@@ -1,7 +1,16 @@
 console.log('add-countries.js loaded');
 
+// Load settings from localStorage or use empty defaults
 let countrySettings = JSON.parse(localStorage.getItem('countrySettings')) || {};
 let availableSourcingCountries = JSON.parse(localStorage.getItem('availableSourcingCountries')) || [];
+
+// Migrate existing countries to include vat if missing
+for (const country in countrySettings) {
+    if (!countrySettings[country].hasOwnProperty('vat')) {
+        countrySettings[country].vat = 0; // Default VAT to 0 for existing countries
+    }
+}
+saveSettings(); // Save migrated data back to localStorage
 
 if (availableSourcingCountries.length === 0 && Object.keys(countrySettings).length > 0) {
     availableSourcingCountries = Object.keys(countrySettings);
@@ -40,9 +49,10 @@ function populateCountryTable() {
                 <td style="padding: 10px;">${settings.currency}</td>
                 <td style="padding: 10px;">${settings.weightUnit}</td>
                 <td style="padding: 10px;">${settings.exchangeRateNPR.toFixed(2)}</td>
-                <td style="padding: 10px;">${settings.salesTax.toFixed(2) || '0'}</td>
+                <td style="padding: 10px;">${settings.salesTax?.toFixed(2) || '0'}</td>
+                <td style="padding: 10px;">${settings.vat?.toFixed(2) || '0'}</td>
                 <td style="padding: 10px;">${settings.minShipping.toFixed(2)}</td>
-                <td style="padding: 10px;">${settings.additionalShipping.toFixed(2) || '0'}</td>
+                <td style="padding: 10px;">${settings.additionalShipping?.toFixed(2) || '0'}</td>
                 <td style="padding: 10px;">${settings.additionalWeight.toFixed(2)}</td>
                 <td style="padding: 10px;">${settings.paymentGatewayFixedFee.toFixed(2)}</td>
                 <td style="padding: 10px;">${settings.paymentGatewayPercentFee.toFixed(2)}</td>
@@ -64,6 +74,7 @@ function prepopulateForm(country) {
     document.getElementById('weightUnit').value = settings.weightUnit || 'lbs';
     document.getElementById('currency').value = settings.currency || '';
     document.getElementById('salesTax').value = settings.salesTax || '';
+    document.getElementById('vat').value = settings.vat || '0';
     document.getElementById('minShipping').value = settings.minShipping || '';
     document.getElementById('additionalShipping').value = settings.additionalShipping || '';
     document.getElementById('additionalWeight').value = settings.additionalWeight || '';
@@ -83,7 +94,7 @@ function prepopulateForm(country) {
 
 function validatePositiveValues(data) {
     const requiredFields = ['exchangeRateNPR', 'minShipping', 'additionalWeight', 'volumetricDivisor'];
-    const optionalFields = ['salesTax', 'additionalShipping', 'paymentGatewayFixedFee', 'paymentGatewayPercentFee'];
+    const optionalFields = ['salesTax', 'vat', 'additionalShipping', 'paymentGatewayFixedFee', 'paymentGatewayPercentFee'];
     for (const field of requiredFields) {
         if (!data[field] || parseFloat(data[field]) <= 0) {
             throw new Error(`${field.replace('NPR', '').replace('Shipping', ' ').replace('Weight', ' ').replace('Tax', ' Tax')} must be a positive value and is required.`);
@@ -96,6 +107,9 @@ function validatePositiveValues(data) {
     }
     if (data.salesTax && parseFloat(data.salesTax) > 100) {
         throw new Error('Sales Tax must not exceed 100%.');
+    }
+    if (data.vat && parseFloat(data.vat) > 100) {
+        throw new Error('VAT must not exceed 100%.');
     }
     if (data.additionalShipping && parseFloat(data.additionalShipping) > 100) {
         throw new Error('Additional Shipping must not exceed 100%.');
@@ -128,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     weightUnit: data.weightUnit,
                     currency: data.currency,
                     salesTax: data.salesTax ? parseFloat(data.salesTax) : 0,
+                    vat: data.vat ? parseFloat(data.vat) : 0,
                     minShipping: parseFloat(data.minShipping),
                     additionalShipping: data.additionalShipping ? parseFloat(data.additionalShipping) : 0,
                     additionalWeight: parseFloat(data.additionalWeight),
@@ -149,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     weightUnit: data.weightUnit,
                     currency: data.currency,
                     salesTax: data.salesTax ? parseFloat(data.salesTax) : 0,
+                    vat: data.vat ? parseFloat(data.vat) : 0,
                     minShipping: parseFloat(data.minShipping),
                     additionalShipping: data.additionalShipping ? parseFloat(data.additionalShipping) : 0,
                     additionalWeight: parseFloat(data.additionalWeight),
@@ -208,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 weightUnit: data.weightUnit,
                 currency: data.currency,
                 salesTax: data.salesTax ? parseFloat(data.salesTax) : 0,
+                vat: data.vat ? parseFloat(data.vat) : 0,
                 minShipping: parseFloat(data.minShipping),
                 additionalShipping: data.additionalShipping ? parseFloat(data.additionalShipping) : 0,
                 additionalWeight: parseFloat(data.additionalWeight),

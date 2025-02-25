@@ -24,11 +24,13 @@
             <option value="CNY">CNY (¥)</option>
         </select>
         <label for="salesTax">Sales Tax (%):</label>
-        <input type="number" name="salesTax" id="salesTax" step="0.01" min="0.01" max="100">
+        <input type="number" name="salesTax" id="salesTax" step="0.01" min="0" max="100">
+        <label for="vat">VAT (%):</label>
+        <input type="number" name="vat" id="vat" step="0.01" min="0" max="100" value="0">
         <label for="minShipping">Minimum Shipping ($):</label>
         <input type="number" name="minShipping" id="minShipping" step="0.01" min="0.01" required>
         <label for="additionalShipping">Additional Shipping (%):</label>
-        <input type="number" name="additionalShipping" id="additionalShipping" step="0.01" min="0.01" max="100">
+        <input type="number" name="additionalShipping" id="additionalShipping" step="0.01" min="0" max="100">
         <label for="additionalWeight">Additional Weight ($):</label>
         <input type="number" name="additionalWeight" id="additionalWeight" step="0.01" min="0.01" required>
         <label for="paymentGatewayFixedFee">Payment Gateway Fixed Fee (Sourcing Currency):</label>
@@ -51,6 +53,7 @@
                 <th style="padding: 10px;">Weight Unit</th>
                 <th style="padding: 10px;">Exchange Rate (NPR)</th>
                 <th style="padding: 10px;">Sales Tax (%)</th>
+                <th style="padding: 10px;">VAT (%)</th>
                 <th style="padding: 10px;">Min Shipping ($)</th>
                 <th style="padding: 10px;">Additional Shipping (%)</th>
                 <th style="padding: 10px;">Additional Weight ($)</th>

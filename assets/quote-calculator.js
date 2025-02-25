@@ -1,12 +1,12 @@
 const defaultSettings = {
-    exchangeRateNPR: 0, salesTax: 0, minShipping: 0, additionalShipping: 0, additionalWeight: 0, currency: '', baseCurrency: '', weightUnit: 'lbs', volumetricDivisor: 166, paymentGatewayFixedFee: 0, paymentGatewayPercentFee: 0
+    exchangeRateNPR: 0, salesTax: 0, vat: 0, minShipping: 0, additionalShipping: 0, additionalWeight: 0, currency: '', baseCurrency: '', weightUnit: 'lbs', volumetricDivisor: 166, paymentGatewayFixedFee: 0, paymentGatewayPercentFee: 0
 };
 
 function calculateVolumetricWeight(length, width, height, divisor, unit) {
     const volume = length * width * height;
-    let volumetricWeight = volume / divisor; // In kg or lbs based on divisor
+    let volumetricWeight = volume / divisor;
     if (unit === 'lbs' && divisor !== 166) {
-        volumetricWeight *= 2.20462; // Convert kg to lbs if divisor is for kg
+        volumetricWeight *= 2.20462;
     }
     return volumetricWeight;
 }
@@ -43,7 +43,7 @@ function calculateShippingQuotes(itemWeight, itemPrice, salesTaxPrice, merchantS
     const paymentGatewayFee = paymentGatewayFixedFee + (subTotalBeforeFees * (paymentGatewayPercentFee / 100));
     
     let subTotal = subTotalBeforeFees + paymentGatewayFee;
-    let vat = Math.round(subTotal * 0.13 * 100) / 100;
+    let vat = Math.round(subTotal * (settings.vat / 100) * 100) / 100; // Use country-specific VAT
     let finalTotal = Math.round((subTotal + vat) * 100) / 100;
 
     return { 

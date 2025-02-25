@@ -31,7 +31,14 @@
         <input type="number" name="itemPrice" id="itemPrice" placeholder="Product Price (Sourcing Currency)" step="0.01" min="0" required>
         <input type="number" name="salesTaxPrice" id="salesTaxPrice" placeholder="Sales Tax (%)" step="0.01" min="0">
         <input type="number" name="merchantShippingPrice" placeholder="Merchant Shipping" step="0.01" min="0">
-        <input type="number" name="customs" placeholder="Customs Duty (%)" step="0.01" min="0" required>
+        <label for="customsCategory">Customs Category:</label>
+        <select name="customsCategory" id="customsCategory" required>
+            <option value="">-- Select Category --</option>
+            <option value="electronics">Electronics (15%)</option>
+            <option value="clothing">Clothing (5%)</option>
+            <option value="books">Books (0%)</option>
+            <option value="furniture">Furniture (10%)</option>
+        </select>
         <input type="number" name="domesticShipping" placeholder="Domestic Shipping" step="0.01" min="0">
         <input type="number" name="handlingCharge" placeholder="Handling Charge" step="0.01" min="0">
         <input type="number" name="discount" placeholder="Discount ($)" step="0.01" min="0">

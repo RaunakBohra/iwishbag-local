@@ -16,7 +16,7 @@ function populateCountryDropdown(selectId, options, availableOnly = false) {
             const settings = options[country];
             const option = document.createElement('option');
             option.value = country;
-            option.textContent = `${country} (${settings.currency}, ${settings.weightUnit}, Sales Tax: ${settings.salesTax || 0}%, Min Shipping: $${settings.minShipping || 0})`;
+            option.textContent = `${country} (${settings.currency}, ${settings.weightUnit}, Sales Tax: ${settings.salesTax || 0}%, VAT: ${settings.vat || 0}%)`;
             select.appendChild(option);
         }
     }
@@ -76,8 +76,19 @@ function updateWeights() {
     if (effectiveWeightField) effectiveWeightField.value = effectiveWeight.toFixed(2);
 
     console.log(`Weights updated: Gross=${grossWeight}, Volumetric=${volumetricWeight}, Effective=${effectiveWeight}`);
-    return effectiveWeight; // Return for use in quote calculation
+    return effectiveWeight;
 }
+
+// Customs categories and their percentages
+const customsCategories = {
+    "electronics": 15,
+    "clothing": 5,
+    "books": 0,
+    "furniture": 10,
+    "video": 20,
+    "sideo": 25,
+    "kideo": 30,
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM fully loaded, initializing quote calculator');
@@ -122,7 +133,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = Object.fromEntries(formData.entries());
             const sourceSettings = countrySettings[data.country] || {};
             const userBaseCurrency = 'NPR';
-            const effectiveWeight = updateWeights(); // Get the effective weight
+            const effectiveWeight = updateWeights();
+            const customsCategory = data.customsCategory;
+            const customsPercent = customsCategories[customsCategory] || 0;
 
             console.log('Form data submitted:', data);
             console.log('Source settings:', sourceSettings);
@@ -130,11 +143,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const itemPrice = parseFloat(data.itemPrice) || 0;
             const salesTaxPrice = data.salesTaxPrice ? parseFloat(data.salesTaxPrice) || 0 : 0;
 
-            console.log('Calculated values:', { itemPrice, salesTaxPrice, effectiveWeight });
+            console.log('Calculated values:', { itemPrice, salesTaxPrice, effectiveWeight, customsPercent });
 
             const quote = calculateShippingQuotes(
                 effectiveWeight, itemPrice, salesTaxPrice,
-                parseFloat(data.merchantShippingPrice) || 0, parseFloat(data.customs) || 0,
+                parseFloat(data.merchantShippingPrice) || 0, customsPercent,
                 parseFloat(data.domesticShipping) || 0, parseFloat(data.handlingCharge) || 0,
                 parseFloat(data.discount) || 0, parseFloat(data.insuranceAmount) || 0, sourceSettings
             );
@@ -151,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultDiv.innerHTML = `
                     <h3>Quote Results</h3>
                     <p>Effective Weight Used: ${effectiveWeight.toFixed(2)} ${sourceSettings.weightUnit || 'lbs'}</p>
+                    <p>Customs Duty: ${customsPercent}% (Category: ${customsCategory.charAt(0).toUpperCase() + customsCategory.slice(1)})</p>
                     <table border="1" style="border-collapse: collapse; width: 100%; margin-top: 20px;">
                         <thead>
                             <tr>
@@ -211,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td>${userSymbol}${(userQuote.insuranceAmount.toFixed(2))}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 10px;">VAT (13%)</td>
+                                <td style="padding: 10px;">VAT (${sourceSettings.vat || 0}%)</td>
                                 <td>${sourceSymbol}${(quote.vat.toFixed(2))}</td>
                                 <td>${userSymbol}${(userQuote.vat.toFixed(2))}</td>
                             </tr>
