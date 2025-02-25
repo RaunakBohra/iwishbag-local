@@ -6,9 +6,13 @@
 </head>
 <body>
     <h2>iWishBag Manage Countries</h2>
-    <a href="manage-customs.html">add customs </a>
-    <a href="quote-calculator.html">admin calculator</a>
-    <a href="add-countries.html">add countries </a>
+    <p>ADMIN SECTION</p><br><a href="/public">Home</a> || 
+    <p></p><br><a href="/public/admin/quote-calculator.html">admin calculator</a> || 
+    <a href="/public/admin/manage-customs.html">add customs </a> ||
+    <a href="/public/admin/add-countries.html">add countries </a> ||
+    <hr>
+    <p>CUSTOMER SECTION</p><a href="/public/customer-calculator.html">customer calculator </a>
+    <hr>
     <form id="countriesForm">
         <label for="countryName">Country Name:</label>
         <input type="text" name="countryName" id="countryName" placeholder="Enter country name (e.g., USA)" required>
@@ -69,7 +73,7 @@
         <tbody></tbody>
     </table>
 
-    <script src="../assets/quote-calculator.js"></script>
-    <script src="../assets/add-countries.js"></script>
+    <script src="/assets/js/calculator.js"></script>
+    <script src="/assets/js/add-countries.js"></script>
 </body>
 </html>
