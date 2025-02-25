@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <title>ADMIN QUOTE SYSTEM</title>
+    <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+    <h2>iWishBag Quotation System</h2>
+    <a href="manage-customs.html">add customs </a>
+    <a href="quote-calculator.html">admin calculator</a>
+    <a href="add-countries.html">add countries </a>
+
+    <h2>Get Quote</h2>
+    <form id="quoteForm">
+        <label for="quoteCountrySelect">Sourcing Country:</label>
+        <select name="country" id="quoteCountrySelect" required>
+            <option value="">-- Select a Country --</option>
+        </select>
+        <label id="weightLabel">Gross Weight (<span id="weightUnitLabel">lbs</span>):</label>
+        <input type="number" name="grossWeight" id="grossWeight" placeholder="Gross Weight" step="0.01" min="0" required>
+        <input type="number" name="itemPrice" id="itemPrice" placeholder="Product Price (Sourcing Currency)" step="0.01" min="0" required>
+        <input type="number" name="salesTaxPrice" id="salesTaxPrice" placeholder="Sales Tax ($)" step="0.01" min="0" value="0">
+        <input type="number" name="merchantShippingPrice" placeholder="Merchant Shipping" step="0.01" min="0">
+        <label for="customsCategory">Customs Category:</label>
+        <select name="customsCategory" id="customsCategory" required>
+            <option value="">-- Select Category --</option>
+            <!-- Populated dynamically in scripts.js -->
+        </select>
+        <button type="submit">Get Quote</button>
+    </form>
+    <div id="result"></div>
+
+    <!-- Automation UI Elements -->
+    <div id="quoteActions" style="margin-top: 20px;">
+        <label for="quoteTemplate">Load Template:</label>
+        <select name="quoteTemplate" id="quoteTemplate" onchange="loadQuoteTemplate(this.value)">
+            <option value="">-- Select Template --</option>
+        </select>
+        <button onclick="saveCurrentQuote()">Save Quote</button>
+        <button onclick="showBatchQuoteForm()">Batch Quotes</button>
+    </div>
+
+    <div id="batchQuoteForm" style="display: none; margin-top: 20px;">
+        <h3>Batch Quote Generation</h3>
+        <form id="batchQuoteForm">
+            <label for="batchQuotes">Enter Quotes (country,weight,price,category per line):</label>
+            <textarea name="batchQuotes" id="batchQuotes" rows="5" placeholder="e.g., SUA,1,100,electronics\nSUA,2,200,clothing"></textarea>
+            <button type="submit">Generate Batch Quotes</button>
+            <button type="button" onclick="hideBatchQuoteForm()">Cancel</button>
+        </form>
+        <div id="batchResults"></div>
+    </div>
+
+    <div id="savedQuotes" style="margin-top: 20px; display: none;">
+        <h3>Saved Quotes</h3>
+        <button onclick="showSavedQuotes()">View Saved Quotes</button>
+        <div id="quoteList"></div>
+    </div>
+
+    <script src="../Customers-pages/customer-calculator.js"></script>
+    <script src="../bulk-quoter/customerscripts.js"></script>
+</body>
+</html>
