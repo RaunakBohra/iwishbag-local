@@ -1,15 +1,6 @@
 const defaultSettings = {
-    exchangeRateNPR: 0, salesTax: 0, minShipping: 0, additionalShipping: 0, additionalWeight: 0, currency: '', baseCurrency: '', weightUnit: 'lbs', volumetricDivisor: 166, paymentGatewayFixedFee: 0, paymentGatewayPercentFee: 0
+    exchangeRateNPR: 0, salesTax: 0, vat: 0, minShipping: 0, additionalShipping: 0, additionalWeight: 0, currency: '', baseCurrency: '', weightUnit: 'lbs', volumetricDivisor: 166, paymentGatewayFixedFee: 0, paymentGatewayPercentFee: 0
 };
-
-function calculateVolumetricWeight(length, width, height, divisor, unit) {
-    const volume = length * width * height;
-    let volumetricWeight = volume / divisor; // In kg or lbs based on divisor
-    if (unit === 'lbs' && divisor !== 166) {
-        volumetricWeight *= 2.20462; // Convert kg to lbs if divisor is for kg
-    }
-    return volumetricWeight;
-}
 
 function calculateStandardInternationalShipping(itemWeight, price1, settings) {
     let shippingWeight = itemWeight;
@@ -33,7 +24,8 @@ function calculateCustomsAndECS(itemPrice, salesTaxPrice, merchantShippingPrice,
 function calculateShippingQuotes(itemWeight, itemPrice, salesTaxPrice, merchantShippingPrice, customsPercent, domesticShipping, handlingCharge, discount, insuranceAmount, settings) {
     console.log('Calculating shipping quotes with:', { itemWeight, itemPrice, salesTaxPrice, settings });
     const interNationalShipping = calculateStandardInternationalShipping(itemWeight, itemPrice, settings);
-    const salesTaxAmount = itemPrice && salesTaxPrice !== undefined && salesTaxPrice !== '' ? parseFloat(salesTaxPrice) || 0 : 0;
+    // Set salesTaxPrice to 0 by default if not provided or empty
+    const salesTaxAmount = salesTaxPrice !== undefined && salesTaxPrice !== '' ? parseFloat(salesTaxPrice) || 0 : 0;
     const customsAndECS = calculateCustomsAndECS(itemPrice, salesTaxAmount, merchantShippingPrice || 0, interNationalShipping, customsPercent || 0);
     
     let subTotalBeforeFees = (itemPrice || 0) + salesTaxAmount + (merchantShippingPrice || 0) + interNationalShipping + (customsAndECS || 0) + (domesticShipping || 0) + (handlingCharge || 0) + (insuranceAmount || 0) - (discount || 0);
@@ -43,7 +35,7 @@ function calculateShippingQuotes(itemWeight, itemPrice, salesTaxPrice, merchantS
     const paymentGatewayFee = paymentGatewayFixedFee + (subTotalBeforeFees * (paymentGatewayPercentFee / 100));
     
     let subTotal = subTotalBeforeFees + paymentGatewayFee;
-    let vat = Math.round(subTotal * 0.13 * 100) / 100;
+    let vat = Math.round(subTotal * (settings.vat / 100) * 100) / 100; // Use country-specific VAT
     let finalTotal = Math.round((subTotal + vat) * 100) / 100;
 
     return { 
