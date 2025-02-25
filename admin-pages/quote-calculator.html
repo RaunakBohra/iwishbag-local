@@ -1,0 +1,58 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <title>ADMIN QUOTE SYSTEM</title>
+    <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+    <h2>iWishBag Quotation System</h2>
+    <a href="manage-customs.html">add customs </a>
+    <a href="quote-calculator.html">admin calculator</a>
+    <a href="add-countries.html">add countries </a>
+
+
+
+
+    <h2>Get Quote</h2>
+    <form id="quoteForm">
+        <label for="quoteCountrySelect">Sourcing Country:</label>
+        <select name="country" id="quoteCountrySelect" required>
+            <option value="">-- Select Sourcing Country --</option>
+        </select>
+        <input type="number" name="itemPrice" id="itemPrice" placeholder="Product Price (Sourcing Currency)" step="0.01" min="0" required>
+        <label id="weightLabel">Gross Weight (<span id="weightUnitLabel">lbs</span>):</label>
+        <input type="number" name="grossWeight" id="grossWeight" placeholder="Gross Weight" step="0.01" min="0" required>
+        <fieldset style="margin-top: 10px;">
+            <legend>Dimensions (cm)</legend>
+            <label for="length">Length:</label>
+            <input type="number" name="length" id="length" placeholder="Length (cm)" step="0.01" min="0">
+            <label for="width">Width:</label>
+            <input type="number" name="width" id="width" placeholder="Width (cm)" step="0.01" min="0">
+            <label for="height">Height:</label>
+            <input type="number" name="height" id="height" placeholder="Height (cm)" step="0.01" min="0">
+        </fieldset>
+        <label for="volumetricWeight">Volumetric Weight (<span id="weightUnitLabelVol">lbs</span>):</label>
+        <input type="number" id="volumetricWeight" readonly placeholder="Calculated">
+        <label for="effectiveWeight">Effective Weight (<span id="weightUnitLabelEff">lbs</span>):</label>
+        <input type="number" id="effectiveWeight" readonly placeholder="Higher of Gross or Volumetric">
+        <input type="number" name="salesTaxPrice" id="salesTaxPrice" placeholder="Sales Tax (%)" step="0.01" min="0">
+        <input type="number" name="merchantShippingPrice" placeholder="Merchant Shipping" step="0.01" min="0">
+        <label for="customsCategory">Customs Category:</label>
+        <select name="customsCategory" id="customsCategory" required>
+            <option value="">-- Select Category --</option>
+            <!-- Populated dynamically in scripts.js -->
+        </select>
+        <input type="number" name="domesticShipping" placeholder="Domestic Shipping" step="0.01" min="0">
+        <input type="number" name="handlingCharge" placeholder="Handling Charge" step="0.01" min="0">
+        <input type="number" name="discount" placeholder="Discount ($)" step="0.01" min="0">
+        <input type="number" name="insuranceAmount" placeholder="Insurance Amount" step="0.01" min="0">
+        <button type="submit">Get Quote</button>
+    </form>
+    <div id="result"></div>
+
+    <script src="../assets/quote-calculator.js"></script>
+    <script src="../assets/scripts.js"></script>
+</body>
+</html>

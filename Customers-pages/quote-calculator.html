@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <title>Customer Quote Estimator</title>
+    <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+    <h2>Customer Quotes</h2>
+    <a href="manage-customs.html">add customs </a>
+    <a href="quote-calculator.html">admin calculator</a>
+    <a href="add-countries.html">add countries </a>
+
+    <h2>Get Quote</h2>
+    <form id="quoteForm">
+        <label for="quoteCountrySelect">Sourcing Country:</label>
+        <select name="country" id="quoteCountrySelect" required>
+            <option value="">-- Select Sourcing Country --</option>
+        </select>
+        <label id="weightLabel">Gross Weight (<span id="weightUnitLabel">lbs</span>):</label>
+        <input type="number" name="grossWeight" id="grossWeight" placeholder="Gross Weight" step="0.01" min="0" required>
+        <input type="number" name="itemPrice" id="itemPrice" placeholder="Product Price (Sourcing Currency)" step="0.01" min="0" required>
+        <label for="customsCategory">Customs Category:</label>
+        <select name="customsCategory" id="customsCategory" required>
+            <option value="">-- Select Category --</option>
+            <!-- Populated dynamically in scripts.js -->
+        </select>
+        <button type="submit">Get Quote</button>
+    </form>
+    <div id="result"></div>
+
+    <script src="../Customers-pages/customer-calculator.js"></script>
+    <script src="../customers-pages/customerscripts.js"></script>
+</body>
+</html>
