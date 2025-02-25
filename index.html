@@ -13,19 +13,21 @@
         <select name="country" id="quoteCountrySelect" required>
             <option value="">-- Select Sourcing Country --</option>
         </select>
-        <label for="weightType">Weight Unit:</label>
-        <select name="weightType" id="weightType" required disabled>
-            <option value="lbs">lbs</option>
-            <option value="kg">kg</option>
-        </select>
-        <div id="volumetricFields" style="display: none; margin-top: 10px;">
-            <input type="number" name="length" placeholder="Length (cm)" step="0.01" min="0">
-            <input type="number" name="width" placeholder="Width (cm)" step="0.01" min="0">
-            <input type="number" name="height" placeholder="Height (cm)" step="0.01" min="0">
-            <input type="number" name="volumetricDivisor" placeholder="Volumetric Divisor" step="1" min="1" value="6000">
-        </div>
-        <label id="weightLabel">Weight (<span id="weightUnitLabel">lbs</span>):</label>
-        <input type="number" name="itemWeight" id="itemWeight" placeholder="Weight" step="0.01" min="0" required>
+        <label id="weightLabel">Gross Weight (<span id="weightUnitLabel">lbs</span>):</label>
+        <input type="number" name="grossWeight" id="grossWeight" placeholder="Gross Weight" step="0.01" min="0" required>
+        <fieldset style="margin-top: 10px;">
+            <legend>Dimensions (cm)</legend>
+            <label for="length">Length:</label>
+            <input type="number" name="length" id="length" placeholder="Length (cm)" step="0.01" min="0">
+            <label for="width">Width:</label>
+            <input type="number" name="width" id="width" placeholder="Width (cm)" step="0.01" min="0">
+            <label for="height">Height:</label>
+            <input type="number" name="height" id="height" placeholder="Height (cm)" step="0.01" min="0">
+        </fieldset>
+        <label for="volumetricWeight">Volumetric Weight (<span id="weightUnitLabelVol">lbs</span>):</label>
+        <input type="number" id="volumetricWeight" readonly placeholder="Calculated">
+        <label for="effectiveWeight">Effective Weight (<span id="weightUnitLabelEff">lbs</span>):</label>
+        <input type="number" id="effectiveWeight" readonly placeholder="Higher of Gross or Volumetric">
         <input type="number" name="itemPrice" id="itemPrice" placeholder="Product Price (Sourcing Currency)" step="0.01" min="0" required>
         <input type="number" name="salesTaxPrice" id="salesTaxPrice" placeholder="Sales Tax (%)" step="0.01" min="0">
         <input type="number" name="merchantShippingPrice" placeholder="Merchant Shipping" step="0.01" min="0">
@@ -38,7 +40,6 @@
     </form>
     <div id="result"></div>
 
-    <!-- Include scripts -->
     <script src="assets/quote-calculator.js"></script>
     <script src="assets/scripts.js"></script>
 </body>

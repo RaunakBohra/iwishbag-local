@@ -35,6 +35,8 @@
         <input type="number" name="paymentGatewayFixedFee" id="paymentGatewayFixedFee" step="0.01" min="0" value="0">
         <label for="paymentGatewayPercentFee">Payment Gateway Percentage Fee (%):</label>
         <input type="number" name="paymentGatewayPercentFee" id="paymentGatewayPercentFee" step="0.01" min="0" max="100" value="0">
+        <label for="volumetricDivisor">Volumetric Divisor:</label>
+        <input type="number" name="volumetricDivisor" id="volumetricDivisor" step="1" min="1" required value="6000">
         <button type="submit" id="saveCountryBtn">Save Country</button>
         <button type="button" id="updateCountryBtn" style="display: none;">Update Country</button>
         <button type="button" id="cancelBtn">Cancel</button>
@@ -54,6 +56,7 @@
                 <th style="padding: 10px;">Additional Weight ($)</th>
                 <th style="padding: 10px;">Payment Gateway Fixed Fee</th>
                 <th style="padding: 10px;">Payment Gateway % Fee</th>
+                <th style="padding: 10px;">Volumetric Divisor</th>
                 <th style="padding: 10px;">Actions</th>
             </tr>
         </thead>

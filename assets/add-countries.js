@@ -1,6 +1,5 @@
 console.log('add-countries.js loaded');
 
-// Load settings from localStorage or use empty defaults
 let countrySettings = JSON.parse(localStorage.getItem('countrySettings')) || {};
 let availableSourcingCountries = JSON.parse(localStorage.getItem('availableSourcingCountries')) || [];
 
@@ -14,6 +13,7 @@ function saveSettings() {
     localStorage.setItem('countrySettings', JSON.stringify(countrySettings));
     console.log('Saved countrySettings to localStorage:', countrySettings);
 }
+
 function saveSourcingCountries() {
     localStorage.setItem('availableSourcingCountries', JSON.stringify(availableSourcingCountries));
     console.log('Saved availableSourcingCountries to localStorage:', availableSourcingCountries);
@@ -22,26 +22,34 @@ function saveSourcingCountries() {
 function populateCountryTable() {
     console.log('Populating country table with:', { countrySettings, availableSourcingCountries });
     const tbody = document.getElementById('countriesTable').getElementsByTagName('tbody')[0];
+    if (!tbody) {
+        console.error('tbody element not found in DOM');
+        return;
+    }
     tbody.innerHTML = '';
     const countriesToDisplay = availableSourcingCountries.length > 0 ? availableSourcingCountries : Object.keys(countrySettings);
+    console.log('Countries to display:', countriesToDisplay);
     for (const country of countriesToDisplay) {
         if (countrySettings[country]) {
             const settings = countrySettings[country];
+            const escapedCountry = country.replace(/'/g, "\\'");
+            console.log('Adding row for country:', country);
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td style="padding: 10px;">${country}</td>
-                <td style="padding: 10px;">${settings.currency || '-'}</td>
-                <td style="padding: 10px;">${settings.weightUnit || '-'}</td>
-                <td style="padding: 10px;">${(settings.exchangeRateNPR || 0).toFixed(2)}</td>
-                <td style="padding: 10px;">${(settings.salesTax || 0).toFixed(2)}</td>
-                <td style="padding: 10px;">${(settings.minShipping || 0).toFixed(2)}</td>
-                <td style="padding: 10px;">${(settings.additionalShipping || 0).toFixed(2)}</td>
-                <td style="padding: 10px;">${(settings.additionalWeight || 0).toFixed(2)}</td>
-                <td style="padding: 10px;">${(settings.paymentGatewayFixedFee || 0).toFixed(2)}</td>
-                <td style="padding: 10px;">${(settings.paymentGatewayPercentFee || 0).toFixed(2)}</td>
+                <td style="padding: 10px;">${settings.currency}</td>
+                <td style="padding: 10px;">${settings.weightUnit}</td>
+                <td style="padding: 10px;">${settings.exchangeRateNPR.toFixed(2)}</td>
+                <td style="padding: 10px;">${settings.salesTax.toFixed(2) || '0'}</td>
+                <td style="padding: 10px;">${settings.minShipping.toFixed(2)}</td>
+                <td style="padding: 10px;">${settings.additionalShipping.toFixed(2) || '0'}</td>
+                <td style="padding: 10px;">${settings.additionalWeight.toFixed(2)}</td>
+                <td style="padding: 10px;">${settings.paymentGatewayFixedFee.toFixed(2)}</td>
+                <td style="padding: 10px;">${settings.paymentGatewayPercentFee.toFixed(2)}</td>
+                <td style="padding: 10px;">${settings.volumetricDivisor}</td>
                 <td style="padding: 10px;">
-                    <button onclick="editCountry('${country}')">Edit</button>
-                    <button onclick="removeCountry('${country}')">Delete</button>
+                    <button onclick="editCountry('${escapedCountry}')">Edit</button>
+                    <button onclick="removeCountry('${escapedCountry}')">Delete</button>
                 </td>
             `;
             tbody.appendChild(row);
@@ -61,6 +69,7 @@ function prepopulateForm(country) {
     document.getElementById('additionalWeight').value = settings.additionalWeight || '';
     document.getElementById('paymentGatewayFixedFee').value = settings.paymentGatewayFixedFee || '0';
     document.getElementById('paymentGatewayPercentFee').value = settings.paymentGatewayPercentFee || '0';
+    document.getElementById('volumetricDivisor').value = settings.volumetricDivisor || (settings.weightUnit === 'lbs' ? '166' : '6000');
     if (country) {
         document.getElementById('countryName').readOnly = true;
         document.getElementById('saveCountryBtn').style.display = 'none';
@@ -73,7 +82,7 @@ function prepopulateForm(country) {
 }
 
 function validatePositiveValues(data) {
-    const requiredFields = ['exchangeRateNPR', 'minShipping', 'additionalWeight'];
+    const requiredFields = ['exchangeRateNPR', 'minShipping', 'additionalWeight', 'volumetricDivisor'];
     const optionalFields = ['salesTax', 'additionalShipping', 'paymentGatewayFixedFee', 'paymentGatewayPercentFee'];
     for (const field of requiredFields) {
         if (!data[field] || parseFloat(data[field]) <= 0) {
@@ -97,6 +106,7 @@ function validatePositiveValues(data) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM fully loaded, initializing add-countries.js');
     populateCountryTable();
 
     document.getElementById('countriesForm').addEventListener('submit', (e) => {
@@ -121,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     minShipping: parseFloat(data.minShipping),
                     additionalShipping: data.additionalShipping ? parseFloat(data.additionalShipping) : 0,
                     additionalWeight: parseFloat(data.additionalWeight),
-                    volumetricDivisor: data.weightUnit === 'lbs' ? 166 : 6000,
+                    volumetricDivisor: parseFloat(data.volumetricDivisor),
                     paymentGatewayFixedFee: data.paymentGatewayFixedFee ? parseFloat(data.paymentGatewayFixedFee) : 0,
                     paymentGatewayPercentFee: data.paymentGatewayPercentFee ? parseFloat(data.paymentGatewayPercentFee) : 0
                 };
@@ -142,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     minShipping: parseFloat(data.minShipping),
                     additionalShipping: data.additionalShipping ? parseFloat(data.additionalShipping) : 0,
                     additionalWeight: parseFloat(data.additionalWeight),
-                    volumetricDivisor: data.weightUnit === 'lbs' ? 166 : 6000,
+                    volumetricDivisor: parseFloat(data.volumetricDivisor),
                     paymentGatewayFixedFee: data.paymentGatewayFixedFee ? parseFloat(data.paymentGatewayFixedFee) : 0,
                     paymentGatewayPercentFee: data.paymentGatewayPercentFee ? parseFloat(data.paymentGatewayPercentFee) : 0
                 };
@@ -158,11 +168,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.editCountry = function(country) {
+        console.log('Editing country:', country);
         prepopulateForm(country);
         populateCountryTable();
     };
 
     window.removeCountry = function(country) {
+        console.log('Removing country:', country);
         if (confirm(`Are you sure you want to remove ${country} as a country?`)) {
             delete countrySettings[country];
             const index = availableSourcingCountries.indexOf(country);
@@ -199,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 minShipping: parseFloat(data.minShipping),
                 additionalShipping: data.additionalShipping ? parseFloat(data.additionalShipping) : 0,
                 additionalWeight: parseFloat(data.additionalWeight),
-                volumetricDivisor: data.weightUnit === 'lbs' ? 166 : 6000,
+                volumetricDivisor: parseFloat(data.volumetricDivisor),
                 paymentGatewayFixedFee: data.paymentGatewayFixedFee ? parseFloat(data.paymentGatewayFixedFee) : 0,
                 paymentGatewayPercentFee: data.paymentGatewayPercentFee ? parseFloat(data.paymentGatewayPercentFee) : 0
             };
@@ -216,16 +228,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cancelBtn').addEventListener('click', () => {
         document.getElementById('countriesForm').reset();
         prepopulateForm('');
-    
-        const countrySelect = document.getElementById('countrySelect');
-        if (countrySelect) {
-            countrySelect.value = '';
-        }
-    
+        document.getElementById('countryName').value = '';
         populateCountryTable();
     });
 
-    // Add Clear All Data button functionality
     document.getElementById('clearDataBtn').addEventListener('click', () => {
         if (confirm('Are you sure you want to clear all data? This will remove all saved countries and settings.')) {
             localStorage.clear();

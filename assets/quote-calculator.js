@@ -1,19 +1,16 @@
-// Default country settings
 const defaultSettings = {
     exchangeRateNPR: 0, salesTax: 0, minShipping: 0, additionalShipping: 0, additionalWeight: 0, currency: '', baseCurrency: '', weightUnit: 'lbs', volumetricDivisor: 166, paymentGatewayFixedFee: 0, paymentGatewayPercentFee: 0
 };
 
-// Calculate volumetric weight
 function calculateVolumetricWeight(length, width, height, divisor, unit) {
     const volume = length * width * height;
-    let volumetricWeight = volume / divisor;
-    if (unit === 'lbs') {
-        volumetricWeight *= 2.20462;
+    let volumetricWeight = volume / divisor; // In kg or lbs based on divisor
+    if (unit === 'lbs' && divisor !== 166) {
+        volumetricWeight *= 2.20462; // Convert kg to lbs if divisor is for kg
     }
     return volumetricWeight;
 }
 
-// Calculate standard international shipping
 function calculateStandardInternationalShipping(itemWeight, price1, settings) {
     let shippingWeight = itemWeight;
     if (settings.weightUnit === 'kg') {
@@ -29,12 +26,10 @@ function calculateStandardInternationalShipping(itemWeight, price1, settings) {
     return shippingCost;
 }
 
-// Calculate customs and ECS
 function calculateCustomsAndECS(itemPrice, salesTaxPrice, merchantShippingPrice, interNationalShipping, customsPercent) {
     return ((itemPrice + (salesTaxPrice || 0) + (merchantShippingPrice || 0) + interNationalShipping) * (customsPercent / 100));
 }
 
-// Calculate shipping quotes
 function calculateShippingQuotes(itemWeight, itemPrice, salesTaxPrice, merchantShippingPrice, customsPercent, domesticShipping, handlingCharge, discount, insuranceAmount, settings) {
     console.log('Calculating shipping quotes with:', { itemWeight, itemPrice, salesTaxPrice, settings });
     const interNationalShipping = calculateStandardInternationalShipping(itemWeight, itemPrice, settings);
@@ -43,13 +38,12 @@ function calculateShippingQuotes(itemWeight, itemPrice, salesTaxPrice, merchantS
     
     let subTotalBeforeFees = (itemPrice || 0) + salesTaxAmount + (merchantShippingPrice || 0) + interNationalShipping + (customsAndECS || 0) + (domesticShipping || 0) + (handlingCharge || 0) + (insuranceAmount || 0) - (discount || 0);
     
-    // Calculate payment gateway fees
     const paymentGatewayFixedFee = settings.paymentGatewayFixedFee || 0;
     const paymentGatewayPercentFee = settings.paymentGatewayPercentFee || 0;
     const paymentGatewayFee = paymentGatewayFixedFee + (subTotalBeforeFees * (paymentGatewayPercentFee / 100));
     
     let subTotal = subTotalBeforeFees + paymentGatewayFee;
-    let vat = Math.round(subTotal * 0.13 * 100) / 100; // 13% VAT
+    let vat = Math.round(subTotal * 0.13 * 100) / 100;
     let finalTotal = Math.round((subTotal + vat) * 100) / 100;
 
     return { 
@@ -69,7 +63,6 @@ function calculateShippingQuotes(itemWeight, itemPrice, salesTaxPrice, merchantS
     };
 }
 
-// Convert to user currency (default to NPR)
 function convertToUserCurrency(quote, sourceSettings, userBaseCurrency = 'NPR') {
     console.log('Converting to user currency with:', { quote, sourceSettings, userBaseCurrency });
     if (!sourceSettings.currency) {
