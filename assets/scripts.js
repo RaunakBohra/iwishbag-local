@@ -1,7 +1,14 @@
 let countrySettings = JSON.parse(localStorage.getItem('countrySettings')) || {};
 let availableSourcingCountries = JSON.parse(localStorage.getItem('availableSourcingCountries')) || [];
+let customsCategories = JSON.parse(localStorage.getItem('customsCategories')) || {
+    "electronics": 15,
+    "clothing": 5,
+    "books": 0,
+    "furniture": 10
+};
 
 console.log('assets/scripts.js loaded successfully');
+console.log('Initial customsCategories in scripts.js:', customsCategories);
 
 function populateCountryDropdown(selectId, options, availableOnly = false) {
     const select = document.getElementById(selectId);
@@ -19,6 +26,23 @@ function populateCountryDropdown(selectId, options, availableOnly = false) {
             option.textContent = `${country} (${settings.currency}, ${settings.weightUnit}, Sales Tax: ${settings.salesTax || 0}%, VAT: ${settings.vat || 0}%)`;
             select.appendChild(option);
         }
+    }
+}
+
+function populateCustomsDropdown() {
+    const select = document.getElementById('customsCategory');
+    if (!select) {
+        console.error('customsCategory element not found in DOM');
+        return;
+    }
+    select.innerHTML = '<option value="">-- Select Category --</option>';
+    console.log('Populating customs dropdown with:', customsCategories);
+    for (const category in customsCategories) {
+        const percent = customsCategories[category];
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = `${category.charAt(0).toUpperCase() + category.slice(1)} (${percent}%)`;
+        select.appendChild(option);
     }
 }
 
@@ -79,20 +103,10 @@ function updateWeights() {
     return effectiveWeight;
 }
 
-// Customs categories and their percentages
-const customsCategories = {
-    "electronics": 15,
-    "clothing": 5,
-    "books": 0,
-    "furniture": 10,
-    "video": 20,
-    "sideo": 25,
-    "kideo": 30,
-};
-
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM fully loaded, initializing quote calculator');
     populateCountryDropdown('quoteCountrySelect', countrySettings, true);
+    populateCustomsDropdown();
 
     const quoteCountrySelect = document.getElementById('quoteCountrySelect');
     if (quoteCountrySelect) {

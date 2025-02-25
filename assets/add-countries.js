@@ -6,11 +6,12 @@ let availableSourcingCountries = JSON.parse(localStorage.getItem('availableSourc
 
 // Migrate existing countries to include vat if missing
 for (const country in countrySettings) {
-    if (!countrySettings[country].hasOwnProperty('vat')) {
-        countrySettings[country].vat = 0; // Default VAT to 0 for existing countries
+    if (!countrySettings[country].hasOwnProperty('vat') || isNaN(countrySettings[country].vat)) {
+        countrySettings[country].vat = 0; // Ensure vat is a number
     }
 }
 saveSettings(); // Save migrated data back to localStorage
+console.log('After migration, countrySettings:', countrySettings);
 
 if (availableSourcingCountries.length === 0 && Object.keys(countrySettings).length > 0) {
     availableSourcingCountries = Object.keys(countrySettings);
@@ -42,7 +43,7 @@ function populateCountryTable() {
         if (countrySettings[country]) {
             const settings = countrySettings[country];
             const escapedCountry = country.replace(/'/g, "\\'");
-            console.log('Adding row for country:', country);
+            console.log('Adding row for country:', country, 'with vat:', settings.vat);
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td style="padding: 10px;">${country}</td>
@@ -50,7 +51,7 @@ function populateCountryTable() {
                 <td style="padding: 10px;">${settings.weightUnit}</td>
                 <td style="padding: 10px;">${settings.exchangeRateNPR.toFixed(2)}</td>
                 <td style="padding: 10px;">${settings.salesTax?.toFixed(2) || '0'}</td>
-                <td style="padding: 10px;">${settings.vat?.toFixed(2) || '0'}</td>
+                <td style="padding: 10px;">${Number(settings.vat).toFixed(2)}</td>
                 <td style="padding: 10px;">${settings.minShipping.toFixed(2)}</td>
                 <td style="padding: 10px;">${settings.additionalShipping?.toFixed(2) || '0'}</td>
                 <td style="padding: 10px;">${settings.additionalWeight.toFixed(2)}</td>

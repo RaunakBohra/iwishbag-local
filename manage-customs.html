@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>iWishBag Manage Customs Categories</title>
+    <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+    <h2>iWishBag Manage Customs Categories</h2>
+    <form id="customsForm">
+        <label for="categoryName">Category Name:</label>
+        <input type="text" name="categoryName" id="categoryName" placeholder="Enter category name (e.g., Electronics)" required>
+        <label for="customsPercent">Customs Duty (%):</label>
+        <input type="number" name="customsPercent" id="customsPercent" step="0.01" min="0" max="100" required>
+        <button type="submit" id="saveCategoryBtn">Save Category</button>
+        <button type="button" id="updateCategoryBtn" style="display: none;">Update Category</button>
+        <button type="button" id="cancelBtn">Cancel</button>
+    </form>
+    <h3>Existing Categories</h3>
+    <table id="customsTable" border="1" style="border-collapse: collapse; width: 100%; margin-top: 20px;">
+        <thead>
+            <tr>
+                <th style="padding: 10px;">Category Name</th>
+                <th style="padding: 10px;">Customs Duty (%)</th>
+                <th style="padding: 10px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script src="assets/manage-customs.js"></script>
+</body>
+</html>

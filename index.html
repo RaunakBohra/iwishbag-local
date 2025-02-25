@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <title>iWishBag Quotation System</title>
     <link rel="stylesheet" href="assets/styles.css">
 </head>
@@ -34,10 +35,7 @@
         <label for="customsCategory">Customs Category:</label>
         <select name="customsCategory" id="customsCategory" required>
             <option value="">-- Select Category --</option>
-            <option value="electronics">Electronics (15%)</option>
-            <option value="clothing">Clothing (5%)</option>
-            <option value="books">Books (0%)</option>
-            <option value="furniture">Furniture (10%)</option>
+            <!-- Populated dynamically in scripts.js -->
         </select>
         <input type="number" name="domesticShipping" placeholder="Domestic Shipping" step="0.01" min="0">
         <input type="number" name="handlingCharge" placeholder="Handling Charge" step="0.01" min="0">
