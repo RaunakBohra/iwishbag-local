@@ -1,21 +1,49 @@
-// Initialize on DOM load and ensure functions are globally available
+// Access countrySettings and customsCategories from scripts.js via global/localStorage, without redeclaring
+let countrySettings = window.getCountrySettings ? window.getCountrySettings() : JSON.parse(localStorage.getItem('countrySettings')) || {};
+let customsCategories = window.getCustomsCategories ? window.getCustomsCategories() : JSON.parse(localStorage.getItem('customsCategories')) || {
+    "electronics": 15,
+    "clothing": 5,
+    "books": 0,
+    "furniture": 10
+};
+
+// Function to refresh countrySettings and customsCategories from localStorage
+function refreshSettings() {
+    countrySettings = window.getCountrySettings ? window.getCountrySettings() : JSON.parse(localStorage.getItem('countrySettings')) || {};
+    customsCategories = window.getCustomsCategories ? window.getCustomsCategories() : JSON.parse(localStorage.getItem('customsCategories')) || {
+        "electronics": 15,
+        "clothing": 5,
+        "books": 0,
+        "furniture": 10
+    };
+    console.log('Refreshed countrySettings and customsCategories:', { countrySettings, customsCategories });
+}
+
+// Call refresh and expose functions before using them in critical operations, with enhanced debugging
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Bulk quotes script loaded');
+    refreshSettings(); // Ensure latest settings on load
+    // Ensure functions are exposed globally immediately
     window.showBatchQuoteForm = showBatchQuoteForm;
     window.hideBatchQuoteForm = hideBatchQuoteForm;
+    console.log('Exposed showBatchQuoteForm:', typeof window.showBatchQuoteForm === 'function' ? 'Function' : 'Not a function');
+    console.log('Exposed hideBatchQuoteForm:', typeof window.hideBatchQuoteForm === 'function' ? 'Function' : 'Not a function');
 });
-// Load necessary data from localStorag// Assume calculateVolumetricWeight, calculateShippingQuotes, convertToUserCurrency, getCurrencySymbol, updateWeights, and validateQuoteForm are available from assets/quote-calculator.js and assets/scripts.js
+
+// Assume calculateVolumetricWeight, calculateShippingQuotes, convertToUserCurrency, getCurrencySymbol, and updateWeights are available from assets/quote-calculator.js and assets/scripts.js
 function showBatchQuoteForm() {
+    console.log('showBatchQuoteForm called');
     document.getElementById('batchQuoteForm').style.display = 'block';
-    // Ensure this function is globally available
+    // Reinforce global exposure
     window.showBatchQuoteForm = showBatchQuoteForm;
 }
 
 function hideBatchQuoteForm() {
+    console.log('hideBatchQuoteForm called');
     document.getElementById('batchQuoteForm').style.display = 'none';
     document.getElementById('batchQuoteForm').reset();
     document.getElementById('batchResults').innerHTML = '';
-    // Ensure this function is globally available
+    // Reinforce global exposure
     window.hideBatchQuoteForm = hideBatchQuoteForm;
 }
 
@@ -36,40 +64,25 @@ function exportBatchQuotes(results) {
     console.log('Exported batch quotes as CSV:', results);
 }
 
-function validateQuoteForm() {
-    const country = document.getElementById('quoteCountrySelect').value;
-    const grossWeight = parseFloat(document.getElementById('grossWeight').value) || 0;
-    const itemPrice = parseFloat(document.getElementById('itemPrice').value) || 0;
-    const customsCategory = document.getElementById('customsCategory').value;
-
-    if (!country) {
-        alert('Please select a sourcing country.');
-        return false;
-    }
-    if (grossWeight <= 0) {
-        alert('Gross weight must be greater than 0.');
-        return false;
-    }
-    if (itemPrice <= 0) {
-        alert('Product price must be greater than 0.');
-        return false;
-    }
-    if (!customsCategory) {
-        alert('Please select a customs category.');
-        return false;
-    }
-    return true;
-}
-
 document.getElementById('batchQuoteForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!validateQuoteForm()) return;
+    refreshSettings(); // Refresh before processing batch quotes
     const batchQuotes = document.getElementById('batchQuotes').value.split('\n').map(line => line.trim().split(',')).filter(line => line.length === 4);
     let results = [];
     const length = parseFloat(document.getElementById('length').value) || 0;
     const width = parseFloat(document.getElementById('width').value) || 0;
     const height = parseFloat(document.getElementById('height').value) || 0;
+
+    if (batchQuotes.length === 0) {
+        alert('Please enter at least one quote in the format: country,weight,price,category');
+        return;
+    }
+
     batchQuotes.forEach(([country, weight, price, category]) => {
+        if (!country || !weight || !price || !category) {
+            console.error(`Invalid batch quote entry: ${country},${weight},${price},${category}`);
+            return;
+        }
         if (!countrySettings[country]) {
             console.error(`Country ${country} not found in settings`);
             return;
@@ -135,11 +148,13 @@ document.getElementById('batchQuoteForm')?.addEventListener('submit', (e) => {
 
 // Helper function to calculate effective weight using the updated weights logic from scripts.js
 function updateWeights(grossWeight, length, width, height, settings) {
-    const divisor = settings.volumetricDivisor || (settings.weightUnit === 'lbs' ? 166 : 6000);
+    // Ensure settings is not undefined and provide defaults
+    if (!settings) settings = {};
+    const weightUnit = settings.weightUnit || 'lbs';
+    const divisor = settings.volumetricDivisor !== undefined ? settings.volumetricDivisor : (weightUnit === 'lbs' ? 166 : 6000);
     let volumetricWeight = 0;
     if (length > 0 && width > 0 && height > 0) {
-        volumetricWeight = calculateVolumetricWeight(length, width, height, divisor, settings.weightUnit || 'lbs');
+        volumetricWeight = calculateVolumetricWeight(length, width, height, divisor, weightUnit);
     }
     return Math.max(grossWeight, volumetricWeight);
 }
-

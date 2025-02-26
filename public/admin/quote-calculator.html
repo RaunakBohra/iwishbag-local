@@ -76,9 +76,28 @@
         <div id="quoteList"></div>
     </div>
 
-    <script src="/assets/js/calculator.js"></script>
+    <script src="/assets/js/quote-calculator.js"></script>
     <script src="/assets/js/scripts.js"></script>
     <script src="/assets/js/quote-templates.js"></script>
     <script src="/assets/js/bulk-quotes.js"></script>
+    <script>
+        window.addEventListener('load', function() {
+            if (typeof showBatchQuoteForm !== 'function') {
+                console.error('showBatchQuoteForm is not defined. Check bulk-quotes.js loading.');
+                // Fallback: Define a minimal showBatchQuoteForm function
+                window.showBatchQuoteForm = function() {
+                    console.warn('Using fallback showBatchQuoteForm due to loading issue');
+                    const batchForm = document.getElementById('batchQuoteForm');
+                    if (batchForm) {
+                        batchForm.style.display = 'block';
+                    } else {
+                        console.error('batchQuoteForm element not found');
+                    }
+                };
+            } else {
+                console.log('showBatchQuoteForm is loaded successfully:', typeof showBatchQuoteForm);
+            }
+        });
+    </script>
 </body>
 </html>

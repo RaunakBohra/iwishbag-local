@@ -1,26 +1,34 @@
-console.log('add-countries.js loaded');
-
-// Load settings from localStorage or use empty defaults
-let countrySettings = JSON.parse(localStorage.getItem('countrySettings')) || {};
+// Access countrySettings and availableSourcingCountries from scripts.js via global/localStorage
+let countrySettings = window.getCountrySettings ? window.getCountrySettings() : JSON.parse(localStorage.getItem('countrySettings')) || {};
 let availableSourcingCountries = JSON.parse(localStorage.getItem('availableSourcingCountries')) || [];
+
+console.log('add-countries.js loaded');
 
 // Migrate existing countries to include vat if missing
 for (const country in countrySettings) {
-    if (!countrySettings[country].hasOwnProperty('vat') || isNaN(countrySettings[country].vat)) {
+    if (!countrySettings.hasOwnProperty('vat') || isNaN(countrySettings[country].vat)) {
         countrySettings[country].vat = 0; // Ensure vat is a number
     }
 }
-saveSettings(); // Save migrated data back to localStorage
+if (window.getCountrySettings) {
+    window.getCountrySettings(countrySettings); // Update global if available
+} else {
+    localStorage.setItem('countrySettings', JSON.stringify(countrySettings));
+}
 console.log('After migration, countrySettings:', countrySettings);
 
 if (availableSourcingCountries.length === 0 && Object.keys(countrySettings).length > 0) {
     availableSourcingCountries = Object.keys(countrySettings);
-    saveSourcingCountries();
+    localStorage.setItem('availableSourcingCountries', JSON.stringify(availableSourcingCountries));
     console.log('Synchronized availableSourcingCountries with countrySettings:', availableSourcingCountries);
 }
 
 function saveSettings() {
-    localStorage.setItem('countrySettings', JSON.stringify(countrySettings));
+    if (window.getCountrySettings) {
+        window.getCountrySettings(countrySettings);
+    } else {
+        localStorage.setItem('countrySettings', JSON.stringify(countrySettings));
+    }
     console.log('Saved countrySettings to localStorage:', countrySettings);
 }
 
@@ -154,7 +162,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!availableSourcingCountries.includes(country)) {
                     availableSourcingCountries.push(country);
                 }
-                saveSettings();
+                if (window.getCountrySettings) {
+                    window.getCountrySettings(countrySettings);
+                } else {
+                    localStorage.setItem('countrySettings', JSON.stringify(countrySettings));
+                }
                 saveSourcingCountries();
                 populateCountryTable();
                 alert(`Added ${country} with the provided settings!`);
@@ -173,7 +185,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     paymentGatewayFixedFee: data.paymentGatewayFixedFee ? parseFloat(data.paymentGatewayFixedFee) : 0,
                     paymentGatewayPercentFee: data.paymentGatewayPercentFee ? parseFloat(data.paymentGatewayPercentFee) : 0
                 };
-                saveSettings();
+                if (window.getCountrySettings) {
+                    window.getCountrySettings(countrySettings);
+                } else {
+                    localStorage.setItem('countrySettings', JSON.stringify(countrySettings));
+                }
                 populateCountryTable();
                 alert(`Updated settings for ${country}!`);
             }
@@ -197,7 +213,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const index = availableSourcingCountries.indexOf(country);
             if (index !== -1) {
                 availableSourcingCountries.splice(index, 1);
-                saveSettings();
+                if (window.getCountrySettings) {
+                    window.getCountrySettings(countrySettings);
+                } else {
+                    localStorage.setItem('countrySettings', JSON.stringify(countrySettings));
+                }
                 saveSourcingCountries();
                 populateCountryTable();
                 document.getElementById('countriesForm').reset();
@@ -233,7 +253,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 paymentGatewayFixedFee: data.paymentGatewayFixedFee ? parseFloat(data.paymentGatewayFixedFee) : 0,
                 paymentGatewayPercentFee: data.paymentGatewayPercentFee ? parseFloat(data.paymentGatewayPercentFee) : 0
             };
-            saveSettings();
+            if (window.getCountrySettings) {
+                window.getCountrySettings(countrySettings);
+            } else {
+                localStorage.setItem('countrySettings', JSON.stringify(countrySettings));
+            }
             populateCountryTable();
             alert(`Updated settings for ${country}!`);
             document.getElementById('countriesForm').reset();
@@ -255,6 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.clear();
             countrySettings = {};
             availableSourcingCountries = [];
+            if (window.getCountrySettings) {
+                window.getCountrySettings(countrySettings);
+            }
             populateCountryTable();
             document.getElementById('countriesForm').reset();
             prepopulateForm('');

@@ -1,10 +1,13 @@
-// Initialize template dropdown on load and ensure functions are globally available
-document.addEventListener('DOMContentLoaded', () => {
-    updateTemplateDropdown();
-    window.saveQuoteTemplatePrompt = saveQuoteTemplatePrompt;
-});
+// Access countrySettings and customsCategories from scripts.js via global/localStorage
+let countrySettings = window.getCountrySettings ? window.getCountrySettings() : JSON.parse(localStorage.getItem('countrySettings')) || {};
+let customsCategories = window.getCustomsCategories ? window.getCustomsCategories() : JSON.parse(localStorage.getItem('customsCategories')) || {
+    "electronics": 15,
+    "clothing": 5,
+    "books": 0,
+    "furniture": 10
+};
 
-// Assume calculateVolumetricWeight, updateWeightLabel, updateWeights, autoPopulateSalesTax, and validateQuoteForm are available from assets/quote-calculator.js and assets/scripts.js
+// Assume calculateVolumetricWeight, updateWeightLabel, updateWeights, autoPopulateSalesTax, validateQuoteForm, and saveCurrentQuote are available from assets/quote-calculator.js and assets/scripts.js
 function loadQuoteTemplate(templateName) {
     if (!templateName) return;
     const templates = JSON.parse(localStorage.getItem('quoteTemplates') || '{}');
@@ -80,3 +83,8 @@ function updateTemplateDropdown() {
     }
 }
 
+// Initialize template dropdown on load and ensure functions are globally available
+document.addEventListener('DOMContentLoaded', () => {
+    updateTemplateDropdown();
+    window.saveQuoteTemplatePrompt = saveQuoteTemplatePrompt;
+});

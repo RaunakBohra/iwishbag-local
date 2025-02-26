@@ -1,15 +1,19 @@
-console.log('manage-customs.js loaded');
-
-// Load customs categories from localStorage or use defaults
-let customsCategories = JSON.parse(localStorage.getItem('customsCategories')) || {
+// Access customsCategories from scripts.js via global/localStorage or local declaration
+let customsCategories = window.getCustomsCategories ? window.getCustomsCategories() : JSON.parse(localStorage.getItem('customsCategories')) || {
     "electronics": 15,
     "clothing": 5,
     "books": 0,
     "furniture": 10
 };
 
+console.log('manage-customs.js loaded');
+
 function saveCategories() {
     localStorage.setItem('customsCategories', JSON.stringify(customsCategories));
+    // Update the global customsCategories if it exists
+    if (window.getCustomsCategories && typeof window.getCustomsCategories === 'function') {
+        window.getCustomsCategories(customsCategories);
+    }
     console.log('Saved customsCategories to localStorage:', customsCategories);
 }
 
