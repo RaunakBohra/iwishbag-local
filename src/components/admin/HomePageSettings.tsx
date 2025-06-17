@@ -61,6 +61,90 @@ export const HomePageSettings = () => {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label htmlFor="hero_banner_url" className="block text-sm font-medium mb-1">Hero Banner Image URL</label>
+            <input
+              id="hero_banner_url"
+              type="url"
+              className="input input-bordered w-full"
+              value={formData.hero_banner_url || ''}
+              onChange={e => handleInputChange('hero_banner_url', e.target.value)}
+              placeholder="https://your-banner-url.com/banner.jpg"
+            />
+            {formData.hero_banner_url && (
+              <div className="mt-2">
+                <span className="block text-xs text-muted-foreground mb-1">Preview:</span>
+                <img src={formData.hero_banner_url} alt="Hero Banner Preview" className="h-32 w-full object-cover bg-white border rounded p-2" />
+              </div>
+            )}
+          </div>
+          <div>
+            <label htmlFor="hero_headline" className="block text-sm font-medium mb-1">Hero Headline</label>
+            <input
+              id="hero_headline"
+              type="text"
+              className="input input-bordered w-full"
+              value={formData.hero_headline || ''}
+              onChange={e => handleInputChange('hero_headline', e.target.value)}
+              placeholder="Your main headline here"
+            />
+            <label htmlFor="hero_subheadline" className="block text-sm font-medium mb-1 mt-4">Hero Subheadline</label>
+            <input
+              id="hero_subheadline"
+              type="text"
+              className="input input-bordered w-full"
+              value={formData.hero_subheadline || ''}
+              onChange={e => handleInputChange('hero_subheadline', e.target.value)}
+              placeholder="A supporting subheadline here"
+            />
+            <label htmlFor="hero_cta_text" className="block text-sm font-medium mb-1 mt-4">Hero CTA Text</label>
+            <input
+              id="hero_cta_text"
+              type="text"
+              className="input input-bordered w-full"
+              value={formData.hero_cta_text || ''}
+              onChange={e => handleInputChange('hero_cta_text', e.target.value)}
+              placeholder="Get Started"
+            />
+            <label htmlFor="hero_cta_link" className="block text-sm font-medium mb-1 mt-4">Hero CTA Link</label>
+            <input
+              id="hero_cta_link"
+              type="url"
+              className="input input-bordered w-full"
+              value={formData.hero_cta_link || ''}
+              onChange={e => handleInputChange('hero_cta_link', e.target.value)}
+              placeholder="https://your-link.com"
+            />
+          </div>
+        </div>
+        {/* How It Works Steps (JSON) */}
+        <div>
+          <label htmlFor="how_it_works_steps" className="block text-sm font-medium mb-1">How It Works Steps (JSON)</label>
+          <textarea
+            id="how_it_works_steps"
+            className="input input-bordered w-full font-mono"
+            rows={4}
+            value={String(formData.how_it_works_steps || '')}
+            onChange={e => handleInputChange('how_it_works_steps', e.target.value)}
+            placeholder='[{"icon": "🚚", "title": "Step 1", "desc": "Describe step 1"}, ...]'
+          />
+          <span className="block text-xs text-muted-foreground mt-1">Enter steps as a JSON array.</span>
+        </div>
+        {/* Value Props (JSON) */}
+        <div>
+          <label htmlFor="value_props" className="block text-sm font-medium mb-1">Value Propositions (JSON)</label>
+          <textarea
+            id="value_props"
+            className="input input-bordered w-full font-mono"
+            rows={3}
+            value={String(formData.value_props || '')}
+            onChange={e => handleInputChange('value_props', e.target.value)}
+            placeholder='[{"icon": "⭐", "title": "Best Prices", "desc": "We guarantee the best prices."}, ...]'
+          />
+          <span className="block text-xs text-muted-foreground mt-1">Enter value props as a JSON array.</span>
+        </div>
+
         <Button 
           type="submit" 
           className="w-full"

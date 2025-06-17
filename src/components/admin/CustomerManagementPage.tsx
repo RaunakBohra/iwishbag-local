@@ -177,28 +177,58 @@ export const CustomerManagementPage = () => {
 
   const removeUserMutation = useMutation({
     mutationFn: async (userId: string) => {
+      // Get the current session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw new Error('Not authenticated');
       
-      const { data, error } = await supabase.functions.invoke('delete-user', {
-        body: { userId },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error('Authentication error. Please try signing in again.');
+      }
+      
+      if (!session?.access_token) {
+        console.error('No access token available');
+        throw new Error('No access token available. Please try signing in again.');
+      }
+
+      console.log('Making delete request with token:', session.access_token.substring(0, 10) + '...');
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ userId }),
         }
-      });
-      
-      if (error) throw new Error(error.message);
-      return data;
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Delete user error:', errorData);
+        throw new Error(errorData.error || 'Failed to delete user');
+      }
+
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       setIsRemoveUserDialogOpen(false);
       setSelectedUserForRemoval(null);
-      toast({ title: "User removed successfully" });
     },
-    onError: (error) => {
-      toast({ title: "Error removing user", description: error.message, variant: "destructive" });
-    }
+    onError: (error: Error) => {
+      console.error('Delete user mutation error:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const filteredUsers = users?.filter(user => 

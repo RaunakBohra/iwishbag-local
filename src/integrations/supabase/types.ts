@@ -244,6 +244,13 @@ export type Database = {
           support_email: string | null
           updated_at: string
           website_logo_url: string | null
+          hero_banner_url: string | null
+          hero_headline: string | null
+          hero_subheadline: string | null
+          hero_cta_text: string | null
+          hero_cta_link: string | null
+          how_it_works_steps: Json | null
+          value_props: Json | null
         }
         Insert: {
           business_hours?: string | null
@@ -263,6 +270,13 @@ export type Database = {
           support_email?: string | null
           updated_at?: string
           website_logo_url?: string | null
+          hero_banner_url?: string | null
+          hero_headline?: string | null
+          hero_subheadline?: string | null
+          hero_cta_text?: string | null
+          hero_cta_link?: string | null
+          how_it_works_steps?: Json | null
+          value_props?: Json | null
         }
         Update: {
           business_hours?: string | null
@@ -282,6 +296,13 @@ export type Database = {
           support_email?: string | null
           updated_at?: string
           website_logo_url?: string | null
+          hero_banner_url?: string | null
+          hero_headline?: string | null
+          hero_subheadline?: string | null
+          hero_cta_text?: string | null
+          hero_cta_link?: string | null
+          how_it_works_steps?: Json | null
+          value_props?: Json | null
         }
         Relationships: []
       }
@@ -565,6 +586,7 @@ export type Database = {
           full_name: string | null
           id: string
           internal_notes: string | null
+          phone: string | null
           preferred_display_currency: string | null
           referral_code: string | null
           total_orders: number | null
@@ -578,6 +600,7 @@ export type Database = {
           full_name?: string | null
           id: string
           internal_notes?: string | null
+          phone?: string | null
           preferred_display_currency?: string | null
           referral_code?: string | null
           total_orders?: number | null
@@ -591,6 +614,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           internal_notes?: string | null
+          phone?: string | null
           preferred_display_currency?: string | null
           referral_code?: string | null
           total_orders?: number | null

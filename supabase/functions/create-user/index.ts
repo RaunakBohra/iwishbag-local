@@ -58,7 +58,7 @@ serve(async (req) => {
     )
 
     // Get the request body
-    const { email, password, full_name } = await req.json()
+    const { email, password, full_name, phone } = await req.json()
 
     if (!email || !password) {
       throw new Error('Email and password are required')
@@ -90,6 +90,7 @@ serve(async (req) => {
       .upsert({
         id: authData.user.id,
         full_name: full_name || email.split('@')[0],
+        phone: phone || null,
         cod_enabled: false,
         internal_notes: '',
         preferred_display_currency: 'USD'

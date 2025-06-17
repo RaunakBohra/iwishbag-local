@@ -38,6 +38,7 @@ import { AddressList } from "@/components/profile/AddressList";
 const profileFormSchema = z.object({
   full_name: z.string().min(1, "Full name is required"),
   email: z.string().email().optional(),
+  phone: z.string().min(8, "Phone number is required"),
   preferred_display_currency: z.string().min(1, "Preferred currency is required"),
 });
 
@@ -78,6 +79,7 @@ const Profile = () => {
         .upsert({ 
           id: user.id, 
           full_name: values.full_name,
+          phone: values.phone,
           preferred_display_currency: values.preferred_display_currency,
         });
       if (error) throw new Error(error.message);
@@ -103,6 +105,7 @@ const Profile = () => {
     defaultValues: {
       full_name: "",
       email: user?.email || "",
+      phone: "",
       preferred_display_currency: "USD",
     },
   });
@@ -112,6 +115,7 @@ const Profile = () => {
       form.reset({
         full_name: profile.full_name || "",
         email: user?.email || "",
+        phone: profile.phone || "",
         preferred_display_currency: profile.preferred_display_currency || "USD",
       });
     }
@@ -200,6 +204,19 @@ const Profile = () => {
                       <FormLabel>Full Name</FormLabel>
                       <FormControl>
                         <Input placeholder="Your full name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="+1 234 567 8901" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

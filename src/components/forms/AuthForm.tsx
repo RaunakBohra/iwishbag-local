@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 const signInSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -26,7 +27,7 @@ const signInSchema = z.object({
 const signUpSchema = z.object({
   name: z.string().min(1, { message: "Name is required." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
-  phone: z.string().min(8, { message: "Phone is required." }),
+  phone: z.string().min(8, { message: "Please enter a valid phone number (minimum 8 digits)." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
   terms: z.literal(true, { errorMap: () => ({ message: "You must agree to the terms and conditions." }) }),
 });
@@ -49,7 +50,13 @@ const AuthForm = () => {
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { name: "", email: "", phone: "", password: "", terms: false },
+    defaultValues: { 
+      name: "", 
+      email: "", 
+      phone: "", 
+      password: "", 
+      terms: true 
+    },
   });
 
   const forgotForm = useForm<z.infer<typeof forgotPasswordSchema>>({
@@ -124,7 +131,15 @@ const AuthForm = () => {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="you@example.com" {...field} />
+                  <Input 
+                    type="email" 
+                    placeholder="you@example.com" 
+                    {...field}
+                    className={cn(
+                      field.value && field.value.includes('@') ? "border-green-500" : "",
+                      field.value && !field.value.includes('@') ? "border-red-500" : ""
+                    )}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -137,7 +152,14 @@ const AuthForm = () => {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" {...field} />
+                  <Input 
+                    type="password" 
+                    {...field}
+                    className={cn(
+                      field.value && field.value.length >= 8 ? "border-green-500" : "",
+                      field.value && field.value.length < 8 ? "border-red-500" : ""
+                    )}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -175,7 +197,14 @@ const AuthForm = () => {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Your Name" {...field} />
+                      <Input 
+                        placeholder="Your Name" 
+                        {...field}
+                        className={cn(
+                          field.value && field.value.length >= 1 ? "border-green-500" : "",
+                          field.value && field.value.length < 1 ? "border-red-500" : ""
+                        )}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -188,7 +217,15 @@ const AuthForm = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="you@example.com" {...field} />
+                      <Input 
+                        type="email" 
+                        placeholder="you@example.com" 
+                        {...field}
+                        className={cn(
+                          field.value && field.value.includes('@') ? "border-green-500" : "",
+                          field.value && !field.value.includes('@') ? "border-red-500" : ""
+                        )}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -199,10 +236,21 @@ const AuthForm = () => {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input type="tel" placeholder="+1 234 567 8901" {...field} />
+                      <Input 
+                        type="tel" 
+                        placeholder="+1 234 567 8901" 
+                        {...field}
+                        className={cn(
+                          field.value && field.value.length >= 8 ? "border-green-500" : "",
+                          field.value && field.value.length < 8 ? "border-red-500" : ""
+                        )}
+                      />
                     </FormControl>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Required for account verification. You can update this later in your profile settings.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -214,7 +262,15 @@ const AuthForm = () => {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
+                      <Input 
+                        type="password" 
+                        placeholder="••••••••" 
+                        {...field}
+                        className={cn(
+                          field.value && field.value.length >= 8 ? "border-green-500" : "",
+                          field.value && field.value.length < 8 ? "border-red-500" : ""
+                        )}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

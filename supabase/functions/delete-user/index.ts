@@ -18,6 +18,10 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
     if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing environment variables:', { 
+        hasUrl: !!supabaseUrl, 
+        hasKey: !!supabaseServiceKey 
+      })
       throw new Error('Missing required environment variables')
     }
 
@@ -29,12 +33,13 @@ serve(async (req) => {
     try {
       requestBody = await req.json()
     } catch (e) {
+      console.error('Invalid request body:', e)
       throw new Error('Invalid request body')
     }
 
     // Get the authorization header
     const authHeader = req.headers.get('Authorization')
-    console.log('Auth header:', authHeader ? 'Present' : 'Missing')
+    console.log('Auth header present:', !!authHeader)
     
     if (!authHeader) {
       throw new Error('No authorization header')
@@ -42,18 +47,25 @@ serve(async (req) => {
 
     // Get the user's JWT
     const token = authHeader.replace('Bearer ', '')
-    console.log('Token extracted:', token ? 'Yes' : 'No')
+    if (!token) {
+      throw new Error('No token provided')
+    }
+    console.log('Token length:', token.length)
     
+    // Verify the token and get the user
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
-    console.log('User data:', user ? 'Found' : 'Not found', 'Error:', userError ? userError.message : 'None')
     
     if (userError) {
+      console.error('Auth error:', userError)
       throw new Error(`Auth error: ${userError.message}`)
     }
     
     if (!user) {
+      console.error('No user found for token')
       throw new Error('User not found')
     }
+
+    console.log('Authenticated user:', user.id)
 
     // Check if the user is an admin
     const { data: roleData, error: roleError } = await supabaseClient
@@ -62,20 +74,18 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .single()
     
-    console.log('Role data:', roleData, 'Error:', roleError ? roleError.message : 'None')
-    
     if (roleError) {
+      console.error('Role check error:', roleError)
       throw new Error(`Role check error: ${roleError.message}`)
     }
     
     if (!roleData || roleData.role !== 'admin') {
+      console.error('User is not an admin:', user.id)
       throw new Error('Unauthorized: Admin access required')
     }
 
     // Get the user ID to delete
     const { userId } = requestBody
-    console.log('User ID to delete:', userId)
-    
     if (!userId) {
       throw new Error('User ID is required')
     }
@@ -109,16 +119,19 @@ serve(async (req) => {
 
     // Delete quote items separately if they exist
     try {
-      const { error: quoteItemsError } = await supabaseClient
+      const { data: quotes, error: quoteItemsError } = await supabaseClient
         .from('quotes')
         .select('id')
         .eq('user_id', userId)
 
-      if (!quoteItemsError) {
+      if (!quoteItemsError && quotes && quotes.length > 0) {
+        const quoteIds = quotes.map(q => q.id)
+        console.log('Deleting quote items for quotes:', quoteIds)
+        
         const { error: deleteQuoteItemsError } = await supabaseClient
           .from('quote_items')
           .delete()
-          .eq('quote_id', userId)
+          .in('quote_id', quoteIds)
 
         if (deleteQuoteItemsError) {
           console.error('Error deleting quote items:', deleteQuoteItemsError)

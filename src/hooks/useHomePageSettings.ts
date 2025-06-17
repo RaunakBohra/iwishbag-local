@@ -10,7 +10,7 @@ export const useHomePageSettings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: homePageSettings, isLoading } = useQuery({
+  const { data: homePageSettings, isLoading, error } = useQuery({
     queryKey: ['home-page-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -40,6 +40,13 @@ export const useHomePageSettings = () => {
     social_instagram: '',
     social_linkedin: '',
     website_logo_url: '',
+    hero_banner_url: '',
+    hero_headline: '',
+    hero_subheadline: '',
+    hero_cta_text: '',
+    hero_cta_link: '',
+    how_it_works_steps: '',
+    value_props: '',
   });
 
   useEffect(() => {
@@ -59,6 +66,13 @@ export const useHomePageSettings = () => {
         social_instagram: homePageSettings.social_instagram || '',
         social_linkedin: homePageSettings.social_linkedin || '',
         website_logo_url: homePageSettings.website_logo_url || '',
+        hero_banner_url: homePageSettings.hero_banner_url || '',
+        hero_headline: homePageSettings.hero_headline || '',
+        hero_subheadline: homePageSettings.hero_subheadline || '',
+        hero_cta_text: homePageSettings.hero_cta_text || '',
+        hero_cta_link: homePageSettings.hero_cta_link || '',
+        how_it_works_steps: homePageSettings.how_it_works_steps || '',
+        value_props: homePageSettings.value_props || '',
       });
     }
   }, [homePageSettings]);
@@ -77,7 +91,7 @@ export const useHomePageSettings = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['home-page-settings']);
+      queryClient.invalidateQueries({ queryKey: ['home-page-settings'] });
       toast({ title: 'Settings updated', description: 'Home page settings updated successfully.' });
     },
     onError: (error: any) => {
@@ -95,7 +109,9 @@ export const useHomePageSettings = () => {
   };
 
   return {
-    isLoading,
+    settings: homePageSettings,
+    loading: isLoading,
+    error,
     formData,
     isUpdating: updateSettingsMutation.isPending,
     handleInputChange,
