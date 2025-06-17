@@ -20,7 +20,7 @@ export const useQuoteSteps = (quote: Quote | null) => {
         label: 'Requested',
         description: 'Quote request submitted',
         date: quote.created_at,
-        status: 'completed',
+        status: 'upcoming',
         icon: 'shopping-cart'
       },
       {
@@ -28,8 +28,7 @@ export const useQuoteSteps = (quote: Quote | null) => {
         label: 'Calculated',
         description: 'Quote has been calculated',
         date: quote.calculated_at,
-        status: quote.status === 'calculated' || quote.status === 'sent' || quote.status === 'accepted' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered' ? 'completed' : 
-               quote.status === 'cancelled' ? 'error' : 'upcoming',
+        status: 'upcoming',
         icon: 'calculator'
       },
       {
@@ -37,82 +36,105 @@ export const useQuoteSteps = (quote: Quote | null) => {
         label: 'Sent',
         description: 'Quote has been sent to customer',
         date: quote.sent_at,
-        status: quote.status === 'sent' || quote.status === 'accepted' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered' ? 'completed' : 
-               quote.status === 'cancelled' ? 'error' : 'upcoming',
+        status: 'upcoming',
         icon: 'send'
       }
     ];
 
-    // Add approval step if quote has been sent
     if (quote.status !== 'calculated' && quote.status !== 'cancelled') {
       steps.push({
         id: 'approved',
         label: 'Approved',
         description: 'Quote has been approved by customer',
         date: quote.approved_at,
-        status: quote.status === 'accepted' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered' ? 'completed' : 
-               quote.status === 'cancelled' ? 'error' : 'upcoming',
+        status: 'upcoming',
         icon: 'check-circle'
       });
     }
-
-    // Add payment step if quote has been approved
     if (quote.status === 'accepted' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered') {
       steps.push({
         id: 'paid',
         label: 'Paid',
         description: 'Payment has been received',
         date: quote.paid_at,
-        status: quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered' ? 'completed' : 'upcoming',
+        status: 'upcoming',
         icon: 'credit-card'
       });
     }
-
-    // Add order step if payment has been received
     if (quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered') {
       steps.push({
         id: 'ordered',
         label: 'Ordered',
         description: 'Order has been placed with seller',
         date: quote.ordered_at,
-        status: quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered' ? 'completed' : 'upcoming',
+        status: 'upcoming',
         icon: 'package'
       });
     }
-
-    // Add shipping step if order has been placed
     if (quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered') {
       steps.push({
         id: 'shipped',
         label: 'Shipped',
         description: 'Order has been shipped',
         date: quote.shipped_at,
-        status: quote.status === 'shipped' || quote.status === 'delivered' ? 'completed' : 'upcoming',
+        status: 'upcoming',
         icon: 'truck'
       });
     }
-
-    // Add delivery step if order has been shipped
     if (quote.status === 'shipped' || quote.status === 'delivered') {
       steps.push({
         id: 'delivered',
         label: 'Delivered',
         description: 'Order has been delivered',
         date: quote.delivered_at,
-        status: quote.status === 'delivered' ? 'completed' : 'upcoming',
+        status: 'upcoming',
         icon: 'home'
       });
     }
 
-    // Update current step based on last completed step
-    let foundCurrent = false;
-    for (let i = steps.length - 1; i >= 0; i--) {
-      if (steps[i].status === 'completed' && !foundCurrent) {
-        foundCurrent = true;
-        if (i < steps.length - 1) {
-          steps[i + 1].status = 'current';
-        }
+    // Find the last reached step
+    let lastReached = -1;
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      if (
+        (step.id === 'requested' && quote.status !== 'pending') ||
+        (step.id === 'calculated' && (quote.status === 'calculated' || quote.status === 'sent' || quote.status === 'accepted' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
+        (step.id === 'sent' && (quote.status === 'sent' || quote.status === 'accepted' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
+        (step.id === 'approved' && (quote.status === 'accepted' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
+        (step.id === 'paid' && (quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
+        (step.id === 'ordered' && (quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
+        (step.id === 'shipped' && (quote.status === 'shipped' || quote.status === 'delivered')) ||
+        (step.id === 'delivered' && quote.status === 'delivered')
+      ) {
+        lastReached = i;
       }
+    }
+
+    // Set statuses
+    for (let i = 0; i < steps.length; i++) {
+      if (i < lastReached) {
+        steps[i].status = 'completed';
+      } else if (i === lastReached) {
+        steps[i].status = 'current';
+      } else {
+        steps[i].status = 'upcoming';
+      }
+    }
+
+    // Handle error/cancelled
+    if (quote.status === 'cancelled' && steps.length > 0) {
+      if (steps[lastReached + 1]) {
+        steps[lastReached + 1].status = 'error';
+      }
+    }
+
+    // Special case: if quote.status is 'pending', highlight 'requested' as current
+    if (quote.status === 'pending' && steps.length > 0) {
+      steps[0].status = 'current';
+      for (let i = 1; i < steps.length; i++) {
+        steps[i].status = 'upcoming';
+      }
+      return steps;
     }
 
     return steps;

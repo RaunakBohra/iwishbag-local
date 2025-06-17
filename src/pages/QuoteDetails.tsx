@@ -13,6 +13,7 @@ import { useQuoteState } from "@/hooks/useQuoteState";
 import { isQuoteEditable } from "@/types/quote";
 import { QuoteStepper } from "@/components/dashboard/QuoteStepper";
 import { useQuoteSteps } from "@/hooks/useQuoteSteps";
+import { QuoteMainInfoCard } from '@/components/dashboard/QuoteMainInfoCard';
 
 type QuoteWithItems = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
@@ -86,6 +87,22 @@ const QuoteDetails = () => {
 
   return (
     <div className="container py-12 space-y-8">
+      <QuoteMainInfoCard
+        imageUrl={quote.quote_items[0]?.image_url}
+        productName={quote.quote_items[0]?.product_name || 'Product'}
+        quoteId={quote.display_id || quote.id.substring(0, 8)}
+        status={quote.status}
+        price={quote.final_total ? `${quote.final_total} ${quote.final_currency || 'USD'}` : '—'}
+        eta={quote.eta || '3-7 days'}
+        ctaLabel={quote.status === 'sent' ? 'Approve Quote' : 'Track Order'}
+        onCtaClick={() => {
+          if (quote.status === 'sent') approveQuote(quote.id);
+          // else: tracking logic (not implemented here)
+        }}
+        ctaDisabled={isUpdating || quote.status !== 'sent'}
+        hint={quote.status === 'sent' ? 'Review all details before payment.' : 'You can track your order status here.'}
+        disclaimer={undefined} // Replace with backend disclaimer if available
+      />
       <QuoteStepper steps={steps} className="mb-8" />
       
       {canViewBreakdown ? (
