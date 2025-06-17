@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CustomerRejectQuoteDialog } from "@/components/dashboard/CustomerRejectQuoteDialog";
 import { useQuoteState } from "@/hooks/useQuoteState";
 import { isQuoteEditable } from "@/types/quote";
+import { QuoteStepper } from "@/components/dashboard/QuoteStepper";
+import { useQuoteSteps } from "@/hooks/useQuoteSteps";
 
 type QuoteWithItems = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
@@ -45,6 +47,8 @@ const QuoteDetails = () => {
     },
     enabled: !!id && !!user,
   });
+
+  const steps = useQuoteSteps(quote);
 
   const handleConfirmRejection = (reasonId: string, details: string) => {
     if (!quote) return;
@@ -82,6 +86,8 @@ const QuoteDetails = () => {
 
   return (
     <div className="container py-12 space-y-8">
+      <QuoteStepper steps={steps} className="mb-8" />
+      
       {canViewBreakdown ? (
         <QuoteBreakdown 
           quote={quote} 
