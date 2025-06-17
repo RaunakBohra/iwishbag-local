@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useHomePageSettings } from "@/hooks/useHomePageSettings";
-import { HeroSection } from "@/components/home/HeroSection";
-import { HowItWorksSection } from "@/components/home/HowItWorksSection";
+import HeroSection from "@/components/home/HeroSection";
 import { ValuePropsSection } from "@/components/home/ValuePropsSection";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -21,7 +20,6 @@ export default function Index() {
       <div className="space-y-8">
         <Skeleton className="h-[600px] w-full" />
         <Skeleton className="h-[400px] w-full" />
-        <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
@@ -29,7 +27,6 @@ export default function Index() {
   return (
     <main>
       <HeroSection settings={settings} />
-      <HowItWorksSection settings={settings} />
       <ValuePropsSection settings={settings} />
     </main>
   );
