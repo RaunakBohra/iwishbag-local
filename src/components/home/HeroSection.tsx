@@ -37,7 +37,7 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
         {settings.hero_cta_text && settings.hero_cta_link ? (
           <Button 
             size="lg" 
-            className="text-lg px-8 py-6 bg-white text-black hover:bg-gray-100"
+            variant="destructive"
             onClick={() => window.location.href = settings.hero_cta_link}
           >
             {settings.hero_cta_text}
@@ -45,7 +45,7 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
         ) : (
           <Button 
             size="lg" 
-            className="text-lg px-8 py-6 bg-white text-black hover:bg-gray-100"
+            variant="destructive"
             onClick={() => window.location.href = '/auth'}
           >
             Get Started

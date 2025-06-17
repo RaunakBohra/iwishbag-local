@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
@@ -38,6 +37,7 @@ export const CheckoutButton = ({ selectedQuoteIds, totalAmount, disabled }: Chec
       disabled={disabled || selectedQuoteIds.length === 0}
       size="lg"
       className="min-w-fit"
+      variant="destructive"
     >
       <span className="flex items-center gap-2">
         Proceed to Checkout - 

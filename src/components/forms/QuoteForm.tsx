@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { GuestEmailField } from "@/components/forms/quote-form-fields/GuestEmailField";
@@ -66,13 +65,12 @@ const QuoteForm = () => {
         </div>
         
         <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => append()}
+          type="button"
+          variant="destructive"
+          onClick={() => append()}
         >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Another Item
+          <Plus className="h-4 w-4 mr-2" />
+          Add Another Item
         </Button>
 
         {!user && <GuestEmailField control={form.control} setValue={form.setValue} />}

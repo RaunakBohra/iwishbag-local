@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +27,7 @@ const CostEstimator = () => {
         .from("country_settings")
         .select("*")
         .eq("shipping_allowed", true)
+        .eq("purchase_allowed", true)
         .order("name");
       if (error) throw error;
       return data;
@@ -112,29 +112,7 @@ const CostEstimator = () => {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="itemPrice">Item Price (USD)</Label>
-          <Input
-            id="itemPrice"
-            type="number"
-            placeholder="Enter item price in USD"
-            value={itemPrice}
-            onChange={(e) => setItemPrice(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="itemWeight">Item Weight</Label>
-          <Input
-            id="itemWeight"
-            type="number"
-            placeholder="Enter weight"
-            value={itemWeight}
-            onChange={(e) => setItemWeight(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2">
+        <div className="space-y-2 order-1">
           <Label htmlFor="country">Destination Country</Label>
           <Select value={country} onValueChange={setCountry}>
             <SelectTrigger>
@@ -149,8 +127,27 @@ const CostEstimator = () => {
             </SelectContent>
           </Select>
         </div>
-
-        <div className="space-y-2">
+        <div className="space-y-2 order-2">
+          <Label htmlFor="itemPrice">Item Price (USD)</Label>
+          <Input
+            id="itemPrice"
+            type="number"
+            placeholder="Enter item price in USD"
+            value={itemPrice}
+            onChange={(e) => setItemPrice(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2 order-3">
+          <Label htmlFor="itemWeight">Item Weight</Label>
+          <Input
+            id="itemWeight"
+            type="number"
+            placeholder="Enter weight"
+            value={itemWeight}
+            onChange={(e) => setItemWeight(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2 order-4">
           <Label htmlFor="category">Product Category</Label>
           <Select value={customsCategory} onValueChange={setCustomsCategory}>
             <SelectTrigger>
@@ -178,36 +175,13 @@ const CostEstimator = () => {
       {estimate && (
         <Card>
           <CardHeader>
-            <CardTitle>Estimated Costs for {estimate.country}</CardTitle>
+            <CardTitle>Total Estimated Cost for {estimate.country}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Item Price</p>
-                <div className="font-semibold">{formatAmount(parseFloat(itemPrice))}</div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">International Shipping</p>
-                <div className="font-semibold">{formatAmount(estimate.interNationalShipping)}</div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Customs & Duties</p>
-                <div className="font-semibold">{formatAmount(estimate.customsAndECS)}</div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Payment Gateway Fee</p>
-                <div className="font-semibold">{formatAmount(estimate.paymentGatewayFee)}</div>
-              </div>
-            </div>
-            
-            <div className="border-t pt-4">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold">Total Estimated Cost</span>
-                <div className="text-right">
-                  <div className="font-bold text-lg">{formatAmount(estimate.finalTotal)}</div>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
+            <div className="flex flex-col items-center justify-center py-6">
+              <span className="text-lg font-semibold mb-2">Total Estimated Cost</span>
+              <div className="font-bold text-3xl text-primary mb-2">{formatAmount(estimate.finalTotal)}</div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
                 All amounts are displayed in your preferred currency
               </p>
             </div>

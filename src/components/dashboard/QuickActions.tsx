@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, MessageSquare, Bell, Calculator } from "lucide-react";
@@ -12,7 +11,7 @@ export const QuickActions = () => {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Button asChild className="h-20 flex-col">
+          <Button asChild variant="destructive" className="h-20 flex-col">
             <Link to="/quote">
               <Plus className="h-6 w-6 mb-2" />
               New Quote

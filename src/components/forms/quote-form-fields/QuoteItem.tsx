@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Control, UseFieldArrayRemove } from "react-hook-form";
@@ -21,12 +20,12 @@ const QuoteItem = ({ index, remove, control }: QuoteItemProps) => {
           {index > 0 && (
             <Button
               type="button"
-              variant="ghost"
+              variant="destructive"
               size="sm"
               onClick={() => remove(index)}
-              className="text-destructive hover:text-destructive"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
             </Button>
           )}
         </div>

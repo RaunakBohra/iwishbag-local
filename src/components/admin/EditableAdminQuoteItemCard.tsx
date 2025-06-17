@@ -1,4 +1,3 @@
-
 import { useMemo } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Control } from "react-hook-form";
 import { AdminQuoteFormValues } from "@/components/admin/admin-quote-form-validation";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Trash2 } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 
 type CountrySetting = Tables<'country_settings'>;
@@ -17,9 +16,10 @@ interface EditableAdminQuoteItemCardProps {
   index: number;
   control: Control<AdminQuoteFormValues>;
   allCountries?: CountrySetting[] | null;
+  onDelete: () => void;
 }
 
-export const EditableAdminQuoteItemCard = ({ index, control, allCountries }: EditableAdminQuoteItemCardProps) => {
+export const EditableAdminQuoteItemCard = ({ index, control, allCountries, onDelete }: EditableAdminQuoteItemCardProps) => {
   const handleNumberInputWheel = (e: React.WheelEvent) => {
     (e.currentTarget as HTMLInputElement).blur();
   };
@@ -210,6 +210,15 @@ export const EditableAdminQuoteItemCard = ({ index, control, allCountries }: Edi
             )}
           />
         </div>
+
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={onDelete}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete
+        </Button>
       </CardContent>
     </Card>
   );

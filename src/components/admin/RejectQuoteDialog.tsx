@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -85,8 +84,13 @@ export const RejectQuoteDialog = ({ isOpen, onOpenChange, onConfirm, isPending }
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button onClick={handleSubmit} disabled={!selectedReasonId || isPending}>
-                        {isPending ? "Rejecting..." : "Confirm Rejection"}
+                    <Button
+                        type="submit"
+                        variant="destructive"
+                        disabled={isLoading}
+                        onClick={handleSubmit}
+                    >
+                        {isLoading ? 'Rejecting...' : 'Confirm Rejection'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

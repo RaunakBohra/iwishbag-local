@@ -103,14 +103,14 @@ const Header = () => {
   };
 
   return (
-    <header className="border-b bg-background">
+    <header className="border-b border-black/10 bg-[#00c3cf]" style={{ color: '#052a2e' }}>
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link to="/" className="flex items-center">
             {homePageSettings?.website_logo_url ? (
               <img src={homePageSettings.website_logo_url} alt="Logo" className="h-10 w-auto object-contain" />
             ) : (
-              <span className="font-bold text-xl">{homePageSettings?.company_name || "WishBag"}</span>
+              <span className="font-bold text-xl text-[#052a2e]">{homePageSettings?.company_name || "WishBag"}</span>
             )}
           </Link>
         </div>
@@ -118,7 +118,7 @@ const Header = () => {
         <div className="flex items-center space-x-4">
           {user ? (
             <div className="flex items-center space-x-2 sm:space-x-4">
-              <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/cart')}>
+              <Button variant="ghost" size="icon" className="relative text-[#052a2e] hover:bg-black/10" onClick={() => navigate('/cart')}>
                 <ShoppingCart className="h-5 w-5" />
                 {approvedQuotesCount && approvedQuotesCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs">
@@ -127,7 +127,7 @@ const Header = () => {
                 )}
                 <span className="sr-only">Cart</span>
               </Button>
-              <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/notifications')}>
+              <Button variant="ghost" size="icon" className="relative text-[#052a2e] hover:bg-black/10" onClick={() => navigate('/notifications')}>
                 <Bell className="h-5 w-5" />
                 {unreadNotificationsCount && unreadNotificationsCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs">
@@ -136,7 +136,7 @@ const Header = () => {
                 )}
                 <span className="sr-only">Notifications</span>
               </Button>
-              <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/messages')}>
+              <Button variant="ghost" size="icon" className="relative text-[#052a2e] hover:bg-black/10" onClick={() => navigate('/messages')}>
                 <MessageSquare className="h-5 w-5" />
                  {unreadMessagesCount && unreadMessagesCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs">
@@ -148,7 +148,7 @@ const Header = () => {
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="px-2 sm:px-4 text-left">
+                  <Button variant="ghost" className="px-2 sm:px-4 text-left text-[#052a2e] hover:bg-black/10">
                     <span className="hidden sm:inline">Hello, </span>{getDisplayName()}
                   </Button>
                 </DropdownMenuTrigger>
@@ -177,10 +177,10 @@ const Header = () => {
             </div>
           ) : (
             <>
-              <Button asChild>
+              <Button asChild variant="secondary">
                 <Link to="/quote">Get Quote</Link>
               </Button>
-              <Button asChild variant="ghost">
+              <Button asChild variant="destructive">
                 <Link to="/auth">Sign In</Link>
               </Button>
             </>

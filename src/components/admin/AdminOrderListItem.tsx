@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -124,7 +123,7 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect }: AdminOrderLi
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => navigate(`/admin/orders/${order.id}`)}>
+                        <Button size="sm" variant="destructive" onClick={() => navigate(`/admin/orders/${order.id}`)}>
                             View Details
                         </Button>
                     </div>

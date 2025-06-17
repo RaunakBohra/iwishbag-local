@@ -29,7 +29,7 @@ export const ValuePropsSection = ({ settings }: ValuePropsSectionProps) => {
           {valueProps.map((prop, index) => (
             <div 
               key={index}
-              className="p-6 border rounded-lg hover:shadow-lg transition-shadow"
+              className="p-6 border border-[#b3eaff] rounded-lg hover:shadow-lg transition-shadow"
             >
               <h3 className="text-xl font-semibold mb-3">{prop.title}</h3>
               <p className="text-gray-600">{prop.description}</p>

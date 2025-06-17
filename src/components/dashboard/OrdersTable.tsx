@@ -1,4 +1,3 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
@@ -61,7 +60,7 @@ export const OrdersTable = ({ orders }: OrdersTableProps) => {
             </TableCell>
             <TableCell>
               <Button
-                variant="outline"
+                variant="destructive"
                 size="sm"
                 onClick={(e) => {
                     e.stopPropagation();

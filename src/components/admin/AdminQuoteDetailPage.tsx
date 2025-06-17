@@ -52,7 +52,7 @@ const AdminQuoteDetailPage = () => {
       <div className="container py-12 text-center">
         <h1 className="text-2xl font-bold mb-4">Quote Not Found</h1>
         <p className="text-muted-foreground">{error?.message || "The quote could not be found."}</p>
-        <Button variant="outline" onClick={() => navigate('/admin/quotes')} className="mt-4">
+        <Button variant="destructive" onClick={() => navigate('/admin/quotes')} className="mt-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Quotes
         </Button>
@@ -63,7 +63,7 @@ const AdminQuoteDetailPage = () => {
     <Form {...form}>
       <div className="container py-8 space-y-6">
           <div>
-              <Button variant="outline" size="sm" onClick={() => navigate(isOrder ? '/admin/orders' : '/admin/quotes')}>
+              <Button variant="destructive" size="sm" onClick={() => navigate(isOrder ? '/admin/orders' : '/admin/quotes')}>
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   {isOrder ? 'Back to All Orders' : 'Back to All Quotes'}
               </Button>
@@ -135,7 +135,7 @@ const AdminQuoteDetailPage = () => {
                   onClick={() => sendQuoteEmail(quote)}
                   disabled={(quote.status !== 'calculated' && quote.status !== 'sent') || isSendingEmail || isUpdating || !canRecalculate}
                   className="w-full"
-                  variant="secondary"
+                  variant="destructive"
                   type="button"
               >
                   <Send className="h-4 w-4 mr-2" />

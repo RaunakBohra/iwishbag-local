@@ -40,6 +40,7 @@ import { SystemSettings } from "@/components/admin/SystemSettings";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
 import { QueryProvider } from './providers/QueryProvider';
 import { HomePageSettings } from "@/components/admin/HomePageSettings";
+import ButtonPreview from "@/pages/ButtonPreview";
 
 const router = createBrowserRouter([
   {
@@ -199,6 +200,10 @@ const router = createBrowserRouter([
             element: <Profile />,
           },
         ],
+      },
+      {
+        path: "button-preview",
+        element: <ButtonPreview />,
       },
       {
         path: "*",

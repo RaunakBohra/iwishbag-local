@@ -1,4 +1,3 @@
-
 import AuthForm from "@/components/forms/AuthForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -12,9 +11,9 @@ const Auth = () => {
   }
 
   return (
-    <div className="container py-12 md:py-24 flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center">
       <div className="max-w-md w-full">
-         <Card>
+        <Card className="bg-white/60 shadow-xl rounded-xl backdrop-blur-md border border-white/30">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold">Welcome</CardTitle>
             <CardDescription>

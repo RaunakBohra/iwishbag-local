@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -126,7 +125,7 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => navigate(`/admin/quotes/${quote.id}`)}>
+                        <Button size="sm" variant="destructive" onClick={() => navigate(`/admin/quotes/${quote.id}`)}>
                             View Details
                         </Button>
                     </div>

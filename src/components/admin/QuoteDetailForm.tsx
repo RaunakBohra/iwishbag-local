@@ -7,6 +7,7 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/comp
 import { useAllCountries } from "@/hooks/useAllCountries";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Truck, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const QuoteDetailForm = ({ control, customsCategories }: {
   control: Control<any>;
@@ -271,6 +272,9 @@ export const QuoteDetailForm = ({ control, customsCategories }: {
             </FormItem>
           )}
         />
+      </div>
+      <div className="col-span-2">
+        {/* Removed Send to Customer button, as this action is handled by the parent component. */}
       </div>
     </div>
   );
