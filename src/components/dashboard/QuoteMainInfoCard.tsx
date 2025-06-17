@@ -99,7 +99,7 @@ export const QuoteMainInfoCard: React.FC<QuoteMainInfoCardProps> = ({
                 <div className="text-xs text-muted-foreground mt-2 text-center">
                   Not happy with this quote?{' '}
                   <button
-                    className="underline hover:text-primary transition-colors"
+                    className="underline"
                     onClick={onRejectClick}
                     type="button"
                   >

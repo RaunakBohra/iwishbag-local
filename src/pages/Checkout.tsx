@@ -357,6 +357,18 @@ export default function Checkout() {
               <p className="text-xs text-muted-foreground text-center">
                 By placing this order, you agree to our terms and conditions.
               </p>
+
+              {(quote.status === 'sent' || quote.status === 'accepted') && (
+                <div className="mt-2 text-center">
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline hover:text-destructive transition"
+                    onClick={openRejectDialog} // <-- replace with your actual handler
+                  >
+                    Not happy with this quote? <span className="font-medium text-destructive">Reject Quote</span>
+                  </button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
