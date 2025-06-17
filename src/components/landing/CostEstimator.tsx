@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Card,
@@ -115,12 +114,12 @@ const CostEstimator = () => {
   };
 
   return (
-    <section id="cost-estimator" className="py-16 bg-gray-50 dark:bg-gray-900/20">
-      <div className="container">
+    <section id="cost-estimator" className="py-10 md:py-16 bg-gray-50 dark:bg-gray-900/20">
+      <div className="container px-2 md:px-0">
         <Card className="max-w-2xl mx-auto">
           <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold">Cost Estimator</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-2xl md:text-3xl font-bold">Cost Estimator</CardTitle>
+            <CardDescription className="text-sm md:text-base">
               Get a quick estimate of your total cost, including shipping and fees.
             </CardDescription>
           </CardHeader>
@@ -152,6 +151,7 @@ const CostEstimator = () => {
                     <Input
                       id="item-price"
                       type="number"
+                      className="text-sm md:text-base"
                       placeholder={`e.g., 500 ${selectedCountryData.currency.toUpperCase()}`}
                       value={itemPrice}
                       onChange={(e) => setItemPrice(e.target.value)}
@@ -165,6 +165,7 @@ const CostEstimator = () => {
                     <Input
                       id="item-weight"
                       type="number"
+                      className="text-sm md:text-base"
                       placeholder={`e.g., 2.5 ${selectedCountryData.weight_unit}`}
                       value={itemWeight}
                       onChange={(e) => setItemWeight(e.target.value)}
@@ -179,7 +180,7 @@ const CostEstimator = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {categories?.map((category) => (
-                          <SelectItem key={category.name} value={category.name}>
+                          <SelectItem key={category.name} value={category.name} className="text-sm md:text-base">
                             {category.name}
                           </SelectItem>
                         ))}
@@ -192,7 +193,7 @@ const CostEstimator = () => {
 
             <Button 
               onClick={handleCalculate} 
-              className="w-full"
+              className="w-full py-3 md:py-4 text-base md:text-lg"
               disabled={!destinationCountry || !itemPrice || !itemWeight || !selectedCategory}
             >
               Calculate Estimate
@@ -202,8 +203,8 @@ const CostEstimator = () => {
             
             {estimatedCost !== null && (
               <div className="text-center pt-4">
-                <p className="text-lg font-semibold">Estimated Total Cost:</p>
-                <p className="text-4xl font-bold text-primary">
+                <p className="text-base md:text-lg font-semibold">Estimated Total Cost:</p>
+                <p className="text-2xl md:text-4xl font-bold text-primary">
                   {formatAmount(estimatedCost)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
