@@ -243,6 +243,7 @@ export type Database = {
           social_twitter: string | null
           support_email: string | null
           updated_at: string
+          website_logo_url: string | null
         }
         Insert: {
           business_hours?: string | null
@@ -261,6 +262,7 @@ export type Database = {
           social_twitter?: string | null
           support_email?: string | null
           updated_at?: string
+          website_logo_url?: string | null
         }
         Update: {
           business_hours?: string | null
@@ -279,6 +281,7 @@ export type Database = {
           social_twitter?: string | null
           support_email?: string | null
           updated_at?: string
+          website_logo_url?: string | null
         }
         Relationships: []
       }

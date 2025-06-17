@@ -1,4 +1,3 @@
-
 import { NavLink } from "react-router-dom";
 import { BarChart3, Users, FileText, Globe, Settings, Moon, Sun, Building, Package, TrendingDown, FileCog, Landmark, UserCheck } from "lucide-react";
 import {
@@ -67,7 +66,7 @@ const menuItems = [
     icon: Users,
   },
   {
-    title: "Footer Settings",
+    title: "Home Page Settings",
     url: "/admin/footer",
     icon: Building,
   },

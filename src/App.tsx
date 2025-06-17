@@ -30,7 +30,6 @@ import { UserRoles } from "@/components/admin/UserRoles";
 import { MessageCenter } from "@/components/messaging/MessageCenter";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { Cart } from "@/components/cart/Cart";
-import { FooterSettings } from "@/components/admin/FooterSettings";
 import AdminQuoteDetailPage from "@/components/admin/AdminQuoteDetailPage";
 import CostEstimatorPage from "@/pages/CostEstimator";
 import CustomerOrderDetailPage from "@/pages/CustomerOrderDetailPage";
@@ -40,6 +39,7 @@ import { BankAccountSettings } from "@/components/admin/BankAccountSettings";
 import { SystemSettings } from "@/components/admin/SystemSettings";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
 import { QueryProvider } from './providers/QueryProvider';
+import { HomePageSettings } from "@/components/admin/HomePageSettings";
 
 const router = createBrowserRouter([
   {
@@ -108,7 +108,11 @@ const router = createBrowserRouter([
           },
           {
             path: "footer",
-            element: <FooterSettings />,
+            element: <HomePageSettings />,
+          },
+          {
+            path: "home-page-settings",
+            element: <HomePageSettings />,
           },
           {
             path: "*",

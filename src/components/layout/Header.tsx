@@ -1,4 +1,3 @@
-
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogOut, Bell, MessageSquare, ShoppingCart, LayoutDashboard, User } from "lucide-react";
@@ -15,12 +14,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useAdminRole } from "@/hooks/useAdminRole";
+import { useHomePageSettings } from "@/hooks/useHomePageSettings";
 
 const Header = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
   const { data: hasAdminRole } = useAdminRole();
+  const { formData: homePageSettings } = useHomePageSettings();
 
   const { data: unreadMessagesCount } = useQuery({
     queryKey: ['unreadMessagesCount', user?.id, hasAdminRole],
@@ -106,7 +107,11 @@ const Header = () => {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link to="/" className="flex items-center">
-            <img src="https://res.cloudinary.com/dto2xew5c/image/upload/v1749986460/iWishBag-india-logo_zqv8gs.png" alt="WishBag Logo" className="h-10" />
+            {homePageSettings?.website_logo_url ? (
+              <img src={homePageSettings.website_logo_url} alt="Logo" className="h-10 w-auto object-contain" />
+            ) : (
+              <span className="font-bold text-xl">{homePageSettings?.company_name || "WishBag"}</span>
+            )}
           </Link>
         </div>
 
