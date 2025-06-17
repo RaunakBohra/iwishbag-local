@@ -146,9 +146,9 @@ const AuthForm = () => {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Signing In..." : "Sign In"}
           </Button>
-          <Button type="button" variant="outline" className="w-full" onClick={handleSignInWithGoogle}>
+         <Button type="button" variant="outline" className="w-full" onClick={handleSignInWithGoogle}>
             Sign in with Google
-          </Button>
+           </Button>
           <div className="flex justify-between items-center mt-2">
             <button type="button" className="text-sm text-primary underline" onClick={() => setShowForgot(true)}>
               Forgot Password?

@@ -177,11 +177,11 @@ const Header = () => {
             </div>
           ) : (
             <>
-              <Button asChild variant="ghost">
-                <Link to="/auth">Sign In</Link>
-              </Button>
               <Button asChild>
                 <Link to="/quote">Get Quote</Link>
+              </Button>
+              <Button asChild variant="ghost">
+                <Link to="/auth">Sign In</Link>
               </Button>
             </>
           )}

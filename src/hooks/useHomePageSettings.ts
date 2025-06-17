@@ -21,7 +21,6 @@ export const useHomePageSettings = () => {
         toast({ title: 'Error fetching settings', description: error.message, variant: 'destructive' });
         return null;
       }
-      console.log("homePageSettings", data);
       return data;
     },
   });
