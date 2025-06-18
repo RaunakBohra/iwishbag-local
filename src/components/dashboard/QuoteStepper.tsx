@@ -1,137 +1,134 @@
 import React from 'react';
-import { cn } from "@/lib/utils";
-import { Check, AlertCircle } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { format } from "date-fns";
-import { QuoteStep } from "@/hooks/useQuoteSteps";
-import { CheckCircle2, Circle } from "lucide-react";
-import { Icon } from "@/components/ui/icon";
+import { cn } from '@/lib/utils';
+import { Check, FileText, ShoppingCart, CreditCard, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+export type QuoteStep = 'review' | 'approve' | 'cart' | 'checkout';
 
 interface QuoteStepperProps {
-  steps: QuoteStep[];
+  currentStep: QuoteStep;
+  onStepClick?: (step: QuoteStep) => void;
   className?: string;
 }
 
-const GREEN_STEPS = ["approved", "paid", "delivered"];
+const steps: { id: QuoteStep; label: string; icon: React.ReactNode }[] = [
+  {
+    id: 'review',
+    label: 'Review Quote',
+    icon: <FileText className="w-5 h-5" />
+  },
+  {
+    id: 'approve',
+    label: 'Approve',
+    icon: <Check className="w-5 h-5" />
+  },
+  {
+    id: 'cart',
+    label: 'Add to Cart',
+    icon: <ShoppingCart className="w-5 h-5" />
+  },
+  {
+    id: 'checkout',
+    label: 'Checkout',
+    icon: <CreditCard className="w-5 h-5" />
+  }
+];
 
-export const QuoteStepper = ({ steps, className }: QuoteStepperProps) => {
+export function QuoteStepper({ currentStep, onStepClick, className }: QuoteStepperProps) {
+  const currentIndex = steps.findIndex(step => step.id === currentStep);
+
   return (
-    <>
-      <style>{`
-        @keyframes ripple {
-          0% { box-shadow: 0 0 0 0 var(--ripple-color, rgba(59,130,246,0.07)); }
-          70% { box-shadow: 0 0 0 12px rgba(59,130,246,0); }
-          100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
-        }
-        .ripple-animate { position: relative; }
-        .ripple-animate::before {
-          content: '';
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          width: 40px;
-          height: 40px;
-          transform: translate(-50%, -50%);
-          border-radius: 9999px;
-          background: var(--ripple-color, rgba(59,130,246,0.07));
-          z-index: 0;
-          animation: ripple 2s infinite;
-        }
-      `}</style>
-      <div className={cn("w-full flex justify-center py-4 sm:py-6", className)}>
-        <div className="flex flex-wrap justify-center">
-          {steps.map((step, index) => {
-            const isCurrent = step.status === "current";
-            const isCompleted = step.status === "completed";
-            const isUpcoming = step.status === "upcoming";
-            const isRejected = step.status === "error";
-            const isRejectedStep = step.label === "Rejected" || step.id === "rejected" || isRejected;
-
-            // Color logic
-            let borderColor = "border-gray-300";
-            let bgColor = "bg-gray-100";
-            let textColor = "text-gray-400";
-            let iconColor = "text-gray-400";
-            let rippleColor = "rgba(34,255,94,0.25)"; // default green for current
-
-            if (isCompleted) {
-              borderColor = "border-[#00c9db]";
-              bgColor = "bg-white";
-              textColor = "text-[#00c9db]";
-              iconColor = "text-[#00c9db]";
-            }
-            if (isCurrent) {
-              borderColor = "border-green-500";
-              bgColor = "bg-white";
-              textColor = "text-green-600 font-bold";
-              iconColor = "text-green-600";
-              rippleColor = "rgba(34,255,94,0.25)";
-            }
-            if (isRejectedStep && (isCurrent || isCompleted)) {
-              borderColor = "border-destructive";
-              bgColor = "bg-white";
-              textColor = "text-destructive font-bold";
-              iconColor = "text-destructive";
-              rippleColor = "rgba(239,68,68,0.18)";
-            }
-
-            return (
-              <TooltipProvider key={step.id}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex flex-col items-center gap-1 sm:gap-2 relative px-4 sm:px-6">
-                      <div className="relative">
-                        {index > 0 && (
-                          <div className="absolute -left-3 sm:-left-4 top-1/2 h-0.5 w-3 sm:w-4 -translate-y-1/2 bg-border" style={{background: 'linear-gradient(90deg, #e0f7fa 0%, #00c9db 100%)', opacity: 0.7}} />
-                        )}
-                        <div
-                          className={cn(
-                            "flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full border-2 transition-all duration-200",
-                            isCompleted && "border-[#00c9db] bg-white text-[#00c9db]",
-                            isCurrent && "border-green-500 bg-white text-green-600 font-bold ripple-animate",
-                            isUpcoming && "border-gray-300 bg-gray-100 text-gray-400",
-                            isRejectedStep && (isCurrent || isCompleted) && "border-destructive text-destructive bg-white font-bold ripple-animate"
-                          )}
-                          style={isCurrent ? { '--ripple-color': rippleColor } : {}}
-                        >
-                          {isCompleted ? (
-                            <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                          ) : isRejectedStep ? (
-                            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4" />
-                          ) : (
-                            <Icon name={step.icon} className="h-3 w-3 sm:h-4 sm:w-4" />
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-center gap-0.5 sm:gap-1">
-                        <span
-                          className={cn(
-                            "text-xs sm:text-sm font-medium transition-all duration-200",
-                            isCompleted && "text-[#00c9db]",
-                            isCurrent && "text-green-600 font-bold",
-                            isUpcoming && "text-gray-400",
-                            isRejectedStep && (isCurrent || isCompleted) && "text-destructive font-bold"
-                          )}
-                        >
-                          {isRejectedStep ? "Rejected" : step.label}
-                        </span>
-                        {step.date && (
-                          <span className="text-[10px] sm:text-xs text-muted-foreground">
-                            {new Date(step.date).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{step.description}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            );
-          })}
+    <div className={cn("w-full", className)}>
+      <div className="relative flex items-center justify-between">
+        {/* Progress bar */}
+        <div className="absolute left-0 top-1/2 h-1 w-full -translate-y-1/2 bg-gray-200">
+          <motion.div
+            className="absolute left-0 top-0 h-full bg-primary"
+            initial={{ width: 0 }}
+            animate={{ 
+              width: `${(currentIndex / (steps.length - 1)) * 100}%`,
+              transition: { duration: 0.5, ease: "easeInOut" }
+            }}
+          />
         </div>
+
+        {/* Steps */}
+        {steps.map((step, index) => {
+          const isActive = step.id === currentStep;
+          const isCompleted = index < currentIndex;
+          const isClickable = isCompleted || isActive;
+
+          return (
+            <motion.div
+              key={step.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="relative flex flex-col items-center"
+            >
+              {/* Step circle */}
+              <motion.button
+                onClick={() => isClickable && onStepClick?.(step.id)}
+                className={cn(
+                  "relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300",
+                  isActive && "border-primary bg-primary text-white scale-110",
+                  isCompleted && "border-primary bg-primary text-white",
+                  !isActive && !isCompleted && "border-gray-300 bg-white text-gray-400",
+                  isClickable && "cursor-pointer hover:scale-105",
+                  !isClickable && "cursor-not-allowed"
+                )}
+                whileHover={isClickable ? { scale: 1.05 } : {}}
+                whileTap={isClickable ? { scale: 0.95 } : {}}
+              >
+                {isCompleted ? (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                  >
+                    <Check className="w-5 h-5" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                  >
+                    {step.icon}
+                  </motion.div>
+                )}
+              </motion.button>
+
+              {/* Step label */}
+              <motion.span
+                className={cn(
+                  "mt-2 text-sm font-medium transition-colors duration-300",
+                  isActive && "text-primary",
+                  isCompleted && "text-primary",
+                  !isActive && !isCompleted && "text-gray-500"
+                )}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: index * 0.1 + 0.2 }}
+              >
+                {step.label}
+              </motion.span>
+
+              {/* Connecting arrow */}
+              {index < steps.length - 1 && (
+                <motion.div
+                  className="absolute right-0 top-5 -mr-4 text-gray-300"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 + 0.3 }}
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </motion.div>
+              )}
+            </motion.div>
+          );
+        })}
       </div>
-    </>
+    </div>
   );
-}; 
+} 

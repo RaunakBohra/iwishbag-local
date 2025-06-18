@@ -7,7 +7,7 @@ interface QuoteBreakdownApprovalProps {
   isProcessing: boolean;
   quoteId: string;
   onApprove: (id: string) => void;
-  onReject: () => void;
+  onReject: (reason: string) => void;
 }
 
 export const QuoteBreakdownApproval: React.FC<QuoteBreakdownApprovalProps> = ({
@@ -30,7 +30,7 @@ export const QuoteBreakdownApproval: React.FC<QuoteBreakdownApprovalProps> = ({
       </Button>
       <Button
         variant="outline"
-        onClick={onReject}
+        onClick={() => onReject("")}
         disabled={isProcessing}
         className="flex-1"
       >

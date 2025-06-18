@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { QuoteStepper } from "@/components/dashboard/QuoteStepper";
 import { QuoteBreakdown } from "@/components/dashboard/QuoteBreakdown";
 import { QuoteMessaging } from "@/components/messaging/QuoteMessaging";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,8 +75,6 @@ export const QuoteDetails: React.FC = () => {
 
   return (
     <div className="container py-12 space-y-8">
-      <QuoteStepper steps={steps} />
-      
       {quote.status === 'requested' ? (
         <>
           <Card>
@@ -124,14 +121,14 @@ export const QuoteDetails: React.FC = () => {
         />
       )}
 
-      <QuoteMessaging quoteId={quote.id} quoteUserId={quote.user_id} />
-
       <CustomerRejectQuoteDialog
         isOpen={isRejectDialogOpen}
         onOpenChange={setRejectDialogOpen}
         onConfirm={handleConfirmRejection}
         isPending={isUpdating}
       />
+
+      <QuoteMessaging quoteId={id || ''} quoteUserId={quote.user_id} />
     </div>
   );
 };
