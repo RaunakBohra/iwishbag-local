@@ -786,52 +786,73 @@ export const Cart = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Checkout Card */}
-          {getSelectedCartItems().length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Checkout Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Selected Items:</span>
-                    <span>{getSelectedCartItems().length}</span>
+          {/* Checkout Card - Always Show */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Checkout Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {getSelectedCartItems().length > 0 ? (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Selected Items:</span>
+                      <span>{getSelectedCartItems().length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Subtotal:</span>
+                      <span>{formattedSelectedTotal}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Weight:</span>
+                      <span>{selectedItemsWeight.toFixed(2)}kg</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
+                  <Separator />
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total:</span>
                     <span>{formattedSelectedTotal}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Weight:</span>
-                    <span>{selectedItemsWeight.toFixed(2)}kg</span>
+                  <Button 
+                    onClick={handleCheckout} 
+                    disabled={isCheckingOut}
+                    className="w-full"
+                  >
+                    {isCheckingOut ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Proceed to Checkout
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="text-center py-6">
+                    <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <h3 className="font-medium mb-2">No items selected</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Select items from your cart to see the checkout summary
+                    </p>
+                    {hasCartItems && (
+                      <Button 
+                        variant="outline" 
+                        onClick={() => handleSelectAllCart()}
+                        className="w-full"
+                      >
+                        Select All Items
+                      </Button>
+                    )}
                   </div>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-bold text-lg">
-                  <span>Total:</span>
-                  <span>{formattedSelectedTotal}</span>
-                </div>
-                <Button 
-                  onClick={handleCheckout} 
-                  disabled={isCheckingOut}
-                  className="w-full"
-                >
-                  {isCheckingOut ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      Proceed to Checkout
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
