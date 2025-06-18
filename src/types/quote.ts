@@ -121,7 +121,7 @@ export const updateQuoteState = (
   }
 
   return newState;
-};
+}; 
 
 export type QuoteItem = {
   id: string;

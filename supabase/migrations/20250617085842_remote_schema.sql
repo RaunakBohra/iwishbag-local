@@ -553,145 +553,145 @@ DO $$
 BEGIN
     -- Create primary key indexes
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'audit_logs' AND indexname = 'audit_logs_pkey') THEN
-        CREATE UNIQUE INDEX audit_logs_pkey ON public.audit_logs USING btree (id);
+CREATE UNIQUE INDEX audit_logs_pkey ON public.audit_logs USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'bank_account_details' AND indexname = 'bank_account_details_pkey') THEN
-        CREATE UNIQUE INDEX bank_account_details_pkey ON public.bank_account_details USING btree (id);
+CREATE UNIQUE INDEX bank_account_details_pkey ON public.bank_account_details USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'country_settings' AND indexname = 'country_settings_pkey') THEN
-        CREATE UNIQUE INDEX country_settings_pkey ON public.country_settings USING btree (code);
+CREATE UNIQUE INDEX country_settings_pkey ON public.country_settings USING btree (code);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'customs_categories' AND indexname = 'customs_categories_pkey') THEN
-        CREATE UNIQUE INDEX customs_categories_pkey ON public.customs_categories USING btree (name);
+CREATE UNIQUE INDEX customs_categories_pkey ON public.customs_categories USING btree (name);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'email_templates' AND indexname = 'email_templates_pkey') THEN
-        CREATE UNIQUE INDEX email_templates_pkey ON public.email_templates USING btree (id);
+CREATE UNIQUE INDEX email_templates_pkey ON public.email_templates USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'footer_settings' AND indexname = 'footer_settings_pkey') THEN
-        CREATE UNIQUE INDEX footer_settings_pkey ON public.footer_settings USING btree (id);
+CREATE UNIQUE INDEX footer_settings_pkey ON public.footer_settings USING btree (id);
     END IF;
 
     -- Create other indexes
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'audit_logs' AND indexname = 'idx_audit_logs_table_record') THEN
-        CREATE INDEX idx_audit_logs_table_record ON public.audit_logs USING btree (table_name, record_id);
+CREATE INDEX idx_audit_logs_table_record ON public.audit_logs USING btree (table_name, record_id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'order_tracking_events' AND indexname = 'idx_order_tracking_events_created_at') THEN
-        CREATE INDEX idx_order_tracking_events_created_at ON public.order_tracking_events USING btree (created_at);
+CREATE INDEX idx_order_tracking_events_created_at ON public.order_tracking_events USING btree (created_at);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'order_tracking_events' AND indexname = 'idx_order_tracking_events_quote_id') THEN
-        CREATE INDEX idx_order_tracking_events_quote_id ON public.order_tracking_events USING btree (quote_id);
+CREATE INDEX idx_order_tracking_events_quote_id ON public.order_tracking_events USING btree (quote_id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'quotes' AND indexname = 'idx_quotes_approval_status') THEN
-        CREATE INDEX idx_quotes_approval_status ON public.quotes USING btree (approval_status);
+CREATE INDEX idx_quotes_approval_status ON public.quotes USING btree (approval_status);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'referrals' AND indexname = 'idx_referrals_referee_id') THEN
-        CREATE INDEX idx_referrals_referee_id ON public.referrals USING btree (referee_id);
+CREATE INDEX idx_referrals_referee_id ON public.referrals USING btree (referee_id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'referrals' AND indexname = 'idx_referrals_referrer_id') THEN
-        CREATE INDEX idx_referrals_referrer_id ON public.referrals USING btree (referrer_id);
+CREATE INDEX idx_referrals_referrer_id ON public.referrals USING btree (referrer_id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'user_memberships' AND indexname = 'idx_user_memberships_user_id') THEN
-        CREATE INDEX idx_user_memberships_user_id ON public.user_memberships USING btree (user_id);
+CREATE INDEX idx_user_memberships_user_id ON public.user_memberships USING btree (user_id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'user_wishlist_items' AND indexname = 'idx_user_wishlist_items_user_id') THEN
-        CREATE INDEX idx_user_wishlist_items_user_id ON public.user_wishlist_items USING btree (user_id);
+CREATE INDEX idx_user_wishlist_items_user_id ON public.user_wishlist_items USING btree (user_id);
     END IF;
 
     -- Create remaining primary key indexes
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'membership_tiers' AND indexname = 'membership_tiers_pkey') THEN
-        CREATE UNIQUE INDEX membership_tiers_pkey ON public.membership_tiers USING btree (id);
+CREATE UNIQUE INDEX membership_tiers_pkey ON public.membership_tiers USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'messages' AND indexname = 'messages_pkey') THEN
-        CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id);
+CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'notification_preferences' AND indexname = 'notification_preferences_pkey') THEN
-        CREATE UNIQUE INDEX notification_preferences_pkey ON public.notification_preferences USING btree (id);
+CREATE UNIQUE INDEX notification_preferences_pkey ON public.notification_preferences USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'notifications' AND indexname = 'notifications_pkey') THEN
-        CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id);
+CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'order_tracking_events' AND indexname = 'order_tracking_events_pkey') THEN
-        CREATE UNIQUE INDEX order_tracking_events_pkey ON public.order_tracking_events USING btree (id);
+CREATE UNIQUE INDEX order_tracking_events_pkey ON public.order_tracking_events USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'order_workflow_steps' AND indexname = 'order_workflow_steps_pkey') THEN
-        CREATE UNIQUE INDEX order_workflow_steps_pkey ON public.order_workflow_steps USING btree (id);
+CREATE UNIQUE INDEX order_workflow_steps_pkey ON public.order_workflow_steps USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'profiles' AND indexname = 'profiles_referral_code_key') THEN
-        CREATE UNIQUE INDEX profiles_referral_code_key ON public.profiles USING btree (referral_code);
+CREATE UNIQUE INDEX profiles_referral_code_key ON public.profiles USING btree (referral_code);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'quote_items' AND indexname = 'quote_items_pkey') THEN
-        CREATE UNIQUE INDEX quote_items_pkey ON public.quote_items USING btree (id);
+CREATE UNIQUE INDEX quote_items_pkey ON public.quote_items USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'quote_templates' AND indexname = 'quote_templates_pkey') THEN
-        CREATE UNIQUE INDEX quote_templates_pkey ON public.quote_templates USING btree (id);
+CREATE UNIQUE INDEX quote_templates_pkey ON public.quote_templates USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'quotes' AND indexname = 'quotes_display_id_key') THEN
-        CREATE UNIQUE INDEX quotes_display_id_key ON public.quotes USING btree (display_id);
+CREATE UNIQUE INDEX quotes_display_id_key ON public.quotes USING btree (display_id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'quotes' AND indexname = 'quotes_order_display_id_key') THEN
-        CREATE UNIQUE INDEX quotes_order_display_id_key ON public.quotes USING btree (order_display_id);
+CREATE UNIQUE INDEX quotes_order_display_id_key ON public.quotes USING btree (order_display_id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'quotes' AND indexname = 'quotes_pkey') THEN
-        CREATE UNIQUE INDEX quotes_pkey ON public.quotes USING btree (id);
+CREATE UNIQUE INDEX quotes_pkey ON public.quotes USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'referral_rewards' AND indexname = 'referral_rewards_pkey') THEN
-        CREATE UNIQUE INDEX referral_rewards_pkey ON public.referral_rewards USING btree (id);
+CREATE UNIQUE INDEX referral_rewards_pkey ON public.referral_rewards USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'referrals' AND indexname = 'referrals_pkey') THEN
-        CREATE UNIQUE INDEX referrals_pkey ON public.referrals USING btree (id);
+CREATE UNIQUE INDEX referrals_pkey ON public.referrals USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'referrals' AND indexname = 'referrals_referral_code_key') THEN
-        CREATE UNIQUE INDEX referrals_referral_code_key ON public.referrals USING btree (referral_code);
+CREATE UNIQUE INDEX referrals_referral_code_key ON public.referrals USING btree (referral_code);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'rejection_reasons' AND indexname = 'rejection_reasons_pkey') THEN
-        CREATE UNIQUE INDEX rejection_reasons_pkey ON public.rejection_reasons USING btree (id);
+CREATE UNIQUE INDEX rejection_reasons_pkey ON public.rejection_reasons USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'system_settings' AND indexname = 'system_settings_pkey') THEN
-        CREATE UNIQUE INDEX system_settings_pkey ON public.system_settings USING btree (id);
+CREATE UNIQUE INDEX system_settings_pkey ON public.system_settings USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'system_settings' AND indexname = 'system_settings_setting_key_key') THEN
-        CREATE UNIQUE INDEX system_settings_setting_key_key ON public.system_settings USING btree (setting_key);
+CREATE UNIQUE INDEX system_settings_setting_key_key ON public.system_settings USING btree (setting_key);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'tracking_templates' AND indexname = 'tracking_templates_pkey') THEN
-        CREATE UNIQUE INDEX tracking_templates_pkey ON public.tracking_templates USING btree (id);
+CREATE UNIQUE INDEX tracking_templates_pkey ON public.tracking_templates USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'user_memberships' AND indexname = 'user_memberships_pkey') THEN
-        CREATE UNIQUE INDEX user_memberships_pkey ON public.user_memberships USING btree (id);
+CREATE UNIQUE INDEX user_memberships_pkey ON public.user_memberships USING btree (id);
     END IF;
 
     IF NOT EXISTS (SELECT FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'user_wishlist_items' AND indexname = 'user_wishlist_items_pkey') THEN
-        CREATE UNIQUE INDEX user_wishlist_items_pkey ON public.user_wishlist_items USING btree (id);
+CREATE UNIQUE INDEX user_wishlist_items_pkey ON public.user_wishlist_items USING btree (id);
     END IF;
 END $$;
 

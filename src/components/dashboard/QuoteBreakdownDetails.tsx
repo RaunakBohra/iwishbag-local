@@ -173,7 +173,7 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                 <DialogTrigger asChild>
                   <button className="relative flex items-center justify-center w-6 h-6 p-0" style={{ minWidth: 24, minHeight: 24 }}>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      {/* Multi-ring ripple effect centered on the icon */}
+                    {/* Multi-ring ripple effect centered on the icon */}
                       <span className="absolute rounded-full border border-green-400" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s infinite' }} />
                       <span className="absolute rounded-full border border-green-400" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s 0.8s infinite' }} />
                       <span className="absolute rounded-full border border-green-400" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s 1.6s infinite' }} />

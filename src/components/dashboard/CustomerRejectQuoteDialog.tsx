@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -39,6 +38,7 @@ export const CustomerRejectQuoteDialog: React.FC<RejectQuoteDialogProps> = ({
 }) => {
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [details, setDetails] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: rejectionReasons, isLoading: isLoadingReasons } = useQuery({
     queryKey: ['rejection_reasons'],
@@ -52,14 +52,32 @@ export const CustomerRejectQuoteDialog: React.FC<RejectQuoteDialogProps> = ({
     },
   });
 
-  const handleConfirm = () => {
-    if (selectedReason) {
-      onConfirm(selectedReason, details);
+  const handleConfirm = async () => {
+    if (selectedReason && !isSubmitting && !isPending) {
+      setIsSubmitting(true);
+      try {
+        await onConfirm(selectedReason, details);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedReason('');
+      setDetails('');
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!isSubmitting && !isPending) {
+        onOpenChange(open);
+      }
+    }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Reject Quote</DialogTitle>
@@ -74,7 +92,7 @@ export const CustomerRejectQuoteDialog: React.FC<RejectQuoteDialogProps> = ({
             <Select
               value={selectedReason}
               onValueChange={setSelectedReason}
-              disabled={isLoadingReasons}
+              disabled={isLoadingReasons || isPending || isSubmitting}
             >
               <SelectTrigger id="rejection-reason">
                 <SelectValue placeholder="Select a reason..." />
@@ -95,18 +113,23 @@ export const CustomerRejectQuoteDialog: React.FC<RejectQuoteDialogProps> = ({
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               placeholder="Provide more information..."
+              disabled={isPending || isSubmitting}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            disabled={isPending || isSubmitting}
+          >
             Cancel
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={!selectedReason || isPending}
+            disabled={!selectedReason || isPending || isSubmitting}
           >
-            {isPending ? 'Submitting...' : 'Confirm Rejection'}
+            {isPending || isSubmitting ? 'Submitting...' : 'Confirm Rejection'}
           </Button>
         </DialogFooter>
       </DialogContent>

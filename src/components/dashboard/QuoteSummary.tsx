@@ -83,7 +83,7 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
               Approve & Add to Cart
             </Button>
           )}
-          {onReject && (
+          {onReject && status === 'pending' && (
             <Button
               variant="outline"
               onClick={onReject}
@@ -120,7 +120,7 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
               Approve
             </Button>
           )}
-          {onReject && (
+          {onReject && status === 'pending' && (
             <Button
               size="sm"
               variant="outline"
