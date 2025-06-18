@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, Package, ArrowRight, Save, Search, SortAsc, SortDesc, Trash2 } from "lucide-react";
+import { ShoppingCart, Package, ArrowRight, Save, Search, SortAsc, SortDesc, Trash2, X } from "lucide-react";
 import { useCartMutations } from "@/hooks/useCartMutations";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
 import { Link } from "react-router-dom";
@@ -25,6 +25,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Info } from "lucide-react";
 import { Database } from "@/lib/database.types";
 import { Tables } from '@/integrations/supabase/types';
+import { QuantityAdjuster } from "./QuantityAdjuster";
 
 type SortOption = "date-desc" | "date-asc" | "price-desc" | "price-asc" | "name-asc" | "name-desc";
 type ViewMode = "list";
@@ -51,7 +52,7 @@ interface CartItemProps {
   viewMode?: 'list' | 'grid';
 }
 
-export const CartDrawer = () => {
+export function CartDrawer() {
   const { user } = useAuth();
   const { removeFromCart, moveToCart } = useCartMutations();
   const { formatAmount } = useUserCurrency();
@@ -63,6 +64,7 @@ export const CartDrawer = () => {
   const [showBulkMoveConfirm, setShowBulkMoveConfirm] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [viewMode] = useState<ViewMode>("list");
   const { toast } = useToast();
@@ -72,6 +74,9 @@ export const CartDrawer = () => {
     memberDiscount: 0,
     seasonalDiscount: 0,
   });
+  const queryClient = useQueryClient();
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [itemsToRemove, setItemsToRemove] = useState<string[]>([]);
 
   const { data: approvedQuotes, isLoading } = useQuery({
     queryKey: ['approved-quotes', user?.id],
@@ -172,6 +177,20 @@ export const CartDrawer = () => {
     enabled: !!user,
   });
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery("");
+    setDebouncedSearchQuery("");
+  }, []);
+
   const handleRemoveFromCart = (quoteId: string) => {
     removeFromCart(quoteId);
     setSelectedItems(prev => {
@@ -187,6 +206,19 @@ export const CartDrawer = () => {
     if (approvedQuotes && approvedQuotes.length <= 1) {
       setActiveTab("saved");
     }
+  };
+
+  const handleSaveForLater = (quoteId: string) => {
+    removeFromCart(quoteId);
+    setSelectedItems(prev => {
+      const next = new Set(prev);
+      next.delete(quoteId);
+      return next;
+    });
+    toast({
+      title: "Item saved",
+      description: "The item has been saved for later.",
+    });
   };
 
   const handleSelectItem = (quoteId: string) => {
@@ -292,6 +324,44 @@ export const CartDrawer = () => {
     });
   };
 
+  const handleQuantityChange = async (quoteId: string, itemId: string, newQuantity: number) => {
+    try {
+      const { error } = await supabase
+        .from('quote_items')
+        .update({ quantity: newQuantity })
+        .eq('id', itemId)
+        .eq('quote_id', quoteId);
+
+      if (error) throw error;
+
+      // Refresh the quotes data
+      queryClient.invalidateQueries({ queryKey: ['approved-quotes', user?.id] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update quantity. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemoveItems = async () => {
+    try {
+      for (const id of itemsToRemove) {
+        await removeFromCart(id);
+      }
+      setSelectedItems(new Set());
+      setItemsToRemove([]);
+      setIsConfirmDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove items. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const renderCartContent = () => {
     if (isLoading) {
       return (
@@ -330,23 +400,12 @@ export const CartDrawer = () => {
                 Select All
               </label>
             </div>
-            <div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleBulkSaveForLater}
-                className="flex items-center gap-2"
-              >
-                <Save className="h-4 w-4" />
-                Save {selectedItems.size} for Later
-              </Button>
-            </div>
           </div>
         </div>
 
         <ScrollArea className="flex-1 py-4">
           {approvedQuotes.map((quote) => (
-            <div key={quote.id} className="flex items-start gap-2">
+            <div key={quote.id} className="flex items-start gap-2 p-2">
               <Checkbox
                 id={`select-${quote.id}`}
                 checked={selectedItems.has(quote.id)}
@@ -355,12 +414,46 @@ export const CartDrawer = () => {
               />
               <div className="flex-1">
                 {quote.quote_items?.map((item) => (
-                  <CartItem
-                    key={item.id}
-                    item={item}
-                    quoteId={quote.id}
-                    onRemove={handleRemoveFromCart}
-                  />
+                  <div key={item.id} className="flex items-start justify-between p-2 border rounded-lg mb-2">
+                    <div className="flex-1">
+                      <h4 className="font-medium">{item.product_name}</h4>
+                      <div className="flex items-center gap-4 mt-2">
+                        <QuantityAdjuster
+                          initialQuantity={item.quantity}
+                          onQuantityChange={(newQuantity) => {
+                            handleQuantityChange(quote.id, item.id, newQuantity);
+                          }}
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          Est. Delivery: {quote.estimated_delivery_date ? new Date(quote.estimated_delivery_date).toLocaleDateString() : 'TBD'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleSaveForLater(quote.id)}
+                          className="h-8 w-8"
+                        >
+                          <Save className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setItemsToRemove([quote.id]);
+                            setIsConfirmDialogOpen(true);
+                          }}
+                          className="h-8 w-8"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold">{formatAmount(item.item_price)}</div>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -368,8 +461,6 @@ export const CartDrawer = () => {
         </ScrollArea>
         
         <div className="border-t p-4 space-y-4">
-          {renderAnalytics()}
-          
           <div className="flex flex-col gap-2">
             <Button asChild className="w-full">
               <Link to="/cart" onClick={() => setIsOpen(false)}>
@@ -397,68 +488,45 @@ export const CartDrawer = () => {
   };
 
   const renderSavedContent = () => {
-    if (!savedQuotes?.length) {
+    if (!savedQuotes || savedQuotes.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center p-8 text-center">
-          <Package className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No saved items</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Items you save for later will appear here
-          </p>
+        <div className="flex flex-col items-center justify-center h-32 space-y-4">
+          <Package className="h-8 w-8 text-muted-foreground" />
+          <p className="text-muted-foreground">No saved items</p>
         </div>
       );
     }
 
-    const filteredQuotes = savedQuotes.filter(quote => {
-      const searchLower = searchQuery.toLowerCase();
-      return (
-        quote.product_name?.toLowerCase().includes(searchLower) ||
-        quote.quote_items?.some(item => 
-          item.product_name?.toLowerCase().includes(searchLower)
-        )
-      );
-    });
-
-    const sortedQuotes = [...filteredQuotes].sort((a, b) => {
-      switch (sortBy) {
-        case "date-desc":
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case "date-asc":
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case "price-desc":
-          return (b.item_price || 0) - (a.item_price || 0);
-        case "price-asc":
-          return (a.item_price || 0) - (b.item_price || 0);
-        case "name-asc":
-          return (a.product_name || "").localeCompare(b.product_name || "");
-        case "name-desc":
-          return (b.product_name || "").localeCompare(a.product_name || "");
-        default:
-          return 0;
-      }
-    });
-
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col h-[calc(100vh-8rem)]">
+        <div className="p-4 border-b space-y-4">
           <div className="flex items-center gap-2">
-            <Checkbox
-              id="select-all-saved"
-              checked={selectedSavedItems.size === savedQuotes.length}
-              onCheckedChange={handleSelectAllSaved}
-            />
-            <label htmlFor="select-all-saved" className="text-sm font-medium">
-              Select All
-            </label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search saved items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={clearSearch}
+                  className="absolute right-2 top-1 h-6 w-6"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="date-desc">Newest First</SelectItem>
-                <SelectItem value="date-asc">Oldest First</SelectItem>
+                <SelectItem value="date-desc">Date: Newest</SelectItem>
+                <SelectItem value="date-asc">Date: Oldest</SelectItem>
                 <SelectItem value="price-desc">Price: High to Low</SelectItem>
                 <SelectItem value="price-asc">Price: Low to High</SelectItem>
                 <SelectItem value="name-asc">Name: A to Z</SelectItem>
@@ -468,52 +536,79 @@ export const CartDrawer = () => {
           </div>
         </div>
 
-        <div className="space-y-4">
-          {sortedQuotes.map((quote) => {
-            const firstItem = quote.quote_items?.[0];
-            if (!firstItem) return null;
-
-            return (
-              <CartItem
-                key={quote.id}
-                item={firstItem}
-                quoteId={quote.id}
-                selected={selectedSavedItems.has(quote.id)}
-                onSelect={() => handleSelectSavedItem(quote.id)}
-                onRemove={handleRemoveFromCart}
-                onMoveToCart={() => handleMoveToCart(quote.id)}
-                onSaveForLater={() => {}}
-                viewMode={viewMode}
-              />
-            );
-          })}
-        </div>
-
-        {selectedSavedItems.size > 0 && (
-          <div className="sticky bottom-0 bg-background border-t p-4">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-sm text-muted-foreground">
-                {selectedSavedItems.size} items selected
-              </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowBulkMoveConfirm(true)}
-                >
-                  Move to Cart
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setShowBulkDeleteConfirm(true)}
-                >
-                  Delete
-                </Button>
+        <ScrollArea className="h-[calc(100vh-16rem)]">
+          {savedQuotes
+            .filter(quote => 
+              (typeof quote.product_name === 'string' && quote.product_name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())) ||
+              quote.quote_items?.some(item => 
+                typeof item.product_name === 'string' && item.product_name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+              )
+            )
+            .sort((a, b) => {
+              switch (sortBy) {
+                case 'date-desc':
+                  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                case 'date-asc':
+                  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                case 'price-desc':
+                  return (b.quote_items?.[0]?.item_price || 0) - (a.quote_items?.[0]?.item_price || 0);
+                case 'price-asc':
+                  return (a.quote_items?.[0]?.item_price || 0) - (b.quote_items?.[0]?.item_price || 0);
+                case 'name-asc':
+                  return (a.product_name || '').localeCompare(b.product_name || '');
+                case 'name-desc':
+                  return (b.product_name || '').localeCompare(a.product_name || '');
+                default:
+                  return 0;
+              }
+            })
+            .map((quote) => (
+              <div key={quote.id} className="flex items-start gap-2 p-2">
+                <Checkbox
+                  id={`select-saved-${quote.id}`}
+                  checked={selectedSavedItems.has(quote.id)}
+                  onCheckedChange={() => handleSelectSavedItem(quote.id)}
+                  className="mt-4"
+                />
+                <div className="flex-1">
+                  {quote.quote_items?.map((item) => (
+                    <div key={item.id} className="flex items-start justify-between p-2 border rounded-lg mb-2">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.product_name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Quantity: {item.quantity}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Est. Delivery: {quote.estimated_delivery_date ? new Date(quote.estimated_delivery_date).toLocaleDateString() : 'TBD'}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleMoveToCart(quote.id)}
+                            className="h-8 w-8"
+                          >
+                            <ShoppingCart className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveFromCart(quote.id)}
+                            className="h-8 w-8"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold">{formatAmount(item.item_price)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            ))}
+        </ScrollArea>
       </div>
     );
   };
@@ -630,36 +725,26 @@ export const CartDrawer = () => {
   };
 
   return (
-    <>
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative">
-            <ShoppingCart className="h-5 w-5" />
-            {approvedQuotes && approvedQuotes.length > 0 && (
-              <div
-                className="absolute -top-1 -right-1"
-              >
-                <Badge variant="destructive" className="h-5 w-5 justify-center p-0 rounded-full text-xs">
-                  {approvedQuotes.length}
-                </Badge>
-              </div>
-            )}
-            <span className="sr-only">Cart</span>
-          </Button>
-        </SheetTrigger>
-        <SheetContent className="w-full sm:max-w-lg">
-          <SheetHeader className="space-y-2.5">
-            <SheetTitle>Shopping Cart</SheetTitle>
-          </SheetHeader>
-          
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="icon" className="relative">
+          <ShoppingCart className="h-5 w-5" />
+          {approvedQuotes && approvedQuotes.length > 0 && (
+            <Badge variant="secondary" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0">
+              {approvedQuotes.length}
+            </Badge>
+          )}
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="w-full sm:max-w-lg">
+        <SheetHeader>
+          <SheetTitle>Your Cart</SheetTitle>
+        </SheetHeader>
+        <div className="mt-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="cart">
-                Cart ({approvedQuotes?.length || 0})
-              </TabsTrigger>
-              <TabsTrigger value="saved">
-                Saved ({savedQuotes?.length || 0})
-              </TabsTrigger>
+              <TabsTrigger value="cart">Cart ({approvedQuotes?.length || 0})</TabsTrigger>
+              <TabsTrigger value="saved">Saved for Later ({savedQuotes?.length || 0})</TabsTrigger>
             </TabsList>
             <TabsContent value="cart" className="mt-4">
               {renderCartContent()}
@@ -668,38 +753,15 @@ export const CartDrawer = () => {
               {renderSavedContent()}
             </TabsContent>
           </Tabs>
-        </SheetContent>
-      </Sheet>
-
+        </div>
+      </SheetContent>
       <ConfirmDialog
-        isOpen={showBulkSaveConfirm}
-        onClose={() => setShowBulkSaveConfirm(false)}
-        onConfirm={confirmBulkSaveForLater}
-        title="Save Items for Later"
-        description={`Are you sure you want to save ${selectedItems.size} item(s) for later? You can find them in the "Saved" tab.`}
-        confirmText="Save for Later"
-        cancelText="Keep in Cart"
+        isOpen={isConfirmDialogOpen}
+        onClose={() => setIsConfirmDialogOpen(false)}
+        onConfirm={handleRemoveItems}
+        title="Remove Items"
+        description="Are you sure you want to remove the selected items from your cart?"
       />
-
-      <ConfirmDialog
-        isOpen={showBulkMoveConfirm}
-        onClose={() => setShowBulkMoveConfirm(false)}
-        onConfirm={confirmBulkMoveToCart}
-        title="Move Items to Cart"
-        description={`Are you sure you want to move ${selectedSavedItems.size} item(s) to your cart?`}
-        confirmText="Move to Cart"
-        cancelText="Keep Saved"
-      />
-
-      <ConfirmDialog
-        isOpen={showBulkDeleteConfirm}
-        onClose={() => setShowBulkDeleteConfirm(false)}
-        onConfirm={confirmBulkDelete}
-        title="Delete Saved Items"
-        description={`Are you sure you want to delete ${selectedSavedItems.size} item(s)? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-      />
-    </>
+    </Sheet>
   );
-}; 
+} 
