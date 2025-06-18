@@ -172,10 +172,12 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
               <Dialog open={isBreakdownOpen} onOpenChange={setIsBreakdownOpen}>
                 <DialogTrigger asChild>
                   <button className="relative flex items-center justify-center w-6 h-6 p-0" style={{ minWidth: 24, minHeight: 24 }}>
-                    {/* Multi-ring ripple effect centered on the icon */}
-                    <span className="absolute rounded-full border border-green-400" style={{ width: 24, height: 24, left: '50%', top: '50%', transform: 'translate(-50%, -50%)', animation: 'ripple-outline 2.5s infinite' }} />
-                    <span className="absolute rounded-full border border-green-400" style={{ width: 24, height: 24, left: '50%', top: '50%', transform: 'translate(-50%, -50%)', animation: 'ripple-outline 2.5s 0.8s infinite' }} />
-                    <span className="absolute rounded-full border border-green-400" style={{ width: 24, height: 24, left: '50%', top: '50%', transform: 'translate(-50%, -50%)', animation: 'ripple-outline 2.5s 1.6s infinite' }} />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {/* Multi-ring ripple effect centered on the icon */}
+                      <span className="absolute rounded-full border border-green-400" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s infinite' }} />
+                      <span className="absolute rounded-full border border-green-400" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s 0.8s infinite' }} />
+                      <span className="absolute rounded-full border border-green-400" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s 1.6s infinite' }} />
+                    </div>
                     <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors relative z-10" />
                   </button>
                 </DialogTrigger>

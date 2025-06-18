@@ -127,8 +127,6 @@ export const QuoteDetails: React.FC = () => {
         onConfirm={handleConfirmRejection}
         isPending={isUpdating}
       />
-
-      <QuoteMessaging quoteId={id || ''} quoteUserId={quote.user_id} />
     </div>
   );
 };

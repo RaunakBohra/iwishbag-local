@@ -123,7 +123,8 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
   // Use the same currency conversion logic for both breakdown and summary
   const quoteTotal = useMemo(() => {
     if (!quote.final_total) return 0;
-    return typeof quote.final_total === 'string' ? parseFloat(quote.final_total) : quote.final_total;
+    // Ensure we're using the exact same value as shown in the breakdown
+    return quote.final_total;
   }, [quote.final_total]);
 
   const handleApproveClick = () => {
@@ -157,18 +158,21 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
     setMobileHelpOpen(false);
     setShowMessages(true);
   };
+
   const handleFAQ = () => {
     setHelpOpen(false);
     setMobileHelpOpen(false);
     // Open FAQ modal or link
     window.open('/faq', '_blank');
   };
+
   const handleRequestChanges = () => {
     setHelpOpen(false);
     setMobileHelpOpen(false);
     // Open request changes form/modal
     // e.g., setShowRequestChanges(true)
   };
+
   const handleCancelQuote = () => {
     setHelpOpen(false);
     setMobileHelpOpen(false);
@@ -281,31 +285,31 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
               <HelpCircle className="w-4 h-4" /> Need Help?
             </button>
             <Dialog open={isMobileHelpOpen} onOpenChange={setMobileHelpOpen}>
-              <DialogContent className="p-0 w-full max-w-[100vw] rounded-t-xl fixed bottom-0 left-0 right-0 mx-auto transform translate-y-0">
+              <DialogContent className="sm:max-w-[300px]">
                 <div className="flex flex-col divide-y">
                   <button 
-                    className="flex items-center gap-2 w-full px-4 py-4 text-base hover:bg-muted/50 active:bg-muted/70 transition-colors" 
+                    className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-muted/50 active:bg-muted/70 transition-colors" 
                     onClick={handleMessageSupport}
                   >
-                    <MessageCircle className="w-5 h-5" /> Message Support
+                    <MessageCircle className="w-4 h-4" /> Message Support
                   </button>
                   <button 
-                    className="flex items-center gap-2 w-full px-4 py-4 text-base hover:bg-muted/50 active:bg-muted/70 transition-colors" 
+                    className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-muted/50 active:bg-muted/70 transition-colors" 
                     onClick={handleCancelQuote}
                   >
-                    <XCircle className="w-5 h-5 text-destructive" /> Cancel Quote
+                    <XCircle className="w-4 h-4 text-destructive" /> Cancel Quote
                   </button>
                   <button 
-                    className="flex items-center gap-2 w-full px-4 py-4 text-base hover:bg-muted/50 active:bg-muted/70 transition-colors" 
+                    className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-muted/50 active:bg-muted/70 transition-colors" 
                     onClick={handleFAQ}
                   >
-                    <BookOpen className="w-5 h-5" /> FAQ
+                    <BookOpen className="w-4 h-4" /> FAQ
                   </button>
                   <button 
-                    className="flex items-center gap-2 w-full px-4 py-4 text-base hover:bg-muted/50 active:bg-muted/70 transition-colors" 
+                    className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-muted/50 active:bg-muted/70 transition-colors" 
                     onClick={handleRequestChanges}
                   >
-                    <Edit2 className="w-5 h-5" /> Request Changes
+                    <Edit2 className="w-4 h-4" /> Request Changes
                   </button>
                 </div>
               </DialogContent>

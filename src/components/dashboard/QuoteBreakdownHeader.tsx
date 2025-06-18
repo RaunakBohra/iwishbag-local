@@ -2,7 +2,7 @@ import React from "react";
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
-import { MapPin, Hash, Calendar, Package, ChevronUp, ChevronDown } from "lucide-react";
+import { MapPin, Hash, Calendar } from "lucide-react";
 
 type Quote = Tables<'quotes'>;
 type QuoteWithItems = Tables<'quotes'> & {
@@ -44,18 +44,6 @@ export const QuoteBreakdownHeader: React.FC<QuoteBreakdownHeaderProps> = ({
             <span>Shipping from: {quote.country_code}</span>
           </div>
         </div>
-      </div>
-      <div className="flex items-center justify-center mb-6 relative">
-        <div className="flex items-center gap-2">
-          <Package className="h-5 w-5 text-blue-500" />
-          <h3 className="text-xl font-semibold">Items Requested</h3>
-        </div>
-        <button
-          onClick={onToggleItems}
-          className="absolute right-0 p-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          {isItemsExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-        </button>
       </div>
     </CardHeader>
   );

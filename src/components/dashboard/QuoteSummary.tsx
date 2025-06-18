@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { formatAmountForDisplay } from '@/lib/currencyUtils';
+import { useUserCurrency } from '@/hooks/useUserCurrency';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -36,6 +36,7 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
   countryCode,
 }) => {
   const statusInfo = statusMap[status] || statusMap['pending'];
+  const { formatAmount } = useUserCurrency();
 
   const { data: countrySettings } = useQuery({
     queryKey: ['country-settings', countryCode],
@@ -52,7 +53,7 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
     enabled: !!countryCode,
   });
 
-  const formattedTotal = formatAmountForDisplay(total, countrySettings?.currency || 'USD');
+  const formattedTotal = formatAmount(total);
 
   return (
     <>
@@ -69,7 +70,7 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
           <Badge className={cn('text-base px-3 py-1 font-semibold', statusInfo.color)}>
             {statusInfo.label}
           </Badge>
-          <span className="text-xl font-bold">{formattedTotal}</span>
+          <span className="text-lg font-semibold">{formattedTotal}</span>
           <span className="text-gray-500">{itemCount} {itemCount === 1 ? 'Item' : 'Items'}</span>
         </div>
         <div className="flex gap-2 items-center">
@@ -103,7 +104,7 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
         animate={{ opacity: 1, y: 0 }}
       >
         <div className="flex flex-col gap-1">
-          <span className="text-base font-bold">{formattedTotal}</span>
+          <span className="text-lg font-semibold">{formattedTotal}</span>
           <Badge className={cn('text-xs px-2 py-0.5 font-semibold', statusInfo.color)}>
             {statusInfo.label}
           </Badge>

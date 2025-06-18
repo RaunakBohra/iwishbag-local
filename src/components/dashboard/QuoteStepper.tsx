@@ -55,7 +55,7 @@ export function QuoteStepper({ currentStep, onStepClick, className, rejected }: 
 
   return (
     <div className={cn("w-full", className)}>
-      <div className="relative flex items-center justify-between">
+      <div className="relative flex items-center justify-between px-4 md:px-0">
         {/* Progress bar */}
         <div className="absolute left-0 top-1/2 h-1 w-full -translate-y-1/2 bg-gray-200">
           <motion.div
@@ -81,13 +81,13 @@ export function QuoteStepper({ currentStep, onStepClick, className, rejected }: 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="relative flex flex-col items-center"
+              className="relative flex flex-col items-center flex-1"
             >
               {/* Step circle */}
               <motion.button
                 onClick={() => isClickable && onStepClick?.(step.id)}
                 className={cn(
-                  "relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300",
+                  "relative z-10 flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full border-2 transition-all duration-300",
                   isRejectedStep && "border-destructive bg-destructive/10 text-destructive scale-110",
                   isActive && !isRejectedStep && "border-primary bg-primary text-white scale-110",
                   isCompleted && !isRejectedStep && "border-primary bg-primary text-white",
@@ -99,14 +99,14 @@ export function QuoteStepper({ currentStep, onStepClick, className, rejected }: 
                 whileTap={isClickable ? { scale: 0.95 } : {}}
               >
                 {isRejectedStep ? (
-                  <XCircle className="w-5 h-5 text-destructive" />
+                  <XCircle className="w-4 h-4 md:w-5 md:h-5 text-destructive" />
                 ) : isCompleted ? (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 200, damping: 10 }}
                   >
-                    <Check className="w-5 h-5" />
+                    <Check className="w-4 h-4 md:w-5 md:h-5" />
                   </motion.div>
                 ) : (
                   <motion.div
@@ -114,7 +114,9 @@ export function QuoteStepper({ currentStep, onStepClick, className, rejected }: 
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 200, damping: 10 }}
                   >
-                    {step.icon}
+                    {React.cloneElement(step.icon as React.ReactElement, {
+                      className: "w-4 h-4 md:w-5 md:h-5"
+                    })}
                   </motion.div>
                 )}
               </motion.button>
@@ -122,7 +124,7 @@ export function QuoteStepper({ currentStep, onStepClick, className, rejected }: 
               {/* Step label */}
               <motion.span
                 className={cn(
-                  "mt-2 text-sm font-medium transition-colors duration-300",
+                  "mt-1 md:mt-2 text-xs md:text-sm font-medium transition-colors duration-300 text-center",
                   isRejectedStep && "text-destructive",
                   isActive && !isRejectedStep && "text-primary",
                   isCompleted && !isRejectedStep && "text-primary",
@@ -138,12 +140,12 @@ export function QuoteStepper({ currentStep, onStepClick, className, rejected }: 
               {/* Connecting arrow */}
               {index < displaySteps.length - 1 && (
                 <motion.div
-                  className="absolute right-0 top-5 -mr-4 text-gray-300"
+                  className="absolute right-0 top-4 md:top-5 -mr-2 md:-mr-4 text-gray-300"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 + 0.3 }}
                 >
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
                 </motion.div>
               )}
             </motion.div>
