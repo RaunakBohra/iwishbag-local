@@ -8,8 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { 
   Trash2, 
@@ -20,7 +18,6 @@ import {
   SortDesc, 
   Package, 
   ArrowRight, 
-  Info,
   X,
   Grid3X3,
   List
@@ -33,12 +30,6 @@ import { useDebounce } from '@/hooks/useDebounce';
 
 type SortOption = "date-desc" | "date-asc" | "price-desc" | "price-asc" | "name-asc" | "name-desc";
 type ViewMode = "list" | "grid";
-
-interface SavingsBreakdown {
-  bulkDiscount: number;
-  memberDiscount: number;
-  seasonalDiscount: number;
-}
 
 export const Cart = () => {
   const { user } = useAuth();
@@ -90,11 +81,6 @@ export const Cart = () => {
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [savingsBreakdown, setSavingsBreakdown] = useState<SavingsBreakdown>({
-    bulkDiscount: 0,
-    memberDiscount: 0,
-    seasonalDiscount: 0,
-  });
 
   // Debounced search
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -240,12 +226,6 @@ export const Cart = () => {
       setIsCheckingOut(false);
     }
   };
-
-  // Calculate estimated costs
-  const estimatedShipping = cartWeight * 2.5; // $2.50 per kg
-  const estimatedTaxes = cartTotal * 0.08; // 8% tax
-  const totalWithShippingAndTax = cartTotal + estimatedShipping + estimatedTaxes;
-  const totalSavings = savingsBreakdown.bulkDiscount + savingsBreakdown.memberDiscount + savingsBreakdown.seasonalDiscount;
 
   const renderCartContent = () => {
     if (cartLoading) {
@@ -755,96 +735,6 @@ export const Cart = () => {
     );
   };
 
-  const renderAnalytics = () => (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Cart Analytics</CardTitle>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Detailed breakdown of your cart costs and savings</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Cost Breakdown */}
-        <div className="space-y-3">
-          <h4 className="font-medium">Cost Breakdown</h4>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Subtotal:</span>
-              <span>{formatAmount(cartTotal)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Total Weight:</span>
-              <span>{cartWeight.toFixed(2)}kg</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Estimated Shipping:</span>
-              <span>{formatAmount(estimatedShipping)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Estimated Taxes:</span>
-              <span>{formatAmount(estimatedTaxes)}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between font-medium">
-              <span>Total:</span>
-              <span>{formatAmount(totalWithShippingAndTax)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Savings Breakdown */}
-        <div className="space-y-3">
-          <h4 className="font-medium">Savings</h4>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Bulk Discount:</span>
-              <span className="text-green-600">-{formatAmount(savingsBreakdown.bulkDiscount)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Member Discount:</span>
-              <span className="text-green-600">-{formatAmount(savingsBreakdown.memberDiscount)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Seasonal Discount:</span>
-              <span className="text-green-600">-{formatAmount(savingsBreakdown.seasonalDiscount)}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between font-medium text-green-600">
-              <span>Total Savings:</span>
-              <span>-{formatAmount(totalSavings)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Progress Indicators */}
-        <div className="space-y-3">
-          <h4 className="font-medium">Free Shipping Progress</h4>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Free shipping at $100</span>
-              <span>{formatAmount(cartTotal)} / $100</span>
-            </div>
-            <Progress value={Math.min((cartTotal / 100) * 100, 100)} className="h-2" />
-            {cartTotal < 100 && (
-              <p className="text-xs text-muted-foreground">
-                Add {formatAmount(100 - cartTotal)} more for free shipping
-              </p>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   if (cartError) {
     return (
       <div className="container py-12">
@@ -942,9 +832,6 @@ export const Cart = () => {
               </CardContent>
             </Card>
           )}
-
-          {/* Analytics */}
-          {hasCartItems && renderAnalytics()}
         </div>
       </div>
 
