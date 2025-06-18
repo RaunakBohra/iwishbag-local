@@ -111,11 +111,22 @@ export const CartDrawer = () => {
   });
 
   // Calculate total in USD
-  const totalAmount = approvedQuotes?.reduce((sum, quote) => {
-    const quoteTotal = quote.quote_items?.reduce((itemSum, item) => 
-      itemSum + (item.item_price || 0) * item.quantity, 0) || 0;
-    return sum + quoteTotal;
-  }, 0) || 0;
+  const totalAmount = approvedQuotes
+    ?.filter(quote => selectedItems.has(quote.id))
+    .reduce((sum, quote) => {
+      const quoteTotal = quote.quote_items?.reduce((itemSum, item) => 
+        itemSum + (item.item_price * (item.quantity || 1)), 0) || 0;
+      return sum + quoteTotal;
+    }, 0) || 0;
+
+  // Calculate total weight
+  const totalWeight = approvedQuotes
+    ?.filter(quote => selectedItems.has(quote.id))
+    .reduce((sum, quote) => {
+      const quoteWeight = quote.quote_items?.reduce((itemSum, item) => 
+        itemSum + (item.item_weight * (item.quantity || 1)), 0) || 0;
+      return sum + quoteWeight;
+    }, 0) || 0;
 
   // Calculate savings breakdown
   useEffect(() => {
@@ -188,34 +199,86 @@ export const CartDrawer = () => {
     setDebouncedSearchQuery("");
   }, []);
 
-  const handleRemoveFromCart = (quoteId: string) => {
-    removeFromCart(quoteId);
-    setSelectedItems(prev => {
-      const next = new Set(prev);
-      next.delete(quoteId);
-      return next;
-    });
-    toast({
-      title: "Item removed",
-      description: "The item has been removed from your cart.",
-    });
-    // Switch to saved tab if cart is empty
-    if (approvedQuotes && approvedQuotes.length <= 1) {
-      setActiveTab("saved");
+  const handleRemoveFromCart = async (quoteId: string) => {
+    try {
+      const { error } = await supabase
+        .from('quotes')
+        .update({ in_cart: false })
+        .eq('id', quoteId);
+
+      if (error) throw error;
+
+      // Update the local state immediately
+      const updatedQuotes = approvedQuotes?.filter(quote => quote.id !== quoteId);
+      
+      // Update the query cache
+      queryClient.setQueryData(['approved-quotes', user?.id], updatedQuotes);
+
+      // Update selected items
+      setSelectedItems(prev => {
+        const next = new Set(prev);
+        next.delete(quoteId);
+        return next;
+      });
+
+      toast({
+        title: "Item removed",
+        description: "The item has been removed from your cart.",
+      });
+
+      // Switch to saved tab if cart is empty
+      if (updatedQuotes && updatedQuotes.length === 0) {
+        setActiveTab("saved");
+      }
+    } catch (error) {
+      console.error('Error removing item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove item. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleSaveForLater = (quoteId: string) => {
-    removeFromCart(quoteId);
-    setSelectedItems(prev => {
-      const next = new Set(prev);
-      next.delete(quoteId);
-      return next;
-    });
-    toast({
-      title: "Item saved",
-      description: "The item has been saved for later.",
-    });
+  const handleSaveForLater = async (quoteId: string) => {
+    try {
+      const { error } = await supabase
+        .from('quotes')
+        .update({ in_cart: false })
+        .eq('id', quoteId);
+
+      if (error) throw error;
+
+      // Update the local state immediately
+      const updatedQuotes = approvedQuotes?.filter(quote => quote.id !== quoteId);
+      
+      // Update the query cache
+      queryClient.setQueryData(['approved-quotes', user?.id], updatedQuotes);
+
+      // Update selected items
+      setSelectedItems(prev => {
+        const next = new Set(prev);
+        next.delete(quoteId);
+        return next;
+      });
+
+      toast({
+        title: "Item saved",
+        description: "The item has been saved for later.",
+      });
+
+      // Switch to saved tab if cart is empty
+      if (updatedQuotes && updatedQuotes.length === 0) {
+        setActiveTab("saved");
+      }
+    } catch (error) {
+      console.error('Error saving item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save item. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSelectItem = (quoteId: string) => {
@@ -308,17 +371,44 @@ export const CartDrawer = () => {
     });
   };
 
-  const handleMoveToCart = (quoteId: string) => {
-    moveToCart(quoteId);
-    setSelectedSavedItems(prev => {
-      const next = new Set(prev);
-      next.delete(quoteId);
-      return next;
-    });
-    toast({
-      title: "Item moved",
-      description: "The item has been moved to your cart.",
-    });
+  const handleMoveToCart = async (quoteId: string) => {
+    try {
+      const { error } = await supabase
+        .from('quotes')
+        .update({ in_cart: true })
+        .eq('id', quoteId);
+
+      if (error) throw error;
+
+      // Update the local state immediately
+      const updatedSavedQuotes = savedQuotes?.filter(quote => quote.id !== quoteId);
+      const quoteToMove = savedQuotes?.find(quote => quote.id === quoteId);
+      
+      // Update the query cache
+      queryClient.setQueryData(['saved-quotes', user?.id], updatedSavedQuotes);
+      if (quoteToMove) {
+        queryClient.setQueryData(['approved-quotes', user?.id], (old: any) => [...(old || []), quoteToMove]);
+      }
+
+      // Update selected items
+      setSelectedSavedItems(prev => {
+        const next = new Set(prev);
+        next.delete(quoteId);
+        return next;
+      });
+
+      toast({
+        title: "Item moved",
+        description: "The item has been moved to your cart.",
+      });
+    } catch (error) {
+      console.error('Error moving item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to move item. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleQuantityChange = async (quoteId: string, itemId: string, newQuantity: number) => {
@@ -333,9 +423,31 @@ export const CartDrawer = () => {
 
       if (error) throw error;
 
-      // Refresh the quotes data
-      queryClient.invalidateQueries({ queryKey: ['approved-quotes', user?.id] });
+      // Update the local state immediately
+      const updatedQuotes = approvedQuotes?.map(quote => {
+        if (quote.id === quoteId) {
+          return {
+            ...quote,
+            quote_items: quote.quote_items?.map(item => {
+              if (item.id === itemId) {
+                return { ...item, quantity: newQuantity };
+              }
+              return item;
+            })
+          };
+        }
+        return quote;
+      });
+
+      // Update the query cache
+      queryClient.setQueryData(['approved-quotes', user?.id], updatedQuotes);
+      
+      toast({
+        title: "Quantity updated",
+        description: "The item quantity has been updated.",
+      });
     } catch (error) {
+      console.error('Error updating quantity:', error);
       toast({
         title: "Error",
         description: "Failed to update quantity. Please try again.",
@@ -445,9 +557,11 @@ export const CartDrawer = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold">{formatAmount(quote.final_total)}</div>
+                      <div className="font-bold">
+                        {formatAmount(quote.final_total * (item.quantity || 1))}
+                      </div>
                       <div className="text-sm text-muted-foreground">
-                        {item.item_weight}kg • {quote.country_code}
+                        {(item.item_weight * (item.quantity || 1)).toFixed(2)}kg • {quote.country_code}
                       </div>
                     </div>
                   </div>
@@ -619,10 +733,10 @@ export const CartDrawer = () => {
                       </div>
                       <div className="text-right">
                         <div className="font-bold">
-                          {formatAmount(quote.final_total)}
+                          {formatAmount(quote.final_total * (item.quantity || 1))}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {item.item_weight}kg • {quote.country_code}
+                          {(item.item_weight * (item.quantity || 1)).toFixed(2)}kg • {quote.country_code}
                         </div>
                       </div>
                     </div>
@@ -656,6 +770,10 @@ export const CartDrawer = () => {
         <div className="flex justify-between text-sm">
           <span>Subtotal:</span>
           <span>{formatAmount(totalAmount)}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span>Total Weight:</span>
+          <span>{totalWeight.toFixed(2)}kg</span>
         </div>
         <div className="flex justify-between text-sm">
           <span>Estimated Shipping:</span>
