@@ -214,8 +214,24 @@ export const Cart = () => {
 
     setIsCheckingOut(true);
     try {
-      // Navigate to checkout page
-      window.location.href = '/checkout';
+      // Get selected cart items (not saved items)
+      const selectedCartItems = getSelectedCartItems();
+      if (selectedCartItems.length === 0) {
+        toast({
+          title: "No cart items selected",
+          description: "Please select items from your cart to checkout.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create URL with selected quote IDs
+      const quoteIds = selectedCartItems.map(item => item.quoteId);
+      const params = new URLSearchParams();
+      params.set('quotes', quoteIds.join(','));
+      
+      // Navigate to checkout page with quote IDs
+      window.location.href = `/checkout?${params.toString()}`;
     } catch (error) {
       toast({
         title: "Error",
