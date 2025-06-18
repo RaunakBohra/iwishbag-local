@@ -41,6 +41,7 @@ import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
 import { QueryProvider } from './providers/QueryProvider';
 import { HomePageSettings } from "@/components/admin/HomePageSettings";
 import ButtonPreview from "@/pages/ButtonPreview";
+import { CartSettings } from "@/components/admin/CartSettings";
 
 const router = createBrowserRouter([
   {
@@ -114,6 +115,10 @@ const router = createBrowserRouter([
           {
             path: "home-page-settings",
             element: <HomePageSettings />,
+          },
+          {
+            path: "cart-settings",
+            element: <CartSettings />,
           },
           {
             path: "*",

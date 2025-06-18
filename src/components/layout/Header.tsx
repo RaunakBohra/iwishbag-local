@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useHomePageSettings } from "@/hooks/useHomePageSettings";
+import { CartDrawer } from "@/components/cart/CartDrawer";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -118,15 +119,7 @@ const Header = () => {
         <div className="flex items-center space-x-4">
           {user ? (
             <div className="flex items-center space-x-2 sm:space-x-4">
-              <Button variant="ghost" size="icon" className="relative text-[#052a2e] hover:bg-black/10" onClick={() => navigate('/cart')}>
-                <ShoppingCart className="h-5 w-5" />
-                {approvedQuotesCount && approvedQuotesCount > 0 && (
-                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs">
-                    {approvedQuotesCount}
-                  </Badge>
-                )}
-                <span className="sr-only">Cart</span>
-              </Button>
+              <CartDrawer />
               <Button variant="ghost" size="icon" className="relative text-[#052a2e] hover:bg-black/10" onClick={() => navigate('/notifications')}>
                 <Bell className="h-5 w-5" />
                 {unreadNotificationsCount && unreadNotificationsCount > 0 && (

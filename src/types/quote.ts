@@ -121,4 +121,20 @@ export const updateQuoteState = (
   }
 
   return newState;
+};
+
+export type QuoteItem = {
+  id: string;
+  quote_id: string;
+  product_name: string;
+  product_url: string;
+  image_url: string;
+  item_price: number;
+  item_currency: string;
+  item_weight: number;
+  quantity: number;
+  options: string;
+  category: 'electronics' | 'clothing' | 'home' | 'other';
+  created_at: string;
+  updated_at: string;
 }; 

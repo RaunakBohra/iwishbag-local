@@ -105,6 +105,54 @@ export type Database = {
         }
         Relationships: []
       }
+      cart_settings: {
+        Row: {
+          bulk_discount_percentage: number
+          bulk_discount_threshold: number
+          created_at: string
+          free_shipping_threshold: number
+          id: string
+          is_seasonal_discount_active: boolean
+          member_discount_percentage: number
+          seasonal_discount_end_month: number
+          seasonal_discount_percentage: number
+          seasonal_discount_start_month: number
+          shipping_rate_percentage: number
+          tax_rate_percentage: number
+          updated_at: string
+        }
+        Insert: {
+          bulk_discount_percentage?: number
+          bulk_discount_threshold?: number
+          created_at?: string
+          free_shipping_threshold?: number
+          id?: string
+          is_seasonal_discount_active?: boolean
+          member_discount_percentage?: number
+          seasonal_discount_end_month?: number
+          seasonal_discount_percentage?: number
+          seasonal_discount_start_month?: number
+          shipping_rate_percentage?: number
+          tax_rate_percentage?: number
+          updated_at?: string
+        }
+        Update: {
+          bulk_discount_percentage?: number
+          bulk_discount_threshold?: number
+          created_at?: string
+          free_shipping_threshold?: number
+          id?: string
+          is_seasonal_discount_active?: boolean
+          member_discount_percentage?: number
+          seasonal_discount_end_month?: number
+          seasonal_discount_percentage?: number
+          seasonal_discount_start_month?: number
+          shipping_rate_percentage?: number
+          tax_rate_percentage?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       country_settings: {
         Row: {
           additional_shipping: number
@@ -231,6 +279,12 @@ export type Database = {
           company_description: string | null
           company_name: string | null
           created_at: string
+          hero_banner_url: string | null
+          hero_cta_link: string | null
+          hero_cta_text: string | null
+          hero_headline: string | null
+          hero_subheadline: string | null
+          how_it_works_steps: Json | null
           id: string
           primary_address: string | null
           primary_email: string | null
@@ -243,20 +297,20 @@ export type Database = {
           social_twitter: string | null
           support_email: string | null
           updated_at: string
-          website_logo_url: string | null
-          hero_banner_url: string | null
-          hero_headline: string | null
-          hero_subheadline: string | null
-          hero_cta_text: string | null
-          hero_cta_link: string | null
-          how_it_works_steps: Json | null
           value_props: Json | null
+          website_logo_url: string | null
         }
         Insert: {
           business_hours?: string | null
           company_description?: string | null
           company_name?: string | null
           created_at?: string
+          hero_banner_url?: string | null
+          hero_cta_link?: string | null
+          hero_cta_text?: string | null
+          hero_headline?: string | null
+          hero_subheadline?: string | null
+          how_it_works_steps?: Json | null
           id?: string
           primary_address?: string | null
           primary_email?: string | null
@@ -269,20 +323,20 @@ export type Database = {
           social_twitter?: string | null
           support_email?: string | null
           updated_at?: string
-          website_logo_url?: string | null
-          hero_banner_url?: string | null
-          hero_headline?: string | null
-          hero_subheadline?: string | null
-          hero_cta_text?: string | null
-          hero_cta_link?: string | null
-          how_it_works_steps?: Json | null
           value_props?: Json | null
+          website_logo_url?: string | null
         }
         Update: {
           business_hours?: string | null
           company_description?: string | null
           company_name?: string | null
           created_at?: string
+          hero_banner_url?: string | null
+          hero_cta_link?: string | null
+          hero_cta_text?: string | null
+          hero_headline?: string | null
+          hero_subheadline?: string | null
+          how_it_works_steps?: Json | null
           id?: string
           primary_address?: string | null
           primary_email?: string | null
@@ -295,14 +349,8 @@ export type Database = {
           social_twitter?: string | null
           support_email?: string | null
           updated_at?: string
-          website_logo_url?: string | null
-          hero_banner_url?: string | null
-          hero_headline?: string | null
-          hero_subheadline?: string | null
-          hero_cta_text?: string | null
-          hero_cta_link?: string | null
-          how_it_works_steps?: Json | null
           value_props?: Json | null
+          website_logo_url?: string | null
         }
         Relationships: []
       }
@@ -625,6 +673,7 @@ export type Database = {
       }
       quote_items: {
         Row: {
+          category: string | null
           created_at: string
           id: string
           image_url: string | null
@@ -639,6 +688,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           id?: string
           image_url?: string | null
@@ -653,6 +703,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           id?: string
           image_url?: string | null
@@ -1213,54 +1264,6 @@ export type Database = {
         }
         Relationships: []
       }
-      cart_settings: {
-        Row: {
-          bulk_discount_threshold: number;
-          bulk_discount_percentage: number;
-          member_discount_percentage: number;
-          seasonal_discount_percentage: number;
-          seasonal_discount_start_month: number;
-          seasonal_discount_end_month: number;
-          free_shipping_threshold: number;
-          shipping_rate_percentage: number;
-          tax_rate_percentage: number;
-          is_seasonal_discount_active: boolean;
-          created_at: string;
-          updated_at: string;
-          id: string;
-        };
-        Insert: {
-          bulk_discount_threshold?: number;
-          bulk_discount_percentage?: number;
-          member_discount_percentage?: number;
-          seasonal_discount_percentage?: number;
-          seasonal_discount_start_month?: number;
-          seasonal_discount_end_month?: number;
-          free_shipping_threshold?: number;
-          shipping_rate_percentage?: number;
-          tax_rate_percentage?: number;
-          is_seasonal_discount_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-          id?: string;
-        };
-        Update: {
-          bulk_discount_threshold?: number;
-          bulk_discount_percentage?: number;
-          member_discount_percentage?: number;
-          seasonal_discount_percentage?: number;
-          seasonal_discount_start_month?: number;
-          seasonal_discount_end_month?: number;
-          free_shipping_threshold?: number;
-          shipping_rate_percentage?: number;
-          tax_rate_percentage?: number;
-          is_seasonal_discount_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-          id?: string;
-        };
-        Relationships: [];
-      };
     }
     Views: {
       [_ in never]: never

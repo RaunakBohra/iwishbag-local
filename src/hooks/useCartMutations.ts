@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export const useCartMutations = () => {
     const queryClient = useQueryClient();
@@ -22,14 +23,18 @@ export const useCartMutations = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['approved-quotes', user?.id] });
             queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders', user?.id] });
-            toast({ title: "Item removed from cart." });
+            toast({
+                title: "Success",
+                description: "Removed from cart",
+            });
         },
         onError: (error: Error) => {
             toast({
-                title: "Error removing item",
-                description: error.message,
+                title: "Error",
+                description: "Failed to remove from cart",
                 variant: "destructive",
             });
+            console.error('Remove from cart error:', error);
         },
     });
 
@@ -47,14 +52,18 @@ export const useCartMutations = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['approved-quotes', user?.id] });
             queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders', user?.id] });
-            toast({ title: "Item added to cart." });
+            toast({
+                title: "Success",
+                description: "Added to cart",
+            });
         },
         onError: (error: Error) => {
             toast({
-                title: "Error adding item to cart",
-                description: error.message,
+                title: "Error",
+                description: "Failed to add to cart",
                 variant: "destructive",
             });
+            console.error('Add to cart error:', error);
         },
     });
 
@@ -74,10 +83,11 @@ export const useCartMutations = () => {
         },
         onError: (error: Error) => {
             toast({
-                title: "Error adding items to cart",
-                description: error.message,
+                title: "Error",
+                description: "Failed to add items to cart",
                 variant: "destructive",
             });
+            console.error('Add to cart error:', error);
         },
     });
 
@@ -97,10 +107,38 @@ export const useCartMutations = () => {
         },
         onError: (error: Error) => {
             toast({
-                title: "Error removing items from cart",
-                description: error.message,
+                title: "Error",
+                description: "Failed to remove items from cart",
                 variant: "destructive",
             });
+            console.error('Remove from cart error:', error);
+        },
+    });
+
+    const moveToCartMutation = useMutation({
+        mutationFn: async (quoteId: string) => {
+            const { error } = await supabase
+                .from('quotes')
+                .update({ in_cart: true })
+                .eq('id', quoteId);
+            
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['approved-quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['saved-quotes'] });
+            toast({
+                title: "Success",
+                description: "Moved to cart",
+            });
+        },
+        onError: (error) => {
+            toast({
+                title: "Error",
+                description: "Failed to move to cart",
+                variant: "destructive",
+            });
+            console.error('Move to cart error:', error);
         },
     });
 
@@ -113,5 +151,6 @@ export const useCartMutations = () => {
         isAddingBulk: bulkAddToCartMutation.isPending,
         bulkRemoveFromCart: bulkRemoveFromCartMutation.mutate,
         isRemovingBulk: bulkRemoveFromCartMutation.isPending,
+        moveToCart: moveToCartMutation.mutate,
     };
 };
