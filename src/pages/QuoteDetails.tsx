@@ -11,7 +11,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuoteSteps } from "@/hooks/useQuoteSteps";
 import { useQuoteState } from "@/hooks/useQuoteState";
-import { CustomerRejectQuoteDialog } from "@/components/dashboard/CustomerRejectQuoteDialog";
 
 type QuoteWithItems = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
@@ -21,7 +20,6 @@ type QuoteWithItems = Tables<'quotes'> & {
 export const QuoteDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const [isRejectDialogOpen, setRejectDialogOpen] = useState(false);
   const { approveQuote, rejectQuote, addToCart, isUpdating } = useQuoteState(id || '');
 
   const { data: quote, isLoading, error } = useQuery({
@@ -45,12 +43,6 @@ export const QuoteDetails: React.FC = () => {
   });
 
   const steps = useQuoteSteps(quote);
-
-  const handleConfirmRejection = (reasonId: string, details: string) => {
-    if (!quote) return;
-    rejectQuote(reasonId, details);
-    setRejectDialogOpen(false);
-  };
 
   if (isLoading) {
     return (
@@ -115,18 +107,11 @@ export const QuoteDetails: React.FC = () => {
         <QuoteBreakdown 
           quote={quote} 
           onApprove={approveQuote}
-          onReject={() => setRejectDialogOpen(true)}
+          onReject={rejectQuote}
           isProcessing={isUpdating}
           onAddToCart={addToCart}
         />
       )}
-
-      <CustomerRejectQuoteDialog
-        isOpen={isRejectDialogOpen}
-        onOpenChange={setRejectDialogOpen}
-        onConfirm={handleConfirmRejection}
-        isPending={isUpdating}
-      />
     </div>
   );
 };
