@@ -1,14 +1,15 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Check, FileText, ShoppingCart, CreditCard, ArrowRight } from 'lucide-react';
+import { Check, FileText, ShoppingCart, CreditCard, ArrowRight, XCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export type QuoteStep = 'review' | 'approve' | 'cart' | 'checkout';
+export type QuoteStep = 'review' | 'approve' | 'cart' | 'checkout' | 'rejected';
 
 interface QuoteStepperProps {
   currentStep: QuoteStep;
   onStepClick?: (step: QuoteStep) => void;
   className?: string;
+  rejected?: boolean;
 }
 
 const steps: { id: QuoteStep; label: string; icon: React.ReactNode }[] = [
@@ -34,8 +35,23 @@ const steps: { id: QuoteStep; label: string; icon: React.ReactNode }[] = [
   }
 ];
 
-export function QuoteStepper({ currentStep, onStepClick, className }: QuoteStepperProps) {
-  const currentIndex = steps.findIndex(step => step.id === currentStep);
+export function QuoteStepper({ currentStep, onStepClick, className, rejected }: QuoteStepperProps) {
+  let displaySteps = [...steps];
+  let currentIndex = displaySteps.findIndex(step => step.id === currentStep);
+
+  // If rejected, replace 'approve' step with 'rejected'
+  if (rejected) {
+    displaySteps = displaySteps.map((step) =>
+      step.id === 'approve'
+        ? {
+            id: 'rejected',
+            label: 'Rejected',
+            icon: <XCircle className="w-5 h-5 text-destructive" />
+          }
+        : step
+    );
+    currentIndex = displaySteps.findIndex(step => step.id === 'rejected');
+  }
 
   return (
     <div className={cn("w-full", className)}>
@@ -46,17 +62,18 @@ export function QuoteStepper({ currentStep, onStepClick, className }: QuoteStepp
             className="absolute left-0 top-0 h-full bg-primary"
             initial={{ width: 0 }}
             animate={{ 
-              width: `${(currentIndex / (steps.length - 1)) * 100}%`,
+              width: `${(currentIndex / (displaySteps.length - 1)) * 100}%`,
               transition: { duration: 0.5, ease: "easeInOut" }
             }}
           />
         </div>
 
         {/* Steps */}
-        {steps.map((step, index) => {
-          const isActive = step.id === currentStep;
+        {displaySteps.map((step, index) => {
+          const isActive = step.id === currentStep || (rejected && step.id === 'rejected' && currentStep === 'rejected');
           const isCompleted = index < currentIndex;
           const isClickable = isCompleted || isActive;
+          const isRejectedStep = step.id === 'rejected';
 
           return (
             <motion.div
@@ -71,16 +88,19 @@ export function QuoteStepper({ currentStep, onStepClick, className }: QuoteStepp
                 onClick={() => isClickable && onStepClick?.(step.id)}
                 className={cn(
                   "relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300",
-                  isActive && "border-primary bg-primary text-white scale-110",
-                  isCompleted && "border-primary bg-primary text-white",
-                  !isActive && !isCompleted && "border-gray-300 bg-white text-gray-400",
+                  isRejectedStep && "border-destructive bg-destructive/10 text-destructive scale-110",
+                  isActive && !isRejectedStep && "border-primary bg-primary text-white scale-110",
+                  isCompleted && !isRejectedStep && "border-primary bg-primary text-white",
+                  !isActive && !isCompleted && !isRejectedStep && "border-gray-300 bg-white text-gray-400",
                   isClickable && "cursor-pointer hover:scale-105",
                   !isClickable && "cursor-not-allowed"
                 )}
                 whileHover={isClickable ? { scale: 1.05 } : {}}
                 whileTap={isClickable ? { scale: 0.95 } : {}}
               >
-                {isCompleted ? (
+                {isRejectedStep ? (
+                  <XCircle className="w-5 h-5 text-destructive" />
+                ) : isCompleted ? (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
@@ -103,9 +123,10 @@ export function QuoteStepper({ currentStep, onStepClick, className }: QuoteStepp
               <motion.span
                 className={cn(
                   "mt-2 text-sm font-medium transition-colors duration-300",
-                  isActive && "text-primary",
-                  isCompleted && "text-primary",
-                  !isActive && !isCompleted && "text-gray-500"
+                  isRejectedStep && "text-destructive",
+                  isActive && !isRejectedStep && "text-primary",
+                  isCompleted && !isRejectedStep && "text-primary",
+                  !isActive && !isCompleted && !isRejectedStep && "text-gray-500"
                 )}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -115,7 +136,7 @@ export function QuoteStepper({ currentStep, onStepClick, className }: QuoteStepp
               </motion.span>
 
               {/* Connecting arrow */}
-              {index < steps.length - 1 && (
+              {index < displaySteps.length - 1 && (
                 <motion.div
                   className="absolute right-0 top-5 -mr-4 text-gray-300"
                   initial={{ opacity: 0, x: -10 }}
