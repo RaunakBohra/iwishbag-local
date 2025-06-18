@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useCartStore } from "@/stores/cartStore";
 
 export const useCartMutations = () => {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { user } = useAuth();
+    const { loadFromServer } = useCartStore();
 
     const removeFromCartMutation = useMutation({
         mutationFn: async (quoteId: string) => {
@@ -23,6 +25,9 @@ export const useCartMutations = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['approved-quotes', user?.id] });
             queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders', user?.id] });
+            if (user?.id) {
+                loadFromServer(user.id);
+            }
             toast({
                 title: "Success",
                 description: "Removed from cart",
@@ -52,6 +57,9 @@ export const useCartMutations = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['approved-quotes', user?.id] });
             queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders', user?.id] });
+            if (user?.id) {
+                loadFromServer(user.id);
+            }
             toast({
                 title: "Success",
                 description: "Added to cart",
@@ -79,6 +87,9 @@ export const useCartMutations = () => {
         onSuccess: (count) => {
             queryClient.invalidateQueries({ queryKey: ['approved-quotes', user?.id] });
             queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders', user?.id] });
+            if (user?.id) {
+                loadFromServer(user.id);
+            }
             toast({ title: `${count} item(s) added to cart.` });
         },
         onError: (error: Error) => {
@@ -103,6 +114,9 @@ export const useCartMutations = () => {
         onSuccess: (count) => {
             queryClient.invalidateQueries({ queryKey: ['approved-quotes', user?.id] });
             queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders', user?.id] });
+            if (user?.id) {
+                loadFromServer(user.id);
+            }
             toast({ title: `${count} item(s) removed from cart.` });
         },
         onError: (error: Error) => {
@@ -127,6 +141,9 @@ export const useCartMutations = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['approved-quotes'] });
             queryClient.invalidateQueries({ queryKey: ['saved-quotes'] });
+            if (user?.id) {
+                loadFromServer(user.id);
+            }
             toast({
                 title: "Success",
                 description: "Moved to cart",

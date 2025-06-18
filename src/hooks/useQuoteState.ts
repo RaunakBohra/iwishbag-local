@@ -3,11 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Quote, QuoteStatus, isValidStatusTransition } from "@/types/quote";
 import { useEmailNotifications } from "./useEmailNotifications";
+import { useCartStore } from "@/stores/cartStore";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useQuoteState = (quoteId: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { sendQuoteApprovedEmail, sendQuoteRejectedEmail } = useEmailNotifications();
+  const { loadFromServer } = useCartStore();
+  const { user } = useAuth();
 
   const updateQuoteStateMutation = useMutation({
     mutationFn: async ({ 
@@ -69,9 +73,14 @@ export const useQuoteState = (quoteId: string) => {
 
       return { ...currentQuote, ...updateData };
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['quote', quoteId] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      
+      // If in_cart was updated, sync with Zustand store
+      if (variables.in_cart !== undefined && user?.id) {
+        loadFromServer(user.id);
+      }
     },
     onError: (error: Error) => {
       toast({

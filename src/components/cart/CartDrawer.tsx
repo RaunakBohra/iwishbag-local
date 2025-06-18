@@ -86,7 +86,8 @@ export const CartDrawer = () => {
     handleBulkDelete,
     handleBulkMoveToSaved,
     handleBulkMoveToCart,
-    clearSelection
+    clearSelection,
+    loadFromServer
   } = useCart();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -104,6 +105,13 @@ export const CartDrawer = () => {
     memberDiscount: 0,
     seasonalDiscount: 0,
   });
+
+  // Load cart data from server when drawer opens
+  useEffect(() => {
+    if (isOpen && user) {
+      loadFromServer(user.id);
+    }
+  }, [isOpen, user, loadFromServer]);
 
   const { data: cartSettings } = useQuery({
     queryKey: ['cart-settings'],

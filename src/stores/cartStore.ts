@@ -26,6 +26,7 @@ interface CartStore {
   selectedItems: string[];
   isLoading: boolean;
   error: string | null;
+  userId: string | null;
 
   // Actions
   addItem: (item: CartItem) => void;
@@ -41,7 +42,9 @@ interface CartStore {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
+  setUserId: (userId: string) => void;
   syncWithServer: () => Promise<void>;
+  loadFromServer: (userId?: string) => Promise<void>;
 }
 
 export const useCartStore = create<CartStore>()(
@@ -53,6 +56,7 @@ export const useCartStore = create<CartStore>()(
       selectedItems: [],
       isLoading: false,
       error: null,
+      userId: null,
 
       // Actions
       addItem: (item: CartItem) => {
@@ -173,9 +177,12 @@ export const useCartStore = create<CartStore>()(
         set({ error: null });
       },
 
+      setUserId: (userId: string) => {
+        set({ userId });
+      },
+
       syncWithServer: async () => {
-        const { user } = useAuth.getState?.() || {};
-        if (!user) return;
+        if (!get().userId) return;
 
         try {
           get().setLoading(true);
@@ -211,6 +218,89 @@ export const useCartStore = create<CartStore>()(
         } catch (error) {
           console.error('Error syncing cart with server:', error);
           get().setError('Failed to sync cart with server');
+        } finally {
+          get().setLoading(false);
+        }
+      },
+
+      loadFromServer: async (userId?: string) => {
+        if (!userId) return;
+
+        // Set the userId in the store
+        get().setUserId(userId);
+
+        try {
+          get().setLoading(true);
+          get().clearError();
+
+          // First, let's see all approved quotes for this user
+          const { data: allQuotes, error: allQuotesError } = await supabase
+            .from('quotes')
+            .select(`
+              id,
+              product_name,
+              final_total,
+              quantity,
+              item_weight,
+              image_url,
+              estimated_delivery_date,
+              country_code,
+              in_cart,
+              created_at,
+              updated_at,
+              approval_status,
+              quote_items (
+                id,
+                product_name,
+                item_price,
+                quantity,
+                item_weight,
+                image_url,
+                options
+              )
+            `)
+            .eq('user_id', userId)
+            .eq('approval_status', 'approved')
+            .order('created_at', { ascending: false });
+
+          if (allQuotesError) throw allQuotesError;
+
+          // Filter quotes based on in_cart status
+          const cartQuotes = allQuotes?.filter(quote => quote.in_cart === true) || [];
+          const savedQuotes = allQuotes?.filter(quote => quote.in_cart === false) || [];
+
+          // Convert quotes to CartItem format
+          const convertQuoteToCartItem = (quote: any): CartItem => {
+            const firstItem = quote.quote_items?.[0];
+            return {
+              id: quote.id,
+              quoteId: quote.id,
+              productName: quote.product_name || firstItem?.product_name || 'Unknown Product',
+              itemPrice: quote.final_total || firstItem?.item_price || 0,
+              quantity: quote.quantity || firstItem?.quantity || 1,
+              itemWeight: quote.item_weight || firstItem?.item_weight || 0,
+              imageUrl: quote.image_url || firstItem?.image_url,
+              deliveryDate: quote.estimated_delivery_date,
+              countryCode: quote.country_code || 'US',
+              inCart: quote.in_cart || false,
+              isSelected: false,
+              createdAt: new Date(quote.created_at),
+              updatedAt: new Date(quote.updated_at)
+            };
+          };
+
+          const cartItems = cartQuotes.map(convertQuoteToCartItem);
+          const savedItems = savedQuotes.map(convertQuoteToCartItem);
+
+          set({
+            items: cartItems,
+            savedItems: savedItems,
+            selectedItems: []
+          });
+
+        } catch (error) {
+          console.error('Error loading cart from server:', error);
+          get().setError('Failed to load cart from server');
         } finally {
           get().setLoading(false);
         }

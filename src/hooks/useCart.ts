@@ -22,7 +22,9 @@ export const useCart = () => {
     setLoading,
     setError,
     clearError,
-    syncWithServer
+    setUserId,
+    syncWithServer,
+    loadFromServer
   } = useCartStore();
 
   // Cart calculations
@@ -171,7 +173,9 @@ export const useCart = () => {
     setLoading,
     setError,
     clearError,
+    setUserId,
     syncWithServer,
+    loadFromServer,
     
     // Bulk operations
     handleSelectAll,
