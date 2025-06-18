@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 import { Image as ImageIcon } from 'lucide-react';
@@ -21,11 +20,7 @@ export const ProductImage: React.FC<ProductImageProps> = ({
   };
 
   if (!imageUrl) {
-    return (
-      <div className={`${sizeClasses[size]} bg-gray-100 rounded-lg flex items-center justify-center`}>
-        <ImageIcon className="w-4 h-4 text-gray-400" />
-      </div>
-    );
+    return null;
   }
 
   return (

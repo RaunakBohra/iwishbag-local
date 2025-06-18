@@ -1,9 +1,8 @@
-
 import React from "react";
 import { CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
+import { MapPin, Hash, Calendar } from "lucide-react";
 
 type Quote = Tables<'quotes'>;
 
@@ -12,29 +11,29 @@ interface QuoteBreakdownHeaderProps {
 }
 
 export const QuoteBreakdownHeader: React.FC<QuoteBreakdownHeaderProps> = ({ quote }) => {
+  const formatDate = (date: string | Date) => {
+    return format(new Date(date), 'MMM d, yyyy');
+  };
+
   return (
-    <CardHeader>
-      <div className="flex items-start justify-between">
-        <div>
-            <CardTitle className="text-xl">Quote Details</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Quote ID: {quote.display_id || quote.id.substring(0, 8)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Requested: {format(new Date(quote.created_at), 'MMM d, yyyy')}
-            </p>
-        </div>
-        <div className="flex flex-col items-end space-y-2">
-            <div className="flex items-center space-x-2">
-                <Badge variant={quote.status === 'calculated' ? 'default' : 'secondary'}>
-                    {quote.status}
-                </Badge>
-                {quote.approval_status !== 'pending' && (
-                    <Badge variant={quote.approval_status === 'approved' ? 'success' : 'destructive'}>
-                    {quote.approval_status}
-                    </Badge>
-                )}
-            </div>
+    <CardHeader className="flex flex-col space-y-1.5 p-6">
+      <div className="flex flex-col items-center text-center">
+        <h3 className="text-xl font-semibold tracking-tight mb-4">Quote Details</h3>
+        <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Hash className="h-4 w-4" />
+            <span>{quote.display_id || `QT-${quote.id.toString().padStart(7, '0')}`}</span>
+          </div>
+          <span className="hidden md:inline">•</span>
+          <div className="flex items-center gap-1">
+            <Calendar className="h-4 w-4" />
+            <span>Requested: {formatDate(quote.created_at)}</span>
+          </div>
+          <span className="hidden md:inline">•</span>
+          <div className="flex items-center gap-1">
+            <MapPin className="h-4 w-4" />
+            <span>Shipping from: {quote.country_code}</span>
+          </div>
         </div>
       </div>
     </CardHeader>
