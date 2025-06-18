@@ -227,8 +227,8 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
               {quote.quote_items?.map((item) => (
                 <QuoteItemCard key={item.id} item={item} />
               ))}
-            </div>
-          )}
+                </div>
+              )}
           {showBreakdown && (
             <div className="space-y-6 pt-6 border-t">
               <QuoteBreakdownDetails quote={quote} countrySettings={countrySettings} />
@@ -244,10 +244,20 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
         />
         <CustomerRejectQuoteDialog
           isOpen={isRejectDialogOpen}
-          onOpenChange={setRejectDialogOpen}
-          onConfirm={(reasonId, details) => {
-            onReject(reasonId || details || '');
-            setRejectDialogOpen(false);
+          onOpenChange={(open) => {
+            // Only allow closing if not submitting
+            if (!isProcessing) {
+              setRejectDialogOpen(open);
+            }
+          }}
+          onConfirm={async (reasonId, details) => {
+            try {
+              await onReject(reasonId || details || '');
+              setRejectDialogOpen(false);
+            } catch (error) {
+              // Keep dialog open on error
+              console.error('Error rejecting quote:', error);
+            }
           }}
           isPending={isProcessing}
         />
@@ -264,9 +274,11 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
                 <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-muted/50 text-sm" onClick={handleMessageSupport}>
                   <MessageCircle className="w-4 h-4" /> Message Support
                 </button>
-                <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-muted/50 text-sm" onClick={handleCancelQuote}>
-                  <XCircle className="w-4 h-4 text-destructive" /> Cancel Quote
-                </button>
+                {quote.approval_status !== 'rejected' && (
+                  <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-muted/50 text-sm" onClick={handleCancelQuote}>
+                    <XCircle className="w-4 h-4 text-destructive" /> Cancel Quote
+                  </button>
+                )}
                 <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-muted/50 text-sm" onClick={handleFAQ}>
                   <BookOpen className="w-4 h-4" /> FAQ
                 </button>
@@ -293,12 +305,14 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
                   >
                     <MessageCircle className="w-4 h-4" /> Message Support
                   </button>
-                  <button 
-                    className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-muted/50 active:bg-muted/70 transition-colors" 
-                    onClick={handleCancelQuote}
-                  >
-                    <XCircle className="w-4 h-4 text-destructive" /> Cancel Quote
-                  </button>
+                  {quote.approval_status !== 'rejected' && (
+                    <button 
+                      className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-muted/50 active:bg-muted/70 transition-colors" 
+                      onClick={handleCancelQuote}
+                    >
+                      <XCircle className="w-4 h-4 text-destructive" /> Cancel Quote
+                    </button>
+                  )}
                   <button 
                     className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-muted/50 active:bg-muted/70 transition-colors" 
                     onClick={handleFAQ}
