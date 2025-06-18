@@ -25,7 +25,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Info } from "lucide-react";
 import { Database } from "@/lib/database.types";
 import { Tables } from '@/integrations/supabase/types';
-import { QuantityAdjuster } from "./QuantityAdjuster";
 
 type SortOption = "date-desc" | "date-asc" | "price-desc" | "price-asc" | "name-asc" | "name-desc";
 type ViewMode = "list";
@@ -52,7 +51,7 @@ interface CartItemProps {
   viewMode?: 'list' | 'grid';
 }
 
-export function CartDrawer() {
+export const CartDrawer = () => {
   const { user } = useAuth();
   const { removeFromCart, moveToCart } = useCartMutations();
   const { formatAmount } = useUserCurrency();
@@ -75,8 +74,6 @@ export function CartDrawer() {
     seasonalDiscount: 0,
   });
   const queryClient = useQueryClient();
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [itemsToRemove, setItemsToRemove] = useState<string[]>([]);
 
   const { data: approvedQuotes, isLoading } = useQuery({
     queryKey: ['approved-quotes', user?.id],
@@ -325,6 +322,8 @@ export function CartDrawer() {
   };
 
   const handleQuantityChange = async (quoteId: string, itemId: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    
     try {
       const { error } = await supabase
         .from('quote_items')
@@ -340,23 +339,6 @@ export function CartDrawer() {
       toast({
         title: "Error",
         description: "Failed to update quantity. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRemoveItems = async () => {
-    try {
-      for (const id of itemsToRemove) {
-        await removeFromCart(id);
-      }
-      setSelectedItems(new Set());
-      setItemsToRemove([]);
-      setIsConfirmDialogOpen(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to remove items. Please try again.",
         variant: "destructive",
       });
     }
@@ -416,17 +398,32 @@ export function CartDrawer() {
                 {quote.quote_items?.map((item) => (
                   <div key={item.id} className="flex items-start justify-between p-2 border rounded-lg mb-2">
                     <div className="flex-1">
-                      <h4 className="font-medium">{item.product_name}</h4>
+                      <a 
+                        href={item.product_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="font-medium hover:underline"
+                      >
+                        {item.product_name}
+                      </a>
                       <div className="flex items-center gap-4 mt-2">
-                        <QuantityAdjuster
-                          initialQuantity={item.quantity}
-                          onQuantityChange={(newQuantity) => {
-                            handleQuantityChange(quote.id, item.id, newQuantity);
-                          }}
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          Est. Delivery: {quote.estimated_delivery_date ? new Date(quote.estimated_delivery_date).toLocaleDateString() : 'TBD'}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuantityChange(quote.id, item.id, Math.max(1, item.quantity - 1))}
+                          >
+                            -
+                          </Button>
+                          <span className="w-8 text-center">{item.quantity}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuantityChange(quote.id, item.id, item.quantity + 1)}
+                          >
+                            +
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 mt-2">
                         <Button
@@ -440,10 +437,7 @@ export function CartDrawer() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {
-                            setItemsToRemove([quote.id]);
-                            setIsConfirmDialogOpen(true);
-                          }}
+                          onClick={() => handleRemoveFromCart(quote.id)}
                           className="h-8 w-8"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -451,7 +445,10 @@ export function CartDrawer() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold">{formatAmount(item.item_price)}</div>
+                      <div className="font-bold">{formatAmount(quote.final_total)}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {item.item_weight}kg • {quote.country_code}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -574,13 +571,33 @@ export function CartDrawer() {
                   {quote.quote_items?.map((item) => (
                     <div key={item.id} className="flex items-start justify-between p-2 border rounded-lg mb-2">
                       <div className="flex-1">
-                        <h4 className="font-medium">{item.product_name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Quantity: {item.quantity}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Est. Delivery: {quote.estimated_delivery_date ? new Date(quote.estimated_delivery_date).toLocaleDateString() : 'TBD'}
-                        </p>
+                        <a 
+                          href={item.product_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="font-medium hover:underline"
+                        >
+                          {item.product_name}
+                        </a>
+                        <div className="flex items-center gap-4 mt-2">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleQuantityChange(quote.id, item.id, Math.max(1, item.quantity - 1))}
+                            >
+                              -
+                            </Button>
+                            <span className="w-8 text-center">{item.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleQuantityChange(quote.id, item.id, item.quantity + 1)}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>
                         <div className="flex items-center gap-2 mt-2">
                           <Button
                             variant="ghost"
@@ -601,7 +618,12 @@ export function CartDrawer() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold">{formatAmount(item.item_price)}</div>
+                        <div className="font-bold">
+                          {formatAmount(quote.final_total)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {item.item_weight}kg • {quote.country_code}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -725,26 +747,36 @@ export function CartDrawer() {
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="icon" className="relative">
-          <ShoppingCart className="h-5 w-5" />
-          {approvedQuotes && approvedQuotes.length > 0 && (
-            <Badge variant="secondary" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0">
-              {approvedQuotes.length}
-            </Badge>
-          )}
-        </Button>
-      </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Your Cart</SheetTitle>
-        </SheetHeader>
-        <div className="mt-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+    <>
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative">
+            <ShoppingCart className="h-5 w-5" />
+            {approvedQuotes && approvedQuotes.length > 0 && (
+              <div
+                className="absolute -top-1 -right-1"
+              >
+                <Badge variant="destructive" className="h-5 w-5 justify-center p-0 rounded-full text-xs">
+                  {approvedQuotes.length}
+                </Badge>
+              </div>
+            )}
+            <span className="sr-only">Cart</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent className="w-full sm:max-w-lg">
+          <SheetHeader className="space-y-2.5">
+            <SheetTitle>Shopping Cart</SheetTitle>
+          </SheetHeader>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="cart">Cart ({approvedQuotes?.length || 0})</TabsTrigger>
-              <TabsTrigger value="saved">Saved for Later ({savedQuotes?.length || 0})</TabsTrigger>
+              <TabsTrigger value="cart">
+                Cart ({approvedQuotes?.length || 0})
+              </TabsTrigger>
+              <TabsTrigger value="saved">
+                Saved ({savedQuotes?.length || 0})
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="cart" className="mt-4">
               {renderCartContent()}
@@ -753,15 +785,38 @@ export function CartDrawer() {
               {renderSavedContent()}
             </TabsContent>
           </Tabs>
-        </div>
-      </SheetContent>
+        </SheetContent>
+      </Sheet>
+
       <ConfirmDialog
-        isOpen={isConfirmDialogOpen}
-        onClose={() => setIsConfirmDialogOpen(false)}
-        onConfirm={handleRemoveItems}
-        title="Remove Items"
-        description="Are you sure you want to remove the selected items from your cart?"
+        isOpen={showBulkSaveConfirm}
+        onClose={() => setShowBulkSaveConfirm(false)}
+        onConfirm={confirmBulkSaveForLater}
+        title="Save Items for Later"
+        description={`Are you sure you want to save ${selectedItems.size} item(s) for later? You can find them in the "Saved" tab.`}
+        confirmText="Save for Later"
+        cancelText="Keep in Cart"
       />
-    </Sheet>
+
+      <ConfirmDialog
+        isOpen={showBulkMoveConfirm}
+        onClose={() => setShowBulkMoveConfirm(false)}
+        onConfirm={confirmBulkMoveToCart}
+        title="Move Items to Cart"
+        description={`Are you sure you want to move ${selectedSavedItems.size} item(s) to your cart?`}
+        confirmText="Move to Cart"
+        cancelText="Keep Saved"
+      />
+
+      <ConfirmDialog
+        isOpen={showBulkDeleteConfirm}
+        onClose={() => setShowBulkDeleteConfirm(false)}
+        onConfirm={confirmBulkDelete}
+        title="Delete Saved Items"
+        description={`Are you sure you want to delete ${selectedSavedItems.size} item(s)? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+    </>
   );
-} 
+}; 
