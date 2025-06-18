@@ -64,18 +64,22 @@ export const Cart = () => {
     hasSelectedItems,
     hasCartItems,
     hasSavedItems,
-    isAllSelected,
+    isAllCartSelected,
+    isAllSavedSelected,
     removeItem,
     updateQuantity,
     moveToSaved,
     moveToCart,
     toggleSelection,
-    handleSelectAll,
+    handleSelectAllCart,
     handleBulkDelete,
     handleBulkMoveToSaved,
     handleBulkMoveToCart,
     clearSelection,
-    loadFromServer
+    loadFromServer,
+    handleSelectAllSaved,
+    getSelectedCartItems,
+    getSelectedSavedItems
   } = useCart();
 
   const [activeTab, setActiveTab] = useState("cart");
@@ -329,14 +333,14 @@ export const Cart = () => {
           <div className="flex items-center gap-2">
             <Checkbox
               id="select-all"
-              checked={selectedItems.length === cartItems.length}
-              onCheckedChange={handleSelectAll}
+              checked={isAllCartSelected}
+              onCheckedChange={handleSelectAllCart}
             />
             <label htmlFor="select-all" className="text-sm font-medium">
-              Select All ({selectedItems.length})
+              Select All ({itemCount})
             </label>
           </div>
-          {selectedItems.length > 0 && (
+          {getSelectedCartItems().length > 0 && (
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -344,7 +348,7 @@ export const Cart = () => {
                 onClick={() => setShowBulkSaveConfirm(true)}
               >
                 <Save className="h-4 w-4 mr-1" />
-                Save ({selectedItems.length})
+                Save ({getSelectedCartItems().length})
               </Button>
               <Button
                 variant="outline"
@@ -352,7 +356,7 @@ export const Cart = () => {
                 onClick={() => setShowBulkDeleteConfirm(true)}
               >
                 <Trash2 className="h-4 w-4 mr-1" />
-                Delete ({selectedItems.length})
+                Delete ({getSelectedCartItems().length})
               </Button>
             </div>
           )}
@@ -579,14 +583,14 @@ export const Cart = () => {
           <div className="flex items-center gap-2">
             <Checkbox
               id="select-all-saved"
-              checked={selectedItems.length === savedItems.length}
-              onCheckedChange={handleSelectAll}
+              checked={isAllSavedSelected}
+              onCheckedChange={handleSelectAllSaved}
             />
             <label htmlFor="select-all-saved" className="text-sm font-medium">
-              Select All ({selectedItems.length})
+              Select All ({savedItemCount})
             </label>
           </div>
-          {selectedItems.length > 0 && (
+          {getSelectedSavedItems().length > 0 && (
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -594,7 +598,7 @@ export const Cart = () => {
                 onClick={() => setShowBulkMoveConfirm(true)}
               >
                 <ShoppingCart className="h-4 w-4 mr-1" />
-                Move to Cart ({selectedItems.length})
+                Move to Cart ({getSelectedSavedItems().length})
               </Button>
               <Button
                 variant="outline"
@@ -602,7 +606,7 @@ export const Cart = () => {
                 onClick={() => setShowBulkDeleteConfirm(true)}
               >
                 <Trash2 className="h-4 w-4 mr-1" />
-                Delete ({selectedItems.length})
+                Delete ({getSelectedSavedItems().length})
               </Button>
             </div>
           )}
@@ -893,7 +897,7 @@ export const Cart = () => {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Checkout Card */}
-          {hasSelectedItems && (
+          {getSelectedCartItems().length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle>Checkout Summary</CardTitle>
@@ -902,7 +906,7 @@ export const Cart = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Selected Items:</span>
-                    <span>{selectedItemCount}</span>
+                    <span>{getSelectedCartItems().length}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Subtotal:</span>

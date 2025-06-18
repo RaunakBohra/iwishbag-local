@@ -36,6 +36,8 @@ interface CartStore {
   moveToCart: (id: string) => void;
   toggleSelection: (id: string) => void;
   selectAll: () => void;
+  selectAllCart: () => void;
+  selectAllSaved: () => void;
   clearSelection: () => void;
   bulkDelete: (ids: string[]) => void;
   bulkMove: (ids: string[], toSaved: boolean) => void;
@@ -128,6 +130,18 @@ export const useCartStore = create<CartStore>()(
       selectAll: () => {
         set((state) => ({
           selectedItems: [...state.items, ...state.savedItems].map(item => item.id)
+        }));
+      },
+
+      selectAllCart: () => {
+        set((state) => ({
+          selectedItems: state.items.map(item => item.id)
+        }));
+      },
+
+      selectAllSaved: () => {
+        set((state) => ({
+          selectedItems: state.savedItems.map(item => item.id)
         }));
       },
 
@@ -240,6 +254,7 @@ export const useCartStore = create<CartStore>()(
               id,
               product_name,
               final_total,
+              final_total_local,
               quantity,
               item_weight,
               image_url,
@@ -276,7 +291,7 @@ export const useCartStore = create<CartStore>()(
               id: quote.id,
               quoteId: quote.id,
               productName: quote.product_name || firstItem?.product_name || 'Unknown Product',
-              itemPrice: quote.final_total || firstItem?.item_price || 0,
+              itemPrice: quote.final_total_local || quote.final_total || firstItem?.item_price || 0,
               quantity: quote.quantity || firstItem?.quantity || 1,
               itemWeight: quote.item_weight || firstItem?.item_weight || 0,
               imageUrl: quote.image_url || firstItem?.image_url,

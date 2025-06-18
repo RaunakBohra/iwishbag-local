@@ -109,7 +109,7 @@ export default function Checkout() {
   const allowCod = userProfile?.cod_enabled ?? false;
 
   // Calculate total amount
-  const totalAmount = selectedQuotes?.reduce((sum, quote) => sum + (quote.final_total || 0), 0) || 0; // Use quote.final_total
+  const totalAmount = selectedQuotes?.reduce((sum, quote) => sum + (quote.final_total_local ?? quote.final_total ?? 0), 0) || 0; // Use quote.final_total_local, fallback to final_total
 
   const handleStripePayment = async () => {
     setIsProcessing(true);
@@ -327,7 +327,7 @@ export default function Checkout() {
                   </div>
                   <div className="text-right">
                     {/* Corrected property access here */}
-                    <div className="font-bold">{formatAmount(quote.final_total || 0)}</div>
+                    <div className="font-bold">{formatAmount(quote.final_total_local ?? quote.final_total ?? 0)}</div>
                   </div>
                 </div>
               ))}

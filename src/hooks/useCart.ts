@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useCartStore, CartItem } from '@/stores/cartStore';
-import { formatAmountForDisplay } from '@/lib/currencyUtils';
+import { useUserCurrency } from '@/hooks/useUserCurrency';
 
 export const useCart = () => {
   const {
@@ -24,8 +24,12 @@ export const useCart = () => {
     clearError,
     setUserId,
     syncWithServer,
-    loadFromServer
+    loadFromServer,
+    selectAllCart,
+    selectAllSaved
   } = useCartStore();
+
+  const { formatAmount } = useUserCurrency();
 
   // Cart calculations
   const cartTotal = useMemo(() => {
@@ -68,12 +72,12 @@ export const useCart = () => {
 
   // Formatted values
   const formattedCartTotal = useMemo(() => {
-    return formatAmountForDisplay(cartTotal);
-  }, [cartTotal]);
+    return formatAmount(cartTotal);
+  }, [cartTotal, formatAmount]);
 
   const formattedSelectedTotal = useMemo(() => {
-    return formatAmountForDisplay(selectedItemsTotal);
-  }, [selectedItemsTotal]);
+    return formatAmount(selectedItemsTotal);
+  }, [selectedItemsTotal, formatAmount]);
 
   // Utility functions
   const isItemSelected = (id: string) => {
@@ -97,15 +101,35 @@ export const useCart = () => {
   const hasSavedItems = savedItemCount > 0;
   const isAllSelected = selectedItemCount === (itemCount + savedItemCount) && (itemCount + savedItemCount) > 0;
 
-  // Bulk operations
-  const handleSelectAll = () => {
-    if (isAllSelected) {
-      clearSelection();
+  // New: Context-aware select all
+  const isAllCartSelected = itemCount > 0 && getSelectedCartItems().length === itemCount;
+  const isAllSavedSelected = savedItemCount > 0 && getSelectedSavedItems().length === savedItemCount;
+
+  const handleSelectAllCart = () => {
+    if (isAllCartSelected) {
+      // Deselect all cart items
+      const cartItemIds = items.map(item => item.id);
+      setTimeout(() => {
+        clearSelection();
+      }, 0);
     } else {
-      selectAll();
+      selectAllCart();
     }
   };
 
+  const handleSelectAllSaved = () => {
+    if (isAllSavedSelected) {
+      // Deselect all saved items
+      const savedItemIds = savedItems.map(item => item.id);
+      setTimeout(() => {
+        clearSelection();
+      }, 0);
+    } else {
+      selectAllSaved();
+    }
+  };
+
+  // Bulk operations
   const handleBulkDelete = () => {
     if (hasSelectedItems) {
       bulkDelete(selectedItems);
@@ -158,6 +182,8 @@ export const useCart = () => {
     hasCartItems,
     hasSavedItems,
     isAllSelected,
+    isAllCartSelected,
+    isAllSavedSelected,
     
     // Actions
     addItem,
@@ -178,7 +204,8 @@ export const useCart = () => {
     loadFromServer,
     
     // Bulk operations
-    handleSelectAll,
+    handleSelectAllCart,
+    handleSelectAllSaved,
     handleBulkDelete,
     handleBulkMoveToSaved,
     handleBulkMoveToCart
