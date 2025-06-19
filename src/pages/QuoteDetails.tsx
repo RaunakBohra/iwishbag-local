@@ -77,7 +77,7 @@ export const QuoteDetails: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container py-12 space-y-8">
+      <div className="container py-6 sm:py-12 space-y-6 sm:space-y-8">
         {quote.status === 'requested' ? (
           <>
             <Card className="bg-card border border-border">
@@ -87,17 +87,17 @@ export const QuoteDetails: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground mb-6">
+                <p className="text-muted-foreground mb-4 sm:mb-6">
                   Thank you for your quote request. Our team is currently preparing your quote and will get back to you shortly. 
                   You can see the items you've requested below.
                 </p>
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-foreground">Items Requested</h3>
-                  <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground">Items Requested</h3>
+                  <div className="space-y-3 sm:space-y-4">
                     {quote.quote_items?.map((item) => (
-                      <div key={item.id} className="flex items-start gap-4 p-4 bg-card border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div key={item.id} className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-card border border-border rounded-lg hover:bg-muted/50 transition-colors">
                         {item.image_url && (
-                          <div className="w-16 h-16 rounded-lg overflow-hidden border border-border bg-muted">
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-border bg-muted flex-shrink-0">
                             <img 
                               src={item.image_url} 
                               alt={item.product_name || 'Product'} 
@@ -105,9 +105,9 @@ export const QuoteDetails: React.FC = () => {
                             />
                           </div>
                         )}
-                        <div className="flex-1">
-                          <h4 className="font-medium text-foreground">{item.product_name}</h4>
-                          <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-sm sm:text-base text-foreground">{item.product_name}</h4>
+                          <p className="text-xs sm:text-sm text-muted-foreground">Quantity: {item.quantity}</p>
                         </div>
                       </div>
                     ))}

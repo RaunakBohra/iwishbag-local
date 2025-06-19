@@ -111,23 +111,23 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
 
       {/* Sticky bottom action bar for mobile */}
       <motion.div
-        className="mobile-sticky-bar bg-card border-t border-border flex md:hidden items-center justify-between px-4 py-3"
+        className="mobile-sticky-bar bg-card border-t border-border flex md:hidden items-center justify-between px-3 py-2.5"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div className="flex flex-col gap-1">
-          <span className="text-lg font-semibold text-foreground">{formattedTotal}</span>
-          <Badge className={cn('text-xs px-2 py-0.5 font-medium border', statusInfo.color)}>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-base font-semibold text-foreground">{formattedTotal}</span>
+          <Badge className={cn('text-xs px-1.5 py-0.5 font-medium border w-fit', statusInfo.color)}>
             {statusInfo.label}
           </Badge>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-1.5 items-center">
           {onApprove && (
             <Button
               size="sm"
               onClick={onApprove}
               disabled={isProcessing}
-              className="bg-foreground text-background hover:bg-foreground/90"
+              className="bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm"
             >
               Approve
             </Button>
@@ -138,7 +138,7 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
               variant="outline"
               onClick={onReject}
               disabled={isProcessing}
-              className="border-destructive text-destructive hover:bg-destructive/10"
+              className="border-destructive text-destructive hover:bg-destructive/10 px-3 py-1.5 h-auto text-sm"
             >
               Reject
             </Button>

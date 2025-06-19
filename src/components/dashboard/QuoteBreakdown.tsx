@@ -183,7 +183,7 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
 
   return (
     <Card className="w-full overflow-hidden bg-card border border-border">
-      <CardContent className="pt-6 space-y-8 pb-mobile-safe md:pb-6">
+      <CardContent className="pt-4 sm:pt-6 space-y-6 sm:space-y-8 pb-mobile-safe md:pb-6">
         <QuoteStepper currentStep={uiState.step} rejected={uiState.step === 'rejected'} />
         <QuoteSummary
           status={uiState.summaryStatus}
@@ -195,42 +195,42 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
           renderActions={() => (
             <>
               {uiState.canAddToCart && (
-                <Button onClick={handleAddToCart} disabled={isProcessing} className="ml-2 bg-foreground text-background hover:bg-foreground/90">
-                  <ShoppingCart className="h-4 w-4 mr-2" />
+                <Button onClick={handleAddToCart} disabled={isProcessing} className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm">
+                  <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                   Add to Cart
                 </Button>
               )}
               {uiState.canGoToCart && (
-                <Button asChild className="ml-2 bg-foreground text-background hover:bg-foreground/90">
+                <Button asChild className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm">
                   <Link to="/cart">
-                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                     Go to Cart
                   </Link>
                 </Button>
               )}
               {uiState.canReApprove && (
-                <Button onClick={handleReApprove} disabled={isProcessing} className="ml-2 bg-foreground text-background hover:bg-foreground/90">
+                <Button onClick={handleReApprove} disabled={isProcessing} className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm">
                   Re-Approve Quote
                 </Button>
               )}
             </>
           )}
         />
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <QuoteBreakdownHeader
             quote={quote}
             isItemsExpanded={isItemsExpanded}
             onToggleItems={() => setIsItemsExpanded(!isItemsExpanded)}
           />
           {isItemsExpanded && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {quote.quote_items?.map((item) => (
                 <QuoteItemCard key={item.id} item={item} />
               ))}
             </div>
           )}
           {showBreakdown && (
-            <div className="space-y-6 pt-6 border-t border-white/30">
+            <div className="space-y-4 sm:space-y-6 pt-4 sm:pt-6 border-t border-white/30">
               <QuoteBreakdownDetails quote={quote} countrySettings={countrySettings} />
             </div>
           )}
@@ -262,7 +262,7 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
           isPending={isProcessing}
         />
         {/* Need Help? menu - moved between breakdown and messages */}
-        <div className="flex justify-center py-4 border-t border-b border-border">
+        <div className="flex justify-center py-3 sm:py-4 border-t border-b border-border">
           <div className="md:block hidden">
             <Popover open={isHelpOpen} onOpenChange={setHelpOpen}>
               <PopoverTrigger asChild>
@@ -290,11 +290,11 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
           </div>
           <div className="md:hidden block w-full">
             <button
-              className="w-full text-base font-medium flex items-center gap-1 justify-center py-2 text-red-600 dark:text-red-400 bg-transparent border-none shadow-none hover:bg-transparent hover:text-red-500 focus:outline-none focus:ring-0"
+              className="w-full text-sm sm:text-base font-medium flex items-center gap-1 justify-center py-2 text-red-600 dark:text-red-400 bg-transparent border-none shadow-none hover:bg-transparent hover:text-red-500 focus:outline-none focus:ring-0"
               type="button"
               onClick={() => setMobileHelpOpen(true)}
             >
-              <HelpCircle className="w-5 h-5 text-red-600 dark:text-red-400" /> Need Help?
+              <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" /> Need Help?
             </button>
             <Dialog open={isMobileHelpOpen} onOpenChange={setMobileHelpOpen}>
               <DialogContent className="sm:max-w-[300px] backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl">
