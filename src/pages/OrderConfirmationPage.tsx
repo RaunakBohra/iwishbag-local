@@ -167,15 +167,15 @@ const OrderConfirmationPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center space-y-6">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-8 shadow-2xl text-center space-y-6">
           <div className="relative">
             <div className="w-20 h-20 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto"></div>
             <CheckCircle2 className="absolute inset-0 m-auto w-8 h-8 text-green-600 animate-pulse" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-gray-900">Processing Your Order</h2>
-            <p className="text-gray-600">Please wait while we confirm your order details...</p>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Processing Your Order</h2>
+            <p className="text-muted-foreground">Please wait while we confirm your order details...</p>
           </div>
         </div>
       </div>
@@ -184,28 +184,22 @@ const OrderConfirmationPage = () => {
 
   if (isError || !order) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center">
-        <div className="text-center space-y-6 max-w-md mx-auto p-6">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 flex items-center justify-center">
+        <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-8 shadow-2xl text-center space-y-6 max-w-md mx-auto">
           <div className="relative">
             <XCircle className="w-20 h-20 text-red-500 mx-auto" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-gray-900">Order Not Found</h2>
-            <p className="text-gray-600">We couldn't find the order you're looking for. Please check your order ID and try again.</p>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-500 bg-clip-text text-transparent">Order Not Found</h2>
+            <p className="text-muted-foreground">We couldn't find the order you're looking for. Please check your order ID and try again.</p>
           </div>
           <div className="space-y-3">
-            <Button asChild className="w-full">
+            <Button asChild className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-300">
               <Link to="/dashboard">
                 <Home className="w-4 h-4 mr-2" />
                 Go to Dashboard
               </Link>
             </Button>
-            <Button variant="outline" asChild className="w-full">
-              <Link to="/cart">
-                <ShoppingBag className="w-4 h-4 mr-2" />
-                View Cart
-              </Link>
-        </Button>
           </div>
         </div>
       </div>
@@ -496,7 +490,7 @@ const OrderConfirmationPage = () => {
                     Have questions about your order? We're here to help!
                   </p>
                   <div className="space-y-2">
-                    <Button variant="outline" className="w-full justify-start" asChild>
+                    <Button variant="outline" className="w-full justify-start asChild">
                       <Link to="/contact">
                         <Mail className="w-4 h-4 mr-2" />
                         Contact Support

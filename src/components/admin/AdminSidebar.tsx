@@ -126,8 +126,8 @@ export const AdminSidebar = () => {
   };
 
   return (
-    <Sidebar className="border-r">
-      <SidebarContent className="py-4">
+    <Sidebar className="border-r bg-card">
+      <SidebarContent className="py-4 bg-card">
         {menuGroups.map((group) => (
           <SidebarGroup key={group.title}>
             <SidebarGroupLabel className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">

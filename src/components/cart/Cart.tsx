@@ -286,89 +286,8 @@ export const Cart = () => {
       );
     }
 
-    // Filter and sort items
-    const filteredCartItems = cartItems?.filter(item =>
-      item.productName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-      item.countryCode.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-    ) || [];
-
-    const sortedCartItems = [...filteredCartItems].sort((a, b) => {
-      switch (sortBy) {
-        case "date-desc":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case "date-asc":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case "price-desc":
-          return (b.finalTotal * b.quantity) - (a.finalTotal * a.quantity);
-        case "price-asc":
-          return (a.finalTotal * a.quantity) - (b.finalTotal * b.quantity);
-        case "name-asc":
-          return a.productName.localeCompare(b.productName);
-        case "name-desc":
-          return b.productName.localeCompare(a.productName);
-        default:
-          return 0;
-      }
-    });
-
     return (
       <div className="space-y-6">
-        {/* Search and Sort Controls */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date-desc">Newest First</SelectItem>
-                <SelectItem value="date-asc">Oldest First</SelectItem>
-                <SelectItem value="price-desc">Price High-Low</SelectItem>
-                <SelectItem value="price-asc">Price Low-High</SelectItem>
-                <SelectItem value="name-asc">Name A-Z</SelectItem>
-                <SelectItem value="name-desc">Name Z-A</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex border rounded-md">
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-                className="rounded-r-none"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("grid")}
-                className="rounded-l-none"
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
         {/* Bulk Actions */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -406,7 +325,7 @@ export const Cart = () => {
         {/* Items Grid/List */}
         {viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sortedCartItems.map((item) => (
+            {cartItems.map((item) => (
               <Card key={item.id} className="relative">
                 <CardContent className="p-4">
                   <div className="absolute top-2 right-2">
@@ -474,47 +393,39 @@ export const Cart = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {sortedCartItems.map((item) => (
+            {cartItems.map((item) => (
               <Card key={item.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
                     <Checkbox
                       checked={selectedItems.includes(item.id)}
                       onCheckedChange={() => handleSelectItem(item.id)}
-                      className="mt-4"
+                      className="mt-1"
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-medium">{item.productName}</h3>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium truncate">{item.productName}</h3>
                           <p className="text-sm text-muted-foreground">
                             {item.countryCode} • {(item.itemWeight * item.quantity).toFixed(2)}kg
                           </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold">
-                            {formatAmount(item.finalTotal * item.quantity)}
+                          <div className="flex items-center gap-2 mt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
+                            >
+                              -
+                            </Button>
+                            <span className="w-8 text-center">{item.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                            >
+                              +
+                            </Button>
                           </div>
-                          <p className="text-sm text-muted-foreground">Total</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 mt-4">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
-                          >
-                            -
-                          </Button>
-                          <span className="w-8 text-center">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                          >
-                            +
-                          </Button>
                         </div>
                         <div className="flex gap-1">
                           <Button
@@ -533,6 +444,14 @@ export const Cart = () => {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
+                        </div>
+                      </div>
+                      <div className="text-right mt-2">
+                        <div className="font-bold">
+                          {formatAmount(item.finalTotal * item.quantity)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
                         </div>
                       </div>
                     </div>
@@ -554,96 +473,15 @@ export const Cart = () => {
           <div className="text-center">
             <h3 className="text-lg font-medium">No saved items</h3>
             <p className="text-sm text-muted-foreground">
-              Items you save will appear here
+              Items you save for later will appear here
             </p>
           </div>
         </div>
       );
     }
 
-    // Filter and sort saved items
-    const filteredSavedItems = savedItems?.filter(item =>
-      item.productName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-      item.countryCode.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-    ) || [];
-
-    const sortedSavedItems = [...filteredSavedItems].sort((a, b) => {
-      switch (sortBy) {
-        case "date-desc":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case "date-asc":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case "price-desc":
-          return (b.finalTotal * b.quantity) - (a.finalTotal * a.quantity);
-        case "price-asc":
-          return (a.finalTotal * a.quantity) - (b.finalTotal * b.quantity);
-        case "name-asc":
-          return a.productName.localeCompare(b.productName);
-        case "name-desc":
-          return b.productName.localeCompare(a.productName);
-        default:
-          return 0;
-      }
-    });
-
     return (
       <div className="space-y-6">
-        {/* Search and Sort Controls */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search saved items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date-desc">Newest First</SelectItem>
-                <SelectItem value="date-asc">Oldest First</SelectItem>
-                <SelectItem value="price-desc">Price High-Low</SelectItem>
-                <SelectItem value="price-asc">Price Low-High</SelectItem>
-                <SelectItem value="name-asc">Name A-Z</SelectItem>
-                <SelectItem value="name-desc">Name Z-A</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex border rounded-md">
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-                className="rounded-r-none"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("grid")}
-                className="rounded-l-none"
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
         {/* Bulk Actions */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -681,7 +519,7 @@ export const Cart = () => {
         {/* Items Grid/List */}
         {viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sortedSavedItems.map((item) => (
+            {savedItems.map((item) => (
               <Card key={item.id} className="relative">
                 <CardContent className="p-4">
                   <div className="absolute top-2 right-2">
@@ -749,47 +587,39 @@ export const Cart = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {sortedSavedItems.map((item) => (
+            {savedItems.map((item) => (
               <Card key={item.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
                     <Checkbox
                       checked={selectedItems.includes(item.id)}
                       onCheckedChange={() => handleSelectItem(item.id)}
-                      className="mt-4"
+                      className="mt-1"
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-medium">{item.productName}</h3>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium truncate">{item.productName}</h3>
                           <p className="text-sm text-muted-foreground">
                             {item.countryCode} • {(item.itemWeight * item.quantity).toFixed(2)}kg
                           </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold">
-                            {formatAmount(item.finalTotal * item.quantity)}
+                          <div className="flex items-center gap-2 mt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
+                            >
+                              -
+                            </Button>
+                            <span className="w-8 text-center">{item.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                            >
+                              +
+                            </Button>
                           </div>
-                          <p className="text-sm text-muted-foreground">Total</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 mt-4">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
-                          >
-                            -
-                          </Button>
-                          <span className="w-8 text-center">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                          >
-                            +
-                          </Button>
                         </div>
                         <div className="flex gap-1">
                           <Button
@@ -808,6 +638,14 @@ export const Cart = () => {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
+                        </div>
+                      </div>
+                      <div className="text-right mt-2">
+                        <div className="font-bold">
+                          {formatAmount(item.finalTotal * item.quantity)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
                         </div>
                       </div>
                     </div>

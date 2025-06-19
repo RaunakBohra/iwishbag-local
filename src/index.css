@@ -43,21 +43,21 @@
 
   .dark {
     --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --foreground: 210 40% 85%;
     --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card-foreground: 210 40% 85%;
     --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
+    --popover-foreground: 210 40% 85%;
+    --primary: 210 40% 85%;
     --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary-foreground: 210 40% 85%;
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted-foreground: 215 20.2% 70%;
     --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent-foreground: 210 40% 85%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 210 40% 85%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
@@ -87,24 +87,46 @@
     min-height: 100vh;
     width: 100%;
     overflow-x: hidden;
-    background: linear-gradient(
-      to bottom,
-      #00aeb0 0%,
-      #00c4d6 25%,
-      #00d9db 50%,
-      #00e5d4 75%,
-      #ffe9c4 100%
-    );
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-    background-size: cover;
-    color: #052a2e;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Dark theme text adjustments for better readability */
+  .dark {
+    color: hsl(210 40% 85%);
+  }
+
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    color: hsl(210 40% 90%);
+  }
+
+  .dark p, .dark span, .dark div {
+    color: hsl(210 40% 85%);
+  }
+
+  .dark .text-muted-foreground {
+    color: hsl(215 20.2% 70%) !important;
+  }
+
+  .dark .text-gray-100 {
+    color: hsl(210 40% 85%) !important;
+  }
+
+  .dark .text-gray-200 {
+    color: hsl(210 40% 80%) !important;
+  }
+
+  .dark .text-gray-300 {
+    color: hsl(210 40% 75%) !important;
+  }
+
+  .dark .text-gray-400 {
+    color: hsl(210 40% 70%) !important;
   }
 
   /* Mobile-specific fixes */
   @media (max-width: 768px) {
     body {
-      font-size: 16px; /* Prevent zoom on iOS */
+      font-size: 16px;
       line-height: 1.5;
     }
     
@@ -129,111 +151,98 @@
     }
   }
 
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    /* Remove the old gradient, let body handle it */
-    background: none;
-    pointer-events: none;
+  /* Theme transitions for all elements */
+  * {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Disable transitions for specific elements that shouldn't animate */
+  .no-transition,
+  .no-transition * {
+    transition: none !important;
   }
 }
 
+/* Custom button styles with theme support */
 .btn-signin {
-  background-image: linear-gradient(to right, #00c4d6, #00e5d4, #00c4d6);
-  background-size: 200% auto;
+  @apply bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600;
   color: white;
   font-weight: 600;
   border-radius: 10px;
   padding: 14px 30px;
-  transition: background-position 0.5s ease, transform 0.2s;
-  box-shadow: 0 4px 15px rgba(0, 229, 212, 0.3);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   display: inline-block;
 }
+
 .btn-signin:hover, .btn-signin:focus {
-  background-position: right center;
   transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .btn-secondary {
-  background-image: linear-gradient(to right, #e0fbfc, #b2f4fa, #e0fbfc);
-  background-size: 200% auto;
-  color: #052a2e;
+  @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
   font-weight: 600;
   border-radius: 10px;
   padding: 14px 30px;
-  transition: background-position 0.5s, transform 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 229, 212, 0.08);
+  transition: all 0.3s ease;
   display: inline-block;
 }
+
 .btn-secondary:hover, .btn-secondary:focus {
-  background-position: right center;
   transform: scale(1.05);
 }
 
 .btn-outline {
-  background: transparent;
-  color: #00c4d6;
-  border: 2px solid transparent;
+  @apply bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground;
   border-radius: 10px;
   padding: 14px 30px;
   font-weight: 600;
-  background-image: linear-gradient(white, white), linear-gradient(to right, #00c4d6, #00e5d4, #00c4d6);
-  background-origin: border-box;
-  background-clip: padding-box, border-box;
-  transition: border-color 0.3s, transform 0.2s;
+  transition: all 0.3s ease;
   display: inline-block;
 }
+
 .btn-outline:hover, .btn-outline:focus {
   transform: scale(1.05);
-  border-color: #00e5d4;
 }
 
 .btn-glass {
-  background: rgba(255,255,255,0.12);
-  border: 1.5px solid #b2f4fa;
-  color: #00c4d6;
+  @apply bg-background/10 border border-border/50 text-foreground;
   border-radius: 10px;
   padding: 14px 30px;
   font-weight: 600;
   backdrop-filter: blur(10px);
-  transition: 0.3s, transform 0.2s;
+  transition: all 0.3s ease;
   display: inline-block;
 }
+
 .btn-glass:hover, .btn-glass:focus {
+  @apply bg-background/20 border-border;
   transform: scale(1.05);
-  background: rgba(255,255,255,0.18);
 }
 
 .btn-destructive {
-  background-image: linear-gradient(to right, #ff5f6d, #ffc371, #ff5f6d);
-  background-size: 200% auto;
-  color: #fff;
+  @apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
   font-weight: 600;
   border-radius: 10px;
   padding: 14px 30px;
-  transition: background-position 0.5s, transform 0.2s;
-  box-shadow: 0 4px 15px rgba(255, 95, 109, 0.15);
+  transition: all 0.3s ease;
   display: inline-block;
 }
+
 .btn-destructive:hover, .btn-destructive:focus {
-  background-position: right center;
   transform: scale(1.05);
 }
 
 .btn-link {
-  color: #0074d9;
+  @apply text-primary hover:text-primary/80 underline-offset-4 hover:underline;
   font-weight: 600;
-  background: none;
-  border: none;
-  padding: 0;
-  transition: color 0.2s, transform 0.2s;
+  transition: all 0.3s ease;
   display: inline-block;
 }
+
 .btn-link:hover, .btn-link:focus {
-  text-decoration: underline;
-  transform: scale(1.05);
+  transform: scale(1.02);
 }
 
 @keyframes scroll-reveal {
@@ -422,5 +431,24 @@
   .container {
     padding-left: 0.75rem;
     padding-right: 0.75rem;
+  }
+}
+
+/* Mobile sticky bar positioning */
+.mobile-sticky-bar {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 9999 !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Ensure content doesn't get hidden behind sticky bar on mobile */
+@media (max-width: 768px) {
+  .pb-mobile-safe {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 }

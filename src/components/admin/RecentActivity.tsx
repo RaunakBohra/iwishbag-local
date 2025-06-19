@@ -50,15 +50,15 @@ export const RecentActivity = () => {
       case 'approved':
       case 'completed':
       case 'paid':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400';
       case 'pending':
       case 'processing':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400';
       case 'rejected':
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 

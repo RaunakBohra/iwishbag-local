@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,9 +14,9 @@ interface CompanyInfoFormProps {
 
 export const CompanyInfoForm = ({ formData, handleInputChange }: CompanyInfoFormProps) => {
   return (
-    <Card>
+    <Card className="backdrop-blur-xl bg-white/10 border-white/20 shadow-2xl">
       <CardHeader>
-        <CardTitle>Company Information</CardTitle>
+        <CardTitle className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Company Information</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -26,6 +25,7 @@ export const CompanyInfoForm = ({ formData, handleInputChange }: CompanyInfoForm
             id="company_name"
             value={formData.company_name}
             onChange={(e) => handleInputChange('company_name', e.target.value)}
+            className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
           />
         </div>
         
@@ -36,6 +36,7 @@ export const CompanyInfoForm = ({ formData, handleInputChange }: CompanyInfoForm
             value={formData.company_description}
             onChange={(e) => handleInputChange('company_description', e.target.value)}
             rows={3}
+            className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
           />
         </div>
         
@@ -46,6 +47,7 @@ export const CompanyInfoForm = ({ formData, handleInputChange }: CompanyInfoForm
             value={formData.business_hours}
             onChange={(e) => handleInputChange('business_hours', e.target.value)}
             rows={2}
+            className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
           />
         </div>
       </CardContent>

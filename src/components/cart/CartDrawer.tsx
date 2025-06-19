@@ -362,35 +362,9 @@ export const CartDrawer = () => {
 
     return (
       <div className="space-y-4">
-        {/* Search and Sort Controls */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date-desc">Newest</SelectItem>
-              <SelectItem value="date-asc">Oldest</SelectItem>
-              <SelectItem value="price-desc">Price High</SelectItem>
-              <SelectItem value="price-asc">Price Low</SelectItem>
-              <SelectItem value="name-asc">Name A-Z</SelectItem>
-              <SelectItem value="name-desc">Name Z-A</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Cart Items */}
         <div className="space-y-3">
-          {sortedCartItems.map((item) => (
+          {cartItems.map((item) => (
             <div key={item.id} className="flex items-start gap-3 p-3 border rounded-lg">
               <Checkbox
                 checked={selectedItems.includes(item.id)}
@@ -474,35 +448,9 @@ export const CartDrawer = () => {
 
     return (
       <div className="space-y-4">
-        {/* Search and Sort Controls */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search saved items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date-desc">Newest</SelectItem>
-              <SelectItem value="date-asc">Oldest</SelectItem>
-              <SelectItem value="price-desc">Price High</SelectItem>
-              <SelectItem value="price-asc">Price Low</SelectItem>
-              <SelectItem value="name-asc">Name A-Z</SelectItem>
-              <SelectItem value="name-desc">Name Z-A</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Saved Items */}
         <div className="space-y-3">
-          {sortedSavedItems.map((item) => (
+          {savedItems.map((item) => (
             <div key={item.id} className="flex items-start gap-3 p-3 border rounded-lg">
               <Checkbox
                 checked={selectedItems.includes(item.id)}

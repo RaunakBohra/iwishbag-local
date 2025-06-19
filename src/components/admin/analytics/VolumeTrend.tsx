@@ -5,12 +5,14 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const VolumeTrend = () => {
-  const { data: volumeData, isLoading } = useQuery({
+  const { data: volumeData, isLoading, error } = useQuery({
     queryKey: ['volume-trend'],
     queryFn: async () => {
       // Get last 8 weeks of data
       const eightWeeksAgo = new Date();
       eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56); // 8 weeks * 7 days
+      
+      console.log('Fetching volume data from:', eightWeeksAgo.toISOString());
       
       const { data: quotes, error } = await supabase
         .from('quotes')
@@ -18,7 +20,12 @@ export const VolumeTrend = () => {
         .gte('created_at', eightWeeksAgo.toISOString())
         .order('created_at', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching volume data:', error);
+        throw error;
+      }
+
+      console.log('Fetched quotes for volume:', quotes?.length || 0);
 
       // Group by week
       const weeklyQuotes = new Map();
@@ -50,27 +57,31 @@ export const VolumeTrend = () => {
         orders: weeklyOrders.get(week) || 0
       }));
 
+      console.log('Weekly volume data:', weeklyData);
+
       // Calculate totals
       const totalQuotes = quotes?.length || 0;
       const totalOrders = quotes?.filter(q => q.approval_status === 'approved').length || 0;
 
-      // Calculate trends
-      const recentWeeks = weeklyData.slice(-4);
-      const previousWeeks = weeklyData.slice(-8, -4);
-      
-      const recentQuoteAvg = recentWeeks.reduce((sum, week) => sum + week.quotes, 0) / recentWeeks.length;
-      const previousQuoteAvg = previousWeeks.reduce((sum, week) => sum + week.quotes, 0) / previousWeeks.length;
-      
-      const recentOrderAvg = recentWeeks.reduce((sum, week) => sum + week.orders, 0) / recentWeeks.length;
-      const previousOrderAvg = previousWeeks.reduce((sum, week) => sum + week.orders, 0) / previousWeeks.length;
-      
-      const quoteChange = recentQuoteAvg - previousQuoteAvg;
-      const orderChange = recentOrderAvg - previousOrderAvg;
-      
-      const quoteChangePercent = previousQuoteAvg > 0 ? (quoteChange / previousQuoteAvg) * 100 : 0;
-      const orderChangePercent = previousOrderAvg > 0 ? (orderChange / previousOrderAvg) * 100 : 0;
+      // Calculate trends - handle cases with limited data
+      let quoteChange = 0;
+      let orderChange = 0;
+      let quoteChangePercent = 0;
+      let orderChangePercent = 0;
 
-      return {
+      if (weeklyData.length >= 2) {
+        // If we have at least 2 weeks, compare the last week with the previous week
+        const lastWeek = weeklyData[weeklyData.length - 1];
+        const previousWeek = weeklyData[weeklyData.length - 2];
+        
+        quoteChange = lastWeek.quotes - previousWeek.quotes;
+        orderChange = lastWeek.orders - previousWeek.orders;
+        
+        quoteChangePercent = previousWeek.quotes > 0 ? (quoteChange / previousWeek.quotes) * 100 : 0;
+        orderChangePercent = previousWeek.orders > 0 ? (orderChange / previousWeek.orders) * 100 : 0;
+      }
+
+      const result = {
         totalQuotes,
         totalOrders,
         weeklyData,
@@ -79,16 +90,21 @@ export const VolumeTrend = () => {
         quoteChangePercent: Math.round(quoteChangePercent * 100) / 100,
         orderChangePercent: Math.round(orderChangePercent * 100) / 100
       };
+
+      console.log('Volume trend result:', result);
+      return result;
     },
   });
 
   const getTrendIcon = (change: number) => {
+    if (isNaN(change)) return <Minus className="h-4 w-4 text-gray-500" />;
     if (change > 0) return <TrendingUp className="h-4 w-4 text-green-500" />;
     if (change < 0) return <TrendingDown className="h-4 w-4 text-red-500" />;
     return <Minus className="h-4 w-4 text-gray-500" />;
   };
 
   const getTrendColor = (change: number) => {
+    if (isNaN(change)) return "text-gray-500";
     if (change > 0) return "text-green-500";
     if (change < 0) return "text-red-500";
     return "text-gray-500";
@@ -111,6 +127,22 @@ export const VolumeTrend = () => {
     );
   }
 
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Volume Trend</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-red-500">Error loading volume data</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const hasData = volumeData?.weeklyData && volumeData.weeklyData.length > 0;
+  const showTrend = volumeData?.weeklyData.length >= 2;
+
   return (
     <Card>
       <CardHeader>
@@ -127,9 +159,15 @@ export const VolumeTrend = () => {
             <div className="text-2xl font-bold">
               {volumeData?.totalQuotes || 0}
             </div>
-            <p className={`text-sm ${getTrendColor(volumeData?.quoteChange || 0)}`}>
-              {volumeData?.quoteChange > 0 ? '+' : ''}{volumeData?.quoteChangePercent || 0}% vs previous 4 weeks
-            </p>
+            {showTrend ? (
+              <p className={`text-sm ${getTrendColor(volumeData?.quoteChange || 0)}`}>
+                {volumeData?.quoteChange > 0 ? '+' : ''}{volumeData?.quoteChangePercent || 0}% vs previous week
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {volumeData?.weeklyData.length === 1 ? 'First week of data' : 'Insufficient data for trend'}
+              </p>
+            )}
           </div>
 
           {/* Orders */}
@@ -141,41 +179,53 @@ export const VolumeTrend = () => {
             <div className="text-2xl font-bold">
               {volumeData?.totalOrders || 0}
             </div>
-            <p className={`text-sm ${getTrendColor(volumeData?.orderChange || 0)}`}>
-              {volumeData?.orderChange > 0 ? '+' : ''}{volumeData?.orderChangePercent || 0}% vs previous 4 weeks
-            </p>
+            {showTrend ? (
+              <p className={`text-sm ${getTrendColor(volumeData?.orderChange || 0)}`}>
+                {volumeData?.orderChange > 0 ? '+' : ''}{volumeData?.orderChangePercent || 0}% vs previous week
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {volumeData?.weeklyData.length === 1 ? 'First week of data' : 'Insufficient data for trend'}
+              </p>
+            )}
           </div>
 
           {/* Simple chart */}
           <div className="mt-4 space-y-2">
             <div className="text-xs text-muted-foreground">Weekly Volume</div>
-            <div className="flex items-end space-x-1 h-16">
-              {volumeData?.weeklyData.slice(-6).map((week) => {
-                const maxVolume = Math.max(...volumeData.weeklyData.map(w => Math.max(w.quotes, w.orders)));
-                const quoteHeight = maxVolume > 0 ? (week.quotes / maxVolume) * 100 : 0;
-                const orderHeight = maxVolume > 0 ? (week.orders / maxVolume) * 100 : 0;
-                
-                return (
-                  <div key={week.week} className="flex-1 flex flex-col items-center space-y-1">
-                    <div className="w-full flex flex-col space-y-1">
-                      <div 
-                        className="w-full bg-blue-500 rounded-t"
-                        style={{ height: `${quoteHeight}%` }}
-                        title={`${week.quotes} quotes`}
-                      />
-                      <div 
-                        className="w-full bg-green-500 rounded-t"
-                        style={{ height: `${orderHeight}%` }}
-                        title={`${week.orders} orders`}
-                      />
+            {hasData ? (
+              <div className="flex items-end space-x-1 h-16">
+                {volumeData?.weeklyData.slice(-6).map((week) => {
+                  const maxVolume = Math.max(...volumeData.weeklyData.map(w => Math.max(w.quotes, w.orders)));
+                  const quoteHeight = maxVolume > 0 ? (week.quotes / maxVolume) * 100 : 0;
+                  const orderHeight = maxVolume > 0 ? (week.orders / maxVolume) * 100 : 0;
+                  
+                  return (
+                    <div key={week.week} className="flex-1 flex flex-col items-center space-y-1">
+                      <div className="w-full flex flex-col space-y-1">
+                        <div 
+                          className="w-full bg-blue-500 rounded-t min-h-[2px]"
+                          style={{ height: `${quoteHeight}%` }}
+                          title={`${week.quotes} quotes`}
+                        />
+                        <div 
+                          className="w-full bg-green-500 rounded-t min-h-[2px]"
+                          style={{ height: `${orderHeight}%` }}
+                          title={`${week.orders} orders`}
+                        />
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(week.week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(week.week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="h-16 flex items-center justify-center text-sm text-muted-foreground">
+                No volume data available
+              </div>
+            )}
             <div className="flex items-center justify-center space-x-4 text-xs">
               <div className="flex items-center space-x-1">
                 <div className="w-3 h-3 bg-blue-500 rounded"></div>

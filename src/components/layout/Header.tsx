@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, Bell, MessageSquare, ShoppingCart, LayoutDashboard, User, Menu } from "lucide-react";
+import { LogOut, Bell, MessageSquare, ShoppingCart, LayoutDashboard, User, Menu, Search, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -18,12 +18,14 @@ import { useHomePageSettings } from "@/hooks/useHomePageSettings";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { useSidebar } from "@/components/ui/sidebar";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { useTheme } from "next-themes";
 
 const Header = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toggleSidebar } = useSidebar();
+  const { theme, setTheme } = useTheme();
 
   const { data: hasAdminRole } = useAdminRole();
   const { formData: homePageSettings } = useHomePageSettings();
@@ -111,64 +113,90 @@ const Header = () => {
   };
 
   return (
-    <header className="border-b border-black/10 bg-[#00c3cf] w-full" style={{ color: '#052a2e' }}>
-      <div className="container flex h-16 items-center justify-between max-w-full px-4">
-        <div className="flex items-center space-x-4 min-w-0">
+    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 w-full">
+      <div className="container flex h-16 items-center justify-between max-w-full px-3 sm:px-4 lg:px-6">
+        <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
           {/* Mobile menu toggle for admin area */}
           {isAdminArea && (
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden text-[#052a2e] hover:bg-black/10 flex-shrink-0"
+              className="md:hidden hover:bg-accent flex-shrink-0 h-9 w-9"
               onClick={toggleSidebar}
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-4 w-4" />
               <span className="sr-only">Toggle menu</span>
             </Button>
           )}
           
-          <Link to="/" className="flex items-center min-w-0">
+          <Link to="/" className="flex items-center min-w-0 flex-1">
             {homePageSettings?.website_logo_url ? (
-              <img src={homePageSettings.website_logo_url} alt="Logo" className="h-10 w-auto object-contain" />
+              <img src={homePageSettings.website_logo_url} alt="Logo" className="h-8 sm:h-10 w-auto object-contain" />
             ) : (
-              <span className="font-bold text-xl text-[#052a2e] truncate">{homePageSettings?.company_name || "WishBag"}</span>
+              <span className="font-bold text-lg sm:text-xl truncate">{homePageSettings?.company_name || "WishBag"}</span>
             )}
           </Link>
         </div>
 
-        <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
+        <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4 min-w-0">
           {/* Admin Search - only show in admin area */}
           {isAdminArea && (
-            <AdminSearch />
+            <>
+              <div className="hidden sm:block">
+                <AdminSearch />
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="sm:hidden hover:bg-accent flex-shrink-0 h-9 w-9"
+                onClick={() => navigate('/admin/search')}
+              >
+                <Search className="h-4 w-4" />
+                <span className="sr-only">Search</span>
+              </Button>
+            </>
           )}
           
           {user ? (
-            <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
               <CartDrawer />
-              <Button variant="ghost" size="icon" className="relative text-[#052a2e] hover:bg-black/10 flex-shrink-0" onClick={() => navigate('/notifications')}>
-                <Bell className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="relative hover:bg-accent flex-shrink-0 h-9 w-9" onClick={() => navigate('/notifications')}>
+                <Bell className="h-4 w-4" />
                 {unreadNotificationsCount && unreadNotificationsCount > 0 && (
-                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs">
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 rounded-full text-xs">
                     {unreadNotificationsCount}
                   </Badge>
                 )}
                 <span className="sr-only">Notifications</span>
               </Button>
-              <Button variant="ghost" size="icon" className="relative text-[#052a2e] hover:bg-black/10 flex-shrink-0" onClick={() => navigate('/messages')}>
-                <MessageSquare className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="relative hover:bg-accent flex-shrink-0 h-9 w-9" onClick={() => navigate('/messages')}>
+                <MessageSquare className="h-4 w-4" />
                  {unreadMessagesCount && unreadMessagesCount > 0 && (
-                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs">
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 rounded-full text-xs">
                     {unreadMessagesCount}
                   </Badge>
                 )}
                 <span className="sr-only">Messages</span>
               </Button>
               
+              {/* Theme Toggle - Only for admins */}
+              {hasAdminRole && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="hover:bg-accent flex-shrink-0 h-9 w-9"
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                >
+                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  <span className="sr-only">Toggle theme</span>
+                </Button>
+              )}
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="px-2 sm:px-4 text-left text-[#052a2e] hover:bg-black/10 min-w-0">
-                    <span className="hidden sm:inline">Hello, </span>
-                    <span className="truncate">{getDisplayName()}</span>
+                  <Button variant="ghost" className="px-2 sm:px-3 text-left hover:bg-accent min-w-0 h-9">
+                    <span className="hidden lg:inline">Hello, </span>
+                    <span className="truncate text-sm sm:text-base">{getDisplayName()}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">

@@ -112,7 +112,7 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
   };
 
   return (
-    <div className="bg-gray-50 rounded-lg p-4 md:p-6">
+    <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-6 shadow-2xl">
       <style>{`
         @keyframes ripple-outline {
           0% { transform: scale(1); opacity: 0.7; }
@@ -120,11 +120,11 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
           100% { transform: scale(1.5); opacity: 0; }
         }
       `}</style>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <Package className="h-4 w-4" />
                 <span className="text-sm font-medium">Cost of Goods</span>
                 <TooltipProvider>
@@ -138,12 +138,12 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <span className="text-lg font-semibold">
+              <span className="text-lg font-semibold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 {formatAmount(quote.item_price || 0)}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <Package className="h-4 w-4" />
                 <span className="text-sm font-medium">Total Weight</span>
                 <TooltipProvider>
@@ -157,16 +157,16 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <span className="text-lg font-semibold">
+              <span className="text-lg font-semibold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 {`${totalWeight} ${countrySettings?.weight_unit || 'kg'}`}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-center h-full">
+        <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col justify-center h-full">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-gray-600">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <Receipt className="h-4 w-4" />
               <span className="text-sm font-medium">Quote Total</span>
               <Dialog open={isBreakdownOpen} onOpenChange={setIsBreakdownOpen}>
@@ -174,17 +174,17 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                   <button className="relative flex items-center justify-center w-6 h-6 p-0" style={{ minWidth: 24, minHeight: 24 }}>
                     <div className="absolute inset-0 flex items-center justify-center">
                     {/* Multi-ring ripple effect centered on the icon */}
-                      <span className="absolute rounded-full border border-green-400" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s infinite' }} />
-                      <span className="absolute rounded-full border border-green-400" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s 0.8s infinite' }} />
-                      <span className="absolute rounded-full border border-green-400" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s 1.6s infinite' }} />
+                      <span className="absolute rounded-full border border-primary/60" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s infinite' }} />
+                      <span className="absolute rounded-full border border-primary/60" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s 0.8s infinite' }} />
+                      <span className="absolute rounded-full border border-primary/60" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s 1.6s infinite' }} />
                     </div>
                     <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors relative z-10" />
                   </button>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl w-[95vw] md:w-[90vw]">
+                <DialogContent className="max-w-4xl w-[95vw] md:w-[90vw] backdrop-blur-xl bg-white/95 border border-white/30">
                   <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Receipt className="h-5 w-5 text-blue-500" />
+                    <DialogTitle className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                      <Receipt className="h-5 w-5 text-primary" />
                       Quote Breakdown
                     </DialogTitle>
                   </DialogHeader>
@@ -192,14 +192,14 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold">Items</h3>
-                        <Button variant="outline" size="sm" className="gap-2">
+                        <Button variant="outline" size="sm" className="gap-2 backdrop-blur-xl bg-white/20 border-white/30">
                           <Download className="h-4 w-4" />
                           Download PDF
                         </Button>
                       </div>
                       <div className="space-y-2">
                         {quote.quote_items?.map((item) => (
-                          <div key={item.id} className="flex justify-between items-center text-sm bg-gray-50 rounded-lg p-3">
+                          <div key={item.id} className="flex justify-between items-center text-sm backdrop-blur-xl bg-white/20 border border-white/30 rounded-lg p-3">
                             <div className="flex items-center gap-3">
                               {item.image_url && (
                                 <img 
@@ -210,7 +210,7 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                               )}
                               <div>
                                 <div className="font-medium">{item.product_name}</div>
-                                <div className="text-gray-500">Quantity: {item.quantity}</div>
+                                <div className="text-muted-foreground">Quantity: {item.quantity}</div>
                               </div>
                             </div>
                             <span className="font-medium">{formatAmount(item.item_price * item.quantity)}</span>
@@ -237,10 +237,10 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                         {renderRow("Subtotal", quote.sub_total, false, <Receipt className="h-4 w-4" />)}
                         {renderRow("VAT", quote.vat, false, <Percent className="h-4 w-4" />)}
                       </div>
-                      <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="backdrop-blur-xl bg-primary/10 border border-primary/20 rounded-lg p-4">
                         <div className="flex justify-between items-center font-semibold">
                           <span>Total Amount</span>
-                          <span>{formatAmount(quote.final_total)}</span>
+                          <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{formatAmount(quote.final_total)}</span>
                         </div>
                       </div>
                     </div>
@@ -248,7 +248,7 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                 </DialogContent>
               </Dialog>
             </div>
-            <span className="text-lg font-semibold">
+            <span className="text-lg font-semibold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
               {formatAmount(quote.final_total)}
             </span>
           </div>

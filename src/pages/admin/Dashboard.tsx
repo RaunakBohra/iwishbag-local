@@ -54,42 +54,42 @@ const AdminDashboard = () => {
       description: "Manage customer quotes",
       icon: FileText,
       href: "/admin/quotes",
-      color: "bg-blue-500",
+      color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
     },
     {
       title: "Manage Orders",
       description: "Track and process orders",
       icon: Package,
       href: "/admin/orders",
-      color: "bg-green-500",
+      color: "bg-green-500/10 text-green-600 dark:text-green-400",
     },
     {
       title: "Customer Analytics",
       description: "View customer insights",
       icon: Users,
       href: "/admin/customers",
-      color: "bg-purple-500",
+      color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
     },
     {
       title: "Cart Analytics",
       description: "Monitor cart performance",
       icon: ShoppingCart,
       href: "/admin/cart-analytics",
-      color: "bg-orange-500",
+      color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
     },
     {
       title: "Email Templates",
       description: "Manage email campaigns",
       icon: Mail,
       href: "/admin/email-templates",
-      color: "bg-red-500",
+      color: "bg-red-500/10 text-red-600 dark:text-red-400",
     },
     {
       title: "System Settings",
       description: "Configure system options",
       icon: Settings,
       href: "/admin/footer",
-      color: "bg-gray-500",
+      color: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
     },
   ];
 
@@ -105,6 +105,32 @@ const AdminDashboard = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground mt-1">Monitor and manage your business operations</p>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {quickActions.map((action) => (
+            <Card 
+              key={action.title} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate(action.href)}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className={`p-3 rounded-lg ${action.color}`}>
+                    <action.icon className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{action.title}</h3>
+                    <p className="text-sm text-muted-foreground">{action.description}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
 
@@ -163,32 +189,6 @@ const AdminDashboard = () => {
           <TopCountries />
           <AverageOrderValue />
           <ExportAnalytics />
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {quickActions.map((action) => (
-            <Card 
-              key={action.title} 
-              className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate(action.href)}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className={`p-3 rounded-lg ${action.color}`}>
-                    <action.icon className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{action.title}</h3>
-                    <p className="text-sm text-muted-foreground">{action.description}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
         </div>
       </div>
 

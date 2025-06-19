@@ -21,7 +21,7 @@ export default function ButtonPreview() {
       <h2 className="text-xl font-semibold mb-2">Logo Animation Example</h2>
       <div className="flex items-center justify-center gap-6">
         <img src="/favicon.ico" alt="Logo" className="h-16 w-16 logo-bounce logo-rotate cursor-pointer" />
-        <span className="font-bold text-2xl text-[#052a2e] logo-bounce logo-rotate cursor-pointer">WishBag</span>
+        <span className="font-bold text-2xl text-foreground logo-bounce logo-rotate cursor-pointer">WishBag</span>
       </div>
     </div>
   );

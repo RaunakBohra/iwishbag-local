@@ -27,21 +27,23 @@ export const OrderTimeline = ({ currentStatus }: OrderTimelineProps) => {
 
   if (currentStatus === 'cancelled') {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Order Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-red-500 font-bold text-lg">Order Cancelled</p>
-            </CardContent>
-        </Card>
-    )
+      <Card className="backdrop-blur-xl bg-white/10 border-white/20 shadow-2xl">
+        <CardHeader>
+          <CardTitle className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Order Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="backdrop-blur-xl bg-red-50/50 border border-red-200/50 rounded-lg p-4">
+            <p className="text-red-600 font-bold text-lg">Order Cancelled</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <Card>
+    <Card className="backdrop-blur-xl bg-white/10 border-white/20 shadow-2xl">
       <CardHeader>
-        <CardTitle>Order Timeline</CardTitle>
+        <CardTitle className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Order Timeline</CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto pb-4">
         <div className="flex items-start w-full min-w-max">
@@ -52,19 +54,21 @@ export const OrderTimeline = ({ currentStatus }: OrderTimelineProps) => {
 
             return (
               <div key={step.status} className="contents">
-                <div className="flex flex-col items-center gap-2 w-24">
+                <div className="flex flex-col items-center gap-3 w-24">
                   <div
                     className={cn(
-                      'w-10 h-10 rounded-full flex items-center justify-center border-2',
-                      isCompleted ? 'bg-primary border-primary text-primary-foreground' : 'bg-background border-muted text-muted-foreground'
+                      'w-12 h-12 rounded-full flex items-center justify-center border-2 backdrop-blur-xl transition-all duration-300',
+                      isCompleted 
+                        ? 'bg-gradient-to-r from-primary to-primary/80 border-primary text-white shadow-lg shadow-primary/20' 
+                        : 'bg-white/20 border-white/30 text-gray-400'
                     )}
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-6 h-6" />
                   </div>
                   <p
                     className={cn(
-                      'text-xs sm:text-sm font-medium text-center',
-                      isCompleted ? 'text-foreground' : 'text-muted-foreground'
+                      'text-xs sm:text-sm font-medium text-center transition-colors duration-300',
+                      isCompleted ? 'text-primary font-semibold' : 'text-muted-foreground'
                     )}
                   >
                     {step.label}
@@ -72,8 +76,8 @@ export const OrderTimeline = ({ currentStatus }: OrderTimelineProps) => {
                 </div>
                 {!isLastStep && (
                   <div className={cn(
-                    "flex-1 h-0.5 mt-5",
-                    isCompleted ? 'bg-primary' : 'bg-muted'
+                    "flex-1 h-1 mt-6 rounded-full transition-all duration-300",
+                    isCompleted ? 'bg-gradient-to-r from-primary to-primary/80' : 'bg-white/30'
                   )} />
                 )}
               </div>

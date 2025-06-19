@@ -46,72 +46,86 @@ export const QuoteDetails: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="container py-12 space-y-8">
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
+        <div className="container py-12 space-y-8">
+          <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-6 shadow-2xl">
+            <Skeleton className="h-32 w-full bg-white/30" />
+          </div>
+          <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-6 shadow-2xl">
+            <Skeleton className="h-64 w-full bg-white/30" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !quote) {
     return (
-      <div className="container py-12">
-        <Alert variant="destructive">
-          <AlertDescription>
-            {error instanceof Error ? error.message : 'Failed to load quote'}
-          </AlertDescription>
-        </Alert>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
+        <div className="container py-12">
+          <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-6 shadow-2xl">
+            <Alert variant="destructive" className="backdrop-blur-xl bg-red-50/50 border-red-200/50">
+              <AlertDescription className="text-red-800">
+                {error instanceof Error ? error.message : 'Failed to load quote'}
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container py-12 space-y-8">
-      {quote.status === 'requested' ? (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Quote Request Received</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-6">
-                Thank you for your quote request. Our team is currently preparing your quote and will get back to you shortly. 
-                You can see the items you've requested below.
-              </p>
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Items Requested</h3>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
+      <div className="container py-12 space-y-8">
+        {quote.status === 'requested' ? (
+          <>
+            <Card className="backdrop-blur-xl bg-white/20 border border-white/30 shadow-2xl">
+              <CardHeader>
+                <CardTitle className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                  Quote Request Received
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-700 mb-6">
+                  Thank you for your quote request. Our team is currently preparing your quote and will get back to you shortly. 
+                  You can see the items you've requested below.
+                </p>
                 <div className="space-y-4">
-                  {quote.quote_items?.map((item) => (
-                    <div key={item.id} className="flex items-start gap-4 p-4 border rounded-lg">
-                      {item.image_url && (
-                        <div className="w-16 h-16 rounded-lg overflow-hidden border">
-                          <img 
-                            src={item.image_url} 
-                            alt={item.product_name || 'Product'} 
-                            className="w-full h-full object-cover"
-                          />
+                  <h3 className="text-lg font-semibold text-gray-900">Items Requested</h3>
+                  <div className="space-y-4">
+                    {quote.quote_items?.map((item) => (
+                      <div key={item.id} className="flex items-start gap-4 p-4 backdrop-blur-xl bg-white/30 border border-white/40 rounded-xl hover:bg-white/40 transition-all duration-300">
+                        {item.image_url && (
+                          <div className="w-16 h-16 rounded-lg overflow-hidden border border-white/40 backdrop-blur-xl bg-white/20">
+                            <img 
+                              src={item.image_url} 
+                              alt={item.product_name || 'Product'} 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">{item.product_name}</h4>
+                          <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                         </div>
-                      )}
-                      <div className="flex-1">
-                        <h4 className="font-medium">{item.product_name}</h4>
-                        <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      ) : (
-        <QuoteBreakdown 
-          quote={quote} 
-          onApprove={approveQuote}
-          onReject={rejectQuote}
-          isProcessing={isUpdating}
-          onAddToCart={addToCart}
-        />
-      )}
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <QuoteBreakdown 
+            quote={quote} 
+            onApprove={approveQuote}
+            onReject={rejectQuote}
+            isProcessing={isUpdating}
+            onAddToCart={addToCart}
+          />
+        )}
+      </div>
     </div>
   );
 };

@@ -102,9 +102,15 @@ const CostEstimator = () => {
   if (countriesLoading || categoriesLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-8 w-full" />
+        <div className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/30 dark:border-gray-700/30 rounded-xl p-4">
+          <Skeleton className="h-8 w-full bg-white/30 dark:bg-gray-700/30" />
+        </div>
+        <div className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/30 dark:border-gray-700/30 rounded-xl p-4">
+          <Skeleton className="h-8 w-full bg-white/30 dark:bg-gray-700/30" />
+        </div>
+        <div className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/30 dark:border-gray-700/30 rounded-xl p-4">
+          <Skeleton className="h-8 w-full bg-white/30 dark:bg-gray-700/30" />
+        </div>
       </div>
     );
   }
@@ -113,14 +119,14 @@ const CostEstimator = () => {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2 order-1">
-          <Label htmlFor="country">Destination Country</Label>
+          <Label htmlFor="country" className="text-gray-700 dark:text-gray-300 font-medium">Destination Country</Label>
           <Select value={country} onValueChange={setCountry}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select destination country" />
+            <SelectTrigger className="backdrop-blur-xl bg-white/30 dark:bg-gray-700/30 border border-white/40 dark:border-gray-600/40 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all duration-300">
+              <SelectValue placeholder="Select destination country" className="text-gray-700 dark:text-gray-300" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/40 dark:border-gray-600/40">
               {countries?.map((country) => (
-                <SelectItem key={country.code} value={country.code}>
+                <SelectItem key={country.code} value={country.code} className="text-gray-700 dark:text-gray-300 hover:bg-primary/10 dark:hover:bg-primary/20">
                   {country.name}
                 </SelectItem>
               ))}
@@ -128,34 +134,36 @@ const CostEstimator = () => {
           </Select>
         </div>
         <div className="space-y-2 order-2">
-          <Label htmlFor="itemPrice">Item Price (USD)</Label>
+          <Label htmlFor="itemPrice" className="text-gray-700 dark:text-gray-300 font-medium">Item Price (USD)</Label>
           <Input
             id="itemPrice"
             type="number"
             placeholder="Enter item price in USD"
             value={itemPrice}
             onChange={(e) => setItemPrice(e.target.value)}
+            className="backdrop-blur-xl bg-white/30 dark:bg-gray-700/30 border border-white/40 dark:border-gray-600/40 hover:bg-white/40 dark:hover:bg-gray-700/40 focus:bg-white/50 dark:focus:bg-gray-700/50 transition-all duration-300 text-gray-700 dark:text-gray-300 placeholder:text-gray-500 dark:placeholder:text-gray-400"
           />
         </div>
         <div className="space-y-2 order-3">
-          <Label htmlFor="itemWeight">Item Weight</Label>
+          <Label htmlFor="itemWeight" className="text-gray-700 dark:text-gray-300 font-medium">Item Weight</Label>
           <Input
             id="itemWeight"
             type="number"
             placeholder="Enter weight"
             value={itemWeight}
             onChange={(e) => setItemWeight(e.target.value)}
+            className="backdrop-blur-xl bg-white/30 dark:bg-gray-700/30 border border-white/40 dark:border-gray-600/40 hover:bg-white/40 dark:hover:bg-gray-700/40 focus:bg-white/50 dark:focus:bg-gray-700/50 transition-all duration-300 text-gray-700 dark:text-gray-300 placeholder:text-gray-500 dark:placeholder:text-gray-400"
           />
         </div>
         <div className="space-y-2 order-4">
-          <Label htmlFor="category">Product Category</Label>
+          <Label htmlFor="category" className="text-gray-700 dark:text-gray-300 font-medium">Product Category</Label>
           <Select value={customsCategory} onValueChange={setCustomsCategory}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select product category" />
+            <SelectTrigger className="backdrop-blur-xl bg-white/30 dark:bg-gray-700/30 border border-white/40 dark:border-gray-600/40 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all duration-300">
+              <SelectValue placeholder="Select product category" className="text-gray-700 dark:text-gray-300" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/40 dark:border-gray-600/40">
               {customsCategories?.map((category) => (
-                <SelectItem key={category.name} value={category.name}>
+                <SelectItem key={category.name} value={category.name} className="text-gray-700 dark:text-gray-300 hover:bg-primary/10 dark:hover:bg-primary/20">
                   {category.name}
                 </SelectItem>
               ))}
@@ -167,21 +175,23 @@ const CostEstimator = () => {
       <Button
         onClick={handleCalculate}
         disabled={!itemPrice || !itemWeight || !country || !customsCategory || isCalculating}
-        className="w-full"
+        className="w-full backdrop-blur-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 dark:from-primary/80 dark:to-primary/60 dark:hover:from-primary/90 dark:hover:to-primary/70 text-white font-medium py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-primary/20 dark:border-primary/30"
       >
         {isCalculating ? "Calculating..." : "Calculate Estimate"}
       </Button>
 
       {estimate && (
-        <Card>
+        <Card className="backdrop-blur-xl bg-white/20 dark:bg-gray-800/20 border border-white/30 dark:border-gray-700/30 shadow-2xl">
           <CardHeader>
-            <CardTitle>Total Estimated Cost for {estimate.country}</CardTitle>
+            <CardTitle className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent dark:from-primary/80 dark:to-primary/40">
+              Total Estimated Cost for {estimate.country}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col items-center justify-center py-6">
-              <span className="text-lg font-semibold mb-2">Total Estimated Cost</span>
-              <div className="font-bold text-3xl text-primary mb-2">{formatAmount(estimate.finalTotal)}</div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
+              <span className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">Total Estimated Cost</span>
+              <div className="font-bold text-3xl bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent dark:from-primary/80 dark:to-primary/40 mb-2">{formatAmount(estimate.finalTotal)}</div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 text-center">
                 All amounts are displayed in your preferred currency
               </p>
             </div>

@@ -114,30 +114,34 @@ const CostEstimator = () => {
   };
 
   return (
-    <section id="cost-estimator" className="py-10 md:py-16 bg-gray-50 dark:bg-gray-900/20">
+    <section id="cost-estimator" className="py-10 md:py-16 bg-gradient-to-br from-gray-50 via-white to-blue-50">
       <div className="container px-2 md:px-0">
-        <Card className="max-w-2xl mx-auto">
+        <Card className="max-w-2xl mx-auto backdrop-blur-xl bg-white/20 border border-white/30 shadow-2xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl md:text-3xl font-bold">Cost Estimator</CardTitle>
-            <CardDescription className="text-sm md:text-base">
+            <CardTitle className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              Cost Estimator
+            </CardTitle>
+            <CardDescription className="text-sm md:text-base text-gray-700">
               Get a quick estimate of your total cost, including shipping and fees.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="destination-country">Country to Purchase From</Label>
+                <Label htmlFor="destination-country" className="text-gray-700 font-medium">Country to Purchase From</Label>
                 <Select onValueChange={handleCountryChange} value={destinationCountry} disabled={isLoadingCountries}>
-                  <SelectTrigger id="destination-country">
-                    <SelectValue placeholder={isLoadingCountries ? "Loading countries..." : "Select a country first"} />
+                  <SelectTrigger id="destination-country" className="backdrop-blur-xl bg-white/30 border border-white/40 hover:bg-white/40 transition-all duration-300">
+                    <SelectValue placeholder={isLoadingCountries ? "Loading countries..." : "Select a country first"} className="text-gray-700" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="backdrop-blur-xl bg-white/90 border border-white/40">
                     {countries?.map((country) => (
-                      <SelectItem key={country.code} value={country.code}>{country.displayName}</SelectItem>
+                      <SelectItem key={country.code} value={country.code} className="text-gray-700 hover:bg-primary/10">
+                        {country.displayName}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-600">
                   Only countries where purchases are allowed are shown
                 </p>
               </div>
@@ -145,13 +149,13 @@ const CostEstimator = () => {
               {selectedCountryData && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="item-price">
+                    <Label htmlFor="item-price" className="text-gray-700 font-medium">
                       Item Price ({selectedCountryData.currency.toUpperCase()})
                     </Label>
                     <Input
                       id="item-price"
                       type="number"
-                      className="text-sm md:text-base"
+                      className="text-sm md:text-base backdrop-blur-xl bg-white/30 border border-white/40 hover:bg-white/40 focus:bg-white/50 transition-all duration-300 text-gray-700 placeholder:text-gray-500"
                       placeholder={`e.g., 500 ${selectedCountryData.currency.toUpperCase()}`}
                       value={itemPrice}
                       onChange={(e) => setItemPrice(e.target.value)}
@@ -159,13 +163,13 @@ const CostEstimator = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="item-weight">
+                    <Label htmlFor="item-weight" className="text-gray-700 font-medium">
                       Item Weight ({selectedCountryData.weight_unit})
                     </Label>
                     <Input
                       id="item-weight"
                       type="number"
-                      className="text-sm md:text-base"
+                      className="text-sm md:text-base backdrop-blur-xl bg-white/30 border border-white/40 hover:bg-white/40 focus:bg-white/50 transition-all duration-300 text-gray-700 placeholder:text-gray-500"
                       placeholder={`e.g., 2.5 ${selectedCountryData.weight_unit}`}
                       value={itemWeight}
                       onChange={(e) => setItemWeight(e.target.value)}
@@ -173,14 +177,14 @@ const CostEstimator = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Product Category</Label>
+                    <Label className="text-gray-700 font-medium">Product Category</Label>
                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select product category" />
+                      <SelectTrigger className="backdrop-blur-xl bg-white/30 border border-white/40 hover:bg-white/40 transition-all duration-300">
+                        <SelectValue placeholder="Select product category" className="text-gray-700" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="backdrop-blur-xl bg-white/90 border border-white/40">
                         {categories?.map((category) => (
-                          <SelectItem key={category.name} value={category.name} className="text-sm md:text-base">
+                          <SelectItem key={category.name} value={category.name} className="text-sm md:text-base text-gray-700 hover:bg-primary/10">
                             {category.name}
                           </SelectItem>
                         ))}
@@ -193,21 +197,21 @@ const CostEstimator = () => {
 
             <Button 
               onClick={handleCalculate} 
-              className="w-full py-3 md:py-4 text-base md:text-lg"
+              className="w-full py-3 md:py-4 text-base md:text-lg backdrop-blur-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-primary/20"
               disabled={!destinationCountry || !itemPrice || !itemWeight || !selectedCategory}
             >
               Calculate Estimate
             </Button>
             
-            {error && <p className="text-destructive text-sm text-center">{error}</p>}
+            {error && <p className="text-red-600 text-sm text-center">{error}</p>}
             
             {estimatedCost !== null && (
               <div className="text-center pt-4">
-                <p className="text-base md:text-lg font-semibold">Estimated Total Cost:</p>
-                <p className="text-2xl md:text-4xl font-bold text-primary">
+                <p className="text-base md:text-lg font-semibold text-gray-800">Estimated Total Cost:</p>
+                <p className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                   {formatAmount(estimatedCost)}
                 </p>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-gray-600 mt-2">
                   This is an estimate. The final price will be provided in the official quote.
                 </p>
               </div>

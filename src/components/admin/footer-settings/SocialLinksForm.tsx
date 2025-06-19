@@ -1,62 +1,82 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface SocialLinksFormProps {
   formData: {
-    social_twitter: string;
-    social_facebook: string;
-    social_instagram: string;
-    social_linkedin: string;
+    facebook_url: string;
+    twitter_url: string;
+    instagram_url: string;
+    linkedin_url: string;
+    youtube_url: string;
   };
   handleInputChange: (field: string, value: string) => void;
 }
 
 export const SocialLinksForm = ({ formData, handleInputChange }: SocialLinksFormProps) => {
   return (
-    <Card>
+    <Card className="backdrop-blur-xl bg-white/10 border-white/20 shadow-2xl">
       <CardHeader>
-        <CardTitle>Social Media Links</CardTitle>
+        <CardTitle className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Social Media Links</CardTitle>
       </CardHeader>
-      <CardContent className="grid md:grid-cols-2 gap-4">
+      <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="social_twitter">Twitter URL</Label>
+          <Label htmlFor="facebook_url">Facebook URL</Label>
           <Input
-            id="social_twitter"
-            value={formData.social_twitter}
-            onChange={(e) => handleInputChange('social_twitter', e.target.value)}
-            placeholder="https://twitter.com/yourcompany"
+            id="facebook_url"
+            type="url"
+            value={formData.facebook_url}
+            onChange={(e) => handleInputChange('facebook_url', e.target.value)}
+            placeholder="https://facebook.com/yourpage"
+            className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="social_facebook">Facebook URL</Label>
+          <Label htmlFor="twitter_url">Twitter URL</Label>
           <Input
-            id="social_facebook"
-            value={formData.social_facebook}
-            onChange={(e) => handleInputChange('social_facebook', e.target.value)}
-            placeholder="https://facebook.com/yourcompany"
+            id="twitter_url"
+            type="url"
+            value={formData.twitter_url}
+            onChange={(e) => handleInputChange('twitter_url', e.target.value)}
+            placeholder="https://twitter.com/yourhandle"
+            className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="social_instagram">Instagram URL</Label>
+          <Label htmlFor="instagram_url">Instagram URL</Label>
           <Input
-            id="social_instagram"
-            value={formData.social_instagram}
-            onChange={(e) => handleInputChange('social_instagram', e.target.value)}
-            placeholder="https://instagram.com/yourcompany"
+            id="instagram_url"
+            type="url"
+            value={formData.instagram_url}
+            onChange={(e) => handleInputChange('instagram_url', e.target.value)}
+            placeholder="https://instagram.com/yourprofile"
+            className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="social_linkedin">LinkedIn URL</Label>
+          <Label htmlFor="linkedin_url">LinkedIn URL</Label>
           <Input
-            id="social_linkedin"
-            value={formData.social_linkedin}
-            onChange={(e) => handleInputChange('social_linkedin', e.target.value)}
+            id="linkedin_url"
+            type="url"
+            value={formData.linkedin_url}
+            onChange={(e) => handleInputChange('linkedin_url', e.target.value)}
             placeholder="https://linkedin.com/company/yourcompany"
+            className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="youtube_url">YouTube URL</Label>
+          <Input
+            id="youtube_url"
+            type="url"
+            value={formData.youtube_url}
+            onChange={(e) => handleInputChange('youtube_url', e.target.value)}
+            placeholder="https://youtube.com/@yourchannel"
+            className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
           />
         </div>
       </CardContent>

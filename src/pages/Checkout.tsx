@@ -309,53 +309,57 @@ export default function Checkout() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
       <div className="container py-8">
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Header */}
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold">Complete Your Order</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Complete Your Order</h1>
             <p className="text-muted-foreground">Just a few steps to complete your purchase</p>
           </div>
 
           {/* Progress Stepper */}
           <div className="flex items-center justify-center">
-            <div className="flex items-center space-x-4">
-              {steps.map((step, index) => {
-                const Icon = step.icon;
-                const isActive = currentStep === step.id;
-                const isCompleted = steps.findIndex(s => s.id === currentStep) > index;
-                
-                return (
-                  <div key={step.id} className="flex items-center">
-                    <div className={cn(
-                      "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors",
-                      isActive ? "bg-primary border-primary text-primary-foreground" : 
-                      isCompleted ? "bg-green-500 border-green-500 text-white" :
-                      "bg-white border-gray-300 text-gray-500"
-                    )}>
-                      {isCompleted ? (
-                        <CheckCircle2 className="h-5 w-5" />
-                      ) : (
-                        <Icon className="h-5 w-5" />
+            <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-6 shadow-2xl">
+              <div className="flex items-center space-x-6">
+                {steps.map((step, index) => {
+                  const Icon = step.icon;
+                  const isActive = currentStep === step.id;
+                  const isCompleted = steps.findIndex(s => s.id === currentStep) > index;
+                  
+                  return (
+                    <div key={step.id} className="flex items-center">
+                      <div className={cn(
+                        "flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 backdrop-blur-xl",
+                        isActive 
+                          ? "bg-gradient-to-r from-primary to-primary/80 border-primary text-white shadow-lg shadow-primary/20 scale-110" : 
+                        isCompleted 
+                          ? "bg-gradient-to-r from-green-500 to-green-600 border-green-500 text-white shadow-md shadow-green-500/20" :
+                          "bg-white/20 border-white/30 text-gray-500 hover:border-primary/50 hover:bg-white/30"
+                      )}>
+                        {isCompleted ? (
+                          <CheckCircle2 className="h-6 w-6" />
+                        ) : (
+                          <Icon className="h-6 w-6" />
+                        )}
+                      </div>
+                      <span className={cn(
+                        "ml-3 text-sm font-medium hidden sm:block transition-colors duration-300",
+                        isActive ? "text-primary font-semibold" : 
+                        isCompleted ? "text-green-600 font-medium" : "text-gray-500"
+                      )}>
+                        {step.title}
+                      </span>
+                      {index < steps.length - 1 && (
+                        <div className={cn(
+                          "w-12 h-1 mx-6 rounded-full transition-all duration-300",
+                          isCompleted ? "bg-gradient-to-r from-green-500 to-green-600" : "bg-white/30"
+                        )} />
                       )}
                     </div>
-                    <span className={cn(
-                      "ml-2 text-sm font-medium hidden sm:block",
-                      isActive ? "text-primary" : 
-                      isCompleted ? "text-green-600" : "text-gray-500"
-                    )}>
-                      {step.title}
-                    </span>
-                    {index < steps.length - 1 && (
-                      <div className={cn(
-                        "w-8 h-0.5 mx-4",
-                        isCompleted ? "bg-green-500" : "bg-gray-300"
-                      )} />
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
 

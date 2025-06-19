@@ -1,60 +1,53 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface ContactInfoFormProps {
   formData: {
-    primary_phone: string;
-    secondary_phone: string;
-    primary_email: string;
-    support_email: string;
+    contact_email: string;
+    contact_phone: string;
+    contact_website: string;
   };
   handleInputChange: (field: string, value: string) => void;
 }
 
 export const ContactInfoForm = ({ formData, handleInputChange }: ContactInfoFormProps) => {
   return (
-    <Card>
+    <Card className="backdrop-blur-xl bg-white/10 border-white/20 shadow-2xl">
       <CardHeader>
-        <CardTitle>Contact Information</CardTitle>
+        <CardTitle className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Contact Information</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="primary_phone">Primary Phone</Label>
+          <Label htmlFor="contact_email">Contact Email</Label>
           <Input
-            id="primary_phone"
-            value={formData.primary_phone}
-            onChange={(e) => handleInputChange('primary_phone', e.target.value)}
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="secondary_phone">Secondary Phone</Label>
-          <Input
-            id="secondary_phone"
-            value={formData.secondary_phone}
-            onChange={(e) => handleInputChange('secondary_phone', e.target.value)}
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="primary_email">Primary Email</Label>
-          <Input
-            id="primary_email"
+            id="contact_email"
             type="email"
-            value={formData.primary_email}
-            onChange={(e) => handleInputChange('primary_email', e.target.value)}
+            value={formData.contact_email}
+            onChange={(e) => handleInputChange('contact_email', e.target.value)}
+            className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="support_email">Support Email</Label>
+          <Label htmlFor="contact_phone">Contact Phone</Label>
           <Input
-            id="support_email"
-            type="email"
-            value={formData.support_email}
-            onChange={(e) => handleInputChange('support_email', e.target.value)}
+            id="contact_phone"
+            type="tel"
+            value={formData.contact_phone}
+            onChange={(e) => handleInputChange('contact_phone', e.target.value)}
+            className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="contact_website">Contact Website</Label>
+          <Input
+            id="contact_website"
+            type="url"
+            value={formData.contact_website}
+            onChange={(e) => handleInputChange('contact_website', e.target.value)}
+            className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
           />
         </div>
       </CardContent>

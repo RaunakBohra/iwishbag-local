@@ -6,9 +6,9 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 const Layout = () => {
   return (
     <SidebarProvider>
-      <div className="flex flex-col min-h-screen w-full bg-white">
+      <div className="flex flex-col min-h-screen w-full bg-background">
         <Header />
-        <main className="flex-grow bg-white">
+        <main className="flex-grow bg-background">
           <Outlet />
         </main>
         <Footer />
