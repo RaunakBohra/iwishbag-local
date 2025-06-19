@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, Bell, MessageSquare, ShoppingCart, LayoutDashboard, User, Menu, Search, Sun, Moon, MoreVertical, Building } from "lucide-react";
+import { LogOut, Bell, MessageSquare, ShoppingCart, LayoutDashboard, User, Menu, Search, Sun, Moon, MoreVertical, Building, Home, Package, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -116,9 +116,10 @@ const Header = () => {
   };
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 w-full">
-      <div className="container flex h-16 items-center justify-between max-w-full px-3 sm:px-4 lg:px-6">
-        <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
+      <div className="container flex h-16 items-center justify-between max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/* Left Section - Logo and Navigation */}
+        <div className="flex items-center space-x-4 md:space-x-6 lg:space-x-8 min-w-0 flex-1">
           {/* Mobile menu toggle for admin area */}
           {isAdminArea && (
             <Button
@@ -132,59 +133,129 @@ const Header = () => {
             </Button>
           )}
           
-          <Link to="/" className="flex items-center min-w-0 flex-1">
+          {/* Logo */}
+          <Link to="/" className="flex items-center min-w-0 flex-shrink-0">
             {homePageSettings?.website_logo_url ? (
-              <img src={homePageSettings.website_logo_url} alt="Logo" className="h-8 sm:h-10 w-auto object-contain" />
+              <img 
+                src={homePageSettings.website_logo_url} 
+                alt="Logo" 
+                className="h-8 sm:h-9 w-auto object-contain transition-transform hover:scale-105" 
+              />
             ) : (
-              <span className="font-bold text-lg sm:text-xl truncate">{homePageSettings?.company_name || "WishBag"}</span>
+              <span className="font-bold text-lg sm:text-xl lg:text-2xl bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                {homePageSettings?.company_name || "WishBag"}
+              </span>
             )}
           </Link>
+
+          {/* Desktop Navigation - Only show for authenticated users */}
+          {user && !isAdminArea && (
+            <nav className="hidden md:flex items-center space-x-2 lg:space-x-3">
+              <Button
+                variant={location.pathname === '/quote' ? "default" : "ghost"}
+                size="sm"
+                className="h-8 px-3 text-sm font-medium"
+                onClick={() => navigate('/quote')}
+              >
+                <Package className="h-4 w-4 mr-2" />
+                Get Quote
+              </Button>
+            </nav>
+          )}
+
+          {/* Admin Navigation */}
+          {user && isAdminArea && (
+            <nav className="hidden md:flex items-center space-x-2 lg:space-x-3">
+              <Button
+                variant={location.pathname.includes('/admin/quotes') ? "default" : "ghost"}
+                size="sm"
+                className="h-8 px-3 text-sm font-medium"
+                onClick={() => navigate('/admin/quotes')}
+              >
+                <Package className="h-4 w-4 mr-2" />
+                Quotes
+              </Button>
+              <Button
+                variant={location.pathname.includes('/admin/orders') ? "default" : "ghost"}
+                size="sm"
+                className="h-8 px-3 text-sm font-medium"
+                onClick={() => navigate('/admin/orders')}
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Orders
+              </Button>
+            </nav>
+          )}
         </div>
 
-        <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4 min-w-0">
+        {/* Right Section - Actions and User Menu */}
+        <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4 min-w-0">
           {/* Admin Search - only show in admin area */}
           {isAdminArea && (
-            <>
-              <div className="hidden sm:block">
-                <AdminSearch />
-              </div>
-              <div className="sm:hidden">
-                <AdminSearch />
-              </div>
-            </>
+            <div className="hidden sm:block">
+              <AdminSearch />
+            </div>
           )}
           
           {user ? (
-            <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
-              {/* Desktop View */}
-              <div className="hidden sm:flex items-center space-x-2">
-                <CartDrawer />
-                <Button variant="ghost" size="icon" className="relative hover:bg-accent flex-shrink-0 h-9 w-9" onClick={() => navigate('/notifications')}>
+            <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4">
+              {/* Desktop View - Enhanced with better spacing and visual hierarchy */}
+              <div className="hidden sm:flex items-center space-x-1 md:space-x-2 lg:space-x-3">
+                {/* Cart with enhanced styling */}
+                <div className="relative">
+                  <CartDrawer />
+                </div>
+
+                {/* Notifications with improved badge */}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="relative hover:bg-accent flex-shrink-0 h-9 w-9 transition-colors" 
+                  onClick={() => navigate('/notifications')}
+                >
                   <Bell className="h-4 w-4" />
                   {unreadNotificationsCount && unreadNotificationsCount > 0 && (
-                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 rounded-full text-xs">
-                      {unreadNotificationsCount}
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs font-medium animate-pulse"
+                    >
+                      {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
                     </Badge>
                   )}
                 </Button>
-                <Button variant="ghost" size="icon" className="relative hover:bg-accent flex-shrink-0 h-9 w-9" onClick={() => navigate('/messages')}>
+
+                {/* Messages with improved badge */}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="relative hover:bg-accent flex-shrink-0 h-9 w-9 transition-colors" 
+                  onClick={() => navigate('/messages')}
+                >
                   <MessageSquare className="h-4 w-4" />
                   {unreadMessagesCount && unreadMessagesCount > 0 && (
-                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 rounded-full text-xs">
-                      {unreadMessagesCount}
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs font-medium animate-pulse"
+                    >
+                      {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
                     </Badge>
                   )}
                 </Button>
+
+                {/* Theme toggle for admin users */}
                 {hasAdminRole && (
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="hover:bg-accent flex-shrink-0 h-9 w-9"
+                    className="hover:bg-accent flex-shrink-0 h-9 w-9 transition-colors"
                     onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                   >
                     {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                   </Button>
                 )}
+
+                {/* Separator */}
+                <div className="h-6 w-px bg-border mx-1 md:mx-2 lg:mx-3" />
               </div>
 
               {/* Mobile View - Only show Cart and More menu */}
@@ -302,48 +373,97 @@ const Header = () => {
                 </Sheet>
               </div>
 
-              {/* Desktop User Menu */}
+              {/* Desktop User Menu - Enhanced with better styling */}
               <div className="hidden sm:block">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="px-2 sm:px-3 text-left hover:bg-accent min-w-0 h-9">
-                      <span className="hidden lg:inline">Hello, </span>
-                      <span className="truncate text-sm sm:text-base">{getDisplayName()}</span>
+                    <Button 
+                      variant="ghost" 
+                      className="px-2 md:px-3 py-2 text-left hover:bg-accent min-w-0 h-9 rounded-md transition-colors"
+                    >
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <User className="h-3 w-3 text-primary" />
+                        </div>
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className="text-sm font-medium truncate">{getDisplayName()}</span>
+                          <span className="text-xs text-muted-foreground truncate hidden lg:block">
+                            {user.email}
+                          </span>
+                        </div>
+                      </div>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuContent align="end" className="w-60 md:w-64 p-2">
+                    <DropdownMenuLabel className="font-semibold">My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to="/dashboard" className="flex items-center cursor-pointer w-full">
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        <span>Dashboard</span>
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-md">
+                      <Link to="/dashboard" className="flex items-center w-full">
+                        <LayoutDashboard className="mr-3 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">Dashboard</span>
+                          <span className="text-xs text-muted-foreground">View your quotes and orders</span>
+                        </div>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/profile" className="flex items-center cursor-pointer w-full">
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Profile</span>
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-md">
+                      <Link to="/profile" className="flex items-center w-full">
+                        <Settings className="mr-3 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">Profile Settings</span>
+                          <span className="text-xs text-muted-foreground">Manage your account</span>
+                        </div>
                       </Link>
                     </DropdownMenuItem>
+                    {hasAdminRole && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild className="cursor-pointer rounded-md">
+                          <Link to="/admin" className="flex items-center w-full">
+                            <Building className="mr-3 h-4 w-4" />
+                            <div className="flex flex-col">
+                              <span className="font-medium">Admin Dashboard</span>
+                              <span className="text-xs text-muted-foreground">Manage the platform</span>
+                            </div>
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      <span>Sign Out</span>
+                    <DropdownMenuItem 
+                      onClick={handleSignOut} 
+                      className="cursor-pointer rounded-md text-destructive focus:text-destructive"
+                    >
+                      <LogOut className="mr-3 h-4 w-4" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">Sign Out</span>
+                        <span className="text-xs text-muted-foreground">End your session</span>
+                      </div>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </div>
           ) : (
-            <>
-              <Button asChild variant="secondary" className="hidden sm:inline-flex">
+            /* Guest User Actions - Enhanced styling */
+            <div className="flex items-center space-x-2 md:space-x-3">
+              <Button 
+                asChild 
+                variant="ghost" 
+                size="sm"
+                className="hidden sm:inline-flex h-8 px-3 md:px-4 text-sm font-medium hover:bg-accent"
+              >
                 <Link to="/quote">Get Quote</Link>
               </Button>
-              <Button asChild variant="destructive">
+              <Button 
+                asChild 
+                variant="default"
+                size="sm"
+                className="h-8 px-3 md:px-4 text-sm font-medium"
+              >
                 <Link to="/auth">Sign In</Link>
               </Button>
-            </>
+            </div>
           )}
         </div>
       </div>
