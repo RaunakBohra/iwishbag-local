@@ -41,6 +41,12 @@ import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
 import { QueryProvider } from './providers/QueryProvider';
 import { HomePageSettings } from "@/components/admin/HomePageSettings";
 import ButtonPreview from "@/pages/ButtonPreview";
+import AdminDashboard from "@/pages/admin/Dashboard";
+import CartAnalyticsPage from "@/pages/admin/CartAnalytics";
+import CartRecoveryPage from "@/pages/admin/CartRecovery";
+import EmailTemplatesPage from "@/pages/admin/EmailTemplates";
+import { AccessibilityProvider, AccessibilityToolbar } from "@/components/ui/AccessibilityProvider";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
 const router = createBrowserRouter([
   {
@@ -53,7 +59,19 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <AdminAnalytics />,
+            element: <AdminDashboard />,
+          },
+          {
+            path: "cart-analytics",
+            element: <CartAnalyticsPage />,
+          },
+          {
+            path: "cart-recovery",
+            element: <CartRecoveryPage />,
+          },
+          {
+            path: "email-templates",
+            element: <EmailTemplatesPage />,
           },
           {
             path: "analytics",
@@ -218,8 +236,15 @@ function App() {
     <QueryProvider>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <AuthProvider>
-          <RouterProvider router={router} />
-          <Toaster />
+          <AccessibilityProvider>
+            <div className="min-h-screen">
+              <ErrorBoundary>
+                <RouterProvider router={router} />
+              </ErrorBoundary>
+              <AccessibilityToolbar />
+            </div>
+            <Toaster />
+          </AccessibilityProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryProvider>

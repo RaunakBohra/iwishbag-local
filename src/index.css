@@ -5,47 +5,88 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 224 71.4% 4.1%;
+    --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
+    --card-foreground: 222.2 84% 4.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 192 100% 55%;
-    --primary-foreground: 197 87% 10%; /* #052a2e as HSL */
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 220 13% 91%;
-    --secondary-foreground: 224 71.4% 4.1%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
 
-    --muted: 220 13% 91%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 180 66% 70%; /* Aqua Sky */
-    --accent-foreground: 224 71.4% 4.1%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 217 91% 60%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
 
     --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    overflow-x: hidden;
+    width: 100%;
   }
 
   body {
-    @apply text-foreground;
+    @apply bg-background text-foreground;
     font-family: 'Poppins', sans-serif;
     position: relative;
     min-height: 100vh;
+    width: 100%;
+    overflow-x: hidden;
     background: linear-gradient(
       to bottom,
       #00aeb0 0%,
@@ -58,6 +99,34 @@
     background-repeat: no-repeat;
     background-size: cover;
     color: #052a2e;
+  }
+
+  /* Mobile-specific fixes */
+  @media (max-width: 768px) {
+    body {
+      font-size: 16px; /* Prevent zoom on iOS */
+      line-height: 1.5;
+    }
+    
+    /* Ensure containers don't overflow */
+    .container {
+      max-width: 100vw;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    
+    /* Fix for admin layout */
+    .min-h-screen {
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+    }
+  }
+
+  /* iOS Safari specific fixes */
+  @supports (-webkit-touch-callout: none) {
+    body {
+      min-height: -webkit-fill-available;
+    }
   }
 
   body::before {
@@ -193,4 +262,165 @@
 .logo-rotate:hover {
   transition: transform 0.4s cubic-bezier(.5,1.6,.4,1);
   transform: rotate(12deg) scale(1.08);
+}
+
+/* Accessibility Styles */
+@layer utilities {
+  /* High Contrast Mode */
+  .high-contrast {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 80%;
+    --accent: 0 0% 20%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 50%;
+    --input: 0 0% 50%;
+    --ring: 0 0% 100%;
+  }
+
+  .high-contrast * {
+    border-color: hsl(0 0% 50%) !important;
+  }
+
+  .high-contrast button,
+  .high-contrast [role="button"] {
+    border: 2px solid hsl(0 0% 100%) !important;
+  }
+
+  .high-contrast button:hover,
+  .high-contrast [role="button"]:hover {
+    background-color: hsl(0 0% 100%) !important;
+    color: hsl(0 0% 0%) !important;
+  }
+
+  /* Reduced Motion */
+  .reduced-motion *,
+  .reduced-motion *::before,
+  .reduced-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Keyboard Navigation */
+  .keyboard-navigation *:focus {
+    outline: 3px solid hsl(222.2 84% 4.9%) !important;
+    outline-offset: 2px !important;
+  }
+
+  .keyboard-navigation button:focus,
+  .keyboard-navigation [role="button"]:focus,
+  .keyboard-navigation a:focus,
+  .keyboard-navigation input:focus,
+  .keyboard-navigation select:focus,
+  .keyboard-navigation textarea:focus {
+    outline: 3px solid hsl(222.2 84% 4.9%) !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 0 0 2px hsl(0 0% 100%), 0 0 0 4px hsl(222.2 84% 4.9%) !important;
+  }
+
+  /* Focus indicators for interactive elements */
+  .keyboard-navigation .focus-visible {
+    outline: 3px solid hsl(222.2 84% 4.9%) !important;
+    outline-offset: 2px !important;
+  }
+
+  /* Skip to content link */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 6px;
+    background: hsl(222.2 84% 4.9%);
+    color: hsl(0 0% 100%);
+    padding: 8px;
+    text-decoration: none;
+    border-radius: 4px;
+    z-index: 1000;
+  }
+
+  .skip-link:focus {
+    top: 6px;
+  }
+
+  /* Screen reader only text */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* High contrast focus for dark mode */
+  .dark.keyboard-navigation *:focus {
+    outline-color: hsl(210 40% 98%) !important;
+  }
+
+  .dark.keyboard-navigation button:focus,
+  .dark.keyboard-navigation [role="button"]:focus,
+  .dark.keyboard-navigation a:focus,
+  .dark.keyboard-navigation input:focus,
+  .dark.keyboard-navigation select:focus,
+  .dark.keyboard-navigation textarea:focus {
+    outline-color: hsl(210 40% 98%) !important;
+    box-shadow: 0 0 0 2px hsl(222.2 84% 4.9%), 0 0 0 4px hsl(210 40% 98%) !important;
+  }
+}
+
+/* Mobile viewport fixes */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
+  
+  #root {
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Admin layout overflow prevention */
+.admin-layout {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.admin-content {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Ensure proper scaling on mobile */
+@media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+  
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
 }

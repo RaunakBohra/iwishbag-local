@@ -1,6 +1,6 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, Bell, MessageSquare, ShoppingCart, LayoutDashboard, User } from "lucide-react";
+import { LogOut, Bell, MessageSquare, ShoppingCart, LayoutDashboard, User, Menu } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -16,13 +16,20 @@ import { Badge } from "@/components/ui/badge";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useHomePageSettings } from "@/hooks/useHomePageSettings";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { useSidebar } from "@/components/ui/sidebar";
+import { AdminSearch } from "@/components/admin/AdminSearch";
 
 const Header = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { toggleSidebar } = useSidebar();
 
   const { data: hasAdminRole } = useAdminRole();
   const { formData: homePageSettings } = useHomePageSettings();
+
+  // Check if we're in admin area
+  const isAdminArea = location.pathname.startsWith('/admin');
 
   const { data: unreadMessagesCount } = useQuery({
     queryKey: ['unreadMessagesCount', user?.id, hasAdminRole],
@@ -104,23 +111,41 @@ const Header = () => {
   };
 
   return (
-    <header className="border-b border-black/10 bg-[#00c3cf]" style={{ color: '#052a2e' }}>
-      <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link to="/" className="flex items-center">
+    <header className="border-b border-black/10 bg-[#00c3cf] w-full" style={{ color: '#052a2e' }}>
+      <div className="container flex h-16 items-center justify-between max-w-full px-4">
+        <div className="flex items-center space-x-4 min-w-0">
+          {/* Mobile menu toggle for admin area */}
+          {isAdminArea && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden text-[#052a2e] hover:bg-black/10 flex-shrink-0"
+              onClick={toggleSidebar}
+            >
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle menu</span>
+            </Button>
+          )}
+          
+          <Link to="/" className="flex items-center min-w-0">
             {homePageSettings?.website_logo_url ? (
               <img src={homePageSettings.website_logo_url} alt="Logo" className="h-10 w-auto object-contain" />
             ) : (
-              <span className="font-bold text-xl text-[#052a2e]">{homePageSettings?.company_name || "WishBag"}</span>
+              <span className="font-bold text-xl text-[#052a2e] truncate">{homePageSettings?.company_name || "WishBag"}</span>
             )}
           </Link>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
+          {/* Admin Search - only show in admin area */}
+          {isAdminArea && (
+            <AdminSearch />
+          )}
+          
           {user ? (
             <div className="flex items-center space-x-2 sm:space-x-4">
               <CartDrawer />
-              <Button variant="ghost" size="icon" className="relative text-[#052a2e] hover:bg-black/10" onClick={() => navigate('/notifications')}>
+              <Button variant="ghost" size="icon" className="relative text-[#052a2e] hover:bg-black/10 flex-shrink-0" onClick={() => navigate('/notifications')}>
                 <Bell className="h-5 w-5" />
                 {unreadNotificationsCount && unreadNotificationsCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs">
@@ -129,7 +154,7 @@ const Header = () => {
                 )}
                 <span className="sr-only">Notifications</span>
               </Button>
-              <Button variant="ghost" size="icon" className="relative text-[#052a2e] hover:bg-black/10" onClick={() => navigate('/messages')}>
+              <Button variant="ghost" size="icon" className="relative text-[#052a2e] hover:bg-black/10 flex-shrink-0" onClick={() => navigate('/messages')}>
                 <MessageSquare className="h-5 w-5" />
                  {unreadMessagesCount && unreadMessagesCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs">
@@ -141,8 +166,9 @@ const Header = () => {
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="px-2 sm:px-4 text-left text-[#052a2e] hover:bg-black/10">
-                    <span className="hidden sm:inline">Hello, </span>{getDisplayName()}
+                  <Button variant="ghost" className="px-2 sm:px-4 text-left text-[#052a2e] hover:bg-black/10 min-w-0">
+                    <span className="hidden sm:inline">Hello, </span>
+                    <span className="truncate">{getDisplayName()}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -170,7 +196,7 @@ const Header = () => {
             </div>
           ) : (
             <>
-              <Button asChild variant="secondary">
+              <Button asChild variant="secondary" className="hidden sm:inline-flex">
                 <Link to="/quote">Get Quote</Link>
               </Button>
               <Button asChild variant="destructive">

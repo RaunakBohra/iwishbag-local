@@ -1,14 +1,9 @@
-
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRejectionAnalytics } from '@/hooks/useRejectionAnalytics';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-});
+import { useUserCurrency } from '@/hooks/useUserCurrency';
 
 const chartConfig = {
   "Rejected Quotes": {
@@ -22,6 +17,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export const RejectionAnalytics = () => {
+    const { formatAmount } = useUserCurrency();
     const { stats, reasonsBreakdown, categoryBreakdown, trends, isLoading } = useRejectionAnalytics();
 
     if (isLoading) {
@@ -57,10 +53,10 @@ export const RejectionAnalytics = () => {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Total Value Lost (USD)</CardTitle>
+                        <CardTitle>Total Value Lost</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-3xl font-bold">{currencyFormatter.format(stats.totalValueLost)}</p>
+                        <p className="text-3xl font-bold">{formatAmount(stats.totalValueLost)}</p>
                     </CardContent>
                 </Card>
                 <Card>
