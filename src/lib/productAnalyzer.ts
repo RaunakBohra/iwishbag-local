@@ -78,6 +78,46 @@ export class ProductAnalyzer {
   }
 
   /**
+   * Debug method to check API key configuration
+   */
+  public debugConfig(): { scraperApi: boolean; proxyApi: boolean } {
+    return {
+      scraperApi: !!this.apiKeys.scraperApi,
+      proxyApi: !!this.apiKeys.proxyApi
+    };
+  }
+
+  /**
+   * Test API connectivity
+   */
+  public async testAPI(): Promise<{ success: boolean; message: string }> {
+    if (!this.apiKeys.scraperApi) {
+      return { success: false, message: 'No ScraperAPI key configured' };
+    }
+
+    try {
+      // Test with a simple request
+      const response = await fetch('https://api.scraperapi.com/api/v1/account', {
+        headers: {
+          'Authorization': `Bearer ${this.apiKeys.scraperApi}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return { 
+          success: true, 
+          message: `API connected successfully. Credits remaining: ${data.credits || 'Unknown'}` 
+        };
+      } else {
+        return { success: false, message: `API test failed: ${response.status}` };
+      }
+    } catch (error) {
+      return { success: false, message: `API test failed: ${error}` };
+    }
+  }
+
+  /**
    * Main method to analyze a product URL
    */
   public async analyzeProduct(url: string, productName?: string): Promise<ProductAnalysis> {

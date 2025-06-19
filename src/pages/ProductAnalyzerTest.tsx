@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { productAnalyzer, ProductAnalysis } from '@/lib/productAnalyzer';
-import { Loader2, ExternalLink, Package, DollarSign, Weight, Tag } from 'lucide-react';
+import { Loader2, ExternalLink, Package, DollarSign, Weight, Tag, Settings, CheckCircle, XCircle } from 'lucide-react';
 
 export const ProductAnalyzerTest = () => {
   const [url, setUrl] = useState('');
@@ -14,7 +14,16 @@ export const ProductAnalyzerTest = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<ProductAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [apiConfig, setApiConfig] = useState<{ scraperApi: boolean; proxyApi: boolean } | null>(null);
+  const [apiTestResult, setApiTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isTestingAPI, setIsTestingAPI] = useState(false);
   const { toast } = useToast();
+
+  // Check API configuration on component mount
+  useEffect(() => {
+    const config = productAnalyzer.debugConfig();
+    setApiConfig(config);
+  }, []);
 
   // Sample URLs for testing
   const sampleUrls = [
@@ -74,6 +83,28 @@ export const ProductAnalyzerTest = () => {
     }
   };
 
+  const handleTestAPI = async () => {
+    setIsTestingAPI(true);
+    try {
+      const result = await productAnalyzer.testAPI();
+      setApiTestResult(result);
+      toast({
+        title: result.success ? "API Test Successful" : "API Test Failed",
+        description: result.message,
+        variant: result.success ? "default" : "destructive"
+      });
+    } catch (error) {
+      setApiTestResult({ success: false, message: 'API test failed' });
+      toast({
+        title: "API Test Failed",
+        description: "Could not test API connectivity",
+        variant: "destructive"
+      });
+    } finally {
+      setIsTestingAPI(false);
+    }
+  };
+
   const handleSampleUrl = (sample: typeof sampleUrls[0]) => {
     setUrl(sample.url);
     setProductName(sample.name);
@@ -102,6 +133,74 @@ export const ProductAnalyzerTest = () => {
           Test the product analysis system with real URLs
         </p>
       </div>
+
+      {/* API Configuration Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            API Configuration
+          </CardTitle>
+          <CardDescription>
+            Check your API key configuration and test connectivity
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {apiConfig && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                {apiConfig.scraperApi ? (
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-600" />
+                )}
+                <span className="text-sm">
+                  ScraperAPI: {apiConfig.scraperApi ? 'Configured' : 'Not configured'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {apiConfig.proxyApi ? (
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-600" />
+                )}
+                <span className="text-sm">
+                  ProxyAPI: {apiConfig.proxyApi ? 'Configured' : 'Not configured'}
+                </span>
+              </div>
+            </div>
+          )}
+          
+          <Button 
+            onClick={handleTestAPI} 
+            disabled={isTestingAPI || !apiConfig?.scraperApi}
+            variant="outline"
+          >
+            {isTestingAPI ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Testing API...
+              </>
+            ) : (
+              'Test API Connection'
+            )}
+          </Button>
+
+          {apiTestResult && (
+            <div className={`p-3 rounded-lg ${
+              apiTestResult.success 
+                ? 'bg-green-50 border border-green-200' 
+                : 'bg-red-50 border border-red-200'
+            }`}>
+              <div className={`text-sm ${
+                apiTestResult.success ? 'text-green-800' : 'text-red-800'
+              }`}>
+                {apiTestResult.message}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Test Form */}
       <Card>
