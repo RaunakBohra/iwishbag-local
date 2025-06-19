@@ -57,7 +57,7 @@ export const CartDrawer = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Use the new cart store
+  // Use the new cart store with FIXED calculations
   const {
     items: cartItems,
     savedItems,
@@ -71,8 +71,10 @@ export const CartDrawer = () => {
     itemCount,
     savedItemCount,
     selectedItemCount,
+    selectedCartItemCount, // NEW: Selected cart items count
     formattedCartTotal,
     formattedSelectedTotal,
+    formattedSelectedCartTotal, // NEW: Formatted selected cart total
     hasSelectedItems,
     hasCartItems,
     hasSavedItems,
@@ -115,19 +117,19 @@ export const CartDrawer = () => {
     if (isOpen) setHasAutoSelected(false);
   }, [isOpen]);
 
-  // Auto-select all cart items only once per drawer open
+  // FIXED: Improved auto-selection logic
   useEffect(() => {
     if (
       isOpen &&
       cartItems &&
       cartItems.length > 0 &&
-      selectedItemCount === 0 &&
+      selectedCartItemCount === 0 && // Use selectedCartItemCount instead of selectedItemCount
       !hasAutoSelected
     ) {
       setHasAutoSelected(true);
       handleSelectAllCart();
     }
-  }, [isOpen, cartItems, selectedItemCount, hasAutoSelected, handleSelectAllCart]);
+  }, [isOpen, cartItems, selectedCartItemCount, hasAutoSelected, handleSelectAllCart]);
 
   // Load cart data from server when drawer opens
   useEffect(() => {
@@ -149,25 +151,25 @@ export const CartDrawer = () => {
     },
   });
 
-  // Calculate savings breakdown
+  // FIXED: Calculate savings breakdown using selected cart items total
   useEffect(() => {
     if (cartItems && cartSettings) {
       const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
       
-      // Calculate bulk discount
+      // Calculate bulk discount based on selected items total
       const bulkDiscount = totalItems >= cartSettings.bulk_discount_threshold 
-        ? cartTotal * (cartSettings.bulk_discount_percentage / 100) 
+        ? selectedItemsTotal * (cartSettings.bulk_discount_percentage / 100) 
         : 0;
       
-      // Calculate member discount
-      const memberDiscount = cartTotal * (cartSettings.member_discount_percentage / 100);
+      // Calculate member discount based on selected items total
+      const memberDiscount = selectedItemsTotal * (cartSettings.member_discount_percentage / 100);
       
-      // Calculate seasonal discount
+      // Calculate seasonal discount based on selected items total
       const currentMonth = new Date().getMonth() + 1;
       const isSeasonalPeriod = currentMonth >= cartSettings.seasonal_discount_start_month && 
                               currentMonth <= cartSettings.seasonal_discount_end_month;
       const seasonalDiscount = (isSeasonalPeriod && cartSettings.is_seasonal_discount_active)
-        ? cartTotal * (cartSettings.seasonal_discount_percentage / 100)
+        ? selectedItemsTotal * (cartSettings.seasonal_discount_percentage / 100)
         : 0;
 
       setSavingsBreakdown({
@@ -176,12 +178,13 @@ export const CartDrawer = () => {
         seasonalDiscount,
       });
     }
-  }, [cartItems, cartTotal, cartSettings]);
+  }, [cartItems, selectedItemsTotal, cartSettings]); // FIXED: Use selectedItemsTotal instead of cartTotal
 
   const totalSavings = savingsBreakdown.bulkDiscount + savingsBreakdown.memberDiscount + savingsBreakdown.seasonalDiscount;
-  const estimatedShipping = cartSettings ? cartTotal * (cartSettings.shipping_rate_percentage / 100) : cartTotal * 0.1;
-  const estimatedTaxes = cartSettings ? cartTotal * (cartSettings.tax_rate_percentage / 100) : cartTotal * 0.08;
-  const finalTotal = cartTotal + estimatedShipping + estimatedTaxes - totalSavings;
+  // FIXED: Use selected items total for calculations
+  const estimatedShipping = cartSettings ? selectedItemsTotal * (cartSettings.shipping_rate_percentage / 100) : selectedItemsTotal * 0.1;
+  const estimatedTaxes = cartSettings ? selectedItemsTotal * (cartSettings.tax_rate_percentage / 100) : selectedItemsTotal * 0.08;
+  const finalTotal = selectedItemsTotal + estimatedShipping + estimatedTaxes - totalSavings;
 
   // Debounce search query
   useEffect(() => {
@@ -427,8 +430,8 @@ export const CartDrawer = () => {
           <div className="flex items-center gap-2">
             <Checkbox
               id="select-all"
-              checked={isAllCartSelected}
-              onCheckedChange={(checked) => handleSelectAllCart(checked as boolean)}
+              checked={selectedItems.length === cartItems.length}
+              onCheckedChange={handleSelectAllCart}
             />
             <label htmlFor="select-all" className="text-sm font-medium">
               Select All ({selectedItems.length})
@@ -550,8 +553,8 @@ export const CartDrawer = () => {
           <div className="flex items-center gap-2">
             <Checkbox
               id="select-all-saved"
-              checked={isAllSavedSelected}
-              onCheckedChange={(checked) => handleSelectAllSaved(checked as boolean)}
+              checked={selectedItems.length === savedItems.length}
+              onCheckedChange={handleSelectAllSaved}
             />
             <label htmlFor="select-all-saved" className="text-sm font-medium">
               Select All ({selectedItems.length})
@@ -652,91 +655,8 @@ export const CartDrawer = () => {
   };
 
   const renderAnalytics = () => (
-    <div className="border-t pt-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium">Cart Analytics</h3>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Detailed breakdown of your cart costs and savings</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-
-      {/* Cost Breakdown */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span>Subtotal:</span>
-          <span>{formatAmount(cartTotal)}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span>Total Weight:</span>
-          <span>{cartWeight.toFixed(2)}kg</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span>Estimated Shipping:</span>
-          <span>{formatAmount(estimatedShipping)}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span>Estimated Taxes:</span>
-          <span>{formatAmount(estimatedTaxes)}</span>
-        </div>
-      </div>
-
-      {/* Savings Breakdown */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-green-600">Total Savings:</span>
-          <span className="text-green-600">{formatAmount(totalSavings)}</span>
-        </div>
-        {savingsBreakdown.bulkDiscount > 0 && cartSettings && (
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Bulk Discount ({cartSettings.bulk_discount_percentage}%):</span>
-            <span>{formatAmount(savingsBreakdown.bulkDiscount)}</span>
-          </div>
-        )}
-        {savingsBreakdown.memberDiscount > 0 && cartSettings && (
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Member Discount ({cartSettings.member_discount_percentage}%):</span>
-            <span>{formatAmount(savingsBreakdown.memberDiscount)}</span>
-          </div>
-        )}
-        {savingsBreakdown.seasonalDiscount > 0 && cartSettings && (
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Seasonal Discount ({cartSettings.seasonal_discount_percentage}%):</span>
-            <span>{formatAmount(savingsBreakdown.seasonalDiscount)}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Progress Bar */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Free Shipping Progress</span>
-          <span>{formatAmount(cartTotal)} / {formatAmount(cartSettings?.free_shipping_threshold || 1000)}</span>
-        </div>
-        <Progress 
-          value={(cartTotal / (cartSettings?.free_shipping_threshold || 1000)) * 100} 
-          className="h-2" 
-        />
-        {cartTotal < (cartSettings?.free_shipping_threshold || 1000) && (
-          <p className="text-xs text-muted-foreground">
-            Add {formatAmount((cartSettings?.free_shipping_threshold || 1000) - cartTotal)} more for free shipping
-          </p>
-        )}
-      </div>
-
-      {/* Final Total */}
-      <div className="border-t pt-4">
-        <div className="flex justify-between text-lg font-semibold">
-          <span>Final Total:</span>
-          <span>{formatAmount(finalTotal)}</span>
-        </div>
-      </div>
+    <div className="space-y-4">
+      {/* Analytics section removed - no longer showing selected items summary, shipping, taxes, or savings */}
     </div>
   );
 

@@ -105,7 +105,15 @@ export default function Checkout() {
 
       const { data, error } = await supabase
         .from('quotes')
-        .select('*')
+        .select(`
+          *,
+          quote_items (
+            id,
+            item_price,
+            quantity,
+            product_name
+          )
+        `)
         .in('id', selectedQuoteIds)
         .eq('user_id', user?.id)
         .eq('approval_status', 'approved');
@@ -184,7 +192,19 @@ export default function Checkout() {
 
   // Computed values
   const allowCod = userProfile?.cod_enabled ?? false;
-  const totalAmount = selectedQuotes?.reduce((sum, quote) => sum + (quote.final_total_local ?? quote.final_total ?? 0), 0) || 0;
+  
+  // FIXED: Use the same calculation method as cart (itemPrice * quantity)
+  const totalAmount = selectedQuotes?.reduce((sum, quote) => {
+    // Get the quote items to calculate the same way as cart
+    const quoteItems = quote.quote_items || [];
+    const itemTotal = quoteItems.reduce((itemSum, item) => {
+      return itemSum + (item.item_price * item.quantity);
+    }, 0);
+    
+    // If no quote items, fall back to final_total
+    return sum + (itemTotal || (quote.final_total_local ?? quote.final_total ?? 0));
+  }, 0) || 0;
+  
   const canProceedToPayment = selectedAddress && addresses && addresses.length > 0;
   const canProceedToReview = canProceedToPayment && paymentMethod;
 
@@ -691,22 +711,33 @@ export default function Checkout() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {selectedQuotes.map((quote) => (
-                    <div key={quote.id} className="flex justify-between items-start p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <Link to={`/quote-details/${quote.id}`} className="font-medium hover:underline text-primary">
-                          <h4>{quote.product_name}</h4>
-                        </Link>
-                        <p className="text-sm text-muted-foreground">
-                          {quote.quantity} item{quote.quantity !== 1 ? 's' : ''}
-                        </p>
-                        <Badge variant="outline">{quote.country_code}</Badge> 
+                  {selectedQuotes.map((quote) => {
+                    // Calculate item total the same way as cart
+                    const quoteItems = quote.quote_items || [];
+                    const itemTotal = quoteItems.reduce((sum, item) => {
+                      return sum + (item.item_price * item.quantity);
+                    }, 0);
+                    
+                    // Fall back to final_total if no quote items
+                    const displayTotal = itemTotal || (quote.final_total_local ?? quote.final_total ?? 0);
+                    
+                    return (
+                      <div key={quote.id} className="flex justify-between items-start p-3 border rounded-lg">
+                        <div className="flex-1">
+                          <Link to={`/quote-details/${quote.id}`} className="font-medium hover:underline text-primary">
+                            <h4>{quote.product_name}</h4>
+                          </Link>
+                          <p className="text-sm text-muted-foreground">
+                            {quote.quantity} item{quote.quantity !== 1 ? 's' : ''}
+                          </p>
+                          <Badge variant="outline">{quote.country_code}</Badge> 
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold">{formatAmount(displayTotal)}</div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold">{formatAmount(quote.final_total_local ?? quote.final_total ?? 0)}</div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   <Separator />
 

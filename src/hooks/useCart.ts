@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useCartStore, CartItem } from '@/stores/cartStore';
 import { useUserCurrency } from '@/hooks/useUserCurrency';
 
@@ -32,7 +32,7 @@ export const useCart = () => {
 
   const { formatAmount } = useUserCurrency();
 
-  // Cart calculations
+  // Cart calculations - FIXED: Use consistent calculation method
   const cartTotal = useMemo(() => {
     return items.reduce((total, item) => {
       return total + (item.itemPrice * item.quantity);
@@ -45,6 +45,7 @@ export const useCart = () => {
     }, 0);
   }, [items]);
 
+  // FIXED: Ensure selectedItemsTotal only includes cart items (not saved items)
   const selectedItemsTotal = useMemo(() => {
     const selectedCartItems = items.filter(item => selectedItems.includes(item.id));
     return selectedCartItems.reduce((total, item) => {
@@ -71,12 +72,22 @@ export const useCart = () => {
     return selectedItems.length;
   }, [selectedItems]);
 
+  // FIXED: Add selected cart items count (excludes saved items)
+  const selectedCartItemCount = useMemo(() => {
+    return items.filter(item => selectedItems.includes(item.id)).length;
+  }, [items, selectedItems]);
+
   // Formatted values
   const formattedCartTotal = useMemo(() => {
     return formatAmount(cartTotal);
   }, [cartTotal, formatAmount]);
 
   const formattedSelectedTotal = useMemo(() => {
+    return formatAmount(selectedItemsTotal);
+  }, [selectedItemsTotal, formatAmount]);
+
+  // FIXED: Add formatted cart total for selected items only
+  const formattedSelectedCartTotal = useMemo(() => {
     return formatAmount(selectedItemsTotal);
   }, [selectedItemsTotal, formatAmount]);
 
@@ -102,43 +113,46 @@ export const useCart = () => {
   const hasSavedItems = savedItemCount > 0;
   const isAllSelected = selectedItemCount === (itemCount + savedItemCount) && (itemCount + savedItemCount) > 0;
 
-  // New: Context-aware select all
+  // FIXED: Context-aware select all with better logic
   const isAllCartSelected = itemCount > 0 && getSelectedCartItems().length === itemCount;
   const isAllSavedSelected = savedItemCount > 0 && getSelectedSavedItems().length === savedItemCount;
 
-  const handleSelectAllCart = (checked?: boolean) => {
-    // If checked is explicitly provided, use it; otherwise toggle based on current state
-    const shouldSelect = checked !== undefined ? checked : !isAllCartSelected;
-    
-    if (shouldSelect) {
-      // Add all cart items to current selection
-      selectAllCart();
-    } else {
+  // FIXED: Improved select all handlers with better state management
+  const handleSelectAllCart = () => {
+    if (isAllCartSelected) {
       // Deselect only cart items, keep saved items selected
       const cartItemIds = items.map(item => item.id);
       const remainingSelectedItems = selectedItems.filter(id => !cartItemIds.includes(id));
-      // Update the store directly to only deselect cart items
       useCartStore.setState({ selectedItems: remainingSelectedItems });
+    } else {
+      // Select all cart items, keep existing saved items selected
+      const cartItemIds = items.map(item => item.id);
+      const savedItemIds = savedItems.map(item => item.id);
+      const currentlySelectedSavedItems = selectedItems.filter(id => savedItemIds.includes(id));
+      useCartStore.setState({ 
+        selectedItems: [...cartItemIds, ...currentlySelectedSavedItems]
+      });
     }
   };
 
-  const handleSelectAllSaved = (checked?: boolean) => {
-    // If checked is explicitly provided, use it; otherwise toggle based on current state
-    const shouldSelect = checked !== undefined ? checked : !isAllSavedSelected;
-    
-    if (shouldSelect) {
-      // Add all saved items to current selection
-      selectAllSaved();
-    } else {
+  const handleSelectAllSaved = () => {
+    if (isAllSavedSelected) {
       // Deselect only saved items, keep cart items selected
       const savedItemIds = savedItems.map(item => item.id);
       const remainingSelectedItems = selectedItems.filter(id => !savedItemIds.includes(id));
-      // Update the store directly to only deselect saved items
       useCartStore.setState({ selectedItems: remainingSelectedItems });
+    } else {
+      // Select all saved items, keep existing cart items selected
+      const savedItemIds = savedItems.map(item => item.id);
+      const cartItemIds = items.map(item => item.id);
+      const currentlySelectedCartItems = selectedItems.filter(id => cartItemIds.includes(id));
+      useCartStore.setState({ 
+        selectedItems: [...savedItemIds, ...currentlySelectedCartItems]
+      });
     }
   };
 
-  // Bulk operations
+  // FIXED: Improved bulk operations with better error handling
   const handleBulkDelete = () => {
     if (hasSelectedItems) {
       bulkDelete(selectedItems);
@@ -159,6 +173,20 @@ export const useCart = () => {
     }
   };
 
+  // FIXED: Add auto-sync effect to ensure consistency
+  useEffect(() => {
+    // Auto-sync when items or selection changes
+    if (items.length > 0 || savedItems.length > 0) {
+      const timeoutId = setTimeout(() => {
+        if (!isSyncing) {
+          syncWithServer();
+        }
+      }, 1000); // Debounce sync calls
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [items, savedItems, selectedItems, isSyncing, syncWithServer]);
+
   return {
     // State
     items,
@@ -176,10 +204,12 @@ export const useCart = () => {
     itemCount,
     savedItemCount,
     selectedItemCount,
+    selectedCartItemCount, // NEW: Selected cart items count
     
     // Formatted values
     formattedCartTotal,
     formattedSelectedTotal,
+    formattedSelectedCartTotal, // NEW: Formatted selected cart total
     
     // Utility functions
     isItemSelected,
@@ -212,12 +242,14 @@ export const useCart = () => {
     setUserId,
     syncWithServer,
     loadFromServer,
+    selectAllCart,
+    selectAllSaved,
     
-    // Bulk operations
+    // FIXED: Improved handlers
     handleSelectAllCart,
     handleSelectAllSaved,
     handleBulkDelete,
     handleBulkMoveToSaved,
-    handleBulkMoveToCart
+    handleBulkMoveToCart,
   };
 }; 

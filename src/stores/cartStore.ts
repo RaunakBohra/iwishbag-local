@@ -159,25 +159,15 @@ export const useCartStore = create<CartStore>()(
         },
 
         selectAllCart: () => {
-          set((state) => {
-            const cartItemIds = state.items.map(item => item.id);
-            const currentSelected = state.selectedItems;
-            const newSelected = [...new Set([...currentSelected, ...cartItemIds])];
-            return {
-              selectedItems: newSelected
-            };
-          });
+          set((state) => ({
+            selectedItems: state.items.map(item => item.id)
+          }));
         },
 
         selectAllSaved: () => {
-          set((state) => {
-            const savedItemIds = state.savedItems.map(item => item.id);
-            const currentSelected = state.selectedItems;
-            const newSelected = [...new Set([...currentSelected, ...savedItemIds])];
-            return {
-              selectedItems: newSelected
-            };
-          });
+          set((state) => ({
+            selectedItems: state.savedItems.map(item => item.id)
+          }));
         },
 
         clearSelection: () => {
@@ -346,12 +336,25 @@ export const useCartStore = create<CartStore>()(
             // Convert quotes to CartItem format
             const convertQuoteToCartItem = (quote: any): CartItem => {
               const firstItem = quote.quote_items?.[0];
+              
+              // FIXED: Calculate item price the same way as checkout
+              // Use quote_items to calculate total, then divide by quantity to get per-item price
+              const quoteItems = quote.quote_items || [];
+              const totalFromItems = quoteItems.reduce((sum, item) => {
+                return sum + (item.item_price * item.quantity);
+              }, 0);
+              
+              // If we have quote items, use their calculation, otherwise fall back to final_total
+              const totalPrice = totalFromItems || quote.final_total_local || quote.final_total || 0;
+              const quantity = quote.quantity || firstItem?.quantity || 1;
+              const itemPrice = totalPrice / quantity; // Calculate per-item price
+              
               return {
                 id: quote.id,
                 quoteId: quote.id,
                 productName: quote.product_name || firstItem?.product_name || 'Unknown Product',
-                itemPrice: quote.final_total_local || quote.final_total || firstItem?.item_price || 0,
-                quantity: quote.quantity || firstItem?.quantity || 1,
+                itemPrice: itemPrice,
+                quantity: quantity,
                 itemWeight: quote.item_weight || firstItem?.item_weight || 0,
                 imageUrl: quote.image_url || firstItem?.image_url,
                 deliveryDate: quote.estimated_delivery_date,

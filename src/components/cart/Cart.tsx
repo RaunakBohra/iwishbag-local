@@ -36,7 +36,7 @@ export const Cart = () => {
   const { formatAmount } = useUserCurrency();
   const { toast } = useToast();
   
-  // Use the cart store and hook
+  // Use the cart store and hook with FIXED calculations
   const {
     items: cartItems,
     savedItems,
@@ -50,8 +50,10 @@ export const Cart = () => {
     itemCount,
     savedItemCount,
     selectedItemCount,
+    selectedCartItemCount, // NEW: Selected cart items count
     formattedCartTotal,
     formattedSelectedTotal,
+    formattedSelectedCartTotal, // NEW: Formatted selected cart total
     hasSelectedItems,
     hasCartItems,
     hasSavedItems,
@@ -96,14 +98,14 @@ export const Cart = () => {
     }
   }, [user, loadFromServer]);
 
-  // Auto-select all cart items only once when cart data is first loaded
+  // FIXED: Improved auto-selection logic
   useEffect(() => {
-    if (cartItems && cartItems.length > 0 && selectedItemCount === 0 && !cartLoading) {
+    if (cartItems && cartItems.length > 0 && selectedCartItemCount === 0 && !cartLoading) {
       console.log('Cart component: Auto-selecting all cart items');
       // Use handleSelectAllCart instead of individual toggleSelection calls
       handleSelectAllCart();
     }
-  }, [cartItems, selectedItemCount, cartLoading, handleSelectAllCart]);
+  }, [cartItems, selectedCartItemCount, cartLoading, handleSelectAllCart]);
 
   // Debug effect to log cart state changes
   useEffect(() => {
@@ -111,10 +113,13 @@ export const Cart = () => {
       cartItems: cartItems?.length || 0,
       savedItems: savedItems?.length || 0,
       selectedItems: selectedItems?.length || 0,
+      selectedCartItems: selectedCartItemCount,
       isLoading: cartLoading,
-      error: cartError
+      error: cartError,
+      cartTotal,
+      selectedItemsTotal
     });
-  }, [cartItems, savedItems, selectedItems, cartLoading, cartError]);
+  }, [cartItems, savedItems, selectedItems, selectedCartItemCount, cartLoading, cartError, cartTotal, selectedItemsTotal]);
 
   // Filter and sort items
   const filteredCartItems = cartItems?.filter(item =>
@@ -227,25 +232,12 @@ export const Cart = () => {
   };
 
   const handleCheckout = async () => {
-    // If no items are selected, auto-select all cart items
-    if (!hasSelectedItems && hasCartItems) {
-      console.log('Cart: Auto-selecting all cart items for checkout');
-      cartItems.forEach(item => {
-        if (!selectedItems.includes(item.id)) {
-          toggleSelection(item.id);
-        }
-      });
-      // Wait a moment for state to update, then proceed
-      setTimeout(() => {
-        handleCheckout();
-      }, 100);
-      return;
-    }
-
-    if (!hasSelectedItems) {
+    // FIXED: Check for selected cart items specifically
+    const selectedCartItems = getSelectedCartItems();
+    if (selectedCartItems.length === 0) {
       toast({
-        title: "No items selected",
-        description: "Please select items to checkout.",
+        title: "No cart items selected",
+        description: "Please select items from your cart to checkout.",
         variant: "destructive",
       });
       return;
@@ -253,17 +245,6 @@ export const Cart = () => {
 
     setIsCheckingOut(true);
     try {
-      // Get selected cart items (not saved items)
-      const selectedCartItems = getSelectedCartItems();
-      if (selectedCartItems.length === 0) {
-        toast({
-          title: "No cart items selected",
-          description: "Please select items from your cart to checkout.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       // Create URL with selected quote IDs
       const quoteIds = selectedCartItems.map(item => item.quoteId);
       const params = new URLSearchParams();
@@ -394,7 +375,7 @@ export const Cart = () => {
             <Checkbox
               id="select-all"
               checked={isAllCartSelected}
-              onCheckedChange={(checked) => handleSelectAllCart(checked as boolean)}
+              onCheckedChange={handleSelectAllCart}
             />
             <label htmlFor="select-all" className="text-sm font-medium">
               Select All ({itemCount})
@@ -669,7 +650,7 @@ export const Cart = () => {
             <Checkbox
               id="select-all-saved"
               checked={isAllSavedSelected}
-              onCheckedChange={(checked) => handleSelectAllSaved(checked as boolean)}
+              onCheckedChange={handleSelectAllSaved}
             />
             <label htmlFor="select-all-saved" className="text-sm font-medium">
               Select All ({savedItemCount})
@@ -882,16 +863,16 @@ export const Cart = () => {
               <CardTitle>Checkout Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {getSelectedCartItems().length > 0 ? (
+              {selectedCartItemCount > 0 ? (
                 <>
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Selected Items:</span>
-                      <span>{getSelectedCartItems().length}</span>
+                      <span>{selectedCartItemCount}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span>{formattedSelectedTotal}</span>
+                      <span>{formattedSelectedCartTotal}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Weight:</span>
@@ -901,7 +882,7 @@ export const Cart = () => {
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total:</span>
-                    <span>{formattedSelectedTotal}</span>
+                    <span>{formattedSelectedCartTotal}</span>
                   </div>
                   <Button 
                     onClick={handleCheckout} 
