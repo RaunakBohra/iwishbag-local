@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, Bell, MessageSquare, ShoppingCart, LayoutDashboard, User, Menu, Search, Sun, Moon } from "lucide-react";
+import { LogOut, Bell, MessageSquare, ShoppingCart, LayoutDashboard, User, Menu, Search, Sun, Moon, MoreVertical, Building } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -10,6 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ import { CartDrawer } from "@/components/cart/CartDrawer";
 import { useSidebar } from "@/components/ui/sidebar";
 import { AdminSearch } from "@/components/admin/AdminSearch";
 import { useTheme } from "next-themes";
+import { useState } from "react";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -26,6 +28,7 @@ const Header = () => {
   const location = useLocation();
   const { toggleSidebar } = useSidebar();
   const { theme, setTheme } = useTheme();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const { data: hasAdminRole } = useAdminRole();
   const { formData: homePageSettings } = useHomePageSettings();
@@ -159,68 +162,184 @@ const Header = () => {
           
           {user ? (
             <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
-              <CartDrawer />
-              <Button variant="ghost" size="icon" className="relative hover:bg-accent flex-shrink-0 h-9 w-9" onClick={() => navigate('/notifications')}>
-                <Bell className="h-4 w-4" />
-                {unreadNotificationsCount && unreadNotificationsCount > 0 && (
-                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 rounded-full text-xs">
-                    {unreadNotificationsCount}
-                  </Badge>
-                )}
-                <span className="sr-only">Notifications</span>
-              </Button>
-              <Button variant="ghost" size="icon" className="relative hover:bg-accent flex-shrink-0 h-9 w-9" onClick={() => navigate('/messages')}>
-                <MessageSquare className="h-4 w-4" />
-                 {unreadMessagesCount && unreadMessagesCount > 0 && (
-                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 rounded-full text-xs">
-                    {unreadMessagesCount}
-                  </Badge>
-                )}
-                <span className="sr-only">Messages</span>
-              </Button>
-              
-              {/* Theme Toggle - Only for admins */}
-              {hasAdminRole && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="hover:bg-accent flex-shrink-0 h-9 w-9"
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                >
-                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                  <span className="sr-only">Toggle theme</span>
+              {/* Desktop View */}
+              <div className="hidden sm:flex items-center space-x-2">
+                <CartDrawer />
+                <Button variant="ghost" size="icon" className="relative hover:bg-accent flex-shrink-0 h-9 w-9" onClick={() => navigate('/notifications')}>
+                  <Bell className="h-4 w-4" />
+                  {unreadNotificationsCount && unreadNotificationsCount > 0 && (
+                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 rounded-full text-xs">
+                      {unreadNotificationsCount}
+                    </Badge>
+                  )}
                 </Button>
-              )}
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="px-2 sm:px-3 text-left hover:bg-accent min-w-0 h-9">
-                    <span className="hidden lg:inline">Hello, </span>
-                    <span className="truncate text-sm sm:text-base">{getDisplayName()}</span>
+                <Button variant="ghost" size="icon" className="relative hover:bg-accent flex-shrink-0 h-9 w-9" onClick={() => navigate('/messages')}>
+                  <MessageSquare className="h-4 w-4" />
+                  {unreadMessagesCount && unreadMessagesCount > 0 && (
+                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center p-0 rounded-full text-xs">
+                      {unreadMessagesCount}
+                    </Badge>
+                  )}
+                </Button>
+                {hasAdminRole && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="hover:bg-accent flex-shrink-0 h-9 w-9"
+                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  >
+                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard" className="flex items-center cursor-pointer w-full">
-                      <LayoutDashboard className="mr-2 h-4 w-4" />
-                      <span>Dashboard</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center cursor-pointer w-full">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    <span>Sign Out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                )}
+              </div>
+
+              {/* Mobile View - Only show Cart and More menu */}
+              <div className="flex sm:hidden items-center space-x-1">
+                <CartDrawer />
+                <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative hover:bg-accent flex-shrink-0 h-9 w-9">
+                      <MoreVertical className="h-4 w-4" />
+                      {(unreadNotificationsCount > 0 || unreadMessagesCount > 0) && (
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-2 w-2 p-0 rounded-full" />
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="h-[80vh]">
+                    <SheetHeader>
+                      <SheetTitle>Menu</SheetTitle>
+                    </SheetHeader>
+                    <div className="py-6 space-y-4">
+                      <div className="grid grid-cols-3 gap-4">
+                        <Button
+                          variant="outline"
+                          className="flex flex-col items-center justify-center h-24"
+                          onClick={() => {
+                            navigate('/dashboard');
+                            setIsSheetOpen(false);
+                          }}
+                        >
+                          <LayoutDashboard className="h-6 w-6 mb-2" />
+                          <span className="text-sm">Dashboard</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex flex-col items-center justify-center h-24 relative"
+                          onClick={() => {
+                            navigate('/messages');
+                            setIsSheetOpen(false);
+                          }}
+                        >
+                          <MessageSquare className="h-6 w-6 mb-2" />
+                          <span className="text-sm">Messages</span>
+                          {unreadMessagesCount > 0 && (
+                            <Badge variant="destructive" className="absolute top-2 right-2">
+                              {unreadMessagesCount}
+                            </Badge>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex flex-col items-center justify-center h-24 relative"
+                          onClick={() => {
+                            navigate('/notifications');
+                            setIsSheetOpen(false);
+                          }}
+                        >
+                          <Bell className="h-6 w-6 mb-2" />
+                          <span className="text-sm">Notifications</span>
+                          {unreadNotificationsCount > 0 && (
+                            <Badge variant="destructive" className="absolute top-2 right-2">
+                              {unreadNotificationsCount}
+                            </Badge>
+                          )}
+                        </Button>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {hasAdminRole && (
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start"
+                            onClick={() => {
+                              navigate('/admin');
+                              setIsSheetOpen(false);
+                            }}
+                          >
+                            <Building className="h-4 w-4 mr-2" />
+                            Admin Dashboard
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => {
+                            navigate('/profile');
+                            setIsSheetOpen(false);
+                          }}
+                        >
+                          <User className="h-4 w-4 mr-2" />
+                          Profile Settings
+                        </Button>
+                        {hasAdminRole && (
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start"
+                            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                          >
+                            {theme === "dark" ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
+                            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-destructive"
+                          onClick={() => {
+                            handleSignOut();
+                            setIsSheetOpen(false);
+                          }}
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sign Out
+                        </Button>
+                      </div>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+
+              {/* Desktop User Menu */}
+              <div className="hidden sm:block">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="px-2 sm:px-3 text-left hover:bg-accent min-w-0 h-9">
+                      <span className="hidden lg:inline">Hello, </span>
+                      <span className="truncate text-sm sm:text-base">{getDisplayName()}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/dashboard" className="flex items-center cursor-pointer w-full">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        <span>Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="flex items-center cursor-pointer w-full">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      <span>Sign Out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           ) : (
             <>
