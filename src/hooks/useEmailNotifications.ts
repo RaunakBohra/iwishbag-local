@@ -13,8 +13,17 @@ interface EmailNotificationOptions {
 }
 
 async function getAccessToken() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || '';
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) {
+      console.warn('Error getting session:', error);
+      return null;
+    }
+    return session?.access_token || null;
+  } catch (error) {
+    console.warn('Error getting access token:', error);
+    return null;
+  }
 }
 
 export const useEmailNotifications = () => {
@@ -23,26 +32,38 @@ export const useEmailNotifications = () => {
   const sendEmailMutation = useMutation({
     mutationFn: async ({ to, template, data, from }: EmailNotificationOptions) => {
       const accessToken = await getAccessToken();
-      const { error } = await supabase.functions.invoke('send-email', {
-        body: {
-          to,
-          template,
-          data,
-          from: from || 'WishBag <noreply@resend.dev>'
-        },
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
+      
+      if (accessToken) {
+        const { error } = await supabase.functions.invoke('send-email', {
+          body: {
+            to,
+            template,
+            data,
+            from: from || 'WishBag <noreply@resend.dev>'
+          },
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        console.warn('No access token available, skipping email send');
+        // You might want to throw an error here or handle it differently
+        throw new Error('User not authenticated - cannot send email');
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email sent successfully",
+        description: "The notification email has been sent.",
+      });
     },
     onError: (error: Error) => {
-      console.error('Email sending error:', error);
       toast({
-        title: "Error",
-        description: `Failed to send email: ${error.message}`,
-        variant: "destructive"
+        title: "Failed to send email",
+        description: error.message,
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Predefined email notification functions

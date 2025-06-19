@@ -7,8 +7,17 @@ type Quote = Tables<'quotes'>;
 type QuoteItem = Tables<'quote_items'>;
 
 async function getAccessToken() {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || '';
+    try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+            console.warn('Error getting session:', error);
+            return null;
+        }
+        return session?.access_token || null;
+    } catch (error) {
+        console.warn('Error getting access token:', error);
+        return null;
+    }
 }
 
 export const useQuoteMutations = (id: string | undefined) => {
@@ -89,20 +98,24 @@ export const useQuoteMutations = (id: string | undefined) => {
             // Before calling send-email:
             const accessToken = await getAccessToken();
 
-            // Send email using the edge function
-            const { error: emailError } = await supabase.functions.invoke('send-email', {
-                body: {
-                    to: quote.email,
-                    subject: emailSubject,
-                    html: emailHtml,
-                    from: 'WishBag <quotes@resend.dev>',
+            if (accessToken) {
+                // Send email using the edge function
+                const { error: emailError } = await supabase.functions.invoke('send-email', {
+                    body: {
+                        to: quote.email,
+                        subject: emailSubject,
+                        html: emailHtml,
+                        from: 'WishBag <quotes@resend.dev>'
+                    },
                     headers: { Authorization: `Bearer ${accessToken}` }
-                }
-            });
+                });
 
-            if (emailError) {
-                console.error('Email sending error:', emailError);
-                throw new Error(`Failed to send email: ${emailError.message}`);
+                if (emailError) {
+                    console.error('Email sending error:', emailError);
+                    throw new Error(`Failed to send email: ${emailError.message}`);
+                }
+            } else {
+                console.warn('No access token available, skipping email send');
             }
 
             // Update quote status to sent

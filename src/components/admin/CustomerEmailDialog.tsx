@@ -14,8 +14,17 @@ interface CustomerEmailDialogProps {
 }
 
 async function getAccessToken() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || '';
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) {
+      console.warn('Error getting session:', error);
+      return null;
+    }
+    return session?.access_token || null;
+  } catch (error) {
+    console.warn('Error getting access token:', error);
+    return null;
+  }
 }
 
 export const CustomerEmailDialog = ({ customerEmail, customerName }: CustomerEmailDialogProps) => {

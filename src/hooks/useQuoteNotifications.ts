@@ -7,8 +7,17 @@ type Quote = Tables<'quotes'>;
 
 // Helper to get the current user's access token
 async function getAccessToken() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || '';
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) {
+      console.warn('Error getting session:', error);
+      return null;
+    }
+    return session?.access_token || null;
+  } catch (error) {
+    console.warn('Error getting access token:', error);
+    return null;
+  }
 }
 
 export const useQuoteNotifications = () => {
@@ -32,22 +41,27 @@ export const useQuoteNotifications = () => {
 
       // Send confirmation email
       const accessToken = await getAccessToken();
-      const { error: emailError } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: quote.email,
-          template: 'quote_confirmation',
-          data: {
-            quoteId: quote.display_id || quote.id.substring(0, 8),
-            customerEmail: quote.email,
-            itemCount: quote.quote_items?.length || 0,
-            estimatedTime: '24-48 hours',
-            dashboardUrl: `${window.location.origin}/dashboard`
+      if (accessToken) {
+        const { error: emailError } = await supabase.functions.invoke('send-email', {
+          body: {
+            to: quote.email,
+            template: 'quote_confirmation',
+            data: {
+              quoteId: quote.display_id || quote.id,
+              itemCount: quote.quote_items?.length || 1,
+              estimatedTime: '24-48 hours',
+              dashboardUrl: `${window.location.origin}/dashboard`
+            }
           },
           headers: { Authorization: `Bearer ${accessToken}` }
-        }
-      });
+        });
 
-      if (emailError) throw emailError;
+        if (emailError) {
+          console.error('Failed to send confirmation email:', emailError);
+        }
+      } else {
+        console.warn('No access token available, skipping confirmation email');
+      }
 
       // Update quote status to indicate confirmation sent
       const { error: updateError } = await supabase
@@ -97,24 +111,29 @@ export const useQuoteNotifications = () => {
 
       // Send quote ready email
       const accessToken = await getAccessToken();
-      const { error: emailError } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: quote.email,
-          template: 'quote_ready',
-          data: {
-            quoteId: quote.display_id || quote.id.substring(0, 8),
-            customerEmail: quote.email,
-            totalAmount: quote.final_total,
-            currency: quote.final_currency,
-            itemCount: quote.quote_items?.length || 0,
-            dashboardUrl: `${window.location.origin}/dashboard`,
-            quoteUrl: `${window.location.origin}/quote-details/${quote.id}`
+      if (accessToken) {
+        const { error: emailError } = await supabase.functions.invoke('send-email', {
+          body: {
+            to: quote.email,
+            template: 'quote_ready',
+            data: {
+              quoteId: quote.order_display_id || quote.id,
+              totalAmount: quote.final_total_local || quote.final_total,
+              currency: quote.final_currency || 'USD',
+              itemCount: quote.quote_items?.length || 1,
+              dashboardUrl: `${window.location.origin}/dashboard`,
+              quoteUrl: `${window.location.origin}/quote-details/${quote.id}`
+            }
           },
           headers: { Authorization: `Bearer ${accessToken}` }
-        }
-      });
+        });
 
-      if (emailError) throw emailError;
+        if (emailError) {
+          console.error('Failed to send quote ready email:', emailError);
+        }
+      } else {
+        console.warn('No access token available, skipping quote ready email');
+      }
 
       // Update quote status
       const { error: updateError } = await supabase
@@ -177,24 +196,29 @@ export const useQuoteNotifications = () => {
 
       // Send status update email
       const accessToken = await getAccessToken();
-      const { error: emailError } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: quote.email,
-          template,
-          data: {
-            quoteId: quote.display_id || quote.id.substring(0, 8),
-            customerEmail: quote.email,
-            status,
-            totalAmount: quote.final_total,
-            currency: quote.final_currency,
-            dashboardUrl: `${window.location.origin}/dashboard`,
-            ...additionalData
+      if (accessToken) {
+        const { error: emailError } = await supabase.functions.invoke('send-email', {
+          body: {
+            to: quote.email,
+            template: template as EmailTemplate,
+            data: {
+              quoteId: quote.order_display_id || quote.id,
+              customerName: quote.customer_name || 'Customer',
+              totalAmount: quote.final_total_local || quote.final_total,
+              currency: quote.final_currency || 'USD',
+              dashboardUrl: `${window.location.origin}/dashboard`,
+              ...additionalData
+            }
           },
           headers: { Authorization: `Bearer ${accessToken}` }
-        }
-      });
+        });
 
-      if (emailError) throw emailError;
+        if (emailError) {
+          console.error('Failed to send status update email:', emailError);
+        }
+      } else {
+        console.warn('No access token available, skipping status update email');
+      }
 
       return quote;
     },
@@ -228,21 +252,29 @@ export const useQuoteNotifications = () => {
 
       // Send reminder email
       const accessToken = await getAccessToken();
-      const { error: emailError } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: quote.email,
-          template: 'quote_reminder',
-          data: {
-            quoteId: quote.display_id || quote.id.substring(0, 8),
-            customerEmail: quote.email,
-            daysSinceRequest: Math.floor((Date.now() - new Date(quote.created_at).getTime()) / (1000 * 60 * 60 * 24)),
-            dashboardUrl: `${window.location.origin}/dashboard`
+      if (accessToken) {
+        const { error: emailError } = await supabase.functions.invoke('send-email', {
+          body: {
+            to: quote.email,
+            template: 'quote_reminder',
+            data: {
+              quoteId: quote.order_display_id || quote.id,
+              customerName: quote.customer_name || 'Customer',
+              totalAmount: quote.final_total_local || quote.final_total,
+              currency: quote.final_currency || 'USD',
+              daysSinceRequest: Math.floor((Date.now() - new Date(quote.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+              dashboardUrl: `${window.location.origin}/dashboard`
+            }
           },
           headers: { Authorization: `Bearer ${accessToken}` }
-        }
-      });
+        });
 
-      if (emailError) throw emailError;
+        if (emailError) {
+          console.error('Failed to send reminder email:', emailError);
+        }
+      } else {
+        console.warn('No access token available, skipping reminder email');
+      }
 
       return quote;
     },
