@@ -2,40 +2,40 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, ArrowLeft, Home } from 'lucide-react';
+import { XCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 
-export default function PaymentSuccess() {
+export default function PaymentFailed() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [paymentDetails, setPaymentDetails] = useState({
     method: searchParams.get('method') || 'unknown',
     orderId: searchParams.get('order_id') || 'unknown',
-    transactionId: searchParams.get('transaction_id') || 'unknown'
+    error: searchParams.get('error') || 'Payment failed'
   });
 
   useEffect(() => {
-    // Log payment success for debugging
-    console.log('Payment Success Page Loaded');
+    // Log payment failure for debugging
+    console.log('Payment Failed Page Loaded');
     console.log('URL Parameters:', Object.fromEntries(searchParams.entries()));
     console.log('Payment Details:', paymentDetails);
   }, [searchParams, paymentDetails]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="mx-auto mb-4 w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+            <XCircle className="w-8 h-8 text-red-600" />
           </div>
-          <CardTitle className="text-2xl text-green-800">Payment Successful!</CardTitle>
+          <CardTitle className="text-2xl text-red-800">Payment Failed</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="text-center space-y-2">
             <p className="text-gray-600">
-              Your payment has been processed successfully.
+              Your payment could not be processed.
             </p>
             <p className="text-sm text-gray-500">
-              You will receive a confirmation email shortly.
+              Please try again or contact support if the problem persists.
             </p>
           </div>
 
@@ -51,32 +51,30 @@ export default function PaymentSuccess() {
                 <span className="text-gray-600">Order ID:</span>
                 <span className="font-mono text-xs">{paymentDetails.orderId}</span>
               </div>
-              {paymentDetails.transactionId !== 'unknown' && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Transaction ID:</span>
-                  <span className="font-mono text-xs">{paymentDetails.transactionId}</span>
-                </div>
-              )}
+              <div className="flex justify-between">
+                <span className="text-gray-600">Error:</span>
+                <span className="text-red-600 text-xs">{paymentDetails.error}</span>
+              </div>
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="space-y-3">
             <Button 
-              onClick={() => navigate('/dashboard')} 
-              className="w-full bg-green-600 hover:bg-green-700"
+              onClick={() => navigate('/esewa-payment')} 
+              className="w-full bg-red-600 hover:bg-red-700"
             >
-              <Home className="w-4 h-4 mr-2" />
-              Go to Dashboard
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
             </Button>
             
             <Button 
-              onClick={() => navigate('/')} 
+              onClick={() => navigate('/dashboard')} 
               variant="outline" 
               className="w-full"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+              Back to Dashboard
             </Button>
           </div>
 
@@ -89,7 +87,7 @@ export default function PaymentSuccess() {
               <div><strong>URL:</strong> {window.location.href}</div>
               <div><strong>Method:</strong> {paymentDetails.method}</div>
               <div><strong>Order ID:</strong> {paymentDetails.orderId}</div>
-              <div><strong>Transaction ID:</strong> {paymentDetails.transactionId}</div>
+              <div><strong>Error:</strong> {paymentDetails.error}</div>
               <div><strong>All Params:</strong> {Object.fromEntries(searchParams.entries())}</div>
             </div>
           </details>
@@ -97,4 +95,4 @@ export default function PaymentSuccess() {
       </Card>
     </div>
   );
-}
+} 

@@ -1,4 +1,3 @@
-
 import {
   Select,
   SelectContent,
@@ -22,6 +21,7 @@ export const StatusFilter = ({ onStatusChange }: StatusFilterProps) => {
         <SelectItem value="pending">Pending</SelectItem>
         <SelectItem value="cod_pending">COD Pending</SelectItem>
         <SelectItem value="bank_transfer_pending">Bank Transfer Pending</SelectItem>
+        <SelectItem value="esewa_pending">eSewa Pending</SelectItem>
         <SelectItem value="paid">Paid</SelectItem>
         <SelectItem value="approved">Approved</SelectItem>
         <SelectItem value="ordered">Ordered</SelectItem>

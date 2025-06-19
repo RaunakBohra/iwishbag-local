@@ -38,6 +38,9 @@ import { QuoteTemplatesPage } from "@/components/admin/QuoteTemplatesPage";
 import { BankAccountSettings } from "@/components/admin/BankAccountSettings";
 import { SystemSettings } from "@/components/admin/SystemSettings";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
+import ESewaPaymentPage from "@/pages/ESewaPaymentPage";
+import PaymentSuccess from "@/pages/payment-success";
+import PaymentFailed from "@/pages/payment-failed";
 import { QueryProvider } from './providers/QueryProvider';
 import { HomePageSettings } from "@/components/admin/HomePageSettings";
 import ButtonPreview from "@/pages/ButtonPreview";
@@ -203,6 +206,18 @@ const router = createBrowserRouter([
           {
             path: "profile",
             element: <Profile />,
+          },
+          {
+            path: "esewa-payment",
+            element: <ESewaPaymentPage />,
+          },
+          {
+            path: "payment-success",
+            element: <PaymentSuccess />,
+          },
+          {
+            path: "payment-failed",
+            element: <PaymentFailed />,
           },
         ],
       },

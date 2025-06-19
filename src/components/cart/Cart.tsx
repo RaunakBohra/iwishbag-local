@@ -92,6 +92,18 @@ export const Cart = () => {
     }
   }, [user, loadFromServer]);
 
+  // Auto-select all cart items by default when cart data is loaded
+  useEffect(() => {
+    if (cartItems && cartItems.length > 0 && selectedItemCount === 0) {
+      // Select all cart items if none are currently selected
+      cartItems.forEach(item => {
+        if (!selectedItems.includes(item.id)) {
+          toggleSelection(item.id);
+        }
+      });
+    }
+  }, [cartItems, selectedItems, selectedItemCount, toggleSelection]);
+
   // Filter and sort items
   const filteredCartItems = cartItems?.filter(item =>
     item.productName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||

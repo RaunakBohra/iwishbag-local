@@ -6,6 +6,7 @@ export type QuoteStatus =
   | 'cancelled'        // Quote has been cancelled
   | 'cod_pending'      // Cash on delivery payment pending
   | 'bank_transfer_pending' // Bank transfer payment pending
+  | 'esewa_pending'    // eSewa payment pending
   | 'paid'             // Payment received
   | 'ordered'          // Order has been placed
   | 'shipped'          // Order has been shipped
@@ -21,6 +22,7 @@ export type PaymentMethod =
   | 'stripe'           // Stripe payment
   | 'cod'              // Cash on delivery
   | 'bank_transfer'    // Bank transfer
+  | 'esewa'            // eSewa payment
   | null;              // No payment method selected
 
 export interface QuoteState {
