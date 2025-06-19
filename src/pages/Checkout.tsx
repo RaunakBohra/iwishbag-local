@@ -35,6 +35,7 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Tables } from "@/integrations/supabase/types";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
+import { useCart } from "@/hooks/useCart";
 import { cn } from "@/lib/utils";
 
 type QuoteType = Tables<'quotes'>;
@@ -59,6 +60,15 @@ export default function Checkout() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   
+  // Cart store
+  const { 
+    items: cartItems, 
+    selectedItems, 
+    selectedItemsTotal, 
+    formattedSelectedTotal,
+    getSelectedCartItems 
+  } = useCart();
+  
   // State
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
   const [selectedAddress, setSelectedAddress] = useState<string>("");
@@ -81,6 +91,11 @@ export default function Checkout() {
   const { data: userProfile } = useUserProfile();
   const { formatAmount } = useUserCurrency();
 
+  // Get selected cart items based on quote IDs
+  const selectedCartItems = cartItems.filter(item => 
+    selectedQuoteIds.includes(item.quoteId)
+  );
+
   // Queries
   const { data: addresses, isLoading: addressesLoading } = useQuery({
     queryKey: ['user_addresses', user?.id],
@@ -96,32 +111,6 @@ export default function Checkout() {
       return data;
     },
     enabled: !!user,
-  });
-
-  const { data: selectedQuotes, isLoading: quotesLoading } = useQuery<QuoteType[], Error>({
-    queryKey: ['checkout-quotes', selectedQuoteIds],
-    queryFn: async () => {
-      if (selectedQuoteIds.length === 0) return [];
-
-      const { data, error } = await supabase
-        .from('quotes')
-        .select(`
-          *,
-          quote_items (
-            id,
-            item_price,
-            quantity,
-            product_name
-          )
-        `)
-        .in('id', selectedQuoteIds)
-        .eq('user_id', user?.id)
-        .eq('approval_status', 'approved');
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: selectedQuoteIds.length > 0 && !!user,
   });
 
   // Auto-select default address
@@ -146,7 +135,6 @@ export default function Checkout() {
       if (error) throw new Error(error.message);
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['checkout-quotes', selectedQuoteIds] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['admin-quotes']});
       queryClient.invalidateQueries({ queryKey: ['admin-orders']});
@@ -190,21 +178,9 @@ export default function Checkout() {
     },
   });
 
-  // Computed values
+  // Computed values using cart store
   const allowCod = userProfile?.cod_enabled ?? false;
-  
-  // FIXED: Use the same calculation method as cart (itemPrice * quantity)
-  const totalAmount = selectedQuotes?.reduce((sum, quote) => {
-    // Get the quote items to calculate the same way as cart
-    const quoteItems = quote.quote_items || [];
-    const itemTotal = quoteItems.reduce((itemSum, item) => {
-      return itemSum + (item.item_price * item.quantity);
-    }, 0);
-    
-    // If no quote items, fall back to final_total
-    return sum + (itemTotal || (quote.final_total_local ?? quote.final_total ?? 0));
-  }, 0) || 0;
-  
+  const totalAmount = selectedCartItems.reduce((sum, item) => sum + (item.finalTotal * item.quantity), 0);
   const canProceedToPayment = selectedAddress && addresses && addresses.length > 0;
   const canProceedToReview = canProceedToPayment && paymentMethod;
 
@@ -247,7 +223,7 @@ export default function Checkout() {
           },
           body: JSON.stringify({
             quoteIds: selectedQuoteIds,
-            currency: selectedQuotes?.[0]?.final_currency || 'USD',
+            currency: selectedCartItems[0]?.currency || 'USD',
             amount: totalAmount,
             success_url: `${window.location.origin}/order-confirmation/${orderId}?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${window.location.origin}/checkout`,
@@ -282,7 +258,7 @@ export default function Checkout() {
     }
 
     setIsProcessing(true);
-    const quoteIds = selectedQuotes.map(q => q.id!);
+    const quoteIds = selectedCartItems.map(item => item.quoteId);
 
     if (paymentMethod === 'stripe') {
       await handleStripePayment();
@@ -297,7 +273,7 @@ export default function Checkout() {
   };
 
   // Loading states
-  if (quotesLoading || addressesLoading) {
+  if (addressesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -309,7 +285,7 @@ export default function Checkout() {
     );
   }
 
-  if (!selectedQuotes || selectedQuotes.length === 0) {
+  if (selectedCartItems.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -711,33 +687,22 @@ export default function Checkout() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {selectedQuotes.map((quote) => {
-                    // Calculate item total the same way as cart
-                    const quoteItems = quote.quote_items || [];
-                    const itemTotal = quoteItems.reduce((sum, item) => {
-                      return sum + (item.item_price * item.quantity);
-                    }, 0);
-                    
-                    // Fall back to final_total if no quote items
-                    const displayTotal = itemTotal || (quote.final_total_local ?? quote.final_total ?? 0);
-                    
-                    return (
-                      <div key={quote.id} className="flex justify-between items-start p-3 border rounded-lg">
-                        <div className="flex-1">
-                          <Link to={`/quote-details/${quote.id}`} className="font-medium hover:underline text-primary">
-                            <h4>{quote.product_name}</h4>
-                          </Link>
-                          <p className="text-sm text-muted-foreground">
-                            {quote.quantity} item{quote.quantity !== 1 ? 's' : ''}
-                          </p>
-                          <Badge variant="outline">{quote.country_code}</Badge> 
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold">{formatAmount(displayTotal)}</div>
-                        </div>
+                  {selectedCartItems.map((item) => (
+                    <div key={item.quoteId} className="flex justify-between items-start p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <Link to={`/quote-details/${item.quoteId}`} className="font-medium hover:underline text-primary">
+                          <h4>{item.productName}</h4>
+                        </Link>
+                        <p className="text-sm text-muted-foreground">
+                          {item.quantity} item{item.quantity !== 1 ? 's' : ''}
+                        </p>
+                        <Badge variant="outline">{item.countryCode}</Badge> 
                       </div>
-                    );
-                  })}
+                      <div className="text-right">
+                        <div className="font-bold">{formatAmount(item.finalTotal)}</div>
+                      </div>
+                    </div>
+                  ))}
 
                   <Separator />
 

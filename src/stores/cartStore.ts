@@ -7,7 +7,7 @@ export interface CartItem {
   id: string;
   quoteId: string;
   productName: string;
-  itemPrice: number;
+  finalTotal: number;
   quantity: number;
   itemWeight: number;
   imageUrl?: string;
@@ -353,8 +353,8 @@ export const useCartStore = create<CartStore>()(
                 id: quote.id,
                 quoteId: quote.id,
                 productName: quote.product_name || firstItem?.product_name || 'Unknown Product',
-                itemPrice: itemPrice,
-                quantity: quantity,
+                finalTotal: quote.final_total_local || quote.final_total || firstItem?.item_price || 0,
+                quantity: quote.quantity || firstItem?.quantity || 1,
                 itemWeight: quote.item_weight || firstItem?.item_weight || 0,
                 imageUrl: quote.image_url || firstItem?.image_url,
                 deliveryDate: quote.estimated_delivery_date,
@@ -407,7 +407,7 @@ export const useCartStore = create<CartStore>()(
       },
       // Handle localStorage errors gracefully
       skipHydration: false,
-      version: 1,
+      version: 3,
     }
   )
 ); 

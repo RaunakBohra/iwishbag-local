@@ -35,7 +35,7 @@ export const useCart = () => {
   // Cart calculations - FIXED: Use consistent calculation method
   const cartTotal = useMemo(() => {
     return items.reduce((total, item) => {
-      return total + (item.itemPrice * item.quantity);
+      return total + (item.finalTotal * item.quantity);
     }, 0);
   }, [items]);
 
@@ -49,7 +49,7 @@ export const useCart = () => {
   const selectedItemsTotal = useMemo(() => {
     const selectedCartItems = items.filter(item => selectedItems.includes(item.id));
     return selectedCartItems.reduce((total, item) => {
-      return total + (item.itemPrice * item.quantity);
+      return total + (item.finalTotal * item.quantity);
     }, 0);
   }, [items, selectedItems]);
 

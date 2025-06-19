@@ -1213,54 +1213,6 @@ export type Database = {
         }
         Relationships: []
       }
-      cart_settings: {
-        Row: {
-          bulk_discount_threshold: number;
-          bulk_discount_percentage: number;
-          member_discount_percentage: number;
-          seasonal_discount_percentage: number;
-          seasonal_discount_start_month: number;
-          seasonal_discount_end_month: number;
-          free_shipping_threshold: number;
-          shipping_rate_percentage: number;
-          tax_rate_percentage: number;
-          is_seasonal_discount_active: boolean;
-          created_at: string;
-          updated_at: string;
-          id: string;
-        };
-        Insert: {
-          bulk_discount_threshold?: number;
-          bulk_discount_percentage?: number;
-          member_discount_percentage?: number;
-          seasonal_discount_percentage?: number;
-          seasonal_discount_start_month?: number;
-          seasonal_discount_end_month?: number;
-          free_shipping_threshold?: number;
-          shipping_rate_percentage?: number;
-          tax_rate_percentage?: number;
-          is_seasonal_discount_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-          id?: string;
-        };
-        Update: {
-          bulk_discount_threshold?: number;
-          bulk_discount_percentage?: number;
-          member_discount_percentage?: number;
-          seasonal_discount_percentage?: number;
-          seasonal_discount_start_month?: number;
-          seasonal_discount_end_month?: number;
-          free_shipping_threshold?: number;
-          shipping_rate_percentage?: number;
-          tax_rate_percentage?: number;
-          is_seasonal_discount_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-          id?: string;
-        };
-        Relationships: [];
-      };
     }
     Views: {
       [_ in never]: never

@@ -105,54 +105,6 @@ export type Database = {
         }
         Relationships: []
       }
-      cart_settings: {
-        Row: {
-          bulk_discount_percentage: number
-          bulk_discount_threshold: number
-          created_at: string
-          free_shipping_threshold: number
-          id: string
-          is_seasonal_discount_active: boolean
-          member_discount_percentage: number
-          seasonal_discount_end_month: number
-          seasonal_discount_percentage: number
-          seasonal_discount_start_month: number
-          shipping_rate_percentage: number
-          tax_rate_percentage: number
-          updated_at: string
-        }
-        Insert: {
-          bulk_discount_percentage?: number
-          bulk_discount_threshold?: number
-          created_at?: string
-          free_shipping_threshold?: number
-          id?: string
-          is_seasonal_discount_active?: boolean
-          member_discount_percentage?: number
-          seasonal_discount_end_month?: number
-          seasonal_discount_percentage?: number
-          seasonal_discount_start_month?: number
-          shipping_rate_percentage?: number
-          tax_rate_percentage?: number
-          updated_at?: string
-        }
-        Update: {
-          bulk_discount_percentage?: number
-          bulk_discount_threshold?: number
-          created_at?: string
-          free_shipping_threshold?: number
-          id?: string
-          is_seasonal_discount_active?: boolean
-          member_discount_percentage?: number
-          seasonal_discount_end_month?: number
-          seasonal_discount_percentage?: number
-          seasonal_discount_start_month?: number
-          shipping_rate_percentage?: number
-          tax_rate_percentage?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
       country_settings: {
         Row: {
           additional_shipping: number

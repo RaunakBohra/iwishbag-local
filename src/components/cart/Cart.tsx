@@ -139,9 +139,9 @@ export const Cart = () => {
       case "date-asc":
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       case "price-desc":
-        return (b.itemPrice * b.quantity) - (a.itemPrice * a.quantity);
+        return (b.finalTotal * b.quantity) - (a.finalTotal * a.quantity);
       case "price-asc":
-        return (a.itemPrice * a.quantity) - (b.itemPrice * b.quantity);
+        return (a.finalTotal * a.quantity) - (b.finalTotal * b.quantity);
       case "name-asc":
         return a.productName.localeCompare(b.productName);
       case "name-desc":
@@ -158,9 +158,9 @@ export const Cart = () => {
       case "date-asc":
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       case "price-desc":
-        return (b.itemPrice * b.quantity) - (a.itemPrice * a.quantity);
+        return (b.finalTotal * b.quantity) - (a.finalTotal * a.quantity);
       case "price-asc":
-        return (a.itemPrice * a.quantity) - (b.itemPrice * b.quantity);
+        return (a.finalTotal * a.quantity) - (b.finalTotal * b.quantity);
       case "name-asc":
         return a.productName.localeCompare(b.productName);
       case "name-desc":
@@ -299,9 +299,9 @@ export const Cart = () => {
         case "date-asc":
           return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         case "price-desc":
-          return (b.itemPrice * b.quantity) - (a.itemPrice * a.quantity);
+          return (b.finalTotal * b.quantity) - (a.finalTotal * a.quantity);
         case "price-asc":
-          return (a.itemPrice * a.quantity) - (b.itemPrice * b.quantity);
+          return (a.finalTotal * a.quantity) - (b.finalTotal * b.quantity);
         case "name-asc":
           return a.productName.localeCompare(b.productName);
         case "name-desc":
@@ -461,7 +461,7 @@ export const Cart = () => {
                     </div>
                     <div className="text-right">
                       <div className="font-bold">
-                        {formatAmount(item.itemPrice * item.quantity)}
+                        {formatAmount(item.finalTotal * item.quantity)}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
@@ -493,7 +493,7 @@ export const Cart = () => {
                         </div>
                         <div className="text-right">
                           <div className="font-bold">
-                            {formatAmount(item.itemPrice * item.quantity)}
+                            {formatAmount(item.finalTotal * item.quantity)}
                           </div>
                           <p className="text-sm text-muted-foreground">Total</p>
                         </div>
@@ -574,9 +574,9 @@ export const Cart = () => {
         case "date-asc":
           return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         case "price-desc":
-          return (b.itemPrice * b.quantity) - (a.itemPrice * a.quantity);
+          return (b.finalTotal * b.quantity) - (a.finalTotal * a.quantity);
         case "price-asc":
-          return (a.itemPrice * a.quantity) - (b.itemPrice * b.quantity);
+          return (a.finalTotal * a.quantity) - (b.finalTotal * b.quantity);
         case "name-asc":
           return a.productName.localeCompare(b.productName);
         case "name-desc":
@@ -736,7 +736,7 @@ export const Cart = () => {
                     </div>
                     <div className="text-right">
                       <div className="font-bold">
-                        {formatAmount(item.itemPrice * item.quantity)}
+                        {formatAmount(item.finalTotal * item.quantity)}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
@@ -768,7 +768,7 @@ export const Cart = () => {
                         </div>
                         <div className="text-right">
                           <div className="font-bold">
-                            {formatAmount(item.itemPrice * item.quantity)}
+                            {formatAmount(item.finalTotal * item.quantity)}
                           </div>
                           <p className="text-sm text-muted-foreground">Total</p>
                         </div>
