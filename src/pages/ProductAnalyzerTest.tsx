@@ -17,6 +17,7 @@ export const ProductAnalyzerTest = () => {
   const [apiConfig, setApiConfig] = useState<{ scraperApi: boolean; proxyApi: boolean } | null>(null);
   const [apiTestResult, setApiTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTestingAPI, setIsTestingAPI] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   const { toast } = useToast();
 
   // Check API configuration on component mount
@@ -62,10 +63,22 @@ export const ProductAnalyzerTest = () => {
     setIsAnalyzing(true);
     setError(null);
     setResult(null);
+    setDebugInfo(null);
 
     try {
+      console.log('Starting analysis for:', { url, productName });
+      
       const analysis = await productAnalyzer.analyzeProduct(url, productName);
       setResult(analysis);
+      
+      // Get debug info from the Edge Function logs
+      setDebugInfo({
+        url,
+        productName,
+        platform: analysis.platform,
+        timestamp: new Date().toISOString()
+      });
+      
       toast({
         title: "Analysis Complete",
         description: `Successfully analyzed: ${analysis.name}`,
@@ -73,6 +86,12 @@ export const ProductAnalyzerTest = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Analysis failed';
       setError(errorMessage);
+      setDebugInfo({
+        url,
+        productName,
+        error: errorMessage,
+        timestamp: new Date().toISOString()
+      });
       toast({
         title: "Analysis Failed",
         description: errorMessage,
@@ -393,6 +412,34 @@ export const ProductAnalyzerTest = () => {
             <div className="text-red-600">{error}</div>
             <div className="mt-2 text-sm text-muted-foreground">
               This product will be added to the manual analysis queue for admin review.
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Debug Information */}
+      {debugInfo && (
+        <Card className="border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-blue-600">Debug Information</CardTitle>
+            <CardDescription>
+              Technical details about the analysis process
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div><strong>URL:</strong> {debugInfo.url || 'N/A'}</div>
+              <div><strong>Product Name:</strong> {debugInfo.productName || 'N/A'}</div>
+              <div><strong>Platform:</strong> {debugInfo.platform || 'N/A'}</div>
+              <div><strong>Timestamp:</strong> {debugInfo.timestamp}</div>
+              {debugInfo.error && (
+                <div><strong>Error:</strong> <span className="text-red-600">{debugInfo.error}</span></div>
+              )}
+            </div>
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+              <div className="text-xs text-gray-600">
+                <strong>Note:</strong> Check the browser console and Supabase Edge Function logs for more detailed debugging information.
+              </div>
             </div>
           </CardContent>
         </Card>

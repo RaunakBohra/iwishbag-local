@@ -38,6 +38,9 @@ serve(async (req) => {
     if (url && scraperApiKey) {
       // Try to analyze with ScraperAPI
       try {
+        const platform = detectPlatform(url)
+        const extractRules = getExtractRules(platform)
+        
         const response = await fetch('https://api.scraperapi.com/api/v1/scrape', {
           method: 'POST',
           headers: {
@@ -46,18 +49,18 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             url: url,
-            extract_rules: {
-              name: { selector: 'h1, .product-title, .title, [data-testid="product-title"]' },
-              price: { selector: '.price, .product-price, [data-price], .a-price-whole' },
-              image: { selector: '.product-image img, .main-image img, [data-testid="product-image"]' },
-              description: { selector: '.product-description, .description, .a-expander-content' }
-            }
+            render_js: true,
+            wait_for: '.product-info, .product-details, .a-section, .product',
+            extract_rules: extractRules
           })
         })
 
         if (response.ok) {
           const data = await response.json()
-          analysisResult = parseScraperAPIResponse(data, url)
+          console.log('ScraperAPI response:', data)
+          analysisResult = parseScraperAPIResponse(data, url, platform)
+        } else {
+          console.error('ScraperAPI error:', response.status, response.statusText)
         }
       } catch (error) {
         console.error('ScraperAPI error:', error)
@@ -119,14 +122,98 @@ serve(async (req) => {
   }
 })
 
-function parseScraperAPIResponse(data: any, url: string) {
+function detectPlatform(url: string): string {
   const hostname = new URL(url).hostname.toLowerCase()
   
+  if (hostname.includes('amazon')) return 'amazon'
+  if (hostname.includes('ebay')) return 'ebay'
+  if (hostname.includes('walmart')) return 'walmart'
+  if (hostname.includes('target')) return 'target'
+  if (hostname.includes('bestbuy')) return 'bestbuy'
+  if (hostname.includes('aliexpress')) return 'aliexpress'
+  if (hostname.includes('taobao')) return 'taobao'
+  if (hostname.includes('jd.com')) return 'jd'
+  if (hostname.includes('rakuten')) return 'rakuten'
+  if (hostname.includes('yahoo.co.jp')) return 'yahoo_japan'
+  if (hostname.includes('mercari')) return 'mercari'
+  if (hostname.includes('etsy')) return 'etsy'
+  
+  return 'generic'
+}
+
+function getExtractRules(platform: string) {
+  const baseRules = {
+    name: { 
+      selector: 'h1, .product-title, .title, [data-testid="product-title"], .a-size-large, .product-name, .item-title' 
+    },
+    price: { 
+      selector: '.price, .product-price, [data-price], .a-price-whole, .price-current, .price-value, .current-price' 
+    },
+    image: { 
+      selector: '.product-image img, .main-image img, [data-testid="product-image"], .a-dynamic-image, .product-photo img' 
+    },
+    description: { 
+      selector: '.product-description, .description, .a-expander-content, .product-details, .item-description' 
+    },
+    weight: {
+      selector: '.weight, .shipping-weight, .product-weight, .item-weight, [data-weight]'
+    },
+    brand: {
+      selector: '.brand, .product-brand, .manufacturer, .item-brand'
+    }
+  }
+
+  // Platform-specific rules
+  switch (platform) {
+    case 'amazon':
+      return {
+        ...baseRules,
+        name: { selector: '.a-size-large, .a-size-base-plus, h1#title, .product-title' },
+        price: { selector: '.a-price-whole, .a-price .a-offscreen, .a-price-current .a-offscreen' },
+        image: { selector: '.a-dynamic-image, #landingImage, .imgTagWrapper img' },
+        description: { selector: '.a-expander-content, #feature-bullets, .product-description' }
+      }
+    case 'ebay':
+      return {
+        ...baseRules,
+        name: { selector: '.x-item-title__mainTitle, .item-title, h1' },
+        price: { selector: '.x-price-primary .ux-textspans, .price-current, .price-value' },
+        image: { selector: '.ux-image-carousel-item img, .ux-image-magnify img' },
+        description: { selector: '.item-description, .item-description__content' }
+      }
+    case 'walmart':
+      return {
+        ...baseRules,
+        name: { selector: '.prod-ProductTitle, h1, .product-name' },
+        price: { selector: '.price-characteristic, .price-current, .price-main' },
+        image: { selector: '.prod-hero-image-carousel img, .product-image img' },
+        description: { selector: '.product-description, .about-details' }
+      }
+    case 'aliexpress':
+      return {
+        ...baseRules,
+        name: { selector: '.product-title, .item-title, h1' },
+        price: { selector: '.product-price, .price-current, .price-value' },
+        image: { selector: '.product-image img, .main-image img' },
+        description: { selector: '.product-description, .item-description' }
+      }
+    default:
+      return baseRules
+  }
+}
+
+function parseScraperAPIResponse(data: any, url: string, platform: string) {
+  console.log('Parsing response for platform:', platform)
+  console.log('Raw data:', data)
+  
   // Extract and clean data
-  const name = data.name || 'Unknown Product'
+  const name = cleanText(data.name || 'Unknown Product')
   const price = extractPrice(data.price)
-  const weight = estimateWeightFromName(name)
+  const weight = extractWeight(data.weight) || estimateWeightFromName(name)
   const category = categorizeProduct(name, data.description)
+  const brand = cleanText(data.brand)
+  
+  console.log('Extracted data:', { name, price, weight, category, brand })
   
   return {
     name: name,
@@ -136,18 +223,68 @@ function parseScraperAPIResponse(data: any, url: string) {
     category: category,
     availability: true,
     currency: 'USD',
-    description: data.description,
-    dimensions: estimateDimensions(category, weight)
+    description: cleanText(data.description),
+    brand: brand,
+    dimensions: estimateDimensions(category, weight),
+    platform: platform
   }
+}
+
+function cleanText(text: any): string {
+  if (!text) return ''
+  if (typeof text === 'string') {
+    return text.trim().replace(/\s+/g, ' ')
+  }
+  if (Array.isArray(text)) {
+    return text.map(t => cleanText(t)).join(' ').trim()
+  }
+  return String(text).trim()
 }
 
 function extractPrice(priceData: any): number {
   if (typeof priceData === 'number') return priceData
-  if (typeof priceData === 'string') {
-    const match = priceData.match(/[\d,]+\.?\d*/)
-    return match ? parseFloat(match[0].replace(/,/g, '')) : 0
+  
+  const priceText = cleanText(priceData)
+  if (!priceText) return 0
+  
+  // Remove currency symbols and extract numbers
+  const priceMatch = priceText.match(/[\d,]+\.?\d*/)
+  if (priceMatch) {
+    return parseFloat(priceMatch[0].replace(/,/g, ''))
   }
+  
   return 0
+}
+
+function extractWeight(weightData: any): number | null {
+  if (typeof weightData === 'number') return weightData
+  
+  const weightText = cleanText(weightData)
+  if (!weightText) return null
+  
+  // Parse weight strings like "2.5 lbs", "1.2 kg", etc.
+  const match = weightText.match(/(\d+\.?\d*)\s*(lbs?|kg|g|oz)/i)
+  if (match) {
+    const value = parseFloat(match[1])
+    const unit = match[2].toLowerCase()
+    
+    // Convert to kg
+    switch (unit) {
+      case 'lbs':
+      case 'lb':
+        return value * 0.453592
+      case 'kg':
+        return value
+      case 'g':
+        return value / 1000
+      case 'oz':
+        return value * 0.0283495
+      default:
+        return value
+    }
+  }
+  
+  return null
 }
 
 function estimateWeightFromName(name: string): number {
@@ -180,14 +317,14 @@ function categorizeProduct(name: string, description?: string): string {
   const text = `${name} ${description || ''}`.toLowerCase()
   
   const categories = {
-    electronics: ['phone', 'laptop', 'computer', 'tablet', 'camera', 'tv', 'headphones', 'speaker', 'gaming', 'echo', 'iphone'],
-    clothing: ['shirt', 'dress', 'pants', 'jeans', 'jacket', 'shoes', 'sneakers', 'boots', 'hat', 'cap'],
-    home: ['furniture', 'chair', 'table', 'bed', 'sofa', 'lamp', 'kitchen', 'bathroom', 'decor'],
-    beauty: ['makeup', 'skincare', 'perfume', 'cosmetics', 'beauty', 'hair', 'nail'],
-    sports: ['fitness', 'gym', 'sports', 'exercise', 'workout', 'running', 'basketball', 'soccer'],
-    toys: ['toy', 'game', 'puzzle', 'doll', 'action figure', 'lego', 'board game'],
-    books: ['book', 'novel', 'textbook', 'magazine', 'comic', 'manga'],
-    automotive: ['car', 'auto', 'vehicle', 'motorcycle', 'bike', 'tire', 'oil']
+    electronics: ['phone', 'laptop', 'computer', 'tablet', 'camera', 'tv', 'headphones', 'speaker', 'gaming', 'echo', 'iphone', 'samsung', 'apple', 'android', 'wireless', 'bluetooth', 'smart', 'digital', 'electronic'],
+    clothing: ['shirt', 'dress', 'pants', 'jeans', 'jacket', 'shoes', 'sneakers', 'boots', 'hat', 'cap', 'sweater', 'hoodie', 't-shirt', 'blouse', 'skirt', 'shorts'],
+    home: ['furniture', 'chair', 'table', 'bed', 'sofa', 'lamp', 'kitchen', 'bathroom', 'decor', 'cushion', 'pillow', 'blanket', 'curtain', 'rug', 'mirror'],
+    beauty: ['makeup', 'skincare', 'perfume', 'cosmetics', 'beauty', 'hair', 'nail', 'lotion', 'cream', 'serum', 'mask', 'brush'],
+    sports: ['fitness', 'gym', 'sports', 'exercise', 'workout', 'running', 'basketball', 'soccer', 'tennis', 'yoga', 'dumbbell', 'treadmill'],
+    toys: ['toy', 'game', 'puzzle', 'doll', 'action figure', 'lego', 'board game', 'stuffed', 'plush', 'educational'],
+    books: ['book', 'novel', 'textbook', 'magazine', 'comic', 'manga', 'journal', 'notebook'],
+    automotive: ['car', 'auto', 'vehicle', 'motorcycle', 'bike', 'tire', 'oil', 'accessory', 'tool']
   }
 
   for (const [category, keywords] of Object.entries(categories)) {
