@@ -108,24 +108,26 @@ export const useCart = () => {
 
   const handleSelectAllCart = () => {
     if (isAllCartSelected) {
-      // Deselect all cart items
+      // Deselect only cart items, keep saved items selected
       const cartItemIds = items.map(item => item.id);
-      setTimeout(() => {
-        clearSelection();
-      }, 0);
+      const remainingSelectedItems = selectedItems.filter(id => !cartItemIds.includes(id));
+      // Update the store directly to only deselect cart items
+      useCartStore.setState({ selectedItems: remainingSelectedItems });
     } else {
+      // Add all cart items to current selection
       selectAllCart();
     }
   };
 
   const handleSelectAllSaved = () => {
     if (isAllSavedSelected) {
-      // Deselect all saved items
+      // Deselect only saved items, keep cart items selected
       const savedItemIds = savedItems.map(item => item.id);
-      setTimeout(() => {
-        clearSelection();
-      }, 0);
+      const remainingSelectedItems = selectedItems.filter(id => !savedItemIds.includes(id));
+      // Update the store directly to only deselect saved items
+      useCartStore.setState({ selectedItems: remainingSelectedItems });
     } else {
+      // Add all saved items to current selection
       selectAllSaved();
     }
   };

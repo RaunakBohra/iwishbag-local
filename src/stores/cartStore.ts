@@ -159,15 +159,25 @@ export const useCartStore = create<CartStore>()(
         },
 
         selectAllCart: () => {
-          set((state) => ({
-            selectedItems: state.items.map(item => item.id)
-          }));
+          set((state) => {
+            const cartItemIds = state.items.map(item => item.id);
+            const currentSelected = state.selectedItems;
+            const newSelected = [...new Set([...currentSelected, ...cartItemIds])];
+            return {
+              selectedItems: newSelected
+            };
+          });
         },
 
         selectAllSaved: () => {
-          set((state) => ({
-            selectedItems: state.savedItems.map(item => item.id)
-          }));
+          set((state) => {
+            const savedItemIds = state.savedItems.map(item => item.id);
+            const currentSelected = state.selectedItems;
+            const newSelected = [...new Set([...currentSelected, ...savedItemIds])];
+            return {
+              selectedItems: newSelected
+            };
+          });
         },
 
         clearSelection: () => {
