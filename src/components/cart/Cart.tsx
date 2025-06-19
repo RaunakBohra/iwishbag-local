@@ -295,6 +295,7 @@ export const Cart = () => {
               id="select-all"
               checked={isAllCartSelected}
               onCheckedChange={handleSelectAllCart}
+              data-testid="select-all-cart-page"
             />
             <label htmlFor="select-all" className="text-sm font-medium">
               Select All ({itemCount})
@@ -306,6 +307,7 @@ export const Cart = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowBulkSaveConfirm(true)}
+                data-testid="bulk-save-button"
               >
                 <Save className="h-4 w-4 mr-1" />
                 Save ({getSelectedCartItems().length})
@@ -314,6 +316,7 @@ export const Cart = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowBulkDeleteConfirm(true)}
+                data-testid="bulk-delete-button"
               >
                 <Trash2 className="h-4 w-4 mr-1" />
                 Delete ({getSelectedCartItems().length})
@@ -322,16 +325,65 @@ export const Cart = () => {
           )}
         </div>
 
+        {/* Checkout Summary */}
+        {selectedCartItemCount > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Checkout Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Selected Items:</span>
+                  <span>{selectedCartItemCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span data-testid="cart-page-total">{formattedSelectedCartTotal}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Weight:</span>
+                  <span>{selectedItemsWeight.toFixed(2)}kg</span>
+                </div>
+              </div>
+              <Separator />
+              <div className="flex justify-between font-bold text-lg">
+                <span>Total:</span>
+                <span>{formattedSelectedCartTotal}</span>
+              </div>
+              <Button 
+                onClick={handleCheckout} 
+                disabled={isCheckingOut}
+                className="w-full"
+                data-testid="cart-page-checkout-button"
+              >
+                {isCheckingOut ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    Proceed to Checkout
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Items Grid/List */}
         {viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cartItems.map((item) => (
-              <Card key={item.id} className="relative">
+            {cartItems.map((item, index) => (
+              <Card key={item.id} className="relative" data-testid="cart-page-item">
                 <CardContent className="p-4">
                   <div className="absolute top-2 right-2">
                     <Checkbox
                       checked={selectedItems.includes(item.id)}
                       onCheckedChange={() => handleSelectItem(item.id)}
+                      data-testid={`cart-page-item-checkbox-${index}`}
                     />
                   </div>
                   <div className="aspect-square mb-3">
@@ -348,14 +400,18 @@ export const Cart = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
+                        data-testid={`cart-page-quantity-decrease-${index}`}
                       >
                         -
                       </Button>
-                      <span className="w-8 text-center">{item.quantity}</span>
+                      <span className="w-8 text-center" data-testid={`cart-page-quantity-input-${index}`}>
+                        {item.quantity}
+                      </span>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                        data-testid={`cart-page-quantity-increase-${index}`}
                       >
                         +
                       </Button>
@@ -366,6 +422,7 @@ export const Cart = () => {
                         size="icon"
                         onClick={() => handleSaveForLater(item.id)}
                         className="h-8 w-8"
+                        data-testid={`cart-page-move-to-saved-${index}`}
                       >
                         <Save className="h-4 w-4" />
                       </Button>
@@ -374,12 +431,13 @@ export const Cart = () => {
                         size="icon"
                         onClick={() => handleRemoveFromCart(item.id)}
                         className="h-8 w-8"
+                        data-testid={`cart-page-remove-item-${index}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold">
+                      <div className="font-bold" data-testid={`cart-page-item-total-${index}`}>
                         {formatAmount(item.finalTotal * item.quantity)}
                       </div>
                       <div className="text-sm text-muted-foreground">
@@ -393,14 +451,15 @@ export const Cart = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {cartItems.map((item) => (
-              <Card key={item.id}>
+            {cartItems.map((item, index) => (
+              <Card key={item.id} data-testid="cart-page-item">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
                     <Checkbox
                       checked={selectedItems.includes(item.id)}
                       onCheckedChange={() => handleSelectItem(item.id)}
                       className="mt-1"
+                      data-testid={`cart-page-item-checkbox-${index}`}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
@@ -414,14 +473,18 @@ export const Cart = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
+                              data-testid={`cart-page-quantity-decrease-${index}`}
                             >
                               -
                             </Button>
-                            <span className="w-8 text-center">{item.quantity}</span>
+                            <span className="w-8 text-center" data-testid={`cart-page-quantity-input-${index}`}>
+                              {item.quantity}
+                            </span>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                              data-testid={`cart-page-quantity-increase-${index}`}
                             >
                               +
                             </Button>
@@ -433,6 +496,7 @@ export const Cart = () => {
                             size="icon"
                             onClick={() => handleSaveForLater(item.id)}
                             className="h-8 w-8"
+                            data-testid={`cart-page-move-to-saved-${index}`}
                           >
                             <Save className="h-4 w-4" />
                           </Button>
@@ -441,13 +505,14 @@ export const Cart = () => {
                             size="icon"
                             onClick={() => handleRemoveFromCart(item.id)}
                             className="h-8 w-8"
+                            data-testid={`cart-page-remove-item-${index}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
                       <div className="text-right mt-2">
-                        <div className="font-bold">
+                        <div className="font-bold" data-testid={`cart-page-item-total-${index}`}>
                           {formatAmount(item.finalTotal * item.quantity)}
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -489,6 +554,7 @@ export const Cart = () => {
               id="select-all-saved"
               checked={isAllSavedSelected}
               onCheckedChange={handleSelectAllSaved}
+              data-testid="select-all-saved-page"
             />
             <label htmlFor="select-all-saved" className="text-sm font-medium">
               Select All ({savedItemCount})
@@ -500,6 +566,7 @@ export const Cart = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowBulkMoveConfirm(true)}
+                data-testid="bulk-move-to-cart-button"
               >
                 <ShoppingCart className="h-4 w-4 mr-1" />
                 Move to Cart ({getSelectedSavedItems().length})
@@ -508,6 +575,7 @@ export const Cart = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowBulkDeleteConfirm(true)}
+                data-testid="bulk-delete-saved-button"
               >
                 <Trash2 className="h-4 w-4 mr-1" />
                 Delete ({getSelectedSavedItems().length})
@@ -519,13 +587,14 @@ export const Cart = () => {
         {/* Items Grid/List */}
         {viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {savedItems.map((item) => (
-              <Card key={item.id} className="relative">
+            {savedItems.map((item, index) => (
+              <Card key={item.id} className="relative" data-testid="saved-page-item">
                 <CardContent className="p-4">
                   <div className="absolute top-2 right-2">
                     <Checkbox
                       checked={selectedItems.includes(item.id)}
                       onCheckedChange={() => handleSelectItem(item.id)}
+                      data-testid={`saved-page-item-checkbox-${index}`}
                     />
                   </div>
                   <div className="aspect-square mb-3">
@@ -542,14 +611,18 @@ export const Cart = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
+                        data-testid={`saved-page-quantity-decrease-${index}`}
                       >
                         -
                       </Button>
-                      <span className="w-8 text-center">{item.quantity}</span>
+                      <span className="w-8 text-center" data-testid={`saved-page-quantity-input-${index}`}>
+                        {item.quantity}
+                      </span>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                        data-testid={`saved-page-quantity-increase-${index}`}
                       >
                         +
                       </Button>
@@ -560,6 +633,7 @@ export const Cart = () => {
                         size="icon"
                         onClick={() => handleMoveToCart(item.id)}
                         className="h-8 w-8"
+                        data-testid={`saved-page-move-to-cart-${index}`}
                       >
                         <ShoppingCart className="h-4 w-4" />
                       </Button>
@@ -568,12 +642,13 @@ export const Cart = () => {
                         size="icon"
                         onClick={() => handleRemoveFromCart(item.id)}
                         className="h-8 w-8"
+                        data-testid={`saved-page-remove-item-${index}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold">
+                      <div className="font-bold" data-testid={`saved-page-item-total-${index}`}>
                         {formatAmount(item.finalTotal * item.quantity)}
                       </div>
                       <div className="text-sm text-muted-foreground">
@@ -587,14 +662,15 @@ export const Cart = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {savedItems.map((item) => (
-              <Card key={item.id}>
+            {savedItems.map((item, index) => (
+              <Card key={item.id} data-testid="saved-page-item">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
                     <Checkbox
                       checked={selectedItems.includes(item.id)}
                       onCheckedChange={() => handleSelectItem(item.id)}
                       className="mt-1"
+                      data-testid={`saved-page-item-checkbox-${index}`}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
@@ -608,14 +684,18 @@ export const Cart = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
+                              data-testid={`saved-page-quantity-decrease-${index}`}
                             >
                               -
                             </Button>
-                            <span className="w-8 text-center">{item.quantity}</span>
+                            <span className="w-8 text-center" data-testid={`saved-page-quantity-input-${index}`}>
+                              {item.quantity}
+                            </span>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                              data-testid={`saved-page-quantity-increase-${index}`}
                             >
                               +
                             </Button>
@@ -627,6 +707,7 @@ export const Cart = () => {
                             size="icon"
                             onClick={() => handleMoveToCart(item.id)}
                             className="h-8 w-8"
+                            data-testid={`saved-page-move-to-cart-${index}`}
                           >
                             <ShoppingCart className="h-4 w-4" />
                           </Button>
@@ -635,13 +716,14 @@ export const Cart = () => {
                             size="icon"
                             onClick={() => handleRemoveFromCart(item.id)}
                             className="h-8 w-8"
+                            data-testid={`saved-page-remove-item-${index}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
                       <div className="text-right mt-2">
-                        <div className="font-bold">
+                        <div className="font-bold" data-testid={`saved-page-item-total-${index}`}>
                           {formatAmount(item.finalTotal * item.quantity)}
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -660,140 +742,111 @@ export const Cart = () => {
   };
 
   return (
-    <div className="container py-12 space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <ShoppingCart className="h-8 w-8" />
-          Shopping Cart
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Manage your cart items and saved items
-        </p>
+    <div className="container mx-auto py-8 px-4 space-y-6" data-testid="cart-page">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Shopping Cart</h1>
+          <p className="text-muted-foreground">
+            {itemCount} items in cart • {savedItemCount} saved items
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setViewMode(viewMode === "list" ? "grid" : "list")}
+            data-testid="view-mode-toggle"
+          >
+            {viewMode === "list" ? <Grid3X3 className="h-4 w-4" /> : <List className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-2">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="cart">
-                Cart ({itemCount})
-              </TabsTrigger>
-              <TabsTrigger value="saved">
-                Saved ({savedItemCount})
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="cart" className="space-y-6">
-              {renderCartContent()}
-            </TabsContent>
-            <TabsContent value="saved" className="space-y-6">
-              {renderSavedContent()}
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Checkout Card - Always Show */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Checkout Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {selectedCartItemCount > 0 ? (
-                <>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Selected Items:</span>
-                      <span>{selectedCartItemCount}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Subtotal:</span>
-                      <span>{formattedSelectedCartTotal}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Weight:</span>
-                      <span>{selectedItemsWeight.toFixed(2)}kg</span>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total:</span>
-                    <span>{formattedSelectedCartTotal}</span>
-                  </div>
-                  <Button 
-                    onClick={handleCheckout} 
-                    disabled={isCheckingOut}
-                    className="w-full"
-                  >
-                    {isCheckingOut ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        Proceed to Checkout
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="text-center py-6">
-                    <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <h3 className="font-medium mb-2">No items selected</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Select items from your cart to see the checkout summary
-                    </p>
-                    {hasCartItems && (
-                      <Button 
-                        variant="outline" 
-                        onClick={() => handleSelectAllCart()}
-                        className="w-full"
-                      >
-                        Select All Items
-                      </Button>
-                    )}
-                  </div>
-                </>
+      {/* Search and Sort Controls */}
+      <Card>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+                data-testid="cart-page-search"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6"
+                  onClick={() => setSearchQuery("")}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            </div>
+            <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+              <SelectTrigger className="w-full sm:w-48" data-testid="cart-page-sort">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date-desc">Newest First</SelectItem>
+                <SelectItem value="date-asc">Oldest First</SelectItem>
+                <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                <SelectItem value="name-asc">Name: A to Z</SelectItem>
+                <SelectItem value="name-desc">Name: Z to A</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="cart" data-testid="cart-page-tab">
+            Cart ({cartItems?.length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="saved" data-testid="saved-page-tab">
+            Saved ({savedItems?.length || 0})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="cart" className="space-y-6">
+          {renderCartContent()}
+        </TabsContent>
+
+        <TabsContent value="saved" className="space-y-6">
+          {renderSavedContent()}
+        </TabsContent>
+      </Tabs>
 
       {/* Confirmation Dialogs */}
       <ConfirmDialog
-        isOpen={showBulkSaveConfirm}
-        onClose={() => setShowBulkSaveConfirm(false)}
+        open={showBulkSaveConfirm}
+        onOpenChange={setShowBulkSaveConfirm}
+        title="Save Selected Items"
+        description={`Are you sure you want to save ${getSelectedCartItems().length} items for later?`}
         onConfirm={confirmBulkSaveForLater}
-        title="Save Items for Later"
-        description={`Are you sure you want to save ${selectedItems.length} item(s) for later? You can find them in the "Saved" tab.`}
-        confirmText="Save for Later"
-        cancelText="Keep in Cart"
       />
 
       <ConfirmDialog
-        isOpen={showBulkMoveConfirm}
-        onClose={() => setShowBulkMoveConfirm(false)}
+        open={showBulkMoveConfirm}
+        onOpenChange={setShowBulkMoveConfirm}
+        title="Move Selected Items"
+        description={`Are you sure you want to move ${getSelectedSavedItems().length} items to cart?`}
         onConfirm={confirmBulkMoveToCart}
-        title="Move Items to Cart"
-        description={`Are you sure you want to move ${selectedItems.length} item(s) to your cart?`}
-        confirmText="Move to Cart"
-        cancelText="Keep Saved"
       />
 
       <ConfirmDialog
-        isOpen={showBulkDeleteConfirm}
-        onClose={() => setShowBulkDeleteConfirm(false)}
+        open={showBulkDeleteConfirm}
+        onOpenChange={setShowBulkDeleteConfirm}
+        title="Delete Selected Items"
+        description={`Are you sure you want to permanently delete ${selectedItemCount} items? This action cannot be undone.`}
         onConfirm={confirmBulkDelete}
-        title="Delete Items"
-        description={`Are you sure you want to delete ${selectedItems.length} item(s)? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
+        variant="destructive"
       />
     </div>
   );
