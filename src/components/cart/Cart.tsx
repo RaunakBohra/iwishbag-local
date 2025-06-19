@@ -88,13 +88,18 @@ export const Cart = () => {
   // Load cart data from server when component mounts
   useEffect(() => {
     if (user) {
+      console.log('Cart component: Loading cart for user:', user.id);
+      // Always load from server first, this will override localStorage
       loadFromServer(user.id);
+    } else {
+      console.log('Cart component: No user found, skipping cart load');
     }
   }, [user, loadFromServer]);
 
   // Auto-select all cart items by default when cart data is loaded
   useEffect(() => {
     if (cartItems && cartItems.length > 0 && selectedItemCount === 0) {
+      console.log('Cart component: Auto-selecting cart items');
       // Select all cart items if none are currently selected
       cartItems.forEach(item => {
         if (!selectedItems.includes(item.id)) {
@@ -103,6 +108,17 @@ export const Cart = () => {
       });
     }
   }, [cartItems, selectedItems, selectedItemCount, toggleSelection]);
+
+  // Debug effect to log cart state changes
+  useEffect(() => {
+    console.log('Cart state updated:', {
+      cartItems: cartItems?.length || 0,
+      savedItems: savedItems?.length || 0,
+      selectedItems: selectedItems?.length || 0,
+      isLoading: cartLoading,
+      error: cartError
+    });
+  }, [cartItems, savedItems, selectedItems, cartLoading, cartError]);
 
   // Filter and sort items
   const filteredCartItems = cartItems?.filter(item =>
@@ -276,9 +292,34 @@ export const Cart = () => {
           </div>
         </div>
       );
-  }
+    }
 
-  return (
+    // Filter and sort items
+    const filteredCartItems = cartItems?.filter(item =>
+      item.productName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      item.countryCode.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    ) || [];
+
+    const sortedCartItems = [...filteredCartItems].sort((a, b) => {
+      switch (sortBy) {
+        case "date-desc":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "date-asc":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "price-desc":
+          return (b.itemPrice * b.quantity) - (a.itemPrice * a.quantity);
+        case "price-asc":
+          return (a.itemPrice * a.quantity) - (b.itemPrice * b.quantity);
+        case "name-asc":
+          return a.productName.localeCompare(b.productName);
+        case "name-desc":
+          return b.productName.localeCompare(a.productName);
+        default:
+          return 0;
+      }
+    });
+
+    return (
       <div className="space-y-6">
         {/* Search and Sort Controls */}
         <div className="flex flex-col sm:flex-row gap-4">
@@ -528,6 +569,31 @@ export const Cart = () => {
       );
     }
 
+    // Filter and sort saved items
+    const filteredSavedItems = savedItems?.filter(item =>
+      item.productName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      item.countryCode.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    ) || [];
+
+    const sortedSavedItems = [...filteredSavedItems].sort((a, b) => {
+      switch (sortBy) {
+        case "date-desc":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "date-asc":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "price-desc":
+          return (b.itemPrice * b.quantity) - (a.itemPrice * a.quantity);
+        case "price-asc":
+          return (a.itemPrice * a.quantity) - (b.itemPrice * b.quantity);
+        case "name-asc":
+          return a.productName.localeCompare(b.productName);
+        case "name-desc":
+          return b.productName.localeCompare(a.productName);
+        default:
+          return 0;
+      }
+    });
+
     return (
       <div className="space-y-6">
         {/* Search and Sort Controls */}
@@ -685,8 +751,8 @@ export const Cart = () => {
                       </div>
                     </div>
                   </div>
-          </CardContent>
-        </Card>
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : (
@@ -732,7 +798,7 @@ export const Cart = () => {
                           >
                             +
                           </Button>
-                    </div>
+                        </div>
                         <div className="flex gap-1">
                           <Button
                             variant="ghost"
@@ -742,14 +808,14 @@ export const Cart = () => {
                           >
                             <ShoppingCart className="h-4 w-4" />
                           </Button>
-                    <Button 
-                      variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => handleRemoveFromCart(item.id)}
                             className="h-8 w-8"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -759,34 +825,19 @@ export const Cart = () => {
             ))}
           </div>
         )}
-                  </div>
-                );
-  };
-
-  if (cartError) {
-    return (
-      <div className="container py-12">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-destructive">Error loading cart: {cartError}</p>
-            <Button onClick={() => user && loadFromServer(user.id)} className="mt-4">
-              Retry
-            </Button>
-            </CardContent>
-          </Card>
       </div>
     );
-  }
+  };
 
   return (
     <div className="container py-12 space-y-8">
       {/* Header */}
-                  <div>
+      <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <ShoppingCart className="h-8 w-8" />
           Shopping Cart
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mt-2">
           Manage your cart items and saved items
         </p>
       </div>
@@ -879,8 +930,8 @@ export const Cart = () => {
                   </div>
                 </>
               )}
-              </CardContent>
-            </Card>
+            </CardContent>
+          </Card>
         </div>
       </div>
 

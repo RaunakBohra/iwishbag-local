@@ -27,6 +27,7 @@ interface CartStore {
   isLoading: boolean;
   error: string | null;
   userId: string | null;
+  isInitialized: boolean;
 
   // Actions
   addItem: (item: CartItem) => void;
@@ -59,6 +60,7 @@ export const useCartStore = create<CartStore>()(
       isLoading: false,
       error: null,
       userId: null,
+      isInitialized: false,
 
       // Actions
       addItem: (item: CartItem) => {
@@ -207,7 +209,7 @@ export const useCartStore = create<CartStore>()(
 
           // Update cart items in database
           for (const item of items) {
-            await supabase
+            const { error } = await supabase
               .from('quotes')
               .update({ 
                 in_cart: true, 
@@ -215,11 +217,16 @@ export const useCartStore = create<CartStore>()(
                 updated_at: new Date().toISOString()
               })
               .eq('id', item.quoteId);
+            
+            if (error) {
+              console.error('Error updating cart item:', error);
+              throw error;
+            }
           }
 
           // Update saved items in database
           for (const item of savedItems) {
-            await supabase
+            const { error } = await supabase
               .from('quotes')
               .update({ 
                 in_cart: false,
@@ -227,6 +234,11 @@ export const useCartStore = create<CartStore>()(
                 updated_at: new Date().toISOString()
               })
               .eq('id', item.quoteId);
+            
+            if (error) {
+              console.error('Error updating saved item:', error);
+              throw error;
+            }
           }
 
         } catch (error) {
@@ -238,7 +250,10 @@ export const useCartStore = create<CartStore>()(
       },
 
       loadFromServer: async (userId?: string) => {
-        if (!userId) return;
+        if (!userId) {
+          console.warn('No userId provided to loadFromServer');
+          return;
+        }
 
         // Set the userId in the store
         get().setUserId(userId);
@@ -246,6 +261,8 @@ export const useCartStore = create<CartStore>()(
         try {
           get().setLoading(true);
           get().clearError();
+
+          console.log('Loading cart for user:', userId);
 
           // First, let's see all approved quotes for this user
           const { data: allQuotes, error: allQuotesError } = await supabase
@@ -278,11 +295,18 @@ export const useCartStore = create<CartStore>()(
             .eq('approval_status', 'approved')
             .order('created_at', { ascending: false });
 
-          if (allQuotesError) throw allQuotesError;
+          if (allQuotesError) {
+            console.error('Error fetching quotes:', allQuotesError);
+            throw allQuotesError;
+          }
+
+          console.log('Fetched quotes:', allQuotes?.length || 0);
 
           // Filter quotes based on in_cart status
           const cartQuotes = allQuotes?.filter(quote => quote.in_cart === true) || [];
           const savedQuotes = allQuotes?.filter(quote => quote.in_cart === false) || [];
+
+          console.log('Cart quotes:', cartQuotes.length, 'Saved quotes:', savedQuotes.length);
 
           // Convert quotes to CartItem format
           const convertQuoteToCartItem = (quote: any): CartItem => {
@@ -307,15 +331,21 @@ export const useCartStore = create<CartStore>()(
           const cartItems = cartQuotes.map(convertQuoteToCartItem);
           const savedItems = savedQuotes.map(convertQuoteToCartItem);
 
+          // Server data takes priority over localStorage
           set({
             items: cartItems,
             savedItems: savedItems,
-            selectedItems: []
+            selectedItems: [],
+            isInitialized: true
           });
+
+          console.log('Cart loaded successfully from server:', { cartItems: cartItems.length, savedItems: savedItems.length });
 
         } catch (error) {
           console.error('Error loading cart from server:', error);
           get().setError('Failed to load cart from server');
+          // If server fails, we keep localStorage data
+          set({ isInitialized: true });
         } finally {
           get().setLoading(false);
         }
@@ -327,7 +357,18 @@ export const useCartStore = create<CartStore>()(
         items: state.items,
         savedItems: state.savedItems,
         selectedItems: state.selectedItems
-      })
+      }),
+      // Only rehydrate if we haven't loaded from server yet
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          console.log('Cart state rehydrated from localStorage');
+          // Mark as initialized so we know localStorage was loaded
+          state.isInitialized = true;
+        }
+      },
+      // Handle localStorage errors gracefully
+      skipHydration: false,
+      version: 1,
     }
   )
 ); 
