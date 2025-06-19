@@ -102,11 +102,11 @@ export const useQuoteState = (quoteId: string) => {
   const rejectQuote = async (reasonId: string, details: string) => {
     try {
       await updateQuoteStateMutation.mutateAsync({
-        status: 'cancelled',
-        approval_status: 'rejected',
-        rejection_reason_id: reasonId,
-        rejection_details: details
-      });
+      status: 'cancelled',
+      approval_status: 'rejected',
+      rejection_reason_id: reasonId,
+      rejection_details: details
+    });
       return true;
     } catch (error) {
       console.error('Error rejecting quote:', error);

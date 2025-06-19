@@ -28,8 +28,7 @@ import {
   Clock,
   AlertCircle,
   Plus,
-  Edit3,
-  Smartphone
+  Edit3
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
@@ -271,8 +270,6 @@ export default function Checkout() {
       updateQuotesMutation.mutate({ ids: quoteIds, status: 'cod_pending', method: 'cod' });
     } else if (paymentMethod === 'bank_transfer') {
       updateQuotesMutation.mutate({ ids: quoteIds, status: 'bank_transfer_pending', method: 'bank_transfer' });
-    } else if (paymentMethod === 'esewa') {
-      updateQuotesMutation.mutate({ ids: quoteIds, status: 'esewa_pending', method: 'esewa' });
     } else {
       toast({ title: "Invalid payment method", variant: "destructive" });
       setIsProcessing(false);
@@ -593,28 +590,6 @@ export default function Checkout() {
                           </div>
                         </div>
                       </Label>
-
-                      <Label htmlFor="esewa" className="flex items-start space-x-3 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer">
-                        <RadioGroupItem value="esewa" id="esewa" className="mt-1" />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Smartphone className="h-4 w-4" />
-                            <span className="font-medium">Pay with eSewa</span>
-                            <Badge variant="outline" className="text-xs">Popular in Nepal</Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2">Instant payment via eSewa digital wallet. Secure and convenient.</p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Shield className="h-3 w-3" />
-                              <span>Secure</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              <span>Instant</span>
-                            </div>
-                          </div>
-                        </div>
-                      </Label>
                     </RadioGroup>
                   </CardContent>
                 </Card>
@@ -655,12 +630,10 @@ export default function Checkout() {
                           {paymentMethod === 'stripe' && <CreditCard className="h-4 w-4" />}
                           {paymentMethod === 'cod' && <Banknote className="h-4 w-4" />}
                           {paymentMethod === 'bank_transfer' && <Landmark className="h-4 w-4" />}
-                          {paymentMethod === 'esewa' && <Smartphone className="h-4 w-4" />}
                           <span className="font-medium">
                             {paymentMethod === 'stripe' && 'Pay with Card'}
                             {paymentMethod === 'cod' && 'Cash on Delivery'}
                             {paymentMethod === 'bank_transfer' && 'Bank Transfer'}
-                            {paymentMethod === 'esewa' && 'Pay with eSewa'}
                           </span>
                         </div>
                       </div>

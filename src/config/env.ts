@@ -1,34 +1,35 @@
+// Environment configuration
 export const config = {
-  app: {
-    name: import.meta.env.VITE_APP_NAME || 'WishBag',
-    description: import.meta.env.VITE_APP_DESCRIPTION || 'Global Wishlist Hub',
-    url: import.meta.env.VITE_FRONTEND_URL || 'http://localhost:5173',
-  },
   supabase: {
     url: import.meta.env.VITE_SUPABASE_URL,
     anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
   },
-  stripe: {
-    publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY,
-    secretKey: import.meta.env.VITE_STRIPE_SECRET_KEY,
+  app: {
+    name: 'Global Wishlist Hub',
+    version: '1.0.0',
+    environment: import.meta.env.MODE,
   },
-  resend: {
-    apiKey: import.meta.env.VITE_RESEND_API_KEY,
+  api: {
+    baseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
   },
-} as const;
+};
 
-// Validate required environment variables
-const requiredEnvVars = [
+// Required environment variables
+export const requiredEnvVars = [
   'VITE_SUPABASE_URL',
   'VITE_SUPABASE_ANON_KEY',
-  'VITE_RESEND_API_KEY',
-  'VITE_FRONTEND_URL',
-  'VITE_STRIPE_PUBLISHABLE_KEY',
-  'VITE_STRIPE_SECRET_KEY',
-] as const;
+];
 
-for (const envVar of requiredEnvVars) {
-  if (!import.meta.env[envVar]) {
-    throw new Error(`Missing required environment variable: ${envVar}`);
+// Validate environment variables
+export const validateEnv = () => {
+  const missing = requiredEnvVars.filter(
+    (varName) => !import.meta.env[varName]
+  );
+  
+  if (missing.length > 0) {
+    console.error('Missing required environment variables:', missing);
+    return false;
   }
-} 
+  
+  return true;
+}; 

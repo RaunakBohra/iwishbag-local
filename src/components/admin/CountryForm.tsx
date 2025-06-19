@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -144,7 +145,6 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="stripe">Stripe</SelectItem>
-                <SelectItem value="esewa">eSewa</SelectItem>
                 <SelectItem value="payu">PayU</SelectItem>
                 <SelectItem value="nepalpayqr">NepalPay QR</SelectItem>
                 <SelectItem value="airwallex">Airwallex</SelectItem>

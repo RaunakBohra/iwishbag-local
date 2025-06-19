@@ -276,9 +276,9 @@ export const Cart = () => {
           </div>
         </div>
       );
-    }
+  }
 
-    return (
+  return (
       <div className="space-y-6">
         {/* Search and Sort Controls */}
         <div className="flex flex-col sm:flex-row gap-4">
@@ -685,8 +685,8 @@ export const Cart = () => {
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+          </CardContent>
+        </Card>
             ))}
           </div>
         ) : (
@@ -732,7 +732,7 @@ export const Cart = () => {
                           >
                             +
                           </Button>
-                        </div>
+                    </div>
                         <div className="flex gap-1">
                           <Button
                             variant="ghost"
@@ -742,14 +742,14 @@ export const Cart = () => {
                           >
                             <ShoppingCart className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
+                    <Button 
+                      variant="ghost" 
                             size="icon"
                             onClick={() => handleRemoveFromCart(item.id)}
                             className="h-8 w-8"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                         </div>
                       </div>
                     </div>
@@ -759,8 +759,8 @@ export const Cart = () => {
             ))}
           </div>
         )}
-      </div>
-    );
+                  </div>
+                );
   };
 
   if (cartError) {
@@ -772,8 +772,8 @@ export const Cart = () => {
             <Button onClick={() => user && loadFromServer(user.id)} className="mt-4">
               Retry
             </Button>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
       </div>
     );
   }
@@ -781,7 +781,7 @@ export const Cart = () => {
   return (
     <div className="container py-12 space-y-8">
       {/* Header */}
-      <div>
+                  <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <ShoppingCart className="h-8 w-8" />
           Shopping Cart
@@ -879,8 +879,8 @@ export const Cart = () => {
                   </div>
                 </>
               )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
         </div>
       </div>
 

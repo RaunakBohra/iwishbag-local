@@ -99,7 +99,7 @@ export const useOrderMutations = (id: string | undefined) => {
             const updateData: Partial<Tables<'quotes'>> = { 
                 status: 'paid',
                 paid_at: new Date().toISOString(),
-                payment_method: 'stripe',
+                payment_method: 'cod',
                 in_cart: false, // <<< ADD in_cart: false here
             };
             

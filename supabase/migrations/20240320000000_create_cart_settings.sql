@@ -44,7 +44,7 @@ BEGIN
 
         CREATE POLICY "Enable write access for admins only" ON public.cart_settings
             FOR ALL
-            USING (has_role(auth.uid(), 'admin'::app_role));
+            USING (auth.role() = 'admin');
 
         -- Create trigger for updated_at
         CREATE TRIGGER set_timestamp

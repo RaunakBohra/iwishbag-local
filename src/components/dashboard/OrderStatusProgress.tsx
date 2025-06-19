@@ -1,3 +1,4 @@
+
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +12,6 @@ const statusSteps: Record<string, number> = {
 const statusLabels: Record<string, string> = {
     cod_pending: "Awaiting Payment",
     bank_transfer_pending: "Awaiting Payment",
-    esewa_pending: "Awaiting Payment",
     paid: "Paid",
     ordered: "Processing",
     shipped: "Shipped",
@@ -26,7 +26,7 @@ interface OrderStatusProgressProps {
 export const OrderStatusProgress = ({ status }: OrderStatusProgressProps) => {
   const progressValue = statusSteps[status] || 0;
   const isCancelled = status === 'cancelled';
-  const isPendingPayment = status === 'cod_pending' || status === 'bank_transfer_pending' || status === 'esewa_pending';
+  const isPendingPayment = status === 'cod_pending' || status === 'bank_transfer_pending';
 
   if (isCancelled) {
     return <span className="text-sm text-red-600 font-medium">Cancelled</span>

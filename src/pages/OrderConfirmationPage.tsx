@@ -31,8 +31,7 @@ import {
   Star,
   Heart,
   ShoppingBag,
-  Home,
-  Smartphone
+  Home
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useUserCurrency } from '@/hooks/useUserCurrency';
@@ -101,15 +100,6 @@ const OrderConfirmationPage = () => {
           icon: AlertCircle,
           color: 'text-orange-600',
           bgColor: 'bg-orange-50'
-        };
-      case 'esewa_pending':
-        return {
-          status: 'esewa_pending',
-          title: 'eSewa Payment Pending',
-          description: 'Complete your eSewa payment to confirm order',
-          icon: AlertCircle,
-          color: 'text-green-600',
-          bgColor: 'bg-green-50'
         };
       case 'ordered':
         return {
@@ -215,7 +205,7 @@ const OrderConfirmationPage = () => {
                 <ShoppingBag className="w-4 h-4 mr-2" />
                 View Cart
               </Link>
-            </Button>
+        </Button>
           </div>
         </div>
       </div>
@@ -225,7 +215,6 @@ const OrderConfirmationPage = () => {
   const orderStatus = getOrderStatus(order.status, order.payment_method);
   const StatusIcon = orderStatus.icon;
   const isBankTransfer = order.payment_method === 'bank_transfer';
-  const isESewa = order.payment_method === 'esewa';
   const isStripePayment = order.payment_method === 'stripe' && sessionId;
 
   return (
@@ -310,14 +299,12 @@ const OrderConfirmationPage = () => {
                         {order.payment_method === 'stripe' && <CreditCard className="w-5 h-5 text-gray-500" />}
                         {order.payment_method === 'cod' && <Banknote className="w-5 h-5 text-gray-500" />}
                         {order.payment_method === 'bank_transfer' && <Landmark className="w-5 h-5 text-gray-500" />}
-                        {order.payment_method === 'esewa' && <Smartphone className="w-5 h-5 text-gray-500" />}
                         <div>
                           <p className="text-sm text-gray-500">Payment Method</p>
                           <p className="font-medium capitalize">
                             {order.payment_method === 'stripe' && 'Credit Card'}
                             {order.payment_method === 'cod' && 'Cash on Delivery'}
                             {order.payment_method === 'bank_transfer' && 'Bank Transfer'}
-                            {order.payment_method === 'esewa' && 'eSewa'}
                           </p>
                         </div>
                       </div>
@@ -375,69 +362,6 @@ const OrderConfirmationPage = () => {
                             <p className="font-medium text-yellow-800">Important</p>
                             <p className="text-sm text-yellow-700 mt-1">
                               Please include your Order ID (#{order.order_display_id || order.id?.substring(0, 8).toUpperCase()}) in the payment reference.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* eSewa Payment Instructions */}
-              {isESewa && (
-                <Card className="border-0 shadow-lg">
-                  <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg">
-                    <CardTitle className="text-xl flex items-center gap-2">
-                      <Smartphone className="w-5 h-5" />
-                      eSewa Payment Instructions
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <p className="text-gray-600">
-                        Please complete your payment using eSewa. Click the button below to proceed with your eSewa payment.
-                      </p>
-                      
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                          <Smartphone className="w-5 h-5 text-green-600 mt-0.5" />
-                          <div>
-                            <p className="font-medium text-green-800">eSewa Payment</p>
-                            <p className="text-sm text-green-700 mt-1">
-                              Amount: {formatAmount(order.final_total_local ?? order.final_total ?? 0)}
-                            </p>
-                            <p className="text-sm text-green-700">
-                              Order ID: #{order.order_display_id || order.id?.substring(0, 8).toUpperCase()}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <Button 
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                          onClick={() => {
-                            // This would integrate with the eSewa payment component
-                            window.open(`/esewa-payment?order_id=${order.id}&amount=${order.final_total_local ?? order.final_total}`, '_blank');
-                          }}
-                        >
-                          <Smartphone className="w-4 h-4 mr-2" />
-                          Pay with eSewa
-                        </Button>
-                        <Button variant="outline">
-                          <Mail className="w-4 h-4 mr-2" />
-                          Send Payment Link
-                        </Button>
-                      </div>
-
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                          <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-                          <div>
-                            <p className="font-medium text-blue-800">Need Help?</p>
-                            <p className="text-sm text-blue-700 mt-1">
-                              If you don't have an eSewa account, you can download the app from the App Store or Google Play Store.
                             </p>
                           </div>
                         </div>
@@ -518,7 +442,7 @@ const OrderConfirmationPage = () => {
               <Card className="border-0 shadow-lg">
                 <CardHeader>
                   <CardTitle className="text-lg">Quick Actions</CardTitle>
-                </CardHeader>
+        </CardHeader>
                 <CardContent className="space-y-3">
                   <Button 
                     variant="outline" 
@@ -616,11 +540,11 @@ const OrderConfirmationPage = () => {
                     <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                       <span className="text-white text-xs font-bold">3</span>
                     </div>
-                    <div>
+            <div>
                       <p className="font-medium text-sm">Leave a Review</p>
                       <p className="text-xs text-gray-600">Share your experience once you receive your order</p>
                     </div>
-                  </div>
+                </div>
                 </CardContent>
               </Card>
             </div>
@@ -628,7 +552,7 @@ const OrderConfirmationPage = () => {
 
           {/* Bottom CTA */}
           <div className="text-center space-y-4">
-            <Separator />
+              <Separator />
             <div className="space-y-4">
               <h3 className="text-xl font-semibold">Thank you for your order!</h3>
               <p className="text-gray-600 max-w-2xl mx-auto">
@@ -641,13 +565,13 @@ const OrderConfirmationPage = () => {
                     <Home className="w-4 h-4 mr-2" />
                     Go to Dashboard
                   </Link>
-                </Button>
+            </Button>
                 <Button variant="outline" asChild size="lg">
                   <Link to="/quote">
                     <Star className="w-4 h-4 mr-2" />
                     Request New Quote
                   </Link>
-                </Button>
+            </Button>
               </div>
             </div>
           </div>

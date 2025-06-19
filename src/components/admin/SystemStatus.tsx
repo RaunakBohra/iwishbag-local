@@ -78,8 +78,8 @@ export const SystemStatus = () => {
               <p>App Name: {config.app.name}</p>
               <p>Frontend URL: {config.app.url}</p>
               <p>Supabase URL: {config.supabase.url ? '✅' : '❌'}</p>
+              <p>Supabase Key: {config.supabase.anonKey ? '✅' : '❌'}</p>
               <p>Resend API Key: {config.resend.apiKey ? '✅' : '❌'}</p>
-              <p>Stripe Keys: {config.stripe.publishableKey && config.stripe.secretKey ? '✅' : '❌'}</p>
             </div>
           </div>
 
