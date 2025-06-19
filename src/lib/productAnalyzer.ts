@@ -18,6 +18,27 @@ export interface ProductAnalysis {
   };
   shippingWeight?: number;
   error?: string;
+  // Amazon-specific fields
+  platform?: string;
+  averageRating?: number;
+  totalReviews?: number;
+  featureBullets?: string[];
+  shippingPrice?: string;
+  shippingTime?: string;
+  // eBay-specific fields
+  condition?: string;
+  seller?: string;
+  location?: string;
+  shippingCost?: number;
+  shippingCurrency?: string;
+  availableQuantity?: string;
+  soldItems?: string;
+  estimatedDeliveryMin?: string;
+  estimatedDeliveryMax?: string;
+  returnPolicy?: string;
+  sellerReviews?: number;
+  sellerRating?: string;
+  itemSpecifics?: Array<{label: string; value: string}>;
 }
 
 export interface ScrapingResult {
@@ -37,6 +58,18 @@ const SUPPORTED_PLATFORMS = {
   'amazon.es': 'amazon',
   'amazon.ca': 'amazon',
   'amazon.com.au': 'amazon',
+  'amazon.in': 'amazon',
+  'amazon.co.jp': 'amazon',
+  'amazon.com.br': 'amazon',
+  'amazon.com.mx': 'amazon',
+  'amazon.nl': 'amazon',
+  'amazon.se': 'amazon',
+  'amazon.pl': 'amazon',
+  'amazon.sg': 'amazon',
+  'amazon.ae': 'amazon',
+  'amazon.sa': 'amazon',
+  'amazon.eg': 'amazon',
+  'amazon.com.tr': 'amazon',
   'ebay.com': 'ebay',
   'ebay.co.uk': 'ebay',
   'ebay.de': 'ebay',

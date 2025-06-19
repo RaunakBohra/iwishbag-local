@@ -14,7 +14,9 @@ import {
   DollarSign,
   Users,
   ShoppingBag,
-  Plane
+  Plane,
+  Sparkles,
+  Zap
 } from "lucide-react";
 
 const Quote = () => {
@@ -91,7 +93,137 @@ const Quote = () => {
         </div>
       </div>
 
-      {/* Quote Form Section */}
+      {/* Features Section */}
+      <div className="container py-16">
+        <div className="text-center space-y-12">
+          <div className="space-y-4">
+            <h2 className="text-3xl md:text-4xl font-bold">
+              Features
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Our AI-powered system automatically analyzes product links and fills in all the details for you
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Card className="border-2 border-primary/10 bg-primary/5">
+              <CardHeader className="text-center">
+                <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <Zap className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle className="text-lg">Smart Analysis</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  Just paste a product URL and our AI automatically extracts all the details
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-primary/10 bg-primary/5">
+              <CardHeader className="text-center">
+                <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle className="text-lg">Auto-Fill Forms</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  Product name, brand, description, and images are automatically filled in
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-primary/10 bg-primary/5">
+              <CardHeader className="text-center">
+                <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle className="text-lg">Rich Data</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  Get ratings, reviews, features, and pricing information automatically
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Demo Section */}
+      <div className="container py-8">
+        <div className="max-w-4xl mx-auto">
+          <Card className="border-2 border-blue-200 bg-blue-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-800">
+                <Sparkles className="h-5 w-5" />
+                Try Smart Analysis
+              </CardTitle>
+              <p className="text-blue-700">
+                Test our smart analysis with these Amazon products:
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="text-sm text-blue-700">
+                  <div className="font-medium mb-2">🇺🇸 Amazon US:</div>
+                  <a 
+                    href="https://www.amazon.com/dp/B09V3BS25N" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="underline hover:text-blue-900"
+                  >
+                    NOW Foods Lion's Mane 500mg
+                  </a>
+                </div>
+                <div className="text-sm text-blue-700">
+                  <div className="font-medium mb-2">🇮🇳 Amazon India:</div>
+                  <a 
+                    href="https://www.amazon.in/dp/B07JDM9DF5" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="underline hover:text-blue-900"
+                  >
+                    Naturoman Frankincense Essential Oil (₹210)
+                  </a>
+                </div>
+                <div className="text-sm text-blue-700">
+                  <div className="font-medium mb-2">🛒 eBay:</div>
+                  <a 
+                    href="https://www.ebay.com/itm/167595093681" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="underline hover:text-blue-900"
+                  >
+                    LEGO 40766 Tribute To Jane Austen's Books ($46.69)
+                  </a>
+                </div>
+              </div>
+              <div className="mt-4 text-sm text-blue-700 space-y-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Paste any Amazon URL and click "Smart Analysis"</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Works with Amazon US, India, UK, Germany, and more</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Also supports eBay, Walmart, and other major retailers</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Get local pricing, ratings, and product details</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Main Quote Form */}
       <div className="container py-8 md:py-16">
         <div className="max-w-4xl mx-auto">
           <Card className="border-0 shadow-xl bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/80">

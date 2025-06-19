@@ -29,6 +29,26 @@ export const ProductAnalyzerTest = () => {
   // Sample URLs for testing
   const sampleUrls = [
     {
+      name: 'NOW Foods Lion\'s Mane 500mg',
+      url: 'https://www.amazon.com/dp/B09V3BS25N',
+      description: 'Organic Lion\'s Mane mushroom supplement (US)'
+    },
+    {
+      name: 'Naturoman Frankincense Oil',
+      url: 'https://www.amazon.in/dp/B07JDM9DF5',
+      description: 'Essential oil from Amazon India (₹210)'
+    },
+    {
+      name: 'LEGO 40766 Tribute To Jane Austen\'s Books',
+      url: 'https://www.ebay.com/itm/167595093681',
+      description: 'LEGO set from eBay ($46.69)'
+    },
+    {
+      name: 'Amazon Echo Dot (India)',
+      url: 'https://www.amazon.in/dp/B08N5WRWNW',
+      description: 'Smart speaker from Amazon India'
+    },
+    {
       name: 'Amazon Echo Dot',
       url: 'https://www.amazon.com/dp/B08N5WRWNW',
       description: 'Smart speaker'
@@ -42,11 +62,6 @@ export const ProductAnalyzerTest = () => {
       name: 'Samsung TV',
       url: 'https://www.walmart.com/ip/123456789',
       description: 'Television'
-    },
-    {
-      name: 'Wireless Earbuds',
-      url: 'https://www.aliexpress.com/item/123456789.html',
-      description: 'Audio device'
     }
   ];
 
@@ -323,6 +338,18 @@ export const ProductAnalyzerTest = () => {
                   </div>
                 </div>
 
+                {result.originalPrice && result.originalPrice > result.price && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm font-medium">Original Price</Label>
+                    <div className="text-sm text-muted-foreground line-through">
+                      ${result.originalPrice.toFixed(2)}
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {Math.round(((result.originalPrice - result.price) / result.originalPrice) * 100)}% off
+                    </Badge>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2">
                   <Weight className="h-4 w-4 text-blue-600" />
                   <Label className="text-sm font-medium">Weight</Label>
@@ -338,6 +365,21 @@ export const ProductAnalyzerTest = () => {
                     {result.category}
                   </Badge>
                 </div>
+
+                {/* Amazon-specific ratings */}
+                {result.averageRating && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm font-medium">Rating</Label>
+                    <div className="flex items-center gap-1">
+                      <div className="text-lg font-semibold text-yellow-600">
+                        {result.averageRating.toFixed(1)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        ({result.totalReviews?.toLocaleString()} reviews)
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Additional Details */}
@@ -374,6 +416,17 @@ export const ProductAnalyzerTest = () => {
                   </Badge>
                 </div>
 
+                {/* Amazon-specific shipping info */}
+                {result.shippingPrice && (
+                  <div>
+                    <Label className="text-sm font-medium">Shipping</Label>
+                    <div className="text-sm">
+                      {result.shippingPrice}
+                      {result.shippingTime && ` • ${result.shippingTime}`}
+                    </div>
+                  </div>
+                )}
+
                 {result.imageUrl && (
                   <div>
                     <Label className="text-sm font-medium">Product Image</Label>
@@ -388,8 +441,37 @@ export const ProductAnalyzerTest = () => {
                     </a>
                   </div>
                 )}
+
+                {result.platform && (
+                  <div>
+                    <Label className="text-sm font-medium">Platform</Label>
+                    <Badge variant="outline" className="capitalize">
+                      {result.platform}
+                    </Badge>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Amazon Feature Bullets */}
+            {result.featureBullets && result.featureBullets.length > 0 && (
+              <div className="mt-6">
+                <Label className="text-sm font-medium">Product Features</Label>
+                <div className="mt-2 space-y-2">
+                  {result.featureBullets.slice(0, 5).map((feature, index) => (
+                    <div key={index} className="flex items-start gap-2 text-sm">
+                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="text-muted-foreground">{feature}</div>
+                    </div>
+                  ))}
+                  {result.featureBullets.length > 5 && (
+                    <div className="text-xs text-muted-foreground mt-2">
+                      +{result.featureBullets.length - 5} more features
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {result.error && (
               <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">

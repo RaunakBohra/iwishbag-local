@@ -1,14 +1,28 @@
-
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { ImageUpload } from "@/components/ui/image-upload";
-import { Control } from "react-hook-form";
+import { Control, useWatch } from "react-hook-form";
+import { useEffect } from "react";
 
 interface ProductImageFieldProps {
   control: Control<any>;
   index: number;
+  analysisResult?: any; // ProductAnalysis result from parent
 }
 
-export const ProductImageField = ({ control, index }: ProductImageFieldProps) => {
+export const ProductImageField = ({ control, index, analysisResult }: ProductImageFieldProps) => {
+  // Watch the image URL field
+  const imageUrl = useWatch({
+    control,
+    name: `items.${index}.imageUrl`
+  });
+
+  // Auto-set image URL when analysis result is available
+  useEffect(() => {
+    if (analysisResult?.imageUrl && !imageUrl) {
+      // This will be handled by the parent component through setValue
+    }
+  }, [analysisResult, imageUrl]);
+
   return (
     <FormField
       control={control}

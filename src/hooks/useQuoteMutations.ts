@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -6,6 +5,11 @@ import { Tables } from "@/integrations/supabase/types";
 
 type Quote = Tables<'quotes'>;
 type QuoteItem = Tables<'quote_items'>;
+
+async function getAccessToken() {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || '';
+}
 
 export const useQuoteMutations = (id: string | undefined) => {
     const queryClient = useQueryClient();
@@ -82,13 +86,17 @@ export const useQuoteMutations = (id: string | undefined) => {
                 </html>
             `;
 
+            // Before calling send-email:
+            const accessToken = await getAccessToken();
+
             // Send email using the edge function
             const { error: emailError } = await supabase.functions.invoke('send-email', {
                 body: {
                     to: quote.email,
                     subject: emailSubject,
                     html: emailHtml,
-                    from: 'WishBag <quotes@resend.dev>'
+                    from: 'WishBag <quotes@resend.dev>',
+                    headers: { Authorization: `Bearer ${accessToken}` }
                 }
             });
 

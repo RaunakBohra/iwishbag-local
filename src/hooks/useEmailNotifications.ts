@@ -12,18 +12,25 @@ interface EmailNotificationOptions {
   from?: string;
 }
 
+async function getAccessToken() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || '';
+}
+
 export const useEmailNotifications = () => {
   const { toast } = useToast();
 
   const sendEmailMutation = useMutation({
     mutationFn: async ({ to, template, data, from }: EmailNotificationOptions) => {
+      const accessToken = await getAccessToken();
       const { error } = await supabase.functions.invoke('send-email', {
         body: {
           to,
           template,
           data,
           from: from || 'WishBag <noreply@resend.dev>'
-        }
+        },
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
 
       if (error) throw error;

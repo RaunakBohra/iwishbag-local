@@ -57,7 +57,12 @@ function getQuoteUIState(quote) {
   let canReApprove = false;
   let showCancelLink = false;
 
-  if ((status === 'calculated' || status === 'sent') && approval_status === 'pending') {
+  // Handle pending quotes (new quotes awaiting review)
+  if (status === 'pending' && approval_status === 'pending') {
+    step = 'review';
+    summaryStatus = 'pending';
+    showCancelLink = true;
+  } else if ((status === 'calculated' || status === 'sent') && approval_status === 'pending') {
     step = 'review';
     summaryStatus = 'pending';
     canApprove = true;

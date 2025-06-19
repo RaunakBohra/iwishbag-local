@@ -34,7 +34,8 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
           country_code: countryCode,
           user_id: user?.id ?? null,
           items_currency: selectedCountryCurrency,
-          final_currency: 'NPR'
+          final_currency: 'NPR',
+          in_cart: false
         })
         .select('id')
         .single();
@@ -99,7 +100,8 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         country_code: countryCode,
         user_id: user?.id ?? null,
         items_currency: selectedCountryCurrency,
-        final_currency: 'NPR'
+        final_currency: 'NPR',
+        in_cart: false
       })
       .select('id')
       .single();

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Control, UseFieldArrayRemove } from "react-hook-form";
+import { Control, UseFieldArrayRemove, UseFormSetValue } from "react-hook-form";
 import { ProductInfoFields } from "./ProductInfoFields";
 import { ProductImageField } from "./ProductImageField";
 import { Trash2, Package } from "lucide-react";
@@ -10,9 +10,10 @@ interface QuoteItemProps {
   index: number;
   remove: UseFieldArrayRemove;
   control: Control<any>;
+  setValue: UseFormSetValue<any>;
 }
 
-const QuoteItem = ({ index, remove, control }: QuoteItemProps) => {
+const QuoteItem = ({ index, remove, control, setValue }: QuoteItemProps) => {
   return (
     <Card className="border-2 border-border hover:border-primary/20 transition-colors">
       <CardHeader className="pb-4">
@@ -58,7 +59,7 @@ const QuoteItem = ({ index, remove, control }: QuoteItemProps) => {
           {/* Product Details */}
           <div className="lg:col-span-2">
             <div className="space-y-4">
-              <ProductInfoFields control={control} index={index} />
+              <ProductInfoFields control={control} index={index} setValue={setValue} />
             </div>
           </div>
         </div>

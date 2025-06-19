@@ -1,23 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
-
-const resendApiKey = Deno.env.get("RESEND_API_KEY");
-const frontendUrl = Deno.env.get("FRONTEND_URL");
-
-if (!resendApiKey) {
-  throw new Error("RESEND_API_KEY environment variable is not set");
-}
-
-if (!frontendUrl) {
-  throw new Error("FRONTEND_URL environment variable is not set");
-}
-
-const resend = new Resend(resendApiKey);
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 type EmailTemplate = 'quote_sent' | 'quote_approved' | 'quote_rejected' | 'order_shipped' | 'order_delivered' | 'contact_form' | 'quote_confirmation' | 'quote_ready' | 'quote_accepted' | 'payment_confirmed' | 'order_placed' | 'quote_cancelled' | 'quote_reminder';
 
@@ -516,9 +499,44 @@ const templates: Record<EmailTemplate, (data: Record<string, any>) => { subject:
 };
 
 const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Max-Age': '86400',
+      }
+    });
   }
+
+  // Check environment variables only for actual requests
+  const resendApiKey = Deno.env.get("RESEND_API_KEY");
+  const frontendUrl = Deno.env.get("FRONTEND_URL");
+
+  if (!resendApiKey) {
+    return new Response(
+      JSON.stringify({ error: "RESEND_API_KEY environment variable is not set" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
+  }
+
+  if (!frontendUrl) {
+    return new Response(
+      JSON.stringify({ error: "FRONTEND_URL environment variable is not set" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
+  }
+
+  // Create Resend instance with API key
+  const resend = new Resend(resendApiKey);
 
   try {
     const { to, template, data, from = "WishBag <noreply@resend.dev>" }: EmailRequest = await req.json();
@@ -527,29 +545,51 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Missing required fields: to, template, data");
     }
 
+    // Validate template exists
+    if (!templates[template]) {
+      throw new Error(`Invalid template: ${template}`);
+    }
+
     const { subject, html } = templates[template](data);
 
     console.log(`Sending ${template} email to: ${to}`);
 
-    const emailResponse = await resend.emails.send({
-      from,
-      to: [to],
-      subject,
-      html,
-    });
+    try {
+      const emailResponse = await resend.emails.send({
+        from,
+        to: [to],
+        subject,
+        html,
+      });
 
-    console.log("Email sent successfully:", emailResponse);
+      console.log("Email sent successfully:", emailResponse);
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      messageId: emailResponse.data?.id 
-    }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders,
-      },
-    });
+      return new Response(JSON.stringify({ 
+        success: true, 
+        messageId: emailResponse.data?.id 
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      });
+    } catch (emailError: any) {
+      console.error("Resend API error:", emailError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Email service error: ${emailError.message}` 
+        }),
+        {
+          status: 500,
+          headers: { 
+            "Content-Type": "application/json", 
+            ...corsHeaders 
+          },
+        }
+      );
+    }
 
   } catch (error: any) {
     console.error("Error sending email:", error);
@@ -560,7 +600,10 @@ const handler = async (req: Request): Promise<Response> => {
       }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { 
+          "Content-Type": "application/json", 
+          ...corsHeaders 
+        },
       }
     );
   }

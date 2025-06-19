@@ -1,15 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from "../_shared/cors.ts"
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { 
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Max-Age': '86400',
+      }
+    })
   }
 
   try {
@@ -39,28 +42,16 @@ serve(async (req) => {
       // Try to analyze with ScraperAPI
       try {
         const platform = detectPlatform(url)
-        const extractRules = getExtractRules(platform)
         
-        const response = await fetch('https://api.scraperapi.com/api/v1/scrape', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${scraperApiKey}`
-          },
-          body: JSON.stringify({
-            url: url,
-            render_js: true,
-            wait_for: '.product-info, .product-details, .a-section, .product',
-            extract_rules: extractRules
-          })
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          console.log('ScraperAPI response:', data)
-          analysisResult = parseScraperAPIResponse(data, url, platform)
+        if (platform === 'amazon') {
+          // Use structured Amazon API for Amazon products
+          analysisResult = await analyzeAmazonProduct(url, scraperApiKey)
+        } else if (platform === 'ebay') {
+          // Use structured eBay API for eBay products
+          analysisResult = await analyzeEbayProduct(url, scraperApiKey)
         } else {
-          console.error('ScraperAPI error:', response.status, response.statusText)
+          // Use generic scraping for other platforms
+          analysisResult = await analyzeGenericProduct(url, scraperApiKey, platform)
         }
       } catch (error) {
         console.error('ScraperAPI error:', error)
@@ -121,6 +112,259 @@ serve(async (req) => {
     )
   }
 })
+
+async function analyzeAmazonProduct(url: string, apiKey: string) {
+  try {
+    // Extract ASIN from Amazon URL
+    const asin = extractASIN(url)
+    if (!asin) {
+      throw new Error('Could not extract ASIN from Amazon URL')
+    }
+
+    // Detect country from Amazon URL
+    const countryCode = detectAmazonCountry(url)
+    
+    // Build API URL with appropriate parameters
+    let apiUrl = `https://api.scraperapi.com/structured/amazon/product?api_key=${apiKey}&asin=${asin}&country_code=${countryCode}`
+    
+    // Add TLD parameter for non-US domains
+    if (countryCode !== 'us') {
+      const tld = getTLDForCountry(countryCode)
+      if (tld) {
+        apiUrl += `&tld=${tld}`
+      }
+    }
+    
+    console.log('Fetching Amazon product data for ASIN:', asin, 'Country:', countryCode, 'URL:', apiUrl)
+    
+    const response = await fetch(apiUrl)
+    
+    if (!response.ok) {
+      throw new Error(`Amazon API error: ${response.status} ${response.statusText}`)
+    }
+    
+    const data = await response.json()
+    console.log('Amazon API response received')
+    
+    return parseAmazonProductResponse(data, url)
+    
+  } catch (error) {
+    console.error('Amazon product analysis failed:', error)
+    throw error
+  }
+}
+
+function getTLDForCountry(countryCode: string): string | null {
+  // Map country codes to TLDs
+  const tldMap: Record<string, string> = {
+    'uk': 'co.uk',
+    'de': 'de',
+    'fr': 'fr',
+    'it': 'it',
+    'es': 'es',
+    'ca': 'ca',
+    'au': 'com.au',
+    'in': 'in',
+    'jp': 'co.jp',
+    'br': 'com.br',
+    'mx': 'com.mx',
+    'nl': 'nl',
+    'se': 'se',
+    'pl': 'pl',
+    'sg': 'sg',
+    'ae': 'ae',
+    'sa': 'sa',
+    'eg': 'eg',
+    'tr': 'com.tr'
+  }
+  
+  return tldMap[countryCode] || null
+}
+
+function detectAmazonCountry(url: string): string {
+  const hostname = new URL(url).hostname.toLowerCase()
+  
+  // Map Amazon domains to country codes
+  const amazonDomains: Record<string, string> = {
+    'amazon.com': 'us',
+    'amazon.co.uk': 'uk',
+    'amazon.de': 'de',
+    'amazon.fr': 'fr',
+    'amazon.it': 'it',
+    'amazon.es': 'es',
+    'amazon.ca': 'ca',
+    'amazon.com.au': 'au',
+    'amazon.in': 'in',
+    'amazon.co.jp': 'jp',
+    'amazon.com.br': 'br',
+    'amazon.com.mx': 'mx',
+    'amazon.nl': 'nl',
+    'amazon.se': 'se',
+    'amazon.pl': 'pl',
+    'amazon.sg': 'sg',
+    'amazon.ae': 'ae',
+    'amazon.sa': 'sa',
+    'amazon.eg': 'eg',
+    'amazon.com.tr': 'tr'
+  }
+  
+  for (const [domain, country] of Object.entries(amazonDomains)) {
+    if (hostname.includes(domain)) {
+      return country
+    }
+  }
+  
+  // Default to US if no match found
+  return 'us'
+}
+
+async function analyzeGenericProduct(url: string, apiKey: string, platform: string) {
+  const extractRules = getExtractRules(platform)
+  
+  const response = await fetch('https://api.scraperapi.com/api/v1/scrape', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      url: url,
+      render_js: true,
+      wait_for: '.product-info, .product-details, .a-section, .product',
+      extract_rules: extractRules
+    })
+  })
+
+  if (response.ok) {
+    const data = await response.json()
+    console.log('Generic ScraperAPI response:', data)
+    return parseScraperAPIResponse(data, url, platform)
+  } else {
+    console.error('Generic ScraperAPI error:', response.status, response.statusText)
+    throw new Error(`Generic scraping failed: ${response.status}`)
+  }
+}
+
+function extractASIN(url: string): string | null {
+  // Extract ASIN from various Amazon URL formats
+  const patterns = [
+    /\/dp\/([A-Z0-9]{10})/,
+    /\/gp\/product\/([A-Z0-9]{10})/,
+    /\/ASIN\/([A-Z0-9]{10})/,
+    /\/ref=.*\/([A-Z0-9]{10})/
+  ]
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern)
+    if (match) {
+      return match[1]
+    }
+  }
+  
+  return null
+}
+
+function parseAmazonProductResponse(data: any, url: string) {
+  console.log('Parsing Amazon product response')
+  
+  // Detect country and currency
+  const countryCode = detectAmazonCountry(url)
+  const currency = getCurrencyForCountry(countryCode)
+  
+  // Extract basic information
+  const name = cleanText(data.name || 'Unknown Product')
+  const price = extractPrice(data.pricing)
+  const originalPrice = data.list_price ? extractPrice(data.list_price) : undefined
+  const brand = cleanText(data.brand)
+  const description = cleanText(data.full_description)
+  const category = categorizeProduct(name, description)
+  
+  // Extract weight from product information
+  let weight = 0
+  if (data.product_information?.product_dimensions) {
+    weight = extractWeight(data.product_information.product_dimensions) || 0
+  }
+  if (weight === 0) {
+    weight = estimateWeightFromName(name)
+  }
+  
+  // Determine availability
+  const availability = data.availability_status?.toLowerCase().includes('in stock') || true
+  
+  // Get primary image
+  const imageUrl = data.images && data.images.length > 0 ? data.images[0] : undefined
+  
+  // Extract dimensions if available
+  let dimensions = undefined
+  if (data.product_information?.product_dimensions) {
+    dimensions = extractDimensions(data.product_information.product_dimensions)
+  }
+  if (!dimensions) {
+    dimensions = estimateDimensions(category, weight)
+  }
+  
+  console.log('Amazon product parsed:', { 
+    name, 
+    price, 
+    originalPrice, 
+    weight, 
+    category, 
+    brand,
+    availability,
+    imageUrl,
+    currency,
+    countryCode
+  })
+  
+  return {
+    name: name,
+    price: price,
+    weight: weight,
+    imageUrl: imageUrl,
+    category: category,
+    availability: availability,
+    currency: currency,
+    originalPrice: originalPrice,
+    description: description,
+    brand: brand,
+    dimensions: dimensions,
+    platform: 'amazon',
+    // Additional Amazon-specific data
+    averageRating: data.average_rating,
+    totalReviews: data.total_reviews,
+    featureBullets: data.feature_bullets,
+    shippingPrice: data.shipping_price,
+    shippingTime: data.shipping_time
+  }
+}
+
+function getCurrencyForCountry(countryCode: string): string {
+  // Map country codes to currencies
+  const currencyMap: Record<string, string> = {
+    'us': 'USD',
+    'uk': 'GBP',
+    'de': 'EUR',
+    'fr': 'EUR',
+    'it': 'EUR',
+    'es': 'EUR',
+    'ca': 'CAD',
+    'au': 'AUD',
+    'in': 'INR',
+    'jp': 'JPY',
+    'br': 'BRL',
+    'mx': 'MXN',
+    'nl': 'EUR',
+    'se': 'SEK',
+    'pl': 'PLN',
+    'sg': 'SGD',
+    'ae': 'AED',
+    'sa': 'SAR',
+    'eg': 'EGP',
+    'tr': 'TRY'
+  }
+  
+  return currencyMap[countryCode] || 'USD'
+}
 
 function detectPlatform(url: string): string {
   const hostname = new URL(url).hostname.toLowerCase()
@@ -202,6 +446,30 @@ function getExtractRules(platform: string) {
   }
 }
 
+function extractDimensions(dimensionsText: string) {
+  if (!dimensionsText) return null
+  
+  // Parse dimensions like "2.4 x 2.4 x 4.5 inches"
+  const match = dimensionsText.match(/(\d+\.?\d*)\s*x\s*(\d+\.?\d*)\s*x\s*(\d+\.?\d*)\s*(inches?|cm|mm)/i)
+  if (match) {
+    const length = parseFloat(match[1])
+    const width = parseFloat(match[2])
+    const height = parseFloat(match[3])
+    const unit = match[4].toLowerCase()
+    
+    // Convert to cm
+    const multiplier = unit.includes('inch') ? 2.54 : unit === 'mm' ? 0.1 : 1
+    
+    return {
+      length: length * multiplier,
+      width: width * multiplier,
+      height: height * multiplier
+    }
+  }
+  
+  return null
+}
+
 function parseScraperAPIResponse(data: any, url: string, platform: string) {
   console.log('Parsing response for platform:', platform)
   console.log('Raw data:', data)
@@ -248,7 +516,8 @@ function extractPrice(priceData: any): number {
   if (!priceText) return 0
   
   // Remove currency symbols and extract numbers
-  const priceMatch = priceText.match(/[\d,]+\.?\d*/)
+  // Handle various currencies: $, ₹, £, €, etc.
+  const priceMatch = priceText.replace(/[₹$£€¥]/g, '').match(/[\d,]+\.?\d*/)
   if (priceMatch) {
     return parseFloat(priceMatch[0].replace(/,/g, ''))
   }
@@ -356,5 +625,144 @@ function estimateDimensions(category: string, weight: number) {
     length: base.length * scale,
     width: base.width * scale,
     height: base.height * scale
+  }
+}
+
+async function analyzeEbayProduct(url: string, apiKey: string) {
+  try {
+    // Extract product ID from eBay URL
+    const productId = extractEbayProductId(url)
+    if (!productId) {
+      throw new Error('Could not extract product ID from eBay URL')
+    }
+
+    // Use structured eBay API
+    const apiUrl = `https://api.scraperapi.com/structured/ebay/product?api_key=${apiKey}&product_id=${productId}`
+    
+    console.log('Fetching eBay product data for Product ID:', productId)
+    
+    const response = await fetch(apiUrl)
+    
+    if (!response.ok) {
+      throw new Error(`eBay API error: ${response.status} ${response.statusText}`)
+    }
+    
+    const data = await response.json()
+    console.log('eBay API response received')
+    
+    return parseEbayProductResponse(data, url)
+    
+  } catch (error) {
+    console.error('eBay product analysis failed:', error)
+    throw error
+  }
+}
+
+function extractEbayProductId(url: string): string | null {
+  // Extract product ID from various eBay URL formats
+  const patterns = [
+    /\/itm\/(\d+)/,
+    /\/p\/(\d+)/,
+    /item=(\d+)/
+  ]
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern)
+    if (match) {
+      return match[1]
+    }
+  }
+  
+  return null
+}
+
+function parseEbayProductResponse(data: any, url: string) {
+  console.log('Parsing eBay product response')
+  
+  // Extract basic information
+  const name = cleanText(data.title || 'Unknown Product')
+  const price = data.price?.value || 0
+  const currency = data.price?.currency || 'USD'
+  const brand = cleanText(data.brand)
+  const condition = cleanText(data.condition)
+  const seller = data.seller?.name
+  const location = data.location
+  
+  // Extract shipping cost
+  const shippingCost = data.shipping_costs?.value || 0
+  const shippingCurrency = data.shipping_costs?.currency || currency
+  
+  // Get primary image
+  const imageUrl = data.images && data.images.length > 0 ? data.images[0] : undefined
+  
+  // Extract item specifics for description
+  let description = ''
+  if (data.item_specifics && Array.isArray(data.item_specifics)) {
+    description = data.item_specifics.map((spec: any) => `${spec.label}: ${spec.value}`).join(', ')
+  }
+  
+  // Determine category from item specifics or name
+  const category = categorizeProduct(name, description)
+  
+  // Estimate weight from category and name
+  const weight = estimateWeightFromName(name)
+  
+  // Determine availability
+  const availability = data.available || false
+  
+  // Extract dimensions if available in item specifics
+  let dimensions = undefined
+  if (data.item_specifics) {
+    const dimensionSpec = data.item_specifics.find((spec: any) => 
+      spec.label.toLowerCase().includes('dimension') || 
+      spec.label.toLowerCase().includes('size')
+    )
+    if (dimensionSpec) {
+      dimensions = extractDimensions(dimensionSpec.value)
+    }
+  }
+  if (!dimensions) {
+    dimensions = estimateDimensions(category, weight)
+  }
+  
+  console.log('eBay product parsed:', { 
+    name, 
+    price, 
+    currency,
+    brand,
+    condition,
+    seller,
+    location,
+    shippingCost,
+    availability,
+    imageUrl 
+  })
+  
+  return {
+    name: name,
+    price: price,
+    weight: weight,
+    imageUrl: imageUrl,
+    category: category,
+    availability: availability,
+    currency: currency,
+    description: description,
+    brand: brand,
+    dimensions: dimensions,
+    platform: 'ebay',
+    // eBay-specific data
+    condition: condition,
+    seller: seller,
+    location: location,
+    shippingCost: shippingCost,
+    shippingCurrency: shippingCurrency,
+    availableQuantity: data.available_quantity,
+    soldItems: data.sold_items,
+    estimatedDeliveryMin: data.estimated_delivery_min,
+    estimatedDeliveryMax: data.estimated_delivery_max,
+    returnPolicy: data.return_policy,
+    sellerReviews: data.seller?.seller_reviews_count,
+    sellerRating: data.seller?.seller_review,
+    itemSpecifics: data.item_specifics
   }
 } 

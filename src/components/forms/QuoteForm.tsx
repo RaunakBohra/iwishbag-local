@@ -136,6 +136,7 @@ const QuoteForm = () => {
                   index={index}
                   remove={remove}
                   control={form.control}
+                  setValue={form.setValue}
                 />
                 {index < fields.length - 1 && (
                   <Separator className="my-6" />

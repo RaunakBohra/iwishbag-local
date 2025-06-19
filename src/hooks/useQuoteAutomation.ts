@@ -147,10 +147,25 @@ export const useQuoteAutomation = () => {
         (item.item_price || 0) > (max.item_price || 0) ? item : max
       );
 
+      // Map product category to customs category name
+      const categoryMapping: Record<string, string> = {
+        'electronics': 'Electronics',
+        'clothing': 'Clothing & Textiles',
+        'home': 'Home & Garden',
+        'beauty': 'Beauty & Health',
+        'sports': 'Sports & Outdoors',
+        'toys': 'Toys & Games',
+        'books': 'Books & Media',
+        'automotive': 'Automotive',
+        'other': 'General Goods'
+      };
+
+      const customsCategoryName = categoryMapping[mostExpensiveItem.category || 'other'] || 'General Goods';
+
       const { data: customsCategory } = await supabase
         .from('customs_categories')
         .select('*')
-        .eq('category', mostExpensiveItem.category || 'other')
+        .eq('name', customsCategoryName)
         .single();
 
       // Use the quote calculator

@@ -5,6 +5,12 @@ import { Tables } from "@/integrations/supabase/types";
 
 type Quote = Tables<'quotes'>;
 
+// Helper to get the current user's access token
+async function getAccessToken() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || '';
+}
+
 export const useQuoteNotifications = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -25,6 +31,7 @@ export const useQuoteNotifications = () => {
       if (!quote) throw new Error('Quote not found');
 
       // Send confirmation email
+      const accessToken = await getAccessToken();
       const { error: emailError } = await supabase.functions.invoke('send-email', {
         body: {
           to: quote.email,
@@ -35,7 +42,8 @@ export const useQuoteNotifications = () => {
             itemCount: quote.quote_items?.length || 0,
             estimatedTime: '24-48 hours',
             dashboardUrl: `${window.location.origin}/dashboard`
-          }
+          },
+          headers: { Authorization: `Bearer ${accessToken}` }
         }
       });
 
@@ -88,6 +96,7 @@ export const useQuoteNotifications = () => {
       if (!quote) throw new Error('Quote not found');
 
       // Send quote ready email
+      const accessToken = await getAccessToken();
       const { error: emailError } = await supabase.functions.invoke('send-email', {
         body: {
           to: quote.email,
@@ -100,7 +109,8 @@ export const useQuoteNotifications = () => {
             itemCount: quote.quote_items?.length || 0,
             dashboardUrl: `${window.location.origin}/dashboard`,
             quoteUrl: `${window.location.origin}/quote-details/${quote.id}`
-          }
+          },
+          headers: { Authorization: `Bearer ${accessToken}` }
         }
       });
 
@@ -166,6 +176,7 @@ export const useQuoteNotifications = () => {
       if (!template) return quote;
 
       // Send status update email
+      const accessToken = await getAccessToken();
       const { error: emailError } = await supabase.functions.invoke('send-email', {
         body: {
           to: quote.email,
@@ -178,7 +189,8 @@ export const useQuoteNotifications = () => {
             currency: quote.final_currency,
             dashboardUrl: `${window.location.origin}/dashboard`,
             ...additionalData
-          }
+          },
+          headers: { Authorization: `Bearer ${accessToken}` }
         }
       });
 
@@ -215,6 +227,7 @@ export const useQuoteNotifications = () => {
       if (!quote) throw new Error('Quote not found');
 
       // Send reminder email
+      const accessToken = await getAccessToken();
       const { error: emailError } = await supabase.functions.invoke('send-email', {
         body: {
           to: quote.email,
@@ -224,7 +237,8 @@ export const useQuoteNotifications = () => {
             customerEmail: quote.email,
             daysSinceRequest: Math.floor((Date.now() - new Date(quote.created_at).getTime()) / (1000 * 60 * 60 * 24)),
             dashboardUrl: `${window.location.origin}/dashboard`
-          }
+          },
+          headers: { Authorization: `Bearer ${accessToken}` }
         }
       });
 

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,11 @@ import { supabase } from "@/integrations/supabase/client";
 interface CustomerEmailDialogProps {
   customerEmail: string;
   customerName?: string;
+}
+
+async function getAccessToken() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || '';
 }
 
 export const CustomerEmailDialog = ({ customerEmail, customerName }: CustomerEmailDialogProps) => {
@@ -33,12 +37,14 @@ export const CustomerEmailDialog = ({ customerEmail, customerName }: CustomerEma
 
     setIsSending(true);
     try {
+      const accessToken = await getAccessToken();
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
           recipientEmail: customerEmail,
           subject: subject.trim(),
           content: content.trim(),
-        }
+        },
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
 
       if (error) throw error;
