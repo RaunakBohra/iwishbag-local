@@ -12,10 +12,10 @@ interface QuoteItemCardProps {
 
 export const QuoteItemCard: React.FC<QuoteItemCardProps> = ({ item }) => {
   return (
-    <Card className="backdrop-blur-xl bg-white/20 border border-white/30 hover:shadow-2xl hover:bg-white/30 hover:border-primary/30 transition-all duration-300 group">
+    <Card className="bg-card border border-border hover:bg-muted/50 hover:border-border transition-colors group">
       <CardContent className="p-6">
         <div className="flex items-start gap-4">
-          <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-lg p-2 group-hover:border-primary/30 transition-all duration-300">
+          <div className="bg-muted border border-border rounded-lg p-2 group-hover:border-border transition-colors">
             <ProductImage 
               imageUrl={item.image_url}
               productName={item.product_name || 'Product'}
@@ -30,13 +30,13 @@ export const QuoteItemCard: React.FC<QuoteItemCardProps> = ({ item }) => {
                     href={item.product_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="font-semibold hover:underline inline-flex items-center text-base group-hover:text-primary transition-colors duration-300"
+                    className="font-semibold hover:underline inline-flex items-center text-base text-foreground hover:text-foreground/80 transition-colors duration-300"
                   >
                     {item.product_name || 'Item'}
                     <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
                   </a>
                 ) : (
-                  <h4 className="font-semibold text-base group-hover:text-primary transition-colors duration-300">{item.product_name || 'Item'}</h4>
+                  <h4 className="font-semibold text-base text-foreground transition-colors duration-300">{item.product_name || 'Item'}</h4>
                 )}
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>

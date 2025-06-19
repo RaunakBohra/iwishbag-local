@@ -46,13 +46,13 @@ export const QuoteDetails: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
+      <div className="min-h-screen bg-background">
         <div className="container py-12 space-y-8">
-          <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-6 shadow-2xl">
-            <Skeleton className="h-32 w-full bg-white/30" />
+          <div className="bg-card border border-border rounded-lg p-6">
+            <Skeleton className="h-32 w-full" />
           </div>
-          <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-6 shadow-2xl">
-            <Skeleton className="h-64 w-full bg-white/30" />
+          <div className="bg-card border border-border rounded-lg p-6">
+            <Skeleton className="h-64 w-full" />
           </div>
         </div>
       </div>
@@ -61,11 +61,11 @@ export const QuoteDetails: React.FC = () => {
 
   if (error || !quote) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
+      <div className="min-h-screen bg-background">
         <div className="container py-12">
-          <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-6 shadow-2xl">
-            <Alert variant="destructive" className="backdrop-blur-xl bg-red-50/50 border-red-200/50">
-              <AlertDescription className="text-red-800">
+          <div className="bg-card border border-border rounded-lg p-6">
+            <Alert variant="destructive">
+              <AlertDescription>
                 {error instanceof Error ? error.message : 'Failed to load quote'}
               </AlertDescription>
             </Alert>
@@ -76,28 +76,28 @@ export const QuoteDetails: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
+    <div className="min-h-screen bg-background">
       <div className="container py-12 space-y-8">
         {quote.status === 'requested' ? (
           <>
-            <Card className="backdrop-blur-xl bg-white/20 border border-white/30 shadow-2xl">
+            <Card className="bg-card border border-border">
               <CardHeader>
-                <CardTitle className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                <CardTitle className="text-foreground">
                   Quote Request Received
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700 mb-6">
+                <p className="text-muted-foreground mb-6">
                   Thank you for your quote request. Our team is currently preparing your quote and will get back to you shortly. 
                   You can see the items you've requested below.
                 </p>
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Items Requested</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Items Requested</h3>
                   <div className="space-y-4">
                     {quote.quote_items?.map((item) => (
-                      <div key={item.id} className="flex items-start gap-4 p-4 backdrop-blur-xl bg-white/30 border border-white/40 rounded-xl hover:bg-white/40 transition-all duration-300">
+                      <div key={item.id} className="flex items-start gap-4 p-4 bg-card border border-border rounded-lg hover:bg-muted/50 transition-colors">
                         {item.image_url && (
-                          <div className="w-16 h-16 rounded-lg overflow-hidden border border-white/40 backdrop-blur-xl bg-white/20">
+                          <div className="w-16 h-16 rounded-lg overflow-hidden border border-border bg-muted">
                             <img 
                               src={item.image_url} 
                               alt={item.product_name || 'Product'} 
@@ -106,8 +106,8 @@ export const QuoteDetails: React.FC = () => {
                           </div>
                         )}
                         <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">{item.product_name}</h4>
-                          <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                          <h4 className="font-medium text-foreground">{item.product_name}</h4>
+                          <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>
                         </div>
                       </div>
                     ))}

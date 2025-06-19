@@ -54,12 +54,12 @@ export function QuoteStepper({ currentStep, onStepClick, className, rejected }: 
   }
 
   return (
-    <div className={cn("w-full backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-6", className)}>
+    <div className={cn("w-full bg-card border border-border rounded-lg p-6", className)}>
       <div className="relative flex items-center justify-between px-4 md:px-0">
         {/* Progress bar */}
-        <div className="absolute left-0 top-1/2 h-2 w-full -translate-y-1/2 bg-white/30 rounded-full overflow-hidden">
+        <div className="absolute left-0 top-1/2 h-2 w-full -translate-y-1/2 bg-muted rounded-full overflow-hidden">
           <motion.div
-            className="absolute left-0 top-0 h-full bg-gradient-to-r from-primary to-primary/80 rounded-full"
+            className="absolute left-0 top-0 h-full bg-foreground rounded-full"
             initial={{ width: 0 }}
             animate={{ 
               width: `${(currentIndex / (displaySteps.length - 1)) * 100}%`,
@@ -87,11 +87,11 @@ export function QuoteStepper({ currentStep, onStepClick, className, rejected }: 
               <motion.button
                 onClick={() => isClickable && onStepClick?.(step.id)}
                 className={cn(
-                  "relative z-10 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border-2 transition-all duration-300 backdrop-blur-xl",
-                  isRejectedStep && "border-destructive bg-destructive/10 text-destructive scale-110 shadow-lg shadow-destructive/20",
-                  isActive && !isRejectedStep && "border-primary bg-gradient-to-r from-primary to-primary/80 text-white scale-110 shadow-lg shadow-primary/20",
-                  isCompleted && !isRejectedStep && "border-primary bg-gradient-to-r from-primary to-primary/80 text-white shadow-md shadow-primary/10",
-                  !isActive && !isCompleted && !isRejectedStep && "border-white/30 bg-white/20 text-gray-400 hover:border-primary/50 hover:bg-white/30",
+                  "relative z-10 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border-2 transition-all duration-300",
+                  isRejectedStep && "border-destructive bg-destructive text-background scale-110",
+                  isActive && !isRejectedStep && "border-foreground bg-foreground text-background scale-110",
+                  isCompleted && !isRejectedStep && "border-foreground bg-foreground text-background",
+                  !isActive && !isCompleted && !isRejectedStep && "border-border bg-muted text-muted-foreground hover:border-foreground/50 hover:bg-muted/80",
                   isClickable && "cursor-pointer hover:scale-105",
                   !isClickable && "cursor-not-allowed"
                 )}
@@ -99,14 +99,14 @@ export function QuoteStepper({ currentStep, onStepClick, className, rejected }: 
                 whileTap={isClickable ? { scale: 0.95 } : {}}
               >
                 {isRejectedStep ? (
-                  <XCircle className="w-5 h-5 md:w-6 md:h-6 text-destructive" />
+                  <XCircle className="w-5 h-5 md:w-6 md:h-6" />
                 ) : isCompleted ? (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 200, damping: 10 }}
                   >
-                    <Check className="w-5 h-5 md:w-6 md:h-6" />
+                    <Check className="w-5 h-5 md:w-6 md:h-6 text-background" />
                   </motion.div>
                 ) : (
                   <motion.div
@@ -115,7 +115,10 @@ export function QuoteStepper({ currentStep, onStepClick, className, rejected }: 
                     transition={{ type: "spring", stiffness: 200, damping: 10 }}
                   >
                     {React.cloneElement(step.icon as React.ReactElement, {
-                      className: "w-5 h-5 md:w-6 md:h-6"
+                      className: cn(
+                        "w-5 h-5 md:w-6 md:h-6",
+                        (isActive || isCompleted) && !isRejectedStep ? "text-background" : "text-muted-foreground"
+                      )
                     })}
                   </motion.div>
                 )}
@@ -126,9 +129,9 @@ export function QuoteStepper({ currentStep, onStepClick, className, rejected }: 
                 className={cn(
                   "mt-2 md:mt-3 text-xs md:text-sm font-medium transition-colors duration-300 text-center",
                   isRejectedStep && "text-destructive",
-                  isActive && !isRejectedStep && "text-primary font-semibold",
-                  isCompleted && !isRejectedStep && "text-primary",
-                  !isActive && !isCompleted && !isRejectedStep && "text-gray-500"
+                  isActive && !isRejectedStep && "text-foreground font-semibold",
+                  isCompleted && !isRejectedStep && "text-foreground",
+                  !isActive && !isCompleted && !isRejectedStep && "text-muted-foreground"
                 )}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -140,7 +143,7 @@ export function QuoteStepper({ currentStep, onStepClick, className, rejected }: 
               {/* Connecting arrow */}
               {index < displaySteps.length - 1 && (
                 <motion.div
-                  className="absolute right-0 top-5 md:top-6 -mr-2 md:-mr-4 text-white/40"
+                  className="absolute right-0 top-5 md:top-6 -mr-2 md:-mr-4 text-muted-foreground"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 + 0.3 }}

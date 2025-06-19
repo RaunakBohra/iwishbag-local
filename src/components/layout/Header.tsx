@@ -148,15 +148,9 @@ const Header = () => {
               <div className="hidden sm:block">
                 <AdminSearch />
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="sm:hidden hover:bg-accent flex-shrink-0 h-9 w-9"
-                onClick={() => navigate('/admin/search')}
-              >
-                <Search className="h-4 w-4" />
-                <span className="sr-only">Search</span>
-              </Button>
+              <div className="sm:hidden">
+                <AdminSearch />
+              </div>
             </>
           )}
           

@@ -129,16 +129,13 @@ const AuthForm = () => {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel className="text-foreground">Email</FormLabel>
                 <FormControl>
                   <Input 
                     type="email" 
                     placeholder="you@example.com" 
                     {...field}
-                    className={cn(
-                      field.value && field.value.includes('@') ? "border-green-500" : "",
-                      field.value && !field.value.includes('@') ? "border-red-500" : ""
-                    )}
+                    className="border-border focus:border-foreground"
                   />
                 </FormControl>
                 <FormMessage />
@@ -150,32 +147,29 @@ const AuthForm = () => {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <FormLabel className="text-foreground">Password</FormLabel>
                 <FormControl>
                   <Input 
                     type="password" 
                     {...field}
-                    className={cn(
-                      field.value && field.value.length >= 8 ? "border-green-500" : "",
-                      field.value && field.value.length < 8 ? "border-red-500" : ""
-                    )}
+                    className="border-border focus:border-foreground"
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90" disabled={loading}>
             {loading ? "Signing In..." : "Sign In"}
           </Button>
-         <Button type="button" variant="outline" className="w-full" onClick={handleSignInWithGoogle}>
+         <Button type="button" variant="outline" className="w-full border-border hover:bg-muted" onClick={handleSignInWithGoogle}>
             Sign in with Google
            </Button>
           <div className="flex justify-between items-center mt-2">
-            <button type="button" className="text-sm text-primary underline" onClick={() => setShowForgot(true)}>
+            <button type="button" className="text-sm text-foreground underline hover:text-foreground/80" onClick={() => setShowForgot(true)}>
               Forgot Password?
             </button>
-            <button type="button" className="text-sm text-primary underline" onClick={() => setShowSignUp(true)}>
+            <button type="button" className="text-sm text-foreground underline hover:text-foreground/80" onClick={() => setShowSignUp(true)}>
               Sign Up
             </button>
           </div>
@@ -184,9 +178,9 @@ const AuthForm = () => {
 
       {/* Sign Up Modal */}
       <Dialog open={showSignUp} onOpenChange={setShowSignUp}>
-        <DialogContent>
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle>Sign Up</DialogTitle>
+            <DialogTitle className="text-foreground">Sign Up</DialogTitle>
           </DialogHeader>
           <Form {...signUpForm}>
             <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
@@ -195,15 +189,12 @@ const AuthForm = () => {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel className="text-foreground">Name</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="Your Name" 
                         {...field}
-                        className={cn(
-                          field.value && field.value.length >= 1 ? "border-green-500" : "",
-                          field.value && field.value.length < 1 ? "border-red-500" : ""
-                        )}
+                        className="border-border focus:border-foreground"
                       />
                     </FormControl>
                     <FormMessage />
@@ -215,16 +206,13 @@ const AuthForm = () => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-foreground">Email</FormLabel>
                     <FormControl>
                       <Input 
                         type="email" 
                         placeholder="you@example.com" 
                         {...field}
-                        className={cn(
-                          field.value && field.value.includes('@') ? "border-green-500" : "",
-                          field.value && !field.value.includes('@') ? "border-red-500" : ""
-                        )}
+                        className="border-border focus:border-foreground"
                       />
                     </FormControl>
                     <FormMessage />
@@ -236,16 +224,13 @@ const AuthForm = () => {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
+                    <FormLabel className="text-foreground">Phone Number</FormLabel>
                     <FormControl>
                       <Input 
                         type="tel" 
                         placeholder="+1 234 567 8901" 
                         {...field}
-                        className={cn(
-                          field.value && field.value.length >= 8 ? "border-green-500" : "",
-                          field.value && field.value.length < 8 ? "border-red-500" : ""
-                        )}
+                        className="border-border focus:border-foreground"
                       />
                     </FormControl>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -260,16 +245,13 @@ const AuthForm = () => {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-foreground">Password</FormLabel>
                     <FormControl>
                       <Input 
                         type="password" 
                         placeholder="••••••••" 
                         {...field}
-                        className={cn(
-                          field.value && field.value.length >= 8 ? "border-green-500" : "",
-                          field.value && field.value.length < 8 ? "border-red-500" : ""
-                        )}
+                        className="border-border focus:border-foreground"
                       />
                     </FormControl>
                     <FormMessage />
@@ -284,15 +266,15 @@ const AuthForm = () => {
                     <FormControl>
                       <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
-                    <FormLabel>I agree to the <a href="/terms" className="underline text-primary" target="_blank" rel="noopener noreferrer">terms and conditions</a></FormLabel>
+                    <FormLabel className="text-foreground">I agree to the <a href="/terms" className="underline text-foreground hover:text-foreground/80" target="_blank" rel="noopener noreferrer">terms and conditions</a></FormLabel>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90" disabled={loading}>
                 {loading ? "Signing Up..." : "Sign Up"}
               </Button>
-              <Button type="button" variant="outline" className="w-full" onClick={handleSignInWithGoogle}>
+              <Button type="button" variant="outline" className="w-full border-border hover:bg-muted" onClick={handleSignInWithGoogle}>
                 Sign up with Google
               </Button>
             </form>
@@ -302,9 +284,9 @@ const AuthForm = () => {
 
       {/* Forgot Password Modal */}
       <Dialog open={showForgot} onOpenChange={setShowForgot}>
-        <DialogContent>
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle>Forgot Password</DialogTitle>
+            <DialogTitle className="text-foreground">Forgot Password</DialogTitle>
           </DialogHeader>
           <Form {...forgotForm}>
             <form onSubmit={forgotForm.handleSubmit(handleForgotPassword)} className="space-y-4">
@@ -313,15 +295,15 @@ const AuthForm = () => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-foreground">Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="you@example.com" {...field} />
+                      <Input type="email" placeholder="you@example.com" {...field} className="border-border focus:border-foreground" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={forgotLoading}>
+              <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90" disabled={forgotLoading}>
                 {forgotLoading ? "Sending..." : "Send Reset Link"}
               </Button>
             </form>
