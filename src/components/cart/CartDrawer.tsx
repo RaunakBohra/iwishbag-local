@@ -427,8 +427,8 @@ export const CartDrawer = () => {
           <div className="flex items-center gap-2">
             <Checkbox
               id="select-all"
-              checked={selectedItems.length === cartItems.length}
-              onCheckedChange={handleSelectAllCart}
+              checked={isAllCartSelected}
+              onCheckedChange={(checked) => handleSelectAllCart(checked as boolean)}
             />
             <label htmlFor="select-all" className="text-sm font-medium">
               Select All ({selectedItems.length})
@@ -550,8 +550,8 @@ export const CartDrawer = () => {
           <div className="flex items-center gap-2">
             <Checkbox
               id="select-all-saved"
-              checked={selectedItems.length === savedItems.length}
-              onCheckedChange={handleSelectAllSaved}
+              checked={isAllSavedSelected}
+              onCheckedChange={(checked) => handleSelectAllSaved(checked as boolean)}
             />
             <label htmlFor="select-all-saved" className="text-sm font-medium">
               Select All ({selectedItems.length})

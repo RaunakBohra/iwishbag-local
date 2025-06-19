@@ -394,7 +394,7 @@ export const Cart = () => {
             <Checkbox
               id="select-all"
               checked={isAllCartSelected}
-              onCheckedChange={handleSelectAllCart}
+              onCheckedChange={(checked) => handleSelectAllCart(checked as boolean)}
             />
             <label htmlFor="select-all" className="text-sm font-medium">
               Select All ({itemCount})
@@ -669,7 +669,7 @@ export const Cart = () => {
             <Checkbox
               id="select-all-saved"
               checked={isAllSavedSelected}
-              onCheckedChange={handleSelectAllSaved}
+              onCheckedChange={(checked) => handleSelectAllSaved(checked as boolean)}
             />
             <label htmlFor="select-all-saved" className="text-sm font-medium">
               Select All ({savedItemCount})
