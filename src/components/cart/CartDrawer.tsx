@@ -361,93 +361,72 @@ export const CartDrawer = () => {
     }
 
     return (
-      <div className="space-y-4 p-4">
-        {/* Select All Checkbox */}
-        {cartItems.length > 0 && (
-          <div className="flex items-center space-x-2 p-2 border rounded-lg">
-            <Checkbox
-              checked={isAllCartSelected}
-              onCheckedChange={handleSelectAllCart}
-              data-testid="select-all-cart"
-            />
-            <label className="text-sm font-medium">Select All Cart Items</label>
-          </div>
-        )}
-
+      <div className="space-y-4">
         {/* Cart Items */}
-        <ScrollArea className="flex-1">
-          <div className="space-y-3">
-            {cartItems.map((item, index) => (
-              <div key={item.id} className="flex items-start gap-3 p-3 border rounded-lg" data-testid="cart-item">
-                <Checkbox
-                  checked={selectedItems.includes(item.id)}
-                  onCheckedChange={() => handleSelectItem(item.id)}
-                  className="mt-1"
-                  data-testid={`cart-item-checkbox-${index}`}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium truncate">{item.productName}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {item.countryCode} • {(item.itemWeight * item.quantity).toFixed(2)}kg
-                      </p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
-                          data-testid={`quantity-decrease-${index}`}
-                        >
-                          -
-                        </Button>
-                        <span className="w-8 text-center text-sm" data-testid={`quantity-input-${index}`}>
-                          {item.quantity}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                          data-testid={`quantity-increase-${index}`}
-                        >
-                          +
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
+        <div className="space-y-3">
+          {cartItems.map((item) => (
+            <div key={item.id} className="flex items-start gap-3 p-3 border rounded-lg">
+              <Checkbox
+                checked={selectedItems.includes(item.id)}
+                onCheckedChange={() => handleSelectItem(item.id)}
+                className="mt-1"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium truncate">{item.productName}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {item.countryCode} • {(item.itemWeight * item.quantity).toFixed(2)}kg
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleSaveForLater(item.id)}
-                        className="h-8 w-8"
-                        data-testid={`move-to-saved-${index}`}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
                       >
-                        <Save className="h-4 w-4" />
+                        -
                       </Button>
+                      <span className="w-8 text-center text-sm">{item.quantity}</span>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveFromCart(item.id)}
-                        className="h-8 w-8"
-                        data-testid={`remove-item-${index}`}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        +
                       </Button>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-bold" data-testid={`item-total-${index}`}>
-                      {formatAmount(item.finalTotal * item.quantity)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
-                    </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleSaveForLater(item.id)}
+                      className="h-8 w-8"
+                    >
+                      <Save className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveFromCart(item.id)}
+                      className="h-8 w-8"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold">
+                    {formatAmount(item.finalTotal * item.quantity)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </ScrollArea>
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
@@ -468,248 +447,208 @@ export const CartDrawer = () => {
     }
 
     return (
-      <div className="space-y-4 p-4">
-        {/* Select All Checkbox */}
-        {savedItems.length > 0 && (
-          <div className="flex items-center space-x-2 p-2 border rounded-lg">
-            <Checkbox
-              checked={isAllSavedSelected}
-              onCheckedChange={handleSelectAllSaved}
-              data-testid="select-all-saved"
-            />
-            <label className="text-sm font-medium">Select All Saved Items</label>
-          </div>
-        )}
-
+      <div className="space-y-4">
         {/* Saved Items */}
-        <ScrollArea className="flex-1">
-          <div className="space-y-3">
-            {savedItems.map((item, index) => (
-              <div key={item.id} className="flex items-start gap-3 p-3 border rounded-lg" data-testid="saved-item">
-                <Checkbox
-                  checked={selectedItems.includes(item.id)}
-                  onCheckedChange={() => handleSelectItem(item.id)}
-                  className="mt-1"
-                  data-testid={`saved-item-checkbox-${index}`}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium truncate">{item.productName}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {item.countryCode} • {(item.itemWeight * item.quantity).toFixed(2)}kg
-                      </p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
-                          data-testid={`saved-quantity-decrease-${index}`}
-                        >
-                          -
-                        </Button>
-                        <span className="w-8 text-center text-sm" data-testid={`saved-quantity-input-${index}`}>
-                          {item.quantity}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                          data-testid={`saved-quantity-increase-${index}`}
-                        >
-                          +
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
+        <div className="space-y-3">
+          {savedItems.map((item) => (
+            <div key={item.id} className="flex items-start gap-3 p-3 border rounded-lg">
+              <Checkbox
+                checked={selectedItems.includes(item.id)}
+                onCheckedChange={() => handleSelectItem(item.id)}
+                className="mt-1"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium truncate">{item.productName}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {item.countryCode} • {(item.itemWeight * item.quantity).toFixed(2)}kg
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleMoveToCart(item.id)}
-                        className="h-8 w-8"
-                        data-testid={`move-to-cart-${index}`}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
                       >
-                        <ShoppingCart className="h-4 w-4" />
+                        -
                       </Button>
+                      <span className="w-8 text-center text-sm">{item.quantity}</span>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveFromCart(item.id)}
-                        className="h-8 w-8"
-                        data-testid={`remove-saved-item-${index}`}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        +
                       </Button>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-bold" data-testid={`saved-item-total-${index}`}>
-                      {formatAmount(item.finalTotal * item.quantity)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
-                    </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleMoveToCart(item.id)}
+                      className="h-8 w-8"
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveFromCart(item.id)}
+                      className="h-8 w-8"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold">
+                    {formatAmount(item.finalTotal * item.quantity)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </ScrollArea>
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative"
-          data-testid="cart-button"
-        >
-          <ShoppingCart className="h-5 w-5" />
-          {itemCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs"
-              data-testid="cart-badge"
-            >
-              {itemCount}
-            </Badge>
-          )}
-        </Button>
-      </SheetTrigger>
-      <SheetContent
-        side="right"
-        className="w-full sm:w-96 p-0"
-        data-testid="cart-drawer"
-      >
-        <SheetHeader className="p-4 border-b">
-          <SheetTitle className="flex items-center gap-2">
+    <>
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative">
             <ShoppingCart className="h-5 w-5" />
-            Cart ({itemCount})
-          </SheetTitle>
-        </SheetHeader>
-
-        <div className="flex flex-col h-full">
-          {/* Search and Sort Controls */}
-          <div className="p-4 border-b space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search items..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-                data-testid="cart-search"
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6"
-                  onClick={clearSearch}
+            {cartItems && cartItems.length > 0 && (
+              <div className="absolute -top-1 -right-1">
+                <Badge variant="destructive" className="h-5 w-5 justify-center p-0 rounded-full text-xs">
+                  {cartItems.length}
+                </Badge>
+              </div>
+            )}
+            <span className="sr-only">Cart</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent className="w-full sm:max-w-lg flex flex-col h-full">
+          <SheetHeader className="space-y-2.5 flex-shrink-0">
+            <SheetTitle>Shopping Cart</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 flex flex-col min-h-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-shrink-0">
+              <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+                <TabsTrigger value="cart">
+                  Cart ({cartItems?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="saved">
+                  Saved ({savedItems?.length || 0})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {activeTab === 'cart' && (
+              <div className="flex-1 flex flex-col min-h-0 mt-4">
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  {renderCartContent()}
+                </div>
+              </div>
+            )}
+            {activeTab === 'saved' && (
+              <div className="flex-1 flex flex-col min-h-0 mt-4">
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  {renderSavedContent()}
+                </div>
+              </div>
+            )}
+            {/* Sticky Action Buttons */}
+            <div className="flex-shrink-0 border-t pt-4 space-y-3 mt-4">
+              {hasCartItems && (
+                <>
+                  {/* Total Display */}
+                  <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                    <span className="font-medium">Total ({selectedItems.length} items):</span>
+                    <span className="font-bold text-lg">{formattedSelectedTotal}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleCheckout} 
+                      disabled={isCheckingOut || !hasSelectedItems}
+                      className="flex-1"
+                    >
+                      {isCheckingOut ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          Checkout
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setIsOpen(false);
+                        window.location.href = '/cart';
+                      }}
+                      className="flex-1"
+                    >
+                      View Cart
+                    </Button>
+                  </div>
+                </>
+              )}
+              {!hasCartItems && hasSavedItems && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsOpen(false);
+                    window.location.href = '/cart';
+                  }}
+                  className="w-full"
                 >
-                  <X className="h-3 w-3" />
+                  View Cart
                 </Button>
               )}
             </div>
-
-            <div className="flex items-center gap-2">
-              <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-                <SelectTrigger className="flex-1" data-testid="cart-sort">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date-desc">Newest First</SelectItem>
-                  <SelectItem value="date-asc">Oldest First</SelectItem>
-                  <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                  <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                  <SelectItem value="name-asc">Name: A to Z</SelectItem>
-                  <SelectItem value="name-desc">Name: Z to A</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
+        </SheetContent>
+      </Sheet>
 
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-2 mx-4 mt-4">
-              <TabsTrigger value="cart" data-testid="cart-tab">
-                Cart ({cartItems.length})
-              </TabsTrigger>
-              <TabsTrigger value="saved" data-testid="saved-tab">
-                Saved ({savedItems.length})
-              </TabsTrigger>
-            </TabsList>
+      {/* Confirmation Dialogs */}
+      <ConfirmDialog
+        isOpen={showBulkSaveConfirm}
+        onClose={() => setShowBulkSaveConfirm(false)}
+        onConfirm={confirmBulkSaveForLater}
+        title="Save Items for Later"
+        description={`Are you sure you want to save ${getSelectedCartItems().length} item(s) for later?`}
+        confirmText="Save for Later"
+        cancelText="Keep in Cart"
+      />
 
-            <TabsContent value="cart" className="flex-1 flex flex-col mt-0">
-              {renderCartContent()}
-            </TabsContent>
+      <ConfirmDialog
+        isOpen={showBulkMoveConfirm}
+        onClose={() => setShowBulkMoveConfirm(false)}
+        onConfirm={confirmBulkMoveToCart}
+        title="Move Items to Cart"
+        description={`Are you sure you want to move ${getSelectedSavedItems().length} item(s) to your cart?`}
+        confirmText="Move to Cart"
+        cancelText="Keep Saved"
+      />
 
-            <TabsContent value="saved" className="flex-1 flex flex-col mt-0">
-              {renderSavedContent()}
-            </TabsContent>
-          </Tabs>
-
-          {/* Summary and Actions */}
-          {activeTab === "cart" && hasCartItems && (
-            <div className="border-t p-4 space-y-3">
-              <div className="flex justify-between items-center text-sm">
-                <span>Selected ({selectedCartItemCount}):</span>
-                <span className="font-medium" data-testid="cart-total">
-                  {formattedSelectedCartTotal}
-                </span>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleCheckout}
-                  disabled={!hasSelectedItems || isCheckingOut}
-                  className="flex-1"
-                  data-testid="checkout-button"
-                >
-                  {isCheckingOut ? (
-                    "Processing..."
-                  ) : (
-                    <>
-                      Checkout
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Confirmation Dialogs */}
-        <ConfirmDialog
-          open={showBulkSaveConfirm}
-          onOpenChange={setShowBulkSaveConfirm}
-          title="Save Selected Items"
-          description={`Are you sure you want to save ${getSelectedCartItems().length} items for later?`}
-          onConfirm={confirmBulkSaveForLater}
-        />
-
-        <ConfirmDialog
-          open={showBulkMoveConfirm}
-          onOpenChange={setShowBulkMoveConfirm}
-          title="Move Selected Items"
-          description={`Are you sure you want to move ${getSelectedSavedItems().length} items to cart?`}
-          onConfirm={confirmBulkMoveToCart}
-        />
-
-        <ConfirmDialog
-          open={showBulkDeleteConfirm}
-          onOpenChange={setShowBulkDeleteConfirm}
-          title="Delete Selected Items"
-          description={`Are you sure you want to permanently delete ${selectedItemCount} items? This action cannot be undone.`}
-          onConfirm={confirmBulkDelete}
-          variant="destructive"
-        />
-      </SheetContent>
-    </Sheet>
+      <ConfirmDialog
+        isOpen={showBulkDeleteConfirm}
+        onClose={() => setShowBulkDeleteConfirm(false)}
+        onConfirm={confirmBulkDelete}
+        title="Delete Items"
+        description={`Are you sure you want to delete ${selectedItems.length} selected item(s)? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+    </>
   );
 }; 
