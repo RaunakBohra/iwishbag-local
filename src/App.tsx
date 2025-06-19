@@ -45,7 +45,7 @@ import AdminDashboard from "@/pages/admin/Dashboard";
 import CartAnalyticsPage from "@/pages/admin/CartAnalytics";
 import CartRecoveryPage from "@/pages/admin/CartRecovery";
 import EmailTemplatesPage from "@/pages/admin/EmailTemplates";
-import { AccessibilityProvider, AccessibilityToolbar } from "@/components/ui/AccessibilityProvider";
+import { AccessibilityProvider } from "@/components/ui/AccessibilityProvider";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
 const router = createBrowserRouter([
@@ -241,7 +241,6 @@ function App() {
               <ErrorBoundary>
                 <RouterProvider router={router} />
               </ErrorBoundary>
-              <AccessibilityToolbar />
             </div>
             <Toaster />
           </AccessibilityProvider>
