@@ -6,6 +6,7 @@ import { Tables } from "@/integrations/supabase/types";
 import { useNavigate } from "react-router-dom";
 import { MultiCurrencyDisplay } from "./MultiCurrencyDisplay";
 import { useAdminCurrencyDisplay } from "@/hooks/useAdminCurrencyDisplay";
+import { useUserCurrency } from "@/hooks/useUserCurrency";
 
 type OrderWithItems = Tables<'quotes'> & { 
   quote_items: Tables<'quote_items'>[];
@@ -54,6 +55,7 @@ const getPriorityBadge = (priority: OrderWithItems['priority']) => {
 export const AdminOrderListItem = ({ order, isSelected, onSelect }: AdminOrderListItemProps) => {
     const navigate = useNavigate();
     const { formatMultiCurrency } = useAdminCurrencyDisplay();
+    const { formatAmount } = useUserCurrency();
     
     const firstItem = order.quote_items?.[0];
     const totalItems = order.quote_items?.length || 0;
@@ -95,11 +97,20 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect }: AdminOrderLi
                             <div>
                                 <div>
                                     <p className="text-sm mb-1">Order Total:</p>
-                                    {order.final_total ? (
-                                        <MultiCurrencyDisplay 
-                                            currencies={currencyDisplays}
-                                            compact={true}
-                                        />
+                                    {order.final_total_local || order.final_total ? (
+                                        <>
+                                            <span className="font-semibold text-base">
+                                                {formatAmount(order.final_total_local || order.final_total)}
+                                            </span>
+                                            {currencyDisplays.length > 0 && (
+                                                <div className="mt-1">
+                                                    <MultiCurrencyDisplay 
+                                                        currencies={currencyDisplays}
+                                                        compact={true}
+                                                    />
+                                                </div>
+                                            )}
+                                        </>
                                     ) : (
                                         <span className="text-sm text-muted-foreground">Not calculated</span>
                                     )}
