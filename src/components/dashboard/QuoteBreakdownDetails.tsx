@@ -33,6 +33,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { format } from "date-fns";
+import { motion } from "framer-motion";
 
 type Quote = Tables<'quotes'> & {
   profiles?: { preferred_display_currency?: string } | null;
@@ -112,16 +113,9 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
   };
 
   return (
-    <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-6 shadow-2xl">
-      <style>{`
-        @keyframes ripple-outline {
-          0% { transform: scale(1); opacity: 0.7; }
-          70% { transform: scale(1.3); opacity: 0.2; }
-          100% { transform: scale(1.5); opacity: 0; }
-        }
-      `}</style>
+    <div className="bg-card border border-border rounded-lg p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+        <div className="bg-muted border border-border rounded-lg p-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -130,7 +124,7 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      <Info className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                      <Info className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Total cost of all items in the quote</p>
@@ -138,7 +132,7 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <span className="text-lg font-semibold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              <span className="text-lg font-semibold text-foreground">
                 {formatAmount(quote.item_price || 0)}
               </span>
             </div>
@@ -149,7 +143,7 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      <Info className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                      <Info className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Total weight of all items in the quote</p>
@@ -157,34 +151,69 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <span className="text-lg font-semibold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              <span className="text-lg font-semibold text-foreground">
                 {`${totalWeight} ${countrySettings?.weight_unit || 'kg'}`}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col justify-center h-full">
+        <div className="bg-muted border border-border rounded-lg p-6 flex flex-col justify-center h-full">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Receipt className="h-4 w-4" />
               <span className="text-sm font-medium">Quote Total</span>
               <Dialog open={isBreakdownOpen} onOpenChange={setIsBreakdownOpen}>
                 <DialogTrigger asChild>
-                  <button className="relative flex items-center justify-center w-6 h-6 p-0" style={{ minWidth: 24, minHeight: 24 }}>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                    {/* Multi-ring ripple effect centered on the icon */}
-                      <span className="absolute rounded-full border border-primary/60" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s infinite' }} />
-                      <span className="absolute rounded-full border border-primary/60" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s 0.8s infinite' }} />
-                      <span className="absolute rounded-full border border-primary/60" style={{ width: 16, height: 16, animation: 'ripple-outline 2.5s 1.6s infinite' }} />
-                    </div>
-                    <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors relative z-10" />
-                  </button>
+                  <div className="relative flex items-center justify-center w-6 h-6 p-0" style={{ minWidth: 24, minHeight: 24 }}>
+                    <motion.div
+                      className="absolute w-4 h-4 rounded-full border border-emerald-500/70"
+                      initial={{ scale: 0.8, opacity: 0.8 }}
+                      animate={{
+                        scale: [0.8, 1.4],
+                        opacity: [0.8, 0]
+                      }}
+                      transition={{
+                        duration: 1.2,
+                        repeat: Infinity,
+                        ease: "easeOut"
+                      }}
+                    />
+                    <motion.div
+                      className="absolute w-4 h-4 rounded-full border border-emerald-500/60"
+                      initial={{ scale: 0.8, opacity: 0.6 }}
+                      animate={{
+                        scale: [0.8, 1.4],
+                        opacity: [0.6, 0]
+                      }}
+                      transition={{
+                        duration: 1.2,
+                        repeat: Infinity,
+                        ease: "easeOut",
+                        delay: 0.4
+                      }}
+                    />
+                    <motion.div
+                      className="absolute w-4 h-4 rounded-full border border-emerald-500/50"
+                      initial={{ scale: 0.8, opacity: 0.4 }}
+                      animate={{
+                        scale: [0.8, 1.4],
+                        opacity: [0.4, 0]
+                      }}
+                      transition={{
+                        duration: 1.2,
+                        repeat: Infinity,
+                        ease: "easeOut",
+                        delay: 0.8
+                      }}
+                    />
+                    <Info className="h-4 w-4 text-emerald-500 relative" />
+                  </div>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl w-[95vw] md:w-[90vw] backdrop-blur-xl bg-white/95 border border-white/30">
+                <DialogContent className="max-w-4xl w-[95vw] md:w-[90vw] bg-card border border-border">
                   <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                      <Receipt className="h-5 w-5 text-primary" />
+                    <DialogTitle className="flex items-center gap-2 text-foreground">
+                      <Receipt className="h-5 w-5" />
                       Quote Breakdown
                     </DialogTitle>
                   </DialogHeader>
@@ -192,14 +221,14 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold">Items</h3>
-                        <Button variant="outline" size="sm" className="gap-2 backdrop-blur-xl bg-white/20 border-white/30">
+                        <Button variant="outline" size="sm" className="gap-2 bg-white/20 border-white/30">
                           <Download className="h-4 w-4" />
                           Download PDF
                         </Button>
                       </div>
                       <div className="space-y-2">
                         {quote.quote_items?.map((item) => (
-                          <div key={item.id} className="flex justify-between items-center text-sm backdrop-blur-xl bg-white/20 border border-white/30 rounded-lg p-3">
+                          <div key={item.id} className="flex justify-between items-center text-sm bg-white/20 border border-white/30 rounded-lg p-3">
                             <div className="flex items-center gap-3">
                               {item.image_url && (
                                 <img 
@@ -237,10 +266,10 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                         {renderRow("Subtotal", quote.sub_total, false, <Receipt className="h-4 w-4" />)}
                         {renderRow("VAT", quote.vat, false, <Percent className="h-4 w-4" />)}
                       </div>
-                      <div className="backdrop-blur-xl bg-primary/10 border border-primary/20 rounded-lg p-4">
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
                         <div className="flex justify-between items-center font-semibold">
                           <span>Total Amount</span>
-                          <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{formatAmount(quote.final_total)}</span>
+                          <span className="text-foreground">{formatAmount(quote.final_total)}</span>
                         </div>
                       </div>
                     </div>
@@ -248,7 +277,7 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                 </DialogContent>
               </Dialog>
             </div>
-            <span className="text-lg font-semibold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            <span className="text-lg font-semibold text-foreground">
               {formatAmount(quote.final_total)}
             </span>
           </div>
