@@ -61,10 +61,11 @@ export class ProductAnalyzer {
   private apiKeys: Record<string, string> = {};
 
   private constructor() {
-    // Initialize API keys from environment
+    // Initialize API keys from environment variables
+    // Use import.meta.env for Vite, fallback to empty strings for browser
     this.apiKeys = {
-      scraperApi: process.env.SCRAPER_API_KEY || '',
-      proxyApi: process.env.PROXY_API_KEY || '',
+      scraperApi: import.meta.env?.VITE_SCRAPER_API_KEY || '',
+      proxyApi: import.meta.env?.VITE_PROXY_API_KEY || '',
       // Add other API keys as needed
     };
   }
@@ -197,7 +198,8 @@ export class ProductAnalyzer {
         }
       }
 
-      return { success: false, error: 'API analysis failed', source: 'api' };
+      // If no API key, fall back to manual analysis
+      return { success: false, error: 'No API key configured', source: 'api' };
     } catch (error) {
       return { success: false, error: 'API analysis failed', source: 'api' };
     }
@@ -209,33 +211,36 @@ export class ProductAnalyzer {
   private async scrapeProduct(url: string, platform: string): Promise<ScrapingResult> {
     try {
       // Use a headless browser service or proxy service
-      const response = await fetch('https://api.proxyapi.com/scrape', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKeys.proxyApi}`
-        },
-        body: JSON.stringify({
-          url: url,
-          render_js: true,
-          wait_for: '.product-info, .product-details'
-        })
-      });
+      if (this.apiKeys.proxyApi) {
+        const response = await fetch('https://api.proxyapi.com/scrape', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKeys.proxyApi}`
+          },
+          body: JSON.stringify({
+            url: url,
+            render_js: true,
+            wait_for: '.product-info, .product-details'
+          })
+        });
 
-      if (response.ok) {
-        const html = await response.text();
-        const data = this.parseHTML(html, platform);
-        
-        if (data) {
-          return {
-            success: true,
-            data,
-            source: 'scraping'
-          };
+        if (response.ok) {
+          const html = await response.text();
+          const data = this.parseHTML(html, platform);
+          
+          if (data) {
+            return {
+              success: true,
+              data,
+              source: 'scraping'
+            };
+          }
         }
       }
 
-      return { success: false, error: 'Scraping failed', source: 'scraping' };
+      // If no API key, fall back to manual analysis
+      return { success: false, error: 'No scraping API key configured', source: 'scraping' };
     } catch (error) {
       return { success: false, error: 'Scraping failed', source: 'scraping' };
     }
