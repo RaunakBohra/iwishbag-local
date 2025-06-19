@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { QuoteFormValues } from "@/components/forms/quote-form-validation";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
+import { useQuoteAutomation } from "@/hooks/useQuoteAutomation";
+import { useQuoteNotifications } from "@/hooks/useQuoteNotifications";
 
 interface UseQuoteSubmissionProps {
   form: UseFormReturn<QuoteFormValues>;
@@ -16,9 +17,12 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const { processNewQuote } = useQuoteAutomation();
+  const { sendConfirmationEmail } = useQuoteNotifications();
 
   const submitSeparateQuotes = async (values: QuoteFormValues, finalEmail: string) => {
     const { items, countryCode } = values;
+    const createdQuotes: string[] = [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -63,11 +67,24 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         });
         return false;
       }
+
+      createdQuotes.push(quote.id);
+    }
+
+    // Send confirmation emails and start processing for each quote
+    for (const quoteId of createdQuotes) {
+      try {
+        await sendConfirmationEmail(quoteId);
+        // Start automated processing
+        processNewQuote(quoteId);
+      } catch (error) {
+        console.error(`Error processing quote ${quoteId}:`, error);
+      }
     }
 
     toast({
       title: "Quotes Requested!",
-      description: `We've received your ${items.length} separate quote requests and will email them shortly.`,
+      description: `We've received your ${items.length} separate quote requests. You'll receive confirmation emails shortly, and your quotes will be ready within 24-48 hours.`,
     });
     return true;
   };
@@ -116,13 +133,22 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         variant: "destructive",
       });
       return false;
-    } else {
-      toast({
-        title: "Quote Requested!",
-        description: "We've received your request and will email your quote shortly.",
-      });
-      return true;
     }
+
+    // Send confirmation email and start processing
+    try {
+      await sendConfirmationEmail(quote.id);
+      // Start automated processing
+      processNewQuote(quote.id);
+    } catch (error) {
+      console.error("Error processing quote:", error);
+    }
+
+    toast({
+      title: "Quote Requested!",
+      description: "We've received your request and will email your confirmation shortly. Your quote will be ready within 24-48 hours.",
+    });
+    return true;
   };
 
   const onSubmit = async (values: QuoteFormValues) => {

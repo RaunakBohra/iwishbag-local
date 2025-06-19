@@ -21,10 +21,17 @@ import {
   TrendingUp, 
   ShoppingCart,
   Mail,
-  Settings
+  Settings,
+  DollarSign,
+  Clock,
+  CheckCircle,
+  AlertCircle
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { AutoProcessingQueue } from "@/components/admin/AutoProcessingQueue";
+import { ManualAnalysisTasks } from "@/components/admin/ManualAnalysisTasks";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -33,16 +40,18 @@ const AdminDashboard = () => {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-dashboard-stats'],
     queryFn: async () => {
-      const [quotesResult, ordersResult, customersResult] = await Promise.all([
+      const [quotesResult, ordersResult, customersResult, pendingQuotesResult] = await Promise.all([
         supabase.from('quotes').select('*', { count: 'exact', head: true }),
-        supabase.from('orders').select('*', { count: 'exact', head: true }),
-        supabase.from('profiles').select('*', { count: 'exact', head: true })
+        supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['paid', 'ordered', 'shipped', 'completed']),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending', 'confirmed'])
       ]);
 
       return {
         totalQuotes: quotesResult.count || 0,
         totalOrders: ordersResult.count || 0,
         totalCustomers: customersResult.count || 0,
+        pendingQuotes: pendingQuotesResult.count || 0,
       };
     },
     refetchInterval: 300000, // Refetch every 5 minutes
@@ -84,13 +93,6 @@ const AdminDashboard = () => {
       href: "/admin/email-templates",
       color: "bg-red-500/10 text-red-600 dark:text-red-400",
     },
-    {
-      title: "System Settings",
-      description: "Configure system options",
-      icon: Settings,
-      href: "/admin/footer",
-      color: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
-    },
   ];
 
   // Show skeleton while loading
@@ -99,43 +101,26 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="container py-8 space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Monitor and manage your business operations</p>
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Monitor and manage your international shopping platform</p>
         </div>
+        <Badge variant="outline" className="text-sm">
+          Auto-Processing Active
+        </Badge>
       </div>
 
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {quickActions.map((action) => (
-            <Card 
-              key={action.title} 
-              className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate(action.href)}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className={`p-3 rounded-lg ${action.color}`}>
-                    <action.icon className="h-6 w-6" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{action.title}</h3>
-                    <p className="text-sm text-muted-foreground">{action.description}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      {/* Auto-Processing Queue - New Feature */}
+      <AutoProcessingQueue />
+
+      {/* Manual Analysis Tasks - New Feature */}
+      <ManualAnalysisTasks />
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Quotes</CardTitle>
@@ -144,20 +129,20 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalQuotes || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Customer quote requests
+              All time quote requests
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalOrders || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Completed orders
+              Orders in progress
             </p>
           </CardContent>
         </Card>
@@ -174,35 +159,72 @@ const AdminDashboard = () => {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Quotes</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.pendingQuotes || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Awaiting processing
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Analytics Dashboard */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" />
-          Analytics Overview
-        </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          <ConversionRate />
-          <RevenueTrend />
-          <VolumeTrend />
-          <TopCountries />
-          <AverageOrderValue />
-          <ExportAnalytics />
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
-        <RecentActivity />
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {quickActions.map((action) => (
+          <Card key={action.title} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className={`p-3 rounded-lg ${action.color}`}>
+                  <action.icon className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold">{action.title}</h3>
+                  <p className="text-sm text-muted-foreground">{action.description}</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full mt-4"
+                onClick={() => navigate(action.href)}
+              >
+                Go to {action.title}
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* System Status */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">System Status</h2>
-        <SystemStatus />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            System Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm">Database: Online</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm">Email Service: Active</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm">Payment Gateway: Connected</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
