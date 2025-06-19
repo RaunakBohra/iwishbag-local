@@ -9,6 +9,7 @@ export const useCart = () => {
     selectedItems,
     isLoading,
     error,
+    isSyncing,
     addItem,
     removeItem,
     updateQuantity,
@@ -157,6 +158,7 @@ export const useCart = () => {
     selectedItems,
     isLoading,
     error,
+    isSyncing,
     
     // Calculations
     cartTotal,

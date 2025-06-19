@@ -77,12 +77,15 @@ export const CartDrawer = () => {
     hasCartItems,
     hasSavedItems,
     isAllSelected,
+    isAllCartSelected,
+    handleSelectAllCart,
+    isAllSavedSelected,
+    handleSelectAllSaved,
     removeItem,
     updateQuantity,
     moveToSaved,
     moveToCart,
     toggleSelection,
-    handleSelectAll,
     handleBulkDelete,
     handleBulkMoveToSaved,
     handleBulkMoveToCart,
@@ -105,6 +108,26 @@ export const CartDrawer = () => {
     memberDiscount: 0,
     seasonalDiscount: 0,
   });
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
+
+  // Reset auto-select state when drawer opens
+  useEffect(() => {
+    if (isOpen) setHasAutoSelected(false);
+  }, [isOpen]);
+
+  // Auto-select all cart items only once per drawer open
+  useEffect(() => {
+    if (
+      isOpen &&
+      cartItems &&
+      cartItems.length > 0 &&
+      selectedItemCount === 0 &&
+      !hasAutoSelected
+    ) {
+      setHasAutoSelected(true);
+      handleSelectAllCart();
+    }
+  }, [isOpen, cartItems, selectedItemCount, hasAutoSelected, handleSelectAllCart]);
 
   // Load cart data from server when drawer opens
   useEffect(() => {
@@ -318,6 +341,21 @@ export const CartDrawer = () => {
   };
 
   const handleCheckout = async () => {
+    // If no items are selected, auto-select all cart items
+    if (!hasSelectedItems && hasCartItems) {
+      console.log('CartDrawer: Auto-selecting all cart items for checkout');
+      cartItems.forEach(item => {
+        if (!selectedItems.includes(item.id)) {
+          toggleSelection(item.id);
+        }
+      });
+      // Wait a moment for state to update, then proceed
+      setTimeout(() => {
+        handleCheckout();
+      }, 100);
+      return;
+    }
+
     if (!hasSelectedItems) {
       toast({
         title: "No items selected",
@@ -329,8 +367,25 @@ export const CartDrawer = () => {
 
     setIsCheckingOut(true);
     try {
-      // Navigate to checkout page
-      window.location.href = '/checkout';
+      // Get selected cart items (not saved items)
+      const selectedCartItems = cartItems.filter(item => selectedItems.includes(item.id));
+      
+      if (selectedCartItems.length === 0) {
+        toast({
+          title: "No cart items selected",
+          description: "Please select items from your cart to checkout.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create URL with selected quote IDs
+      const quoteIds = selectedCartItems.map(item => item.quoteId).join(',');
+      const checkoutUrl = `/checkout?quotes=${quoteIds}`;
+      
+      // Close the drawer and navigate to checkout
+      setIsOpen(false);
+      window.location.href = checkoutUrl;
     } catch (error) {
       toast({
         title: "Error",
@@ -367,12 +422,13 @@ export const CartDrawer = () => {
 
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        {/* Bulk Actions Header */}
+        <div className="flex items-center justify-between sticky top-0 bg-background z-10 py-2">
           <div className="flex items-center gap-2">
             <Checkbox
               id="select-all"
               checked={selectedItems.length === cartItems.length}
-              onCheckedChange={handleSelectAll}
+              onCheckedChange={handleSelectAllCart}
             />
             <label htmlFor="select-all" className="text-sm font-medium">
               Select All ({selectedItems.length})
@@ -400,9 +456,10 @@ export const CartDrawer = () => {
           )}
         </div>
 
-        <ScrollArea className="flex-1 py-4">
+        {/* Cart Items List */}
+        <div className="space-y-3">
           {sortedCartItems.map((item) => (
-            <div key={item.id} className="flex items-start gap-2 p-2">
+            <div key={item.id} className="flex items-start gap-2 p-2 border rounded-lg">
               <Checkbox
                 id={`select-${item.id}`}
                 checked={selectedItems.includes(item.id)}
@@ -466,7 +523,7 @@ export const CartDrawer = () => {
               </div>
             </div>
           ))}
-        </ScrollArea>
+        </div>
       </div>
     );
   };
@@ -488,12 +545,13 @@ export const CartDrawer = () => {
 
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        {/* Bulk Actions Header */}
+        <div className="flex items-center justify-between sticky top-0 bg-background z-10 py-2">
           <div className="flex items-center gap-2">
             <Checkbox
               id="select-all-saved"
               checked={selectedItems.length === savedItems.length}
-              onCheckedChange={handleSelectAll}
+              onCheckedChange={handleSelectAllSaved}
             />
             <label htmlFor="select-all-saved" className="text-sm font-medium">
               Select All ({selectedItems.length})
@@ -521,9 +579,10 @@ export const CartDrawer = () => {
           )}
         </div>
 
-        <ScrollArea className="h-[calc(100vh-16rem)]">
+        {/* Saved Items List */}
+        <div className="space-y-3">
           {sortedSavedItems.map((item) => (
-            <div key={item.id} className="flex items-start gap-2 p-2">
+            <div key={item.id} className="flex items-start gap-2 p-2 border rounded-lg">
               <Checkbox
                 id={`select-saved-${item.id}`}
                 checked={selectedItems.includes(item.id)}
@@ -587,7 +646,7 @@ export const CartDrawer = () => {
               </div>
             </div>
           ))}
-        </ScrollArea>
+        </div>
       </div>
     );
   };
@@ -688,9 +747,7 @@ export const CartDrawer = () => {
           <Button variant="ghost" size="icon" className="relative">
             <ShoppingCart className="h-5 w-5" />
             {cartItems && cartItems.length > 0 && (
-              <div
-                className="absolute -top-1 -right-1"
-              >
+              <div className="absolute -top-1 -right-1">
                 <Badge variant="destructive" className="h-5 w-5 justify-center p-0 rounded-full text-xs">
                   {cartItems.length}
                 </Badge>
@@ -699,27 +756,103 @@ export const CartDrawer = () => {
             <span className="sr-only">Cart</span>
           </Button>
         </SheetTrigger>
-        <SheetContent className="w-full sm:max-w-lg">
-          <SheetHeader className="space-y-2.5">
+        <SheetContent className="w-full sm:max-w-lg flex flex-col h-full">
+          <SheetHeader className="space-y-2.5 flex-shrink-0">
             <SheetTitle>Shopping Cart</SheetTitle>
           </SheetHeader>
-          
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="cart">
-                Cart ({cartItems?.length || 0})
-              </TabsTrigger>
-              <TabsTrigger value="saved">
-                Saved ({savedItems?.length || 0})
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="cart" className="mt-4">
-              {renderCartContent()}
-            </TabsContent>
-            <TabsContent value="saved" className="mt-4">
-              {renderSavedContent()}
-            </TabsContent>
-          </Tabs>
+          <div className="flex-1 flex flex-col min-h-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-shrink-0">
+              <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+                <TabsTrigger value="cart">
+                  Cart ({cartItems?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="saved">
+                  Saved ({savedItems?.length || 0})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {activeTab === 'cart' && (
+              <div className="flex-1 flex flex-col min-h-0 mt-4">
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  {renderCartContent()}
+                </div>
+              </div>
+            )}
+            {activeTab === 'saved' && (
+              <div className="flex-1 flex flex-col min-h-0 mt-4">
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  {renderSavedContent()}
+                </div>
+              </div>
+            )}
+            {/* Analytics Section - Always visible */}
+            <div className="flex-shrink-0 border-t pt-4 mt-4">
+              {renderAnalytics()}
+            </div>
+            {/* Sticky Action Buttons */}
+            <div className="flex-shrink-0 border-t pt-4 space-y-3 mt-4">
+              {hasCartItems && (
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleCheckout} 
+                    disabled={isCheckingOut || !hasSelectedItems}
+                    className="flex-1"
+                  >
+                    {isCheckingOut ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Checkout
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsOpen(false);
+                      window.location.href = '/cart';
+                    }}
+                    className="flex-1"
+                  >
+                    View Cart
+                  </Button>
+                </div>
+              )}
+              {!hasCartItems && hasSavedItems && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsOpen(false);
+                    window.location.href = '/cart';
+                  }}
+                  className="w-full"
+                >
+                  View Cart
+                </Button>
+              )}
+              {!hasCartItems && !hasSavedItems && (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Your cart is empty
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsOpen(false);
+                      window.location.href = '/quote';
+                    }}
+                    className="w-full"
+                  >
+                    Browse Quotes
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
         </SheetContent>
       </Sheet>
 

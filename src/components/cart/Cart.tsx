@@ -109,6 +109,22 @@ export const Cart = () => {
     }
   }, [cartItems, selectedItems, selectedItemCount, toggleSelection]);
 
+  // Auto-select new items when they're added to cart
+  useEffect(() => {
+    if (cartItems && cartItems.length > 0) {
+      // Find items that aren't selected yet
+      const unselectedItems = cartItems.filter(item => !selectedItems.includes(item.id));
+      
+      // Auto-select new items (items that aren't selected)
+      if (unselectedItems.length > 0) {
+        console.log('Cart component: Auto-selecting new items:', unselectedItems.length);
+        unselectedItems.forEach(item => {
+          toggleSelection(item.id);
+        });
+      }
+    }
+  }, [cartItems, selectedItems, toggleSelection]);
+
   // Debug effect to log cart state changes
   useEffect(() => {
     console.log('Cart state updated:', {
@@ -231,6 +247,21 @@ export const Cart = () => {
   };
 
   const handleCheckout = async () => {
+    // If no items are selected, auto-select all cart items
+    if (!hasSelectedItems && hasCartItems) {
+      console.log('Cart: Auto-selecting all cart items for checkout');
+      cartItems.forEach(item => {
+        if (!selectedItems.includes(item.id)) {
+          toggleSelection(item.id);
+        }
+      });
+      // Wait a moment for state to update, then proceed
+      setTimeout(() => {
+        handleCheckout();
+      }, 100);
+      return;
+    }
+
     if (!hasSelectedItems) {
       toast({
         title: "No items selected",
