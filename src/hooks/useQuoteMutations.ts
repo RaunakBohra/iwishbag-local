@@ -99,20 +99,20 @@ export const useQuoteMutations = (id: string | undefined) => {
             const accessToken = await getAccessToken();
 
             if (accessToken) {
-                // Send email using the edge function
-                const { error: emailError } = await supabase.functions.invoke('send-email', {
-                    body: {
-                        to: quote.email,
-                        subject: emailSubject,
-                        html: emailHtml,
-                        from: 'WishBag <quotes@resend.dev>'
+            // Send email using the edge function
+            const { error: emailError } = await supabase.functions.invoke('send-email', {
+                body: {
+                    to: quote.email,
+                    subject: emailSubject,
+                    html: emailHtml,
+                    from: 'WishBag <quotes@resend.dev>'
                     },
                     headers: { Authorization: `Bearer ${accessToken}` }
-                });
+            });
 
-                if (emailError) {
-                    console.error('Email sending error:', emailError);
-                    throw new Error(`Failed to send email: ${emailError.message}`);
+            if (emailError) {
+                console.error('Email sending error:', emailError);
+                throw new Error(`Failed to send email: ${emailError.message}`);
                 }
             } else {
                 console.warn('No access token available, skipping email send');

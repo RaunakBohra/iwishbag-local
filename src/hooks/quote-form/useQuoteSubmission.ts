@@ -146,11 +146,11 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       console.error("Error processing quote:", error);
     }
 
-    toast({
-      title: "Quote Requested!",
+      toast({
+        title: "Quote Requested!",
       description: "We've received your request and will email your confirmation shortly. Your quote will be ready within 24-48 hours.",
-    });
-    return true;
+      });
+      return true;
   };
 
   const onSubmit = async (values: QuoteFormValues) => {

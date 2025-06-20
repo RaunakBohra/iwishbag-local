@@ -34,17 +34,17 @@ export const useEmailNotifications = () => {
       const accessToken = await getAccessToken();
       
       if (accessToken) {
-        const { error } = await supabase.functions.invoke('send-email', {
-          body: {
-            to,
-            template,
-            data,
-            from: from || 'WishBag <noreply@resend.dev>'
+      const { error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to,
+          template,
+          data,
+          from: from || 'WishBag <noreply@resend.dev>'
           },
           headers: { Authorization: `Bearer ${accessToken}` }
-        });
+      });
 
-        if (error) throw error;
+      if (error) throw error;
       } else {
         console.warn('No access token available, skipping email send');
         // You might want to throw an error here or handle it differently

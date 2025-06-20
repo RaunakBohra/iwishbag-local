@@ -135,7 +135,7 @@ const Quote = () => {
             </Card>
 
             <Card className="border-2 border-primary/10 bg-primary/5">
-              <CardHeader className="text-center">
+          <CardHeader className="text-center">
                 <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
@@ -163,8 +163,8 @@ const Quote = () => {
               <p className="text-blue-700">
                 Test our smart analysis with these Amazon products:
               </p>
-            </CardHeader>
-            <CardContent>
+          </CardHeader>
+          <CardContent>
               <div className="space-y-3">
                 <div className="text-sm text-blue-700">
                   <div className="font-medium mb-2">🇺🇸 Amazon US:</div>
@@ -246,9 +246,9 @@ const Quote = () => {
               </div>
             </CardHeader>
             <CardContent className="px-6 md:px-8 pb-8">
-              <QuoteForm />
-            </CardContent>
-          </Card>
+            <QuoteForm />
+          </CardContent>
+        </Card>
         </div>
       </div>
 

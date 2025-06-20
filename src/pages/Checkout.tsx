@@ -36,6 +36,10 @@ import { Tables } from "@/integrations/supabase/types";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
 import { useCart } from "@/hooks/useCart";
+import { usePaymentGateways } from "@/hooks/usePaymentGateways";
+import { PaymentMethodSelector } from "@/components/payment/PaymentMethodSelector";
+import { QRPaymentModal } from "@/components/payment/QRPaymentModal";
+import { PaymentGateway, PaymentRequest } from "@/types/payment";
 import { cn } from "@/lib/utils";
 
 type QuoteType = Tables<'quotes'>;
@@ -69,12 +73,31 @@ export default function Checkout() {
     getSelectedCartItems 
   } = useCart();
   
+  // Payment gateway hook
+  const {
+    availableMethods,
+    methodsLoading,
+    getRecommendedPaymentMethod,
+    createPayment,
+    createPaymentAsync,
+    isCreatingPayment,
+    validatePaymentRequest,
+    isMobileOnlyPayment,
+    requiresQRCode
+  } = usePaymentGateways();
+  
   // State
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
   const [selectedAddress, setSelectedAddress] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("stripe");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentGateway>('stripe');
   const [showAddressForm, setShowAddressForm] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrPaymentData, setQrPaymentData] = useState<{
+    qrCodeUrl: string;
+    transactionId: string;
+    gateway: PaymentGateway;
+  } | null>(null);
   const [addressFormData, setAddressFormData] = useState<AddressFormData>({
     address_line1: '',
     address_line2: '',
@@ -95,6 +118,14 @@ export default function Checkout() {
   const selectedCartItems = cartItems.filter(item => 
     selectedQuoteIds.includes(item.quoteId)
   );
+
+  // Set recommended payment method when available methods load
+  useEffect(() => {
+    if (availableMethods && availableMethods.length > 0) {
+      const recommended = getRecommendedPaymentMethod();
+      setPaymentMethod(recommended);
+    }
+  }, [availableMethods, getRecommendedPaymentMethod]);
 
   // Queries
   const { data: addresses, isLoading: addressesLoading } = useQuery({
@@ -209,40 +240,91 @@ export default function Checkout() {
     addAddressMutation.mutate(addressFormData);
   };
 
-  const handleStripePayment = async () => {
-    setIsProcessing(true);
-    try {
-      const orderId = selectedQuoteIds[0];
-      const res = await fetch(
-        `${window.location.origin.replace(/^http/, 'https')}/functions/v1/create-payment`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem('sb-access-token')}`,
-          },
-          body: JSON.stringify({
-            quoteIds: selectedQuoteIds,
-            currency: selectedCartItems[0]?.currency || 'USD',
-            amount: totalAmount,
-            success_url: `${window.location.origin}/order-confirmation/${orderId}?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${window.location.origin}/checkout`,
-          }),
-        }
-      );
+  const handlePaymentMethodChange = (method: PaymentGateway) => {
+    setPaymentMethod(method);
+  };
 
-      const data = await res.json();
-      if (res.ok && data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error(data.error || "Failed to create payment session.");
+  const handlePaymentSuccess = (data: any) => {
+    if (data.qr_code) {
+      // Show QR modal for mobile payments
+      setQrPaymentData({
+        qrCodeUrl: data.qr_code,
+        transactionId: data.transaction_id,
+        gateway: paymentMethod
+      });
+      setShowQRModal(true);
+    } else if (data.url) {
+      // Redirect to payment gateway
+      window.location.href = data.url;
+    }
+  };
+
+  const handleQRPaymentComplete = () => {
+    setShowQRModal(false);
+    setQrPaymentData(null);
+    // Navigate to order confirmation
+    const orderId = selectedQuoteIds[0];
+    navigate(`/order-confirmation/${orderId}`);
+  };
+
+  const handleQRPaymentFailed = () => {
+    setShowQRModal(false);
+    setQrPaymentData(null);
+    toast({
+      title: "Payment Failed",
+      description: "The payment was not completed. Please try again.",
+      variant: "destructive"
+    });
+  };
+
+  const handleCreatePayment = async () => {
+    if (!selectedAddress) {
+      toast({
+        title: "Address Required",
+        description: "Please select a shipping address to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Validate payment request
+      const paymentRequest: PaymentRequest = {
+        quoteIds: selectedQuoteIds,
+        currency: userProfile?.preferred_display_currency || 'USD',
+        amount: totalAmount,
+        gateway: paymentMethod,
+        success_url: `${window.location.origin}/order-confirmation/${selectedQuoteIds[0]}?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${window.location.origin}/checkout`,
+        metadata: {
+          user_id: user?.id,
+          address_id: selectedAddress
+        }
+      };
+
+      const validation = validatePaymentRequest(paymentRequest);
+      if (!validation.isValid) {
+        toast({
+          title: "Payment Error",
+          description: validation.errors.join(', '),
+          variant: "destructive"
+        });
+        return;
       }
+
+      // Create payment
+      const response = await createPaymentAsync(paymentRequest);
+      handlePaymentSuccess(response);
+
     } catch (error: any) {
       toast({
         title: "Payment Error",
-        description: error.message,
-        variant: "destructive",
+        description: error.message || "Failed to create payment",
+        variant: "destructive"
       });
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -260,15 +342,14 @@ export default function Checkout() {
     setIsProcessing(true);
     const quoteIds = selectedCartItems.map(item => item.quoteId);
 
-    if (paymentMethod === 'stripe') {
-      await handleStripePayment();
-    } else if (paymentMethod === 'cod') {
+    // Handle different payment methods
+    if (paymentMethod === 'cod') {
       updateQuotesMutation.mutate({ ids: quoteIds, status: 'cod_pending', method: 'cod' });
     } else if (paymentMethod === 'bank_transfer') {
       updateQuotesMutation.mutate({ ids: quoteIds, status: 'bank_transfer_pending', method: 'bank_transfer' });
     } else {
-      toast({ title: "Invalid payment method", variant: "destructive" });
-      setIsProcessing(false);
+      // Handle online payments
+      await handleCreatePayment();
     }
   };
 
@@ -536,61 +617,14 @@ export default function Checkout() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-4">
-                      <Label htmlFor="stripe" className="flex items-start space-x-3 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer">
-                        <RadioGroupItem value="stripe" id="stripe" className="mt-1" />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <CreditCard className="h-4 w-4" />
-                            <span className="font-medium">Pay with Card</span>
-                            <Badge variant="outline" className="text-xs">Recommended</Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2">Secure payment via Stripe. All major cards accepted.</p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Shield className="h-3 w-3" />
-                              <span>Secure</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Lock className="h-3 w-3" />
-                              <span>Encrypted</span>
-                            </div>
-                          </div>
-                        </div>
-                      </Label>
-                      
-                      {allowCod && (
-                        <Label htmlFor="cod" className="flex items-start space-x-3 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer">
-                          <RadioGroupItem value="cod" id="cod" className="mt-1" />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Banknote className="h-4 w-4" />
-                              <span className="font-medium">Cash on Delivery</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-2">Pay in cash when your order arrives.</p>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              <span>Pay upon delivery</span>
-                            </div>
-                          </div>
-                        </Label>
-                      )}
-                      
-                      <Label htmlFor="bank_transfer" className="flex items-start space-x-3 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer">
-                        <RadioGroupItem value="bank_transfer" id="bank_transfer" className="mt-1" />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Landmark className="h-4 w-4" />
-                            <span className="font-medium">Bank Transfer</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2">Pay via bank transfer. Details will be provided after order placement.</p>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Truck className="h-3 w-3" />
-                            <span>Manual processing</span>
-                          </div>
-                        </div>
-                      </Label>
-                    </RadioGroup>
+                    <PaymentMethodSelector
+                      selectedMethod={paymentMethod}
+                      onMethodChange={handlePaymentMethodChange}
+                      amount={totalAmount}
+                      currency={userProfile?.preferred_display_currency || 'USD'}
+                      showRecommended={true}
+                      disabled={isProcessing}
+                    />
                   </CardContent>
                 </Card>
               )}
@@ -628,10 +662,20 @@ export default function Checkout() {
                       <div className="p-3 border rounded-lg bg-gray-50">
                         <div className="flex items-center gap-2">
                           {paymentMethod === 'stripe' && <CreditCard className="h-4 w-4" />}
+                          {paymentMethod === 'payu' && <CreditCard className="h-4 w-4" />}
+                          {paymentMethod === 'esewa' && <Banknote className="h-4 w-4" />}
+                          {paymentMethod === 'khalti' && <Banknote className="h-4 w-4" />}
+                          {paymentMethod === 'fonepay' && <Banknote className="h-4 w-4" />}
+                          {paymentMethod === 'airwallex' && <CreditCard className="h-4 w-4" />}
                           {paymentMethod === 'cod' && <Banknote className="h-4 w-4" />}
                           {paymentMethod === 'bank_transfer' && <Landmark className="h-4 w-4" />}
                           <span className="font-medium">
-                            {paymentMethod === 'stripe' && 'Pay with Card'}
+                            {paymentMethod === 'stripe' && 'Credit Card (Stripe)'}
+                            {paymentMethod === 'payu' && 'PayU'}
+                            {paymentMethod === 'esewa' && 'eSewa'}
+                            {paymentMethod === 'khalti' && 'Khalti'}
+                            {paymentMethod === 'fonepay' && 'Fonepay'}
+                            {paymentMethod === 'airwallex' && 'Airwallex'}
                             {paymentMethod === 'cod' && 'Cash on Delivery'}
                             {paymentMethod === 'bank_transfer' && 'Bank Transfer'}
                           </span>
@@ -750,6 +794,21 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      {/* QR Payment Modal */}
+      {qrPaymentData && (
+        <QRPaymentModal
+          isOpen={showQRModal}
+          onClose={() => setShowQRModal(false)}
+          gateway={qrPaymentData.gateway}
+          qrCodeUrl={qrPaymentData.qrCodeUrl}
+          amount={totalAmount}
+          currency={userProfile?.preferred_display_currency || 'USD'}
+          transactionId={qrPaymentData.transactionId}
+          onPaymentComplete={handleQRPaymentComplete}
+          onPaymentFailed={handleQRPaymentFailed}
+        />
+      )}
     </div>
   );
 }

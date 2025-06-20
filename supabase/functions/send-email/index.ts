@@ -490,9 +490,9 @@ const templates: Record<EmailTemplate, (data: Record<string, any>) => { subject:
         <h2>New Contact Form Submission</h2>
         <p><strong>Name:</strong> ${data.name}</p>
         <p><strong>Email:</strong> ${data.email}</p>
-        <p><strong>Subject:</strong> ${data.subject}</p>
+          <p><strong>Subject:</strong> ${data.subject}</p>
         <p><strong>Message:</strong></p>
-        <p>${data.message}</p>
+          <p>${data.message}</p>
       </div>
     `
   }),
@@ -555,25 +555,25 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Sending ${template} email to: ${to}`);
 
     try {
-      const emailResponse = await resend.emails.send({
-        from,
-        to: [to],
-        subject,
-        html,
-      });
+    const emailResponse = await resend.emails.send({
+      from,
+      to: [to],
+      subject,
+      html,
+    });
 
-      console.log("Email sent successfully:", emailResponse);
+    console.log("Email sent successfully:", emailResponse);
 
-      return new Response(JSON.stringify({ 
-        success: true, 
-        messageId: emailResponse.data?.id 
-      }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders,
-        },
-      });
+    return new Response(JSON.stringify({ 
+      success: true, 
+      messageId: emailResponse.data?.id 
+    }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders,
+      },
+    });
     } catch (emailError: any) {
       console.error("Resend API error:", emailError);
       return new Response(

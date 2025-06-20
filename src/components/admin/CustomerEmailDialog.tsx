@@ -47,13 +47,15 @@ export const CustomerEmailDialog = ({ customerEmail, customerName }: CustomerEma
     setIsSending(true);
     try {
       const accessToken = await getAccessToken();
+      
+      if (accessToken) {
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
           recipientEmail: customerEmail,
           subject: subject.trim(),
           content: content.trim(),
-        },
-        headers: { Authorization: `Bearer ${accessToken}` }
+          },
+          headers: { Authorization: `Bearer ${accessToken}` }
       });
 
       if (error) throw error;
@@ -67,6 +69,13 @@ export const CustomerEmailDialog = ({ customerEmail, customerName }: CustomerEma
       setSubject("");
       setContent("");
       setIsOpen(false);
+      } else {
+        toast({
+          title: "Authentication Error",
+          description: "You must be logged in to send emails.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Error sending email:', error);
       toast({

@@ -60,7 +60,7 @@ const QuoteForm = () => {
                 <CheckCircle className="h-4 w-4" />
                 <span>Perfect! We'll deliver to {countryCode}</span>
               </div>
-            )}
+        )}
           </CardContent>
         </Card>
 
@@ -133,9 +133,9 @@ const QuoteForm = () => {
             {fields.map((field, index) => (
               <div key={field.id}>
                 <QuoteItem 
-                  index={index}
-                  remove={remove}
-                  control={form.control}
+                    index={index}
+                    remove={remove}
+                    control={form.control}
                   setValue={form.setValue}
                 />
                 {index < fields.length - 1 && (
@@ -143,16 +143,16 @@ const QuoteForm = () => {
                 )}
               </div>
             ))}
-            
-            <Button
-              type="button"
+        
+        <Button
+          type="button"
               variant="outline"
-              onClick={() => append()}
+          onClick={() => append()}
               className="w-full h-12 border-dashed border-2 hover:border-primary/50 transition-colors"
-            >
-              <Plus className="h-4 w-4 mr-2" />
+        >
+          <Plus className="h-4 w-4 mr-2" />
               Add Another Product
-            </Button>
+        </Button>
           </CardContent>
         </Card>
 
@@ -194,7 +194,7 @@ const QuoteForm = () => {
                 <ArrowRight className="h-5 w-5 ml-2" />
               </>
             )}
-          </Button>
+        </Button>
           <p className="text-sm text-muted-foreground">
             You'll receive your shopping quote within 24 hours
           </p>

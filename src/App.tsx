@@ -45,6 +45,7 @@ import AdminDashboard from "@/pages/admin/Dashboard";
 import CartAnalyticsPage from "@/pages/admin/CartAnalytics";
 import CartRecoveryPage from "@/pages/admin/CartRecovery";
 import EmailTemplatesPage from "@/pages/admin/EmailTemplates";
+import PaymentManagement from "@/pages/admin/PaymentManagement";
 import { AccessibilityProvider } from "@/components/ui/AccessibilityProvider";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ProductAnalyzerTest } from "@/pages/ProductAnalyzerTest";
@@ -133,6 +134,10 @@ const router = createBrowserRouter([
           {
             path: "home-page-settings",
             element: <HomePageSettings />,
+          },
+          {
+            path: "payment-management",
+            element: <PaymentManagement />,
           },
           {
             path: "*",

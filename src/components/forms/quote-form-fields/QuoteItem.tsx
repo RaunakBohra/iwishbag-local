@@ -52,7 +52,7 @@ const QuoteItem = ({ index, remove, control, setValue }: QuoteItemProps) => {
                 <h4 className="font-medium text-sm">Product Image</h4>
                 <Badge variant="secondary" className="text-xs">Optional</Badge>
               </div>
-              <ProductImageField control={control} index={index} />
+          <ProductImageField control={control} index={index} />
             </div>
           </div>
           

@@ -192,9 +192,9 @@ const Header = () => {
         <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4 min-w-0">
           {/* Admin Search - only show in admin area */}
           {isAdminArea && (
-            <div className="hidden sm:block">
-              <AdminSearch />
-            </div>
+              <div className="hidden sm:block">
+                <AdminSearch />
+              </div>
           )}
           
           {user ? (
@@ -203,7 +203,7 @@ const Header = () => {
               <div className="hidden sm:flex items-center space-x-1 md:space-x-2 lg:space-x-3">
                 {/* Cart with enhanced styling */}
                 <div className="relative">
-                  <CartDrawer />
+              <CartDrawer />
                 </div>
 
                 {/* Notifications with improved badge */}
@@ -213,17 +213,17 @@ const Header = () => {
                   className="relative hover:bg-accent flex-shrink-0 h-9 w-9 transition-colors" 
                   onClick={() => navigate('/notifications')}
                 >
-                  <Bell className="h-4 w-4" />
-                  {unreadNotificationsCount && unreadNotificationsCount > 0 && (
+                <Bell className="h-4 w-4" />
+                {unreadNotificationsCount && unreadNotificationsCount > 0 && (
                     <Badge 
                       variant="destructive" 
                       className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs font-medium animate-pulse"
                     >
                       {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
-                    </Badge>
-                  )}
-                </Button>
-
+                  </Badge>
+                )}
+              </Button>
+              
                 {/* Messages with improved badge */}
                 <Button 
                   variant="ghost" 
@@ -249,11 +249,11 @@ const Header = () => {
                     size="icon" 
                     className="hover:bg-accent flex-shrink-0 h-9 w-9 transition-colors"
                     onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  >
-                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                  </Button>
-                )}
-
+                >
+                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </Button>
+              )}
+              
                 {/* Separator */}
                 <div className="h-6 w-px bg-border mx-1 md:mx-2 lg:mx-3" />
               </div>
@@ -375,8 +375,8 @@ const Header = () => {
 
               {/* Desktop User Menu - Enhanced with better styling */}
               <div className="hidden sm:block">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                     <Button 
                       variant="ghost" 
                       className="px-2 md:px-3 py-2 text-left hover:bg-accent min-w-0 h-9 rounded-md transition-colors"
@@ -392,11 +392,11 @@ const Header = () => {
                           </span>
                         </div>
                       </div>
-                    </Button>
-                  </DropdownMenuTrigger>
+                  </Button>
+                </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-60 md:w-64 p-2">
                     <DropdownMenuLabel className="font-semibold">My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
+                  <DropdownMenuSeparator />
                     <DropdownMenuItem asChild className="cursor-pointer rounded-md">
                       <Link to="/dashboard" className="flex items-center w-full">
                         <LayoutDashboard className="mr-3 h-4 w-4" />
@@ -413,8 +413,8 @@ const Header = () => {
                           <span className="font-medium">Profile Settings</span>
                           <span className="text-xs text-muted-foreground">Manage your account</span>
                         </div>
-                      </Link>
-                    </DropdownMenuItem>
+                    </Link>
+                  </DropdownMenuItem>
                     {hasAdminRole && (
                       <>
                         <DropdownMenuSeparator />
@@ -425,11 +425,11 @@ const Header = () => {
                               <span className="font-medium">Admin Dashboard</span>
                               <span className="text-xs text-muted-foreground">Manage the platform</span>
                             </div>
-                          </Link>
-                        </DropdownMenuItem>
+                    </Link>
+                  </DropdownMenuItem>
                       </>
                     )}
-                    <DropdownMenuSeparator />
+                  <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={handleSignOut} 
                       className="cursor-pointer rounded-md text-destructive focus:text-destructive"
@@ -439,9 +439,9 @@ const Header = () => {
                         <span className="font-medium">Sign Out</span>
                         <span className="text-xs text-muted-foreground">End your session</span>
                       </div>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               </div>
             </div>
           ) : (

@@ -25,7 +25,8 @@ import {
   DollarSign,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  CreditCard
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,11 +41,12 @@ const AdminDashboard = () => {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-dashboard-stats'],
     queryFn: async () => {
-      const [quotesResult, ordersResult, customersResult, pendingQuotesResult] = await Promise.all([
+      const [quotesResult, ordersResult, customersResult, pendingQuotesResult, paymentResult] = await Promise.all([
         supabase.from('quotes').select('*', { count: 'exact', head: true }),
         supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['paid', 'ordered', 'shipped', 'completed']),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending', 'confirmed'])
+        supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending', 'confirmed']),
+        supabase.from('payment_transactions').select('*', { count: 'exact', head: true }).eq('status', 'completed')
       ]);
 
       return {
@@ -52,6 +54,7 @@ const AdminDashboard = () => {
         totalOrders: ordersResult.count || 0,
         totalCustomers: customersResult.count || 0,
         pendingQuotes: pendingQuotesResult.count || 0,
+        totalPayments: paymentResult.count || 0,
       };
     },
     refetchInterval: 300000, // Refetch every 5 minutes
@@ -92,6 +95,13 @@ const AdminDashboard = () => {
       icon: Mail,
       href: "/admin/email-templates",
       color: "bg-red-500/10 text-red-600 dark:text-red-400",
+    },
+    {
+      title: "Payment Management",
+      description: "Manage payment transactions",
+      icon: CreditCard,
+      href: "/admin/payment-management",
+      color: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
     },
   ];
 
@@ -162,13 +172,13 @@ const AdminDashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Quotes</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Completed Payments</CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.pendingQuotes || 0}</div>
+            <div className="text-2xl font-bold">{stats?.totalPayments || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Awaiting processing
+              Successful transactions
             </p>
           </CardContent>
         </Card>
@@ -186,8 +196,8 @@ const AdminDashboard = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold">{action.title}</h3>
                   <p className="text-sm text-muted-foreground">{action.description}</p>
-                </div>
-              </div>
+        </div>
+      </div>
               <Button
                 variant="outline"
                 className="w-full mt-4"
@@ -222,7 +232,7 @@ const AdminDashboard = () => {
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <span className="text-sm">Payment Gateway: Connected</span>
             </div>
-          </div>
+      </div>
         </CardContent>
       </Card>
     </div>

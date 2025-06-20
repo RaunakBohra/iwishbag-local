@@ -1,0 +1,267 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { 
+  CreditCard, 
+  Smartphone, 
+  Globe, 
+  Landmark, 
+  Banknote, 
+  Shield, 
+  Clock, 
+  AlertTriangle,
+  CheckCircle,
+  QrCode,
+  ExternalLink
+} from 'lucide-react';
+import { usePaymentGateways } from '@/hooks/usePaymentGateways';
+import { PaymentGateway, PaymentMethodDisplay } from '@/types/payment';
+import { cn } from '@/lib/utils';
+
+interface PaymentMethodSelectorProps {
+  selectedMethod: PaymentGateway;
+  onMethodChange: (method: PaymentGateway) => void;
+  amount: number;
+  currency: string;
+  showRecommended?: boolean;
+  disabled?: boolean;
+}
+
+const getIcon = (iconName: string) => {
+  switch (iconName) {
+    case 'credit-card':
+      return <CreditCard className="h-4 w-4" />;
+    case 'smartphone':
+      return <Smartphone className="h-4 w-4" />;
+    case 'globe':
+      return <Globe className="h-4 w-4" />;
+    case 'landmark':
+      return <Landmark className="h-4 w-4" />;
+    case 'banknote':
+      return <Banknote className="h-4 w-4" />;
+    default:
+      return <CreditCard className="h-4 w-4" />;
+  }
+};
+
+export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
+  selectedMethod,
+  onMethodChange,
+  amount,
+  currency,
+  showRecommended = true,
+  disabled = false
+}) => {
+  const {
+    availableMethods,
+    methodsLoading,
+    getAvailablePaymentMethods,
+    getRecommendedPaymentMethod,
+    isMobileOnlyPayment,
+    requiresQRCode,
+    PAYMENT_METHOD_DISPLAYS
+  } = usePaymentGateways();
+
+  const [showMobileWarning, setShowMobileWarning] = useState(false);
+
+  if (methodsLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Payment Method
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center space-x-3 p-4 border rounded-lg animate-pulse">
+                <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const availablePaymentMethods = getAvailablePaymentMethods();
+  const recommendedMethod = getRecommendedPaymentMethod();
+
+  const handleMethodChange = (method: PaymentGateway) => {
+    if (disabled) return;
+
+    // Check if mobile-only payment is selected on desktop
+    if (isMobileOnlyPayment(method) && !isMobileDevice()) {
+      setShowMobileWarning(true);
+      return;
+    }
+
+    setShowMobileWarning(false);
+    onMethodChange(method);
+  };
+
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
+  const getMethodFee = (method: PaymentGateway) => {
+    const display = PAYMENT_METHOD_DISPLAYS[method];
+    if (display.fees === 'No additional fees') return 0;
+    
+    // Extract percentage from fees string (e.g., "2.9% + $0.30" -> 2.9)
+    const percentMatch = display.fees.match(/(\d+\.?\d*)%/);
+    if (percentMatch) {
+      const percent = parseFloat(percentMatch[1]);
+      return (amount * percent) / 100;
+    }
+    
+    return 0;
+  };
+
+  const renderPaymentMethod = (method: PaymentMethodDisplay) => {
+    const isSelected = selectedMethod === method.code;
+    const isRecommended = method.code === recommendedMethod;
+    const fee = getMethodFee(method.code);
+    const totalWithFee = amount + fee;
+
+    return (
+      <Label
+        key={method.code}
+        htmlFor={method.code}
+        className={cn(
+          "flex items-start space-x-3 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer",
+          isSelected && "border-primary bg-primary/5",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        <RadioGroupItem 
+          value={method.code} 
+          id={method.code} 
+          className="mt-1"
+          disabled={disabled}
+        />
+        
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            {getIcon(method.icon)}
+            <span className="font-medium">{method.name}</span>
+            
+            {isRecommended && showRecommended && (
+              <Badge variant="outline" className="text-xs">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                Recommended
+              </Badge>
+            )}
+            
+            {method.is_mobile_only && (
+              <Badge variant="secondary" className="text-xs">
+                <Smartphone className="w-3 h-3 mr-1" />
+                Mobile Only
+              </Badge>
+            )}
+            
+            {method.requires_qr && (
+              <Badge variant="secondary" className="text-xs">
+                <QrCode className="w-3 h-3 mr-1" />
+                QR Code
+              </Badge>
+            )}
+          </div>
+          
+          <p className="text-sm text-muted-foreground mb-2">{method.description}</p>
+          
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>{method.processing_time}</span>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <Shield className="h-3 w-3" />
+              <span>{method.fees}</span>
+            </div>
+          </div>
+          
+          {fee > 0 && (
+            <div className="mt-2 text-xs text-muted-foreground">
+              <span>Fee: {fee.toFixed(2)} {currency}</span>
+              <span className="ml-2">Total: {totalWithFee.toFixed(2)} {currency}</span>
+            </div>
+          )}
+        </div>
+      </Label>
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CreditCard className="h-5 w-5" />
+          Payment Method
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent>
+        {showMobileWarning && (
+          <Alert className="mb-4 border-orange-200 bg-orange-50">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800">
+              This payment method requires a mobile app. Please use your mobile device or select a different payment method.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        <RadioGroup 
+          value={selectedMethod} 
+          onValueChange={handleMethodChange}
+          className="space-y-4"
+          disabled={disabled}
+        >
+          {availablePaymentMethods.map(renderPaymentMethod)}
+        </RadioGroup>
+        
+        {availablePaymentMethods.length === 0 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              No payment methods available for your location. Please contact support.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {/* Mobile-only payment instructions */}
+        {isMobileOnlyPayment(selectedMethod) && (
+          <Alert className="mt-4 border-blue-200 bg-blue-50">
+            <Smartphone className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              <strong>Mobile Payment Required:</strong> You'll need to scan a QR code with your mobile app to complete this payment. 
+              Make sure you have the {PAYMENT_METHOD_DISPLAYS[selectedMethod].name} app installed on your phone.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {/* QR Code payment instructions */}
+        {requiresQRCode(selectedMethod) && (
+          <Alert className="mt-4 border-purple-200 bg-purple-50">
+            <QrCode className="h-4 w-4 text-purple-600" />
+            <AlertDescription className="text-purple-800">
+              <strong>QR Code Payment:</strong> After selecting this method, you'll see a QR code to scan with your mobile app. 
+              The payment will be processed once you complete the transaction in the app.
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+}; 

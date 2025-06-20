@@ -133,23 +133,23 @@ export const ProductInfoFields = ({ control, index, setValue }: ProductInfoField
             </FormLabel>
             <FormControl>
               <div className="space-y-2">
-                <div className="flex gap-2">
+              <div className="flex gap-2">
                   <Input 
                     placeholder="https://www.amazon.com/product-link or any international store" 
                     {...field} 
                     className="flex-1"
                   />
-                  {field.value && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenUrl(field.value)}
-                      className="shrink-0"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  )}
+                {field.value && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenUrl(field.value)}
+                    className="shrink-0"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                )}
                 </div>
                 <div className="flex gap-2">
                   <Button
