@@ -24,6 +24,55 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
     const { items, countryCode } = values;
     const createdQuotes: string[] = [];
 
+    // Ensure user profile exists
+    if (user?.id) {
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (!existingProfile) {
+        // Create profile if it doesn't exist
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+            phone: user.user_metadata?.phone || null,
+            country: countryCode || 'US',
+            preferred_display_currency: selectedCountryCurrency || 'USD',
+            referral_code: 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase()
+          });
+
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+          toast({
+            title: "Error",
+            description: "There was an error setting up your profile. Please try again.",
+            variant: "destructive",
+          });
+          return false;
+        }
+
+        // Create user role
+        await supabase
+          .from('user_roles')
+          .insert({
+            user_id: user.id,
+            role: 'user',
+            created_by: user.id
+          });
+
+        // Create notification preferences
+        await supabase
+          .from('notification_preferences')
+          .insert({
+            user_id: user.id
+          });
+      }
+    }
+
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       
@@ -57,6 +106,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         quantity: item.quantity,
         options: item.options,
         image_url: item.imageUrl,
+        item_currency: selectedCountryCurrency,
       });
 
       if (itemsError) {
@@ -93,6 +143,55 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
   const submitCombinedQuote = async (values: QuoteFormValues, finalEmail: string) => {
     const { items, countryCode } = values;
 
+    // Ensure user profile exists
+    if (user?.id) {
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (!existingProfile) {
+        // Create profile if it doesn't exist
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+            phone: user.user_metadata?.phone || null,
+            country: countryCode || 'US',
+            preferred_display_currency: selectedCountryCurrency || 'USD',
+            referral_code: 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase()
+          });
+
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+          toast({
+            title: "Error",
+            description: "There was an error setting up your profile. Please try again.",
+            variant: "destructive",
+          });
+          return false;
+        }
+
+        // Create user role
+        await supabase
+          .from('user_roles')
+          .insert({
+            user_id: user.id,
+            role: 'user',
+            created_by: user.id
+          });
+
+        // Create notification preferences
+        await supabase
+          .from('notification_preferences')
+          .insert({
+            user_id: user.id
+          });
+      }
+    }
+
     const { data: quote, error: quoteError } = await supabase
       .from("quotes")
       .insert({
@@ -123,6 +222,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         quantity: item.quantity,
         options: item.options,
         image_url: item.imageUrl,
+        item_currency: selectedCountryCurrency,
     }));
 
     const { error: itemsError } = await supabase.from("quote_items").insert(quoteItemsToInsert);

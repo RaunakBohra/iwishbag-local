@@ -30,50 +30,49 @@ const OrderConfirmationPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const sessionId = searchParams.get('session_id');
+    // Get order ID from the URL path, e.g., /order-confirmation/12345
+    const pathParts = location.pathname.split('/');
+    const orderId = pathParts[pathParts.length - 1];
 
-    // console.log('Original sessionId from URL:', sessionId); // Debugging line
-
-    // A more robust way to clean the session ID from any trailing characters
-    // if (sessionId) {
-    //   sessionId = sessionId.replace(/[^a-zA-Z0-9_]+$/, '');
-    // }
-    
-    // console.log('Cleaned sessionId sent to backend:', sessionId); // Debugging line
-
-    if (!sessionId) {
-      setError('No session ID found in the URL.');
+    if (!orderId) {
+      setError('No order ID found in the URL.');
       setLoading(false);
       return;
     }
 
     const fetchOrderDetails = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          throw new Error('User not authenticated');
-        }
+        const { data, error } = await supabase
+          .from('quotes')
+          .select(`
+            id,
+            display_id,
+            final_total,
+            final_currency,
+            quote_items (
+              product_name,
+              quantity,
+              item_price
+            )
+          `)
+          .eq('id', orderId)
+          .single();
 
-        const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-order-details`;
-
-        const response = await fetch(functionUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ session_id: sessionId }),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-          throw new Error(result.error || 'Failed to fetch order details.');
-        }
+        if (error) throw error;
         
-        setOrderDetails(result.order);
-        console.log('Received order details:', result.order);
+        if (data) {
+          const formattedOrder = {
+            id: data.id,
+            displayId: data.display_id,
+            amount: data.final_total,
+            currency: data.final_currency,
+            items: data.quote_items,
+          };
+          setOrderDetails(formattedOrder as any); // Cast for now
+        } else {
+          throw new Error('Order not found.');
+        }
+
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -100,7 +99,7 @@ const OrderConfirmationPage: React.FC = () => {
           <CardHeader className="bg-destructive text-destructive-foreground p-6">
             <div className="mx-auto bg-white rounded-full p-2 w-fit">
               <AlertTriangle className="h-10 w-10 text-destructive" />
-            </div>
+          </div>
             <CardTitle className="mt-4 text-2xl">Payment Error</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
@@ -133,21 +132,21 @@ const OrderConfirmationPage: React.FC = () => {
             <div className="flex justify-between items-center">
               <span className="font-medium text-muted-foreground">Order ID:</span>
               <Badge variant="secondary" className="text-lg">
-                {orderDetails?.quotes?.display_id || 'N/A'}
+                {orderDetails?.displayId || 'N/A'}
               </Badge>
             </div>
             <div className="flex justify-between items-center">
               <span className="font-medium text-muted-foreground">Amount Paid:</span>
               <span className="font-bold text-lg">
-                {orderDetails?.amount.toFixed(2)} {orderDetails?.currency}
+                {orderDetails?.amount?.toFixed(2)} {orderDetails?.currency}
               </span>
             </div>
           </div>
           <div>
             <h3 className="font-medium text-left mb-2">Order Summary:</h3>
             <div className="text-left text-muted-foreground space-y-2">
-              {orderDetails?.quotes?.quote_items && orderDetails.quotes.quote_items.length > 0 ? (
-                orderDetails.quotes.quote_items.map((item, index) => (
+              {orderDetails?.items && orderDetails.items.length > 0 ? (
+                orderDetails.items.map((item: QuoteItem, index: number) => (
                   <div key={index} className="flex justify-between">
                     <span>{item.product_name || 'Unnamed Product'} (x{item.quantity})</span>
                     <span>{(item.item_price * item.quantity).toFixed(2)} {orderDetails.currency}</span>
@@ -162,10 +161,10 @@ const OrderConfirmationPage: React.FC = () => {
         <CardFooter className="flex-col sm:flex-row gap-2">
           <Button asChild className="w-full">
             <Link to="/dashboard">View Order in Dashboard</Link>
-          </Button>
+            </Button>
           <Button asChild variant="outline" className="w-full">
             <Link to="/">Continue Shopping</Link>
-          </Button>
+            </Button>
         </CardFooter>
       </Card>
     </div>

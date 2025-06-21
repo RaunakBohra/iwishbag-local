@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   CreditCard, 
   Settings, 
@@ -26,10 +27,15 @@ import {
   Banknote,
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  BarChart3,
+  TrendingUp,
+  DollarSign,
+  Users,
+  Activity
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { PaymentGatewayConfig, PaymentGateway } from '@/types/payment';
+import { PaymentGatewayConfig, PaymentGateway, PaymentAnalytics } from '@/types/payment';
 
 interface PaymentGatewayFormData {
   name: string;
@@ -112,6 +118,54 @@ export const PaymentGatewayManagement: React.FC = () => {
     }
   });
 
+  // Fetch payment analytics
+  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ['payment-analytics'],
+    queryFn: async (): Promise<PaymentAnalytics> => {
+      const { data: transactions, error } = await supabase
+        .from('payment_transactions')
+        .select('*')
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()); // Last 30 days
+
+      if (error) throw error;
+
+      const totalTransactions = transactions?.length || 0;
+      const totalAmount = transactions?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+      const completedTransactions = transactions?.filter(t => t.status === 'completed') || [];
+      const successRate = totalTransactions > 0 ? (completedTransactions.length / totalTransactions) * 100 : 0;
+      const averageAmount = totalTransactions > 0 ? totalAmount / totalTransactions : 0;
+
+      // Calculate gateway breakdown
+      const gatewayBreakdown: Record<PaymentGateway, { count: number; amount: number; success_rate: number }> = {} as any;
+      
+      gateways?.forEach(gateway => {
+        const gatewayTransactions = transactions?.filter(t => t.gateway_code === gateway.code) || [];
+        const gatewayCompleted = gatewayTransactions.filter(t => t.status === 'completed');
+        const gatewayAmount = gatewayTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        gatewayBreakdown[gateway.code] = {
+          count: gatewayTransactions.length,
+          amount: gatewayAmount,
+          success_rate: gatewayTransactions.length > 0 ? (gatewayCompleted.length / gatewayTransactions.length) * 100 : 0
+        };
+      });
+
+      return {
+        total_transactions: totalTransactions,
+        total_amount: totalAmount,
+        currency: 'USD',
+        success_rate: successRate,
+        average_amount: averageAmount,
+        gateway_breakdown: gatewayBreakdown,
+        time_period: {
+          start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          end: new Date().toISOString()
+        }
+      };
+    },
+    enabled: !!gateways
+  });
+
   // Update gateway mutation
   const updateGatewayMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<PaymentGatewayFormData> }) => {
@@ -124,6 +178,7 @@ export const PaymentGatewayManagement: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment-gateways'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-analytics'] });
       toast({
         title: 'Gateway Updated',
         description: 'Payment gateway configuration has been updated successfully.',
@@ -202,199 +257,240 @@ export const PaymentGatewayManagement: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {gateways?.map((gateway) => (
-          <Card key={gateway.id} className="relative">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {getGatewayIcon(gateway.code)}
-                  <div>
-                    <CardTitle className="text-lg">{gateway.name}</CardTitle>
-                    <Badge variant="outline" className="text-xs">
-                      {gateway.code}
+      <Tabs defaultValue="gateways" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="gateways" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Gateways
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="gateways" className="space-y-6">
+          {/* Gateway Cards */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {gateways?.map((gateway) => (
+              <Card key={gateway.id} className="relative">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {getGatewayIcon(gateway.code)}
+                      <CardTitle className="text-lg">{gateway.name}</CardTitle>
+                    </div>
+                    <Badge 
+                      variant={gateway.is_active ? "default" : "secondary"}
+                      className={getGatewayColor(gateway.code)}
+                    >
+                      {gateway.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={gateway.is_active}
-                    onCheckedChange={() => toggleGatewayStatus(gateway)}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditGateway(gateway)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              {/* Status Badges */}
-              <div className="flex flex-wrap gap-2">
-                <Badge 
-                  variant={gateway.is_active ? "default" : "secondary"}
-                  className="text-xs"
-                >
-                  {gateway.is_active ? (
-                    <>
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Active
-                    </>
-                  ) : (
-                    <>
-                      <X className="h-3 w-3 mr-1" />
-                      Inactive
-                    </>
-                  )}
-                </Badge>
+                </CardHeader>
                 
-                <Badge 
-                  variant={gateway.test_mode ? "outline" : "default"}
-                  className="text-xs"
-                >
-                  {gateway.test_mode ? "Test Mode" : "Live Mode"}
-                </Badge>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Fee:</span>
+                      <span>{gateway.fee_percent}% + ${gateway.fee_fixed}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Countries:</span>
+                      <span>{gateway.supported_countries.length}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Currencies:</span>
+                      <span>{gateway.supported_currencies.length}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Mode:</span>
+                      <Badge variant={gateway.test_mode ? "outline" : "default"} className="text-xs">
+                        {gateway.test_mode ? 'Test' : 'Live'}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditGateway(gateway)}
+                      className="flex-1"
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewConfig(gateway)}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleGatewayStatus(gateway)}
+                    >
+                      {gateway.is_active ? (
+                        <AlertCircle className="h-3 w-3" />
+                      ) : (
+                        <CheckCircle className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          {analyticsLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : analytics ? (
+            <div className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{analytics.total_transactions}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Last 30 days
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      ${analytics.total_amount.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {analytics.currency}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {analytics.success_rate.toFixed(1)}%
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Payment success
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Average Amount</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      ${analytics.average_amount.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Per transaction
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
 
-              {/* Fee Information */}
-              <div className="text-sm space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fee:</span>
-                  <span className="font-medium">
-                    {gateway.fee_percent}% + {gateway.fee_fixed}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Countries:</span>
-                  <span className="font-medium">{gateway.supported_countries.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Currencies:</span>
-                  <span className="font-medium">{gateway.supported_currencies.length}</span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleViewConfig(gateway)}
-                  className="flex-1"
-                >
-                  <Eye className="h-4 w-4 mr-1" />
-                  Config
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toggleTestMode(gateway)}
-                  className="flex-1"
-                >
-                  {gateway.test_mode ? (
-                    <>
-                      <EyeOff className="h-4 w-4 mr-1" />
-                      Live
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="h-4 w-4 mr-1" />
-                      Test
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              {/* Gateway Breakdown */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Gateway Performance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {Object.entries(analytics.gateway_breakdown).map(([gateway, stats]) => (
+                      <div key={gateway} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          {getGatewayIcon(gateway as PaymentGateway)}
+                          <div>
+                            <p className="font-medium capitalize">{gateway.replace('_', ' ')}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {stats.count} transactions
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">${stats.amount.toFixed(2)}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {stats.success_rate.toFixed(1)}% success
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No analytics data available</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Gateway Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Payment Gateway</DialogTitle>
-          </DialogHeader>
-          
-          {editingGateway && (
-            <GatewayEditForm
-              gateway={editingGateway}
-              onSave={handleSaveGateway}
-              onCancel={() => {
-                setShowEditDialog(false);
-                setEditingGateway(null);
-              }}
-              isSaving={updateGatewayMutation.isPending}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {showEditDialog && editingGateway && (
+        <GatewayEditForm
+          gateway={editingGateway}
+          onSave={handleSaveGateway}
+          onCancel={() => {
+            setShowEditDialog(false);
+            setEditingGateway(null);
+          }}
+          isSaving={updateGatewayMutation.isPending}
+        />
+      )}
 
       {/* View Config Dialog */}
-      <Dialog open={showConfigDialog} onOpenChange={setShowConfigDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Gateway Configuration</DialogTitle>
-          </DialogHeader>
-          
-          {selectedGateway && (
+      {showConfigDialog && selectedGateway && (
+        <Dialog open={showConfigDialog} onOpenChange={setShowConfigDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Gateway Configuration - {selectedGateway.name}</DialogTitle>
+            </DialogHeader>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Name</Label>
-                  <Input value={selectedGateway.name} disabled />
-                </div>
-                <div>
-                  <Label>Code</Label>
-                  <Input value={selectedGateway.code} disabled />
-                </div>
-              </div>
-              
-              <div>
-                <Label>Supported Countries</Label>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {selectedGateway.supported_countries.map((country) => (
-                    <Badge key={country} variant="outline" className="text-xs">
-                      {country}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              
-              <div>
-                <Label>Supported Currencies</Label>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {selectedGateway.supported_currencies.map((currency) => (
-                    <Badge key={currency} variant="outline" className="text-xs">
-                      {currency}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              
               <div>
                 <Label>Configuration (JSON)</Label>
                 <Textarea
                   value={JSON.stringify(selectedGateway.config, null, 2)}
-                  rows={6}
-                  disabled
-                  className="font-mono text-xs"
+                  readOnly
+                  rows={10}
+                  className="font-mono text-sm"
                 />
               </div>
-              
-              <div className="flex justify-end">
-                <Button onClick={() => setShowConfigDialog(false)}>
-                  Close
-                </Button>
+              <div>
+                <Label>Webhook URL</Label>
+                <Input value={selectedGateway.webhook_url || ''} readOnly />
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

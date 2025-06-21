@@ -31,6 +31,12 @@ export const useEmailNotifications = () => {
 
   const sendEmailMutation = useMutation({
     mutationFn: async ({ to, template, data, from }: EmailNotificationOptions) => {
+      // Temporarily disabled to prevent CORS errors
+      console.log('Email notification disabled for development:', { to, template, data });
+      return Promise.resolve();
+      
+      // TODO: Re-enable when Edge Function is properly set up
+      /*
       const accessToken = await getAccessToken();
       
       if (accessToken) {
@@ -50,6 +56,7 @@ export const useEmailNotifications = () => {
         // You might want to throw an error here or handle it differently
         throw new Error('User not authenticated - cannot send email');
       }
+      */
     },
     onSuccess: () => {
       toast({

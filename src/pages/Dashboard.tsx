@@ -1,10 +1,10 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardQuotesTab } from "@/components/dashboard/DashboardQuotesTab";
 import { DashboardOrdersTab } from "@/components/dashboard/DashboardOrdersTab";
 import { useDashboardState } from "@/hooks/useDashboardState";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { CustomerDashboardSummary } from "@/components/dashboard/CustomerDashboardSummary";
+import { UserPreferences } from "@/components/profile/UserPreferences";
 
 const Dashboard = () => {
   const {
@@ -28,7 +28,14 @@ const Dashboard = () => {
 
   return (
     <div className="container py-8 space-y-6">
-      <CustomerDashboardSummary quotes={quotes || []} orders={orders || []} />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <CustomerDashboardSummary quotes={quotes || []} orders={orders || []} />
+        </div>
+        <div>
+          <UserPreferences compact={true} />
+        </div>
+      </div>
       
       <Tabs defaultValue="quotes" className="w-full">
         <TabsList className="grid w-full grid-cols-2">

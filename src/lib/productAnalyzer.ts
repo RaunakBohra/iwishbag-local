@@ -144,13 +144,14 @@ export class ProductAnalyzer {
       // Validate URL
       const validatedUrl = this.validateAndCleanUrl(url);
       if (!validatedUrl) {
-        throw new Error('Invalid URL provided');
+        throw new Error('Invalid URL provided. Please enter a valid product URL.');
       }
 
       // Determine platform
       const platform = this.detectPlatform(validatedUrl);
       if (!platform) {
-        throw new Error('Unsupported e-commerce platform');
+        const hostname = new URL(validatedUrl).hostname;
+        throw new Error(`Unsupported e-commerce platform: ${hostname}. Currently supported: Amazon, eBay, Walmart, Target, Best Buy, Newegg, AliExpress, Taobao, Tmall, JD, Rakuten, Yahoo Japan, Mercari, Etsy, and Shopify stores.`);
       }
 
       // Use Edge Function for analysis

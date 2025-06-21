@@ -71,6 +71,12 @@ const AuthForm = () => {
       password: values.password,
     });
     if (error) {
+      console.error('Sign in error details:', {
+        message: error.message,
+        status: error.status,
+        name: error.name,
+        stack: error.stack
+      });
       toast({
         title: "Error signing in",
         description: error.message,
@@ -100,9 +106,19 @@ const AuthForm = () => {
       },
     });
     if (error) {
+      console.error('Sign up error details:', {
+        message: error.message,
+        status: error.status,
+        name: error.name,
+        stack: error.stack
+      });
       toast({ title: "Error signing up", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Check your email", description: "We've sent you a verification link." });
+      toast({ 
+        title: "Account created successfully!", 
+        description: "You can now sign in with your email and password.",
+        variant: "default"
+      });
       setShowSignUp(false);
     }
     setLoading(false);

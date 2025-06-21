@@ -95,6 +95,43 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
   }
 };
 
+// Payment gateway configuration types
+export interface PaymentGatewayConfig {
+  id: string;
+  name: string;
+  code: string;
+  is_active: boolean;
+  supported_countries: string[];
+  supported_currencies: string[];
+  fee_percent: number;
+  fee_fixed: number;
+  config: Record<string, any>;
+  test_mode: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PaymentGateway = 
+  | 'stripe' 
+  | 'payu' 
+  | 'esewa' 
+  | 'khalti' 
+  | 'fonepay' 
+  | 'airwallex' 
+  | 'bank_transfer' 
+  | 'cod';
+
+export interface PaymentMethodDisplay {
+  code: PaymentGateway;
+  name: string;
+  description: string;
+  icon: string;
+  is_mobile_only: boolean;
+  requires_qr: boolean;
+  processing_time: string;
+  fees: string;
+}
+
 export const usePaymentGateways = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -137,47 +174,45 @@ export const usePaymentGateways = () => {
     queryKey: ['available-payment-methods', userProfile?.country, userProfile?.preferred_display_currency],
     queryFn: async (): Promise<PaymentGateway[]> => {
       if (!userProfile?.country || !userProfile?.preferred_display_currency) {
+        console.log('[Payment Debug] No country or currency in userProfile:', userProfile);
         return ['bank_transfer', 'cod'];
       }
 
-      console.log('--- Payment Gateway Debug ---');
-      console.log('User Profile for Filtering:', { 
-        country: userProfile.country, 
-        currency: userProfile.preferred_display_currency 
-      });
+      // Use the codes directly since database now stores codes
+      const countryCode = userProfile.country;
+      const currencyCode = userProfile.preferred_display_currency;
 
-      const { data: gateways } = await supabase
+      console.log('[Payment Debug] User Profile:', userProfile);
+      console.log('[Payment Debug] Using codes directly:', { countryCode, currencyCode });
+
+      const { data: gateways, error } = await supabase
         .from('payment_gateways')
         .select('code, supported_countries, supported_currencies, is_active')
         .eq('is_active', true);
 
+      if (error) {
+        console.error('[Payment Debug] Error fetching gateways:', error);
+      }
       if (!gateways) {
-        console.log('No active gateways found in database.');
-        console.log('--- End Payment Gateway Debug ---');
+        console.log('[Payment Debug] No active gateways found in database.');
         return ['bank_transfer', 'cod'];
       }
-      
-      console.log('Active Gateways Fetched from DB:', gateways);
+      console.log('[Payment Debug] Active Gateways from DB:', gateways);
 
       const filteredGateways = gateways
         .filter(gateway => {
-          const countryMatch = gateway.supported_countries.includes(userProfile.country);
-          const currencyMatch = gateway.supported_currencies.includes(userProfile.preferred_display_currency);
-          
-          console.log(`\nChecking gateway: ${gateway.code}`);
-          console.log(`  - User Country: '${userProfile.country}' | Supported: [${gateway.supported_countries}] | Match: ${countryMatch}`);
-          console.log(`  - User Currency: '${userProfile.preferred_display_currency}' | Supported: [${gateway.supported_currencies}] | Match: ${currencyMatch}`);
-          
+          const countryMatch = gateway.supported_countries.includes(countryCode);
+          const currencyMatch = gateway.supported_currencies.includes(currencyCode);
+          console.log(`[Payment Debug] Checking gateway: ${gateway.code}`);
+          console.log(`  - User Country: '${countryCode}' | Supported: [${gateway.supported_countries}] | Match: ${countryMatch}`);
+          console.log(`  - User Currency: '${currencyCode}' | Supported: [${gateway.supported_currencies}] | Match: ${currencyMatch}`);
           return countryMatch && currencyMatch;
         });
 
       const finalMethodCodes = filteredGateways
         .map(gateway => gateway.code as PaymentGateway)
         .concat(['bank_transfer', 'cod']);
-        
-      console.log('\nFinal list of available method codes:', finalMethodCodes);
-      console.log('--- End Payment Gateway Debug ---');
-
+      console.log('[Payment Debug] Final available method codes:', finalMethodCodes);
       return finalMethodCodes;
     },
     enabled: !!userProfile
@@ -194,8 +229,7 @@ export const usePaymentGateways = () => {
         throw new Error('User is not authenticated.');
       }
 
-      // Use the official Supabase URL from environment variables.
-      // This works for both local development (e.g., http://127.0.0.1:54321) and production.
+      // Use the local Supabase URL for Edge Functions
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const functionUrl = `${supabaseUrl}/functions/v1/create-payment`;
 
@@ -205,7 +239,7 @@ export const usePaymentGateways = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`, // Use the correct token here
+            'Authorization': `Bearer ${accessToken}`,
           },
           body: JSON.stringify(paymentRequest),
         }
@@ -231,6 +265,12 @@ export const usePaymentGateways = () => {
             description: 'Please scan the QR code with your mobile app to complete payment.',
           });
           // You can emit an event or use a callback to show QR modal
+        } else {
+          // Payment created successfully
+          toast({
+            title: 'Payment Created Successfully',
+            description: `Payment created with ID: ${data.transaction_id}`,
+          });
         }
       } else {
         toast({

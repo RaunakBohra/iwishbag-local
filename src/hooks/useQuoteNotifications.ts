@@ -42,6 +42,11 @@ export const useQuoteNotifications = () => {
       // Send confirmation email
       const accessToken = await getAccessToken();
       if (accessToken) {
+        // Temporarily disabled to prevent CORS errors
+        console.log('Confirmation email disabled for development:', { quoteId: quote.id, email: quote.email });
+        
+        // TODO: Re-enable when Edge Function is properly set up
+        /*
         const { error: emailError } = await supabase.functions.invoke('send-email', {
           body: {
             to: quote.email,
@@ -59,6 +64,7 @@ export const useQuoteNotifications = () => {
         if (emailError) {
           console.error('Failed to send confirmation email:', emailError);
         }
+        */
       } else {
         console.warn('No access token available, skipping confirmation email');
       }
@@ -112,6 +118,11 @@ export const useQuoteNotifications = () => {
       // Send quote ready email
       const accessToken = await getAccessToken();
       if (accessToken) {
+        // Temporarily disabled to prevent CORS errors
+        console.log('Quote ready email disabled for development:', { quoteId: quote.id, email: quote.email });
+        
+        // TODO: Re-enable when Edge Function is properly set up
+        /*
         const { error: emailError } = await supabase.functions.invoke('send-email', {
           body: {
             to: quote.email,
@@ -131,6 +142,7 @@ export const useQuoteNotifications = () => {
         if (emailError) {
           console.error('Failed to send quote ready email:', emailError);
         }
+        */
       } else {
         console.warn('No access token available, skipping quote ready email');
       }
@@ -197,6 +209,11 @@ export const useQuoteNotifications = () => {
       // Send status update email
       const accessToken = await getAccessToken();
       if (accessToken) {
+        // Temporarily disabled to prevent CORS errors
+        console.log('Status update email disabled for development:', { quoteId: quote.id, status, email: quote.email });
+        
+        // TODO: Re-enable when Edge Function is properly set up
+        /*
         const { error: emailError } = await supabase.functions.invoke('send-email', {
           body: {
             to: quote.email,
@@ -216,6 +233,7 @@ export const useQuoteNotifications = () => {
         if (emailError) {
           console.error('Failed to send status update email:', emailError);
         }
+        */
       } else {
         console.warn('No access token available, skipping status update email');
       }

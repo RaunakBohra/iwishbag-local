@@ -159,19 +159,23 @@ export default function Checkout() {
   // Mutations
   const updateQuotesMutation = useMutation({
     mutationFn: async ({ ids, status, method }: { ids: string[], status: string, method: string }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('quotes')
         .update({ status, payment_method: method, in_cart: false })
-        .in('id', ids);
+        .in('id', ids)
+        .select()
+        .single();
+      
       if (error) throw new Error(error.message);
+      return data;
     },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-quotes']});
-      queryClient.invalidateQueries({ queryKey: ['admin-orders']});
-
-      const orderId = variables.ids[0];
-      navigate(`/order-confirmation/${orderId}`);
+    onSuccess: (data) => {
+      if (data) {
+        queryClient.invalidateQueries({ queryKey: ['quotes'] });
+        queryClient.invalidateQueries({ queryKey: ['admin-quotes']});
+        queryClient.invalidateQueries({ queryKey: ['admin-orders']});
+        navigate(`/order-confirmation/${data.id}`);
+      }
     },
     onError: (error: Error) => {
       toast({ title: "Order Placement Failed", description: error.message, variant: "destructive" });
@@ -277,79 +281,53 @@ export default function Checkout() {
     });
   };
 
-  const handleCreatePayment = async () => {
-    if (!selectedAddress) {
-      toast({
-        title: "Address Required",
-        description: "Please select a shipping address to continue.",
-        variant: "destructive",
-      });
+  const handlePlaceOrder = async () => {
+    if (!paymentMethod) {
+      toast({ title: "Payment Error", description: "Please select a payment method.", variant: "destructive" });
+      return;
+    }
+
+    if (isMobileOnlyPayment(paymentMethod) && !requiresQRCode(paymentMethod)) {
+      toast({ title: "Device Incompatible", description: "This payment method can only be used on a mobile device.", variant: "destructive" });
+      return;
+    }
+
+    const paymentRequest: PaymentRequest = {
+      quoteIds: selectedQuoteIds,
+      amount: totalAmount,
+      currency: userProfile?.preferred_display_currency || 'USD',
+      gateway: paymentMethod,
+      success_url: `${window.location.origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${window.location.origin}/checkout?quotes=${selectedQuoteIds.join(',')}`,
+    };
+
+    const { isValid, errors } = validatePaymentRequest(paymentRequest);
+    if (!isValid) {
+      toast({ title: "Payment Request Invalid", description: errors.join(', '), variant: "destructive" });
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // Validate payment request
-      const paymentRequest: PaymentRequest = {
-        quoteIds: selectedQuoteIds,
-        currency: userProfile?.preferred_display_currency || 'USD',
-        amount: totalAmount,
-        gateway: paymentMethod,
-        success_url: `${window.location.origin}/order-confirmation/${selectedQuoteIds[0]}?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${window.location.origin}/checkout`,
-        metadata: {
-          user_id: user?.id,
-          address_id: selectedAddress
-        }
-      };
+      const paymentResponse = await createPaymentAsync(paymentRequest);
 
-      const validation = validatePaymentRequest(paymentRequest);
-      if (!validation.isValid) {
-        toast({
-          title: "Payment Error",
-          description: validation.errors.join(', '),
-          variant: "destructive"
+      if (paymentResponse.url) {
+        window.location.href = paymentResponse.url;
+      } else {
+        // This case would be for non-redirect flows like COD or Bank Transfer
+        toast({ title: "Order Submitted", description: "Your order for has been received." });
+        
+        await updateQuotesMutation.mutateAsync({ 
+          ids: selectedQuoteIds, 
+          status: 'ordered', 
+          method: paymentMethod 
         });
-        return;
       }
-
-      // Create payment
-      const response = await createPaymentAsync(paymentRequest);
-      handlePaymentSuccess(response);
-
     } catch (error: any) {
-      toast({
-        title: "Payment Error",
-        description: error.message || "Failed to create payment",
-        variant: "destructive"
-      });
+      toast({ title: "An Error Occurred", description: error.message, variant: "destructive" });
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  const handlePlaceOrder = async () => {
-    if (!selectedAddress) {
-      toast({
-        title: "Address Required",
-        description: "Please select a shipping address to continue.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-    const quoteIds = selectedCartItems.map(item => item.quoteId);
-
-    // Handle different payment methods
-    if (paymentMethod === 'cod') {
-      updateQuotesMutation.mutate({ ids: quoteIds, status: 'cod_pending', method: 'cod' });
-    } else if (paymentMethod === 'bank_transfer') {
-      updateQuotesMutation.mutate({ ids: quoteIds, status: 'bank_transfer_pending', method: 'bank_transfer' });
-    } else {
-      // Handle online payments
-      await handleCreatePayment();
     }
   };
 

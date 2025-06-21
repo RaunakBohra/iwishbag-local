@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,6 +5,7 @@ import { Tables } from "@/integrations/supabase/types";
 
 type OrderDetail = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
+  shipping_address: Tables<'user_addresses'> | null;
 };
 
 export const useCustomerOrderDetail = (orderId: string | undefined) => {
@@ -18,7 +18,7 @@ export const useCustomerOrderDetail = (orderId: string | undefined) => {
         throw new Error("Order ID and user are required.");
       }
       
-      const { data, error } = await supabase
+      const { data: quoteData, error } = await supabase
         .from('quotes')
         .select('*, quote_items(*)')
         .eq('id', orderId)
@@ -27,9 +27,13 @@ export const useCustomerOrderDetail = (orderId: string | undefined) => {
       if (error) {
         throw error;
       }
+      
+      if (!quoteData) {
+        return null;
+      }
 
       // Ensure the user is the owner of the order, unless they are an admin
-      if (data && data.user_id !== user.id) {
+      if (quoteData.user_id !== user.id) {
           // A proper role check would be better, but this is a good security measure for now.
           const { data: userRoles } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
           if (userRoles?.role !== 'admin') {
@@ -37,7 +41,19 @@ export const useCustomerOrderDetail = (orderId: string | undefined) => {
           }
       }
 
-      return data;
+      // Fetch any shipping address for the user (prefer default, but show any if no default exists)
+      const { data: addressData } = await supabase
+        .from('user_addresses')
+        .select('*')
+        .eq('user_id', quoteData.user_id)
+        .order('is_default', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      return {
+        ...quoteData,
+        shipping_address: addressData
+      };
     },
     enabled: !!orderId && !!user,
   });
