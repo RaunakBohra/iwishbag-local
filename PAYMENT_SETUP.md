@@ -17,7 +17,7 @@ STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 ### **PayU (India)**
 ```bash
 PAYU_MERCHANT_KEY=your_payu_merchant_key
-PAYU_SALT_KEY=your_payu_salt_key
+PAYU_SALT_KEY=your_payu_salt_key 
 PAYU_MERCHANT_ID=your_payu_merchant_id
 PAYU_PAYMENT_URL=https://test.payu.in/_payment
 ```
@@ -334,3 +334,5 @@ Your payment gateway system is now ready to handle payments from customers world
 - ✅ **Universal**: Bank Transfer, COD
 
 The system automatically detects user location and shows appropriate payment methods, handles QR codes for mobile payments, and provides comprehensive admin controls for monitoring and management. 
+
+#
