@@ -175,8 +175,8 @@ host = "smtp.resend.com"
 port = 465
 user = "resend"
 pass = "env(RESEND_API_KEY)"
-admin_email = "noreply@globalwishlisthub.com"
-sender_name = "Global Wishlist Hub"
+admin_email = "info@whyteclub.com"
+sender_name = "iWishBag New"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

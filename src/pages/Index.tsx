@@ -30,6 +30,60 @@ export default function Index() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <HeroSection settings={settings} />
+      {/* Supported Countries */}
+      <div className="container py-16">
+        
+        <div className="text-center space-y-12">
+          <div className="space-y-4">
+            <h2 className="text-3xl md:text-4xl font-bold">
+              Shop from These Countries
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              We help you shop from major international markets
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="flex flex-col items-center space-y-3 p-6 rounded-lg bg-card border border-border hover:border-primary/20 transition-colors">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                <span className="text-xl font-bold text-red-600">🇺🇸</span>
+              </div>
+              <h3 className="font-semibold">United States</h3>
+              <p className="text-sm text-muted-foreground text-center">
+                Amazon, Walmart, Best Buy, and more
+              </p>
+            </div>
+            <div className="flex flex-col items-center space-y-3 p-6 rounded-lg bg-card border border-border hover:border-primary/20 transition-colors">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                <span className="text-xl font-bold text-red-600">🇨🇳</span>
+              </div>
+              <h3 className="font-semibold">China</h3>
+              <p className="text-sm text-muted-foreground text-center">
+                Taobao, JD, AliExpress, and more
+              </p>
+            </div>
+            <div className="flex flex-col items-center space-y-3 p-6 rounded-lg bg-card border border-border hover:border-primary/20 transition-colors">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                <span className="text-xl font-bold text-red-600">🇯🇵</span>
+              </div>
+              <h3 className="font-semibold">Japan</h3>
+              <p className="text-sm text-muted-foreground text-center">
+                Rakuten, Amazon Japan, and more
+              </p>
+            </div>
+            <div className="flex flex-col items-center space-y-3 p-6 rounded-lg bg-card border border-border hover:border-primary/20 transition-colors">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                <span className="text-xl font-bold text-red-600">🇬🇧</span>
+              </div>
+              <h3 className="font-semibold">United Kingdom</h3>
+              <p className="text-sm text-muted-foreground text-center">
+                Amazon UK, Argos, and more
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <ValuePropsSection settings={settings} />
       <section className="py-16 flex justify-center">
         <div className="relative max-w-2xl w-full text-center px-6 py-16 rounded-2xl bg-card/60 backdrop-blur-md border border-border shadow-2xl animate-glow group overflow-visible">
@@ -44,6 +98,7 @@ export default function Index() {
                 </div>
               </div>
             </div>
+            
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground drop-shadow">Instant Cost Estimator</h2>
             <p className="text-lg text-muted-foreground mb-8">Curious about your total cost? Use our free, instant Cost Estimator to get a transparent quote for shipping, customs, and more—before you buy!</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -54,6 +109,7 @@ export default function Index() {
                 <Link to="/quote">Get Quote</Link>
               </Button>
             </div>
+            
             <div className="bg-accent/20 text-foreground rounded-lg px-4 py-3 shadow-inner text-base font-medium">
               💡 <span className="font-semibold">Tip:</span> You can estimate costs for over 50 countries—no signup needed!
             </div>
