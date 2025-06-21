@@ -22,7 +22,6 @@ export const useHomePageSettings = () => {
         toast({ title: 'Error fetching settings', description: error.message, variant: 'destructive' });
         return null;
       }
-      console.log('Fetched footer settings:', data);
       return data;
     },
     staleTime: 0, // Always fetch fresh data
@@ -56,7 +55,6 @@ export const useHomePageSettings = () => {
 
   useEffect(() => {
     if (homePageSettings) {
-      console.log('Updating form data with:', homePageSettings);
       setFormData({
         company_name: homePageSettings.company_name || '',
         company_description: homePageSettings.company_description || '',
@@ -86,7 +84,6 @@ export const useHomePageSettings = () => {
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: HomePageSettingsData) => {
-      console.log('Updating settings with data:', data);
       let id = homePageSettings?.id;
       if (!id) {
         const { data: row } = await supabase.from('footer_settings').select('id').single();
@@ -113,11 +110,9 @@ export const useHomePageSettings = () => {
         throw new Error('No data returned after update');
       }
       
-      console.log('Settings updated successfully, returned data:', updatedData);
       return updatedData;
     },
     onSuccess: (updatedData) => {
-      console.log('Mutation succeeded, updating cache with:', updatedData);
       // Update the cache directly with the new data
       queryClient.setQueryData(['home-page-settings'], updatedData);
       // Also invalidate to ensure fresh data
@@ -138,7 +133,6 @@ export const useHomePageSettings = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting form data:', formData);
     updateSettingsMutation.mutate(formData);
   };
 

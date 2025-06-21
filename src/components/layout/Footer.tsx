@@ -5,9 +5,6 @@ import { useHomePageSettings } from "@/hooks/useHomePageSettings";
 const Footer = () => {
   const { settings: homePageSettings } = useHomePageSettings();
 
-  // Debug logging
-  console.log('Footer component rendering with settings:', homePageSettings);
-
   return (
     <footer className="border-t bg-card text-card-foreground">
       <div className="container py-6 md:py-8">
