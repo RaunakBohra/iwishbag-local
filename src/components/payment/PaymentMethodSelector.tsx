@@ -25,6 +25,8 @@ import { cn } from '@/lib/utils';
 interface PaymentMethodSelectorProps {
   selectedMethod: PaymentGateway;
   onMethodChange: (method: PaymentGateway) => void;
+  amount: number;
+  currency: string;
   showRecommended?: boolean;
   disabled?: boolean;
 }
@@ -49,6 +51,8 @@ const getIcon = (iconName: string) => {
 export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   selectedMethod,
   onMethodChange,
+  amount,
+  currency,
   showRecommended = true,
   disabled = false
 }) => {
