@@ -9,10 +9,5 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "installCommand": "npm install",
-  "devCommand": "npm run dev",
-  "functions": {
-    "supabase/functions/**/*.ts": {
-      "runtime": "nodejs18.x"
-    }
-  }
+  "devCommand": "npm run dev"
 }
