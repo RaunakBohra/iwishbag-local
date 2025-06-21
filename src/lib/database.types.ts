@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
-          extensions?: Json
-          operationName?: string
           query?: string
+          operationName?: string
           variables?: Json
+          extensions?: Json
         }
         Returns: Json
       }
@@ -231,34 +231,94 @@ export type Database = {
       }
       footer_settings: {
         Row: {
+          business_hours: string | null
           company_address: string | null
+          company_description: string | null
           company_email: string | null
           company_name: string | null
           company_phone: string | null
           created_at: string
+          hero_banner_url: string | null
+          hero_cta_link: string | null
+          hero_cta_text: string | null
+          hero_headline: string | null
+          hero_subheadline: string | null
+          how_it_works_steps: Json | null
           id: string
+          primary_address: string | null
+          primary_email: string | null
+          primary_phone: string | null
+          secondary_address: string | null
+          secondary_phone: string | null
+          social_facebook: string | null
+          social_instagram: string | null
+          social_linkedin: string | null
           social_links: Json | null
+          social_twitter: string | null
+          support_email: string | null
           updated_at: string
+          value_props: Json | null
+          website_logo_url: string | null
         }
         Insert: {
+          business_hours?: string | null
           company_address?: string | null
+          company_description?: string | null
           company_email?: string | null
           company_name?: string | null
           company_phone?: string | null
           created_at?: string
+          hero_banner_url?: string | null
+          hero_cta_link?: string | null
+          hero_cta_text?: string | null
+          hero_headline?: string | null
+          hero_subheadline?: string | null
+          how_it_works_steps?: Json | null
           id?: string
+          primary_address?: string | null
+          primary_email?: string | null
+          primary_phone?: string | null
+          secondary_address?: string | null
+          secondary_phone?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          social_linkedin?: string | null
           social_links?: Json | null
+          social_twitter?: string | null
+          support_email?: string | null
           updated_at?: string
+          value_props?: Json | null
+          website_logo_url?: string | null
         }
         Update: {
+          business_hours?: string | null
           company_address?: string | null
+          company_description?: string | null
           company_email?: string | null
           company_name?: string | null
           company_phone?: string | null
           created_at?: string
+          hero_banner_url?: string | null
+          hero_cta_link?: string | null
+          hero_cta_text?: string | null
+          hero_headline?: string | null
+          hero_subheadline?: string | null
+          how_it_works_steps?: Json | null
           id?: string
+          primary_address?: string | null
+          primary_email?: string | null
+          primary_phone?: string | null
+          secondary_address?: string | null
+          secondary_phone?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          social_linkedin?: string | null
           social_links?: Json | null
+          social_twitter?: string | null
+          support_email?: string | null
           updated_at?: string
+          value_props?: Json | null
+          website_logo_url?: string | null
         }
         Relationships: []
       }
@@ -510,6 +570,45 @@ export type Database = {
         }
         Relationships: []
       }
+      order_workflow_steps: {
+        Row: {
+          country_specific: string[] | null
+          created_at: string
+          description: string | null
+          estimated_duration_hours: number | null
+          id: string
+          is_customer_visible: boolean | null
+          name: string
+          order_position: number
+          requires_admin_action: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          country_specific?: string[] | null
+          created_at?: string
+          description?: string | null
+          estimated_duration_hours?: number | null
+          id?: string
+          is_customer_visible?: boolean | null
+          name: string
+          order_position: number
+          requires_admin_action?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          country_specific?: string[] | null
+          created_at?: string
+          description?: string | null
+          estimated_duration_hours?: number | null
+          id?: string
+          is_customer_visible?: boolean | null
+          name?: string
+          order_position?: number
+          requires_admin_action?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_gateways: {
         Row: {
           code: string
@@ -658,6 +757,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      quote_templates: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          item_price: number | null
+          item_weight: number | null
+          options: string | null
+          product_name: string | null
+          product_url: string | null
+          quantity: number | null
+          template_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          item_price?: number | null
+          item_weight?: number | null
+          options?: string | null
+          product_name?: string | null
+          product_url?: string | null
+          quantity?: number | null
+          template_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          item_price?: number | null
+          item_weight?: number | null
+          options?: string | null
+          product_name?: string | null
+          product_url?: string | null
+          quantity?: number | null
+          template_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       quotes: {
         Row: {
@@ -1036,6 +1177,110 @@ export type Database = {
         }
         Relationships: []
       }
+      user_addresses: {
+        Row: {
+          address_line1: string
+          address_line2: string | null
+          city: string
+          country: string
+          country_code: string | null
+          created_at: string
+          id: string
+          is_default: boolean | null
+          postal_code: string
+          state_province_region: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address_line1: string
+          address_line2?: string | null
+          city: string
+          country: string
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          postal_code: string
+          state_province_region: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address_line1?: string
+          address_line2?: string | null
+          city?: string
+          country?: string
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          postal_code?: string
+          state_province_region?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_addresses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_memberships: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          status: string | null
+          stripe_subscription_id: string | null
+          tier_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          status?: string | null
+          stripe_subscription_id?: string | null
+          tier_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          status?: string | null
+          stripe_subscription_id?: string | null
+          tier_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_memberships_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "membership_tiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1060,15 +1305,72 @@ export type Database = {
         }
         Relationships: []
       }
+      user_wishlist_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          currency: string | null
+          estimated_price: number | null
+          id: string
+          image_url: string | null
+          is_favorite: boolean | null
+          notes: string | null
+          product_name: string | null
+          product_url: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          estimated_price?: number | null
+          id?: string
+          image_url?: string | null
+          is_favorite?: boolean | null
+          notes?: string | null
+          product_name?: string | null
+          product_url: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          estimated_price?: number | null
+          id?: string
+          image_url?: string | null
+          is_favorite?: boolean | null
+          notes?: string | null
+          product_name?: string | null
+          product_url?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_wishlist_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      ensure_user_profile: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
       }

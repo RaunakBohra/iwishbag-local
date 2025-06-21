@@ -4,9 +4,8 @@ import { Label } from "@/components/ui/label";
 
 interface ContactInfoFormProps {
   formData: {
-    contact_email: string;
-    contact_phone: string;
-    contact_website: string;
+    primary_email: string;
+    primary_phone: string;
   };
   handleInputChange: (field: string, value: string) => void;
 }
@@ -19,34 +18,23 @@ export const ContactInfoForm = ({ formData, handleInputChange }: ContactInfoForm
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="contact_email">Contact Email</Label>
+          <Label htmlFor="primary_email">Contact Email</Label>
           <Input
-            id="contact_email"
+            id="primary_email"
             type="email"
-            value={formData.contact_email}
-            onChange={(e) => handleInputChange('contact_email', e.target.value)}
+            value={formData.primary_email}
+            onChange={(e) => handleInputChange('primary_email', e.target.value)}
             className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="contact_phone">Contact Phone</Label>
+          <Label htmlFor="primary_phone">Contact Phone</Label>
           <Input
-            id="contact_phone"
+            id="primary_phone"
             type="tel"
-            value={formData.contact_phone}
-            onChange={(e) => handleInputChange('contact_phone', e.target.value)}
-            className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="contact_website">Contact Website</Label>
-          <Input
-            id="contact_website"
-            type="url"
-            value={formData.contact_website}
-            onChange={(e) => handleInputChange('contact_website', e.target.value)}
+            value={formData.primary_phone}
+            onChange={(e) => handleInputChange('primary_phone', e.target.value)}
             className="backdrop-blur-xl bg-white/20 border-white/20 focus:border-primary/50"
           />
         </div>

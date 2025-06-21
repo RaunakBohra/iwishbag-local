@@ -105,9 +105,26 @@ CREATE TABLE IF NOT EXISTS public.payment_gateways (
 CREATE TABLE IF NOT EXISTS public.footer_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_name TEXT,
-    company_address TEXT,
-    company_phone TEXT,
-    company_email TEXT CHECK (company_email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+    company_description TEXT,
+    primary_phone TEXT,
+    secondary_phone TEXT,
+    primary_email TEXT CHECK (primary_email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+    support_email TEXT CHECK (support_email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+    primary_address TEXT,
+    secondary_address TEXT,
+    business_hours TEXT,
+    social_twitter TEXT,
+    social_facebook TEXT,
+    social_instagram TEXT,
+    social_linkedin TEXT,
+    website_logo_url TEXT,
+    hero_banner_url TEXT,
+    hero_headline TEXT,
+    hero_subheadline TEXT,
+    hero_cta_text TEXT,
+    hero_cta_link TEXT,
+    how_it_works_steps TEXT,
+    value_props TEXT,
     social_links JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
@@ -758,9 +775,9 @@ VALUES
 ON CONFLICT (code) DO NOTHING;
 
 -- Footer settings
-INSERT INTO public.footer_settings (company_name, company_address, company_phone, company_email, social_links)
+INSERT INTO public.footer_settings (company_name, company_description, primary_phone, secondary_phone, primary_email, support_email, primary_address, secondary_address, business_hours, social_twitter, social_facebook, social_instagram, social_linkedin, website_logo_url, hero_banner_url, hero_headline, hero_subheadline, hero_cta_text, hero_cta_link, how_it_works_steps, value_props, social_links)
 VALUES
-('Global Wishlist Hub', '123 Main Street, City, Country', '+1-555-0123', 'contact@globalwishlisthub.com', '{"facebook": "", "twitter": "", "instagram": "", "linkedin": ""}')
+('Global Wishlist Hub', 'A comprehensive description of the company', '+1-555-0123', '+1-555-4567', 'contact@globalwishlisthub.com', 'support@globalwishlisthub.com', '123 Main Street, City, Country', '456 Elm Street, Town, Country', 'Mon-Fri: 9:00 AM - 5:00 PM', 'https://twitter.com/globalwishlisthub', 'https://www.facebook.com/globalwishlisthub', 'https://www.instagram.com/globalwishlisthub', 'https://www.linkedin.com/company/globalwishlisthub', 'https://example.com/logo.png', 'https://example.com/banner.jpg', 'Transform Your Shopping Experience', 'Discover the Power of Global Shopping', 'Buy Now', 'https://example.com/cta-link', '{"step1": "Sign up", "step2": "Shop", "step3": "Receive"}', '{"value1": "Fast Shipping", "value2": "Secure Payments", "value3": "Wide Selection"}', '{"facebook": "https://www.facebook.com/globalwishlisthub", "twitter": "https://twitter.com/globalwishlisthub", "instagram": "https://www.instagram.com/globalwishlisthub", "linkedin": "https://www.linkedin.com/company/globalwishlisthub"}')
 ON CONFLICT DO NOTHING;
 
 -- Rejection reasons
