@@ -54,6 +54,7 @@ export const CartDrawer = () => {
     selectedItems,
     isLoading: cartLoading,
     error: cartError,
+    hasLoadedFromServer,
     cartTotal,
     cartWeight,
     selectedItemsTotal,
@@ -119,9 +120,23 @@ export const CartDrawer = () => {
   // Load cart data from server when drawer opens
   useEffect(() => {
     if (isOpen && user) {
+      console.log('CartDrawer: Loading cart for user:', user.id); // DEBUG
       loadFromServer(user.id);
     }
   }, [isOpen, user, loadFromServer]);
+
+  // DEBUG: Log cart state changes
+  useEffect(() => {
+    console.log('CartDrawer: Cart state updated:', {
+      isOpen,
+      cartItemsCount: cartItems?.length || 0,
+      savedItemsCount: savedItems?.length || 0,
+      cartLoading,
+      cartError,
+      hasLoadedFromServer,
+      user: user?.id
+    });
+  }, [isOpen, cartItems?.length, savedItems?.length, cartLoading, cartError, hasLoadedFromServer, user?.id]);
 
   // Debounce search query
   useEffect(() => {
@@ -338,6 +353,27 @@ export const CartDrawer = () => {
   };
 
   const renderCartContent = () => {
+    if (cartError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-32 space-y-4">
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-destructive">Error loading cart</h3>
+            <p className="text-sm text-muted-foreground">
+              {cartError}
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => user && loadFromServer(user.id)}
+              className="mt-2"
+            >
+              Retry
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     if (cartLoading) {
       return (
         <div className="flex items-center justify-center h-32">
@@ -353,8 +389,13 @@ export const CartDrawer = () => {
           <div className="text-center">
             <h3 className="text-lg font-medium">Your cart is empty</h3>
             <p className="text-sm text-muted-foreground">
-              Add some items to get started
+              {hasLoadedFromServer ? 'Add some items to get started' : 'Loading cart...'}
             </p>
+            {!hasLoadedFromServer && (
+              <div className="mt-2 text-xs text-muted-foreground">
+                Debug: hasLoadedFromServer = {hasLoadedFromServer.toString()}
+              </div>
+            )}
           </div>
         </div>
       );

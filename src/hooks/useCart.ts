@@ -10,6 +10,7 @@ export const useCart = () => {
     isLoading,
     error,
     isSyncing,
+    hasLoadedFromServer,
     addItem,
     removeItem,
     updateQuantity,
@@ -27,7 +28,8 @@ export const useCart = () => {
     syncWithServer,
     loadFromServer,
     selectAllCart,
-    selectAllSaved
+    selectAllSaved,
+    clearCart
   } = useCartStore();
 
   const { formatAmount } = useUserCurrency();
@@ -187,6 +189,18 @@ export const useCart = () => {
     }
   }, [items, savedItems, selectedItems, isSyncing, syncWithServer]);
 
+  // DEBUG: Log cart state changes
+  useEffect(() => {
+    console.log('Cart state updated:', {
+      itemsCount: items.length,
+      savedItemsCount: savedItems.length,
+      selectedItemsCount: selectedItems.length,
+      isLoading,
+      error,
+      hasLoadedFromServer
+    });
+  }, [items.length, savedItems.length, selectedItems.length, isLoading, error, hasLoadedFromServer]);
+
   return {
     // State
     items,
@@ -195,6 +209,7 @@ export const useCart = () => {
     isLoading,
     error,
     isSyncing,
+    hasLoadedFromServer,
     
     // Calculations
     cartTotal,
@@ -244,6 +259,7 @@ export const useCart = () => {
     loadFromServer,
     selectAllCart,
     selectAllSaved,
+    clearCart,
     
     // FIXED: Improved handlers
     handleSelectAllCart,

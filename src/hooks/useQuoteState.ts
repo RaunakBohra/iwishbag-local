@@ -3,15 +3,51 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Quote, QuoteStatus, isValidStatusTransition } from "@/types/quote";
 import { useEmailNotifications } from "./useEmailNotifications";
-import { useCartStore } from "@/stores/cartStore";
+import { useCartStore, CartItem } from "@/stores/cartStore";
 import { useAuth } from "@/contexts/AuthContext";
+import { Tables } from "@/integrations/supabase/types";
+
+type QuoteWithItems = Tables<'quotes'> & {
+  quote_items: Tables<'quote_items'>[];
+};
 
 export const useQuoteState = (quoteId: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { sendQuoteApprovedEmail, sendQuoteRejectedEmail } = useEmailNotifications();
-  const { loadFromServer } = useCartStore();
+  const { loadFromServer, addItem } = useCartStore();
   const { user } = useAuth();
+
+  // Helper function to convert quote to cart item
+  const convertQuoteToCartItem = (quote: QuoteWithItems): CartItem => {
+    const firstItem = quote.quote_items?.[0];
+    const quoteItems = quote.quote_items || [];
+    
+    // Calculate total from quote items
+    const totalFromItems = quoteItems.reduce((sum, item) => {
+      return sum + (item.item_price * item.quantity);
+    }, 0);
+    
+    const totalPrice = totalFromItems || quote.final_total_local || quote.final_total || 0;
+    const quantity = quote.quantity || firstItem?.quantity || 1;
+    const itemPrice = totalPrice / quantity; // Calculate per-item price
+    
+    return {
+      id: quote.id,
+      quoteId: quote.id,
+      productName: firstItem?.product_name || quote.product_name || 'Unknown Product',
+      finalTotal: totalPrice,
+      quantity: quantity,
+      itemWeight: firstItem?.item_weight || quote.item_weight || 0,
+      imageUrl: firstItem?.image_url || quote.image_url,
+      deliveryDate: quote.delivery_date,
+      countryCode: quote.country_code || 'US',
+      inCart: true,
+      isSelected: false,
+      createdAt: new Date(quote.created_at),
+      updatedAt: new Date(quote.updated_at)
+    };
+  };
 
   const updateQuoteStateMutation = useMutation({
     mutationFn: async ({ 
@@ -25,7 +61,10 @@ export const useQuoteState = (quoteId: string) => {
       // Get current quote state
       const { data: currentQuote, error: fetchError } = await supabase
         .from('quotes')
-        .select('*')
+        .select(`
+          *,
+          quote_items (*)
+        `)
         .eq('id', quoteId)
         .single();
 
@@ -114,10 +153,55 @@ export const useQuoteState = (quoteId: string) => {
     }
   };
 
-  const addToCart = () => {
-    return updateQuoteStateMutation.mutate({
-      in_cart: true
-    });
+  const addToCart = async () => {
+    try {
+      // Get quote with items
+      const { data: quote, error: fetchError } = await supabase
+        .from('quotes')
+        .select(`
+          *,
+          quote_items (*)
+        `)
+        .eq('id', quoteId)
+        .single();
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      if (!quote) {
+        throw new Error('Quote not found');
+      }
+
+      // Convert quote to cart item
+      const cartItem = convertQuoteToCartItem(quote);
+
+      // Set userId in cart store first
+      useCartStore.getState().setUserId(user?.id || '');
+
+      // Add item to cart store
+      addItem(cartItem);
+
+      // Update quote status in database
+      await updateQuoteStateMutation.mutateAsync({ in_cart: true });
+
+      toast({
+        title: "Added to Cart",
+        description: "Item has been added to your cart successfully.",
+      });
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders'] });
+
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const removeFromCart = () => {
