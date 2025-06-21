@@ -24,6 +24,7 @@ import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
 import { QuoteManagementPage } from "@/components/admin/QuoteManagementPage";
 import { OrderManagementPage } from "@/components/admin/OrderManagementPage";
 import { CustomerManagementPage } from "@/components/admin/CustomerManagementPage";
+import { EnhancedCustomerManagementPage } from "@/components/admin/EnhancedCustomerManagementPage";
 import { CountrySettings } from "@/components/admin/CountrySettings";
 import { CustomsCategories } from "@/components/admin/CustomsCategories";
 import { UserRoles } from "@/components/admin/UserRoles";
@@ -97,7 +98,7 @@ const router = createBrowserRouter([
           },
           {
             path: "customers",
-            element: <CustomerManagementPage />,
+            element: <EnhancedCustomerManagementPage />,
           },
           {
             path: "templates",

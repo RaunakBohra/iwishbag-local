@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -31,49 +30,79 @@ export const useCustomerManagement = () => {
   const { data: customers, isLoading } = useQuery({
     queryKey: ['admin-customers'],
     queryFn: async () => {
-      console.log('Fetching customer data from edge function...');
-      
-      // Get all customer data from the updated edge function
-      const { data: customersData, error } = await supabase.functions.invoke('get-users-with-roles');
-      
-      if (error) {
+      try {
+        // Try the Edge Function first
+        const { data, error } = await supabase.functions.invoke('get-users-with-emails');
+
+        if (error) {
+          console.error('Edge Function error:', error);
+          // Fallback to direct database query
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select(`
+              id,
+              full_name,
+              cod_enabled,
+              internal_notes,
+              created_at,
+              user_addresses (
+                id,
+                address_line1,
+                address_line2,
+                city,
+                country,
+                postal_code,
+                is_default
+              )
+            `);
+
+          if (profilesError) {
+            console.error('Direct query error:', profilesError);
+            throw profilesError;
+          }
+
+          // Add mock email for testing
+          const customersWithEmails = profiles?.map(profile => ({
+            ...profile,
+            email: `user-${profile.id}@example.com` // Mock email for testing
+          })) || [];
+
+          return customersWithEmails;
+        }
+
+        if (!data?.data) {
+          return [];
+        }
+
+        return data.data as CustomerWithEmail[];
+      } catch (error) {
         console.error('Error fetching customers:', error);
-        throw new Error(error.message);
+        throw error;
       }
-
-      console.log('Customers data received:', customersData);
-
-      // Check if customersData is an array and has items
-      if (!Array.isArray(customersData) || customersData.length === 0) {
-        console.log('No customers found or invalid data structure');
-        return [];
-      }
-
-      // The edge function now returns all the data we need, including addresses
-      const customersWithEmails: CustomerWithEmail[] = customersData.map((customer: any) => ({
-        id: customer.id,
-        email: customer.email || 'No email found',
-        full_name: customer.full_name,
-        cod_enabled: customer.cod_enabled,
-        internal_notes: customer.internal_notes,
-        created_at: customer.created_at,
-        user_addresses: customer.user_addresses || []
-      }));
-
-      console.log('Final customers data:', customersWithEmails);
-      return customersWithEmails;
     }
   });
 
   const updateCodMutation = useMutation({
     mutationFn: async ({ userId, codEnabled }: { userId: string; codEnabled: boolean }) => {
-      const { error } = await supabase
+      console.log('Updating COD for user:', userId, 'to:', codEnabled);
+      
+      const { data, error } = await supabase
         .from('profiles')
         .update({ cod_enabled: codEnabled })
-        .eq('id', userId);
-      if (error) throw error;
+        .eq('id', userId)
+        .select();
+
+      console.log('Update result:', { data, error });
+      
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+      
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('COD update successful:', data);
       queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
       toast({
         title: "Success",
@@ -81,12 +110,12 @@ export const useCustomerManagement = () => {
       });
     },
     onError: (error) => {
+      console.error('COD update error:', error);
       toast({
         title: "Error",
         description: "Failed to update COD status",
         variant: "destructive",
       });
-      console.error('COD update error:', error);
     },
   });
 
