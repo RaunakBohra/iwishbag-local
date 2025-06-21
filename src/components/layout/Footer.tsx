@@ -3,7 +3,10 @@ import { ShoppingBag, Twitter, Facebook, Instagram, Linkedin, Phone, Mail, MapPi
 import { useHomePageSettings } from "@/hooks/useHomePageSettings";
 
 const Footer = () => {
-  const { formData: homePageSettings } = useHomePageSettings();
+  const { settings: homePageSettings } = useHomePageSettings();
+
+  // Debug logging
+  console.log('Footer component rendering with settings:', homePageSettings);
 
   return (
     <footer className="border-t bg-card text-card-foreground">

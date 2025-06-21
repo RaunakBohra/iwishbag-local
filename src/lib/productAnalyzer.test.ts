@@ -3,89 +3,68 @@
 
 import { productAnalyzer } from './productAnalyzer';
 
-// Example usage and testing scenarios
-export const testProductAnalyzer = async () => {
-  console.log('Testing Product Analyzer...\n');
+// Test the Product Analyzer functionality
+export async function testProductAnalyzer() {
+  const results = {
+    amazon: null as any,
+    ebay: null as any,
+    walmart: null as any,
+    aliexpress: null as any,
+    unsupported: null as any,
+    invalid: null as any
+  };
 
-  // Test 1: Amazon product URL
   try {
-    console.log('Test 1: Amazon Product URL');
-    const amazonResult = await productAnalyzer.analyzeProduct(
-      'https://www.amazon.com/dp/B08N5WRWNW',
-      'Echo Dot (4th Gen)'
-    );
-    console.log('Amazon Result:', amazonResult);
-  } catch (error) {
-    console.log('Amazon Test Failed:', error.message);
-  }
+    // Test 1: Amazon Product URL
+    try {
+      results.amazon = await productAnalyzer.analyzeProduct('https://www.amazon.com/dp/B08N5WRWNW');
+    } catch (error) {
+      results.amazon = { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
 
-  // Test 2: eBay product URL
-  try {
-    console.log('\nTest 2: eBay Product URL');
-    const ebayResult = await productAnalyzer.analyzeProduct(
-      'https://www.ebay.com/itm/123456789',
-      'iPhone 13 Pro'
-    );
-    console.log('eBay Result:', ebayResult);
-  } catch (error) {
-    console.log('eBay Test Failed:', error.message);
-  }
+    // Test 2: eBay Product URL
+    try {
+      results.ebay = await productAnalyzer.analyzeProduct('https://www.ebay.com/itm/123456789');
+    } catch (error) {
+      results.ebay = { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
 
-  // Test 3: Walmart product URL
-  try {
-    console.log('\nTest 3: Walmart Product URL');
-    const walmartResult = await productAnalyzer.analyzeProduct(
-      'https://www.walmart.com/ip/123456789',
-      'Samsung TV'
-    );
-    console.log('Walmart Result:', walmartResult);
-  } catch (error) {
-    console.log('Walmart Test Failed:', error.message);
-  }
+    // Test 3: Walmart Product URL
+    try {
+      results.walmart = await productAnalyzer.analyzeProduct('https://www.walmart.com/ip/123456789');
+    } catch (error) {
+      results.walmart = { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
 
-  // Test 4: AliExpress product URL
-  try {
-    console.log('\nTest 4: AliExpress Product URL');
-    const aliexpressResult = await productAnalyzer.analyzeProduct(
-      'https://www.aliexpress.com/item/123456789.html',
-      'Wireless Earbuds'
-    );
-    console.log('AliExpress Result:', aliexpressResult);
-  } catch (error) {
-    console.log('AliExpress Test Failed:', error.message);
-  }
+    // Test 4: AliExpress Product URL
+    try {
+      results.aliexpress = await productAnalyzer.analyzeProduct('https://www.aliexpress.com/item/123456789.html');
+    } catch (error) {
+      results.aliexpress = { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
 
-  // Test 5: Unsupported platform
-  try {
-    console.log('\nTest 5: Unsupported Platform');
-    const unsupportedResult = await productAnalyzer.analyzeProduct(
-      'https://www.unsupported-site.com/product/123',
-      'Test Product'
-    );
-    console.log('Unsupported Result:', unsupportedResult);
-  } catch (error) {
-    console.log('Unsupported Test Failed (Expected):', error.message);
-  }
+    // Test 5: Unsupported Platform
+    try {
+      results.unsupported = await productAnalyzer.analyzeProduct('https://unsupported-platform.com/product/123');
+    } catch (error) {
+      results.unsupported = { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
 
-  // Test 6: Invalid URL
-  try {
-    console.log('\nTest 6: Invalid URL');
-    const invalidResult = await productAnalyzer.analyzeProduct(
-      'not-a-valid-url',
-      'Test Product'
-    );
-    console.log('Invalid Result:', invalidResult);
-  } catch (error) {
-    console.log('Invalid Test Failed (Expected):', error.message);
-  }
+    // Test 6: Invalid URL
+    try {
+      results.invalid = await productAnalyzer.analyzeProduct('not-a-valid-url');
+    } catch (error) {
+      results.invalid = { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
 
-  console.log('\nProduct Analyzer Testing Complete!');
-};
+    return results;
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Test failed' };
+  }
+}
 
 // Example of how the analyzer would be used in the quote automation process
 export const demonstrateQuoteAutomation = async () => {
-  console.log('\n=== Quote Automation Demonstration ===\n');
-
   // Simulate a customer submitting a quote with product URLs
   const customerQuote = {
     id: 'quote-123',
@@ -111,40 +90,40 @@ export const demonstrateQuoteAutomation = async () => {
     country_code: 'US'
   };
 
-  console.log('Customer Quote Submitted:', customerQuote);
+  const results = [];
 
   // Process each item
   for (const item of customerQuote.items) {
-    console.log(`\nProcessing Item: ${item.product_name}`);
-    
     try {
       const analysis = await productAnalyzer.analyzeProduct(
         item.product_url,
         item.product_name
       );
       
-      console.log('Analysis Result:', {
-        name: analysis.name,
-        price: `$${analysis.price}`,
-        weight: `${analysis.weight}kg`,
-        category: analysis.category,
-        currency: analysis.currency,
-        availability: analysis.availability
+      results.push({
+        item: item.product_name,
+        success: true,
+        analysis: {
+          name: analysis.name,
+          price: `$${analysis.price}`,
+          weight: `${analysis.weight}kg`,
+          category: analysis.category,
+          currency: analysis.currency,
+          availability: analysis.availability
+        }
       });
-
-      // In a real system, this would update the database
-      console.log('✅ Item processed successfully');
       
     } catch (error) {
-      console.log('❌ Item processing failed:', error.message);
-      console.log('📝 Creating manual analysis task...');
-      
-      // In a real system, this would create a manual analysis task
-      console.log('✅ Manual analysis task created');
+      results.push({
+        item: item.product_name,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        manualAnalysisRequired: true
+      });
     }
   }
 
-  console.log('\n=== Quote Automation Complete ===');
+  return results;
 };
 
 // Run the tests if this file is executed directly

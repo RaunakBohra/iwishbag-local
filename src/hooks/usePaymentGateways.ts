@@ -159,7 +159,7 @@ export const usePaymentGateways = () => {
       if (!user) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('preferred_display_currency, country')
+        .select('preferred_display_currency, country, cod_enabled')
         .eq('id', user.id)
         .single();
 
@@ -171,49 +171,54 @@ export const usePaymentGateways = () => {
 
   // Get available payment methods for current user
   const { data: availableMethods, isLoading: methodsLoading } = useQuery({
-    queryKey: ['available-payment-methods', userProfile?.country, userProfile?.preferred_display_currency],
+    queryKey: ['available-payment-methods', userProfile?.country, userProfile?.preferred_display_currency, userProfile?.cod_enabled],
     queryFn: async (): Promise<PaymentGateway[]> => {
       if (!userProfile?.country || !userProfile?.preferred_display_currency) {
-        console.log('[Payment Debug] No country or currency in userProfile:', userProfile);
-        return ['bank_transfer', 'cod'];
+        return [];
       }
 
-      // Use the codes directly since database now stores codes
       const countryCode = userProfile.country;
       const currencyCode = userProfile.preferred_display_currency;
 
-      console.log('[Payment Debug] User Profile:', userProfile);
-      console.log('[Payment Debug] Using codes directly:', { countryCode, currencyCode });
-
       const { data: gateways, error } = await supabase
         .from('payment_gateways')
-        .select('code, supported_countries, supported_currencies, is_active')
+        .select('code, supported_countries, supported_currencies, is_active, test_mode, config')
         .eq('is_active', true);
 
       if (error) {
-        console.error('[Payment Debug] Error fetching gateways:', error);
+        console.error('Error fetching gateways:', error);
+        return [];
       }
       if (!gateways) {
-        console.log('[Payment Debug] No active gateways found in database.');
-        return ['bank_transfer', 'cod'];
+        return [];
       }
-      console.log('[Payment Debug] Active Gateways from DB:', gateways);
 
       const filteredGateways = gateways
         .filter(gateway => {
           const countryMatch = gateway.supported_countries.includes(countryCode);
           const currencyMatch = gateway.supported_currencies.includes(currencyCode);
-          console.log(`[Payment Debug] Checking gateway: ${gateway.code}`);
-          console.log(`  - User Country: '${countryCode}' | Supported: [${gateway.supported_countries}] | Match: ${countryMatch}`);
-          console.log(`  - User Currency: '${currencyCode}' | Supported: [${gateway.supported_currencies}] | Match: ${currencyMatch}`);
-          return countryMatch && currencyMatch;
+          
+          let hasKeys = true;
+          if (gateway.code === 'stripe') {
+            const pk = gateway.test_mode ? gateway.config?.test_publishable_key : gateway.config?.live_publishable_key;
+            hasKeys = !!pk;
+          }
+          
+          return countryMatch && currencyMatch && hasKeys;
         });
 
-      const finalMethodCodes = filteredGateways
-        .map(gateway => gateway.code as PaymentGateway)
-        .concat(['bank_transfer', 'cod']);
-      console.log('[Payment Debug] Final available method codes:', finalMethodCodes);
-      return finalMethodCodes;
+      let finalMethods = filteredGateways.map(gateway => gateway.code as PaymentGateway);
+
+      // Always add Bank Transfer
+      finalMethods.push('bank_transfer');
+
+      // Add COD if enabled for the user
+      if (userProfile?.cod_enabled) {
+        finalMethods.push('cod');
+      }
+      
+      // Remove duplicates
+      return [...new Set(finalMethods)];
     },
     enabled: !!userProfile
   });
@@ -255,21 +260,18 @@ export const usePaymentGateways = () => {
     },
     onSuccess: (data, variables) => {
       if (data.success) {
-        if (data.url) {
-          // Redirect to payment gateway
-          window.location.href = data.url;
-        } else if (data.qr_code) {
-          // Handle QR code payment (show QR modal)
+        if (variables.gateway === 'stripe' && data.stripeCheckoutUrl) {
+          window.location.href = data.stripeCheckoutUrl;
+        } else if (data.qrCode) {
           toast({
             title: 'QR Code Generated',
-            description: 'Please scan the QR code with your mobile app to complete payment.',
+            description: 'Please scan the QR code to complete payment.',
           });
-          // You can emit an event or use a callback to show QR modal
+          // Here you would typically open a modal with the QR code
         } else {
-          // Payment created successfully
           toast({
-            title: 'Payment Created Successfully',
-            description: `Payment created with ID: ${data.transaction_id}`,
+            title: 'Payment Initiated',
+            description: `Your payment was successfully created with ID: ${data.transactionId}`,
           });
         }
       } else {

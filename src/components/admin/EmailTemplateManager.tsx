@@ -12,11 +12,12 @@ import {
   Edit, 
   Trash2, 
   Copy,
-  Eye,
   Save
 } from "lucide-react";
 import { useCartAbandonmentEmails } from "@/hooks/useCartAbandonmentEmails";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from "@/integrations/supabase/client";
 
 interface EmailTemplate {
   id: string;
@@ -36,6 +37,8 @@ export const EmailTemplateManager = () => {
     subject: '',
     body: ''
   });
+
+  const queryClient = useQueryClient();
 
   const handleCreateTemplate = () => {
     setTemplateForm({ name: '', subject: '', body: '' });
@@ -81,6 +84,33 @@ ${template.body}
     `);
     toast.success('Template copied to clipboard');
   };
+
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (template: EmailTemplate) => {
+      const { data, error } = await supabase
+        .from('email_templates')
+        .upsert(template)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-templates'] });
+      toast({
+        title: "Success",
+        description: "Template saved successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save template",
+        variant: "destructive",
+      });
+    },
+  });
 
   if (loadingTemplates) {
     return (

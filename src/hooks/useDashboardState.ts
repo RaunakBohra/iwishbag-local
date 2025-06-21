@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -82,7 +81,6 @@ export const useDashboardState = () => {
   };
 
   const handleBulkAction = (action: string) => {
-    console.log('Bulk action:', action, 'for quotes:', selectedQuoteIds);
     // Implementation will be added later
   };
 

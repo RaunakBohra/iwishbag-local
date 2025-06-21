@@ -10,7 +10,7 @@ export const useHomePageSettings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: homePageSettings, isLoading, error } = useQuery({
+  const { data: homePageSettings, isLoading, error, refetch } = useQuery({
     queryKey: ['home-page-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -18,11 +18,15 @@ export const useHomePageSettings = () => {
         .select('*')
         .single();
       if (error) {
+        console.error('Error fetching footer settings:', error);
         toast({ title: 'Error fetching settings', description: error.message, variant: 'destructive' });
         return null;
       }
+      console.log('Fetched footer settings:', data);
       return data;
     },
+    staleTime: 0, // Always fetch fresh data
+    refetchOnWindowFocus: true, // Refetch when window gains focus
   });
 
   const [formData, setFormData] = useState<HomePageSettingsData>({
@@ -45,12 +49,14 @@ export const useHomePageSettings = () => {
     hero_subheadline: '',
     hero_cta_text: '',
     hero_cta_link: '',
-    how_it_works_steps: '',
-    value_props: '',
+    how_it_works_steps: null,
+    value_props: null,
+    contact_email: '',
   });
 
   useEffect(() => {
     if (homePageSettings) {
+      console.log('Updating form data with:', homePageSettings);
       setFormData({
         company_name: homePageSettings.company_name || '',
         company_description: homePageSettings.company_description || '',
@@ -71,40 +77,68 @@ export const useHomePageSettings = () => {
         hero_subheadline: homePageSettings.hero_subheadline || '',
         hero_cta_text: homePageSettings.hero_cta_text || '',
         hero_cta_link: homePageSettings.hero_cta_link || '',
-        how_it_works_steps: homePageSettings.how_it_works_steps || '',
-        value_props: homePageSettings.value_props || '',
+        how_it_works_steps: homePageSettings.how_it_works_steps || null,
+        value_props: homePageSettings.value_props || null,
+        contact_email: homePageSettings.contact_email || '',
       });
     }
   }, [homePageSettings]);
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: HomePageSettingsData) => {
+      console.log('Updating settings with data:', data);
       let id = homePageSettings?.id;
       if (!id) {
         const { data: row } = await supabase.from('footer_settings').select('id').single();
         id = row?.id;
       }
-      const { error } = await supabase
+      
+      if (!id) {
+        throw new Error('No footer settings record found');
+      }
+      
+      const { data: updatedData, error } = await supabase
         .from('footer_settings')
         .update(data)
-        .eq('id', id);
-      if (error) throw error;
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Error updating footer settings:', error);
+        throw error;
+      }
+      
+      if (!updatedData) {
+        throw new Error('No data returned after update');
+      }
+      
+      console.log('Settings updated successfully, returned data:', updatedData);
+      return updatedData;
     },
-    onSuccess: () => {
+    onSuccess: (updatedData) => {
+      console.log('Mutation succeeded, updating cache with:', updatedData);
+      // Update the cache directly with the new data
+      queryClient.setQueryData(['home-page-settings'], updatedData);
+      // Also invalidate to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['home-page-settings'] });
+      // Force a refetch to ensure all components get the latest data
+      refetch();
       toast({ title: 'Settings updated', description: 'Home page settings updated successfully.' });
     },
     onError: (error: any) => {
+      console.error('Mutation error:', error);
       toast({ title: 'Error updating settings', description: error.message, variant: 'destructive' });
     },
   });
 
-  const handleInputChange = (field: keyof HomePageSettingsData, value: string) => {
+  const handleInputChange = (field: keyof HomePageSettingsData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Submitting form data:', formData);
     updateSettingsMutation.mutate(formData);
   };
 
@@ -116,6 +150,7 @@ export const useHomePageSettings = () => {
     isUpdating: updateSettingsMutation.isPending,
     handleInputChange,
     handleSubmit,
+    refetch,
   };
 };
 

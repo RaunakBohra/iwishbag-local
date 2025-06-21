@@ -1,146 +1,359 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Package, MessageSquare, Settings, DollarSign } from "lucide-react";
-
-interface Activity {
-  id: string;
-  type: 'order' | 'message' | 'status_change' | 'payment';
-  title: string;
-  description: string;
-  timestamp: string;
-  icon: React.ReactNode;
-}
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { 
+  Activity, 
+  ShoppingCart, 
+  FileText, 
+  DollarSign, 
+  Calendar, 
+  MapPin,
+  User,
+  Mail,
+  Phone,
+  Package,
+  Truck,
+  CheckCircle,
+  Clock,
+  AlertCircle
+} from "lucide-react";
+import { format } from "date-fns";
 
 interface CustomerActivityTimelineProps {
   customerId: string;
 }
 
+interface CustomerProfile {
+  id: string;
+  full_name: string | null;
+  email: string;
+  cod_enabled: boolean;
+  internal_notes: string | null;
+  created_at: string;
+  user_addresses: Array<{
+    id: string;
+    address_line1: string;
+    address_line2: string | null;
+    city: string;
+    country: string;
+    postal_code: string;
+    is_default: boolean;
+  }>;
+}
+
+type ActivityItem = {
+  id: string;
+  type: 'quote' | 'order' | 'payment' | 'shipping' | 'note';
+  title: string;
+  description: string;
+  date: Date;
+  status?: string;
+  amount?: number;
+  metadata?: Record<string, any>;
+};
+
 export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelineProps) => {
-  const { data: activities, isLoading } = useQuery({
-    queryKey: ['customer-activity', customerId],
+  const { data: customer } = useQuery<CustomerProfile>({
+    queryKey: ['customer', customerId],
     queryFn: async () => {
-      const activities: Activity[] = [];
+      // Use the Edge Function to get the specific customer
+      const { data, error } = await supabase.functions.invoke('get-users-with-emails');
 
-      // Fetch orders
-      const { data: orders } = await supabase
-        .from('quotes')
-        .select('id, created_at, status, total_amount')
-        .eq('user_id', customerId)
-        .order('created_at', { ascending: false })
-        .limit(5);
+      if (error) throw error;
+      
+      if (!data?.data) {
+        throw new Error('No customer data found');
+      }
 
-      orders?.forEach(order => {
-        activities.push({
-          id: `order-${order.id}`,
-          type: 'order',
-          title: `Order #${order.id}`,
-          description: `Order ${order.status} with total of $${order.total_amount}`,
-          timestamp: order.created_at,
-          icon: <Package className="h-4 w-4" />
-        });
-      });
+      const customers = data.data as CustomerProfile[];
+      const customer = customers.find(c => c.id === customerId);
+      
+      if (!customer) {
+        throw new Error('Customer not found');
+      }
 
-      // Fetch messages
-      const { data: messages } = await supabase
-        .from('messages')
-        .select('id, created_at, content')
-        .eq('user_id', customerId)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      messages?.forEach(message => {
-        activities.push({
-          id: `message-${message.id}`,
-          type: 'message',
-          title: 'New Message',
-          description: message.content,
-          timestamp: message.created_at,
-          icon: <MessageSquare className="h-4 w-4" />
-        });
-      });
-
-      // Fetch profile changes
-      const { data: profileChanges } = await supabase
-        .from('profile_changes')
-        .select('id, created_at, field, old_value, new_value')
-        .eq('user_id', customerId)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      profileChanges?.forEach(change => {
-        activities.push({
-          id: `change-${change.id}`,
-          type: 'status_change',
-          title: 'Profile Updated',
-          description: `${change.field} changed from ${change.old_value} to ${change.new_value}`,
-          timestamp: change.created_at,
-          icon: <Settings className="h-4 w-4" />
-        });
-      });
-
-      // Sort all activities by timestamp
-      return activities.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
+      return customer;
     }
   });
 
-  if (isLoading) {
+  const { data: quotes } = useQuery({
+    queryKey: ['customer-quotes', customerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('user_id', customerId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: orders } = useQuery({
+    queryKey: ['customer-orders', customerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('user_id', customerId)
+        .in('status', ['paid', 'ordered', 'shipped', 'completed'])
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Combine and sort all activities
+  const activities: ActivityItem[] = [];
+
+  // Add customer registration
+  if (customer) {
+    activities.push({
+      id: 'registration',
+      type: 'note',
+      title: 'Customer Registered',
+      description: 'Customer joined the platform',
+      date: new Date(customer.created_at),
+      status: 'completed'
+    });
+  }
+
+  // Add quotes
+  quotes?.forEach(quote => {
+    activities.push({
+      id: `quote-${quote.id}`,
+      type: 'quote',
+      title: `Quote Created`,
+      description: `Quote for ${quote.product_name || 'Product'}`,
+      date: new Date(quote.created_at),
+      status: quote.status,
+      amount: quote.final_total,
+      metadata: {
+        quoteId: quote.id,
+        productName: quote.product_name,
+        status: quote.status
+      }
+    });
+  });
+
+  // Add orders (paid quotes)
+  orders?.forEach(order => {
+    activities.push({
+      id: `order-${order.id}`,
+      type: 'order',
+      title: `Order Placed`,
+      description: `Order for ${order.product_name || 'Product'}`,
+      date: new Date(order.updated_at || order.created_at),
+      status: order.status,
+      amount: order.final_total,
+      metadata: {
+        orderId: order.id,
+        productName: order.product_name,
+        status: order.status
+      }
+    });
+  });
+
+  // Sort activities by date (newest first)
+  activities.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  const getActivityIcon = (type: ActivityItem['type']) => {
+    switch (type) {
+      case 'quote':
+        return <FileText className="h-4 w-4" />;
+      case 'order':
+        return <ShoppingCart className="h-4 w-4" />;
+      case 'payment':
+        return <DollarSign className="h-4 w-4" />;
+      case 'shipping':
+        return <Truck className="h-4 w-4" />;
+      case 'note':
+        return <User className="h-4 w-4" />;
+      default:
+        return <Activity className="h-4 w-4" />;
+    }
+  };
+
+  const getStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'completed':
+      case 'paid':
+      case 'shipped':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'pending':
+      case 'processing':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'cancelled':
+      case 'rejected':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <Activity className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusBadge = (status?: string) => {
+    if (!status) return null;
+    
+    const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+      'pending': { label: 'Pending', variant: 'outline' },
+      'processing': { label: 'Processing', variant: 'secondary' },
+      'paid': { label: 'Paid', variant: 'default' },
+      'ordered': { label: 'Ordered', variant: 'default' },
+      'shipped': { label: 'Shipped', variant: 'default' },
+      'completed': { label: 'Completed', variant: 'default' },
+      'cancelled': { label: 'Cancelled', variant: 'destructive' },
+      'rejected': { label: 'Rejected', variant: 'destructive' }
+    };
+
+    const statusInfo = statusMap[status] || { label: status, variant: 'outline' as const };
+    
+    return (
+      <Badge variant={statusInfo.variant} className="ml-2">
+        {statusInfo.label}
+      </Badge>
+    );
+  };
+
+  if (!customer) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-4">
-                <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-                <div className="space-y-2 flex-1">
-                  <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-                  <div className="h-3 w-48 bg-muted animate-pulse rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
+        <CardContent className="text-center py-12">
+          <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Loading customer information...</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recent Activity</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[300px]">
-          <div className="space-y-4">
-            {activities?.map((activity) => (
-              <div key={activity.id} className="flex items-start space-x-4">
-                <div className="mt-1">
-                  {activity.icon}
-                </div>
-                <div>
-                  <p className="font-medium">{activity.title}</p>
-                  <p className="text-sm text-muted-foreground">{activity.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(activity.timestamp), 'MMM dd, yyyy HH:mm')}
-                  </p>
-                </div>
+    <div className="space-y-6">
+      {/* Customer Info Header */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Customer Activity Timeline
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
               </div>
-            ))}
-            {activities?.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No recent activity
-              </p>
-            )}
+              <div>
+                <div className="font-medium">{customer.full_name || 'Unnamed User'}</div>
+                <div className="text-sm text-muted-foreground">{customer.id}</div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">
+                {customer.user_addresses?.[0] ? 
+                  `${customer.user_addresses[0].city}, ${customer.user_addresses[0].country}` : 
+                  'No address'
+                }
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">
+                Joined {format(new Date(customer.created_at), 'MMM dd, yyyy')}
+              </span>
+            </div>
           </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Activity Timeline */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Recent Activity
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {activities.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Activity className="h-12 w-12 mx-auto mb-4" />
+              <p>No activity found for this customer</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {activities.map((activity) => (
+                <div key={activity.id} className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                    {getActivityIcon(activity.type)}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium">{activity.title}</h4>
+                      {getStatusBadge(activity.status)}
+                    </div>
+                    
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {activity.description}
+                    </p>
+                    
+                    {activity.amount && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <DollarSign className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-sm font-medium">
+                          ${activity.amount.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      {format(activity.date, 'MMM dd, yyyy HH:mm')}
+                    </div>
+                  </div>
+                  
+                  <div className="flex-shrink-0">
+                    {getStatusIcon(activity.status)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm">
+              <Mail className="h-4 w-4 mr-2" />
+              Send Email
+            </Button>
+            <Button variant="outline" size="sm">
+              <Phone className="h-4 w-4 mr-2" />
+              Call Customer
+            </Button>
+            <Button variant="outline" size="sm">
+              <Package className="h-4 w-4 mr-2" />
+              Create Quote
+            </Button>
+            <Button variant="outline" size="sm">
+              <User className="h-4 w-4 mr-2" />
+              Edit Profile
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }; 

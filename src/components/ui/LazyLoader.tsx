@@ -60,14 +60,24 @@ export const usePerformanceMonitor = () => {
     const start = performance.now();
     fn();
     const end = performance.now();
-    console.log(`${name} took ${end - start}ms`);
+    const duration = end - start;
+    
+    // Only log in development and for slow operations
+    if (process.env.NODE_ENV === 'development' && duration > 16) {
+      console.warn(`Performance: ${name} took ${duration.toFixed(2)}ms`);
+    }
   };
 
   const measureAsyncPerformance = async (name: string, fn: () => Promise<void>) => {
     const start = performance.now();
     await fn();
     const end = performance.now();
-    console.log(`${name} took ${end - start}ms`);
+    const duration = end - start;
+    
+    // Only log in development and for slow operations
+    if (process.env.NODE_ENV === 'development' && duration > 100) {
+      console.warn(`Performance: ${name} took ${duration.toFixed(2)}ms`);
+    }
   };
 
   return { measurePerformance, measureAsyncPerformance };

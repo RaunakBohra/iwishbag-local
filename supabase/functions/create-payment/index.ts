@@ -15,6 +15,7 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') as string, {
 // This should match src/types/payment.ts PaymentRequest
 interface PaymentRequest {
   quoteIds: string[];
+  gateway: 'stripe' | 'bank_transfer' | 'cod' | 'payu' | 'esewa' | 'khalti' | 'fonepay' | 'airwallex';
   success_url: string;
   cancel_url: string;
 }
@@ -22,9 +23,9 @@ interface PaymentRequest {
 // This should match src/types/payment.ts PaymentResponse
 interface PaymentResponse {
   success: boolean;
-  url?: string | null;
-  qr_code?: string | null;
-  transaction_id?: string;
+  stripeCheckoutUrl?: string | null;
+  qrCode?: string | null;
+  transactionId?: string;
   error?: string;
 }
 
@@ -38,10 +39,14 @@ serve(async (req) => {
     console.log('Stripe Key:', Deno.env.get('STRIPE_SECRET_KEY')?.substring(0, 10));
     console.log('Supabase URL:', Deno.env.get('SUPABASE_URL'));
 
-    const { quoteIds, success_url, cancel_url }: PaymentRequest = await req.json()
+    const { quoteIds, gateway, success_url, cancel_url }: PaymentRequest = await req.json()
 
     if (!quoteIds || quoteIds.length === 0) {
       return new Response(JSON.stringify({ error: 'Missing quoteIds' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+    }
+    
+    if (!gateway) {
+      return new Response(JSON.stringify({ error: 'Missing payment gateway' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
     }
 
     const supabaseAdmin = createClient(
@@ -62,35 +67,51 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'No valid quotes found.' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
     }
 
-    const line_items = quotes.map(quote => ({
-      price_data: {
-        currency: quote.final_currency || 'usd',
-        product_data: {
-          name: quote.product_name || 'Unnamed Product',
-        },
-        unit_amount: Math.round(quote.final_total * 100), // Stripe expects amount in cents
-      },
-      quantity: quote.quantity,
-    }));
-    
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items,
-      mode: 'payment',
-      success_url,
-      cancel_url,
-      metadata: {
-        quoteIds: quoteIds.join(','),
-      },
-    });
+    let responseData: PaymentResponse;
 
-    return new Response(
-      JSON.stringify({ url: session.url }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    )
+    switch (gateway) {
+      case 'stripe':
+        const line_items = quotes.map(quote => ({
+          price_data: {
+            currency: quote.final_currency || 'usd',
+            product_data: {
+              name: quote.product_name || 'Unnamed Product',
+            },
+            unit_amount: Math.round(quote.final_total * 100), // Stripe expects amount in cents
+          },
+          quantity: quote.quantity,
+        }));
+        
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          line_items,
+          mode: 'payment',
+          success_url,
+          cancel_url,
+          metadata: {
+            quoteIds: quoteIds.join(','),
+          },
+        });
+
+        responseData = { success: true, stripeCheckoutUrl: session.url };
+        break;
+
+      case 'bank_transfer':
+      case 'cod':
+        // For manual methods, we can just mark as success and handle post-payment logic via webhooks or manually
+        responseData = { success: true, transactionId: `manual_${new Date().getTime()}` };
+        break;
+      
+      // TODO: Add cases for other payment gateways (PayU, eSewa, etc.)
+
+      default:
+        return new Response(JSON.stringify({ error: `Unsupported gateway: ${gateway}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+    }
+
+    return new Response(JSON.stringify(responseData), { 
+      status: 200, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
 
   } catch (error) {
     console.error('Payment creation error:', error)

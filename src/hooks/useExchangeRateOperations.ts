@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -9,8 +8,6 @@ export const useExchangeRateOperations = () => {
 
   const triggerUpdateMutation = useMutation({
     mutationFn: async () => {
-      console.log("Triggering exchange rate update...");
-      
       const { data, error } = await supabase.functions.invoke('update-exchange-rates', {
         body: { manual: true }
       });
@@ -22,8 +19,6 @@ export const useExchangeRateOperations = () => {
       return data;
     },
     onSuccess: (data) => {
-      console.log("Exchange rate update response:", data);
-      
       // Invalidate relevant queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ['countries-with-markup'] });
       queryClient.invalidateQueries({ queryKey: ['system-settings'] });
@@ -42,7 +37,6 @@ export const useExchangeRateOperations = () => {
       }
     },
     onError: (error: Error) => {
-      console.error("Exchange rate update failed:", error);
       toast({ 
         title: "Failed to update exchange rates", 
         description: error.message, 
@@ -61,7 +55,6 @@ export const useExchangeRateOperations = () => {
       
       return data;
     } catch (error) {
-      console.error("Failed to get last update info:", error);
       return null;
     }
   };

@@ -1,7 +1,7 @@
-import { HomePageSettings } from "@/integrations/supabase/types";
+import { Tables } from "@/integrations/supabase/types";
 
 interface ValuePropsSectionProps {
-  settings: HomePageSettings | null;
+  settings: Tables<'footer_settings'> | null;
 }
 
 interface ValueProp {
@@ -14,13 +14,41 @@ export const ValuePropsSection = ({ settings }: ValuePropsSectionProps) => {
   if (!settings) return null;
   
   let valueProps: ValueProp[] = [];
+  
   try {
-    valueProps = settings.value_props ? JSON.parse(settings.value_props) : [];
+    // Handle the actual data structure from database
+    if (settings.value_props && typeof settings.value_props === 'object') {
+      const propsObj = settings.value_props as Record<string, string>;
+      valueProps = Object.entries(propsObj).map(([key, value]) => ({
+        title: value,
+        desc: `Premium ${value.toLowerCase()} service for your shopping needs`,
+        icon: getIconForValue(key)
+      }));
+    }
   } catch (e) {
     console.error('Error parsing value_props:', e);
   }
 
-  if (valueProps.length === 0) return null;
+  // Default value props if none are configured
+  if (valueProps.length === 0) {
+    valueProps = [
+      {
+        title: "Fast Shipping",
+        desc: "Get your items delivered quickly and securely",
+        icon: "🚚"
+      },
+      {
+        title: "Secure Payments", 
+        desc: "Your transactions are protected with bank-level security",
+        icon: "🔒"
+      },
+      {
+        title: "Wide Selection",
+        desc: "Access products from major international markets",
+        icon: "🌍"
+      }
+    ];
+  }
 
   return (
     <section className="py-16 md:py-24 relative overflow-hidden">
@@ -68,4 +96,16 @@ export const ValuePropsSection = ({ settings }: ValuePropsSectionProps) => {
       </div>
     </section>
   );
-}; 
+};
+
+// Helper function to get appropriate icons for value props
+function getIconForValue(key: string): string {
+  const iconMap: Record<string, string> = {
+    value1: "🚚", // Fast Shipping
+    value2: "🔒", // Secure Payments  
+    value3: "🌍", // Wide Selection
+    default: "✨"
+  };
+  
+  return iconMap[key] || iconMap.default;
+} 

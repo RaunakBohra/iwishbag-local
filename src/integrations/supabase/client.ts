@@ -2,33 +2,25 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+// Initialize Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Enhanced environment variable validation
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables:', {
-    VITE_SUPABASE_URL: supabaseUrl ? 'SET' : 'MISSING',
-    VITE_SUPABASE_ANON_KEY: supabaseAnonKey ? 'SET' : 'MISSING',
-    NODE_ENV: import.meta.env.MODE,
-  });
-  throw new Error('Missing Supabase environment variables. Please check your .env file and Vercel environment variables.');
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing Supabase environment variables');
 }
 
 // Validate URL format
 try {
   new URL(supabaseUrl);
 } catch (error) {
-  console.error('Invalid Supabase URL format:', supabaseUrl);
   throw new Error('Invalid Supabase URL format');
 }
-
-console.log('Supabase client initialized with URL:', supabaseUrl);
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,

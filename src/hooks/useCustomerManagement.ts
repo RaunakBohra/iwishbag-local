@@ -84,25 +84,19 @@ export const useCustomerManagement = () => {
 
   const updateCodMutation = useMutation({
     mutationFn: async ({ userId, codEnabled }: { userId: string; codEnabled: boolean }) => {
-      console.log('Updating COD for user:', userId, 'to:', codEnabled);
-      
       const { data, error } = await supabase
         .from('profiles')
         .update({ cod_enabled: codEnabled })
         .eq('id', userId)
         .select();
-
-      console.log('Update result:', { data, error });
       
       if (error) {
-        console.error('Database error:', error);
         throw error;
       }
       
       return data;
     },
     onSuccess: (data) => {
-      console.log('COD update successful:', data);
       queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
       toast({
         title: "Success",
@@ -110,10 +104,9 @@ export const useCustomerManagement = () => {
       });
     },
     onError: (error) => {
-      console.error('COD update error:', error);
       toast({
         title: "Error",
-        description: "Failed to update COD status",
+        description: error.message || "Failed to update COD status",
         variant: "destructive",
       });
     },

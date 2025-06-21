@@ -164,11 +164,19 @@ export const HomePageSettings = () => {
                 id="how_it_works_steps"
                 className="font-mono"
                 rows={4}
-                value={String(formData.how_it_works_steps || '')}
-                onChange={e => handleInputChange('how_it_works_steps', e.target.value)}
-                placeholder='[{"icon": "🚚", "title": "Step 1", "desc": "Describe step 1"}, ...]'
+                value={formData.how_it_works_steps ? JSON.stringify(formData.how_it_works_steps, null, 2) : ''}
+                onChange={e => {
+                  try {
+                    const parsed = e.target.value ? JSON.parse(e.target.value) : null;
+                    handleInputChange('how_it_works_steps', parsed);
+                  } catch (error) {
+                    // Keep the string value if JSON is invalid
+                    console.warn('Invalid JSON for how_it_works_steps:', error);
+                  }
+                }}
+                placeholder='{"step1": "Sign up", "step2": "Shop", "step3": "Receive"}'
               />
-              <span className="block text-xs text-muted-foreground">Enter steps as a JSON array.</span>
+              <span className="block text-xs text-muted-foreground">Enter steps as a JSON object.</span>
             </div>
           </CardContent>
         </Card>
@@ -185,11 +193,19 @@ export const HomePageSettings = () => {
                 id="value_props"
                 className="font-mono"
                 rows={3}
-                value={String(formData.value_props || '')}
-                onChange={e => handleInputChange('value_props', e.target.value)}
-                placeholder='[{"icon": "⭐", "title": "Best Prices", "desc": "We guarantee the best prices."}, ...]'
+                value={formData.value_props ? JSON.stringify(formData.value_props, null, 2) : ''}
+                onChange={e => {
+                  try {
+                    const parsed = e.target.value ? JSON.parse(e.target.value) : null;
+                    handleInputChange('value_props', parsed);
+                  } catch (error) {
+                    // Keep the string value if JSON is invalid
+                    console.warn('Invalid JSON for value_props:', error);
+                  }
+                }}
+                placeholder='{"value1": "Fast Shipping", "value2": "Secure Payments", "value3": "Wide Selection"}'
               />
-              <span className="block text-xs text-muted-foreground">Enter value props as a JSON array.</span>
+              <span className="block text-xs text-muted-foreground">Enter value props as a JSON object.</span>
             </div>
           </CardContent>
         </Card>

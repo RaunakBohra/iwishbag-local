@@ -1,26 +1,20 @@
-
 import { useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Message, User, Conversation } from "@/components/messaging/types";
+import { useCustomerManagement } from "./useCustomerManagement";
 
 export const useMessaging = (hasAdminRole: boolean | undefined) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { customers: allUsers, isLoading: isLoadingUsers } = useCustomerManagement();
 
-  const { data: users, isLoading: isLoadingUsers } = useQuery<User[]>({
-    queryKey: ['all-users-with-roles'],
-    queryFn: async () => {
-        const { data, error } = await supabase.functions.invoke('get-users-with-roles');
-        if (error) throw error;
-        return data.filter((u: any) => u.role !== 'admin');
-    },
-    enabled: !!hasAdminRole,
-  });
-
+  const users = useMemo(() => {
+    return allUsers?.filter((u) => u.role !== 'admin') || [];
+  }, [allUsers]);
 
   const { data: messages, isLoading } = useQuery({
     queryKey: ['messages', user?.id, hasAdminRole],

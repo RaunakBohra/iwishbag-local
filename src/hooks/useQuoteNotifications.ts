@@ -43,8 +43,6 @@ export const useQuoteNotifications = () => {
       const accessToken = await getAccessToken();
       if (accessToken) {
         // Temporarily disabled to prevent CORS errors
-        console.log('Confirmation email disabled for development:', { quoteId: quote.id, email: quote.email });
-        
         // TODO: Re-enable when Edge Function is properly set up
         /*
         const { error: emailError } = await supabase.functions.invoke('send-email', {
@@ -119,8 +117,6 @@ export const useQuoteNotifications = () => {
       const accessToken = await getAccessToken();
       if (accessToken) {
         // Temporarily disabled to prevent CORS errors
-        console.log('Quote ready email disabled for development:', { quoteId: quote.id, email: quote.email });
-        
         // TODO: Re-enable when Edge Function is properly set up
         /*
         const { error: emailError } = await supabase.functions.invoke('send-email', {
@@ -210,8 +206,6 @@ export const useQuoteNotifications = () => {
       const accessToken = await getAccessToken();
       if (accessToken) {
         // Temporarily disabled to prevent CORS errors
-        console.log('Status update email disabled for development:', { quoteId: quote.id, status, email: quote.email });
-        
         // TODO: Re-enable when Edge Function is properly set up
         /*
         const { error: emailError } = await supabase.functions.invoke('send-email', {

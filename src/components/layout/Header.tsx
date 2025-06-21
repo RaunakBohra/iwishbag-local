@@ -31,7 +31,7 @@ const Header = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const { data: hasAdminRole } = useAdminRole();
-  const { formData: homePageSettings } = useHomePageSettings();
+  const { settings: homePageSettings } = useHomePageSettings();
 
   // Check if we're in admin area
   const isAdminArea = location.pathname.startsWith('/admin');

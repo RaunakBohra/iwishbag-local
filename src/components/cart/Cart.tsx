@@ -90,36 +90,18 @@ export const Cart = () => {
   // Load cart data from server when component mounts
   useEffect(() => {
     if (user) {
-      console.log('Cart component: Loading cart for user:', user.id);
       // Always load from server first, this will override localStorage
       loadFromServer(user.id);
-    } else {
-      console.log('Cart component: No user found, skipping cart load');
     }
   }, [user, loadFromServer]);
 
   // FIXED: Improved auto-selection logic
   useEffect(() => {
     if (cartItems && cartItems.length > 0 && selectedCartItemCount === 0 && !cartLoading) {
-      console.log('Cart component: Auto-selecting all cart items');
       // Use handleSelectAllCart instead of individual toggleSelection calls
       handleSelectAllCart();
     }
   }, [cartItems, selectedCartItemCount, cartLoading, handleSelectAllCart]);
-
-  // Debug effect to log cart state changes
-  useEffect(() => {
-    console.log('Cart state updated:', {
-      cartItems: cartItems?.length || 0,
-      savedItems: savedItems?.length || 0,
-      selectedItems: selectedItems?.length || 0,
-      selectedCartItems: selectedCartItemCount,
-      isLoading: cartLoading,
-      error: cartError,
-      cartTotal,
-      selectedItemsTotal
-    });
-  }, [cartItems, savedItems, selectedItems, selectedCartItemCount, cartLoading, cartError, cartTotal, selectedItemsTotal]);
 
   // Filter and sort items
   const filteredCartItems = cartItems?.filter(item =>

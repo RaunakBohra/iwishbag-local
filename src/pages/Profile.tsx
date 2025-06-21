@@ -87,16 +87,43 @@ const Profile = () => {
   const updateProfileMutation = useMutation({
     mutationFn: async (values: ProfileFormValues) => {
       if (!user) throw new Error("User not authenticated");
-      const { error } = await supabase
-        .from("profiles")
-        .upsert({ 
-          id: user.id, 
-          full_name: values.full_name,
-          phone: values.phone,
-          country: values.country,
-          preferred_display_currency: values.preferred_display_currency,
-        });
-      if (error) throw new Error(error.message);
+
+      // Check if profile exists
+      const { data: existingProfile, error: selectError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (selectError && selectError.code !== 'PGRST116') {
+        throw new Error(`Error checking profile: ${selectError.message}`);
+      }
+
+      if (existingProfile) {
+        // Profile exists, so update it
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            full_name: values.full_name,
+            phone: values.phone,
+            country: values.country,
+            preferred_display_currency: values.preferred_display_currency,
+          })
+          .eq("id", user.id);
+        if (error) throw new Error(`Error updating profile: ${error.message}`);
+      } else {
+        // Profile doesn't exist, so insert it
+        const { error } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            full_name: values.full_name,
+            phone: values.phone,
+            country: values.country,
+            preferred_display_currency: values.preferred_display_currency,
+          });
+        if (error) throw new Error(`Error creating profile: ${error.message}`);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
@@ -414,43 +441,6 @@ const Profile = () => {
                           <span className="text-sm">
                             <span className="text-muted-foreground">Currency:</span> {getCurrencyName(form.watch('preferred_display_currency'))} ({form.watch('preferred_display_currency')})
                           </span>
-                        </div>
-                      </div>
-                      
-                      {/* Payment Methods Info */}
-                      <div className="mt-4 pt-3 border-t">
-                        <h5 className="font-medium text-sm mb-2">Available Payment Methods</h5>
-                        <div className="flex flex-wrap gap-2">
-                          {form.watch('country') === 'NP' && (
-                            <>
-                              <Badge variant="outline" className="text-xs">
-                                <Globe className="h-3 w-3 mr-1" />
-                                eSewa
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                <Globe className="h-3 w-3 mr-1" />
-                                Khalti
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                <Globe className="h-3 w-3 mr-1" />
-                                Fonepay
-                              </Badge>
-                            </>
-                          )}
-                          {form.watch('country') === 'IN' && (
-                            <Badge variant="outline" className="text-xs">
-                              <Globe className="h-3 w-3 mr-1" />
-                              PayU
-                            </Badge>
-                          )}
-                          <Badge variant="outline" className="text-xs">
-                            <Globe className="h-3 w-3 mr-1" />
-                            Bank Transfer
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            <Globe className="h-3 w-3 mr-1" />
-                            Cash on Delivery
-                          </Badge>
                         </div>
                       </div>
                     </div>

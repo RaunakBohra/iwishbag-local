@@ -3,98 +3,69 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useMemo } from "react";
+import { startOfWeek, format } from "date-fns";
 
 export const VolumeTrend = () => {
-  const { data: volumeData, isLoading, error } = useQuery({
+  const { data: quotes, isLoading, error } = useQuery({
     queryKey: ['volume-trend'],
     queryFn: async () => {
       // Get last 8 weeks of data
       const eightWeeksAgo = new Date();
       eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56); // 8 weeks * 7 days
       
-      console.log('Fetching volume data from:', eightWeeksAgo.toISOString());
-      
       const { data: quotes, error } = await supabase
         .from('quotes')
-        .select('created_at, approval_status')
+        .select('created_at, status')
         .gte('created_at', eightWeeksAgo.toISOString())
+        .in('status', ['paid', 'ordered', 'shipped', 'completed'])
         .order('created_at', { ascending: true });
       
-      if (error) {
-        console.error('Error fetching volume data:', error);
-        throw error;
-      }
-
-      console.log('Fetched quotes for volume:', quotes?.length || 0);
-
-      // Group by week
-      const weeklyQuotes = new Map();
-      const weeklyOrders = new Map();
-
-      quotes?.forEach(quote => {
-        const date = new Date(quote.created_at);
-        const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
-        const weekKey = weekStart.toISOString().split('T')[0];
-        
-        // Count quotes
-        const currentQuotes = weeklyQuotes.get(weekKey) || 0;
-        weeklyQuotes.set(weekKey, currentQuotes + 1);
-        
-        // Count orders (approved quotes)
-        if (quote.approval_status === 'approved') {
-          const currentOrders = weeklyOrders.get(weekKey) || 0;
-          weeklyOrders.set(weekKey, currentOrders + 1);
-        }
-      });
-
-      // Convert to arrays and sort
-      const weeks = Array.from(new Set([...weeklyQuotes.keys(), ...weeklyOrders.keys()])).sort();
+      if (error) throw error;
       
-      const weeklyData = weeks.map(week => ({
-        week,
-        quotes: weeklyQuotes.get(week) || 0,
-        orders: weeklyOrders.get(week) || 0
-      }));
-
-      console.log('Weekly volume data:', weeklyData);
-
-      // Calculate totals
-      const totalQuotes = quotes?.length || 0;
-      const totalOrders = quotes?.filter(q => q.approval_status === 'approved').length || 0;
-
-      // Calculate trends - handle cases with limited data
-      let quoteChange = 0;
-      let orderChange = 0;
-      let quoteChangePercent = 0;
-      let orderChangePercent = 0;
-
-      if (weeklyData.length >= 2) {
-        // If we have at least 2 weeks, compare the last week with the previous week
-        const lastWeek = weeklyData[weeklyData.length - 1];
-        const previousWeek = weeklyData[weeklyData.length - 2];
-        
-        quoteChange = lastWeek.quotes - previousWeek.quotes;
-        orderChange = lastWeek.orders - previousWeek.orders;
-        
-        quoteChangePercent = previousWeek.quotes > 0 ? (quoteChange / previousWeek.quotes) * 100 : 0;
-        orderChangePercent = previousWeek.orders > 0 ? (orderChange / previousWeek.orders) * 100 : 0;
-      }
-
-      const result = {
-        totalQuotes,
-        totalOrders,
-        weeklyData,
-        quoteChange: Math.round(quoteChange * 100) / 100,
-        orderChange: Math.round(orderChange * 100) / 100,
-        quoteChangePercent: Math.round(quoteChangePercent * 100) / 100,
-        orderChangePercent: Math.round(orderChangePercent * 100) / 100
-      };
-
-      console.log('Volume trend result:', result);
-      return result;
+      return quotes;
     },
   });
+
+  const result = useMemo(() => {
+    if (!quotes) return { trend: 'stable', percentage: 0, weeklyData: [] };
+
+    // Group by week and count quotes
+    const weeklyData = quotes.reduce((acc: any[], quote) => {
+      const weekStart = startOfWeek(new Date(quote.created_at), { weekStartsOn: 1 });
+      const weekKey = format(weekStart, 'yyyy-MM-dd');
+      
+      const existingWeek = acc.find(w => w.week === weekKey);
+      if (existingWeek) {
+        existingWeek.count += 1;
+      } else {
+        acc.push({
+          week: weekKey,
+          count: 1
+        });
+      }
+      return acc;
+    }, []);
+
+    // Sort by week
+    weeklyData.sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime());
+
+    // Calculate trend
+    if (weeklyData.length < 2) {
+      return { trend: 'stable', percentage: 0, weeklyData };
+    }
+
+    const recentWeeks = weeklyData.slice(-4); // Last 4 weeks
+    const olderWeeks = weeklyData.slice(-8, -4); // Previous 4 weeks
+
+    const recentAvg = recentWeeks.reduce((sum, week) => sum + week.count, 0) / recentWeeks.length;
+    const olderAvg = olderWeeks.reduce((sum, week) => sum + week.count, 0) / olderWeeks.length;
+
+    const percentage = olderAvg > 0 ? ((recentAvg - olderAvg) / olderAvg) * 100 : 0;
+    const trend = percentage > 5 ? 'up' : percentage < -5 ? 'down' : 'stable';
+
+    return { trend, percentage: Math.abs(percentage), weeklyData };
+  }, [quotes]);
 
   const getTrendIcon = (change: number) => {
     if (isNaN(change)) return <Minus className="h-4 w-4 text-gray-500" />;
@@ -140,8 +111,8 @@ export const VolumeTrend = () => {
     );
   }
 
-  const hasData = volumeData?.weeklyData && volumeData.weeklyData.length > 0;
-  const showTrend = volumeData?.weeklyData.length >= 2;
+  const hasData = result.weeklyData && result.weeklyData.length > 0;
+  const showTrend = result.weeklyData.length >= 2;
 
   return (
     <Card>
@@ -154,38 +125,18 @@ export const VolumeTrend = () => {
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Quotes</span>
-              {getTrendIcon(volumeData?.quoteChange || 0)}
+              {getTrendIcon(result.percentage || 0)}
             </div>
             <div className="text-2xl font-bold">
-              {volumeData?.totalQuotes || 0}
+              {result.weeklyData.length}
             </div>
             {showTrend ? (
-              <p className={`text-sm ${getTrendColor(volumeData?.quoteChange || 0)}`}>
-                {volumeData?.quoteChange > 0 ? '+' : ''}{volumeData?.quoteChangePercent || 0}% vs previous week
+              <p className={`text-sm ${getTrendColor(result.percentage || 0)}`}>
+                {result.percentage > 0 ? '+' : ''}{result.percentage}% vs previous week
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
-                {volumeData?.weeklyData.length === 1 ? 'First week of data' : 'Insufficient data for trend'}
-              </p>
-            )}
-          </div>
-
-          {/* Orders */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Orders</span>
-              {getTrendIcon(volumeData?.orderChange || 0)}
-            </div>
-            <div className="text-2xl font-bold">
-              {volumeData?.totalOrders || 0}
-            </div>
-            {showTrend ? (
-              <p className={`text-sm ${getTrendColor(volumeData?.orderChange || 0)}`}>
-                {volumeData?.orderChange > 0 ? '+' : ''}{volumeData?.orderChangePercent || 0}% vs previous week
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {volumeData?.weeklyData.length === 1 ? 'First week of data' : 'Insufficient data for trend'}
+                {result.weeklyData.length === 1 ? 'First week of data' : 'Insufficient data for trend'}
               </p>
             )}
           </div>
@@ -195,10 +146,9 @@ export const VolumeTrend = () => {
             <div className="text-xs text-muted-foreground">Weekly Volume</div>
             {hasData ? (
               <div className="flex items-end space-x-1 h-16">
-                {volumeData?.weeklyData.slice(-6).map((week) => {
-                  const maxVolume = Math.max(...volumeData.weeklyData.map(w => Math.max(w.quotes, w.orders)));
-                  const quoteHeight = maxVolume > 0 ? (week.quotes / maxVolume) * 100 : 0;
-                  const orderHeight = maxVolume > 0 ? (week.orders / maxVolume) * 100 : 0;
+                {result.weeklyData.slice(-6).map((week) => {
+                  const maxVolume = Math.max(...result.weeklyData.map(w => Math.max(w.count)));
+                  const quoteHeight = maxVolume > 0 ? (week.count / maxVolume) * 100 : 0;
                   
                   return (
                     <div key={week.week} className="flex-1 flex flex-col items-center space-y-1">
@@ -206,12 +156,7 @@ export const VolumeTrend = () => {
                         <div 
                           className="w-full bg-blue-500 rounded-t min-h-[2px]"
                           style={{ height: `${quoteHeight}%` }}
-                          title={`${week.quotes} quotes`}
-                        />
-                        <div 
-                          className="w-full bg-green-500 rounded-t min-h-[2px]"
-                          style={{ height: `${orderHeight}%` }}
-                          title={`${week.orders} orders`}
+                          title={`${week.count} quotes`}
                         />
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -230,10 +175,6 @@ export const VolumeTrend = () => {
               <div className="flex items-center space-x-1">
                 <div className="w-3 h-3 bg-blue-500 rounded"></div>
                 <span>Quotes</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-green-500 rounded"></div>
-                <span>Orders</span>
               </div>
             </div>
           </div>

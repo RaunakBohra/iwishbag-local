@@ -25,8 +25,6 @@ import { cn } from '@/lib/utils';
 interface PaymentMethodSelectorProps {
   selectedMethod: PaymentGateway;
   onMethodChange: (method: PaymentGateway) => void;
-  amount: number;
-  currency: string;
   showRecommended?: boolean;
   disabled?: boolean;
 }
@@ -51,19 +49,15 @@ const getIcon = (iconName: string) => {
 export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   selectedMethod,
   onMethodChange,
-  amount,
-  currency,
   showRecommended = true,
   disabled = false
 }) => {
   const {
     availableMethods,
     methodsLoading,
-    getAvailablePaymentMethods,
     getRecommendedPaymentMethod,
     isMobileOnlyPayment,
-    requiresQRCode,
-    PAYMENT_METHOD_DISPLAYS
+    getPaymentMethodDisplay,
   } = usePaymentGateways();
 
   const [showMobileWarning, setShowMobileWarning] = useState(false);
@@ -94,7 +88,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     );
   }
 
-  const availablePaymentMethods = getAvailablePaymentMethods();
+  const availablePaymentMethods = availableMethods?.map(code => getPaymentMethodDisplay(code)) || [];
   const recommendedMethod = getRecommendedPaymentMethod();
 
   const handleMethodChange = (method: PaymentGateway) => {
@@ -114,8 +108,8 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   };
 
-  const getMethodFee = (method: PaymentGateway) => {
-    const display = PAYMENT_METHOD_DISPLAYS[method];
+  const getMethodFee = (method: PaymentGateway, amount: number) => {
+    const display = getPaymentMethodDisplay(method);
     if (display.fees === 'No additional fees') return 0;
     
     // Extract percentage from fees string (e.g., "2.9% + $0.30" -> 2.9)
@@ -131,7 +125,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   const renderPaymentMethod = (method: PaymentMethodDisplay) => {
     const isSelected = selectedMethod === method.code;
     const isRecommended = method.code === recommendedMethod;
-    const fee = getMethodFee(method.code);
+    const fee = getMethodFee(method.code, amount);
     const totalWithFee = amount + fee;
 
     return (
@@ -246,13 +240,13 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             <Smartphone className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800">
               <strong>Mobile Payment Required:</strong> You'll need to scan a QR code with your mobile app to complete this payment. 
-              Make sure you have the {PAYMENT_METHOD_DISPLAYS[selectedMethod].name} app installed on your phone.
+              Make sure you have the {getPaymentMethodDisplay(selectedMethod).name} app installed on your phone.
             </AlertDescription>
           </Alert>
         )}
         
         {/* QR Code payment instructions */}
-        {requiresQRCode(selectedMethod) && (
+        {getPaymentMethodDisplay(selectedMethod).requires_qr && (
           <Alert className="mt-4 border-purple-200 bg-purple-50">
             <QrCode className="h-4 w-4 text-purple-600" />
             <AlertDescription className="text-purple-800">
