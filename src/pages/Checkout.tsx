@@ -90,7 +90,7 @@ export default function Checkout() {
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
   const [selectedAddress, setSelectedAddress] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentGateway>('stripe');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentGateway>('bank_transfer');
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrPaymentData, setQrPaymentData] = useState<{
@@ -123,9 +123,17 @@ export default function Checkout() {
   useEffect(() => {
     if (availableMethods && availableMethods.length > 0) {
       const recommended = getRecommendedPaymentMethod();
+      
+      // Check if current payment method is still available
+      if (availableMethods.includes(paymentMethod)) {
+        // Current method is still available, keep it
+        return;
+      }
+      
+      // Current method is not available, set to recommended
       setPaymentMethod(recommended);
     }
-  }, [availableMethods, getRecommendedPaymentMethod]);
+  }, [availableMethods, getRecommendedPaymentMethod, paymentMethod]);
 
   // Queries
   const { data: addresses, isLoading: addressesLoading } = useQuery({

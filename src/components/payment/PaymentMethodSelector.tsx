@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -95,17 +95,32 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   const availablePaymentMethods = availableMethods?.map(code => getPaymentMethodDisplay(code)) || [];
   const recommendedMethod = getRecommendedPaymentMethod();
 
-  const handleMethodChange = (method: PaymentGateway) => {
+  // Ensure selectedMethod is always a valid available method
+  const validSelectedMethod = availableMethods?.includes(selectedMethod) 
+    ? selectedMethod 
+    : availableMethods?.[0] || 'bank_transfer';
+
+  // Notify parent if the valid method differs from the prop
+  useEffect(() => {
+    if (validSelectedMethod !== selectedMethod && availableMethods?.length) {
+      onMethodChange(validSelectedMethod);
+    }
+  }, [validSelectedMethod, selectedMethod, availableMethods, onMethodChange]);
+
+  const handleMethodChange = (method: string) => {
     if (disabled) return;
 
+    // Convert string to PaymentGateway type
+    const paymentMethod = method as PaymentGateway;
+
     // Check if mobile-only payment is selected on desktop
-    if (isMobileOnlyPayment(method) && !isMobileDevice()) {
+    if (isMobileOnlyPayment(paymentMethod) && !isMobileDevice()) {
       setShowMobileWarning(true);
       return;
     }
 
     setShowMobileWarning(false);
-    onMethodChange(method);
+    onMethodChange(paymentMethod);
   };
 
   const isMobileDevice = () => {
@@ -127,7 +142,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   };
 
   const renderPaymentMethod = (method: PaymentMethodDisplay) => {
-    const isSelected = selectedMethod === method.code;
+    const isSelected = validSelectedMethod === method.code;
     const isRecommended = method.code === recommendedMethod;
     const fee = getMethodFee(method.code, amount);
     const totalWithFee = amount + fee;
@@ -221,7 +236,8 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         )}
         
         <RadioGroup 
-          value={selectedMethod} 
+          key={validSelectedMethod}
+          value={validSelectedMethod} 
           onValueChange={handleMethodChange}
           className="space-y-4"
           disabled={disabled}
@@ -239,18 +255,18 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         )}
         
         {/* Mobile-only payment instructions */}
-        {isMobileOnlyPayment(selectedMethod) && (
+        {isMobileOnlyPayment(validSelectedMethod) && (
           <Alert className="mt-4 border-blue-200 bg-blue-50">
             <Smartphone className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800">
               <strong>Mobile Payment Required:</strong> You'll need to scan a QR code with your mobile app to complete this payment. 
-              Make sure you have the {getPaymentMethodDisplay(selectedMethod).name} app installed on your phone.
+              Make sure you have the {getPaymentMethodDisplay(validSelectedMethod).name} app installed on your phone.
             </AlertDescription>
           </Alert>
         )}
         
         {/* QR Code payment instructions */}
-        {getPaymentMethodDisplay(selectedMethod).requires_qr && (
+        {getPaymentMethodDisplay(validSelectedMethod).requires_qr && (
           <Alert className="mt-4 border-purple-200 bg-purple-50">
             <QrCode className="h-4 w-4 text-purple-600" />
             <AlertDescription className="text-purple-800">
