@@ -1,8 +1,8 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SystemSetting {
   id: string;
@@ -17,18 +17,54 @@ export const useSystemSettings = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Check user role for admin access
+  const { data: userRole } = useQuery({
+    queryKey: ['user-role', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      console.log('Checking user role for system settings:', user.id);
+      
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error checking user role:', error);
+        return null;
+      }
+      
+      console.log('User role for system settings:', data);
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['system-settings'],
     queryFn: async () => {
+      console.log('Fetching system settings...');
+      console.log('Current user:', user?.id);
+      console.log('User role:', userRole?.role);
+      
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
         .order('setting_key');
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error('Error fetching system settings:', error);
+        throw new Error(`Failed to fetch system settings: ${error.message}`);
+      }
+      
+      console.log('System settings fetched:', data?.length || 0);
       return data as SystemSetting[];
-    }
+    },
+    enabled: !!user?.id && !!userRole, // Only run when user and user role are loaded
   });
 
   const updateSettingMutation = useMutation({

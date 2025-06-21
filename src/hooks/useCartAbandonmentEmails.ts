@@ -10,15 +10,17 @@ interface AbandonedCart {
   updated_at: string;
   quantity: number;
   product_name?: string;
-  product_image?: string;
+  image_url?: string;
 }
 
 interface EmailTemplate {
   id: string;
   name: string;
   subject: string;
-  body: string;
-  is_default: boolean;
+  html_content: string;
+  template_type: string;
+  variables?: any;
+  is_active?: boolean;
 }
 
 interface EmailCampaign {
@@ -52,7 +54,7 @@ export const useCartAbandonmentEmails = () => {
           updated_at,
           quantity,
           product_name,
-          product_image
+          image_url
         `)
         .eq('in_cart', true)
         .lt('updated_at', abandonedThreshold.toISOString())
@@ -68,14 +70,20 @@ export const useCartAbandonmentEmails = () => {
   const { data: emailTemplates, isLoading: loadingTemplates } = useQuery({
     queryKey: ['email-templates'],
     queryFn: async (): Promise<EmailTemplate[]> => {
-      // For now, return default templates
-      // In a real implementation, these would come from a database table
-      return [
-        {
-          id: 'default-abandonment',
-          name: 'Default Abandonment Recovery',
-          subject: 'Complete Your Purchase - Your Cart is Waiting!',
-          body: `Hi there!
+      const { data, error } = await supabase
+        .from('email_templates')
+        .select('*')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching email templates:', error);
+        // Return default templates as fallback
+        return [
+          {
+            id: 'default-abandonment',
+            name: 'Default Abandonment Recovery',
+            subject: 'Complete Your Purchase - Your Cart is Waiting!',
+            html_content: `Hi there!
 
 We noticed you left some items in your cart. Don't let them get away!
 
@@ -85,13 +93,14 @@ Complete your purchase now and enjoy your items!
 
 Best regards,
 The Team`,
-          is_default: true
-        },
-        {
-          id: 'discount-abandonment',
-          name: 'Abandonment with Discount',
-          subject: 'Special Offer - 10% Off Your Abandoned Cart!',
-          body: `Hi there!
+            template_type: 'cart_abandonment',
+            is_active: true
+          },
+          {
+            id: 'discount-abandonment',
+            name: 'Abandonment with Discount',
+            subject: 'Special Offer - 10% Off Your Abandoned Cart!',
+            html_content: `Hi there!
 
 We noticed you left some items in your cart. As a special offer, we're giving you 10% off!
 
@@ -104,9 +113,13 @@ Complete your purchase now!
 
 Best regards,
 The Team`,
-          is_default: false
-        }
-      ];
+            template_type: 'cart_abandonment',
+            is_active: true
+          }
+        ];
+      }
+      
+      return data || [];
     }
   });
 
@@ -154,7 +167,7 @@ The Team`,
       console.log('Sending recovery email:', {
         to: cart.email,
         subject: template.subject,
-        body: template.body
+        body: template.html_content
           .replace('{product_name}', cart.product_name || 'items')
           .replace('{cart_value}', `$${cart.final_total_local.toFixed(2)}`)
           .replace('{discounted_value}', `$${(cart.final_total_local * 0.9).toFixed(2)}`)

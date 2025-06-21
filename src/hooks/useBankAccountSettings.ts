@@ -1,8 +1,8 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Tables, TablesInsert } from "@/integrations/supabase/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 export type BankAccount = Tables<'bank_account_details'>;
 export type BankAccountFormData = Omit<BankAccount, 'id' | 'created_at' | 'updated_at'>;
@@ -10,14 +10,51 @@ export type BankAccountFormData = Omit<BankAccount, 'id' | 'created_at' | 'updat
 export const useBankAccountSettings = () => {
     const queryClient = useQueryClient();
     const { toast } = useToast();
+    const { user } = useAuth();
+
+    // Check user role for admin access
+    const { data: userRole } = useQuery({
+        queryKey: ['user-role', user?.id],
+        queryFn: async () => {
+            if (!user?.id) return null;
+            
+            console.log('Checking user role for bank account settings:', user.id);
+            
+            const { data, error } = await supabase
+                .from('user_roles')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+            
+            if (error) {
+                console.error('Error checking user role:', error);
+                return null;
+            }
+            
+            console.log('User role for bank account settings:', data);
+            return data;
+        },
+        enabled: !!user?.id,
+    });
 
     const { data: bankAccounts, isLoading: isLoadingBankAccounts } = useQuery({
         queryKey: ['bank-accounts'],
         queryFn: async () => {
+            console.log('Fetching bank accounts...');
+            console.log('Current user:', user?.id);
+            console.log('User role:', userRole?.role);
+            
             const { data, error } = await supabase.from('bank_account_details').select('*').order('created_at');
-            if (error) throw new Error(error.message);
+            
+            if (error) {
+                console.error('Error fetching bank accounts:', error);
+                throw new Error(`Failed to fetch bank accounts: ${error.message}`);
+            }
+            
+            console.log('Bank accounts fetched:', data?.length || 0);
             return data;
-        }
+        },
+        enabled: !!user?.id && !!userRole, // Only run when user and user role are loaded
     });
 
     const createOrUpdateMutation = useMutation({

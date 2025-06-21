@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { 
   Mail, 
@@ -18,13 +18,16 @@ import { useCartAbandonmentEmails } from "@/hooks/useCartAbandonmentEmails";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface EmailTemplate {
   id: string;
   name: string;
   subject: string;
-  body: string;
-  is_default: boolean;
+  html_content: string;
+  template_type: string;
+  variables?: any;
+  is_active?: boolean;
 }
 
 export const EmailTemplateManager = () => {
@@ -35,13 +38,14 @@ export const EmailTemplateManager = () => {
   const [templateForm, setTemplateForm] = useState({
     name: '',
     subject: '',
-    body: ''
+    html_content: '',
+    template_type: 'cart_abandonment'
   });
 
   const queryClient = useQueryClient();
 
   const handleCreateTemplate = () => {
-    setTemplateForm({ name: '', subject: '', body: '' });
+    setTemplateForm({ name: '', subject: '', html_content: '', template_type: 'cart_abandonment' });
     setShowCreateTemplate(true);
   };
 
@@ -50,24 +54,33 @@ export const EmailTemplateManager = () => {
     setTemplateForm({
       name: template.name,
       subject: template.subject,
-      body: template.body
+      html_content: template.html_content,
+      template_type: template.template_type
     });
     setShowEditTemplate(true);
   };
 
   const handleSaveTemplate = () => {
-    if (!templateForm.name || !templateForm.subject || !templateForm.body) {
+    if (!templateForm.name || !templateForm.subject || !templateForm.html_content) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    // In a real implementation, this would save to database
-    console.log('Saving template:', templateForm);
-    toast.success('Template saved successfully');
+    const templateData: EmailTemplate = {
+      id: selectedTemplate?.id || `template_${Date.now()}`,
+      name: templateForm.name,
+      subject: templateForm.subject,
+      html_content: templateForm.html_content,
+      template_type: templateForm.template_type,
+      variables: {},
+      is_active: true
+    };
+
+    saveTemplateMutation.mutate(templateData);
     
     setShowCreateTemplate(false);
     setShowEditTemplate(false);
-    setTemplateForm({ name: '', subject: '', body: '' });
+    setTemplateForm({ name: '', subject: '', html_content: '', template_type: 'cart_abandonment' });
   };
 
   const handleDeleteTemplate = (templateId: string) => {
@@ -80,20 +93,27 @@ export const EmailTemplateManager = () => {
     navigator.clipboard.writeText(`
 Subject: ${template.subject}
 
-${template.body}
+${template.html_content}
     `);
     toast.success('Template copied to clipboard');
   };
 
   const saveTemplateMutation = useMutation({
     mutationFn: async (template: EmailTemplate) => {
+      console.log('Saving email template:', template);
+      
       const { data, error } = await supabase
         .from('email_templates')
         .upsert(template)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error saving email template:', error);
+        throw new Error(`Failed to save email template: ${error.message}`);
+      }
+      
+      console.log('Email template saved successfully');
       return data;
     },
     onSuccess: () => {
@@ -103,7 +123,8 @@ ${template.body}
         description: "Template saved successfully",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Save template mutation error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to save template",
@@ -137,7 +158,7 @@ ${template.body}
         <div>
           <h2 className="text-2xl font-bold">Email Templates</h2>
           <p className="text-muted-foreground">
-            Manage email templates for cart abandonment recovery
+            Manage all email templates for quotes, orders, and cart abandonment recovery
           </p>
         </div>
         <Button onClick={handleCreateTemplate}>
@@ -154,7 +175,16 @@ ${template.body}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CardTitle className="text-lg">{template.name}</CardTitle>
-                  {template.is_default && (
+                  {template.template_type === 'cart_abandonment' && (
+                    <Badge variant="secondary">Cart Abandonment</Badge>
+                  )}
+                  {template.template_type === 'quote_notification' && (
+                    <Badge variant="outline">Quote</Badge>
+                  )}
+                  {template.template_type === 'order_notification' && (
+                    <Badge variant="outline">Order</Badge>
+                  )}
+                  {template.name.includes('Default') && (
                     <Badge variant="default">Default</Badge>
                   )}
                 </div>
@@ -173,7 +203,7 @@ ${template.body}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  {!template.is_default && (
+                  {template.template_type === 'cart_abandonment' && !template.name.includes('Default') && (
                     <Button 
                       size="sm" 
                       variant="outline"
@@ -195,9 +225,9 @@ ${template.body}
               <div>
                 <Label className="text-sm font-medium">Preview</Label>
                 <div className="mt-2 p-3 bg-muted rounded-md text-sm">
-                  {template.body.length > 200 
-                    ? `${template.body.substring(0, 200)}...` 
-                    : template.body
+                  {template.html_content.length > 200 
+                    ? `${template.html_content.substring(0, 200)}...` 
+                    : template.html_content
                   }
                 </div>
               </div>
@@ -214,6 +244,9 @@ ${template.body}
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Create Email Template</DialogTitle>
+            <DialogDescription>
+              Create a new email template for various communication purposes.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -224,6 +257,22 @@ ${template.body}
                 onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="e.g., Default Abandonment Recovery"
               />
+            </div>
+            <div>
+              <Label htmlFor="template-type">Template Type</Label>
+              <Select 
+                value={templateForm.template_type} 
+                onValueChange={(value) => setTemplateForm(prev => ({ ...prev, template_type: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select template type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cart_abandonment">Cart Abandonment</SelectItem>
+                  <SelectItem value="quote_notification">Quote Notification</SelectItem>
+                  <SelectItem value="order_notification">Order Notification</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="template-subject">Email Subject</Label>
@@ -238,8 +287,8 @@ ${template.body}
               <Label htmlFor="template-body">Email Body</Label>
               <Textarea
                 id="template-body"
-                value={templateForm.body}
-                onChange={(e) => setTemplateForm(prev => ({ ...prev, body: e.target.value }))}
+                value={templateForm.html_content}
+                onChange={(e) => setTemplateForm(prev => ({ ...prev, html_content: e.target.value }))}
                 placeholder="Enter your email template here..."
                 rows={8}
               />
@@ -269,6 +318,9 @@ ${template.body}
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Edit Email Template</DialogTitle>
+            <DialogDescription>
+              Modify the email template for various communication purposes.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -279,6 +331,22 @@ ${template.body}
                 onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="e.g., Default Abandonment Recovery"
               />
+            </div>
+            <div>
+              <Label htmlFor="edit-template-type">Template Type</Label>
+              <Select 
+                value={templateForm.template_type} 
+                onValueChange={(value) => setTemplateForm(prev => ({ ...prev, template_type: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select template type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cart_abandonment">Cart Abandonment</SelectItem>
+                  <SelectItem value="quote_notification">Quote Notification</SelectItem>
+                  <SelectItem value="order_notification">Order Notification</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="edit-template-subject">Email Subject</Label>
@@ -293,8 +361,8 @@ ${template.body}
               <Label htmlFor="edit-template-body">Email Body</Label>
               <Textarea
                 id="edit-template-body"
-                value={templateForm.body}
-                onChange={(e) => setTemplateForm(prev => ({ ...prev, body: e.target.value }))}
+                value={templateForm.html_content}
+                onChange={(e) => setTemplateForm(prev => ({ ...prev, html_content: e.target.value }))}
                 placeholder="Enter your email template here..."
                 rows={8}
               />

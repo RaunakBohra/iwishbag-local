@@ -703,6 +703,9 @@ CREATE POLICY "Admins have full access" ON public.user_wishlist_items
 CREATE POLICY "Admins have full access" ON public.order_workflow_steps
   FOR ALL USING (public.has_role(auth.uid(), 'admin'));
 
+CREATE POLICY "Admins have full access" ON public.country_settings
+  FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+
 -- Part 6: Performance Indexes
 -- =================================================================
 

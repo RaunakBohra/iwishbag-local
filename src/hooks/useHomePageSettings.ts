@@ -3,29 +3,61 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 type HomePageSettingsData = Omit<Tables<'footer_settings'>, 'created_at' | 'updated_at' | 'id'>;
 
 export const useHomePageSettings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Check user role for admin access
+  const { data: userRole } = useQuery({
+    queryKey: ['user-role', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      console.log('Checking user role for home page settings:', user.id);
+      
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error checking user role:', error);
+        return null;
+      }
+      
+      console.log('User role for home page settings:', data);
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
   const { data: homePageSettings, isLoading, error, refetch } = useQuery({
     queryKey: ['home-page-settings'],
     queryFn: async () => {
+      console.log('Fetching home page settings...');
+      console.log('Current user:', user?.id);
+      console.log('User role:', userRole?.role);
+      
       const { data, error } = await supabase
         .from('footer_settings')
         .select('*')
         .single();
       if (error) {
         console.error('Error fetching footer settings:', error);
-        toast({ title: 'Error fetching settings', description: error.message, variant: 'destructive' });
-        return null;
+        throw new Error(`Failed to fetch footer settings: ${error.message}`);
       }
+      console.log('Home page settings fetched successfully');
       return data;
     },
     staleTime: 0, // Always fetch fresh data
     refetchOnWindowFocus: true, // Refetch when window gains focus
+    enabled: !!user?.id && !!userRole, // Only run when user and user role are loaded
   });
 
   const [formData, setFormData] = useState<HomePageSettingsData>({
