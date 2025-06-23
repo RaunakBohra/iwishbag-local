@@ -84,7 +84,6 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
         shipping_allowed: shippingAllowed,
       };
 
-      console.log('Submitting country data:', countryData); // DEBUG
       onSubmit(countryData);
     } catch (error) {
       console.error('Error submitting form:', error);

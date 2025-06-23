@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useToast } from '@/hooks/use-toast';
+import { useEmailSettings } from '@/hooks/useEmailSettings';
 
 interface AbandonedCart {
   id: string;
@@ -35,7 +37,9 @@ interface EmailCampaign {
 }
 
 export const useCartAbandonmentEmails = () => {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { shouldSendEmail } = useEmailSettings();
 
   // Get abandoned carts
   const { data: abandonedCarts, isLoading: loadingCarts } = useQuery({
@@ -153,39 +157,57 @@ The Team`,
     }
   });
 
-  // Send recovery email to specific cart
-  const sendRecoveryEmail = useMutation({
-    mutationFn: async ({ cartId, templateId }: { cartId: string; templateId: string }) => {
-      const cart = abandonedCarts?.find(c => c.id === cartId);
-      if (!cart) throw new Error('Cart not found');
+  // Send abandonment email
+  const sendAbandonmentEmailMutation = useMutation({
+    mutationFn: async ({ email, templateName, cartData }: { email: string; templateName: string; cartData: any }) => {
+      // Check if cart abandonment emails are enabled
+      if (!shouldSendEmail('cart_abandonment')) {
+        console.log('Cart abandonment emails are disabled');
+        return { skipped: true, message: 'Cart abandonment emails are disabled' };
+      }
 
-      const template = emailTemplates?.find(t => t.id === templateId);
-      if (!template) throw new Error('Template not found');
-
-      // In a real implementation, this would call an email service
-      // For now, we'll simulate the email sending
-      console.log('Sending recovery email:', {
-        to: cart.email,
-        subject: template.subject,
-        body: template.html_content
-          .replace('{product_name}', cart.product_name || 'items')
-          .replace('{cart_value}', `$${cart.final_total_local.toFixed(2)}`)
-          .replace('{discounted_value}', `$${(cart.final_total_local * 0.9).toFixed(2)}`)
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          to: email,
+          template_name: templateName,
+          template_data: cartData,
+          email_type: 'cart_abandonment'
+        }),
       });
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send email');
+      }
 
-      return { success: true, messageId: `email_${Date.now()}` };
+      return response.json();
     },
-    onSuccess: () => {
-      toast.success('Recovery email sent successfully');
-      queryClient.invalidateQueries({ queryKey: ['email-campaigns'] });
+    onSuccess: (data) => {
+      if (data.skipped) {
+        toast({
+          title: 'Email skipped',
+          description: data.message,
+        });
+      } else {
+        toast({
+          title: 'Email sent successfully',
+          description: 'Cart abandonment email has been sent.',
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['abandoned-carts'] });
     },
     onError: (error) => {
-      toast.error('Failed to send recovery email');
-      console.error('Email sending error:', error);
-    }
+      toast({
+        title: 'Error sending email',
+        description: error.message || 'Failed to send cart abandonment email.',
+        variant: 'destructive',
+      });
+    },
   });
 
   // Send bulk recovery emails
@@ -203,7 +225,7 @@ The Team`,
       
       for (const cartId of cartIds) {
         try {
-          const result = await sendRecoveryEmail.mutateAsync({ cartId, templateId });
+          const result = await sendAbandonmentEmailMutation.mutateAsync({ email: cartId, templateName: templateId });
           results.push({ cartId, success: true, result });
           
           // Add delay between emails to avoid rate limiting
@@ -311,12 +333,13 @@ The Team`,
     loadingCampaigns,
     
     // Mutations
-    sendRecoveryEmail,
+    sendAbandonmentEmail: sendAbandonmentEmailMutation.mutate,
     sendBulkRecoveryEmails,
     createEmailCampaign,
     
     // Utilities
     getAbandonedCartsCount: () => abandonedCarts?.length || 0,
     getTotalAbandonedValue: () => abandonedCarts?.reduce((sum, cart) => sum + cart.final_total_local, 0) || 0,
+    isSending: sendAbandonmentEmailMutation.isPending,
   };
 }; 

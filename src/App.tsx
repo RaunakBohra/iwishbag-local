@@ -1,7 +1,12 @@
+import { Suspense, useState } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { useState } from "react";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { AccessibilityProvider } from "@/components/ui/AccessibilityProvider";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { QueryProvider } from './providers/QueryProvider';
+import { Toaster } from "@/components/ui/toaster";
 import Layout from "@/components/layout/Layout";
 import Index from "@/pages/Index";
 import Quote from "@/pages/Quote";
@@ -17,39 +22,35 @@ import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AdminProtectedRoute from "@/components/auth/AdminProtectedRoute";
 import EmergencyAdmin from "@/pages/EmergencyAdmin";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { Toaster } from "@/components/ui/toaster";
-import { AdminLayout } from "@/components/admin/AdminLayout";
-import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
-import { QuoteManagementPage } from "@/components/admin/QuoteManagementPage";
-import { OrderManagementPage } from "@/components/admin/OrderManagementPage";
-import { CustomerManagementPage } from "@/components/admin/CustomerManagementPage";
-import { EnhancedCustomerManagementPage } from "@/components/admin/EnhancedCustomerManagementPage";
-import { CountrySettings } from "@/components/admin/CountrySettings";
-import { CustomsCategories } from "@/components/admin/CustomsCategories";
-import { UserRoles } from "@/components/admin/UserRoles";
 import { MessageCenter } from "@/components/messaging/MessageCenter";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { Cart } from "@/components/cart/Cart";
-import AdminQuoteDetailPage from "@/components/admin/AdminQuoteDetailPage";
 import CostEstimatorPage from "@/pages/CostEstimator";
 import CustomerOrderDetailPage from "@/pages/CustomerOrderDetailPage";
-import { RejectionAnalytics } from "@/components/admin/RejectionAnalytics";
-import { QuoteTemplatesPage } from "@/components/admin/QuoteTemplatesPage";
-import { BankAccountSettings } from "@/components/admin/BankAccountSettings";
-import { SystemSettings } from "@/components/admin/SystemSettings";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
-import { QueryProvider } from './providers/QueryProvider';
-import { HomePageSettings } from "@/components/admin/HomePageSettings";
 import ButtonPreview from "@/pages/ButtonPreview";
-import AdminDashboard from "@/pages/admin/Dashboard";
-import CartAnalyticsPage from "@/pages/admin/CartAnalytics";
-import CartRecoveryPage from "@/pages/admin/CartRecovery";
-import EmailTemplatesPage from "@/pages/admin/EmailTemplates";
-import PaymentManagement from "@/pages/admin/PaymentManagement";
-import { AccessibilityProvider } from "@/components/ui/AccessibilityProvider";
-import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ProductAnalyzerTest } from "@/pages/ProductAnalyzerTest";
+
+// Lazy load admin/dashboard components
+const AdminLayout = React.lazy(() => import("@/components/admin/AdminLayout"));
+const AdminAnalytics = React.lazy(() => import("@/components/admin/AdminAnalytics"));
+const QuoteManagementPage = React.lazy(() => import("@/components/admin/QuoteManagementPage"));
+const OrderManagementPage = React.lazy(() => import("@/components/admin/OrderManagementPage"));
+const EnhancedCustomerManagementPage = React.lazy(() => import("@/components/admin/EnhancedCustomerManagementPage"));
+const CountrySettings = React.lazy(() => import("@/components/admin/CountrySettings"));
+const CustomsCategories = React.lazy(() => import("@/components/admin/CustomsCategories"));
+const UserRoles = React.lazy(() => import("@/components/admin/UserRoles"));
+const AdminQuoteDetailPage = React.lazy(() => import("@/components/admin/AdminQuoteDetailPage"));
+const RejectionAnalytics = React.lazy(() => import("@/components/admin/RejectionAnalytics"));
+const QuoteTemplatesPage = React.lazy(() => import("@/components/admin/QuoteTemplatesPage"));
+const BankAccountSettings = React.lazy(() => import("@/components/admin/BankAccountSettings"));
+const SystemSettings = React.lazy(() => import("@/components/admin/SystemSettings"));
+const HomePageSettings = React.lazy(() => import("@/components/admin/HomePageSettings"));
+const AdminDashboard = React.lazy(() => import("@/pages/admin/Dashboard"));
+const CartAnalyticsPage = React.lazy(() => import("@/pages/admin/CartAnalytics"));
+const CartRecoveryPage = React.lazy(() => import("@/pages/admin/CartRecovery"));
+const EmailTemplatesPage = React.lazy(() => import("@/pages/admin/EmailTemplates"));
+const PaymentManagement = React.lazy(() => import("@/pages/admin/PaymentManagement"));
 
 const router = createBrowserRouter([
   {
@@ -58,92 +59,33 @@ const router = createBrowserRouter([
     children: [
       {
         path: "",
-        element: <AdminLayout />,
+        element: (
+          <Suspense fallback={<div className="p-8 text-center">Loading admin...</div>}>
+            <AdminLayout />
+          </Suspense>
+        ),
         children: [
-          {
-            index: true,
-            element: <AdminDashboard />,
-          },
-          {
-            path: "cart-analytics",
-            element: <CartAnalyticsPage />,
-          },
-          {
-            path: "cart-recovery",
-            element: <CartRecoveryPage />,
-          },
-          {
-            path: "email-templates",
-            element: <EmailTemplatesPage />,
-          },
-          {
-            path: "analytics",
-            element: <AdminAnalytics />,
-          },
-          {
-            path: "rejection-analytics",
-            element: <RejectionAnalytics />,
-          },
-          {
-            path: "quotes",
-            element: <QuoteManagementPage />,
-          },
-          {
-            path: "orders",
-            element: <OrderManagementPage />,
-          },
-          {
-            path: "orders/:id",
-            element: <AdminQuoteDetailPage />,
-          },
-          {
-            path: "customers",
-            element: <EnhancedCustomerManagementPage />,
-          },
-          {
-            path: "templates",
-            element: <QuoteTemplatesPage />,
-          },
-          {
-            path: "quotes/:id",
-            element: <AdminQuoteDetailPage />,
-          },
-          {
-            path: "countries",
-            element: <CountrySettings />,
-          },
-          {
-            path: "customs",
-            element: <CustomsCategories />,
-          },
-          {
-            path: "bank-accounts",
-            element: <BankAccountSettings />,
-          },
-          {
-            path: "system-settings",
-            element: <SystemSettings />,
-          },
-          {
-            path: "users",
-            element: <UserRoles />,
-          },
-          {
-            path: "footer",
-            element: <HomePageSettings />,
-          },
-          {
-            path: "home-page-settings",
-            element: <HomePageSettings />,
-          },
-          {
-            path: "payment-management",
-            element: <PaymentManagement />,
-          },
-          {
-            path: "*",
-            element: <NotFound />,
-          },
+          { index: true, element: <Suspense fallback={<div>Loading...</div>}><AdminDashboard /></Suspense> },
+          { path: "cart-analytics", element: <Suspense fallback={<div>Loading...</div>}><CartAnalyticsPage /></Suspense> },
+          { path: "cart-recovery", element: <Suspense fallback={<div>Loading...</div>}><CartRecoveryPage /></Suspense> },
+          { path: "email-templates", element: <Suspense fallback={<div>Loading...</div>}><EmailTemplatesPage /></Suspense> },
+          { path: "analytics", element: <Suspense fallback={<div>Loading...</div>}><AdminAnalytics /></Suspense> },
+          { path: "rejection-analytics", element: <Suspense fallback={<div>Loading...</div>}><RejectionAnalytics /></Suspense> },
+          { path: "quotes", element: <Suspense fallback={<div>Loading...</div>}><QuoteManagementPage /></Suspense> },
+          { path: "orders", element: <Suspense fallback={<div>Loading...</div>}><OrderManagementPage /></Suspense> },
+          { path: "orders/:id", element: <Suspense fallback={<div>Loading...</div>}><AdminQuoteDetailPage /></Suspense> },
+          { path: "customers", element: <Suspense fallback={<div>Loading...</div>}><EnhancedCustomerManagementPage /></Suspense> },
+          { path: "templates", element: <Suspense fallback={<div>Loading...</div>}><QuoteTemplatesPage /></Suspense> },
+          { path: "quotes/:id", element: <Suspense fallback={<div>Loading...</div>}><AdminQuoteDetailPage /></Suspense> },
+          { path: "countries", element: <Suspense fallback={<div>Loading...</div>}><CountrySettings /></Suspense> },
+          { path: "customs", element: <Suspense fallback={<div>Loading...</div>}><CustomsCategories /></Suspense> },
+          { path: "bank-accounts", element: <Suspense fallback={<div>Loading...</div>}><BankAccountSettings /></Suspense> },
+          { path: "system-settings", element: <Suspense fallback={<div>Loading...</div>}><SystemSettings /></Suspense> },
+          { path: "users", element: <Suspense fallback={<div>Loading...</div>}><UserRoles /></Suspense> },
+          { path: "footer", element: <Suspense fallback={<div>Loading...</div>}><HomePageSettings /></Suspense> },
+          { path: "home-page-settings", element: <Suspense fallback={<div>Loading...</div>}><HomePageSettings /></Suspense> },
+          { path: "payment-management", element: <Suspense fallback={<div>Loading...</div>}><PaymentManagement /></Suspense> },
+          { path: "*", element: <NotFound /> },
         ],
       },
     ],

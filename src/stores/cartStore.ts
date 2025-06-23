@@ -83,80 +83,70 @@ export const useCartStore = create<CartStore>()(
 
         // Actions
         addItem: (item: CartItem) => {
-          console.log('Adding item to cart:', item);
           set((state) => {
-            // Check if item already exists
             const existingItem = state.items.find(i => i.id === item.id);
+            
             if (existingItem) {
-              console.log('Item already exists in cart, updating quantity');
               return {
+                ...state,
                 items: state.items.map(i => 
                   i.id === item.id 
-                    ? { ...i, quantity: i.quantity + item.quantity, updatedAt: new Date() }
+                    ? { ...i, quantity: i.quantity + item.quantity }
                     : i
                 )
               };
             }
             
             return {
-              items: [...state.items, { ...item, isSelected: false }]
+              ...state,
+              items: [...state.items, item]
             };
           });
-          debouncedSync();
         },
 
         removeItem: (id: string) => {
-          console.log('Removing item from cart:', id);
           set((state) => ({
+            ...state,
             items: state.items.filter(item => item.id !== id),
             selectedItems: state.selectedItems.filter(itemId => itemId !== id)
           }));
-          debouncedSync();
         },
 
         updateQuantity: (id: string, quantity: number) => {
-          if (quantity <= 0) {
-            get().removeItem(id);
-            return;
-          }
-
-          console.log('Updating quantity for item:', id, 'to:', quantity);
           set((state) => ({
-            items: state.items.map(item =>
-              item.id === id ? { ...item, quantity, updatedAt: new Date() } : item
+            ...state,
+            items: state.items.map(item => 
+              item.id === id ? { ...item, quantity } : item
             )
           }));
-          
-          debouncedSync();
         },
 
         moveToSaved: (id: string) => {
-          console.log('Moving item to saved:', id);
           set((state) => {
-            const item = state.items.find(item => item.id === id);
+            const item = state.items.find(i => i.id === id);
             if (!item) return state;
-
+            
             return {
-              items: state.items.filter(item => item.id !== id),
-              savedItems: [...state.savedItems, { ...item, inCart: false, isSelected: false }],
+              ...state,
+              items: state.items.filter(i => i.id !== id),
+              savedItems: [...state.savedItems, { ...item, inCart: false }],
               selectedItems: state.selectedItems.filter(itemId => itemId !== id)
             };
           });
-          debouncedSync();
         },
 
         moveToCart: (id: string) => {
-          console.log('Moving item to cart:', id);
           set((state) => {
-            const item = state.savedItems.find(item => item.id === id);
+            const item = state.savedItems.find(i => i.id === id);
             if (!item) return state;
-
+            
             return {
-              savedItems: state.savedItems.filter(item => item.id !== id),
-              items: [...state.items, { ...item, inCart: true, isSelected: false }]
+              ...state,
+              savedItems: state.savedItems.filter(i => i.id !== id),
+              items: [...state.items, { ...item, inCart: true }],
+              selectedItems: state.selectedItems.filter(itemId => itemId !== id)
             };
           });
-          debouncedSync();
         },
 
         toggleSelection: (id: string) => {
@@ -186,38 +176,40 @@ export const useCartStore = create<CartStore>()(
         },
 
         clearSelection: () => {
-          set({ selectedItems: [] });
+          set((state) => ({
+            selectedItems: []
+          }));
         },
 
         bulkDelete: (ids: string[]) => {
-          console.log('Bulk deleting items:', ids);
           set((state) => ({
+            ...state,
             items: state.items.filter(item => !ids.includes(item.id)),
             savedItems: state.savedItems.filter(item => !ids.includes(item.id)),
             selectedItems: state.selectedItems.filter(id => !ids.includes(id))
           }));
-          debouncedSync();
         },
 
         bulkMove: (ids: string[], toSaved: boolean) => {
-          console.log('Bulk moving items:', ids, 'toSaved:', toSaved);
           set((state) => {
             if (toSaved) {
               const itemsToMove = state.items.filter(item => ids.includes(item.id));
               return {
+                ...state,
                 items: state.items.filter(item => !ids.includes(item.id)),
-                savedItems: [...state.savedItems, ...itemsToMove.map(item => ({ ...item, inCart: false, isSelected: false }))],
+                savedItems: [...state.savedItems, ...itemsToMove.map(item => ({ ...item, inCart: false }))],
                 selectedItems: state.selectedItems.filter(id => !ids.includes(id))
               };
             } else {
               const itemsToMove = state.savedItems.filter(item => ids.includes(item.id));
               return {
+                ...state,
                 savedItems: state.savedItems.filter(item => !ids.includes(item.id)),
-                items: [...state.items, ...itemsToMove.map(item => ({ ...item, inCart: true, isSelected: false }))]
+                items: [...state.items, ...itemsToMove.map(item => ({ ...item, inCart: true }))],
+                selectedItems: state.selectedItems.filter(id => !ids.includes(id))
               };
             }
           });
-          debouncedSync();
         },
 
         setLoading: (loading: boolean) => {
@@ -234,12 +226,10 @@ export const useCartStore = create<CartStore>()(
         },
 
         setUserId: (userId: string) => {
-          console.log('Setting userId in cart store:', userId);
           set({ userId });
         },
 
         clearCart: () => {
-          console.log('Clearing all cart data');
           set({
             items: [],
             savedItems: [],
@@ -254,57 +244,93 @@ export const useCartStore = create<CartStore>()(
         syncWithServer: async () => {
           const { userId } = get();
           if (!userId) {
-            console.log('No userId, skipping server sync');
             return;
           }
 
+          set({ isLoading: true, error: null });
+
           try {
-            console.log('Starting server sync...');
-            set({ isSyncing: true });
-            get().clearError();
+            // Fetch all quotes for the user
+            const { data: allQuotes, error: fetchError } = await supabase
+              .from('quotes')
+              .select(`
+                id,
+                display_id,
+                status,
+                in_cart,
+                quote_items (
+                  id,
+                  product_name,
+                  product_url,
+                  quantity,
+                  item_price,
+                  image_url,
+                  options
+                )
+              `)
+              .eq('user_id', userId)
+              .order('created_at', { ascending: false });
 
-            const { items, savedItems } = get();
-
-            // Update cart items in database
-            for (const item of items) {
-              const { error } = await supabase
-                .from('quotes')
-                .update({ 
-                  in_cart: true, 
-                  quantity: item.quantity,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', item.quoteId);
-              
-              if (error) {
-                console.error('Error updating cart item:', error);
-                throw error;
-              }
+            if (fetchError) {
+              throw fetchError;
             }
 
-            // Update saved items in database
-            for (const item of savedItems) {
-              const { error } = await supabase
-                .from('quotes')
-                .update({ 
-                  in_cart: false,
-                  quantity: item.quantity,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', item.quoteId);
-              
-              if (error) {
-                console.error('Error updating saved item:', error);
-                throw error;
-              }
-            }
+            // Separate cart and saved items
+            const cartQuotes = allQuotes?.filter(quote => quote.in_cart) || [];
+            const savedQuotes = allQuotes?.filter(quote => !quote.in_cart) || [];
 
-            console.log('Server sync completed successfully');
+            // Convert quotes to cart items
+            const cartItems: CartItem[] = cartQuotes.flatMap(quote => 
+              quote.quote_items?.map(item => ({
+                id: item.id,
+                quoteId: quote.id,
+                displayId: quote.display_id,
+                productName: item.product_name,
+                productUrl: item.product_url,
+                quantity: item.quantity,
+                price: item.item_price,
+                imageUrl: item.image_url,
+                options: item.options,
+                inCart: true
+              })) || []
+            );
+
+            const savedItems: CartItem[] = savedQuotes.flatMap(quote => 
+              quote.quote_items?.map(item => ({
+                id: item.id,
+                quoteId: quote.id,
+                displayId: quote.display_id,
+                productName: item.product_name,
+                productUrl: item.product_url,
+                quantity: item.quantity,
+                price: item.item_price,
+                imageUrl: item.image_url,
+                options: item.options,
+                inCart: false
+              })) || []
+            );
+
+            set({
+              items: cartItems,
+              savedItems: savedItems,
+              isLoading: false,
+              hasLoadedFromServer: true
+            });
+
+            // Save to localStorage
+            localStorage.setItem('cartState', JSON.stringify({
+              items: cartItems,
+              savedItems: savedItems,
+              selectedItems: [],
+              userId
+            }));
+
           } catch (error) {
             console.error('Error syncing cart with server:', error);
-            get().setError('Failed to sync cart with server');
-          } finally {
-            set({ isSyncing: false });
+            set({ 
+              error: error instanceof Error ? error.message : 'Failed to sync cart',
+              isLoading: false 
+            });
           }
         },
 

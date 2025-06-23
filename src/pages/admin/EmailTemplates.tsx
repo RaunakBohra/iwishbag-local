@@ -1,5 +1,5 @@
 import React from "react";
-import { EmailTemplateManager } from "@/components/admin/EmailTemplateManager";
+import EmailTemplateManager from "@/components/admin/EmailTemplateManager";
 
 const EmailTemplatesPage = () => {
   return (
