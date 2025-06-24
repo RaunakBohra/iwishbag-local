@@ -43,6 +43,7 @@ export const Cart = () => {
     selectedItems,
     isLoading: cartLoading,
     error: cartError,
+    hasLoadedFromServer,
     cartTotal,
     cartWeight,
     selectedItemsTotal,
@@ -89,11 +90,11 @@ export const Cart = () => {
 
   // Load cart data from server when component mounts
   useEffect(() => {
-    if (user) {
-      // Always load from server first, this will override localStorage
+    if (user && !cartLoading && !hasLoadedFromServer) {
+      // Only load from server if not already loading and not already loaded
       loadFromServer(user.id);
     }
-  }, [user, loadFromServer]);
+  }, [user, loadFromServer, cartLoading, hasLoadedFromServer]);
 
   // FIXED: Improved auto-selection logic
   useEffect(() => {
@@ -162,20 +163,38 @@ export const Cart = () => {
     updateQuantity(id, newQuantity);
   }, [updateQuantity]);
 
-  const handleSaveForLater = useCallback((id: string) => {
-    moveToSaved(id);
-    toast({
-      title: "Item saved",
-      description: "Item has been moved to saved items.",
-    });
+  const handleSaveForLater = useCallback(async (id: string) => {
+    try {
+      await moveToSaved(id);
+      toast({
+        title: "Item saved",
+        description: "Item has been moved to saved items.",
+      });
+    } catch (error) {
+      console.error('Error saving item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save item. Please try again.",
+        variant: "destructive",
+      });
+    }
   }, [moveToSaved, toast]);
 
-  const handleMoveToCart = useCallback((id: string) => {
-    moveToCart(id);
-    toast({
-      title: "Item moved",
-      description: "Item has been moved to your cart.",
-    });
+  const handleMoveToCart = useCallback(async (id: string) => {
+    try {
+      await moveToCart(id);
+      toast({
+        title: "Item moved",
+        description: "Item has been moved to your cart.",
+      });
+    } catch (error) {
+      console.error('Error moving item to cart:', error);
+      toast({
+        title: "Error",
+        description: "Failed to move item to cart. Please try again.",
+        variant: "destructive",
+      });
+    }
   }, [moveToCart, toast]);
 
   const handleRemoveFromCart = useCallback((id: string) => {
@@ -186,22 +205,40 @@ export const Cart = () => {
     });
   }, [removeItem, toast]);
 
-  const confirmBulkSaveForLater = () => {
-    handleBulkMoveToSaved();
-    setShowBulkSaveConfirm(false);
-    toast({
-      title: "Items saved",
-      description: "Selected items have been saved for later.",
-    });
+  const confirmBulkSaveForLater = async () => {
+    try {
+      await handleBulkMoveToSaved();
+      setShowBulkSaveConfirm(false);
+      toast({
+        title: "Items saved",
+        description: "Selected items have been saved for later.",
+      });
+    } catch (error) {
+      console.error('Error bulk saving items:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save items. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const confirmBulkMoveToCart = () => {
-    handleBulkMoveToCart();
-    setShowBulkMoveConfirm(false);
-    toast({
-      title: "Items moved",
-      description: "Selected items have been moved to your cart.",
-    });
+  const confirmBulkMoveToCart = async () => {
+    try {
+      await handleBulkMoveToCart();
+      setShowBulkMoveConfirm(false);
+      toast({
+        title: "Items moved",
+        description: "Selected items have been moved to your cart.",
+      });
+    } catch (error) {
+      console.error('Error bulk moving items to cart:', error);
+      toast({
+        title: "Error",
+        description: "Failed to move items to cart. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const confirmBulkDelete = () => {

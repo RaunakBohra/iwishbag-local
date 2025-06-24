@@ -119,24 +119,10 @@ export const CartDrawer = () => {
 
   // Load cart data from server when drawer opens
   useEffect(() => {
-    if (isOpen && user) {
-      console.log('CartDrawer: Loading cart for user:', user.id); // DEBUG
+    if (isOpen && user && !cartLoading && !hasLoadedFromServer) {
       loadFromServer(user.id);
     }
-  }, [isOpen, user, loadFromServer]);
-
-  // DEBUG: Log cart state changes
-  useEffect(() => {
-    console.log('CartDrawer: Cart state updated:', {
-      isOpen,
-      cartItemsCount: cartItems?.length || 0,
-      savedItemsCount: savedItems?.length || 0,
-      cartLoading,
-      cartError,
-      hasLoadedFromServer,
-      user: user?.id
-    });
-  }, [isOpen, cartItems?.length, savedItems?.length, cartLoading, cartError, hasLoadedFromServer, user?.id]);
+  }, [isOpen, user, loadFromServer, cartLoading, hasLoadedFromServer]);
 
   // Debounce search query
   useEffect(() => {

@@ -23,22 +23,36 @@ export const useQuoteState = (quoteId: string) => {
     const firstItem = quote.quote_items?.[0];
     const quoteItems = quote.quote_items || [];
     
-    // Calculate total from quote items
+    // Calculate total from quote items with proper null checks
     const totalFromItems = quoteItems.reduce((sum, item) => {
-      return sum + (item.item_price * item.quantity);
+      const itemPrice = item.item_price || 0;
+      const itemQuantity = item.quantity || 1;
+      return sum + (itemPrice * itemQuantity);
     }, 0);
     
-    const totalPrice = totalFromItems || quote.final_total_local || quote.final_total || 0;
-    const quantity = quote.quantity || firstItem?.quantity || 1;
-    const itemPrice = totalPrice / quantity; // Calculate per-item price
+    // FIXED: Use proper fallback chain for total price
+    let totalPrice = 0;
+    if (quote.final_total && quote.final_total > 0) {
+      totalPrice = quote.final_total;
+    } else if (quote.final_total_local && quote.final_total_local > 0) {
+      totalPrice = quote.final_total_local;
+    } else if (totalFromItems > 0) {
+      totalPrice = totalFromItems;
+    } else {
+      // If no price found, use the first item's price
+      totalPrice = firstItem?.item_price || 0;
+    }
     
-    return {
+    const quantity = quote.quantity || firstItem?.quantity || 1;
+    const itemWeight = firstItem?.item_weight || quote.item_weight || 0;
+    
+    const cartItem = {
       id: quote.id,
       quoteId: quote.id,
       productName: firstItem?.product_name || quote.product_name || 'Unknown Product',
       finalTotal: totalPrice,
       quantity: quantity,
-      itemWeight: firstItem?.item_weight || quote.item_weight || 0,
+      itemWeight: itemWeight,
       imageUrl: firstItem?.image_url || quote.image_url,
       deliveryDate: quote.delivery_date,
       countryCode: quote.country_code || 'US',
@@ -46,6 +60,14 @@ export const useQuoteState = (quoteId: string) => {
       isSelected: false,
       createdAt: new Date(quote.created_at),
       updatedAt: new Date(quote.updated_at)
+    };
+    
+    // FIXED: Final safety check to ensure all numeric values are valid
+    return {
+      ...cartItem,
+      finalTotal: isNaN(cartItem.finalTotal) ? 0 : cartItem.finalTotal,
+      quantity: isNaN(cartItem.quantity) ? 1 : cartItem.quantity,
+      itemWeight: isNaN(cartItem.itemWeight) ? 0 : cartItem.itemWeight
     };
   };
 

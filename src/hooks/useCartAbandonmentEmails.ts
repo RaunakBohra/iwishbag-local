@@ -166,26 +166,28 @@ The Team`,
         return { skipped: true, message: 'Cart abandonment emails are disabled' };
       }
 
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-        body: JSON.stringify({
-          to: email,
-          template_name: templateName,
-          template_data: cartData,
-          email_type: 'cart_abandonment'
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to send email');
+      const accessToken = await supabase.auth.getSession().then(({ data }) => data.session?.access_token);
+      
+      if (!accessToken) {
+        throw new Error('User not authenticated - cannot send email');
       }
 
-      return response.json();
+      // Use Supabase Edge Function instead of /api/send-email
+      const { data: result, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: email,
+          subject: 'Complete Your Purchase - Your Cart is Waiting!',
+          html: generateCartAbandonmentHtml(templateName, cartData),
+          from: 'noreply@whyteclub.com'
+        },
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to send email');
+      }
+
+      return result;
     },
     onSuccess: (data) => {
       if (data.skipped) {
@@ -209,6 +211,50 @@ The Team`,
       });
     },
   });
+
+  // Helper function to generate cart abandonment email HTML
+  const generateCartAbandonmentHtml = (templateName: string, cartData: any) => {
+    const baseHtml = `
+      <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #2563eb;">Complete Your Purchase</h2>
+    `;
+
+    let content = '';
+    if (templateName.includes('discount')) {
+      content = `
+        <p>Hi there!</p>
+        <p>We noticed you left some items in your cart. As a special offer, we're giving you 10% off!</p>
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0;">Your Cart Items</h3>
+          <p><strong>Product:</strong> ${cartData.product_name || 'Your items'}</p>
+          <p><strong>Original Value:</strong> $${cartData.cart_value || '0'}</p>
+          <p><strong>With Discount:</strong> $${cartData.discounted_value || '0'}</p>
+          <p><strong>Use Code:</strong> ABANDON10</p>
+        </div>
+        <p>Complete your purchase now and enjoy your items!</p>
+      `;
+    } else {
+      content = `
+        <p>Hi there!</p>
+        <p>We noticed you left some items in your cart. Don't let them get away!</p>
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0;">Your Cart Items</h3>
+          <p><strong>Product:</strong> ${cartData.product_name || 'Your items'}</p>
+          <p><strong>Value:</strong> $${cartData.cart_value || '0'}</p>
+        </div>
+        <p>Complete your purchase now and enjoy your items!</p>
+      `;
+    }
+
+    return baseHtml + content + `
+          <p>Best regards,<br>The WishBag Team</p>
+        </div>
+      </body>
+      </html>
+    `;
+  };
 
   // Send bulk recovery emails
   const sendBulkRecoveryEmails = useMutation({

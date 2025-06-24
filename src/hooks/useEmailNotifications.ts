@@ -13,19 +13,11 @@ interface EmailNotificationOptions {
   from?: string;
 }
 
-async function getAccessToken() {
-  try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) {
-      console.warn('Error getting session:', error);
-      return null;
-    }
-    return session?.access_token || null;
-  } catch (error) {
-    console.warn('Error getting access token:', error);
-    return null;
-  }
-}
+// Helper function to get access token
+const getAccessToken = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token;
+};
 
 export const useEmailNotifications = () => {
   const { toast } = useToast();
@@ -54,27 +46,22 @@ export const useEmailNotifications = () => {
         throw new Error('User not authenticated - cannot send email');
       }
 
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
+      // Use Supabase Edge Function instead of /api/send-email
+      const { data: result, error } = await supabase.functions.invoke('send-email', {
+        body: {
           to,
-          template_name: template,
-          template_data: data,
-          email_type: emailType,
-          from: from || 'iWishBag <noreply@iwishbag.com>'
-        }),
+          subject: `Quote ${data.quoteId} - ${template.replace('_', ' ').toUpperCase()}`,
+          html: generateEmailHtml(template, data),
+          from: from || 'noreply@whyteclub.com'
+        },
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to send email');
+      if (error) {
+        throw new Error(error.message || 'Failed to send email');
       }
 
-      return response.json();
+      return result;
     },
     onSuccess: (data) => {
       if (data.skipped) {
@@ -97,6 +84,82 @@ export const useEmailNotifications = () => {
       });
     },
   });
+
+  // Helper function to generate email HTML
+  const generateEmailHtml = (template: EmailTemplate, data: Record<string, any>) => {
+    const baseHtml = `
+      <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #2563eb;">Quote Update</h2>
+          <p>Dear ${data.customerName || 'Customer'},</p>
+    `;
+
+    let content = '';
+    switch (template) {
+      case 'quote_sent':
+        content = `
+          <p>Your quote has been sent for review.</p>
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Quote Details</h3>
+            <p><strong>Quote ID:</strong> ${data.quoteId}</p>
+            <p><strong>Total Amount:</strong> $${data.totalAmount}</p>
+            <p><strong>Currency:</strong> ${data.currency}</p>
+          </div>
+        `;
+        break;
+      case 'quote_approved':
+        content = `
+          <p>Great news! Your quote has been approved.</p>
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Approved Quote</h3>
+            <p><strong>Quote ID:</strong> ${data.quoteId}</p>
+            <p><strong>Total Amount:</strong> $${data.totalAmount}</p>
+            <p><strong>Currency:</strong> ${data.currency}</p>
+          </div>
+        `;
+        break;
+      case 'quote_rejected':
+        content = `
+          <p>We regret to inform you that your quote has been rejected.</p>
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Rejection Details</h3>
+            <p><strong>Quote ID:</strong> ${data.quoteId}</p>
+            <p><strong>Reason:</strong> ${data.rejectionReason}</p>
+          </div>
+        `;
+        break;
+      case 'order_shipped':
+        content = `
+          <p>Your order has been shipped!</p>
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Shipping Details</h3>
+            <p><strong>Quote ID:</strong> ${data.quoteId}</p>
+            <p><strong>Tracking Number:</strong> ${data.trackingNumber}</p>
+            <p><strong>Carrier:</strong> ${data.carrier}</p>
+          </div>
+        `;
+        break;
+      case 'order_delivered':
+        content = `
+          <p>Your order has been delivered!</p>
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Delivery Confirmation</h3>
+            <p><strong>Quote ID:</strong> ${data.quoteId}</p>
+          </div>
+        `;
+        break;
+      default:
+        content = `<p>You have received an update regarding your quote.</p>`;
+    }
+
+    return baseHtml + content + `
+          <p>Best regards,<br>The WishBag Team</p>
+        </div>
+      </body>
+      </html>
+    `;
+  };
 
   // Predefined email notification functions
   const sendQuoteSentEmail = (quote: Quote) => {

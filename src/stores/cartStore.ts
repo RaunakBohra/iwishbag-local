@@ -47,8 +47,8 @@ interface CartStore {
   setError: (error: string | null) => void;
   clearError: () => void;
   setUserId: (userId: string) => void;
-  syncWithServer: () => Promise<void>;
   loadFromServer: (userId: string) => Promise<void>;
+  syncWithServer: () => Promise<void>;
   debouncedSync: () => void;
   clearCart: () => void;
 }
@@ -121,32 +121,84 @@ export const useCartStore = create<CartStore>()(
           }));
         },
 
-        moveToSaved: (id: string) => {
-          set((state) => {
-            const item = state.items.find(i => i.id === id);
-            if (!item) return state;
-            
-            return {
-              ...state,
-              items: state.items.filter(i => i.id !== id),
-              savedItems: [...state.savedItems, { ...item, inCart: false }],
-              selectedItems: state.selectedItems.filter(itemId => itemId !== id)
-            };
-          });
-        },
+        moveToSaved: async (id: string) => {
+          const state = get();
+          const item = state.items.find(i => i.id === id);
+          if (!item) return;
+          
+          // Update local state immediately
+          set((state) => ({
+            ...state,
+            items: state.items.filter(i => i.id !== id),
+            savedItems: [...state.savedItems, { ...item, inCart: false }],
+            selectedItems: state.selectedItems.filter(itemId => itemId !== id)
+          }));
 
-        moveToCart: (id: string) => {
-          set((state) => {
-            const item = state.savedItems.find(i => i.id === id);
-            if (!item) return state;
-            
-            return {
+          // Sync with server
+          try {
+            const { error } = await supabase
+              .from('quotes')
+              .update({ in_cart: false })
+              .eq('id', id);
+
+            if (error) {
+              console.error('Error syncing moveToSaved with server:', error);
+              // Revert local state on error
+              set((state) => ({
+                ...state,
+                savedItems: state.savedItems.filter(i => i.id !== id),
+                items: [...state.items, { ...item, inCart: true }]
+              }));
+            }
+          } catch (error) {
+            console.error('Error syncing moveToSaved with server:', error);
+            // Revert local state on error
+            set((state) => ({
               ...state,
               savedItems: state.savedItems.filter(i => i.id !== id),
-              items: [...state.items, { ...item, inCart: true }],
-              selectedItems: state.selectedItems.filter(itemId => itemId !== id)
-            };
-          });
+              items: [...state.items, { ...item, inCart: true }]
+            }));
+          }
+        },
+
+        moveToCart: async (id: string) => {
+          const state = get();
+          const item = state.savedItems.find(i => i.id === id);
+          if (!item) return;
+          
+          // Update local state immediately
+          set((state) => ({
+            ...state,
+            savedItems: state.savedItems.filter(i => i.id !== id),
+            items: [...state.items, { ...item, inCart: true }],
+            selectedItems: state.selectedItems.filter(itemId => itemId !== id)
+          }));
+
+          // Sync with server
+          try {
+            const { error } = await supabase
+              .from('quotes')
+              .update({ in_cart: true })
+              .eq('id', id);
+
+            if (error) {
+              console.error('Error syncing moveToCart with server:', error);
+              // Revert local state on error
+              set((state) => ({
+                ...state,
+                items: state.items.filter(i => i.id !== id),
+                savedItems: [...state.savedItems, { ...item, inCart: false }]
+              }));
+            }
+          } catch (error) {
+            console.error('Error syncing moveToCart with server:', error);
+            // Revert local state on error
+            set((state) => ({
+              ...state,
+              items: state.items.filter(i => i.id !== id),
+              savedItems: [...state.savedItems, { ...item, inCart: false }]
+            }));
+          }
         },
 
         toggleSelection: (id: string) => {
@@ -190,26 +242,82 @@ export const useCartStore = create<CartStore>()(
           }));
         },
 
-        bulkMove: (ids: string[], toSaved: boolean) => {
-          set((state) => {
-            if (toSaved) {
-              const itemsToMove = state.items.filter(item => ids.includes(item.id));
-              return {
-                ...state,
-                items: state.items.filter(item => !ids.includes(item.id)),
-                savedItems: [...state.savedItems, ...itemsToMove.map(item => ({ ...item, inCart: false }))],
-                selectedItems: state.selectedItems.filter(id => !ids.includes(id))
-              };
-            } else {
-              const itemsToMove = state.savedItems.filter(item => ids.includes(item.id));
-              return {
+        bulkMove: async (ids: string[], toSaved: boolean) => {
+          const state = get();
+          
+          if (toSaved) {
+            const itemsToMove = state.items.filter(item => ids.includes(item.id));
+            
+            // Update local state immediately
+            set((state) => ({
+              ...state,
+              items: state.items.filter(item => !ids.includes(item.id)),
+              savedItems: [...state.savedItems, ...itemsToMove.map(item => ({ ...item, inCart: false }))],
+              selectedItems: state.selectedItems.filter(id => !ids.includes(id))
+            }));
+
+            // Sync with server
+            try {
+              const { error } = await supabase
+                .from('quotes')
+                .update({ in_cart: false })
+                .in('id', ids);
+
+              if (error) {
+                console.error('Error syncing bulkMove to saved with server:', error);
+                // Revert local state on error
+                set((state) => ({
+                  ...state,
+                  savedItems: state.savedItems.filter(item => !ids.includes(item.id)),
+                  items: [...state.items, ...itemsToMove.map(item => ({ ...item, inCart: true }))]
+                }));
+              }
+            } catch (error) {
+              console.error('Error syncing bulkMove to saved with server:', error);
+              // Revert local state on error
+              set((state) => ({
                 ...state,
                 savedItems: state.savedItems.filter(item => !ids.includes(item.id)),
-                items: [...state.items, ...itemsToMove.map(item => ({ ...item, inCart: true }))],
-                selectedItems: state.selectedItems.filter(id => !ids.includes(id))
-              };
+                items: [...state.items, ...itemsToMove.map(item => ({ ...item, inCart: true }))]
+              }));
             }
-          });
+          } else {
+            const itemsToMove = state.savedItems.filter(item => ids.includes(item.id));
+            
+            // Update local state immediately
+            set((state) => ({
+              ...state,
+              savedItems: state.savedItems.filter(item => !ids.includes(item.id)),
+              items: [...state.items, ...itemsToMove.map(item => ({ ...item, inCart: true }))],
+              selectedItems: state.selectedItems.filter(id => !ids.includes(id))
+            }));
+
+            // Sync with server
+            try {
+              const { error } = await supabase
+                .from('quotes')
+                .update({ in_cart: true })
+                .in('id', ids);
+
+              if (error) {
+                console.error('Error syncing bulkMove to cart with server:', error);
+                // Revert local state on error
+                set((state) => ({
+                  ...state,
+                  items: state.items.filter(item => !ids.includes(item.id)),
+                  savedItems: [...state.savedItems, ...itemsToMove.map(item => ({ ...item, inCart: false }))]
+                }));
+              }
+            } catch (error) {
+              console.error('Error syncing bulkMove to cart with server:', error);
+              // Revert local state on error
+              set((state) => ({
+                ...state,
+                items: state.items.filter(item => !ids.includes(item.id)),
+                savedItems: [...state.savedItems, ...itemsToMove.map(item => ({ ...item, inCart: false }))]
+              }));
+            }
+          }
         },
 
         setLoading: (loading: boolean) => {
@@ -242,152 +350,143 @@ export const useCartStore = create<CartStore>()(
         },
 
         syncWithServer: async () => {
-          const { userId } = get();
-          if (!userId) {
+          const state = get();
+          if (!state.userId || state.isSyncing) return;
+          
+          set({ isSyncing: true });
+          
+          try {
+            // Sync cart items (in_cart = true)
+            for (const item of state.items) {
+              const { error } = await supabase
+                .from('quotes')
+                .update({ in_cart: true })
+                .eq('id', item.id);
+              
+              if (error) {
+                console.error(`Error syncing cart item ${item.id}:`, error);
+              }
+            }
+            
+            // Sync saved items (in_cart = false)
+            for (const item of state.savedItems) {
+              const { error } = await supabase
+                .from('quotes')
+                .update({ in_cart: false })
+                .eq('id', item.id);
+              
+              if (error) {
+                console.error(`Error syncing saved item ${item.id}:`, error);
+              }
+            }
+          } catch (error) {
+            console.error('Error in syncWithServer:', error);
+          } finally {
+            set({ isSyncing: false });
+          }
+        },
+
+        loadFromServer: async (userId: string) => {
+          const state = get();
+          
+          // Prevent multiple simultaneous loads
+          if (state.isLoading) {
+            console.log('🔄 Cart load already in progress, skipping...');
             return;
           }
-
+          
+          console.log('🔄 Loading cart from server for user:', userId);
           set({ isLoading: true, error: null });
 
           try {
-            // Fetch all quotes for the user
-            const { data: allQuotes, error: fetchError } = await supabase
+            // Set user ID
+            set({ userId });
+
+            // Fetch cart quotes (in_cart = true)
+            const { data: cartQuotes, error: cartError } = await supabase
               .from('quotes')
               .select(`
-                id,
-                display_id,
-                status,
-                in_cart,
+                *,
                 quote_items (
                   id,
                   product_name,
                   product_url,
                   quantity,
                   item_price,
+                  item_weight,
                   image_url,
                   options
                 )
               `)
               .eq('user_id', userId)
+              .eq('in_cart', true)
               .order('created_at', { ascending: false });
 
-            if (fetchError) {
-              throw fetchError;
+            if (cartError) {
+              console.error('❌ Error fetching cart quotes:', cartError);
+              throw cartError;
             }
 
-            // Separate cart and saved items
-            const cartQuotes = allQuotes?.filter(quote => quote.in_cart) || [];
-            const savedQuotes = allQuotes?.filter(quote => !quote.in_cart) || [];
-
-            // Convert quotes to cart items
-            const cartItems: CartItem[] = cartQuotes.flatMap(quote => 
-              quote.quote_items?.map(item => ({
-                id: item.id,
-                quoteId: quote.id,
-                displayId: quote.display_id,
-                productName: item.product_name,
-                productUrl: item.product_url,
-                quantity: item.quantity,
-                price: item.item_price,
-                imageUrl: item.image_url,
-                options: item.options,
-                inCart: true
-              })) || []
-            );
-
-            const savedItems: CartItem[] = savedQuotes.flatMap(quote => 
-              quote.quote_items?.map(item => ({
-                id: item.id,
-                quoteId: quote.id,
-                displayId: quote.display_id,
-                productName: item.product_name,
-                productUrl: item.product_url,
-                quantity: item.quantity,
-                price: item.item_price,
-                imageUrl: item.image_url,
-                options: item.options,
-                inCart: false
-              })) || []
-            );
-
-            set({
-              items: cartItems,
-              savedItems: savedItems,
-              isLoading: false,
-              hasLoadedFromServer: true
-            });
-
-            // Save to localStorage
-            localStorage.setItem('cartState', JSON.stringify({
-              items: cartItems,
-              savedItems: savedItems,
-              selectedItems: [],
-              userId
-            }));
-
-          } catch (error) {
-            console.error('Error syncing cart with server:', error);
-            set({ 
-              error: error instanceof Error ? error.message : 'Failed to sync cart',
-              isLoading: false 
-            });
-          }
-        },
-
-        debouncedSync: debouncedSync,
-
-        loadFromServer: async (userId: string) => {
-          try {
-            console.log('Loading cart from server for userId:', userId);
-            get().setLoading(true);
-            get().setError(null);
-            
-            // Set the userId in the store first
-            set({ userId });
-            
-            // Fetch all quotes for the user with quote_items
-            const { data: allQuotes, error: quotesError } = await supabase
+            // Fetch saved quotes (in_cart = false)
+            const { data: savedQuotes, error: savedError } = await supabase
               .from('quotes')
               .select(`
                 *,
-                quote_items (*)
+                quote_items (
+                  id,
+                  product_name,
+                  product_url,
+                  quantity,
+                  item_price,
+                  item_weight,
+                  image_url,
+                  options
+                )
               `)
               .eq('user_id', userId)
+              .eq('in_cart', false)
               .order('created_at', { ascending: false });
 
-            if (quotesError) {
-              console.error('Error fetching quotes:', quotesError);
-              throw quotesError;
+            if (savedError) {
+              console.error('❌ Error fetching saved quotes:', savedError);
+              throw savedError;
             }
-
-            console.log('Fetched quotes from server:', allQuotes?.length || 0);
-
-            // Separate cart items (in_cart: true) from saved items (in_cart: false)
-            const cartQuotes = allQuotes?.filter(quote => quote.in_cart === true) || [];
-            const savedQuotes = allQuotes?.filter(quote => quote.in_cart === false) || [];
-
-            console.log('Cart quotes:', cartQuotes.length, 'Saved quotes:', savedQuotes.length);
 
             // Helper function to convert quote to cart item
             const convertQuoteToCartItem = (quote: any): CartItem => {
               const firstItem = quote.quote_items?.[0];
               const quoteItems = quote.quote_items || [];
               
-              // Calculate total from quote items
+              // Calculate total from quote items with proper null checks
               const totalFromItems = quoteItems.reduce((sum: number, item: any) => {
-                return sum + (item.item_price * item.quantity);
+                const itemPrice = item.item_price || 0;
+                const itemQuantity = item.quantity || 1;
+                return sum + (itemPrice * itemQuantity);
               }, 0);
               
-              const totalPrice = totalFromItems || quote.final_total_local || quote.final_total || 0;
-              const quantity = quote.quantity || firstItem?.quantity || 1;
+              // FIXED: Use proper fallback chain for total price
+              let totalPrice = 0;
+              if (quote.final_total && quote.final_total > 0) {
+                totalPrice = quote.final_total;
+              } else if (quote.final_total_local && quote.final_total_local > 0) {
+                totalPrice = quote.final_total_local;
+              } else if (totalFromItems > 0) {
+                totalPrice = totalFromItems;
+              } else {
+                // If no price found, use the first item's price
+                totalPrice = firstItem?.item_price || 0;
+              }
               
-              return {
+              const quantity = quote.quantity || firstItem?.quantity || 1;
+              const itemWeight = firstItem?.item_weight || quote.item_weight || 0;
+              
+              const cartItem = {
                 id: quote.id,
                 quoteId: quote.id,
                 productName: firstItem?.product_name || quote.product_name || 'Unknown Product',
                 finalTotal: totalPrice,
                 quantity: quantity,
-                itemWeight: firstItem?.item_weight || quote.item_weight || 0,
+                itemWeight: itemWeight,
                 imageUrl: firstItem?.image_url || quote.image_url,
                 deliveryDate: quote.delivery_date,
                 countryCode: quote.country_code || 'US',
@@ -396,57 +495,63 @@ export const useCartStore = create<CartStore>()(
                 createdAt: new Date(quote.created_at),
                 updatedAt: new Date(quote.updated_at)
               };
+              
+              // FIXED: Final safety check to ensure all numeric values are valid
+              const validatedCartItem = {
+                ...cartItem,
+                finalTotal: isNaN(cartItem.finalTotal) ? 0 : cartItem.finalTotal,
+                quantity: isNaN(cartItem.quantity) ? 1 : cartItem.quantity,
+                itemWeight: isNaN(cartItem.itemWeight) ? 0 : cartItem.itemWeight
+              };
+              
+              return validatedCartItem;
             };
 
             // Convert quotes to cart items
             const cartItems: CartItem[] = cartQuotes.map(convertQuoteToCartItem);
             const savedItems: CartItem[] = savedQuotes.map(convertQuoteToCartItem);
 
-            console.log('Converted cart items:', cartItems.length, 'saved items:', savedItems.length);
-
             // Update state
             set({ 
               items: cartItems, 
               savedItems, 
-              isLoading: false, 
+              isLoading: false,
               hasLoadedFromServer: true,
-              isInitialized: true 
-            });
-            
-            // Save to localStorage for offline access
-            localStorage.setItem('cartState', JSON.stringify({
-              items: cartItems,
-              savedItems,
               selectedItems: [],
-              userId,
-              timestamp: Date.now()
-            }));
-            
-            console.log('Cart loaded successfully from server');
-            
+              isInitialized: true
+            });
+
+            console.log('✅ Cart loaded successfully from server');
+
           } catch (error) {
-            console.error('Error loading cart from server:', error);
-            get().setError(error instanceof Error ? error.message : 'Failed to load cart');
-            get().setLoading(false);
+            console.error('❌ Error loading cart from server:', error);
+            set({ 
+              error: error instanceof Error ? error.message : 'Failed to load cart',
+              isLoading: false 
+            });
           }
-        }
+        },
+
+        debouncedSync: debouncedSync,
       };
     },
     {
       name: 'cart-storage',
+      // FIXED: Only persist selectedItems and userId, not the actual cart data
       partialize: (state) => ({
-        items: state.items,
-        savedItems: state.savedItems,
-        selectedItems: state.selectedItems
+        selectedItems: state.selectedItems,
+        userId: state.userId
       }),
+      // FIXED: Don't restore cart data from localStorage on page load
       onRehydrateStorage: () => (state) => {
         if (state) {
-          console.log('Cart store rehydrated from localStorage');
-          state.isInitialized = true;
+          // Clear any stale cart data from localStorage
+          state.items = [];
+          state.savedItems = [];
+          state.hasLoadedFromServer = false;
+          state.isInitialized = false;
         }
-      },
-      skipHydration: false,
-      version: 3,
+      }
     }
   )
 ); 

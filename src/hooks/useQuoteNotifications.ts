@@ -43,19 +43,30 @@ export const useQuoteNotifications = () => {
       // Send confirmation email
       const accessToken = await getAccessToken();
       if (accessToken) {
-        // Temporarily disabled to prevent CORS errors
-        // TODO: Re-enable when Edge Function is properly set up
-        /*
         const { error: emailError } = await supabase.functions.invoke('send-email', {
           body: {
             to: quote.email,
-            template: 'quote_confirmation',
-            data: {
-              quoteId: quote.display_id || quote.id,
-              itemCount: quote.quote_items?.length || 1,
-              estimatedTime: '24-48 hours',
-              dashboardUrl: `${window.location.origin}/dashboard`
-            }
+            subject: `Quote Confirmation - ${quote.display_id || quote.id}`,
+            html: `
+              <html>
+              <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #2563eb;">Quote Request Confirmation</h2>
+                  <p>Dear Customer,</p>
+                  <p>Thank you for your quote request. We have received your request and will process it within 24-48 hours.</p>
+                  <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">Request Details</h3>
+                    <p><strong>Quote ID:</strong> ${quote.display_id || quote.id}</p>
+                    <p><strong>Items:</strong> ${quote.quote_items?.length || 1}</p>
+                    <p><strong>Estimated Processing Time:</strong> 24-48 hours</p>
+                  </div>
+                  <p>You will receive another email once your quote is ready.</p>
+                  <p>Best regards,<br>The WishBag Team</p>
+                </div>
+              </body>
+              </html>
+            `,
+            from: 'noreply@whyteclub.com'
           },
           headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -63,7 +74,6 @@ export const useQuoteNotifications = () => {
         if (emailError) {
           console.error('Failed to send confirmation email:', emailError);
         }
-        */
       } else {
         console.warn('No access token available, skipping confirmation email');
       }
@@ -117,21 +127,31 @@ export const useQuoteNotifications = () => {
       // Send quote ready email
       const accessToken = await getAccessToken();
       if (accessToken) {
-        // Temporarily disabled to prevent CORS errors
-        // TODO: Re-enable when Edge Function is properly set up
-        /*
         const { error: emailError } = await supabase.functions.invoke('send-email', {
           body: {
             to: quote.email,
-            template: 'quote_ready',
-            data: {
-              quoteId: quote.order_display_id || quote.id,
-              totalAmount: quote.final_total_local || quote.final_total,
-              currency: quote.final_currency || 'USD',
-              itemCount: quote.quote_items?.length || 1,
-              dashboardUrl: `${window.location.origin}/dashboard`,
-              quoteUrl: `${window.location.origin}/quote-details/${quote.id}`
-            }
+            subject: `Quote Ready - ${quote.order_display_id || quote.id}`,
+            html: `
+              <html>
+              <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #2563eb;">Your Quote is Ready!</h2>
+                  <p>Dear Customer,</p>
+                  <p>Great news! Your quote is ready for review.</p>
+                  <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">Quote Details</h3>
+                    <p><strong>Quote ID:</strong> ${quote.order_display_id || quote.id}</p>
+                    <p><strong>Total Amount:</strong> $${quote.final_total_local || quote.final_total}</p>
+                    <p><strong>Currency:</strong> ${quote.final_currency || 'USD'}</p>
+                    <p><strong>Items:</strong> ${quote.quote_items?.length || 1}</p>
+                  </div>
+                  <p>Please log in to your dashboard to review and approve your quote.</p>
+                  <p>Best regards,<br>The WishBag Team</p>
+                </div>
+              </body>
+              </html>
+            `,
+            from: 'noreply@whyteclub.com'
           },
           headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -139,7 +159,6 @@ export const useQuoteNotifications = () => {
         if (emailError) {
           console.error('Failed to send quote ready email:', emailError);
         }
-        */
       } else {
         console.warn('No access token available, skipping quote ready email');
       }
@@ -209,21 +228,34 @@ export const useQuoteNotifications = () => {
       // Send status update email
       const accessToken = await getAccessToken();
       if (accessToken) {
-        // Temporarily disabled to prevent CORS errors
-        // TODO: Re-enable when Edge Function is properly set up
-        /*
         const { error: emailError } = await supabase.functions.invoke('send-email', {
           body: {
             to: quote.email,
-            template: template as EmailTemplate,
-            data: {
-              quoteId: quote.order_display_id || quote.id,
-              customerName: quote.profiles?.full_name || 'Customer',
-              totalAmount: quote.final_total_local || quote.final_total,
-              currency: quote.final_currency || 'USD',
-              dashboardUrl: `${window.location.origin}/dashboard`,
-              ...additionalData
-            }
+            subject: `Quote Status Update - ${quote.order_display_id || quote.id}`,
+            html: `
+              <html>
+              <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #2563eb;">Quote Status Update</h2>
+                  <p>Dear ${quote.profiles?.full_name || 'Customer'},</p>
+                  <p>Your quote status has been updated.</p>
+                  <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">Status Details</h3>
+                    <p><strong>Quote ID:</strong> ${quote.order_display_id || quote.id}</p>
+                    <p><strong>New Status:</strong> ${status.toUpperCase()}</p>
+                    <p><strong>Total Amount:</strong> $${quote.final_total_local || quote.final_total}</p>
+                    <p><strong>Currency:</strong> ${quote.final_currency || 'USD'}</p>
+                    ${additionalData ? Object.entries(additionalData).map(([key, value]) => 
+                      `<p><strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${value}</p>`
+                    ).join('') : ''}
+                  </div>
+                  <p>Please log in to your dashboard for more details.</p>
+                  <p>Best regards,<br>The WishBag Team</p>
+                </div>
+              </body>
+              </html>
+            `,
+            from: 'noreply@whyteclub.com'
           },
           headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -231,7 +263,6 @@ export const useQuoteNotifications = () => {
         if (emailError) {
           console.error('Failed to send status update email:', emailError);
         }
-        */
       } else {
         console.warn('No access token available, skipping status update email');
       }

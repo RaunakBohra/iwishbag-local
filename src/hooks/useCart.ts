@@ -25,7 +25,6 @@ export const useCart = () => {
     setError,
     clearError,
     setUserId,
-    syncWithServer,
     loadFromServer,
     selectAllCart,
     selectAllSaved,
@@ -37,13 +36,13 @@ export const useCart = () => {
   // Cart calculations - FIXED: Use consistent calculation method
   const cartTotal = useMemo(() => {
     return items.reduce((total, item) => {
-      return total + (item.finalTotal * item.quantity);
+      return total + ((item.finalTotal || 0) * (item.quantity || 1));
     }, 0);
   }, [items]);
 
   const cartWeight = useMemo(() => {
     return items.reduce((total, item) => {
-      return total + (item.itemWeight * item.quantity);
+      return total + ((item.itemWeight || 0) * (item.quantity || 1));
     }, 0);
   }, [items]);
 
@@ -51,14 +50,14 @@ export const useCart = () => {
   const selectedItemsTotal = useMemo(() => {
     const selectedCartItems = items.filter(item => selectedItems.includes(item.id));
     return selectedCartItems.reduce((total, item) => {
-      return total + (item.finalTotal * item.quantity);
+      return total + ((item.finalTotal || 0) * (item.quantity || 1));
     }, 0);
   }, [items, selectedItems]);
 
   const selectedItemsWeight = useMemo(() => {
     const selectedCartItems = items.filter(item => selectedItems.includes(item.id));
     return selectedCartItems.reduce((total, item) => {
-      return total + (item.itemWeight * item.quantity);
+      return total + ((item.itemWeight || 0) * (item.quantity || 1));
     }, 0);
   }, [items, selectedItems]);
 
@@ -161,45 +160,19 @@ export const useCart = () => {
     }
   };
 
-  const handleBulkMoveToSaved = () => {
+  const handleBulkMoveToSaved = async () => {
     const selectedCartItemIds = getSelectedCartItems().map(item => item.id);
     if (selectedCartItemIds.length > 0) {
-      bulkMove(selectedCartItemIds, true);
+      await bulkMove(selectedCartItemIds, true);
     }
   };
 
-  const handleBulkMoveToCart = () => {
+  const handleBulkMoveToCart = async () => {
     const selectedSavedItemIds = getSelectedSavedItems().map(item => item.id);
     if (selectedSavedItemIds.length > 0) {
-      bulkMove(selectedSavedItemIds, false);
+      await bulkMove(selectedSavedItemIds, false);
     }
   };
-
-  // FIXED: Add auto-sync effect to ensure consistency
-  useEffect(() => {
-    // Auto-sync when items or selection changes
-    if (items.length > 0 || savedItems.length > 0) {
-      const timeoutId = setTimeout(() => {
-        if (!isSyncing) {
-          syncWithServer();
-        }
-      }, 1000); // Debounce sync calls
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [items, savedItems, selectedItems, isSyncing, syncWithServer]);
-
-  // DEBUG: Log cart state changes
-  useEffect(() => {
-    console.log('Cart state updated:', {
-      itemsCount: items.length,
-      savedItemsCount: savedItems.length,
-      selectedItemsCount: selectedItems.length,
-      isLoading,
-      error,
-      hasLoadedFromServer
-    });
-  }, [items.length, savedItems.length, selectedItems.length, isLoading, error, hasLoadedFromServer]);
 
   return {
     // State
@@ -255,7 +228,6 @@ export const useCart = () => {
     setError,
     clearError,
     setUserId,
-    syncWithServer,
     loadFromServer,
     selectAllCart,
     selectAllSaved,
