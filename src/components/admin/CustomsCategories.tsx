@@ -19,13 +19,11 @@ export const CustomsCategories = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Test admin role access
-  const { data: userRole, isLoading: userRoleLoading } = useQuery({
+  // Check user role for admin access
+  const { data: userRole } = useQuery({
     queryKey: ['user-role', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      
-      console.log('Checking user role for:', user.id);
       
       const { data, error } = await supabase
         .from('user_roles')
@@ -38,19 +36,14 @@ export const CustomsCategories = () => {
         return null;
       }
       
-      console.log('User role found:', data);
       return data;
     },
     enabled: !!user?.id,
   });
 
   const { data: categories, isLoading, error } = useQuery({
-    queryKey: ['admin-customs-categories'],
+    queryKey: ['customs-categories'],
     queryFn: async () => {
-      console.log('Fetching customs categories...');
-      console.log('Current user:', user?.id);
-      console.log('User role:', userRole?.role);
-      
       const { data, error } = await supabase
         .from('customs_categories')
         .select('*')
@@ -61,76 +54,73 @@ export const CustomsCategories = () => {
         throw new Error(`Failed to fetch customs categories: ${error.message}`);
       }
       
-      console.log('Customs categories fetched successfully:', data?.length || 0);
       return data;
     },
-    retry: 2,
+    retry: 3,
     retryDelay: 1000,
-    enabled: !!user?.id && !!userRole,
+    enabled: !!user?.id && !!userRole, // Only run when user and user role are loaded
   });
 
   const createMutation = useMutation({
     mutationFn: async (categoryData: Omit<CustomsCategory, 'created_at' | 'updated_at'>) => {
-      console.log('Creating customs category:', categoryData);
-      console.log('User role before create:', userRole?.role);
-      
       const { error } = await supabase
         .from('customs_categories')
         .insert(categoryData);
       
       if (error) {
         console.error('Error creating customs category:', error);
-        throw new Error(`Failed to create customs category: ${error.message}`);
+        throw new Error(error.message);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-customs-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['customs-categories'] });
       setIsCreating(false);
-      toast({ title: "Customs category created successfully" });
+      setEditingCategory(null);
+      toast({ 
+        title: "Success", 
+        description: "Customs category created successfully" 
+      });
     },
     onError: (error) => {
-      console.error('Create mutation error:', error);
-      toast({ title: "Error creating customs category", description: error.message, variant: "destructive" });
+      toast({ 
+        title: "Error creating customs category", 
+        description: error.message, 
+        variant: "destructive" 
+      });
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: async (categoryData: CustomsCategory) => {
-      console.log('Updating customs category:', categoryData);
-      console.log('User role before update:', userRole?.role);
-      
-      // Update both name and duty_percent
       const { error } = await supabase
         .from('customs_categories')
-        .update({ 
-          name: categoryData.name,
-          duty_percent: categoryData.duty_percent,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', categoryData.id); // Use id instead of name
+        .update(categoryData)
+        .eq('id', categoryData.id);
       
       if (error) {
         console.error('Error updating customs category:', error);
-        throw new Error(`Failed to update customs category: ${error.message}`);
+        throw new Error(error.message);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-customs-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['customs-categories'] });
       setEditingCategory(null);
-      toast({ title: "Customs category updated successfully" });
+      toast({ 
+        title: "Success", 
+        description: "Customs category updated successfully" 
+      });
     },
     onError: (error) => {
-      console.error('Update mutation error:', error);
-      toast({ title: "Error updating customs category", description: error.message, variant: "destructive" });
+      toast({ 
+        title: "Error updating customs category", 
+        description: error.message, 
+        variant: "destructive" 
+      });
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (categoryId: string) => {
-      console.log('Deleting customs category with ID:', categoryId);
-      console.log('User role before delete:', userRole?.role);
-      
-      // Use id for deleting instead of name
       const { error } = await supabase
         .from('customs_categories')
         .delete()
@@ -138,16 +128,22 @@ export const CustomsCategories = () => {
       
       if (error) {
         console.error('Error deleting customs category:', error);
-        throw new Error(`Failed to delete customs category: ${error.message}`);
+        throw new Error(error.message);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-customs-categories'] });
-      toast({ title: "Customs category deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ['customs-categories'] });
+      toast({ 
+        title: "Success", 
+        description: "Customs category deleted successfully" 
+      });
     },
     onError: (error) => {
-      console.error('Delete mutation error:', error);
-      toast({ title: "Error deleting customs category", description: error.message, variant: "destructive" });
+      toast({ 
+        title: "Error deleting customs category", 
+        description: error.message, 
+        variant: "destructive" 
+      });
     }
   });
 

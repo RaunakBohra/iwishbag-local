@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,13 +12,18 @@ import {
   Edit, 
   Trash2, 
   Copy,
-  Save
+  Save,
+  Settings
 } from "lucide-react";
 import { useCartAbandonmentEmails } from "@/hooks/useCartAbandonmentEmails";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { useEmailSettings } from "@/hooks/useEmailSettings";
+import { useToast } from "@/hooks/use-toast";
 
 interface EmailTemplate {
   id: string;
@@ -30,8 +35,11 @@ interface EmailTemplate {
   is_active?: boolean;
 }
 
-export const EmailTemplateManager = () => {
-  const { emailTemplates, loadingTemplates } = useCartAbandonmentEmails();
+export default function EmailTemplateManager() {
+  const { emailTemplates, loadingTemplates, sendAbandonmentEmail } = useCartAbandonmentEmails();
+  const { emailSettings, isLoading: loadingSettings, updateEmailSetting, isUpdating } = useEmailSettings();
+  const { toast } = useToast();
+  
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [showEditTemplate, setShowEditTemplate] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
@@ -153,7 +161,99 @@ ${template.html_content}
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Email Settings Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Email Settings
+          </CardTitle>
+          <CardDescription>
+            Control which types of emails are sent from your system
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loadingSettings ? (
+            <div className="flex items-center justify-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Global Email Toggle */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">Global Email Sending</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Master toggle to enable/disable all email sending
+                  </p>
+                </div>
+                <Switch
+                  checked={emailSettings?.find(s => s.setting_key === 'email_sending_enabled')?.setting_value ?? true}
+                  onCheckedChange={(checked) => 
+                    updateEmailSetting({ settingKey: 'email_sending_enabled', value: checked })
+                  }
+                  disabled={isUpdating}
+                />
+              </div>
+
+              {/* Cart Abandonment Toggle */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">Cart Abandonment Emails</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Send recovery emails when customers abandon their cart
+                  </p>
+                </div>
+                <Switch
+                  checked={emailSettings?.find(s => s.setting_key === 'cart_abandonment_enabled')?.setting_value ?? true}
+                  onCheckedChange={(checked) => 
+                    updateEmailSetting({ settingKey: 'cart_abandonment_enabled', value: checked })
+                  }
+                  disabled={isUpdating}
+                />
+              </div>
+
+              {/* Quote Notifications Toggle */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">Quote Notification Emails</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Send confirmation emails when quotes are created or updated
+                  </p>
+                </div>
+                <Switch
+                  checked={emailSettings?.find(s => s.setting_key === 'quote_notifications_enabled')?.setting_value ?? true}
+                  onCheckedChange={(checked) => 
+                    updateEmailSetting({ settingKey: 'quote_notifications_enabled', value: checked })
+                  }
+                  disabled={isUpdating}
+                />
+              </div>
+
+              {/* Order Notifications Toggle */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">Order Notification Emails</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Send confirmation emails when orders are placed or updated
+                  </p>
+                </div>
+                <Switch
+                  checked={emailSettings?.find(s => s.setting_key === 'order_notifications_enabled')?.setting_value ?? true}
+                  onCheckedChange={(checked) => 
+                    updateEmailSetting({ settingKey: 'order_notifications_enabled', value: checked })
+                  }
+                  disabled={isUpdating}
+                />
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Separator />
+
+      {/* Email Templates Section */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Email Templates</h2>
@@ -161,7 +261,7 @@ ${template.html_content}
             Manage all email templates for quotes, orders, and cart abandonment recovery
           </p>
         </div>
-        <Button onClick={handleCreateTemplate}>
+        <Button onClick={() => setShowCreateTemplate(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Create Template
         </Button>
@@ -388,4 +488,4 @@ ${template.html_content}
       </Dialog>
     </div>
   );
-}; 
+} 

@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useEmailSettings } from "@/hooks/useEmailSettings";
 import { Quote } from "@/types/quote";
 
 type EmailTemplate = 'quote_sent' | 'quote_approved' | 'quote_rejected' | 'order_shipped' | 'order_delivered' | 'contact_form';
@@ -28,41 +29,65 @@ async function getAccessToken() {
 
 export const useEmailNotifications = () => {
   const { toast } = useToast();
+  const { shouldSendEmail } = useEmailSettings();
 
   const sendEmailMutation = useMutation({
     mutationFn: async ({ to, template, data, from }: EmailNotificationOptions) => {
-      // Temporarily disabled to prevent CORS errors
-      console.log('Email notification disabled for development:', { to, template, data });
-      return Promise.resolve();
+      // Determine email type for settings check
+      let emailType: 'quote_notification' | 'order_notification' | undefined;
       
-      // TODO: Re-enable when Edge Function is properly set up
-      /*
+      if (['quote_sent', 'quote_approved', 'quote_rejected'].includes(template)) {
+        emailType = 'quote_notification';
+      } else if (['order_shipped', 'order_delivered'].includes(template)) {
+        emailType = 'order_notification';
+      }
+
+      // Check if this type of email is enabled
+      if (emailType && !shouldSendEmail(emailType)) {
+        console.log(`${emailType} emails are disabled`);
+        return { skipped: true, message: `${emailType} emails are disabled` };
+      }
+
       const accessToken = await getAccessToken();
       
-      if (accessToken) {
-      const { error } = await supabase.functions.invoke('send-email', {
-        body: {
-          to,
-          template,
-          data,
-          from: from || 'WishBag <noreply@resend.dev>'
-          },
-          headers: { Authorization: `Bearer ${accessToken}` }
-      });
-
-      if (error) throw error;
-      } else {
-        console.warn('No access token available, skipping email send');
-        // You might want to throw an error here or handle it differently
+      if (!accessToken) {
         throw new Error('User not authenticated - cannot send email');
       }
-      */
-    },
-    onSuccess: () => {
-      toast({
-        title: "Email sent successfully",
-        description: "The notification email has been sent.",
+
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          to,
+          template_name: template,
+          template_data: data,
+          email_type: emailType,
+          from: from || 'iWishBag <noreply@iwishbag.com>'
+        }),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send email');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.skipped) {
+        toast({
+          title: "Email skipped",
+          description: data.message,
+        });
+      } else {
+        toast({
+          title: "Email sent successfully",
+          description: "The notification email has been sent.",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
