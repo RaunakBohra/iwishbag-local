@@ -297,6 +297,9 @@ deno_version = 1
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+[edge_runtime.secrets]
+RESEND_API_KEY = "env(RESEND_API_KEY)"
+
 [analytics]
 enabled = true
 port = 54327

@@ -1,4 +1,3 @@
-
 import * as z from "zod";
 
 const emptyStringToNull = z.preprocess((val) => (val === "" || val === undefined ? null : val), z.coerce.number().nullable());
@@ -27,8 +26,8 @@ export const adminQuoteFormSchema = z.object({
     customs_category_name: z.string().nullable(),
     status: z.string(),
     final_currency: z.string(),
-    priority: z.enum(['low', 'medium', 'high', 'urgent']).nullable(),
-    internal_notes: z.string().nullable(),
+    priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+    internal_notes: z.string().optional(),
     items: z.array(adminQuoteItemSchema),
 });
 

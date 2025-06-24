@@ -1,4 +1,3 @@
-
 export interface CountrySettings {
   rate_from_usd: number;
   sales_tax: number;
@@ -34,15 +33,6 @@ export interface Quote {
   paymentGatewayFee: number;
 }
 
-export interface CalculateQuoteParams {
-  itemPrice: number;
-  itemWeight: number;
-  quantity: number;
-  countrySettings: CountrySettings;
-  customsCategory: CustomsCategory;
-  merchantShippingPrice: number;
-}
-
 export function calculateStandardInternationalShipping(itemWeight: number, itemPrice: number, settings: CountrySettings): number {
   let shippingWeight = itemWeight;
   if (settings.weight_unit === "kg") {
@@ -68,56 +58,6 @@ export function calculateStandardInternationalShipping(itemWeight: number, itemP
 
 export function calculateCustomsAndECS(itemPrice: number, salesTaxPrice: number, merchantShippingPrice: number, interNationalShipping: number, customsPercent: number): number {
   return ((itemPrice + (salesTaxPrice || 0) + (merchantShippingPrice || 0) + interNationalShipping) * (customsPercent / 100));
-}
-
-export function calculateQuote(params: CalculateQuoteParams): Quote {
-  const { itemPrice, itemWeight, quantity, countrySettings, customsCategory, merchantShippingPrice } = params;
-  
-  const totalItemPrice = itemPrice * quantity;
-  const totalWeight = itemWeight * quantity;
-  
-  const interNationalShipping = calculateStandardInternationalShipping(totalWeight, totalItemPrice, countrySettings);
-  const salesTaxPrice = (totalItemPrice * countrySettings.sales_tax) / 100;
-  const customsAndECS = calculateCustomsAndECS(totalItemPrice, salesTaxPrice, merchantShippingPrice, interNationalShipping, customsCategory.duty_percent);
-
-  const handlingCharge = 10; // Default handling charge
-  const domesticShipping = 5; // Default domestic shipping
-  const insuranceAmount = 0;
-  const discount = 0;
-
-  const subTotalBeforeFees =
-    totalItemPrice +
-    salesTaxPrice +
-    merchantShippingPrice +
-    interNationalShipping +
-    customsAndECS +
-    domesticShipping +
-    handlingCharge +
-    insuranceAmount -
-    discount;
-
-  const { payment_gateway_fixed_fee, payment_gateway_percent_fee } = countrySettings;
-  const paymentGatewayFee = (payment_gateway_fixed_fee || 0) + (subTotalBeforeFees * (payment_gateway_percent_fee || 0)) / 100;
-
-  const subTotal = subTotalBeforeFees + paymentGatewayFee;
-  const vat = Math.round(subTotal * (countrySettings.vat / 100) * 100) / 100;
-  const finalTotal = Math.round((subTotal + vat) * 100) / 100;
-
-  return {
-    finalTotal,
-    subTotal,
-    vat,
-    interNationalShipping,
-    customsAndECS,
-    itemPrice: totalItemPrice,
-    salesTaxPrice,
-    merchantShippingPrice,
-    domesticShipping,
-    handlingCharge,
-    discount,
-    insuranceAmount,
-    paymentGatewayFee,
-  };
 }
 
 export function calculateShippingQuotes(

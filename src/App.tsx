@@ -49,7 +49,6 @@ import EmailTemplatesPage from "@/pages/admin/EmailTemplates";
 import PaymentManagement from "@/pages/admin/PaymentManagement";
 import { AccessibilityProvider } from "@/components/ui/AccessibilityProvider";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
-import { ProductAnalyzerTest } from "@/pages/ProductAnalyzerTest";
 
 const router = createBrowserRouter([
   {
@@ -179,10 +178,6 @@ const router = createBrowserRouter([
       {
         path: "cost-estimator",
         element: <CostEstimatorPage />,
-      },
-      {
-        path: "test-analyzer",
-        element: <ProductAnalyzerTest />,
       },
       {
         path: "emergency-admin",

@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tables } from "@/integrations/supabase/types";
@@ -71,7 +72,7 @@ export const useQuoteNotifications = () => {
       const { error: updateError } = await supabase
         .from('quotes')
         .update({ 
-          status: 'confirmed',
+          status: 'pending',
           internal_notes: quote.internal_notes ? 
             `${quote.internal_notes}\n[${new Date().toISOString()}] Confirmation email sent` :
             `[${new Date().toISOString()}] Confirmation email sent`
@@ -183,7 +184,10 @@ export const useQuoteNotifications = () => {
     }) => {
       const { data: quote, error } = await supabase
         .from('quotes')
-        .select('*')
+        .select(`
+          *,
+          profiles (full_name)
+        `)
         .eq('id', quoteId)
         .single();
 
@@ -214,7 +218,7 @@ export const useQuoteNotifications = () => {
             template: template as EmailTemplate,
             data: {
               quoteId: quote.order_display_id || quote.id,
-              customerName: quote.customer_name || 'Customer',
+              customerName: quote.profiles?.full_name || 'Customer',
               totalAmount: quote.final_total_local || quote.final_total,
               currency: quote.final_currency || 'USD',
               dashboardUrl: `${window.location.origin}/dashboard`,
@@ -255,7 +259,10 @@ export const useQuoteNotifications = () => {
     mutationFn: async (quoteId: string) => {
       const { data: quote, error } = await supabase
         .from('quotes')
-        .select('*')
+        .select(`
+          *,
+          profiles (full_name)
+        `)
         .eq('id', quoteId)
         .single();
 
@@ -271,7 +278,7 @@ export const useQuoteNotifications = () => {
             template: 'quote_reminder',
             data: {
               quoteId: quote.order_display_id || quote.id,
-              customerName: quote.customer_name || 'Customer',
+              customerName: quote.profiles?.full_name || 'Customer',
               totalAmount: quote.final_total_local || quote.final_total,
               currency: quote.final_currency || 'USD',
               daysSinceRequest: Math.floor((Date.now() - new Date(quote.created_at).getTime()) / (1000 * 60 * 60 * 24)),

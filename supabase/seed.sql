@@ -80,7 +80,7 @@ INSERT INTO rejection_reasons (reason, category) VALUES
 ('High Value', 'value'),
 ('Unavailable', 'availability'),
 ('Pricing Issue', 'pricing')
-ON CONFLICT DO NOTHING;
+ON CONFLICT (reason) DO NOTHING;
 
 -- Insert test membership tiers
 INSERT INTO membership_tiers (name, description, monthly_price, annual_price, benefits, free_shipping_threshold, service_fee_discount, priority_processing) VALUES

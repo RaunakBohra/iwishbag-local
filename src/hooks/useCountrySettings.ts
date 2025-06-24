@@ -218,7 +218,7 @@ export const useCountrySettings = () => {
     editingCountry,
     isCreating,
     isUpdating: updateMutation.isPending,
-    isCreating: createMutation.isPending,
+    isCreatingMutation: createMutation.isPending,
     isDeleting: deleteMutation.isPending,
     handleAddNewClick,
     handleEditClick,

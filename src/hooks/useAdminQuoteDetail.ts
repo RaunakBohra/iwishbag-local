@@ -1,4 +1,3 @@
-
 import { useToast } from "@/components/ui/use-toast";
 import { useQuoteQueries } from "./useQuoteQueries";
 import { useQuoteMutations } from "./useQuoteMutations";
@@ -36,10 +35,10 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                 discount: quote.discount,
                 insurance_amount: quote.insurance_amount,
                 country_code: quote.country_code,
-                customs_category_name: quote.customs_category_name,
+                customs_category_name: quote.customs_category_name ?? undefined,
                 status: quote.status,
                 final_currency: quote.final_currency || 'USD',
-                priority: quote.priority,
+                priority: quote.priority ?? undefined,
                 internal_notes: quote.internal_notes,
                 items: quote.quote_items.map(item => ({
                     id: item.id,

@@ -31,8 +31,34 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { AutoProcessingQueue } from "@/components/admin/AutoProcessingQueue";
 import { ManualAnalysisTasks } from "@/components/admin/ManualAnalysisTasks";
+import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminBottomNav } from "@/components/admin/AdminBottomNav";
+import { EmergencyAdminAccess } from "@/components/admin/EmergencyAdminAccess";
+import { useAdminRole } from "@/hooks/useAdminRole";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
+import { Tables } from "@/integrations/supabase/types";
+import { CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { QuoteManagementPage } from "@/components/admin/QuoteManagementPage";
+import { OrderManagementPage } from "@/components/admin/OrderManagementPage";
+import { CustomerManagementPage } from "@/components/admin/CustomerManagementPage";
+import { SystemSettings } from "@/components/admin/SystemSettings";
+import { PaymentGatewayManagement } from "@/components/admin/PaymentGatewayManagement";
+import { ExchangeRateManagement } from "@/components/admin/ExchangeRateManagement";
+import { CountrySettings } from "@/components/admin/CountrySettings";
+import { BankAccountSettings } from "@/components/admin/BankAccountSettings";
+import { HomePageSettings } from "@/components/admin/HomePageSettings";
+import { EmailTemplateManager } from "@/components/admin/EmailTemplateManager";
+import { UserRoles } from "@/components/admin/UserRoles";
+import { CartAnalytics } from "@/components/admin/CartAnalytics";
+import { CartRecovery } from "@/components/admin/CartRecovery";
+import { AdminRoleRecovery } from "@/components/admin/AdminRoleRecovery";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, Globe, RefreshCw, UserCheck } from "lucide-react";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -41,13 +67,17 @@ const AdminDashboard = () => {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-dashboard-stats'],
     queryFn: async () => {
-      const [quotesResult, ordersResult, customersResult, pendingQuotesResult, paymentResult] = await Promise.all([
+      const [quotesResult, ordersResult, customersResult, pendingQuotesResult, paymentResult, revenueResult] = await Promise.all([
         supabase.from('quotes').select('*', { count: 'exact', head: true }),
         supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['paid', 'ordered', 'shipped', 'completed']),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending', 'confirmed']),
-        supabase.from('payment_transactions').select('*', { count: 'exact', head: true }).eq('status', 'completed')
+        supabase.from('payment_transactions').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+        supabase.from('payment_transactions').select('amount').eq('status', 'completed')
       ]);
+
+      // Calculate total revenue from completed payments
+      const totalRevenue = revenueResult.data?.reduce((sum, transaction) => sum + (transaction.amount || 0), 0) || 0;
 
       return {
         totalQuotes: quotesResult.count || 0,
@@ -55,6 +85,9 @@ const AdminDashboard = () => {
         totalCustomers: customersResult.count || 0,
         pendingQuotes: pendingQuotesResult.count || 0,
         totalPayments: paymentResult.count || 0,
+        totalRevenue: totalRevenue,
+        activeOrders: ordersResult.count || 0, // Using total orders as active for now
+        newCustomersThisMonth: 0, // Placeholder - would need more complex query
       };
     },
     refetchInterval: 300000, // Refetch every 5 minutes
@@ -118,13 +151,7 @@ const AdminDashboard = () => {
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground">Monitor and manage your international shopping platform</p>
         </div>
-        <Badge variant="outline" className="text-sm">
-          Auto-Processing Active
-        </Badge>
       </div>
-
-      {/* Auto-Processing Queue - New Feature */}
-      <AutoProcessingQueue />
 
       {/* Manual Analysis Tasks - New Feature */}
       <ManualAnalysisTasks />
@@ -235,6 +262,63 @@ const AdminDashboard = () => {
       </div>
         </CardContent>
       </Card>
+
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Quotes</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats?.totalQuotes || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats?.pendingQuotes || 0} pending
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats?.totalOrders || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats?.activeOrders || 0} active
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats?.totalCustomers || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats?.newCustomersThisMonth || 0} this month
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${(stats?.totalRevenue || 0).toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">
+                  This month
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <AdminAnalytics />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

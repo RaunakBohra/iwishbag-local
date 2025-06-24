@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { QuoteFormValues } from "@/components/forms/quote-form-validation";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
-import { useQuoteAutomation } from "@/hooks/useQuoteAutomation";
 import { useQuoteNotifications } from "@/hooks/useQuoteNotifications";
 
 interface UseQuoteSubmissionProps {
@@ -17,7 +16,6 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const { processNewQuote } = useQuoteAutomation();
   const { sendConfirmationEmail } = useQuoteNotifications();
 
   const submitSeparateQuotes = async (values: QuoteFormValues, finalEmail: string) => {
@@ -122,14 +120,12 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       createdQuotes.push(quote.id);
     }
 
-    // Send confirmation emails and start processing for each quote
+    // Send confirmation emails for each quote
     for (const quoteId of createdQuotes) {
       try {
         await sendConfirmationEmail(quoteId);
-        // Start automated processing
-        processNewQuote(quoteId);
       } catch (error) {
-        console.error(`Error processing quote ${quoteId}:`, error);
+        console.error(`Error sending confirmation for quote ${quoteId}:`, error);
       }
     }
 
@@ -237,20 +233,18 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       return false;
     }
 
-    // Send confirmation email and start processing
+    // Send confirmation email
     try {
       await sendConfirmationEmail(quote.id);
-      // Start automated processing
-      processNewQuote(quote.id);
     } catch (error) {
-      console.error("Error processing quote:", error);
+      console.error("Error sending confirmation email:", error);
     }
 
-      toast({
-        title: "Quote Requested!",
+    toast({
+      title: "Quote Requested!",
       description: "We've received your request and will email your confirmation shortly. Your quote will be ready within 24-48 hours.",
-      });
-      return true;
+    });
+    return true;
   };
 
   const onSubmit = async (values: QuoteFormValues) => {

@@ -105,7 +105,6 @@ export const useQuoteMutations = (id: string | undefined) => {
                     to: quote.email,
                     subject: emailSubject,
                     html: emailHtml,
-                    from: 'WishBag <quotes@resend.dev>'
                     },
                     headers: { Authorization: `Bearer ${accessToken}` }
             });
