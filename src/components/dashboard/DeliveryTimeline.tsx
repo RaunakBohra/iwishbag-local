@@ -1,0 +1,368 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Clock, Package, Truck, CheckCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface DeliveryOption {
+  id: string;
+  name: string;
+  min_days: number;
+  max_days: number;
+  cost: number;
+}
+
+interface DeliveryTimelineProps {
+  quote: any;
+  onDeliveryOptionChange?: (optionId: string) => void;
+  selectedOptionId?: string;
+  className?: string;
+}
+
+export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
+  quote,
+  onDeliveryOptionChange,
+  selectedOptionId,
+  className = ''
+}) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [shippingRoute, setShippingRoute] = useState<any>(null);
+  const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([]);
+  const [selectedOption, setSelectedOption] = useState<DeliveryOption | null>(null);
+
+  // Early return if no quote data
+  if (!quote) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle>Delivery Timeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-800">No quote data available</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Calculate timeline dates
+  const calculateTimeline = (option: DeliveryOption) => {
+    if (!shippingRoute) return null;
+
+    const startDate = quote.status === 'paid' && quote.payment_date 
+      ? new Date(quote.payment_date) 
+      : new Date(quote.created_at);
+
+    const processingDays = shippingRoute.processing_days || 0;
+    const customsDays = shippingRoute.customs_clearance_days || 0;
+    const deliveryMinDays = option.min_days || 0;
+    const deliveryMaxDays = option.max_days || 0;
+
+    // Calculate total days
+    const totalMinDays = processingDays + customsDays + deliveryMinDays;
+    const totalMaxDays = processingDays + customsDays + deliveryMaxDays;
+
+    // Calculate dates
+    const minDate = new Date(startDate);
+    minDate.setDate(minDate.getDate() + totalMinDays);
+    
+    const maxDate = new Date(startDate);
+    maxDate.setDate(maxDate.getDate() + totalMaxDays);
+
+    return {
+      minDate,
+      maxDate,
+      totalMinDays,
+      totalMaxDays,
+      processingDays,
+      customsDays,
+      deliveryMinDays,
+      deliveryMaxDays
+    };
+  };
+
+  // Format date range
+  const formatDateRange = (minDate: Date, maxDate: Date) => {
+    const minMonth = minDate.toLocaleDateString('en-US', { month: 'short' });
+    const minDay = minDate.getDate();
+    const maxMonth = maxDate.toLocaleDateString('en-US', { month: 'short' });
+    const maxDay = maxDate.getDate();
+    
+    if (minMonth === maxMonth) {
+      return `${minMonth} ${minDay}-${maxDay}`;
+    } else {
+      return `${minMonth} ${minDay} - ${maxMonth} ${maxDay}`;
+    }
+  };
+
+  // Fetch shipping route and delivery options
+  useEffect(() => {
+    const fetchShippingData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        let currentRoute = null;
+        // 1. Try to fetch by shipping_route_id if present
+        if (quote.shipping_route_id) {
+          const { data: routeById, error: routeByIdError } = await supabase
+            .from('shipping_routes')
+            .select('*')
+            .eq('id', quote.shipping_route_id)
+            .single();
+          if (routeByIdError || !routeById) {
+            console.error('Error fetching shipping route by id:', routeByIdError);
+          } else {
+            currentRoute = routeById;
+          }
+        }
+
+        // 2. Fallback to origin/destination matching
+        if (!currentRoute) {
+          const originCountry = quote.origin_country || 'US';
+          const destinationCountry = quote.country_code;
+
+          console.log('[DeliveryTimeline] Fetching shipping route:', {
+            originCountry,
+            destinationCountry,
+            quoteId: quote.id
+          });
+
+          const { data: routeData, error: routeError } = await supabase
+            .from('shipping_routes')
+            .select('*')
+            .eq('origin_country', originCountry)
+            .eq('destination_country', destinationCountry)
+            .eq('is_active', true)
+            .single();
+
+          if (routeError) {
+            console.error('Error fetching shipping route:', routeError);
+            // Try to find any route for destination country
+            const { data: fallbackRoute, error: fallbackError } = await supabase
+              .from('shipping_routes')
+              .select('*')
+              .eq('destination_country', destinationCountry)
+              .eq('is_active', true)
+              .single();
+            
+            if (fallbackError || !fallbackRoute) {
+              throw new Error(`No shipping route found for ${destinationCountry}. Please contact support.`);
+            }
+            currentRoute = fallbackRoute;
+          } else {
+            currentRoute = routeData;
+          }
+        }
+
+        setShippingRoute(currentRoute);
+
+        // Parse delivery options
+        let options: DeliveryOption[] = [];
+        if (currentRoute.delivery_options && Array.isArray(currentRoute.delivery_options)) {
+          options = currentRoute.delivery_options.map((opt: any, index: number) => ({
+            id: opt.id || `option-${index}`,
+            name: opt.name || `Option ${index + 1}`,
+            min_days: opt.min_days || 0,
+            max_days: opt.max_days || 0,
+            cost: opt.cost || 0
+          }));
+        }
+
+        // Create default option if none exist
+        if (options.length === 0) {
+          options = [{
+            id: 'default',
+            name: 'Standard Delivery',
+            min_days: 7,
+            max_days: 14,
+            cost: 0
+          }];
+        }
+
+        // Filter options based on quote's enabled_delivery_options
+        const quoteEnabledOptions = quote.enabled_delivery_options || [];
+        if (quoteEnabledOptions.length > 0) {
+          options = options.filter(option => quoteEnabledOptions.includes(option.id));
+        }
+
+        setDeliveryOptions(options);
+        
+        // Set selected option
+        const defaultOption = selectedOptionId 
+          ? options.find(opt => opt.id === selectedOptionId) 
+          : options[0];
+        setSelectedOption(defaultOption || options[0]);
+
+      } catch (err: any) {
+        console.error('Error fetching shipping data:', err);
+        setError(err.message || 'Failed to load delivery information');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchShippingData();
+  }, [quote.id, quote.shipping_route_id, quote.origin_country, quote.country_code, selectedOptionId]);
+
+  if (loading) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle>Delivery Timeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <p className="text-gray-600">Loading delivery information...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle>Delivery Timeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-800">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!selectedOption || !shippingRoute) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle>Delivery Timeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-800">No delivery options available</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const timeline = calculateTimeline(selectedOption);
+  if (!timeline) return null;
+
+  return (
+    <Card className={`${className} border-0 shadow-none p-0 pt-4 border-t`}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold">Delivery Timeline</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Main Timeline Info */}
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-blue-900">Estimated Delivery</h4>
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+              {selectedOption.name}
+            </Badge>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-blue-700">Delivery Window:</span>
+              <span className="font-medium text-blue-900">
+                {formatDateRange(timeline.minDate, timeline.maxDate)}
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-blue-700">Total Days:</span>
+              <span className="font-medium text-blue-900">
+                {timeline.totalMinDays}-{timeline.totalMaxDays} days
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-blue-700">Based on route:</span>
+              <span className="font-medium text-blue-900">
+                {shippingRoute.origin_country} → {shippingRoute.destination_country}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Timeline Breakdown */}
+        <div className="space-y-3">
+          <h5 className="font-medium text-gray-900">Timeline Breakdown</h5>
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+              <div className="flex items-center space-x-2">
+                <Package className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-700">Processing</span>
+              </div>
+              <span className="text-sm font-medium text-gray-900">
+                {timeline.processingDays} days
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-700">Customs Clearance</span>
+              </div>
+              <span className="text-sm font-medium text-gray-900">
+                {timeline.customsDays} days
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+              <div className="flex items-center space-x-2">
+                <Truck className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-700">Shipping & Delivery</span>
+              </div>
+              <span className="text-sm font-medium text-gray-900">
+                {timeline.deliveryMinDays}-{timeline.deliveryMaxDays} days
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Delivery Options */}
+        {deliveryOptions.length > 1 && (
+          <div className="space-y-3">
+            <h5 className="font-medium text-gray-900">Delivery Options</h5>
+            <div className="space-y-2">
+              {deliveryOptions.map((option) => {
+                const optionTimeline = calculateTimeline(option);
+                return (
+                  <Button
+                    key={option.id}
+                    variant={selectedOption.id === option.id ? "default" : "outline"}
+                    size="sm"
+                    className="w-full justify-between"
+                    onClick={() => {
+                      setSelectedOption(option);
+                      onDeliveryOptionChange?.(option.id);
+                    }}
+                  >
+                    <span>{option.name}</span>
+                    {optionTimeline && (
+                      <span className="text-xs">
+                        {formatDateRange(optionTimeline.minDate, optionTimeline.maxDate)}
+                      </span>
+                    )}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}; 

@@ -1,0 +1,130 @@
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+
+export const useDashboardState = () => {
+  const { user } = useAuth();
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'in_cart'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedQuoteIds, setSelectedQuoteIds] = useState<string[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const { data: allQuotes, isLoading, isError } = useQuery({
+    queryKey: ['user-quotes-and-orders', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const orderStatuses = useMemo(() => ['cod_pending', 'bank_transfer_pending', 'paid', 'ordered', 'shipped', 'completed', 'cancelled'], []);
+
+  const quotes = useMemo(() => allQuotes?.filter(q => !orderStatuses.includes(q.status)) || [], [allQuotes, orderStatuses]);
+  const orders = useMemo(() => allQuotes?.filter(q => orderStatuses.includes(q.status)) || [], [allQuotes, orderStatuses]);
+
+  const filteredQuotes = useMemo(() => {
+    return quotes
+      .filter(quote => {
+        if (statusFilter === 'all') return true;
+        if (statusFilter === 'pending') return quote.status === 'pending';
+        if (statusFilter === 'approved') return quote.approval_status === 'approved';
+        if (statusFilter === 'in_cart') return quote.in_cart;
+        return true;
+      })
+      .filter(quote => {
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        const productNameMatch = quote.product_name?.toLowerCase().includes(searchLower);
+        const displayIdMatch = quote.display_id?.toLowerCase().includes(searchLower);
+        return productNameMatch || displayIdMatch;
+      });
+  }, [quotes, statusFilter, searchTerm]);
+
+  const selectableQuotes = useMemo(() => {
+    return filteredQuotes.filter(q => q.approval_status === 'approved');
+  }, [filteredQuotes]);
+
+  const handleSearchChange = (newSearchTerm: string) => {
+    if (newSearchTerm !== searchTerm) {
+      setIsSearching(true);
+      setSearchTerm(newSearchTerm);
+      
+      // Simulate search delay for UX
+      setTimeout(() => setIsSearching(false), 300);
+    }
+  };
+
+  const handleSelectQuote = (quoteId: string, checked: boolean) => {
+    setSelectedQuoteIds(prev =>
+      checked
+        ? [...prev, quoteId]
+        : prev.filter(id => id !== quoteId)
+    );
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedQuoteIds(selectableQuotes.map(q => q.id));
+    } else {
+      setSelectedQuoteIds([]);
+    }
+  };
+
+  const handleBulkAction = (action: string) => {
+    // Implementation will be added later
+  };
+
+  const handleToggleSelectQuote = (quoteId: string) => {
+    setSelectedQuoteIds(prev =>
+      prev.includes(quoteId)
+        ? prev.filter(id => id !== quoteId)
+        : [...prev, quoteId]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedQuoteIds.length === selectableQuotes.length) {
+      setSelectedQuoteIds([]);
+    } else {
+      setSelectedQuoteIds(selectableQuotes.map(q => q.id));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedQuoteIds([]);
+  };
+
+  return {
+    user,
+    statusFilter,
+    setStatusFilter,
+    searchTerm,
+    selectedQuoteIds,
+    setSelectedQuoteIds,
+    isSearching,
+    allQuotes,
+    isLoading,
+    isError,
+    quotes,
+    orders,
+    filteredQuotes,
+    selectableQuotes,
+    handleSearchChange,
+    handleSelectQuote,
+    handleSelectAll,
+    handleBulkAction,
+    handleToggleSelectQuote,
+    handleToggleSelectAll,
+    handleClearSelection,
+  };
+};
