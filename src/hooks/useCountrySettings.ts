@@ -189,7 +189,7 @@ export const useCountrySettings = () => {
     isLoading,
     error: queryError,
     editingCountry,
-    isCreating: createMutation.isPending,
+    isCreating: isCreating,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
     handleAddNewClick,

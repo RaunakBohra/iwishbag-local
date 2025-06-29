@@ -4,6 +4,7 @@ import { CountryListItem } from "./CountryListItem";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertTriangle, Plus } from "lucide-react";
 
 export const CountrySettings = () => {
@@ -80,13 +81,25 @@ export const CountrySettings = () => {
         </Button>
       </div>
 
-      {(isCreating || editingCountry) && (
-        <CountryForm
-          editingCountry={editingCountry}
-          onSubmit={handleSubmit}
-          onCancel={handleCancelClick}
-        />
-      )}
+      {/* Dialog for Add/Edit Country Form */}
+      <Dialog open={isCreating || !!editingCountry} onOpenChange={(open) => {
+        if (!open) {
+          handleCancelClick();
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingCountry ? 'Edit Country' : 'Add New Country'}
+            </DialogTitle>
+          </DialogHeader>
+          <CountryForm
+            editingCountry={editingCountry}
+            onSubmit={handleSubmit}
+            onCancel={handleCancelClick}
+          />
+        </DialogContent>
+      </Dialog>
 
       {countries && countries.length > 0 ? (
         <div className="grid gap-4">
