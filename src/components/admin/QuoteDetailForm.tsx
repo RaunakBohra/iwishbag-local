@@ -10,10 +10,13 @@ import { ShoppingCart, Truck, AlertTriangle } from "lucide-react";
 import { useWatch } from "react-hook-form";
 import { useEffect, useMemo } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
 
-export const QuoteDetailForm = ({ form, shippingAddress }: {
+export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercentage, detectedCustomsTier }: {
   form: any;
   shippingAddress?: any;
+  detectedCustomsPercentage?: number;
+  detectedCustomsTier?: any;
 }) => {
   const { toast } = useToast();
   const { data: allCountries } = useAllCountries();
@@ -153,16 +156,28 @@ export const QuoteDetailForm = ({ form, shippingAddress }: {
         render={({ field }) => (
           <FormItem>
             <FormLabel>Customs Percentage (%)</FormLabel>
-            <FormControl>
-              <Input 
-                type="number" 
-                step="0.01" 
-                {...field} 
-                value={field.value ?? ''} 
-                onWheel={handleNumberInputWheel}
-                placeholder="0.00"
-              />
-            </FormControl>
+            <div className="flex items-center gap-2">
+              <FormControl>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  {...field} 
+                  value={field.value ?? ''} 
+                  onWheel={handleNumberInputWheel}
+                  placeholder="0.00"
+                />
+              </FormControl>
+              {typeof detectedCustomsPercentage === 'number' && detectedCustomsPercentage !== Number(field.value) && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => form.setValue('customs_percentage', detectedCustomsPercentage)}
+                >
+                  Apply
+                </Button>
+              )}
+            </div>
             <FormMessage />
           </FormItem>
         )}

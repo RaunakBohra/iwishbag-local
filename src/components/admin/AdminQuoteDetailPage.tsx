@@ -25,6 +25,9 @@ import { DeliveryOptionsManager } from "./DeliveryOptionsManager";
 import { useToast } from "@/components/ui/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
+import { CustomsTierDisplay } from "./CustomsTierDisplay";
+import { supabase } from '../../integrations/supabase/client';
+import { useAllCountries } from '../../hooks/useAllCountries';
 
 // Status workflow configuration
 const STATUS_WORKFLOW = {
@@ -99,7 +102,6 @@ const AdminQuoteDetailPage = () => {
   const hasAddress = !!shippingAddress;
 
   const purchaseCountry = form?.control ? useWatch({ control: form.control, name: "country_code" }) : undefined;
-  const destinationCountry = shippingAddress?.country || '';
 
   const isOrder = quote && ['cod_pending', 'bank_transfer_pending', 'paid', 'ordered', 'shipped', 'completed', 'cancelled'].includes(quote.status);
   const canRecalculate = quote && !['shipped', 'completed', 'cancelled'].includes(quote.status);
@@ -308,7 +310,7 @@ const AdminQuoteDetailPage = () => {
   useEffect(() => {
     if (quote) {
       const originCountry = quote.origin_country || purchaseCountry;
-      const destCountry = destinationCountry || quote.country_code;
+      const destCountry = shippingAddress?.country || quote.country_code;
       
       const appropriateUnit = getAppropriateWeightUnit(
         originCountry,
@@ -318,7 +320,77 @@ const AdminQuoteDetailPage = () => {
       
       setSmartWeightUnit(appropriateUnit);
     }
-  }, [quote, routeWeightUnit, purchaseCountry, destinationCountry]);
+  }, [quote, routeWeightUnit, purchaseCountry, shippingAddress?.country]);
+
+  // Customs Tier Detection Logic
+  const [customsTiers, setCustomsTiers] = useState<any[]>([]);
+  const [appliedTier, setAppliedTier] = useState<any | null>(null);
+  const [customsLoading, setCustomsLoading] = useState(true);
+  const [customsError, setCustomsError] = useState<string | null>(null);
+
+  // Get origin/destination codes
+  const originCountry = quote?.origin_country || purchaseCountry || 'US';
+  let destinationCountry = shippingAddress?.country || quote?.country_code;
+  if (destinationCountry && destinationCountry.length > 2) {
+    const found = allCountries?.find(c => c.name === destinationCountry);
+    if (found) destinationCountry = found.code;
+  }
+  const quotePrice = quote?.quote_items?.reduce((sum: number, item: any) => sum + (item.item_price || 0), 0) || 0;
+  const quoteWeight = quote?.quote_items?.reduce((sum: number, item: any) => sum + (item.item_weight || 0), 0) || 0;
+  const appliedCustomsPercentage = quote?.customs_percentage;
+
+  // Fetch customs tiers and determine applied tier
+  useEffect(() => {
+    const fetchCustomsTiers = async () => {
+      if (!originCountry || !destinationCountry) {
+        setCustomsLoading(false);
+        return;
+      }
+      try {
+        setCustomsLoading(true);
+        const { data, error } = await supabase
+          .from('route_customs_tiers')
+          .select('*')
+          .eq('origin_country', originCountry)
+          .eq('destination_country', destinationCountry)
+          .eq('is_active', true)
+          .order('priority_order', { ascending: true });
+        if (error) throw error;
+        setCustomsTiers(data || []);
+        // Determine which tier was applied
+        const applied = determineAppliedTier(data || [], quotePrice, quoteWeight, appliedCustomsPercentage);
+        setAppliedTier(applied);
+      } catch (err: any) {
+        setCustomsError(err.message);
+      } finally {
+        setCustomsLoading(false);
+      }
+    };
+    fetchCustomsTiers();
+  }, [originCountry, destinationCountry, quotePrice, quoteWeight, appliedCustomsPercentage, allCountries]);
+
+  // Function to determine which tier was applied
+  const determineAppliedTier = (
+    tiers: any[],
+    price: number,
+    weight: number,
+    appliedPercentage: number
+  ): any | null => {
+    const exactMatch = tiers.find(tier => tier.customs_percentage === appliedPercentage);
+    if (exactMatch) return exactMatch;
+    for (const tier of tiers) {
+      const priceMatch = (!tier.price_min || price >= tier.price_min) && (!tier.price_max || price <= tier.price_max);
+      const weightMatch = (!tier.weight_min || weight >= tier.weight_min) && (!tier.weight_max || weight <= tier.weight_max);
+      let shouldApply = false;
+      if (tier.logic_type === 'AND') {
+        shouldApply = priceMatch && weightMatch;
+      } else {
+        shouldApply = priceMatch || weightMatch;
+      }
+      if (shouldApply) return tier;
+    }
+    return null;
+  };
 
   // Early return if still loading
   if (quoteLoading) return (
@@ -556,6 +628,8 @@ const AdminQuoteDetailPage = () => {
                       <QuoteDetailForm 
                         form={form}
                         shippingAddress={shippingAddress}
+                        detectedCustomsPercentage={appliedTier?.customs_percentage}
+                        detectedCustomsTier={appliedTier}
                       />
                   </CardContent>
               </Card>
@@ -570,6 +644,17 @@ const AdminQuoteDetailPage = () => {
             <div className="space-y-4">
               <QuoteCurrencySummary quote={quote} countries={countries} />
               <QuoteCalculatedCosts quote={quote} />
+              
+              {/* Customs Tiers Information */}
+              <CustomsTierDisplay 
+                quote={quote} 
+                shippingAddress={shippingAddress} 
+                customsTiers={customsTiers}
+                appliedTier={appliedTier}
+                loading={customsLoading}
+                error={customsError}
+              />
+              
               {/* Shipping Route Information */}
               <Card>
                 <CardHeader>
