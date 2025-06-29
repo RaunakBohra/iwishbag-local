@@ -6,13 +6,17 @@ import { QuoteFormValues } from "@/components/forms/quote-form-validation";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { useQuoteNotifications } from "@/hooks/useQuoteNotifications";
+<<<<<<< HEAD
 import { Tables } from "@/integrations/supabase/types";
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
 interface UseQuoteSubmissionProps {
   form: UseFormReturn<QuoteFormValues>;
   selectedCountryCurrency: string;
 }
 
+<<<<<<< HEAD
 interface QuoteSubmissionData extends QuoteFormValues {
   shippingAddress?: {
     fullName: string;
@@ -28,14 +32,21 @@ interface QuoteSubmissionData extends QuoteFormValues {
   };
 }
 
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSubmissionProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const { sendConfirmationEmail } = useQuoteNotifications();
 
+<<<<<<< HEAD
   const submitSeparateQuotes = async (values: QuoteSubmissionData, finalEmail: string) => {
     const { items, countryCode, shippingAddress } = values;
+=======
+  const submitSeparateQuotes = async (values: QuoteFormValues, finalEmail: string) => {
+    const { items, countryCode } = values;
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     const createdQuotes: string[] = [];
 
     // Ensure user profile exists
@@ -56,8 +67,12 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
             phone: user.user_metadata?.phone || null,
             country: countryCode || 'US',
             preferred_display_currency: selectedCountryCurrency || 'USD',
+<<<<<<< HEAD
             referral_code: 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase(),
             email: user.email
+=======
+            referral_code: 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase()
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           });
 
         if (profileError) {
@@ -91,6 +106,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       
+<<<<<<< HEAD
       // Prepare quote data
       const quoteData: any = {
         email: finalEmail,
@@ -123,6 +139,18 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       const { data: quote, error: quoteError } = await supabase
         .from("quotes")
         .insert(quoteData)
+=======
+      const { data: quote, error: quoteError } = await supabase
+        .from("quotes")
+        .insert({
+          email: finalEmail,
+          country_code: countryCode,
+          user_id: user?.id ?? null,
+          items_currency: selectedCountryCurrency,
+          final_currency: 'NPR',
+          in_cart: false
+        })
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         .select('id')
         .single();
 
@@ -143,6 +171,10 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         quantity: item.quantity,
         options: item.options,
         image_url: item.imageUrl,
+<<<<<<< HEAD
+=======
+        item_currency: selectedCountryCurrency,
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       });
 
       if (itemsError) {
@@ -174,8 +206,13 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
     return true;
   };
 
+<<<<<<< HEAD
   const submitCombinedQuote = async (values: QuoteSubmissionData, finalEmail: string) => {
     const { items, countryCode, shippingAddress } = values;
+=======
+  const submitCombinedQuote = async (values: QuoteFormValues, finalEmail: string) => {
+    const { items, countryCode } = values;
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
     // Ensure user profile exists
     if (user?.id) {
@@ -195,8 +232,12 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
             phone: user.user_metadata?.phone || null,
             country: countryCode || 'US',
             preferred_display_currency: selectedCountryCurrency || 'USD',
+<<<<<<< HEAD
             referral_code: 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase(),
             email: user.email
+=======
+            referral_code: 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase()
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           });
 
         if (profileError) {
@@ -227,6 +268,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       }
     }
 
+<<<<<<< HEAD
     // Prepare quote data
     const quoteData: any = {
       email: finalEmail,
@@ -259,6 +301,18 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
     const { data: quote, error: quoteError } = await supabase
       .from("quotes")
       .insert(quoteData)
+=======
+    const { data: quote, error: quoteError } = await supabase
+      .from("quotes")
+      .insert({
+        email: finalEmail,
+        country_code: countryCode,
+        user_id: user?.id ?? null,
+        items_currency: selectedCountryCurrency,
+        final_currency: 'NPR',
+        in_cart: false
+      })
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       .select('id')
       .single();
 
@@ -279,6 +333,10 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         quantity: item.quantity,
         options: item.options,
         image_url: item.imageUrl,
+<<<<<<< HEAD
+=======
+        item_currency: selectedCountryCurrency,
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     }));
 
     const { error: itemsError } = await supabase.from("quote_items").insert(quoteItemsToInsert);
@@ -307,7 +365,11 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
     return true;
   };
 
+<<<<<<< HEAD
   const onSubmit = async (values: QuoteSubmissionData) => {
+=======
+  const onSubmit = async (values: QuoteFormValues) => {
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     setLoading(true);
 
     const finalEmail = user?.email || values.email;

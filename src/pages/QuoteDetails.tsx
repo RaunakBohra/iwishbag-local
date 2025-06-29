@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+<<<<<<< HEAD
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +24,28 @@ export default function QuoteDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+=======
+import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { QuoteBreakdown } from "@/components/dashboard/QuoteBreakdown";
+import { QuoteMessaging } from "@/components/messaging/QuoteMessaging";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useQuoteSteps } from "@/hooks/useQuoteSteps";
+import { useQuoteState } from "@/hooks/useQuoteState";
+
+type QuoteWithItems = Tables<'quotes'> & {
+  quote_items: Tables<'quote_items'>[];
+  rejection_reasons?: { reason: string } | null;
+};
+
+export const QuoteDetails: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   const { user } = useAuth();
   const { approveQuote, rejectQuote, addToCart, isUpdating } = useQuoteState(id || '');
 
@@ -41,11 +64,16 @@ export default function QuoteDetails() {
         .single();
 
       if (error) throw error;
+<<<<<<< HEAD
       return data;
+=======
+      return data as QuoteWithItems;
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     },
     enabled: !!id && !!user,
   });
 
+<<<<<<< HEAD
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
 
   if (isLoading) {
@@ -55,6 +83,20 @@ export default function QuoteDetails() {
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-64 w-full" />
+=======
+  const steps = useQuoteSteps(quote);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container py-12 space-y-8">
+          <div className="bg-card border border-border rounded-lg p-6">
+            <Skeleton className="h-32 w-full" />
+          </div>
+          <div className="bg-card border border-border rounded-lg p-6">
+            <Skeleton className="h-64 w-full" />
+          </div>
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         </div>
       </div>
     );
@@ -62,6 +104,7 @@ export default function QuoteDetails() {
 
   if (error || !quote) {
     return (
+<<<<<<< HEAD
       <div className="container mx-auto px-4 py-8">
         <Alert variant="destructive">
           <XCircle className="h-4 w-4" />
@@ -69,10 +112,23 @@ export default function QuoteDetails() {
             {error?.message || "Quote not found"}
           </AlertDescription>
         </Alert>
+=======
+      <div className="min-h-screen bg-background">
+        <div className="container py-12">
+          <div className="bg-card border border-border rounded-lg p-6">
+            <Alert variant="destructive">
+              <AlertDescription>
+                {error instanceof Error ? error.message : 'Failed to load quote'}
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       </div>
     );
   }
 
+<<<<<<< HEAD
   const isOwner = user?.id === quote.user_id;
   const isAdmin = user?.user_metadata?.role === "admin";
   
@@ -270,3 +326,61 @@ export default function QuoteDetails() {
     </div>
   );
 }
+=======
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container py-6 sm:py-12 space-y-6 sm:space-y-8">
+        {quote.status === 'requested' ? (
+          <>
+            <Card className="bg-card border border-border">
+              <CardHeader>
+                <CardTitle className="text-foreground">
+                  Quote Request Received
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4 sm:mb-6">
+                  Thank you for your quote request. Our team is currently preparing your quote and will get back to you shortly. 
+                  You can see the items you've requested below.
+                </p>
+                <div className="space-y-3 sm:space-y-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground">Items Requested</h3>
+                  <div className="space-y-3 sm:space-y-4">
+                    {quote.quote_items?.map((item) => (
+                      <div key={item.id} className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-card border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                        {item.image_url && (
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-border bg-muted flex-shrink-0">
+                            <img 
+                              src={item.image_url} 
+                              alt={item.product_name || 'Product'} 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-sm sm:text-base text-foreground">{item.product_name}</h4>
+                          <p className="text-xs sm:text-sm text-muted-foreground">Quantity: {item.quantity}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <QuoteBreakdown 
+            quote={quote} 
+            onApprove={approveQuote}
+            onReject={rejectQuote}
+            isProcessing={isUpdating}
+            onAddToCart={addToCart}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default QuoteDetails;
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312

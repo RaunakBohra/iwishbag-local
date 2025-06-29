@@ -49,6 +49,7 @@ export const PaymentAnalytics: React.FC<PaymentAnalyticsProps> = ({ timeRange = 
   };
 
   // Fetch payment analytics
+<<<<<<< HEAD
   const { data: analytics, isLoading, refetch, error } = useQuery({
     queryKey: ['payment-analytics', selectedTimeRange, selectedGateway],
     queryFn: async (): Promise<PaymentAnalytics> => {
@@ -146,6 +147,85 @@ export const PaymentAnalytics: React.FC<PaymentAnalyticsProps> = ({ timeRange = 
           daily_trends: []
         };
       }
+=======
+  const { data: analytics, isLoading, refetch } = useQuery({
+    queryKey: ['payment-analytics', selectedTimeRange, selectedGateway],
+    queryFn: async (): Promise<PaymentAnalytics> => {
+      const startDate = getDateRange(selectedTimeRange);
+      
+      let query = supabase
+        .from('payment_transactions')
+        .select('*')
+        .gte('created_at', startDate.toISOString());
+
+      if (selectedGateway !== 'all') {
+        query = query.eq('gateway_code', selectedGateway);
+      }
+
+      const { data: transactions, error } = await query;
+
+      if (error) throw error;
+
+      const totalTransactions = transactions?.length || 0;
+      const totalAmount = transactions?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+      const completedTransactions = transactions?.filter(t => t.status === 'completed') || [];
+      const failedTransactions = transactions?.filter(t => t.status === 'failed') || [];
+      const pendingTransactions = transactions?.filter(t => t.status === 'pending') || [];
+      
+      const successRate = totalTransactions > 0 ? (completedTransactions.length / totalTransactions) * 100 : 0;
+      const averageAmount = totalTransactions > 0 ? totalAmount / totalTransactions : 0;
+
+      // Calculate gateway breakdown
+      const gatewayBreakdown: Record<PaymentGateway, { count: number; amount: number; success_rate: number }> = {} as any;
+      
+      const gateways = ['stripe', 'payu', 'esewa', 'khalti', 'fonepay', 'airwallex', 'bank_transfer', 'cod'] as PaymentGateway[];
+      
+      gateways.forEach(gateway => {
+        const gatewayTransactions = transactions?.filter(t => t.gateway_code === gateway) || [];
+        const gatewayCompleted = gatewayTransactions.filter(t => t.status === 'completed');
+        const gatewayAmount = gatewayTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        if (gatewayTransactions.length > 0) {
+          gatewayBreakdown[gateway] = {
+            count: gatewayTransactions.length,
+            amount: gatewayAmount,
+            success_rate: (gatewayCompleted.length / gatewayTransactions.length) * 100
+          };
+        }
+      });
+
+      // Calculate daily trends
+      const dailyData = new Map<string, { count: number; amount: number }>();
+      transactions?.forEach(transaction => {
+        const date = new Date(transaction.created_at).toISOString().split('T')[0];
+        const existing = dailyData.get(date) || { count: 0, amount: 0 };
+        dailyData.set(date, {
+          count: existing.count + 1,
+          amount: existing.amount + (transaction.amount || 0)
+        });
+      });
+
+      return {
+        total_transactions: totalTransactions,
+        total_amount: totalAmount,
+        currency: 'USD',
+        success_rate: successRate,
+        average_amount: averageAmount,
+        gateway_breakdown: gatewayBreakdown,
+        time_period: {
+          start: startDate.toISOString(),
+          end: new Date().toISOString()
+        },
+        // Additional metrics
+        failed_transactions: failedTransactions.length,
+        pending_transactions: pendingTransactions.length,
+        daily_trends: Array.from(dailyData.entries()).map(([date, data]) => ({
+          date,
+          count: data.count,
+          amount: data.amount
+        }))
+      };
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     }
   });
 
@@ -201,6 +281,7 @@ export const PaymentAnalytics: React.FC<PaymentAnalyticsProps> = ({ timeRange = 
     );
   }
 
+<<<<<<< HEAD
   // Show message if table is not available
   if (error && error.message.includes('not available')) {
     return (
@@ -224,6 +305,8 @@ export const PaymentAnalytics: React.FC<PaymentAnalyticsProps> = ({ timeRange = 
     );
   }
 
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

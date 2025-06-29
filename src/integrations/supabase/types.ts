@@ -17,10 +17,17 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
+<<<<<<< HEAD
           variables?: Json
           extensions?: Json
           query?: string
           operationName?: string
+=======
+          operationName?: string
+          extensions?: Json
+          variables?: Json
+          query?: string
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         }
         Returns: Json
       }
@@ -67,6 +74,7 @@ export type Database = {
         }
         Relationships: []
       }
+<<<<<<< HEAD
       auto_quote_analytics: {
         Row: {
           created_at: string | null
@@ -147,6 +155,8 @@ export type Database = {
         }
         Relationships: []
       }
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       bank_account_details: {
         Row: {
           account_name: string
@@ -273,6 +283,7 @@ export type Database = {
         }
         Relationships: []
       }
+<<<<<<< HEAD
       customs_rules: {
         Row: {
           actions: Json
@@ -336,6 +347,8 @@ export type Database = {
         }
         Relationships: []
       }
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       email_templates: {
         Row: {
           created_at: string
@@ -794,6 +807,7 @@ export type Database = {
         }
         Relationships: []
       }
+<<<<<<< HEAD
       pricing_rules: {
         Row: {
           actions: Json
@@ -830,13 +844,18 @@ export type Database = {
         }
         Relationships: []
       }
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       profiles: {
         Row: {
           avatar_url: string | null
           cod_enabled: boolean | null
           country: string
           created_at: string
+<<<<<<< HEAD
           email: string | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           full_name: string | null
           id: string
           internal_notes: string | null
@@ -852,7 +871,10 @@ export type Database = {
           cod_enabled?: boolean | null
           country?: string
           created_at?: string
+<<<<<<< HEAD
           email?: string | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           full_name?: string | null
           id: string
           internal_notes?: string | null
@@ -868,7 +890,10 @@ export type Database = {
           cod_enabled?: boolean | null
           country?: string
           created_at?: string
+<<<<<<< HEAD
           email?: string | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           full_name?: string | null
           id?: string
           internal_notes?: string | null
@@ -881,6 +906,7 @@ export type Database = {
         }
         Relationships: []
       }
+<<<<<<< HEAD
       quote_address_history: {
         Row: {
           change_reason: string | null
@@ -929,6 +955,8 @@ export type Database = {
           },
         ]
       }
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       quote_items: {
         Row: {
           category: string | null
@@ -1029,15 +1057,21 @@ export type Database = {
       }
       quotes: {
         Row: {
+<<<<<<< HEAD
           address_locked: boolean | null
           address_updated_at: string | null
           address_updated_by: string | null
           applied_rules: Json | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           approval_status:
             | Database["public"]["Enums"]["quote_approval_status"]
             | null
           approved_at: string | null
+<<<<<<< HEAD
           confidence_score: number | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           country_code: string | null
           created_at: string
           currency: string
@@ -1048,7 +1082,10 @@ export type Database = {
           display_id: string | null
           domestic_shipping: number | null
           email: string
+<<<<<<< HEAD
           enabled_delivery_options: Json | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           estimated_delivery_date: string | null
           exchange_rate: number | null
           final_currency: string | null
@@ -1068,7 +1105,10 @@ export type Database = {
           merchant_shipping_price: number | null
           options: string | null
           order_display_id: string | null
+<<<<<<< HEAD
           origin_country: string | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           paid_at: string | null
           payment_gateway_fee: number | null
           payment_method: string | null
@@ -1076,17 +1116,25 @@ export type Database = {
           product_name: string | null
           product_url: string | null
           quantity: number | null
+<<<<<<< HEAD
           quote_type: string | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           rejected_at: string | null
           rejection_details: string | null
           rejection_reason_id: string | null
           sales_tax_price: number | null
+<<<<<<< HEAD
           scraped_data: Json | null
           shipped_at: string | null
           shipping_address: Json | null
           shipping_carrier: string | null
           shipping_method: string | null
           shipping_route_id: number | null
+=======
+          shipped_at: string | null
+          shipping_carrier: string | null
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           status: Database["public"]["Enums"]["quote_status"] | null
           sub_total: number | null
           tracking_number: string | null
@@ -1095,15 +1143,21 @@ export type Database = {
           vat: number | null
         }
         Insert: {
+<<<<<<< HEAD
           address_locked?: boolean | null
           address_updated_at?: string | null
           address_updated_by?: string | null
           applied_rules?: Json | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           approval_status?:
             | Database["public"]["Enums"]["quote_approval_status"]
             | null
           approved_at?: string | null
+<<<<<<< HEAD
           confidence_score?: number | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           country_code?: string | null
           created_at?: string
           currency?: string
@@ -1114,7 +1168,10 @@ export type Database = {
           display_id?: string | null
           domestic_shipping?: number | null
           email: string
+<<<<<<< HEAD
           enabled_delivery_options?: Json | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           estimated_delivery_date?: string | null
           exchange_rate?: number | null
           final_currency?: string | null
@@ -1134,7 +1191,10 @@ export type Database = {
           merchant_shipping_price?: number | null
           options?: string | null
           order_display_id?: string | null
+<<<<<<< HEAD
           origin_country?: string | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           paid_at?: string | null
           payment_gateway_fee?: number | null
           payment_method?: string | null
@@ -1142,17 +1202,25 @@ export type Database = {
           product_name?: string | null
           product_url?: string | null
           quantity?: number | null
+<<<<<<< HEAD
           quote_type?: string | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           rejected_at?: string | null
           rejection_details?: string | null
           rejection_reason_id?: string | null
           sales_tax_price?: number | null
+<<<<<<< HEAD
           scraped_data?: Json | null
           shipped_at?: string | null
           shipping_address?: Json | null
           shipping_carrier?: string | null
           shipping_method?: string | null
           shipping_route_id?: number | null
+=======
+          shipped_at?: string | null
+          shipping_carrier?: string | null
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           status?: Database["public"]["Enums"]["quote_status"] | null
           sub_total?: number | null
           tracking_number?: string | null
@@ -1161,15 +1229,21 @@ export type Database = {
           vat?: number | null
         }
         Update: {
+<<<<<<< HEAD
           address_locked?: boolean | null
           address_updated_at?: string | null
           address_updated_by?: string | null
           applied_rules?: Json | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           approval_status?:
             | Database["public"]["Enums"]["quote_approval_status"]
             | null
           approved_at?: string | null
+<<<<<<< HEAD
           confidence_score?: number | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           country_code?: string | null
           created_at?: string
           currency?: string
@@ -1180,7 +1254,10 @@ export type Database = {
           display_id?: string | null
           domestic_shipping?: number | null
           email?: string
+<<<<<<< HEAD
           enabled_delivery_options?: Json | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           estimated_delivery_date?: string | null
           exchange_rate?: number | null
           final_currency?: string | null
@@ -1200,7 +1277,10 @@ export type Database = {
           merchant_shipping_price?: number | null
           options?: string | null
           order_display_id?: string | null
+<<<<<<< HEAD
           origin_country?: string | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           paid_at?: string | null
           payment_gateway_fee?: number | null
           payment_method?: string | null
@@ -1208,17 +1288,25 @@ export type Database = {
           product_name?: string | null
           product_url?: string | null
           quantity?: number | null
+<<<<<<< HEAD
           quote_type?: string | null
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           rejected_at?: string | null
           rejection_details?: string | null
           rejection_reason_id?: string | null
           sales_tax_price?: number | null
+<<<<<<< HEAD
           scraped_data?: Json | null
           shipped_at?: string | null
           shipping_address?: Json | null
           shipping_carrier?: string | null
           shipping_method?: string | null
           shipping_route_id?: number | null
+=======
+          shipped_at?: string | null
+          shipping_carrier?: string | null
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           status?: Database["public"]["Enums"]["quote_status"] | null
           sub_total?: number | null
           tracking_number?: string | null
@@ -1228,6 +1316,7 @@ export type Database = {
         }
         Relationships: [
           {
+<<<<<<< HEAD
             foreignKeyName: "quotes_address_updated_by_fkey"
             columns: ["address_updated_by"]
             isOneToOne: false
@@ -1235,6 +1324,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
             foreignKeyName: "quotes_country_code_fkey"
             columns: ["country_code"]
             isOneToOne: false
@@ -1256,6 +1347,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+<<<<<<< HEAD
             foreignKeyName: "quotes_shipping_route_id_fkey"
             columns: ["shipping_route_id"]
             isOneToOne: false
@@ -1263,6 +1355,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
             foreignKeyName: "quotes_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -1391,6 +1485,7 @@ export type Database = {
         }
         Relationships: []
       }
+<<<<<<< HEAD
       shipping_routes: {
         Row: {
           base_shipping_cost: number
@@ -1445,6 +1540,8 @@ export type Database = {
         }
         Relationships: []
       }
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       system_settings: {
         Row: {
           created_at: string
@@ -1518,9 +1615,13 @@ export type Database = {
           created_at: string
           id: string
           is_default: boolean | null
+<<<<<<< HEAD
           phone: string | null
           postal_code: string
           recipient_name: string | null
+=======
+          postal_code: string
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           state_province_region: string
           updated_at: string
           user_id: string
@@ -1534,9 +1635,13 @@ export type Database = {
           created_at?: string
           id?: string
           is_default?: boolean | null
+<<<<<<< HEAD
           phone?: string | null
           postal_code: string
           recipient_name?: string | null
+=======
+          postal_code: string
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           state_province_region: string
           updated_at?: string
           user_id: string
@@ -1550,9 +1655,13 @@ export type Database = {
           created_at?: string
           id?: string
           is_default?: boolean | null
+<<<<<<< HEAD
           phone?: string | null
           postal_code?: string
           recipient_name?: string | null
+=======
+          postal_code?: string
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           state_province_region?: string
           updated_at?: string
           user_id?: string
@@ -1695,6 +1804,7 @@ export type Database = {
           },
         ]
       }
+<<<<<<< HEAD
       website_scraping_rules: {
         Row: {
           created_at: string | null
@@ -1764,6 +1874,8 @@ export type Database = {
         }
         Relationships: []
       }
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     }
     Views: {
       [_ in never]: never
@@ -1773,6 +1885,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+<<<<<<< HEAD
       get_shipping_cost: {
         Args: {
           p_origin_country: string
@@ -1798,6 +1911,15 @@ export type Database = {
         Args: { quote_uuid: string }
         Returns: boolean
       }
+=======
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     }
     Enums: {
       app_role: "admin" | "user" | "moderator"

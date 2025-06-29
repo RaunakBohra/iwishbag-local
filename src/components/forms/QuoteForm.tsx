@@ -2,7 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { GuestEmailField } from "@/components/forms/quote-form-fields/GuestEmailField";
 import QuoteItem from "./quote-form-fields/QuoteItem";
+<<<<<<< HEAD
 import { Plus, Sparkles, ArrowRight, CheckCircle, MapPin, PlusCircle, Edit } from "lucide-react";
+=======
+import { Plus, Sparkles, ArrowRight, CheckCircle } from "lucide-react";
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 import { CountryField } from "./quote-form-fields/CountryField";
 import { useQuoteForm } from "@/hooks/useQuoteForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+<<<<<<< HEAD
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,6 +24,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AddressForm } from "@/components/profile/AddressForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
 const QuoteForm = () => {
   const {
@@ -32,6 +39,7 @@ const QuoteForm = () => {
     user,
   } = useQuoteForm();
 
+<<<<<<< HEAD
   const queryClient = useQueryClient();
   const [selectedAddressId, setSelectedAddressId] = useState<string | undefined>();
   const [showAddressDialog, setShowAddressDialog] = useState(false);
@@ -124,6 +132,11 @@ const QuoteForm = () => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+=======
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         {/* Quick Start Section */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center space-x-2">
@@ -136,7 +149,11 @@ const QuoteForm = () => {
           </p>
         </div>
 
+<<<<<<< HEAD
         {/* Step 1: Purchase Country Selection */}
+=======
+        {/* Step 1: Country Selection */}
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         <Card className="border-2 border-primary/10 bg-primary/5">
           <CardHeader className="pb-4">
             <div className="flex items-center space-x-3">
@@ -144,14 +161,21 @@ const QuoteForm = () => {
                 1
               </div>
               <div>
+<<<<<<< HEAD
                 <CardTitle className="text-lg">Where to purchase from?</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   This is the country we'll buy your products from.
+=======
+                <CardTitle className="text-lg">Where should we deliver?</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  This helps us calculate shipping costs to your location
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
                 </p>
               </div>
             </div>
           </CardHeader>
           <CardContent>
+<<<<<<< HEAD
             <CountryField control={form.control} isLoading={loading} filter="purchase" label="Purchase Country" />
             {countryCode && (
               <div className="mt-3 flex items-center space-x-2 text-sm text-green-600">
@@ -194,6 +218,15 @@ const QuoteForm = () => {
                 </div>
               </div>
             )}
+=======
+            <CountryField control={form.control} isLoading={loading} filter="purchase" />
+            {countryCode && (
+              <div className="mt-3 flex items-center space-x-2 text-sm text-green-600">
+                <CheckCircle className="h-4 w-4" />
+                <span>Perfect! We'll deliver to {countryCode}</span>
+              </div>
+        )}
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           </CardContent>
         </Card>
 
@@ -289,6 +322,7 @@ const QuoteForm = () => {
           </CardContent>
         </Card>
 
+<<<<<<< HEAD
         {/* Step 4: Shipping Address */}
         <Card className="border-2 border-primary/10 bg-primary/5">
           <CardHeader className="pb-4">
@@ -400,12 +434,19 @@ const QuoteForm = () => {
         </Card>
 
         {/* Step 5: Contact Info */}
+=======
+        {/* Step 4: Contact Info */}
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         {!user && (
           <Card className="border-2 border-primary/10 bg-primary/5">
             <CardHeader className="pb-4">
               <div className="flex items-center space-x-3">
                 <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+<<<<<<< HEAD
                   5
+=======
+                  4
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
                 </div>
                 <div>
                   <CardTitle className="text-lg">How can we reach you?</CardTitle>
@@ -427,7 +468,11 @@ const QuoteForm = () => {
             type="submit" 
             size="lg" 
             className="w-full md:w-auto h-12 px-8 text-lg" 
+<<<<<<< HEAD
             disabled={loading || !selectedAddress}
+=======
+            disabled={loading}
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           >
             {loading ? (
               "Getting Your Shopping Quote..."
@@ -437,17 +482,22 @@ const QuoteForm = () => {
                 <ArrowRight className="h-5 w-5 ml-2" />
               </>
             )}
+<<<<<<< HEAD
           </Button>
           {!selectedAddress && (
             <p className="text-sm text-orange-600">
               Please select a shipping address to continue
             </p>
           )}
+=======
+        </Button>
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           <p className="text-sm text-muted-foreground">
             You'll receive your shopping quote within 24 hours
           </p>
         </div>
       </form>
+<<<<<<< HEAD
 
       {/* Address Dialog */}
       <Dialog open={showAddressDialog} onOpenChange={setShowAddressDialog}>
@@ -458,6 +508,8 @@ const QuoteForm = () => {
           <AddressForm onSuccess={handleAddressFormSuccess} />
         </DialogContent>
       </Dialog>
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     </Form>
   );
 };

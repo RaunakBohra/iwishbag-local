@@ -119,6 +119,7 @@ export const PaymentGatewayManagement: React.FC = () => {
   });
 
   // Fetch payment analytics
+<<<<<<< HEAD
   const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useQuery({
     queryKey: ['payment-analytics'],
     queryFn: async (): Promise<PaymentAnalytics> => {
@@ -179,6 +180,51 @@ export const PaymentGatewayManagement: React.FC = () => {
           }
         };
       }
+=======
+  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ['payment-analytics'],
+    queryFn: async (): Promise<PaymentAnalytics> => {
+      const { data: transactions, error } = await supabase
+        .from('payment_transactions')
+        .select('*')
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()); // Last 30 days
+
+      if (error) throw error;
+
+      const totalTransactions = transactions?.length || 0;
+      const totalAmount = transactions?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+      const completedTransactions = transactions?.filter(t => t.status === 'completed') || [];
+      const successRate = totalTransactions > 0 ? (completedTransactions.length / totalTransactions) * 100 : 0;
+      const averageAmount = totalTransactions > 0 ? totalAmount / totalTransactions : 0;
+
+      // Calculate gateway breakdown
+      const gatewayBreakdown: Record<PaymentGateway, { count: number; amount: number; success_rate: number }> = {} as any;
+      
+      gateways?.forEach(gateway => {
+        const gatewayTransactions = transactions?.filter(t => t.gateway_code === gateway.code) || [];
+        const gatewayCompleted = gatewayTransactions.filter(t => t.status === 'completed');
+        const gatewayAmount = gatewayTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        gatewayBreakdown[gateway.code] = {
+          count: gatewayTransactions.length,
+          amount: gatewayAmount,
+          success_rate: gatewayTransactions.length > 0 ? (gatewayCompleted.length / gatewayTransactions.length) * 100 : 0
+        };
+      });
+
+      return {
+        total_transactions: totalTransactions,
+        total_amount: totalAmount,
+        currency: 'USD',
+        success_rate: successRate,
+        average_amount: averageAmount,
+        gateway_breakdown: gatewayBreakdown,
+        time_period: {
+          start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          end: new Date().toISOString()
+        }
+      };
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     },
     enabled: !!gateways
   });

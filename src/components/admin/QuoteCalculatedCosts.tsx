@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tables } from "@/integrations/supabase/types";
 import { MultiCurrencyDisplay } from "./MultiCurrencyDisplay";
@@ -27,6 +31,7 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
     );
   }
 
+<<<<<<< HEAD
   // Get the user's local currency (from profile) and purchase country currency (from quote)
   const purchaseCurrency = quote.currency || 'USD';
   const userCurrency = quote.profiles?.preferred_display_currency || purchaseCurrency;
@@ -96,10 +101,13 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
   };
 
   // Patch renderRow to filter out USD if not needed
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   const renderRow = (label: string, value: number | null, isDiscount = false) => {
     if (value === null || value === undefined || value === 0) return null;
 
     const sign = isDiscount ? '-' : '';
+<<<<<<< HEAD
     let currencies = formatMultiCurrency({
       usdAmount: value,
       quoteCurrency: quote.final_currency,
@@ -109,6 +117,15 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
     if (!shouldShowUSD) {
       currencies = currencies.filter(c => c.currency !== 'USD');
     }
+=======
+    const currencies = formatMultiCurrency({
+      usdAmount: value,
+      quoteCurrency: quote.final_currency,
+      customerPreferredCurrency: quote.profiles?.preferred_display_currency,
+      showAllVariations: true // Changed to true to show both currencies
+    });
+
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     return (
       <div key={label} className="flex justify-between items-center">
         <p className="text-sm">{label}:</p>
@@ -133,6 +150,7 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
     showAllVariations: true // Changed to true to show both currencies
   });
 
+<<<<<<< HEAD
   // Patch Final Total row to use correct values for each currency
   const renderFinalTotalRow = () => {
     // Get all currencies and their correct values
@@ -189,6 +207,8 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
     );
   };
 
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   return (
     <Card>
       <CardHeader>
@@ -202,7 +222,11 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
           </div>
           <div className="border-t my-1"></div>
           
+<<<<<<< HEAD
           {renderItemPriceRow()}
+=======
+          {renderRow("Total Item Price", quote.item_price)}
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           {renderRow("Sales Tax", quote.sales_tax_price)}
           {renderRow("Merchant Shipping", quote.merchant_shipping_price)}
           {renderRow("International Shipping", quote.international_shipping)}
@@ -215,13 +239,47 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
 
           <div className="border-t my-2"></div>
           
+<<<<<<< HEAD
           {renderSubtotalRow()}
+=======
+          <div className="flex justify-between items-center">
+            <p className="font-semibold">Subtotal:</p>
+            <div className="text-right font-semibold">
+              <MultiCurrencyDisplay 
+                currencies={formatMultiCurrency({
+                  usdAmount: quote.sub_total || 0,
+                  quoteCurrency: quote.final_currency,
+                  customerPreferredCurrency: quote.profiles?.preferred_display_currency,
+                  showAllVariations: true // Changed to true to show both currencies
+                })}
+                orientation="horizontal"
+                showLabels={false}
+                compact={false}
+                cleanFormat={true}
+              />
+            </div>
+          </div>
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           
           {renderRow("VAT", quote.vat)}
 
           <div className="border-t my-2"></div>
 
+<<<<<<< HEAD
           {renderFinalTotalRow()}
+=======
+          <div className="flex justify-between items-center">
+            <p className="font-semibold text-base">Final Total:</p>
+            <div className="text-right">
+              <MultiCurrencyDisplay 
+                currencies={finalTotalCurrencies}
+                orientation="horizontal"
+                showLabels={false}
+                cleanFormat={true}
+              />
+            </div>
+          </div>
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         </div>
       </CardContent>
     </Card>

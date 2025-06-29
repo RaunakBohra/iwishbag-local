@@ -143,9 +143,12 @@ export const CreateQuoteDialog = ({ isOpen, onOpenChange, onQuoteCreated }: Crea
             quantity: item.quantity,
             options: item.options,
             image_url: item.imageUrl,
+<<<<<<< HEAD
             item_currency: 'USD',
             item_price: 0,
             item_weight: 0,
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         }));
     
         const { error: itemsError } = await supabase.from("quote_items").insert(quoteItemsToInsert);
@@ -210,7 +213,10 @@ export const CreateQuoteDialog = ({ isOpen, onOpenChange, onQuoteCreated }: Crea
                                     index={index}
                                     remove={remove}
                                     control={form.control}
+<<<<<<< HEAD
                                     setValue={form.setValue}
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
                                 />
                             ))}
                         </div>

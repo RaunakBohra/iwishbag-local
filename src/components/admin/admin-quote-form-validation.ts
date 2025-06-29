@@ -11,6 +11,10 @@ export const adminQuoteItemSchema = z.object({
     options: z.string().optional().nullable(),
     product_url: z.string().url().optional().or(z.literal('')).nullable(),
     image_url: z.string().url().optional().or(z.literal('')).nullable(),
+<<<<<<< HEAD
+=======
+    item_currency: z.string().min(1, "Currency is required"),
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 });
 
 export const adminQuoteFormSchema = z.object({
@@ -22,8 +26,13 @@ export const adminQuoteFormSchema = z.object({
     discount: emptyStringToNull,
     insurance_amount: emptyStringToNull,
     country_code: z.string().nullable(),
+<<<<<<< HEAD
     customs_percentage: emptyStringToNull,
     currency: z.string().default('USD'),
+=======
+    customs_category_name: z.string().nullable(),
+    status: z.string(),
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     final_currency: z.string(),
     priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
     internal_notes: z.string().optional(),

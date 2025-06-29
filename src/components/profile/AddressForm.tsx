@@ -23,14 +23,20 @@ import { useQuery } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 const addressSchema = z.object({
+<<<<<<< HEAD
   recipient_name: z.string().min(1, "Recipient name is required"),
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   address_line1: z.string().min(1, "Address is required"),
   address_line2: z.string().optional().nullable(),
   city: z.string().min(1, "City is required"),
   state_province_region: z.string().min(1, "State/Province is required"),
   postal_code: z.string().min(1, "Postal code is required"),
   country_code: z.string().min(1, "Country is required"),
+<<<<<<< HEAD
   phone: z.string().min(1, "Phone number is required"),
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   is_default: z.boolean().default(false),
 });
 
@@ -66,17 +72,24 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
       ...address,
       country_code: address.country_code || "",
       address_line2: address.address_line2 || "",
+<<<<<<< HEAD
       phone: address.phone || "",
       recipient_name: address.recipient_name || "",
     } : {
       recipient_name: "",
+=======
+    } : {
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       address_line1: "",
       address_line2: "",
       city: "",
       state_province_region: "",
       postal_code: "",
       country_code: "",
+<<<<<<< HEAD
       phone: "",
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       is_default: false,
     },
   });
@@ -88,7 +101,10 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
       const countryName = countries?.find(c => c.code === values.country_code)?.name;
 
       const payload = {
+<<<<<<< HEAD
         recipient_name: values.recipient_name,
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         address_line1: values.address_line1,
         address_line2: values.address_line2 || null,
         city: values.city,
@@ -96,7 +112,10 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
         postal_code: values.postal_code,
         country: countryName || values.country_code, // For backward compatibility
         country_code: values.country_code, // The new standard
+<<<<<<< HEAD
         phone: values.phone,
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         is_default: values.is_default,
       };
 
@@ -138,6 +157,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+<<<<<<< HEAD
         <FormField control={form.control} name="recipient_name" render={({ field }) => (
           <FormItem>
             <FormLabel>Recipient Name</FormLabel>
@@ -145,6 +165,8 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
             <FormMessage />
           </FormItem>
         )} />
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         <FormField control={form.control} name="address_line1" render={({ field }) => (
           <FormItem>
             <FormLabel>Address Line 1</FormLabel>
@@ -204,6 +226,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                 </FormItem>
             )} />
         </div>
+<<<<<<< HEAD
         <FormField control={form.control} name="phone" render={({ field }) => (
           <FormItem>
             <FormLabel>Phone Number</FormLabel>
@@ -211,6 +234,8 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
             <FormMessage />
           </FormItem>
         )} />
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         <FormField
           control={form.control}
           name="is_default"

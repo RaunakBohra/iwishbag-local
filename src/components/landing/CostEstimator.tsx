@@ -64,6 +64,7 @@ const CostEstimator = () => {
     setError("");
   };
 
+<<<<<<< HEAD
   const restrictTo2Decimals = (value: string) => {
     let sanitized = value.replace(/[^\d.]/g, '');
     const parts = sanitized.split('.');
@@ -72,6 +73,8 @@ const CostEstimator = () => {
     return sanitized;
   };
 
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   const handleCalculate = () => {
     setError("");
     setEstimatedCost(null);
@@ -176,6 +179,7 @@ const CostEstimator = () => {
                     </Label>
                     <Input
                       id="item-weight"
+<<<<<<< HEAD
                       type="text"
                       className="text-sm md:text-base backdrop-blur-xl bg-white/30 border border-white/40 hover:bg-white/40 focus:bg-white/50 transition-all duration-300 text-gray-700 placeholder:text-gray-500"
                       placeholder={`e.g., 2.5 ${selectedCountryData.weight_unit}`}
@@ -188,6 +192,13 @@ const CostEstimator = () => {
                         }
                       }}
                       inputMode="decimal"
+=======
+                      type="number"
+                      className="text-sm md:text-base backdrop-blur-xl bg-white/30 border border-white/40 hover:bg-white/40 focus:bg-white/50 transition-all duration-300 text-gray-700 placeholder:text-gray-500"
+                      placeholder={`e.g., 2.5 ${selectedCountryData.weight_unit}`}
+                      value={itemWeight}
+                      onChange={(e) => setItemWeight(e.target.value)}
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
                     />
                   </div>
 

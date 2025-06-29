@@ -4,7 +4,10 @@
     "lib": ["ES2023"],
     "module": "ESNext",
     "skipLibCheck": true,
+<<<<<<< HEAD
     "types": ["node"],
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -19,5 +22,9 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
+<<<<<<< HEAD
   "include": ["vite.config.ts", "tailwind.config.ts"]
+=======
+  "include": ["vite.config.ts"]
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 }

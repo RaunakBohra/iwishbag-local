@@ -1,10 +1,20 @@
+<<<<<<< HEAD
 import { useToast } from "@/components/ui/use-toast";
 import { calculateShippingQuotes, CountrySettings } from "@/lib/quote-calculator";
 import { getShippingCost } from "@/lib/unified-shipping-calculator";
+=======
+
+import { useToast } from "@/components/ui/use-toast";
+import { calculateShippingQuotes, CountrySettings } from "@/lib/quote-calculator";
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 import { Tables } from "@/integrations/supabase/types";
 import { AdminQuoteFormValues } from "@/components/admin/admin-quote-form-validation";
 
 type CountrySetting = Tables<'country_settings'>;
+<<<<<<< HEAD
+=======
+type CustomsCategory = Tables<'customs_categories'>;
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 type Quote = Tables<'quotes'>;
 type ItemToUpdate = {
     id: string;
@@ -13,6 +23,10 @@ type ItemToUpdate = {
     quantity: number;
     product_name?: string | null;
     options?: string | null;
+<<<<<<< HEAD
+=======
+    item_currency: string;
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     product_url?: string | null;
     image_url?: string | null;
 };
@@ -20,12 +34,21 @@ type ItemToUpdate = {
 export const useQuoteCalculation = () => {
     const { toast } = useToast();
 
+<<<<<<< HEAD
     const calculateUpdatedQuote = async (
         quoteDataFromForm: AdminQuoteFormValues,
         itemsToUpdate: ItemToUpdate[],
         allCountrySettings: CountrySetting[],
         shippingAddress?: any
     ): Promise<(Partial<Quote> & { id: string }) | null> => {
+=======
+    const calculateUpdatedQuote = (
+        quoteDataFromForm: AdminQuoteFormValues,
+        itemsToUpdate: ItemToUpdate[],
+        allCountrySettings: CountrySetting[],
+        customsCategories: CustomsCategory[],
+    ): (Partial<Quote> & { id: string }) | null => {
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
         const { items, ...restOfQuoteData } = quoteDataFromForm;
 
@@ -36,6 +59,7 @@ export const useQuoteCalculation = () => {
         });
         rateMap.set('USD', 1); // Ensure USD to USD is 1
 
+<<<<<<< HEAD
         // Calculate total item price in USD using purchase country currency
         const { currency: purchaseCurrency } = quoteDataFromForm;
         const purchaseCurrencyRate = rateMap.get(purchaseCurrency || 'USD') || 1;
@@ -43,18 +67,30 @@ export const useQuoteCalculation = () => {
         const total_item_price_in_usd = itemsToUpdate.reduce((sum, item) => {
             // Convert item price from purchase currency to USD
             const priceInUsd = item.item_price ? (item.item_price / purchaseCurrencyRate) : 0;
+=======
+        // Calculate total item price in USD from potentially various item_currencies
+        const total_item_price_in_usd = itemsToUpdate.reduce((sum, item) => {
+            const itemRate = rateMap.get(item.item_currency) || 1;
+            // Convert item.item_price FROM its currency TO USD
+            const priceInUsd = item.item_price ? (item.item_price / itemRate) : 0;
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
             return sum + (priceInUsd * item.quantity);
         }, 0);
 
         const total_item_weight = itemsToUpdate.reduce((sum, item) => sum + (item.item_weight || 0) * item.quantity, 0);
         
+<<<<<<< HEAD
         const { country_code, customs_percentage } = quoteDataFromForm;
+=======
+        const { country_code, customs_category_name, final_currency } = quoteDataFromForm;
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
         if (!total_item_price_in_usd || !total_item_weight || !country_code) {
             toast({ title: "Missing required data", description: "Quote needs total item price, total weight, and country to calculate pricing. Make sure all items have a price and weight.", variant: "destructive" });
             return null;
         }
 
+<<<<<<< HEAD
         // Clean and validate form data - convert null values to 0
         const cleanFormData = {
             sales_tax_price: quoteDataFromForm.sales_tax_price ?? 0,
@@ -75,12 +111,15 @@ export const useQuoteCalculation = () => {
             insurance_amount: cleanFormData.insurance_amount / purchaseCurrencyRate,
         };
 
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         const countrySettings = allCountrySettings.find(c => c.code === country_code);
         if (!countrySettings) {
             toast({ title: "Country settings not found", variant: "destructive" });
             return null;
         }
 
+<<<<<<< HEAD
         // Use purchase country as origin, shipping address country_code or countryCode as destination
         const originCountry = quoteDataFromForm.country_code;
         const destinationCountry = shippingAddress?.country_code || shippingAddress?.countryCode;
@@ -266,6 +305,53 @@ export const useQuoteCalculation = () => {
             
             return updatedQuote;
         }
+=======
+        const exchangeRateForCountrySettings = countrySettings.rate_from_usd || 1;
+
+        const countrySettingsInUSD = {
+            ...countrySettings,
+            min_shipping: (countrySettings.min_shipping || 0) / exchangeRateForCountrySettings,
+            additional_weight: (countrySettings.additional_weight || 0) / exchangeRateForCountrySettings,
+            payment_gateway_fixed_fee: (countrySettings.payment_gateway_fixed_fee || 0) / exchangeRateForCountrySettings,
+        };
+
+        const customsCategory = customsCategories.find(c => c.name === customs_category_name);
+        const customsPercent = customsCategory?.duty_percent || 0;
+
+        const calculatedQuote = calculateShippingQuotes(
+            total_item_weight,
+            total_item_price_in_usd,
+            quoteDataFromForm.sales_tax_price || 0,
+            quoteDataFromForm.merchant_shipping_price || 0,
+            customsPercent,
+            quoteDataFromForm.domestic_shipping || 0,
+            quoteDataFromForm.handling_charge || 0,
+            quoteDataFromForm.discount || 0,
+            quoteDataFromForm.insurance_amount || 0,
+            countrySettingsInUSD as CountrySettings
+        );
+
+        const finalQuoteCurrency = final_currency || countrySettings.currency;
+        const finalExchangeRate = rateMap.get(finalQuoteCurrency || 'USD') || 1;
+
+        const updatedQuote = {
+            ...restOfQuoteData,
+            id: quoteDataFromForm.id,
+            item_price: total_item_price_in_usd,
+            item_weight: total_item_weight,
+            final_total: calculatedQuote.finalTotal,
+            sub_total: calculatedQuote.subTotal,
+            vat: calculatedQuote.vat,
+            international_shipping: calculatedQuote.interNationalShipping,
+            customs_and_ecs: calculatedQuote.customsAndECS,
+            payment_gateway_fee: calculatedQuote.paymentGatewayFee,
+            final_currency: finalQuoteCurrency,
+            final_total_local: calculatedQuote.finalTotal * finalExchangeRate,
+            status: 'calculated' as const
+        };
+        
+        return updatedQuote;
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     };
     
     return { calculateUpdatedQuote };

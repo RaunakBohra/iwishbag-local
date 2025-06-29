@@ -26,6 +26,7 @@ export const useQuoteMutations = (id: string | undefined) => {
 
     const updateQuoteMutation = useMutation({
         mutationFn: async (quoteData: Partial<Quote> & { id: string }) => {
+<<<<<<< HEAD
             if (!quoteData.id || quoteData.id === "undefined") {
                 throw new Error("Quote ID is missing or invalid.");
             }
@@ -39,6 +40,11 @@ export const useQuoteMutations = (id: string | undefined) => {
             const { error } = await supabase
                 .from('quotes')
                 .update(cleanQuoteData)
+=======
+            const { error } = await supabase
+                .from('quotes')
+                .update(quoteData)
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
                 .eq('id', quoteData.id);
             if (error) throw new Error(error.message);
         },

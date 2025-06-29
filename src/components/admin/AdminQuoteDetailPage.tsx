@@ -1,7 +1,11 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+<<<<<<< HEAD
 import { ArrowLeft, Send, MapPin, Calculator, CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react";
+=======
+import { ArrowLeft, Send } from "lucide-react";
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 import { QuoteDetailForm } from "@/components/admin/QuoteDetailForm";
 import { QuoteMessaging } from "@/components/messaging/QuoteMessaging";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,6 +17,7 @@ import { EditableAdminQuoteItemCard } from "./EditableAdminQuoteItemCard";
 import { OrderActions } from "./OrderActions";
 import { ShippingInfoForm } from "./ShippingInfoForm";
 import { OrderTimeline } from "@/components/dashboard/OrderTimeline";
+<<<<<<< HEAD
 import { Badge } from "@/components/ui/badge";
 import { extractShippingAddressFromNotes } from "@/lib/addressUpdates";
 import { ShippingAddressDisplay } from "./ShippingAddressDisplay";
@@ -59,11 +64,16 @@ const createStableHash = (obj: any): string => {
   const normalized = normalizeValue(obj);
   return JSON.stringify(normalized);
 };
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
 const AdminQuoteDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+<<<<<<< HEAD
   const { toast } = useToast();
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   
   const {
     quote,
@@ -71,12 +81,17 @@ const AdminQuoteDetailPage = () => {
     error,
     countries,
     shippingCountries,
+<<<<<<< HEAD
+=======
+    customsCategories,
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     allCountries,
     sendQuoteEmail,
     isSendingEmail,
     isUpdating,
     form,
     fields,
+<<<<<<< HEAD
     remove,
     onSubmit,
     updateQuote,
@@ -321,6 +336,14 @@ const AdminQuoteDetailPage = () => {
   }, [quote, routeWeightUnit, purchaseCountry, destinationCountry]);
 
   // Early return if still loading
+=======
+    onSubmit,
+  } = useAdminQuoteDetail(id);
+
+  const isOrder = quote && ['cod_pending', 'bank_transfer_pending', 'paid', 'ordered', 'shipped', 'completed', 'cancelled'].includes(quote.status);
+  const canRecalculate = quote && !['shipped', 'completed', 'cancelled'].includes(quote.status);
+
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   if (quoteLoading) return (
     <div className="container py-8 space-y-4">
       <Skeleton className="h-8 w-48" />
@@ -332,10 +355,14 @@ const AdminQuoteDetailPage = () => {
     </div>
   );
 
+<<<<<<< HEAD
   // Early return if error or no quote
   if (error || !quote) {
     console.log('[AdminQuoteDetailPage] Error or no quote:', { error, quote });
     return (
+=======
+  if (error || !quote) return (
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       <div className="container py-12 text-center">
         <h1 className="text-2xl font-bold mb-4">Quote Not Found</h1>
         <p className="text-muted-foreground">{error?.message || "The quote could not be found."}</p>
@@ -344,6 +371,7 @@ const AdminQuoteDetailPage = () => {
             Back to Quotes
         </Button>
       </div>
+<<<<<<< HEAD
     );
   }
 
@@ -365,6 +393,9 @@ const AdminQuoteDetailPage = () => {
   const currentStatus = quote.status;
   const statusConfig = STATUS_WORKFLOW[currentStatus as keyof typeof STATUS_WORKFLOW];
   const allowedNextStatuses = statusConfig?.next || [];
+=======
+  );
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   
   return (
     <Form {...form}>
@@ -375,6 +406,7 @@ const AdminQuoteDetailPage = () => {
                   {isOrder ? 'Back to All Orders' : 'Back to All Quotes'}
               </Button>
           </div>
+<<<<<<< HEAD
 
         {/* Status Management Panel */}
         <Card>
@@ -492,6 +524,8 @@ const AdminQuoteDetailPage = () => {
           </CardContent>
         </Card>
 
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         <Card>
           <CardHeader>
               <div className="flex justify-between items-center">
@@ -503,6 +537,7 @@ const AdminQuoteDetailPage = () => {
                               : `Quote ID: ${quote.display_id || quote.id}`}
                       </CardDescription>
                   </div>
+<<<<<<< HEAD
                   <div className="flex items-center gap-2">
                     <div>Status: <span className="font-semibold">{quote.status}</span></div>
                     {hasAddress && (
@@ -512,6 +547,9 @@ const AdminQuoteDetailPage = () => {
                       </Badge>
                     )}
                   </div>
+=======
+                  <div>Status: <span className="font-semibold">{quote.status}</span></div>
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
               </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -540,10 +578,13 @@ const AdminQuoteDetailPage = () => {
                                   index={index}
                                   control={form.control}
                                   allCountries={allCountries}
+<<<<<<< HEAD
                                   onDelete={() => remove(index)}
                                   routeWeightUnit={routeWeightUnit}
                                   smartWeightUnit={smartWeightUnit}
                                   countryCurrency={countryCurrency}
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
                               />
                           ))
                       ) : (
@@ -555,8 +596,13 @@ const AdminQuoteDetailPage = () => {
                   <CardHeader><CardTitle>Costs and Settings</CardTitle></CardHeader>
                   <CardContent>
                       <QuoteDetailForm 
+<<<<<<< HEAD
                         form={form}
                         shippingAddress={shippingAddress}
+=======
+                        control={form.control}
+                        customsCategories={customsCategories} 
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
                       />
                   </CardContent>
               </Card>
@@ -567,10 +613,24 @@ const AdminQuoteDetailPage = () => {
               >
                   {isUpdating ? 'Updating...' : 'Update & Recalculate'}
               </Button>
+<<<<<<< HEAD
+=======
+              <Button 
+                  onClick={() => sendQuoteEmail(quote)}
+                  disabled={(quote.status !== 'calculated' && quote.status !== 'sent') || isSendingEmail || isUpdating || !canRecalculate}
+                  className="w-full"
+                  variant="destructive"
+                  type="button"
+              >
+                  <Send className="h-4 w-4 mr-2" />
+                  {quote.status === 'sent' ? 'Resend to Customer' : 'Send to Customer'}
+              </Button>
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
             </form>
             <div className="space-y-4">
               <QuoteCurrencySummary quote={quote} countries={countries} />
               <QuoteCalculatedCosts quote={quote} />
+<<<<<<< HEAD
               
               {/* Shipping Route Information */}
               <Card>
@@ -698,6 +758,8 @@ const AdminQuoteDetailPage = () => {
                 variant="detailed"
               />
               
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
               {isOrder && (
                 <>
                   <OrderActions quote={quote} />

@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 import type { Config } from "tailwindcss";
 
 export default {

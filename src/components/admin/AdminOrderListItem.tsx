@@ -115,6 +115,10 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect }: AdminOrderLi
                                         <span className="text-sm text-muted-foreground">Not calculated</span>
                                     )}
                                 </div>
+<<<<<<< HEAD
+=======
+                                <p className="text-sm mt-2">Category: {order.customs_category_name || 'Not set'}</p>
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
                             </div>
                             <div>
                                 <div className="flex items-center flex-wrap gap-1">

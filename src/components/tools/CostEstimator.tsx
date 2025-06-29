@@ -13,8 +13,12 @@ import { useUserCurrency } from "@/hooks/useUserCurrency";
 const CostEstimator = () => {
   const [itemPrice, setItemPrice] = useState<string>("");
   const [itemWeight, setItemWeight] = useState<string>("");
+<<<<<<< HEAD
   const [purchaseCountry, setPurchaseCountry] = useState<string>("");
   const [shippingCountry, setShippingCountry] = useState<string>("");
+=======
+  const [country, setCountry] = useState<string>("");
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   const [customsCategory, setCustomsCategory] = useState<string>("");
   const [estimate, setEstimate] = useState<any>(null);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -47,6 +51,7 @@ const CostEstimator = () => {
     },
   });
 
+<<<<<<< HEAD
   const restrictTo2Decimals = (value: string) => {
     let sanitized = value.replace(/[^\d.]/g, '');
     const parts = sanitized.split('.');
@@ -57,12 +62,20 @@ const CostEstimator = () => {
 
   const handleCalculate = () => {
     if (!itemPrice || !itemWeight || !purchaseCountry || !shippingCountry || !customsCategory || !countries) {
+=======
+  const handleCalculate = () => {
+    if (!itemPrice || !itemWeight || !country || !customsCategory || !countries) {
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       return;
     }
 
     setIsCalculating(true);
 
+<<<<<<< HEAD
     const selectedCountry = countries.find(c => c.code === shippingCountry);
+=======
+    const selectedCountry = countries.find(c => c.code === country);
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     const selectedCategory = customsCategories?.find(c => c.name === customsCategory);
     
     if (!selectedCountry || !selectedCategory) {
@@ -70,6 +83,7 @@ const CostEstimator = () => {
       return;
     }
 
+<<<<<<< HEAD
     // Send the selected country as shippingCountry in the quote request
     fetch('/functions/v1/calculate-auto-quote', {
       method: 'POST',
@@ -82,6 +96,8 @@ const CostEstimator = () => {
       })
     });
 
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     // Convert country settings to USD if they're not already
     const exchangeRate = selectedCountry.rate_from_usd || 1;
     const countrySettingsInUSD: CountrySettings = {
@@ -140,10 +156,17 @@ const CostEstimator = () => {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2 order-1">
+<<<<<<< HEAD
           <Label htmlFor="purchaseCountry" className="text-gray-700 dark:text-gray-300 font-medium">Purchase Country</Label>
           <Select value={purchaseCountry} onValueChange={setPurchaseCountry}>
             <SelectTrigger className="backdrop-blur-xl bg-white/30 dark:bg-gray-700/30 border border-white/40 dark:border-gray-600/40 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all duration-300">
               <SelectValue placeholder="Select purchase country" className="text-gray-700 dark:text-gray-300" />
+=======
+          <Label htmlFor="country" className="text-gray-700 dark:text-gray-300 font-medium">Destination Country</Label>
+          <Select value={country} onValueChange={setCountry}>
+            <SelectTrigger className="backdrop-blur-xl bg-white/30 dark:bg-gray-700/30 border border-white/40 dark:border-gray-600/40 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all duration-300">
+              <SelectValue placeholder="Select destination country" className="text-gray-700 dark:text-gray-300" />
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
             </SelectTrigger>
             <SelectContent className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/40 dark:border-gray-600/40">
               {countries?.map((country) => (
@@ -155,6 +178,7 @@ const CostEstimator = () => {
           </Select>
         </div>
         <div className="space-y-2 order-2">
+<<<<<<< HEAD
           <Label htmlFor="shippingCountry" className="text-gray-700 dark:text-gray-300 font-medium">Shipping Country</Label>
           <Select value={shippingCountry} onValueChange={setShippingCountry}>
             <SelectTrigger className="backdrop-blur-xl bg-white/30 dark:bg-gray-700/30 border border-white/40 dark:border-gray-600/40 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all duration-300">
@@ -170,6 +194,8 @@ const CostEstimator = () => {
           </Select>
         </div>
         <div className="space-y-2 order-3">
+=======
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           <Label htmlFor="itemPrice" className="text-gray-700 dark:text-gray-300 font-medium">Item Price (USD)</Label>
           <Input
             id="itemPrice"
@@ -180,6 +206,7 @@ const CostEstimator = () => {
             className="backdrop-blur-xl bg-white/30 dark:bg-gray-700/30 border border-white/40 dark:border-gray-600/40 hover:bg-white/40 dark:hover:bg-gray-700/40 focus:bg-white/50 dark:focus:bg-gray-700/50 transition-all duration-300 text-gray-700 dark:text-gray-300 placeholder:text-gray-500 dark:placeholder:text-gray-400"
           />
         </div>
+<<<<<<< HEAD
         <div className="space-y-2 order-4">
           <Label htmlFor="itemWeight" className="text-gray-700 dark:text-gray-300 font-medium">Item Weight</Label>
           <Input
@@ -199,6 +226,20 @@ const CostEstimator = () => {
           />
         </div>
         <div className="space-y-2 order-5">
+=======
+        <div className="space-y-2 order-3">
+          <Label htmlFor="itemWeight" className="text-gray-700 dark:text-gray-300 font-medium">Item Weight</Label>
+          <Input
+            id="itemWeight"
+            type="number"
+            placeholder="Enter weight"
+            value={itemWeight}
+            onChange={(e) => setItemWeight(e.target.value)}
+            className="backdrop-blur-xl bg-white/30 dark:bg-gray-700/30 border border-white/40 dark:border-gray-600/40 hover:bg-white/40 dark:hover:bg-gray-700/40 focus:bg-white/50 dark:focus:bg-gray-700/50 transition-all duration-300 text-gray-700 dark:text-gray-300 placeholder:text-gray-500 dark:placeholder:text-gray-400"
+          />
+        </div>
+        <div className="space-y-2 order-4">
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           <Label htmlFor="category" className="text-gray-700 dark:text-gray-300 font-medium">Product Category</Label>
           <Select value={customsCategory} onValueChange={setCustomsCategory}>
             <SelectTrigger className="backdrop-blur-xl bg-white/30 dark:bg-gray-700/30 border border-white/40 dark:border-gray-600/40 hover:bg-white/40 dark:hover:bg-gray-700/40 transition-all duration-300">
@@ -217,7 +258,11 @@ const CostEstimator = () => {
 
       <Button
         onClick={handleCalculate}
+<<<<<<< HEAD
         disabled={!itemPrice || !itemWeight || !purchaseCountry || !shippingCountry || !customsCategory || isCalculating}
+=======
+        disabled={!itemPrice || !itemWeight || !country || !customsCategory || isCalculating}
+>>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         className="w-full backdrop-blur-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 dark:from-primary/80 dark:to-primary/60 dark:hover:from-primary/90 dark:hover:to-primary/70 text-white font-medium py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-primary/20 dark:border-primary/30"
       >
         {isCalculating ? "Calculating..." : "Calculate Estimate"}
