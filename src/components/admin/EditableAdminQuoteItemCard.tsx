@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 import { useMemo, useState, useEffect } from "react";
 import React from "react";
-=======
-import { useMemo } from "react";
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,10 +10,7 @@ import { AdminQuoteFormValues } from "@/components/admin/admin-quote-form-valida
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Trash2 } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
-<<<<<<< HEAD
 import { convertWeight } from "@/lib/weightUtils";
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
 type CountrySetting = Tables<'country_settings'>;
 
@@ -26,7 +19,6 @@ interface EditableAdminQuoteItemCardProps {
   control: Control<AdminQuoteFormValues>;
   allCountries?: CountrySetting[] | null;
   onDelete: () => void;
-<<<<<<< HEAD
   routeWeightUnit?: string | null;
   smartWeightUnit?: 'kg' | 'lb';
   countryCurrency?: string;
@@ -41,16 +33,10 @@ export const EditableAdminQuoteItemCard = ({
   smartWeightUnit = 'kg',
   countryCurrency = 'USD'
 }: EditableAdminQuoteItemCardProps) => {
-=======
-}
-
-export const EditableAdminQuoteItemCard = ({ index, control, allCountries, onDelete }: EditableAdminQuoteItemCardProps) => {
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   const handleNumberInputWheel = (e: React.WheelEvent) => {
     (e.currentTarget as HTMLInputElement).blur();
   };
 
-<<<<<<< HEAD
   // Use smart weight unit if available, otherwise fall back to route unit or kg
   const displayWeightUnit = smartWeightUnit || routeWeightUnit || 'kg';
 
@@ -76,16 +62,6 @@ export const EditableAdminQuoteItemCard = ({ index, control, allCountries, onDel
   };
 
   const currencySymbol = getCurrencySymbol(countryCurrency);
-=======
-  // Filter unique currencies from allCountries for the dropdown
-  const availableCurrencies = useMemo(() => {
-    const currencies = new Set<string>();
-    allCountries?.forEach(country => {
-      if (country.currency) currencies.add(country.currency);
-    });
-    return Array.from(currencies).sort();
-  }, [allCountries]);
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
   return (
     <Card>
@@ -174,21 +150,13 @@ export const EditableAdminQuoteItemCard = ({ index, control, allCountries, onDel
           </div>
         </div>
         
-<<<<<<< HEAD
         <div className="grid grid-cols-3 gap-4">
-=======
-        <div className="grid grid-cols-4 gap-4">
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           <FormField
             control={control}
             name={`items.${index}.item_price`}
             render={({ field }) => (
               <FormItem>
-<<<<<<< HEAD
                 <FormLabel>Price ({currencySymbol})</FormLabel>
-=======
-                <FormLabel>Price</FormLabel>
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
                 <FormControl>
                   <Input
                     type="number"
@@ -203,39 +171,10 @@ export const EditableAdminQuoteItemCard = ({ index, control, allCountries, onDel
               </FormItem>
             )}
           />
-<<<<<<< HEAD
-=======
-
-          <FormField
-            control={control}
-            name={`items.${index}.item_currency`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Currency</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || 'USD'}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select currency" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {availableCurrencies.map(currency => (
-                      <SelectItem key={currency} value={currency}>
-                        {currency}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           
           <FormField
             control={control}
             name={`items.${index}.item_weight`}
-<<<<<<< HEAD
             render={({ field }) => {
               // Get the display value - if field.value is null/undefined, show empty
               const getDisplayValue = () => {
@@ -342,24 +281,6 @@ export const EditableAdminQuoteItemCard = ({ index, control, allCountries, onDel
                 </FormItem>
               );
             }}
-=======
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Weight (kg)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    {...field}
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : '')}
-                    onWheel={handleNumberInputWheel}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           />
           
           <FormField

@@ -70,11 +70,7 @@ export function CartItem({
 
   const itemCurrencies = item.item_price ? formatMultiCurrency({
     usdAmount: item.item_price * quantity,
-<<<<<<< HEAD
     quoteCurrency: 'USD',
-=======
-    quoteCurrency: item.item_currency,
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     showAllVariations: false
   }) : [];
 

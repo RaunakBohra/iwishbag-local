@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tables } from "@/integrations/supabase/types";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, ComposedChart } from "recharts";
@@ -60,25 +56,6 @@ export const RevenueAnalytics = ({ quotes, orders }: RevenueAnalyticsProps) => {
       avgValue: data.revenue / data.orders
     }));
 
-<<<<<<< HEAD
-=======
-  // Revenue by product category (using customs_category_name)
-  const categoryRevenue = quotes.reduce((acc, quote) => {
-    if (quote.customs_category_name && quote.final_total) {
-      const category = quote.customs_category_name;
-      acc[category] = (acc[category] || 0) + Number(quote.final_total);
-    }
-    return acc;
-  }, {} as Record<string, number>);
-
-  const categoryData = Object.entries(categoryRevenue)
-    .sort(([,a], [,b]) => b - a)
-    .map(([category, revenue]) => ({
-      category,
-      revenue
-    }));
-
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   const totalRevenue = orders
     .filter(o => o.final_total)
     .reduce((sum, o) => sum + Number(o.final_total), 0);
@@ -165,28 +142,6 @@ export const RevenueAnalytics = ({ quotes, orders }: RevenueAnalyticsProps) => {
           </CardContent>
         </Card>
 
-<<<<<<< HEAD
-=======
-        {categoryData.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Revenue by Category</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={categoryData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="category" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']} />
-                  <Bar dataKey="revenue" fill="#ffc658" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
-
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         <Card>
           <CardHeader>
             <CardTitle>Revenue Performance</CardTitle>
@@ -201,7 +156,7 @@ export const RevenueAnalytics = ({ quotes, orders }: RevenueAnalyticsProps) => {
                   </div>
                   <div className="text-right">
                     <div className="font-bold">${item.revenue.toFixed(2)}</div>
-                    <div className="text-sm text-muted-foreground">Avg: ${item.avgValue.toFixed(2)}</div>
+                    <div className="text-sm text-muted-foreground">${item.avgValue.toFixed(2)} avg</div>
                   </div>
                 </div>
               ))}

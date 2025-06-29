@@ -10,11 +10,7 @@ import { useEffect } from "react";
 
 export const useAdminQuoteDetail = (id: string | undefined) => {
     const { toast } = useToast();
-<<<<<<< HEAD
     const { quote, quoteLoading, error, countries, shippingCountries } = useQuoteQueries(id);
-=======
-    const { quote, quoteLoading, error, countries, shippingCountries, customsCategories } = useQuoteQueries(id);
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     const { data: allCountries } = useAllCountries();
     const { updateQuote, updateQuoteItem, sendQuoteEmail, isUpdating, isSendingEmail } = useQuoteMutations(id);
     const { calculateUpdatedQuote } = useQuoteCalculation();
@@ -23,26 +19,18 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
         resolver: zodResolver(adminQuoteFormSchema),
     });
 
-<<<<<<< HEAD
     const { fields, remove, append } = useFieldArray({
-=======
-    const { fields } = useFieldArray({
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         control: form.control,
         name: "items",
     });
 
     useEffect(() => {
         if (quote) {
-<<<<<<< HEAD
             // Determine the purchase country currency
             const purchaseCountry = quote.country_code;
             const purchaseCurrency = allCountries?.find(c => c.code === purchaseCountry)?.currency || 'USD';
             
             const formData = {
-=======
-            form.reset({
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
                 id: quote.id,
                 sales_tax_price: quote.sales_tax_price,
                 merchant_shipping_price: quote.merchant_shipping_price,
@@ -51,13 +39,8 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                 discount: quote.discount,
                 insurance_amount: quote.insurance_amount,
                 country_code: quote.country_code,
-<<<<<<< HEAD
                 customs_percentage: quote.customs_percentage ?? undefined,
                 currency: quote.currency || purchaseCurrency, // Use quote currency or determine from country
-=======
-                customs_category_name: quote.customs_category_name ?? undefined,
-                status: quote.status,
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
                 final_currency: quote.final_currency || 'USD',
                 priority: quote.priority ?? undefined,
                 internal_notes: quote.internal_notes,
@@ -70,7 +53,6 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                     options: item.options,
                     product_url: item.product_url,
                     image_url: item.image_url,
-<<<<<<< HEAD
                 }))
             };
             try {
@@ -80,13 +62,6 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
             }
         }
     }, [quote, form, allCountries]);
-=======
-                    item_currency: item.item_currency || 'USD',
-                }))
-            });
-        }
-    }, [quote, form]);
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
     const onSubmit = async (data: AdminQuoteFormValues) => {
         if (!quote) {
@@ -111,15 +86,11 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                 itemsToUpdate.map(item => updateQuoteItem(item))
             );
         } catch (error: any) {
-<<<<<<< HEAD
             console.error('[ADMIN QUOTE SUBMIT] Error updating items:', error);
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
             toast({ title: "Error updating items", description: error.message, variant: "destructive" });
             return;
         }
         
-<<<<<<< HEAD
         try {
             const finalQuoteData = await calculateUpdatedQuote(
                 data,
@@ -141,22 +112,6 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
         } catch (error: any) {
             console.error('[ADMIN QUOTE SUBMIT] Error calculating quote:', error);
             toast({ title: "Error calculating quote", description: error.message, variant: "destructive" });
-=======
-        const finalQuoteData = calculateUpdatedQuote(
-            data,
-            itemsToUpdate,
-            allCountries || [],
-            customsCategories,
-        );
-
-        if (finalQuoteData) {
-            if (itemsToUpdate.length > 1) {
-                finalQuoteData.product_name = `${itemsToUpdate[0].product_name || 'Item'} and ${itemsToUpdate.length - 1} more items`;
-            } else if (itemsToUpdate.length === 1) {
-                finalQuoteData.product_name = itemsToUpdate[0].product_name;
-            }
-            updateQuote(finalQuoteData);
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         }
     };
 
@@ -166,23 +121,15 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
         error: error as Error | null,
         countries,
         shippingCountries,
-<<<<<<< HEAD
-=======
-        customsCategories,
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         allCountries,
         sendQuoteEmail,
         isSendingEmail,
         isUpdating,
         form,
         fields,
-<<<<<<< HEAD
         remove,
         append,
         onSubmit,
         updateQuote,
-=======
-        onSubmit,
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     };
 };

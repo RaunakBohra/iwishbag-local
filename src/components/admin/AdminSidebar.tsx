@@ -1,9 +1,5 @@
 import { NavLink } from "react-router-dom";
-<<<<<<< HEAD
 import { BarChart3, Users, FileText, Globe, Settings, Moon, Sun, Building, Package, TrendingDown, FileCog, Landmark, UserCheck, LayoutDashboard, ShoppingCart, Mail, BookText, ChevronDown, Zap, Cog, Route } from "lucide-react";
-=======
-import { BarChart3, Users, FileText, Globe, Settings, Moon, Sun, Building, Package, TrendingDown, FileCog, Landmark, UserCheck, LayoutDashboard, ShoppingCart, Mail, BookText, ChevronDown } from "lucide-react";
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 import {
   Sidebar,
   SidebarContent,
@@ -62,14 +58,11 @@ const menuGroups = [
         icon: FileText,
       },
       {
-<<<<<<< HEAD
         title: "Auto Quotes",
         url: "/admin/auto-quotes",
         icon: Zap,
       },
       {
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         title: "Order Management",
         url: "/admin/orders",
         icon: Package,
@@ -95,7 +88,6 @@ const menuGroups = [
         icon: FileCog,
       },
       {
-<<<<<<< HEAD
         title: "Auto Quote Settings",
         url: "/admin/auto-settings",
         icon: Cog,
@@ -106,8 +98,6 @@ const menuGroups = [
         icon: Route,
       },
       {
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         title: "Country Settings",
         url: "/admin/countries",
         icon: Globe,

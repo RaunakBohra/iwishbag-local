@@ -33,7 +33,6 @@ export const ManualAnalysisTasks = () => {
   const { toast } = useToast();
 
   // Fetch manual analysis tasks
-<<<<<<< HEAD
   const { data: tasks, isLoading, error } = useQuery({
     queryKey: ['manual-analysis-tasks'],
     queryFn: async () => {
@@ -49,25 +48,12 @@ export const ManualAnalysisTasks = () => {
         console.warn('Manual analysis tasks table not available:', error);
         return [] as ManualAnalysisTask[];
       }
-=======
-  const { data: tasks, isLoading } = useQuery({
-    queryKey: ['manual-analysis-tasks'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('manual_analysis_tasks')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data as ManualAnalysisTask[];
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     }
   });
 
   // Update task status
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, updates }: { taskId: string; updates: Partial<ManualAnalysisTask> }) => {
-<<<<<<< HEAD
       try {
         const { error } = await supabase
           .from('manual_analysis_tasks')
@@ -83,18 +69,6 @@ export const ManualAnalysisTasks = () => {
         console.warn('Manual analysis tasks table not available:', error);
         throw new Error('Manual analysis tasks table not available');
       }
-=======
-      const { error } = await supabase
-        .from('manual_analysis_tasks')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-          completed_at: updates.status === 'completed' ? new Date().toISOString() : undefined
-        })
-        .eq('id', taskId);
-
-      if (error) throw error;
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manual-analysis-tasks'] });
@@ -115,7 +89,6 @@ export const ManualAnalysisTasks = () => {
   // Complete task with analysis result
   const completeTaskMutation = useMutation({
     mutationFn: async ({ taskId, analysisResult }: { taskId: string; analysisResult: any }) => {
-<<<<<<< HEAD
       try {
         const { error } = await supabase
           .from('manual_analysis_tasks')
@@ -132,19 +105,6 @@ export const ManualAnalysisTasks = () => {
         console.warn('Manual analysis tasks table not available:', error);
         throw new Error('Manual analysis tasks table not available');
       }
-=======
-      const { error } = await supabase
-        .from('manual_analysis_tasks')
-        .update({
-          status: 'completed',
-          analysis_result: analysisResult,
-          completed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', taskId);
-
-      if (error) throw error;
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manual-analysis-tasks'] });
@@ -245,7 +205,6 @@ export const ManualAnalysisTasks = () => {
     );
   }
 
-<<<<<<< HEAD
   // Show message if table is not available
   if (error && error.message.includes('not available')) {
     return (
@@ -263,8 +222,6 @@ export const ManualAnalysisTasks = () => {
     );
   }
 
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   return (
     <div className="space-y-6">
       {/* Stats Cards */}

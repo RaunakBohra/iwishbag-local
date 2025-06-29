@@ -160,7 +160,6 @@ const Header = () => {
                 <Package className="h-4 w-4 mr-2" />
                 Get Quote
               </Button>
-<<<<<<< HEAD
               <Button
                 variant={location.pathname === '/quote-auto' ? "default" : "ghost"}
                 size="sm"
@@ -170,8 +169,6 @@ const Header = () => {
                 <Package className="h-4 w-4 mr-2" />
                 Instant Quote
               </Button>
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
             </nav>
           )}
 

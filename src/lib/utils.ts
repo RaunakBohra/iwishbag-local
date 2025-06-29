@@ -11,7 +11,6 @@ export function formatCurrency(amount: number, currencyCode: string = "USD") {
     style: 'currency',
     currency: currencyCode,
   }).format(amount);
-<<<<<<< HEAD
 }
 
 /**
@@ -34,6 +33,4 @@ export function safeJsonParse<T = any>(data: any, defaultValue: T = {} as T): T 
   }
   
   return defaultValue;
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 }

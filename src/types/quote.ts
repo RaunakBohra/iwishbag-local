@@ -130,10 +130,6 @@ export type QuoteItem = {
   product_url: string;
   image_url: string;
   item_price: number;
-<<<<<<< HEAD
-=======
-  item_currency: string;
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   item_weight: number;
   quantity: number;
   options: string;

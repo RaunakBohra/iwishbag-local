@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,18 +27,12 @@ const AddressCard = ({ address, onEdit, onDelete }: { address: Tables<'user_addr
     <div className="border p-4 rounded-lg">
         <div className="flex items-start justify-between">
             <div className="space-y-1">
-<<<<<<< HEAD
                 <p className="font-semibold text-lg">{address.recipient_name}</p>
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
                 <p className="font-medium">{address.address_line1}</p>
                 {address.address_line2 && <p className="text-sm text-muted-foreground">{address.address_line2}</p>}
                 <p className="text-sm text-muted-foreground">{address.city}, {address.state_province_region} {address.postal_code}</p>
                 <p className="text-sm text-muted-foreground">{address.country}</p>
-<<<<<<< HEAD
                 {address.phone && <p className="text-sm text-muted-foreground">📞 {address.phone}</p>}
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
             </div>
              <div className="flex items-center gap-2">
                 {address.is_default && <Badge>Default</Badge>}

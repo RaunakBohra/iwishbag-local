@@ -67,16 +67,11 @@ const AdminDashboard = () => {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-dashboard-stats'],
     queryFn: async () => {
-<<<<<<< HEAD
       const [quotesResult, ordersResult, customersResult, pendingQuotesResult] = await Promise.all([
-=======
-      const [quotesResult, ordersResult, customersResult, pendingQuotesResult, paymentResult, revenueResult] = await Promise.all([
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         supabase.from('quotes').select('*', { count: 'exact', head: true }),
         supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['paid', 'ordered', 'shipped', 'completed']),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending', 'confirmed']),
-<<<<<<< HEAD
       ]);
 
       // Try to get payment data, but handle gracefully if table doesn't exist
@@ -93,12 +88,6 @@ const AdminDashboard = () => {
         console.warn('Payment transactions table not available:', error);
       }
 
-=======
-        supabase.from('payment_transactions').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
-        supabase.from('payment_transactions').select('amount').eq('status', 'completed')
-      ]);
-
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       // Calculate total revenue from completed payments
       const totalRevenue = revenueResult.data?.reduce((sum, transaction) => sum + (transaction.amount || 0), 0) || 0;
 

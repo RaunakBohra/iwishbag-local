@@ -1,5 +1,4 @@
 // Environment configuration
-<<<<<<< HEAD
 export const env = {
   SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
   SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -26,25 +25,6 @@ export const env = {
   NODE_ENV: import.meta.env.NODE_ENV,
   DEV: import.meta.env.DEV,
 } as const;
-=======
-export const config = {
-  supabase: {
-    url: import.meta.env.VITE_SUPABASE_URL,
-    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-  },
-  app: {
-    name: 'Global Wishlist Hub',
-    version: '1.0.0',
-    environment: import.meta.env.MODE,
-  },
-  api: {
-    baseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
-  },
-  resend: {
-    apiKey: import.meta.env.VITE_RESEND_API_KEY || '',
-  },
-};
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
 // Required environment variables
 export const requiredEnvVars = [

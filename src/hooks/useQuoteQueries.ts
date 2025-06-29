@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
@@ -46,27 +42,11 @@ export const useQuoteQueries = (id: string | undefined) => {
         ?.filter(c => c.shipping_allowed)
         .map(c => ({ code: c.code, name: c.name }));
 
-<<<<<<< HEAD
-=======
-    const { data: customsCategories } = useQuery({
-        queryKey: ['customs-categories'],
-        queryFn: async () => {
-            const { data, error } = await supabase.from('customs_categories').select('*');
-            if (error) throw new Error(error.message);
-            return data || [];
-        }
-    });
-
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     return {
         quote,
         quoteLoading,
         error,
         countries: countries || [],
         shippingCountries: shippingCountries || [],
-<<<<<<< HEAD
-=======
-        customsCategories: customsCategories || [],
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     };
 };

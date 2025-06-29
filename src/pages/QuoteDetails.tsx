@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-<<<<<<< HEAD
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,28 +23,6 @@ export default function QuoteDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-=======
-import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Tables } from "@/integrations/supabase/types";
-import { useAuth } from "@/contexts/AuthContext";
-import { QuoteBreakdown } from "@/components/dashboard/QuoteBreakdown";
-import { QuoteMessaging } from "@/components/messaging/QuoteMessaging";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useQuoteSteps } from "@/hooks/useQuoteSteps";
-import { useQuoteState } from "@/hooks/useQuoteState";
-
-type QuoteWithItems = Tables<'quotes'> & {
-  quote_items: Tables<'quote_items'>[];
-  rejection_reasons?: { reason: string } | null;
-};
-
-export const QuoteDetails: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   const { user } = useAuth();
   const { approveQuote, rejectQuote, addToCart, isUpdating } = useQuoteState(id || '');
 
@@ -64,16 +41,11 @@ export const QuoteDetails: React.FC = () => {
         .single();
 
       if (error) throw error;
-<<<<<<< HEAD
       return data;
-=======
-      return data as QuoteWithItems;
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     },
     enabled: !!id && !!user,
   });
 
-<<<<<<< HEAD
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
 
   if (isLoading) {
@@ -83,20 +55,6 @@ export const QuoteDetails: React.FC = () => {
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-64 w-full" />
-=======
-  const steps = useQuoteSteps(quote);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="container py-12 space-y-8">
-          <div className="bg-card border border-border rounded-lg p-6">
-            <Skeleton className="h-32 w-full" />
-          </div>
-          <div className="bg-card border border-border rounded-lg p-6">
-            <Skeleton className="h-64 w-full" />
-          </div>
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         </div>
       </div>
     );
@@ -104,7 +62,6 @@ export const QuoteDetails: React.FC = () => {
 
   if (error || !quote) {
     return (
-<<<<<<< HEAD
       <div className="container mx-auto px-4 py-8">
         <Alert variant="destructive">
           <XCircle className="h-4 w-4" />
@@ -112,23 +69,10 @@ export const QuoteDetails: React.FC = () => {
             {error?.message || "Quote not found"}
           </AlertDescription>
         </Alert>
-=======
-      <div className="min-h-screen bg-background">
-        <div className="container py-12">
-          <div className="bg-card border border-border rounded-lg p-6">
-            <Alert variant="destructive">
-              <AlertDescription>
-                {error instanceof Error ? error.message : 'Failed to load quote'}
-              </AlertDescription>
-            </Alert>
-          </div>
-        </div>
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       </div>
     );
   }
 
-<<<<<<< HEAD
   const isOwner = user?.id === quote.user_id;
   const isAdmin = user?.user_metadata?.role === "admin";
   
@@ -198,112 +142,83 @@ export const QuoteDetails: React.FC = () => {
                     <strong>Name:</strong> {quote.product_name || "N/A"}
                   </p>
                   <p className="text-sm text-muted-foreground mb-1">
-                    <strong>Price:</strong> {formatCurrency(quote.item_price, quote.items_currency)}
+                    <strong>Price:</strong> {formatCurrency(quote.item_price || 0)}
                   </p>
                   <p className="text-sm text-muted-foreground mb-1">
-                    <strong>Weight:</strong> {quote.item_weight} kg
+                    <strong>Weight:</strong> {quote.item_weight || 0} kg
                   </p>
-                  {quote.product_url && (
-                    <a
-                      href={quote.product_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      View Product
-                    </a>
-                  )}
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2">Shipping Address</h4>
-                  {shippingAddress ? (
-                    <>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {shippingAddress.fullName}
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {shippingAddress.streetAddress}
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {shippingAddress.city}, {shippingAddress.state} {shippingAddress.postalCode}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {shippingAddress.country}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No shipping address provided</p>
-                  )}
+                  <h4 className="font-semibold mb-2">Shipping Details</h4>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    <strong>Country:</strong> {quote.country_code || "N/A"}
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    <strong>Currency:</strong> {quote.currency || "USD"}
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    <strong>Total:</strong> {formatCurrency(quote.final_total || 0)}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
+          {/* Cost Breakdown */}
+          <QuoteBreakdown quote={quote} />
+
           {/* Delivery Timeline */}
           <DeliveryTimeline quote={quote} />
-
-          {/* Quote Breakdown */}
-          <QuoteBreakdown 
-            quote={quote} 
-            onApprove={approveQuote}
-            onReject={(reason: string) => rejectQuote('', reason)}
-            onCalculate={() => {}} // Not used in customer view
-            onRecalculate={() => {}} // Not used in customer view
-            onSave={() => {}} // Not used in customer view
-            onCancel={() => {}} // Not used in customer view
-            isProcessing={isUpdating}
-            onAddToCart={addToCart}
-          />
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Status Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Quote Status</span>
-                  <Badge variant={quote.status === 'paid' ? 'default' : 'secondary'}>
-                    {quote.status}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Approval Status</span>
-                  <Badge variant={quote.approval_status === 'approved' ? 'default' : 'secondary'}>
-                    {quote.approval_status}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Priority</span>
-                  <Badge variant="outline">
-                    {quote.priority}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Actions */}
+          {isOwner && quote.status === 'sent' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  onClick={() => approveQuote()}
+                  disabled={isUpdating}
+                  className="w-full"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Approve Quote
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => rejectQuote()}
+                  disabled={isUpdating}
+                  className="w-full"
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Reject Quote
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Total Cost */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Total Cost
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(quote.final_total, quote.final_currency)}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {quote.final_currency} currency
-              </p>
-            </CardContent>
-          </Card>
+          {/* Shipping Address */}
+          {shippingAddress && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Shipping Address</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm space-y-1">
+                  <p className="font-medium">{shippingAddress.recipient_name}</p>
+                  <p>{shippingAddress.address_line1}</p>
+                  {shippingAddress.address_line2 && <p>{shippingAddress.address_line2}</p>}
+                  <p>{shippingAddress.city}, {shippingAddress.state_province_region} {shippingAddress.postal_code}</p>
+                  <p>{shippingAddress.country}</p>
+                  {shippingAddress.phone && <p>📞 {shippingAddress.phone}</p>}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
@@ -311,76 +226,14 @@ export const QuoteDetails: React.FC = () => {
       <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
         <DialogContent>
           <AddressEditForm
-            currentAddress={shippingAddress}
-            onSave={(address) => {
-              // Handle address save
+            address={shippingAddress}
+            onSuccess={() => {
               setIsAddressDialogOpen(false);
-              queryClient.invalidateQueries({ queryKey: ['quote', id] });
+              queryClient.invalidateQueries(['quote', id]);
             }}
-            onCancel={() => setIsAddressDialogOpen(false)}
-            isLoading={false}
-            canChangeCountry={false}
           />
         </DialogContent>
       </Dialog>
     </div>
   );
 }
-=======
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="container py-6 sm:py-12 space-y-6 sm:space-y-8">
-        {quote.status === 'requested' ? (
-          <>
-            <Card className="bg-card border border-border">
-              <CardHeader>
-                <CardTitle className="text-foreground">
-                  Quote Request Received
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4 sm:mb-6">
-                  Thank you for your quote request. Our team is currently preparing your quote and will get back to you shortly. 
-                  You can see the items you've requested below.
-                </p>
-                <div className="space-y-3 sm:space-y-4">
-                  <h3 className="text-base sm:text-lg font-semibold text-foreground">Items Requested</h3>
-                  <div className="space-y-3 sm:space-y-4">
-                    {quote.quote_items?.map((item) => (
-                      <div key={item.id} className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-card border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                        {item.image_url && (
-                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-border bg-muted flex-shrink-0">
-                            <img 
-                              src={item.image_url} 
-                              alt={item.product_name || 'Product'} 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-sm sm:text-base text-foreground">{item.product_name}</h4>
-                          <p className="text-xs sm:text-sm text-muted-foreground">Quantity: {item.quantity}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        ) : (
-          <QuoteBreakdown 
-            quote={quote} 
-            onApprove={approveQuote}
-            onReject={rejectQuote}
-            isProcessing={isUpdating}
-            onAddToCart={addToCart}
-          />
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default QuoteDetails;
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312

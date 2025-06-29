@@ -10,10 +10,7 @@ import { Toaster } from "@/components/ui/toaster";
 import Layout from "@/components/layout/Layout";
 import Index from "@/pages/Index";
 import Quote from "@/pages/Quote";
-<<<<<<< HEAD
 import QuoteAuto from "@/pages/QuoteAuto";
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import QuoteDetails from "@/pages/QuoteDetails";
@@ -38,12 +35,9 @@ import CartAnalyticsPage from "@/pages/admin/CartAnalytics";
 import CartRecoveryPage from "@/pages/admin/CartRecovery";
 import EmailTemplatesPage from "@/pages/admin/EmailTemplates";
 import PaymentManagement from "@/pages/admin/PaymentManagement";
-<<<<<<< HEAD
 import AutoQuotesPage from "@/pages/admin/AutoQuotes";
 import AutoQuoteSettingsPage from "@/pages/admin/AutoQuoteSettings";
 import ShippingRoutesPage from "@/pages/admin/ShippingRoutes";
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
 // Direct imports instead of lazy loading
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -77,11 +71,8 @@ const router = createBrowserRouter([
           { path: "analytics", element: <AdminAnalytics /> },
           { path: "rejection-analytics", element: <RejectionAnalytics /> },
           { path: "quotes", element: <QuoteManagementPage /> },
-<<<<<<< HEAD
           { path: "auto-quotes", element: <AutoQuotesPage /> },
           { path: "auto-settings", element: <AutoQuoteSettingsPage /> },
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           { path: "orders", element: <OrderManagementPage /> },
           { path: "orders/:id", element: <AdminQuoteDetailPage /> },
           { path: "customers", element: <EnhancedCustomerManagementPage /> },
@@ -95,10 +86,7 @@ const router = createBrowserRouter([
           { path: "footer", element: <HomePageSettings /> },
           { path: "home-page-settings", element: <HomePageSettings /> },
           { path: "payment-management", element: <PaymentManagement /> },
-<<<<<<< HEAD
           { path: "shipping-routes", element: <ShippingRoutesPage /> },
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           { path: "*", element: <NotFound /> },
         ],
       },
@@ -117,13 +105,10 @@ const router = createBrowserRouter([
         element: <Quote />,
       },
       {
-<<<<<<< HEAD
         path: "quote-auto",
         element: <QuoteAuto />,
       },
       {
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         path: "auth",
         element: <Auth />,
       },
@@ -203,20 +188,18 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <QueryProvider>
+    <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <AuthProvider>
-          <AccessibilityProvider>
-            <div className="min-h-screen">
-              <ErrorBoundary>
-                <RouterProvider router={router} />
-              </ErrorBoundary>
-            </div>
-            <Toaster />
-          </AccessibilityProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <AccessibilityProvider>
+              <RouterProvider router={router} />
+              <Toaster />
+            </AccessibilityProvider>
+          </AuthProvider>
+        </QueryProvider>
       </ThemeProvider>
-    </QueryProvider>
+    </ErrorBoundary>
   );
 }
 
