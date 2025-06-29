@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,11 @@ export const useCountrySettings = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Debug logging for state changes
+  useEffect(() => {
+    console.log('useCountrySettings state changed:', { isCreating, editingCountry: editingCountry?.code });
+  }, [isCreating, editingCountry]);
 
   // Check user role for admin access
   const { data: userRole } = useQuery({
@@ -157,8 +162,10 @@ export const useCountrySettings = () => {
   });
 
   const handleAddNewClick = () => {
+    console.log('handleAddNewClick called - setting isCreating to true');
     setIsCreating(true);
     setEditingCountry(null);
+    console.log('State should now be: isCreating=true, editingCountry=null');
   };
 
   const handleEditClick = (country: CountrySetting) => {

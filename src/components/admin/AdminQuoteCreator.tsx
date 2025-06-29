@@ -167,17 +167,21 @@ export const AdminQuoteCreator: React.FC<AdminQuoteCreatorProps> = ({ onQuoteCre
 
     setIsCalculating(true);
     try {
+      // Determine currency based on origin country
+      const originCurrency = allCountries?.find(c => c.code === values.originCountry)?.currency || 'USD';
+
       // Prepare data for calculation
       const quoteData = {
         country_code: values.countryCode,
         origin_country: values.originCountry,
+        currency: originCurrency, // Use currency from origin country
         items: values.items.map((item, index) => ({
           id: `temp-${index}`, // Temporary ID for calculation
           product_name: item.productName,
           quantity: item.quantity,
           item_price: item.estimatedPrice || 0,
           item_weight: 0, // We'll need to add weight field
-          item_currency: 'USD',
+          item_currency: originCurrency, // Use currency from origin country
         })),
       };
 
@@ -213,10 +217,14 @@ export const AdminQuoteCreator: React.FC<AdminQuoteCreatorProps> = ({ onQuoteCre
     try {
       const { items, countryCode, originCountry, ...quoteData } = values;
 
+      // Determine currency based on origin country
+      const originCurrency = allCountries?.find(c => c.code === originCountry)?.currency || 'USD';
+
       // Prepare quote data
       const quoteInsertData: any = {
         country_code: countryCode,
         origin_country: originCountry,
+        currency: originCurrency, // Use currency from origin country
         status: 'pending',
         priority: quoteData.priority,
         internal_notes: quoteData.internalNotes,
@@ -257,7 +265,7 @@ export const AdminQuoteCreator: React.FC<AdminQuoteCreatorProps> = ({ onQuoteCre
         options: item.options,
         image_url: item.imageUrl,
         item_price: item.estimatedPrice,
-        item_currency: 'USD', // Default currency
+        item_currency: originCurrency, // Use currency from origin country
       }));
 
       const { error: itemsError } = await supabase.from("quote_items").insert(quoteItemsToInsert);

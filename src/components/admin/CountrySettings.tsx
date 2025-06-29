@@ -29,7 +29,9 @@ export const CountrySettings = () => {
     error: error?.message,
     isCreating,
     isUpdating,
-    isDeleting 
+    isDeleting,
+    editingCountry: editingCountry?.code,
+    dialogOpen: isCreating || !!editingCountry
   }); // DEBUG
 
   if (isLoading) {
@@ -73,7 +75,10 @@ export const CountrySettings = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Country Settings</h2>
         <Button 
-          onClick={handleAddNewClick} 
+          onClick={() => {
+            console.log('Add Country button clicked');
+            handleAddNewClick();
+          }} 
           disabled={isCreating || isUpdating || isDeleting}
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -116,7 +121,10 @@ export const CountrySettings = () => {
         <div className="text-center py-12">
           <p className="text-muted-foreground">No country settings found.</p>
           <Button 
-            onClick={handleAddNewClick} 
+            onClick={() => {
+              console.log('Add Country button clicked');
+              handleAddNewClick();
+            }} 
             className="mt-4"
             disabled={isCreating || isUpdating || isDeleting}
           >

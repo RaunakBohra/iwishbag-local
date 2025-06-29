@@ -45,6 +45,13 @@ export const QuoteDetailForm = ({ form, shippingAddress }: {
     name: "final_currency"
   }) || countryCurrency;
 
+  // Auto-update currency field when country changes
+  useEffect(() => {
+    if (countryCurrency && form.setValue) {
+      form.setValue('currency', countryCurrency);
+    }
+  }, [countryCurrency, form]);
+
   // Get currency symbol
   const getCurrencySymbol = (currency: string) => {
     const symbols: { [key: string]: string } = {
@@ -121,7 +128,7 @@ export const QuoteDetailForm = ({ form, shippingAddress }: {
         render={({ field }) => (
           <FormItem className="hidden">
             <FormControl>
-              <Input {...field} value={countryCurrency} />
+              <Input {...field} value={field.value || countryCurrency} />
             </FormControl>
           </FormItem>
         )}
