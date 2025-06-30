@@ -87,8 +87,13 @@ export const useEmailSettings = () => {
     return setting?.setting_value ?? true;
   };
 
+  const isStatusNotificationsEnabled = () => {
+    const setting = emailSettings?.find(s => s.setting_key === 'status_notifications_enabled');
+    return setting?.setting_value ?? true;
+  };
+
   // Helper function to check if a specific email type should be sent
-  const shouldSendEmail = (emailType: 'cart_abandonment' | 'quote_notification' | 'order_notification') => {
+  const shouldSendEmail = (emailType: 'cart_abandonment' | 'quote_notification' | 'order_notification' | 'status_notification') => {
     if (!isEmailSendingEnabled()) {
       return false;
     }
@@ -100,6 +105,8 @@ export const useEmailSettings = () => {
         return isQuoteNotificationsEnabled();
       case 'order_notification':
         return isOrderNotificationsEnabled();
+      case 'status_notification':
+        return isStatusNotificationsEnabled();
       default:
         return false;
     }
@@ -114,6 +121,7 @@ export const useEmailSettings = () => {
     isCartAbandonmentEnabled,
     isQuoteNotificationsEnabled,
     isOrderNotificationsEnabled,
+    isStatusNotificationsEnabled,
     shouldSendEmail,
   };
 }; 

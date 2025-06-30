@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -40,24 +39,17 @@ export const QuotesFilter = ({
         <Button size="sm" variant={activeFilter === 'approved' ? 'default' : 'outline'} onClick={() => onFilterChange('approved')}>Approved</Button>
         <Button size="sm" variant={activeFilter === 'in_cart' ? 'default' : 'outline'} onClick={() => onFilterChange('in_cart')}>In Cart</Button>
       </div>
-      <div className="relative w-full sm:w-56 mt-2 sm:mt-0">
-        {isSearching ? (
-          <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
-        ) : (
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        )}
+      
+      <div className="relative flex-1 max-w-sm">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search quotes..."
-          className="pl-10 h-9"
           value={searchInput}
           onChange={(e) => handleSearchInput(e.target.value)}
+          className="pl-10"
         />
-        {searchInput && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <span className="text-xs text-muted-foreground">
-              {isSearching ? 'Searching...' : ''}
-            </span>
-          </div>
+        {isSearching && (
+          <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
         )}
       </div>
     </div>

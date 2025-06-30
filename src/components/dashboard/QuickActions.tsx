@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, MessageSquare, Bell, Calculator } from "lucide-react";
+import { Plus, MessageSquare, Calculator } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export const QuickActions = () => {
@@ -10,7 +10,7 @@ export const QuickActions = () => {
         <CardTitle>Quick Actions</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <Button asChild variant="destructive" className="h-20 flex-col">
             <Link to="/quote">
               <Plus className="h-6 w-6 mb-2" />
@@ -29,13 +29,6 @@ export const QuickActions = () => {
             <Link to="/messages">
               <MessageSquare className="h-6 w-6 mb-2" />
               Messages
-            </Link>
-          </Button>
-          
-          <Button variant="outline" className="h-20 flex-col" asChild>
-            <Link to="/notifications">
-              <Bell className="h-6 w-6 mb-2" />
-              Notifications
             </Link>
           </Button>
         </div>

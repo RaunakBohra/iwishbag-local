@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { useUserCurrency } from '@/hooks/useUserCurrency';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 interface QuoteSummaryProps {
   status: 'pending' | 'approved' | 'rejected' | 'in_cart';
@@ -18,52 +19,30 @@ interface QuoteSummaryProps {
   countryCode?: string;
 }
 
-const statusMap = {
-  pending: { 
-    label: 'Pending', 
-    color: 'bg-amber-500 text-white shadow-sm rounded-full' 
-  },
-  approved: { 
-    label: 'Approved', 
-    color: 'bg-emerald-500 text-white shadow-sm rounded-full' 
-  },
-  rejected: { 
-    label: 'Rejected', 
-    color: 'bg-red-500 text-white shadow-sm rounded-full' 
-  },
-  in_cart: { 
-    label: 'In Cart', 
-    color: 'bg-indigo-500 text-white shadow-sm rounded-full' 
-  },
-};
-
 export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
   status,
   total,
   itemCount,
   onApprove,
   onReject,
-  isProcessing,
+  isProcessing = false,
   renderActions,
-  countryCode,
+  countryCode
 }) => {
-  const statusInfo = statusMap[status] || statusMap['pending'];
   const { formatAmount } = useUserCurrency();
+  const { quoteStatuses } = useStatusManagement();
 
-  const { data: countrySettings } = useQuery({
-    queryKey: ['country-settings', countryCode],
-    queryFn: async () => {
-      if (!countryCode) return null;
-      const { data, error } = await supabase
-        .from('country_settings')
-        .select('*')
-        .eq('code', countryCode)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!countryCode,
-  });
+  // Get status configuration from the management system
+  const statusConfig = (quoteStatuses || []).find(s => s.name === status);
+
+  // Fallback status info if not found in management system
+  const statusInfo = statusConfig ? {
+    label: statusConfig.label,
+    color: statusConfig.color || 'bg-gray-100 text-gray-800'
+  } : {
+    label: status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
+    color: 'bg-gray-100 text-gray-800'
+  };
 
   const formattedTotal = formatAmount(total);
 
@@ -111,34 +90,40 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
 
       {/* Sticky bottom action bar for mobile */}
       <motion.div
-        className="mobile-sticky-bar bg-card border-t border-border flex md:hidden items-center justify-between px-3 py-2.5"
-        initial={{ opacity: 0, y: 20 }}
+        className={cn(
+          'md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border p-4',
+          'transition-all duration-300'
+        )}
+        initial={{ opacity: 0, y: 100 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div className="flex flex-col gap-0.5">
-          <span className="text-base font-semibold text-foreground">{formattedTotal}</span>
-          <Badge className={cn('text-xs px-1.5 py-0.5 font-medium border w-fit', statusInfo.color)}>
-            {statusInfo.label}
-          </Badge>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Badge className={cn('text-xs px-2 py-1', statusInfo.color)}>
+              {statusInfo.label}
+            </Badge>
+            <span className="text-sm font-medium">{formattedTotal}</span>
+          </div>
+          <span className="text-xs text-muted-foreground">{itemCount} items</span>
         </div>
-        <div className="flex gap-1.5 items-center">
+        <div className="flex gap-2">
           {onApprove && (
             <Button
-              size="sm"
               onClick={onApprove}
               disabled={isProcessing}
-              className="bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm"
+              className="flex-1 bg-foreground text-background hover:bg-foreground/90"
+              size="sm"
             >
-              Approve
+              Approve & Add to Cart
             </Button>
           )}
           {onReject && status === 'pending' && (
             <Button
-              size="sm"
               variant="outline"
               onClick={onReject}
               disabled={isProcessing}
-              className="border-destructive text-destructive hover:bg-destructive/10 px-3 py-1.5 h-auto text-sm"
+              className="flex-1 border-destructive text-destructive hover:bg-destructive/10"
+              size="sm"
             >
               Reject
             </Button>

@@ -24,7 +24,8 @@ export const useQuoteCalculation = () => {
         quoteDataFromForm: AdminQuoteFormValues,
         itemsToUpdate: ItemToUpdate[],
         allCountrySettings: CountrySetting[],
-        shippingAddress?: any
+        shippingAddress?: any,
+        currentStatus?: string
     ): Promise<(Partial<Quote> & { id: string }) | null> => {
 
         const { items, ...restOfQuoteData } = quoteDataFromForm;
@@ -206,7 +207,8 @@ export const useQuoteCalculation = () => {
                 origin_country: originCountry,
                 shipping_method: shippingMethod,
                 shipping_route_id: shippingRouteId ?? null,
-                status: 'calculated' as const
+                // Preserve current status - only change to 'calculated' if it was 'pending'
+                status: (currentStatus === 'pending' ? 'calculated' : currentStatus) as any
             };
             
             return updatedQuote;
@@ -261,7 +263,8 @@ export const useQuoteCalculation = () => {
                 origin_country: 'US',
                 shipping_method: 'country_settings',
                 shipping_route_id: null,
-                status: 'calculated' as const
+                // Preserve current status - only change to 'calculated' if it was 'pending'
+                status: (currentStatus === 'pending' ? 'calculated' : currentStatus) as any
             };
             
             return updatedQuote;

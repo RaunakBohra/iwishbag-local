@@ -17,17 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
-<<<<<<< HEAD
           variables?: Json
           extensions?: Json
           query?: string
           operationName?: string
-=======
-          query?: string
-          operationName?: string
-          variables?: Json
-          extensions?: Json
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
         }
         Returns: Json
       }
@@ -41,40 +34,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      audit_logs: {
-        Row: {
-          action: string
-          changed_at: string
-          changed_by: string | null
-          id: string
-          new_values: Json | null
-          old_values: Json | null
-          record_id: string
-          table_name: string
-        }
-        Insert: {
-          action: string
-          changed_at?: string
-          changed_by?: string | null
-          id?: string
-          new_values?: Json | null
-          old_values?: Json | null
-          record_id: string
-          table_name: string
-        }
-        Update: {
-          action?: string
-          changed_at?: string
-          changed_by?: string | null
-          id?: string
-          new_values?: Json | null
-          old_values?: Json | null
-          record_id?: string
-          table_name?: string
-        }
-        Relationships: []
-      }
-<<<<<<< HEAD
       auto_quote_analytics: {
         Row: {
           created_at: string | null
@@ -155,8 +114,6 @@ export type Database = {
         }
         Relationships: []
       }
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       bank_account_details: {
         Row: {
           account_name: string
@@ -259,40 +216,17 @@ export type Database = {
         }
         Relationships: []
       }
-      customs_categories: {
-        Row: {
-          created_at: string
-          duty_percent: number | null
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          duty_percent?: number | null
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          duty_percent?: number | null
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-<<<<<<< HEAD
       customs_rules: {
         Row: {
           actions: Json
           advanced: Json | null
           conditions: Json
           created_at: string | null
+          destination_country: string | null
           id: string
           is_active: boolean | null
           name: string
+          origin_country: string | null
           priority: number | null
           updated_at: string | null
         }
@@ -301,9 +235,11 @@ export type Database = {
           advanced?: Json | null
           conditions: Json
           created_at?: string | null
+          destination_country?: string | null
           id?: string
           is_active?: boolean | null
           name: string
+          origin_country?: string | null
           priority?: number | null
           updated_at?: string | null
         }
@@ -312,9 +248,11 @@ export type Database = {
           advanced?: Json | null
           conditions?: Json
           created_at?: string | null
+          destination_country?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
+          origin_country?: string | null
           priority?: number | null
           updated_at?: string | null
         }
@@ -347,8 +285,6 @@ export type Database = {
         }
         Relationships: []
       }
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       email_templates: {
         Row: {
           created_at: string
@@ -388,17 +324,9 @@ export type Database = {
       footer_settings: {
         Row: {
           business_hours: string | null
-<<<<<<< HEAD
           company_description: string | null
           company_name: string | null
           contact_email: string | null
-=======
-          company_address: string | null
-          company_description: string | null
-          company_email: string | null
-          company_name: string | null
-          company_phone: string | null
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           created_at: string
           hero_banner_url: string | null
           hero_cta_link: string | null
@@ -424,17 +352,9 @@ export type Database = {
         }
         Insert: {
           business_hours?: string | null
-<<<<<<< HEAD
           company_description?: string | null
           company_name?: string | null
           contact_email?: string | null
-=======
-          company_address?: string | null
-          company_description?: string | null
-          company_email?: string | null
-          company_name?: string | null
-          company_phone?: string | null
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           created_at?: string
           hero_banner_url?: string | null
           hero_cta_link?: string | null
@@ -460,17 +380,9 @@ export type Database = {
         }
         Update: {
           business_hours?: string | null
-<<<<<<< HEAD
           company_description?: string | null
           company_name?: string | null
           contact_email?: string | null
-=======
-          company_address?: string | null
-          company_description?: string | null
-          company_email?: string | null
-          company_name?: string | null
-          company_phone?: string | null
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           created_at?: string
           hero_banner_url?: string | null
           hero_cta_link?: string | null
@@ -493,51 +405,6 @@ export type Database = {
           updated_at?: string
           value_props?: Json | null
           website_logo_url?: string | null
-        }
-        Relationships: []
-      }
-      membership_tiers: {
-        Row: {
-          annual_price: number | null
-          benefits: Json | null
-          created_at: string
-          description: string | null
-          free_shipping_threshold: number | null
-          id: string
-          is_active: boolean | null
-          monthly_price: number | null
-          name: string
-          priority_processing: boolean | null
-          service_fee_discount: number | null
-          updated_at: string
-        }
-        Insert: {
-          annual_price?: number | null
-          benefits?: Json | null
-          created_at?: string
-          description?: string | null
-          free_shipping_threshold?: number | null
-          id?: string
-          is_active?: boolean | null
-          monthly_price?: number | null
-          name: string
-          priority_processing?: boolean | null
-          service_fee_discount?: number | null
-          updated_at?: string
-        }
-        Update: {
-          annual_price?: number | null
-          benefits?: Json | null
-          created_at?: string
-          description?: string | null
-          free_shipping_threshold?: number | null
-          id?: string
-          is_active?: boolean | null
-          monthly_price?: number | null
-          name?: string
-          priority_processing?: boolean | null
-          service_fee_discount?: number | null
-          updated_at?: string
         }
         Relationships: []
       }
@@ -617,181 +484,12 @@ export type Database = {
           },
         ]
       }
-      notification_preferences: {
-        Row: {
-          created_at: string
-          email_order_updates: boolean | null
-          email_promotions: boolean | null
-          email_quote_updates: boolean | null
-          id: string
-          in_app_notifications: boolean | null
-          sms_order_updates: boolean | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          email_order_updates?: boolean | null
-          email_promotions?: boolean | null
-          email_quote_updates?: boolean | null
-          id?: string
-          in_app_notifications?: boolean | null
-          sms_order_updates?: boolean | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          email_order_updates?: boolean | null
-          email_promotions?: boolean | null
-          email_quote_updates?: boolean | null
-          id?: string
-          in_app_notifications?: boolean | null
-          sms_order_updates?: boolean | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notification_preferences_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notifications: {
-        Row: {
-          created_at: string
-          id: string
-          is_read: boolean | null
-          message: string
-          title: string
-          type: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_read?: boolean | null
-          message: string
-          title: string
-          type?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_read?: boolean | null
-          message?: string
-          title?: string
-          type?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      order_tracking_events: {
-        Row: {
-          actual_timestamp: string | null
-          carrier: string | null
-          created_at: string
-          description: string | null
-          estimated_delivery: string | null
-          event_type: string
-          id: string
-          location: string | null
-          quote_id: string | null
-          tracking_number: string | null
-          updated_at: string
-        }
-        Insert: {
-          actual_timestamp?: string | null
-          carrier?: string | null
-          created_at?: string
-          description?: string | null
-          estimated_delivery?: string | null
-          event_type: string
-          id?: string
-          location?: string | null
-          quote_id?: string | null
-          tracking_number?: string | null
-          updated_at?: string
-        }
-        Update: {
-          actual_timestamp?: string | null
-          carrier?: string | null
-          created_at?: string
-          description?: string | null
-          estimated_delivery?: string | null
-          event_type?: string
-          id?: string
-          location?: string | null
-          quote_id?: string | null
-          tracking_number?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      order_workflow_steps: {
-        Row: {
-          country_specific: string[] | null
-          created_at: string
-          description: string | null
-          estimated_duration_hours: number | null
-          id: string
-          is_customer_visible: boolean | null
-          name: string
-          order_position: number
-          requires_admin_action: boolean | null
-          updated_at: string
-        }
-        Insert: {
-          country_specific?: string[] | null
-          created_at?: string
-          description?: string | null
-          estimated_duration_hours?: number | null
-          id?: string
-          is_customer_visible?: boolean | null
-          name: string
-          order_position: number
-          requires_admin_action?: boolean | null
-          updated_at?: string
-        }
-        Update: {
-          country_specific?: string[] | null
-          created_at?: string
-          description?: string | null
-          estimated_duration_hours?: number | null
-          id?: string
-          is_customer_visible?: boolean | null
-          name?: string
-          order_position?: number
-          requires_admin_action?: boolean | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       payment_gateways: {
         Row: {
           code: string
           config: Json | null
           created_at: string
-<<<<<<< HEAD
           description: string | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           fee_fixed: number | null
           fee_percent: number | null
           id: string
@@ -806,10 +504,7 @@ export type Database = {
           code: string
           config?: Json | null
           created_at?: string
-<<<<<<< HEAD
           description?: string | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           fee_fixed?: number | null
           fee_percent?: number | null
           id?: string
@@ -824,10 +519,7 @@ export type Database = {
           code?: string
           config?: Json | null
           created_at?: string
-<<<<<<< HEAD
           description?: string | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           fee_fixed?: number | null
           fee_percent?: number | null
           id?: string
@@ -840,7 +532,6 @@ export type Database = {
         }
         Relationships: []
       }
-<<<<<<< HEAD
       pricing_rules: {
         Row: {
           actions: Json
@@ -877,18 +568,13 @@ export type Database = {
         }
         Relationships: []
       }
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       profiles: {
         Row: {
           avatar_url: string | null
           cod_enabled: boolean | null
           country: string
           created_at: string
-<<<<<<< HEAD
           email: string | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           full_name: string | null
           id: string
           internal_notes: string | null
@@ -904,10 +590,7 @@ export type Database = {
           cod_enabled?: boolean | null
           country?: string
           created_at?: string
-<<<<<<< HEAD
           email?: string | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           full_name?: string | null
           id: string
           internal_notes?: string | null
@@ -923,10 +606,7 @@ export type Database = {
           cod_enabled?: boolean | null
           country?: string
           created_at?: string
-<<<<<<< HEAD
           email?: string | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           full_name?: string | null
           id?: string
           internal_notes?: string | null
@@ -939,7 +619,6 @@ export type Database = {
         }
         Relationships: []
       }
-<<<<<<< HEAD
       quote_address_history: {
         Row: {
           change_reason: string | null
@@ -988,15 +667,12 @@ export type Database = {
           },
         ]
       }
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       quote_items: {
         Row: {
           category: string | null
           created_at: string
           id: string
           image_url: string | null
-          item_currency: string
           item_price: number | null
           item_weight: number | null
           options: string | null
@@ -1011,7 +687,6 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
-          item_currency: string
           item_price?: number | null
           item_weight?: number | null
           options?: string | null
@@ -1026,7 +701,6 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
-          item_currency?: string
           item_price?: number | null
           item_weight?: number | null
           options?: string | null
@@ -1045,6 +719,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      quote_statuses: {
+        Row: {
+          color: string | null
+          icon: string | null
+          id: number
+          is_active: boolean | null
+          label: string
+          value: string
+        }
+        Insert: {
+          color?: string | null
+          icon?: string | null
+          id?: number
+          is_active?: boolean | null
+          label: string
+          value: string
+        }
+        Update: {
+          color?: string | null
+          icon?: string | null
+          id?: number
+          is_active?: boolean | null
+          label?: string
+          value?: string
+        }
+        Relationships: []
       }
       quote_templates: {
         Row: {
@@ -1090,33 +791,33 @@ export type Database = {
       }
       quotes: {
         Row: {
-<<<<<<< HEAD
           address_locked: boolean | null
           address_updated_at: string | null
           address_updated_by: string | null
           applied_rules: Json | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           approval_status:
             | Database["public"]["Enums"]["quote_approval_status"]
             | null
           approved_at: string | null
-<<<<<<< HEAD
+          breakdown: Json | null
           confidence_score: number | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           country_code: string | null
           created_at: string
           currency: string
           current_location: string | null
+          customer_name: string | null
+          customer_phone: string | null
           customs_and_ecs: number | null
           customs_category_name: string | null
+          customs_percentage: number | null
           discount: number | null
           display_id: string | null
           domestic_shipping: number | null
-          email: string
+          email: string | null
+          enabled_delivery_options: Json | null
           estimated_delivery_date: string | null
           exchange_rate: number | null
+          expires_at: string | null
           final_currency: string | null
           final_total: number | null
           final_total_local: number | null
@@ -1127,6 +828,7 @@ export type Database = {
           insurance_amount: number | null
           internal_notes: string | null
           international_shipping: number | null
+          is_anonymous: boolean | null
           item_price: number | null
           item_weight: number | null
           items_currency: string | null
@@ -1134,10 +836,7 @@ export type Database = {
           merchant_shipping_price: number | null
           options: string | null
           order_display_id: string | null
-<<<<<<< HEAD
           origin_country: string | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           paid_at: string | null
           payment_gateway_fee: number | null
           payment_method: string | null
@@ -1145,60 +844,56 @@ export type Database = {
           product_name: string | null
           product_url: string | null
           quantity: number | null
-<<<<<<< HEAD
+          quote_source: string | null
           quote_type: string | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           rejected_at: string | null
           rejection_details: string | null
           rejection_reason_id: string | null
           sales_tax_price: number | null
-<<<<<<< HEAD
           scraped_data: Json | null
+          share_token: string | null
           shipped_at: string | null
           shipping_address: Json | null
           shipping_carrier: string | null
+          shipping_delivery_days: string | null
           shipping_method: string | null
           shipping_route_id: number | null
-=======
-          shipped_at: string | null
-          shipping_carrier: string | null
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
-          status: Database["public"]["Enums"]["quote_status"] | null
+          social_handle: string | null
+          status: string | null
           sub_total: number | null
           tracking_number: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
           vat: number | null
         }
         Insert: {
-<<<<<<< HEAD
           address_locked?: boolean | null
           address_updated_at?: string | null
           address_updated_by?: string | null
           applied_rules?: Json | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           approval_status?:
             | Database["public"]["Enums"]["quote_approval_status"]
             | null
           approved_at?: string | null
-<<<<<<< HEAD
+          breakdown?: Json | null
           confidence_score?: number | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           country_code?: string | null
           created_at?: string
           currency?: string
           current_location?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           customs_and_ecs?: number | null
           customs_category_name?: string | null
+          customs_percentage?: number | null
           discount?: number | null
           display_id?: string | null
           domestic_shipping?: number | null
-          email: string
+          email?: string | null
+          enabled_delivery_options?: Json | null
           estimated_delivery_date?: string | null
           exchange_rate?: number | null
+          expires_at?: string | null
           final_currency?: string | null
           final_total?: number | null
           final_total_local?: number | null
@@ -1209,6 +904,7 @@ export type Database = {
           insurance_amount?: number | null
           internal_notes?: string | null
           international_shipping?: number | null
+          is_anonymous?: boolean | null
           item_price?: number | null
           item_weight?: number | null
           items_currency?: string | null
@@ -1216,10 +912,7 @@ export type Database = {
           merchant_shipping_price?: number | null
           options?: string | null
           order_display_id?: string | null
-<<<<<<< HEAD
           origin_country?: string | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           paid_at?: string | null
           payment_gateway_fee?: number | null
           payment_method?: string | null
@@ -1227,60 +920,56 @@ export type Database = {
           product_name?: string | null
           product_url?: string | null
           quantity?: number | null
-<<<<<<< HEAD
+          quote_source?: string | null
           quote_type?: string | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           rejected_at?: string | null
           rejection_details?: string | null
           rejection_reason_id?: string | null
           sales_tax_price?: number | null
-<<<<<<< HEAD
           scraped_data?: Json | null
+          share_token?: string | null
           shipped_at?: string | null
           shipping_address?: Json | null
           shipping_carrier?: string | null
+          shipping_delivery_days?: string | null
           shipping_method?: string | null
           shipping_route_id?: number | null
-=======
-          shipped_at?: string | null
-          shipping_carrier?: string | null
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
-          status?: Database["public"]["Enums"]["quote_status"] | null
+          social_handle?: string | null
+          status?: string | null
           sub_total?: number | null
           tracking_number?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           vat?: number | null
         }
         Update: {
-<<<<<<< HEAD
           address_locked?: boolean | null
           address_updated_at?: string | null
           address_updated_by?: string | null
           applied_rules?: Json | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           approval_status?:
             | Database["public"]["Enums"]["quote_approval_status"]
             | null
           approved_at?: string | null
-<<<<<<< HEAD
+          breakdown?: Json | null
           confidence_score?: number | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           country_code?: string | null
           created_at?: string
           currency?: string
           current_location?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           customs_and_ecs?: number | null
           customs_category_name?: string | null
+          customs_percentage?: number | null
           discount?: number | null
           display_id?: string | null
           domestic_shipping?: number | null
-          email?: string
+          email?: string | null
+          enabled_delivery_options?: Json | null
           estimated_delivery_date?: string | null
           exchange_rate?: number | null
+          expires_at?: string | null
           final_currency?: string | null
           final_total?: number | null
           final_total_local?: number | null
@@ -1291,6 +980,7 @@ export type Database = {
           insurance_amount?: number | null
           internal_notes?: string | null
           international_shipping?: number | null
+          is_anonymous?: boolean | null
           item_price?: number | null
           item_weight?: number | null
           items_currency?: string | null
@@ -1298,10 +988,7 @@ export type Database = {
           merchant_shipping_price?: number | null
           options?: string | null
           order_display_id?: string | null
-<<<<<<< HEAD
           origin_country?: string | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           paid_at?: string | null
           payment_gateway_fee?: number | null
           payment_method?: string | null
@@ -1309,35 +996,30 @@ export type Database = {
           product_name?: string | null
           product_url?: string | null
           quantity?: number | null
-<<<<<<< HEAD
+          quote_source?: string | null
           quote_type?: string | null
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           rejected_at?: string | null
           rejection_details?: string | null
           rejection_reason_id?: string | null
           sales_tax_price?: number | null
-<<<<<<< HEAD
           scraped_data?: Json | null
+          share_token?: string | null
           shipped_at?: string | null
           shipping_address?: Json | null
           shipping_carrier?: string | null
+          shipping_delivery_days?: string | null
           shipping_method?: string | null
           shipping_route_id?: number | null
-=======
-          shipped_at?: string | null
-          shipping_carrier?: string | null
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
-          status?: Database["public"]["Enums"]["quote_status"] | null
+          social_handle?: string | null
+          status?: string | null
           sub_total?: number | null
           tracking_number?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           vat?: number | null
         }
         Relationships: [
           {
-<<<<<<< HEAD
             foreignKeyName: "quotes_address_updated_by_fkey"
             columns: ["address_updated_by"]
             isOneToOne: false
@@ -1345,8 +1027,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
             foreignKeyName: "quotes_country_code_fkey"
             columns: ["country_code"]
             isOneToOne: false
@@ -1354,21 +1034,6 @@ export type Database = {
             referencedColumns: ["code"]
           },
           {
-            foreignKeyName: "quotes_customs_category_name_fkey"
-            columns: ["customs_category_name"]
-            isOneToOne: false
-            referencedRelation: "customs_categories"
-            referencedColumns: ["name"]
-          },
-          {
-            foreignKeyName: "quotes_rejection_reason_id_fkey"
-            columns: ["rejection_reason_id"]
-            isOneToOne: false
-            referencedRelation: "rejection_reasons"
-            referencedColumns: ["id"]
-          },
-          {
-<<<<<<< HEAD
             foreignKeyName: "quotes_shipping_route_id_fkey"
             columns: ["shipping_route_id"]
             isOneToOne: false
@@ -1376,8 +1041,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
             foreignKeyName: "quotes_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -1386,183 +1049,173 @@ export type Database = {
           },
         ]
       }
-      referral_rewards: {
+      route_customs_tiers: {
         Row: {
-          created_at: string
-          currency: string | null
+          created_at: string | null
+          customs_percentage: number
+          description: string | null
+          destination_country: string
           id: string
-          is_active: boolean | null
-          max_uses: number | null
-          min_order_value: number | null
-          name: string
-          reward_type: string
-          reward_value: number
-          updated_at: string
+          is_active: boolean
+          logic_type: string
+          origin_country: string
+          price_max: number | null
+          price_min: number | null
+          priority_order: number
+          rule_name: string
+          updated_at: string | null
+          vat_percentage: number
+          weight_max: number | null
+          weight_min: number | null
         }
         Insert: {
-          created_at?: string
-          currency?: string | null
+          created_at?: string | null
+          customs_percentage: number
+          description?: string | null
+          destination_country: string
           id?: string
-          is_active?: boolean | null
-          max_uses?: number | null
-          min_order_value?: number | null
-          name: string
-          reward_type: string
-          reward_value: number
-          updated_at?: string
+          is_active?: boolean
+          logic_type: string
+          origin_country: string
+          price_max?: number | null
+          price_min?: number | null
+          priority_order?: number
+          rule_name: string
+          updated_at?: string | null
+          vat_percentage: number
+          weight_max?: number | null
+          weight_min?: number | null
         }
         Update: {
-          created_at?: string
-          currency?: string | null
+          created_at?: string | null
+          customs_percentage?: number
+          description?: string | null
+          destination_country?: string
           id?: string
-          is_active?: boolean | null
-          max_uses?: number | null
-          min_order_value?: number | null
-          name?: string
-          reward_type?: string
-          reward_value?: number
-          updated_at?: string
+          is_active?: boolean
+          logic_type?: string
+          origin_country?: string
+          price_max?: number | null
+          price_min?: number | null
+          priority_order?: number
+          rule_name?: string
+          updated_at?: string | null
+          vat_percentage?: number
+          weight_max?: number | null
+          weight_min?: number | null
         }
         Relationships: []
       }
-      referrals: {
-        Row: {
-          completed_at: string | null
-          created_at: string
-          id: string
-          referee_id: string | null
-          referral_code: string
-          referred_at: string
-          referrer_id: string | null
-          reward_amount: number | null
-          reward_currency: string | null
-          status: string | null
-          updated_at: string
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          id?: string
-          referee_id?: string | null
-          referral_code: string
-          referred_at?: string
-          referrer_id?: string | null
-          reward_amount?: number | null
-          reward_currency?: string | null
-          status?: string | null
-          updated_at?: string
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          id?: string
-          referee_id?: string | null
-          referral_code?: string
-          referred_at?: string
-          referrer_id?: string | null
-          reward_amount?: number | null
-          reward_currency?: string | null
-          status?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "referrals_referee_id_fkey"
-            columns: ["referee_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "referrals_referrer_id_fkey"
-            columns: ["referrer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      rejection_reasons: {
-        Row: {
-          category: string
-          created_at: string
-          id: string
-          is_active: boolean | null
-          reason: string
-        }
-        Insert: {
-          category: string
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          reason: string
-        }
-        Update: {
-          category?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          reason?: string
-        }
-        Relationships: []
-      }
-<<<<<<< HEAD
       shipping_routes: {
         Row: {
+          active: boolean | null
           base_shipping_cost: number
           carriers: Json | null
           cost_per_kg: number
           cost_percentage: number | null
           created_at: string | null
+          customs_clearance_days: number | null
+          delivery_options: Json | null
           destination_country: string
           id: number
           is_active: boolean | null
           max_weight: number | null
           origin_country: string
+          processing_days: number | null
           requires_documentation: boolean | null
           restricted_items: string[] | null
+          shipping_per_kg: number | null
           updated_at: string | null
           weight_tiers: Json | null
           weight_unit: string
         }
         Insert: {
+          active?: boolean | null
           base_shipping_cost: number
           carriers?: Json | null
           cost_per_kg: number
           cost_percentage?: number | null
           created_at?: string | null
+          customs_clearance_days?: number | null
+          delivery_options?: Json | null
           destination_country: string
           id?: number
           is_active?: boolean | null
           max_weight?: number | null
           origin_country: string
+          processing_days?: number | null
           requires_documentation?: boolean | null
           restricted_items?: string[] | null
+          shipping_per_kg?: number | null
           updated_at?: string | null
           weight_tiers?: Json | null
           weight_unit?: string
         }
         Update: {
+          active?: boolean | null
           base_shipping_cost?: number
           carriers?: Json | null
           cost_per_kg?: number
           cost_percentage?: number | null
           created_at?: string | null
+          customs_clearance_days?: number | null
+          delivery_options?: Json | null
           destination_country?: string
           id?: number
           is_active?: boolean | null
           max_weight?: number | null
           origin_country?: string
+          processing_days?: number | null
           requires_documentation?: boolean | null
           restricted_items?: string[] | null
+          shipping_per_kg?: number | null
           updated_at?: string | null
           weight_tiers?: Json | null
           weight_unit?: string
         }
         Relationships: []
       }
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
+      status_transitions: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          from_status: string
+          id: string
+          metadata: Json | null
+          quote_id: string
+          to_status: string
+          trigger: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          from_status: string
+          id?: string
+          metadata?: Json | null
+          quote_id: string
+          to_status: string
+          trigger: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          from_status?: string
+          id?: string
+          metadata?: Json | null
+          quote_id?: string
+          to_status?: string
+          trigger?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_transitions_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           created_at: string
@@ -1590,42 +1243,6 @@ export type Database = {
         }
         Relationships: []
       }
-      tracking_templates: {
-        Row: {
-          carrier: string | null
-          country_from: string
-          country_to: string
-          created_at: string
-          estimated_days: number | null
-          id: string
-          name: string
-          template_steps: Json
-          updated_at: string
-        }
-        Insert: {
-          carrier?: string | null
-          country_from: string
-          country_to: string
-          created_at?: string
-          estimated_days?: number | null
-          id?: string
-          name: string
-          template_steps: Json
-          updated_at?: string
-        }
-        Update: {
-          carrier?: string | null
-          country_from?: string
-          country_to?: string
-          created_at?: string
-          estimated_days?: number | null
-          id?: string
-          name?: string
-          template_steps?: Json
-          updated_at?: string
-        }
-        Relationships: []
-      }
       user_addresses: {
         Row: {
           address_line1: string
@@ -1636,13 +1253,9 @@ export type Database = {
           created_at: string
           id: string
           is_default: boolean | null
-<<<<<<< HEAD
           phone: string | null
           postal_code: string
           recipient_name: string | null
-=======
-          postal_code: string
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           state_province_region: string
           updated_at: string
           user_id: string
@@ -1656,13 +1269,9 @@ export type Database = {
           created_at?: string
           id?: string
           is_default?: boolean | null
-<<<<<<< HEAD
           phone?: string | null
           postal_code: string
           recipient_name?: string | null
-=======
-          postal_code: string
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           state_province_region: string
           updated_at?: string
           user_id: string
@@ -1676,13 +1285,9 @@ export type Database = {
           created_at?: string
           id?: string
           is_default?: boolean | null
-<<<<<<< HEAD
           phone?: string | null
           postal_code?: string
           recipient_name?: string | null
-=======
-          postal_code?: string
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
           state_province_region?: string
           updated_at?: string
           user_id?: string
@@ -1690,57 +1295,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_addresses_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_memberships: {
-        Row: {
-          created_at: string
-          current_period_end: string | null
-          current_period_start: string | null
-          id: string
-          status: string | null
-          stripe_subscription_id: string | null
-          tier_id: string | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          current_period_end?: string | null
-          current_period_start?: string | null
-          id?: string
-          status?: string | null
-          stripe_subscription_id?: string | null
-          tier_id?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          current_period_end?: string | null
-          current_period_start?: string | null
-          id?: string
-          status?: string | null
-          stripe_subscription_id?: string | null
-          tier_id?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_memberships_tier_id_fkey"
-            columns: ["tier_id"]
-            isOneToOne: false
-            referencedRelation: "membership_tiers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_memberships_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1772,60 +1326,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_wishlist_items: {
-        Row: {
-          category: string | null
-          created_at: string
-          currency: string | null
-          estimated_price: number | null
-          id: string
-          image_url: string | null
-          is_favorite: boolean | null
-          notes: string | null
-          product_name: string | null
-          product_url: string
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          category?: string | null
-          created_at?: string
-          currency?: string | null
-          estimated_price?: number | null
-          id?: string
-          image_url?: string | null
-          is_favorite?: boolean | null
-          notes?: string | null
-          product_name?: string | null
-          product_url: string
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          category?: string | null
-          created_at?: string
-          currency?: string | null
-          estimated_price?: number | null
-          id?: string
-          image_url?: string | null
-          is_favorite?: boolean | null
-          notes?: string | null
-          product_name?: string | null
-          product_url?: string
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_wishlist_items_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-<<<<<<< HEAD
       website_scraping_rules: {
         Row: {
           created_at: string | null
@@ -1895,8 +1395,6 @@ export type Database = {
         }
         Relationships: []
       }
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     }
     Views: {
       [_ in never]: never
@@ -1906,13 +1404,16 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
-<<<<<<< HEAD
+      generate_share_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_shipping_cost: {
         Args: {
-          p_origin_country: string
           p_destination_country: string
           p_weight: number
           p_price?: number
+          p_origin_country: string
         }
         Returns: {
           cost: number
@@ -1921,37 +1422,22 @@ export type Database = {
           carrier: string
         }[]
       }
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
       }
-<<<<<<< HEAD
       lock_address_after_payment: {
         Args: { quote_uuid: string }
         Returns: boolean
       }
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     }
     Enums: {
       app_role: "admin" | "user" | "moderator"
       quote_approval_status: "pending" | "approved" | "rejected"
       quote_priority: "low" | "normal" | "high" | "urgent"
-      quote_status:
-        | "pending"
-        | "calculated"
-        | "sent"
-        | "accepted"
-        | "paid"
-        | "ordered"
-        | "shipped"
-        | "completed"
-        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2073,17 +1559,6 @@ export const Constants = {
       app_role: ["admin", "user", "moderator"],
       quote_approval_status: ["pending", "approved", "rejected"],
       quote_priority: ["low", "normal", "high", "urgent"],
-      quote_status: [
-        "pending",
-        "calculated",
-        "sent",
-        "accepted",
-        "paid",
-        "ordered",
-        "shipped",
-        "completed",
-        "cancelled",
-      ],
     },
   },
 } as const

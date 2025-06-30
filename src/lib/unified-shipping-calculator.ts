@@ -32,7 +32,7 @@ export async function getShippingCost(
       .eq('origin_country', originCountry)
       .eq('destination_country', destinationCountry)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     if (route && !routeError) {
       return calculateRouteSpecificShipping(route, weight, price);

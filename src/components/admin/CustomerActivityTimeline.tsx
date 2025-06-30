@@ -20,6 +20,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { format } from "date-fns";
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 interface CustomerActivityTimelineProps {
   customerId: string;
@@ -197,25 +198,7 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
 
   const getStatusBadge = (status?: string) => {
     if (!status) return null;
-    
-    const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
-      'pending': { label: 'Pending', variant: 'outline' },
-      'processing': { label: 'Processing', variant: 'secondary' },
-      'paid': { label: 'Paid', variant: 'default' },
-      'ordered': { label: 'Ordered', variant: 'default' },
-      'shipped': { label: 'Shipped', variant: 'default' },
-      'completed': { label: 'Completed', variant: 'default' },
-      'cancelled': { label: 'Cancelled', variant: 'destructive' },
-      'rejected': { label: 'Rejected', variant: 'destructive' }
-    };
-
-    const statusInfo = statusMap[status] || { label: status, variant: 'outline' as const };
-    
-    return (
-      <Badge variant={statusInfo.variant} className="ml-2">
-        {statusInfo.label}
-      </Badge>
-    );
+    return <StatusBadge status={status} />;
   };
 
   if (!customer) {

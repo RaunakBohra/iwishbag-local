@@ -8,10 +8,16 @@ import {
   User, 
   Clock, 
   TrendingUp,
-  DollarSign 
+  DollarSign,
+  Activity,
+  ShoppingCart,
+  Truck,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 export const RecentActivity = () => {
   const { formatAmount } = useUserCurrency();
@@ -108,12 +114,7 @@ export const RecentActivity = () => {
                   <p className="font-medium text-sm">
                     {formatAmount(displayAmount)}
                   </p>
-                  <Badge 
-                    variant="secondary" 
-                    className={getStatusColor(quote.approval_status || quote.status)}
-                  >
-                    {quote.approval_status || quote.status || 'pending'}
-                  </Badge>
+                  <StatusBadge status={quote.approval_status || quote.status || 'pending'} />
                 </div>
               </div>
             );

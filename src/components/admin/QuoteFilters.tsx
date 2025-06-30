@@ -1,7 +1,8 @@
-
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 interface QuoteFiltersProps {
     searchTerm: string;
@@ -11,6 +12,13 @@ interface QuoteFiltersProps {
 }
 
 export const QuoteFilters = ({ searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange }: QuoteFiltersProps) => {
+    const { quoteStatuses } = useStatusManagement();
+
+    // Get only quote statuses for filtering
+    const availableQuoteStatuses = (quoteStatuses || [])
+        .filter(status => status.isActive)
+        .sort((a, b) => a.order - b.order);
+
     return (
         <div className="flex gap-4">
             <div className="relative flex-1">
@@ -28,11 +36,15 @@ export const QuoteFilters = ({ searchTerm, onSearchTermChange, statusFilter, onS
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="all">All Quotes</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="calculated">Calculated</SelectItem>
-                    <SelectItem value="sent">Sent</SelectItem>
-                    <SelectItem value="accepted">Accepted</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    {availableQuoteStatuses.map((status) => (
+                        <SelectItem key={status.name} value={status.name}>
+                            <div className="flex items-center gap-2">
+                                <Badge variant={status.color} className="text-xs">
+                                    {status.label}
+                                </Badge>
+                            </div>
+                        </SelectItem>
+                    ))}
                 </SelectContent>
             </Select>
         </div>

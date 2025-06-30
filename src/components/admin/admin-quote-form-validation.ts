@@ -27,6 +27,7 @@ export const adminQuoteFormSchema = z.object({
     final_currency: z.string(),
     priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
     internal_notes: z.string().optional(),
+    status: z.string().optional(),
     items: z.array(adminQuoteItemSchema),
 });
 

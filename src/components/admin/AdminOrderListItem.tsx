@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { MultiCurrencyDisplay } from "./MultiCurrencyDisplay";
 import { useAdminCurrencyDisplay } from "@/hooks/useAdminCurrencyDisplay";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 type OrderWithItems = Tables<'quotes'> & { 
   quote_items: Tables<'quote_items'>[];
@@ -118,7 +119,7 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect }: AdminOrderLi
                             </div>
                             <div>
                                 <div className="flex items-center flex-wrap gap-1">
-                                    <Badge variant={getStatusColor(order.status) as any}>{order.status}</Badge>
+                                    <StatusBadge status={order.status} />
                                     {getPriorityBadge(order.priority)}
                                 </div>
                                 {order.status === 'cancelled' && order.rejection_details && (

@@ -84,7 +84,7 @@ export const usePerformanceMonitor = () => {
 };
 
 // Virtual scrolling hook for large lists
-export const useVirtualScroll = <T>(
+export const useVirtualScroll = <T,>(
   items: T[],
   itemHeight: number,
   containerHeight: number

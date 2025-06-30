@@ -1,4 +1,3 @@
-
 import {
   Select,
   SelectContent,
@@ -6,12 +5,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
+import { Badge } from "@/components/ui/badge";
 
-type StatusFilterProps = {
-  onStatusChange: (value: string) => void;
-};
+interface StatusFilterProps {
+  onStatusChange: (status: string) => void;
+}
 
 export const StatusFilter = ({ onStatusChange }: StatusFilterProps) => {
+  const { quoteStatuses } = useStatusManagement();
+
+  // Get only quote statuses for filtering
+  const availableQuoteStatuses = (quoteStatuses || [])
+    .filter(status => status.isActive)
+    .sort((a, b) => a.order - b.order);
+
   return (
     <Select onValueChange={onStatusChange} defaultValue="all">
       <SelectTrigger className="w-full sm:w-[180px]">
@@ -19,15 +27,15 @@ export const StatusFilter = ({ onStatusChange }: StatusFilterProps) => {
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="all">All Statuses</SelectItem>
-        <SelectItem value="pending">Pending</SelectItem>
-        <SelectItem value="cod_pending">COD Pending</SelectItem>
-        <SelectItem value="bank_transfer_pending">Bank Transfer Pending</SelectItem>
-        <SelectItem value="paid">Paid</SelectItem>
-        <SelectItem value="approved">Approved</SelectItem>
-        <SelectItem value="ordered">Ordered</SelectItem>
-        <SelectItem value="completed">Completed</SelectItem>
-        <SelectItem value="rejected">Rejected</SelectItem>
-        <SelectItem value="cancelled">Cancelled</SelectItem>
+        {availableQuoteStatuses.map((status) => (
+          <SelectItem key={status.name} value={status.name}>
+            <div className="flex items-center gap-2">
+              <Badge variant={status.color} className="text-xs">
+                {status.label}
+              </Badge>
+            </div>
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );

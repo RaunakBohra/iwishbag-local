@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +5,7 @@ import { Tables } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useNavigate } from "react-router-dom";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 type QuoteWithItems = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
@@ -23,6 +23,7 @@ export const useQuoteManagement = () => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const { toast } = useToast();
+    const { orderStatuses } = useStatusManagement();
 
     const { data: quotes, isLoading: quotesLoading } = useQuery<QuoteWithItems[]>({
         queryKey: ['admin-quotes', statusFilter, searchTerm],
@@ -31,6 +32,12 @@ export const useQuoteManagement = () => {
                 .from('quotes')
                 .select('*, quote_items(*), rejection_reasons(reason)')
                 .order('created_at', { ascending: false });
+            
+            // Filter out order statuses to show only quotes
+            if (orderStatuses && orderStatuses.length > 0) {
+                const orderStatusNames = orderStatuses.map(status => status.name);
+                query = query.not('status', 'in', orderStatusNames);
+            }
         
             if (statusFilter !== 'all') {
                 query = query.eq('status', statusFilter);
@@ -44,7 +51,8 @@ export const useQuoteManagement = () => {
             const { data, error } = await query;
             if (error) throw new Error(error.message);
             return data || [];
-        }
+        },
+        enabled: !!orderStatuses, // Only run query when orderStatuses is loaded
     });
 
     const updateMultipleQuotesStatusMutation = useMutation({

@@ -1,21 +1,19 @@
 export type QuoteStatus = 
   | 'pending'           // Initial state when quote is created
-  | 'calculated'        // Quote has been calculated by admin
   | 'sent'             // Quote has been sent to customer
-  | 'accepted'         // Customer has accepted the quote
-  | 'cancelled'        // Quote has been cancelled
-  | 'cod_pending'      // Cash on delivery payment pending
-  | 'bank_transfer_pending' // Bank transfer payment pending
+  | 'approved'         // Customer has approved the quote
+  | 'rejected'         // Quote has been rejected
+  | 'expired'          // Quote has expired
   | 'paid'             // Payment received
   | 'ordered'          // Order has been placed
   | 'shipped'          // Order has been shipped
   | 'completed'        // Order has been completed
-  | 'rejected';        // Quote has been rejected
+  | 'cancelled';       // Quote or order has been cancelled
 
 export type QuoteApprovalStatus = 
   | 'pending'          // Waiting for customer approval
   | 'approved'         // Customer has approved
-  | 'rejected';        // Customer has rejected
+  | 'rejected';
 
 export type PaymentMethod = 
   | 'stripe'           // Stripe payment
@@ -37,22 +35,24 @@ export const isValidStatusTransition = (currentState: QuoteState, newState: Part
     // Validate status transitions
     switch (currentState.status) {
       case 'pending':
-        return ['calculated', 'cancelled'].includes(newState.status);
-      case 'calculated':
-        return ['sent', 'cancelled'].includes(newState.status);
+        return ['sent', 'rejected'].includes(newState.status);
       case 'sent':
-        return ['accepted', 'rejected', 'cancelled'].includes(newState.status);
-      case 'accepted':
-        return ['cod_pending', 'bank_transfer_pending', 'cancelled'].includes(newState.status);
-      case 'cod_pending':
-      case 'bank_transfer_pending':
-        return ['paid', 'cancelled'].includes(newState.status);
+        return ['approved', 'rejected', 'expired'].includes(newState.status);
+      case 'approved':
+        return ['rejected'].includes(newState.status);
+      case 'rejected':
+        return ['approved'].includes(newState.status);
+      case 'expired':
+        return ['approved'].includes(newState.status);
       case 'paid':
         return ['ordered', 'cancelled'].includes(newState.status);
       case 'ordered':
         return ['shipped', 'cancelled'].includes(newState.status);
       case 'shipped':
         return ['completed', 'cancelled'].includes(newState.status);
+      case 'completed':
+      case 'cancelled':
+        return false; // Terminal states
       default:
         return false;
     }
@@ -71,13 +71,6 @@ export const isValidStatusTransition = (currentState: QuoteState, newState: Part
     if (newState.in_cart && currentState.approval_status !== 'approved') return false;
     // Can only remove from cart if quote is in cart
     if (!newState.in_cart && !currentState.in_cart) return false;
-    return true;
-  }
-
-  // If payment method is changing
-  if (newState.payment_method !== undefined && newState.payment_method !== currentState.payment_method) {
-    // Can only set payment method if quote is accepted
-    if (currentState.status !== 'accepted') return false;
     return true;
   }
 

@@ -32,6 +32,161 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
   const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<DeliveryOption | null>(null);
 
+  // Fetch shipping route and delivery options
+  useEffect(() => {
+    if (!quote) return;
+
+    const fetchShippingData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        let currentRoute = null;
+        // 1. Try to fetch by shipping_route_id if present
+        if (quote.shipping_route_id) {
+          const { data: routeById, error: routeByIdError } = await supabase
+            .from('shipping_routes')
+            .select('*')
+            .eq('id', quote.shipping_route_id)
+            .maybeSingle();
+          if (routeByIdError || !routeById) {
+            console.error('Error fetching shipping route by id:', routeByIdError);
+          } else {
+            currentRoute = routeById;
+          }
+        }
+
+        // 2. Fallback to origin/destination matching
+        if (!currentRoute) {
+          const originCountry = quote.origin_country || 'US';
+          const destinationCountry = quote.country_code;
+
+          console.log('[DeliveryTimeline] Fetching shipping route:', {
+            originCountry,
+            destinationCountry,
+            quoteId: quote.id
+          });
+
+          const { data: routeData, error: routeError } = await supabase
+            .from('shipping_routes')
+            .select('*')
+            .eq('origin_country', originCountry)
+            .eq('destination_country', destinationCountry)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (routeError) {
+            console.error('Error fetching shipping route:', routeError);
+          } else if (routeData) {
+            currentRoute = routeData;
+          }
+
+          // If no exact match found, try to find any route for destination country
+          if (!currentRoute) {
+            const { data: fallbackRoute, error: fallbackError } = await supabase
+              .from('shipping_routes')
+              .select('*')
+              .eq('destination_country', destinationCountry)
+              .eq('is_active', true)
+              .maybeSingle();
+            
+            if (fallbackError) {
+              console.error('Error fetching fallback shipping route:', fallbackError);
+            } else if (fallbackRoute) {
+              currentRoute = fallbackRoute;
+            }
+          }
+
+          // If still no route found, create a default one
+          if (!currentRoute) {
+            console.warn(`No shipping route found for ${originCountry} → ${destinationCountry}, using default`);
+            currentRoute = {
+              id: 0,
+              origin_country: originCountry,
+              destination_country: destinationCountry,
+              base_shipping_cost: 25.00,
+              cost_per_kg: 5.00,
+              shipping_per_kg: 5.00,
+              cost_percentage: 2.5,
+              processing_days: 2,
+              customs_clearance_days: 3,
+              weight_unit: 'kg',
+              delivery_options: [
+                {
+                  id: 'default',
+                  name: 'Standard Delivery',
+                  carrier: 'Standard',
+                  min_days: 7,
+                  max_days: 14,
+                  price: 25.00,
+                  active: true
+                }
+              ],
+              weight_tiers: [
+                { min: 0, max: 1, cost: 15.00 },
+                { min: 1, max: 3, cost: 25.00 },
+                { min: 3, max: 5, cost: 35.00 },
+              ],
+              carriers: [
+                { name: 'Standard', costMultiplier: 1.0, days: '7-14' }
+              ],
+              is_active: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+          }
+        }
+
+        setShippingRoute(currentRoute);
+
+        // Parse delivery options
+        let options: DeliveryOption[] = [];
+        if (currentRoute.delivery_options && Array.isArray(currentRoute.delivery_options)) {
+          options = currentRoute.delivery_options.map((opt: any, index: number) => ({
+            id: opt.id || `option-${index}`,
+            name: opt.name || `Option ${index + 1}`,
+            min_days: opt.min_days || 0,
+            max_days: opt.max_days || 0,
+            cost: opt.cost || 0
+          }));
+        }
+
+        // Create default option if none exist
+        if (options.length === 0) {
+          options = [{
+            id: 'default',
+            name: 'Standard Delivery',
+            min_days: 7,
+            max_days: 14,
+            cost: 0
+          }];
+        }
+
+        // Filter options based on quote's enabled_delivery_options
+        const quoteEnabledOptions = quote.enabled_delivery_options || [];
+        if (quoteEnabledOptions.length > 0) {
+          options = options.filter(option => quoteEnabledOptions.includes(option.id));
+        }
+
+        setDeliveryOptions(options);
+        
+        // Set selected option
+        const defaultOption = selectedOptionId 
+          ? options.find(opt => opt.id === selectedOptionId) 
+          : options[0];
+        setSelectedOption(defaultOption || options[0]);
+
+      } catch (err: any) {
+        console.error('Error fetching shipping data:', err);
+        setError(err.message || 'Failed to load delivery information');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchShippingData();
+  }, [quote?.id, quote?.shipping_route_id, quote?.origin_country, quote?.country_code, selectedOptionId, quote?.enabled_delivery_options]);
+
   // Early return if no quote data
   if (!quote) {
     return (
@@ -97,116 +252,6 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
       return `${minMonth} ${minDay} - ${maxMonth} ${maxDay}`;
     }
   };
-
-  // Fetch shipping route and delivery options
-  useEffect(() => {
-    const fetchShippingData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        let currentRoute = null;
-        // 1. Try to fetch by shipping_route_id if present
-        if (quote.shipping_route_id) {
-          const { data: routeById, error: routeByIdError } = await supabase
-            .from('shipping_routes')
-            .select('*')
-            .eq('id', quote.shipping_route_id)
-            .single();
-          if (routeByIdError || !routeById) {
-            console.error('Error fetching shipping route by id:', routeByIdError);
-          } else {
-            currentRoute = routeById;
-          }
-        }
-
-        // 2. Fallback to origin/destination matching
-        if (!currentRoute) {
-          const originCountry = quote.origin_country || 'US';
-          const destinationCountry = quote.country_code;
-
-          console.log('[DeliveryTimeline] Fetching shipping route:', {
-            originCountry,
-            destinationCountry,
-            quoteId: quote.id
-          });
-
-          const { data: routeData, error: routeError } = await supabase
-            .from('shipping_routes')
-            .select('*')
-            .eq('origin_country', originCountry)
-            .eq('destination_country', destinationCountry)
-            .eq('is_active', true)
-            .single();
-
-          if (routeError) {
-            console.error('Error fetching shipping route:', routeError);
-            // Try to find any route for destination country
-            const { data: fallbackRoute, error: fallbackError } = await supabase
-              .from('shipping_routes')
-              .select('*')
-              .eq('destination_country', destinationCountry)
-              .eq('is_active', true)
-              .single();
-            
-            if (fallbackError || !fallbackRoute) {
-              throw new Error(`No shipping route found for ${destinationCountry}. Please contact support.`);
-            }
-            currentRoute = fallbackRoute;
-          } else {
-            currentRoute = routeData;
-          }
-        }
-
-        setShippingRoute(currentRoute);
-
-        // Parse delivery options
-        let options: DeliveryOption[] = [];
-        if (currentRoute.delivery_options && Array.isArray(currentRoute.delivery_options)) {
-          options = currentRoute.delivery_options.map((opt: any, index: number) => ({
-            id: opt.id || `option-${index}`,
-            name: opt.name || `Option ${index + 1}`,
-            min_days: opt.min_days || 0,
-            max_days: opt.max_days || 0,
-            cost: opt.cost || 0
-          }));
-        }
-
-        // Create default option if none exist
-        if (options.length === 0) {
-          options = [{
-            id: 'default',
-            name: 'Standard Delivery',
-            min_days: 7,
-            max_days: 14,
-            cost: 0
-          }];
-        }
-
-        // Filter options based on quote's enabled_delivery_options
-        const quoteEnabledOptions = quote.enabled_delivery_options || [];
-        if (quoteEnabledOptions.length > 0) {
-          options = options.filter(option => quoteEnabledOptions.includes(option.id));
-        }
-
-        setDeliveryOptions(options);
-        
-        // Set selected option
-        const defaultOption = selectedOptionId 
-          ? options.find(opt => opt.id === selectedOptionId) 
-          : options[0];
-        setSelectedOption(defaultOption || options[0]);
-
-      } catch (err: any) {
-        console.error('Error fetching shipping data:', err);
-        setError(err.message || 'Failed to load delivery information');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchShippingData();
-  }, [quote.id, quote.shipping_route_id, quote.origin_country, quote.country_code, selectedOptionId]);
 
   if (loading) {
     return (

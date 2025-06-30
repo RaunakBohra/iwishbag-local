@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, Bell, MessageSquare, ShoppingCart, LayoutDashboard, User, Menu, Search, Sun, Moon, MoreVertical, Building, Home, Package, Settings } from "lucide-react";
+import { LogOut, MessageSquare, ShoppingCart, LayoutDashboard, User, Menu, Search, Sun, Moon, MoreVertical, Building, Home, Package, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -59,25 +59,6 @@ const Header = () => {
     },
     enabled: !!user,
     refetchInterval: 60000,
-  });
-
-  const { data: unreadNotificationsCount } = useQuery({
-      queryKey: ['unreadNotificationsCount', user?.id],
-      queryFn: async () => {
-          if (!user) return 0;
-          const { count, error } = await supabase
-              .from('notifications')
-              .select('*', { count: 'exact', head: true })
-              .eq('is_read', false)
-              .eq('user_id', user.id);
-          if (error) {
-              console.error('Error fetching unread notifications count:', error);
-              return 0;
-          }
-          return count || 0;
-      },
-      enabled: !!user,
-      refetchInterval: 60000,
   });
 
   const { data: approvedQuotesCount } = useQuery({
@@ -208,31 +189,10 @@ const Header = () => {
           
           {user ? (
             <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4">
-              {/* Desktop View - Enhanced with better spacing and visual hierarchy */}
+              {/* Desktop View - Show all actions */}
               <div className="hidden sm:flex items-center space-x-1 md:space-x-2 lg:space-x-3">
-                {/* Cart with enhanced styling */}
-                <div className="relative">
-              <CartDrawer />
-                </div>
-
-                {/* Notifications with improved badge */}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="relative hover:bg-accent flex-shrink-0 h-9 w-9 transition-colors" 
-                  onClick={() => navigate('/notifications')}
-                >
-                <Bell className="h-4 w-4" />
-                {unreadNotificationsCount && unreadNotificationsCount > 0 && (
-                    <Badge 
-                      variant="destructive" 
-                      className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs font-medium animate-pulse"
-                    >
-                      {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
-                  </Badge>
-                )}
-              </Button>
-              
+                <CartDrawer />
+                
                 {/* Messages with improved badge */}
                 <Button 
                   variant="ghost" 
@@ -274,7 +234,7 @@ const Header = () => {
                   <SheetTrigger asChild>
                     <Button variant="ghost" size="icon" className="relative hover:bg-accent flex-shrink-0 h-9 w-9">
                       <MoreVertical className="h-4 w-4" />
-                      {(unreadNotificationsCount > 0 || unreadMessagesCount > 0) && (
+                      {unreadMessagesCount > 0 && (
                         <Badge variant="destructive" className="absolute -top-1 -right-1 h-2 w-2 p-0 rounded-full" />
                       )}
                     </Button>
@@ -284,7 +244,7 @@ const Header = () => {
                       <SheetTitle>Menu</SheetTitle>
                     </SheetHeader>
                     <div className="py-6 space-y-4">
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <Button
                           variant="outline"
                           className="flex flex-col items-center justify-center h-24"
@@ -309,22 +269,6 @@ const Header = () => {
                           {unreadMessagesCount > 0 && (
                             <Badge variant="destructive" className="absolute top-2 right-2">
                               {unreadMessagesCount}
-                            </Badge>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="flex flex-col items-center justify-center h-24 relative"
-                          onClick={() => {
-                            navigate('/notifications');
-                            setIsSheetOpen(false);
-                          }}
-                        >
-                          <Bell className="h-6 w-6 mb-2" />
-                          <span className="text-sm">Notifications</span>
-                          {unreadNotificationsCount > 0 && (
-                            <Badge variant="destructive" className="absolute top-2 right-2">
-                              {unreadNotificationsCount}
                             </Badge>
                           )}
                         </Button>

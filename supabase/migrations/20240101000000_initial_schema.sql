@@ -14,12 +14,6 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
-    CREATE TYPE public.quote_status AS ENUM ('pending', 'calculated', 'sent', 'accepted', 'paid', 'ordered', 'shipped', 'completed', 'cancelled');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
-
-DO $$ BEGIN
     CREATE TYPE public.quote_approval_status AS ENUM ('pending', 'approved', 'rejected');
 EXCEPTION
     WHEN duplicate_object THEN null;
@@ -321,7 +315,7 @@ CREATE TABLE IF NOT EXISTS public.quotes (
     display_id TEXT UNIQUE,
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     email TEXT NOT NULL CHECK (email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
-    status public.quote_status DEFAULT 'pending',
+    status TEXT,
     approval_status public.quote_approval_status DEFAULT 'pending',
     priority public.quote_priority DEFAULT 'normal',
     country_code TEXT REFERENCES public.country_settings(code),

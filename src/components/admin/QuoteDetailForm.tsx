@@ -11,6 +11,7 @@ import { useWatch } from "react-hook-form";
 import { useEffect, useMemo } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercentage, detectedCustomsTier }: {
   form: any;
@@ -20,6 +21,7 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
 }) => {
   const { toast } = useToast();
   const { data: allCountries } = useAllCountries();
+  const { quoteStatuses, orderStatuses } = useStatusManagement();
 
   // Watch form values
   const watchedValues = useWatch({
@@ -78,6 +80,13 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
   const handleNumberInputWheel = (e: React.WheelEvent) => {
     (e.currentTarget as HTMLInputElement).blur();
   };
+
+  // Get only quote statuses for the status dropdown
+  const availableQuoteStatuses = useMemo(() => {
+    return (quoteStatuses || [])
+      .filter(status => status.isActive)
+      .sort((a, b) => a.order - b.order);
+  }, [quoteStatuses]);
 
   return (
     <div className="space-y-6">
@@ -320,15 +329,15 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="calculated">Calculated</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="ordered">Ordered</SelectItem>
-                <SelectItem value="shipped">Shipped</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                {availableQuoteStatuses.map((status) => (
+                  <SelectItem key={status.name} value={status.name}>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={status.color} className="text-xs">
+                        {status.label}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <FormMessage />

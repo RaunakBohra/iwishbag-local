@@ -25,6 +25,7 @@ export const QuoteCurrencySummary = ({ quote, countries }: QuoteCurrencySummaryP
           <p className="font-semibold">System Currency: <span className="font-normal">USD</span></p>
           <p className="text-xs text-muted-foreground">All prices are calculated and displayed in USD for consistency.</p>
         </div>
+
         <div>
           <p className="font-semibold">Quote Currency: <span className="font-normal">USD</span></p>
           <p className="text-xs text-muted-foreground">Final quote will be provided in USD.</p>
@@ -33,3 +34,4 @@ export const QuoteCurrencySummary = ({ quote, countries }: QuoteCurrencySummaryP
     </Card>
   );
 };
+

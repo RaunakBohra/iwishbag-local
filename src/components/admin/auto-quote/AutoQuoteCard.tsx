@@ -1,9 +1,10 @@
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Eye, CheckCircle, XCircle, Clock, Zap, DollarSign, Package, ExternalLink, Truck, Route } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 interface AutoQuoteCardProps {
   quote: any;
@@ -18,19 +19,6 @@ export const AutoQuoteCard: React.FC<AutoQuoteCardProps> = ({
   onApprove,
   onReject
 }) => {
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="secondary" className="flex items-center gap-1"><Clock className="h-3 w-3" /> Pending</Badge>;
-      case 'approved':
-        return <Badge variant="default" className="flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive" className="flex items-center gap-1"><XCircle className="h-3 w-3" /> Rejected</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.8) return 'text-green-600';
     if (confidence >= 0.6) return 'text-yellow-600';
@@ -71,7 +59,7 @@ export const AutoQuoteCard: React.FC<AutoQuoteCardProps> = ({
                   </a>
                 )}
               </div>
-              {getStatusBadge(quote.status)}
+              <StatusBadge status={quote.status} />
             </div>
 
             {/* Product Info */}
@@ -149,13 +137,16 @@ export const AutoQuoteCard: React.FC<AutoQuoteCardProps> = ({
             {/* Total and Timestamp */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="font-medium">Total:</span>
-                <span className="text-lg font-bold text-green-600">
-                  {formatCurrency(quote.finalTotal || 0)}
+                <StatusBadge status={quote.status} />
+                <span className={`text-sm font-medium ${getConfidenceColor(quote.confidence)}`}>
+                  {Math.round(quote.confidence * 100)}% confidence
                 </span>
               </div>
-              <div className="text-sm text-muted-foreground">
-                {quote.createdAt ? formatDistanceToNow(new Date(quote.createdAt), { addSuffix: true }) : 'Unknown time'}
+              <div className="text-right">
+                <p className="text-lg font-bold">{formatCurrency(quote.finalTotal || 0)}</p>
+                <p className="text-sm text-muted-foreground">
+                  {quote.createdAt ? formatDistanceToNow(new Date(quote.createdAt), { addSuffix: true }) : 'Unknown time'}
+                </p>
               </div>
             </div>
           </div>

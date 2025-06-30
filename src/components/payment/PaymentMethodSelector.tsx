@@ -56,17 +56,22 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   showRecommended = true,
   disabled = false
 }) => {
-  const {
-    availableMethods,
-    methodsLoading,
-    getRecommendedPaymentMethod,
-    isMobileOnlyPayment,
-    getPaymentMethodDisplay,
-  } = usePaymentGateways();
-
   const [showMobileWarning, setShowMobileWarning] = useState(false);
+  const { data: availableMethods, isLoading, getRecommendedPaymentMethod, isMobileOnlyPayment, getPaymentMethodDisplay } = usePaymentGateways();
 
-  if (methodsLoading) {
+  // Ensure selectedMethod is always a valid available method
+  const validSelectedMethod = availableMethods?.includes(selectedMethod) 
+    ? selectedMethod 
+    : availableMethods?.[0] || 'bank_transfer';
+
+  // Notify parent if the valid method differs from the prop
+  useEffect(() => {
+    if (validSelectedMethod !== selectedMethod && availableMethods?.length) {
+      onMethodChange(validSelectedMethod);
+    }
+  }, [validSelectedMethod, selectedMethod, availableMethods, onMethodChange]);
+
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -78,7 +83,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         <CardContent>
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center space-x-3 p-4 border rounded-lg animate-pulse">
+              <div key={i} className="flex items-start space-x-3 p-4 border rounded-lg">
                 <div className="w-4 h-4 bg-gray-200 rounded"></div>
                 <div className="flex-1 space-y-2">
                   <div className="h-4 bg-gray-200 rounded w-1/3"></div>
@@ -94,18 +99,6 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
   const availablePaymentMethods = availableMethods?.map(code => getPaymentMethodDisplay(code)) || [];
   const recommendedMethod = getRecommendedPaymentMethod();
-
-  // Ensure selectedMethod is always a valid available method
-  const validSelectedMethod = availableMethods?.includes(selectedMethod) 
-    ? selectedMethod 
-    : availableMethods?.[0] || 'bank_transfer';
-
-  // Notify parent if the valid method differs from the prop
-  useEffect(() => {
-    if (validSelectedMethod !== selectedMethod && availableMethods?.length) {
-      onMethodChange(validSelectedMethod);
-    }
-  }, [validSelectedMethod, selectedMethod, availableMethods, onMethodChange]);
 
   const handleMethodChange = (method: string) => {
     if (disabled) return;

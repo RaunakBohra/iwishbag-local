@@ -96,7 +96,7 @@ export const addressValidationSchema = {
   },
   phone: {
     required: false,
-    pattern: /^[\+]?[1-9][\d]{0,15}$/,
+    pattern: /^[+]?[1-9]\d{0,15}$/,
   },
   email: {
     required: false,

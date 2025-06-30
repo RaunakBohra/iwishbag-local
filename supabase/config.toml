@@ -2,11 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-<<<<<<< HEAD
 project_id = "iwishBag-new"
-=======
-project_id = "global-wishlist-hub-main"
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
 [api]
 enabled = true
@@ -173,16 +169,6 @@ otp_length = 6
 otp_expiry = 3600
 
 # Use a production-ready SMTP server
-<<<<<<< HEAD
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
-=======
 [auth.email.smtp]
 enabled = true
 host = "smtp.resend.com"
@@ -191,7 +177,6 @@ user = "resend"
 pass = "env(RESEND_API_KEY)"
 admin_email = "info@whyteclub.com"
 sender_name = "iWishBag New"
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
@@ -312,12 +297,6 @@ deno_version = 1
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
-<<<<<<< HEAD
-=======
-[edge_runtime.secrets]
-RESEND_API_KEY = "env(RESEND_API_KEY)"
-
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 [analytics]
 enabled = true
 port = 54327

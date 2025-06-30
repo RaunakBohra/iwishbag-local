@@ -22,14 +22,11 @@ import Checkout from "@/pages/Checkout";
 import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AdminProtectedRoute from "@/components/auth/AdminProtectedRoute";
-import EmergencyAdmin from "@/pages/EmergencyAdmin";
 import { MessageCenter } from "@/components/messaging/MessageCenter";
-import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { Cart } from "@/components/cart/Cart";
 import CostEstimatorPage from "@/pages/CostEstimator";
 import CustomerOrderDetailPage from "@/pages/CustomerOrderDetailPage";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
-import ButtonPreview from "@/pages/ButtonPreview";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import CartAnalyticsPage from "@/pages/admin/CartAnalytics";
 import CartRecoveryPage from "@/pages/admin/CartRecovery";
@@ -38,6 +35,7 @@ import PaymentManagement from "@/pages/admin/PaymentManagement";
 import AutoQuotesPage from "@/pages/admin/AutoQuotes";
 import AutoQuoteSettingsPage from "@/pages/admin/AutoQuoteSettings";
 import ShippingRoutesPage from "@/pages/admin/ShippingRoutes";
+import StatusManagementPage from "@/pages/admin/StatusManagement";
 
 // Direct imports instead of lazy loading
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -54,6 +52,7 @@ import { QuoteTemplatesPage } from "@/components/admin/QuoteTemplatesPage";
 import { BankAccountSettings } from "@/components/admin/BankAccountSettings";
 import { SystemSettings } from "@/components/admin/SystemSettings";
 import { HomePageSettings } from "@/components/admin/HomePageSettings";
+import { StatusManagementTest } from "@/components/admin/StatusManagementTest";
 
 const router = createBrowserRouter([
   {
@@ -87,6 +86,8 @@ const router = createBrowserRouter([
           { path: "home-page-settings", element: <HomePageSettings /> },
           { path: "payment-management", element: <PaymentManagement /> },
           { path: "shipping-routes", element: <ShippingRoutesPage /> },
+          { path: "status-management", element: <StatusManagementPage /> },
+          { path: "status-test", element: <StatusManagementTest /> },
           { path: "*", element: <NotFound /> },
         ],
       },
@@ -129,10 +130,6 @@ const router = createBrowserRouter([
         element: <CostEstimatorPage />,
       },
       {
-        path: "emergency-admin",
-        element: <EmergencyAdmin />,
-      },
-      {
         element: <ProtectedRoute />,
         children: [
           {
@@ -165,18 +162,10 @@ const router = createBrowserRouter([
             element: <OrderConfirmationPage />,
           },
           {
-            path: "notifications",
-            element: <NotificationCenter />,
-          },
-          {
             path: "profile",
             element: <Profile />,
           },
         ],
-      },
-      {
-        path: "button-preview",
-        element: <ButtonPreview />,
       },
       {
         path: "*",

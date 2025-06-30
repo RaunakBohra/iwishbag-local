@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { QuoteFormValues } from "@/components/forms/quote-form-validation";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
-import { useQuoteNotifications } from "@/hooks/useQuoteNotifications";
+import { useEmailNotifications } from "@/hooks/useEmailNotifications";
 import { Tables } from "@/integrations/supabase/types";
 
 interface UseQuoteSubmissionProps {
@@ -32,7 +32,25 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const { sendConfirmationEmail } = useQuoteNotifications();
+  const { sendEmail } = useEmailNotifications();
+
+  // Simple confirmation email function
+  const sendConfirmationEmail = async (quoteId: string, email: string) => {
+    try {
+      await sendEmail({
+        to: email,
+        template: 'quote_sent',
+        data: {
+          quoteId: quoteId,
+          customerName: user?.user_metadata?.full_name || email.split('@')[0] || 'Customer',
+          totalAmount: 'Pending',
+          currency: selectedCountryCurrency
+        }
+      });
+    } catch (error) {
+      console.error('Error sending confirmation email:', error);
+    }
+  };
 
   const submitSeparateQuotes = async (values: QuoteSubmissionData, finalEmail: string) => {
     const { items, countryCode, shippingAddress } = values;
@@ -77,13 +95,6 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
             user_id: user.id,
             role: 'user',
             created_by: user.id
-          });
-
-        // Create notification preferences
-        await supabase
-          .from('notification_preferences')
-          .insert({
-            user_id: user.id
           });
       }
     }
@@ -161,7 +172,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
     // Send confirmation emails for each quote
     for (const quoteId of createdQuotes) {
       try {
-        await sendConfirmationEmail(quoteId);
+        await sendConfirmationEmail(quoteId, finalEmail);
       } catch (error) {
         console.error(`Error sending confirmation for quote ${quoteId}:`, error);
       }
@@ -216,13 +227,6 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
             user_id: user.id,
             role: 'user',
             created_by: user.id
-          });
-
-        // Create notification preferences
-        await supabase
-          .from('notification_preferences')
-          .insert({
-            user_id: user.id
           });
       }
     }
@@ -295,7 +299,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
 
     // Send confirmation email
     try {
-      await sendConfirmationEmail(quote.id);
+      await sendConfirmationEmail(quote.id, finalEmail);
     } catch (error) {
       console.error("Error sending confirmation email:", error);
     }

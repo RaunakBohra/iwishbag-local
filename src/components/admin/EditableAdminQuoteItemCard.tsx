@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Control } from "react-hook-form";
+import { Control, useWatch } from "react-hook-form";
 import { AdminQuoteFormValues } from "@/components/admin/admin-quote-form-validation";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Trash2 } from "lucide-react";
@@ -37,11 +37,38 @@ export const EditableAdminQuoteItemCard = ({
     (e.currentTarget as HTMLInputElement).blur();
   };
 
-  // Use smart weight unit if available, otherwise fall back to route unit or kg
-  const displayWeightUnit = smartWeightUnit || routeWeightUnit || 'kg';
-
-  // Local state for weight input values to avoid conversion issues
   const [weightInputValues, setWeightInputValues] = useState<Record<number, string>>({});
+  const [currencySymbol, setCurrencySymbol] = useState('$');
+  const [displayWeightUnit, setDisplayWeightUnit] = useState<'kg' | 'lb'>('kg');
+
+  // Get the current field value for weight
+  const weightField = useWatch({
+    control,
+    name: `items.${index}.item_weight`
+  });
+
+  // Update input value when field value changes externally (e.g., from form reset)
+  useEffect(() => {
+    const getDisplayValue = () => {
+      if (!weightField) return '';
+      let displayValue = weightField;
+      if (displayWeightUnit && displayWeightUnit !== 'kg') {
+        displayValue = convertWeight(weightField, 'kg', displayWeightUnit);
+      }
+      // Format to 2 decimal places, ensuring no floating point artifacts
+      const formatted = parseFloat(displayValue.toFixed(2));
+      return formatted.toString();
+    };
+
+    const expectedDisplayValue = getDisplayValue();
+    setWeightInputValues(prev => ({
+      ...prev,
+      [index]: expectedDisplayValue
+    }));
+  }, [weightField, displayWeightUnit, index]);
+
+  // Use smart weight unit if available, otherwise fall back to route unit or kg
+  const displayWeightUnitFinal = smartWeightUnit || routeWeightUnit || 'kg';
 
   // Get currency symbol - using country currency
   const getCurrencySymbol = (currency: string) => {
@@ -61,7 +88,7 @@ export const EditableAdminQuoteItemCard = ({
     return symbols[currency] || currency;
   };
 
-  const currencySymbol = getCurrencySymbol(countryCurrency);
+  const currencySymbolFinal = getCurrencySymbol(countryCurrency);
 
   return (
     <Card>
@@ -156,7 +183,7 @@ export const EditableAdminQuoteItemCard = ({
             name={`items.${index}.item_price`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Price ({currencySymbol})</FormLabel>
+                <FormLabel>Price ({currencySymbolFinal})</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -239,19 +266,10 @@ export const EditableAdminQuoteItemCard = ({
               // Get current input value or initialize from field value
               const currentInputValue = weightInputValues[index] ?? getDisplayValue();
 
-              // Update input value when field value changes externally (e.g., from form reset)
-              useEffect(() => {
-                const expectedDisplayValue = getDisplayValue();
-                setWeightInputValues(prev => ({
-                  ...prev,
-                  [index]: expectedDisplayValue
-                }));
-              }, [field.value, displayWeightUnit, index]);
-
               return (
                 <FormItem>
                   <FormLabel>
-                    Weight ({displayWeightUnit})
+                    Weight ({displayWeightUnitFinal})
                     {smartWeightUnit && smartWeightUnit !== 'kg' && (
                       <span className="text-xs text-green-600 ml-1">(Auto-detected)</span>
                     )}
@@ -273,7 +291,7 @@ export const EditableAdminQuoteItemCard = ({
                       }}
                       onBlur={handleBlur}
                       onWheel={handleNumberInputWheel}
-                      placeholder={`Weight in ${displayWeightUnit}`}
+                      placeholder={`Weight in ${displayWeightUnitFinal}`}
                       inputMode="decimal"
                     />
                   </FormControl>

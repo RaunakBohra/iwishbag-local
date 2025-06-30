@@ -23,7 +23,7 @@ const addressFormSchema = z.object({
   state: z.string().max(100, 'State must be no more than 100 characters').optional(),
   postalCode: z.string().min(3, 'Postal code must be at least 3 characters').max(20, 'Postal code must be no more than 20 characters'),
   country: z.string().length(2, 'Country must be a 2-letter country code'),
-  phone: z.string().regex(/^[\+]?[1-9][\d]{0,15}$/, 'Invalid phone number format').optional().or(z.literal('')),
+  phone: z.string().regex(/^[+]?[1-9]\d{0,15}$/, 'Invalid phone number format').optional().or(z.literal('')),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
 });
 

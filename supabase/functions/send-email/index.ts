@@ -4,11 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-<<<<<<< HEAD
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Max-Age': '86400',
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 }
 
 interface EmailRequest {
@@ -22,22 +19,15 @@ serve(async (req) => {
   console.log("🔵 === SEND-EMAIL FUNCTION STARTED ===");
   console.log("🔵 Request method:", req.method);
   console.log("🔵 Request URL:", req.url);
-<<<<<<< HEAD
   console.log("🔵 Request headers:", Object.fromEntries(req.headers.entries()));
-=======
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
 
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     console.log("🔵 Handling CORS preflight request");
-<<<<<<< HEAD
     return new Response(null, { 
       status: 204,
       headers: corsHeaders 
     })
-=======
-    return new Response('ok', { headers: corsHeaders })
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
   }
 
   try {
@@ -114,7 +104,6 @@ serve(async (req) => {
         const errorData = await response.text();
         console.log("❌ Resend API error response:", errorData);
         console.error('!!! RESEND API ERROR !!!:', errorData);
-<<<<<<< HEAD
         return new Response(
           JSON.stringify({ error: `Failed to send email with status: ${response.status}`, details: errorData }),
           { 
@@ -122,9 +111,6 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           }
         );
-=======
-        throw new Error(`Failed to send email with status: ${response.status}`);
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
       }
 
       const result = await response.json();
@@ -140,7 +126,6 @@ serve(async (req) => {
     } catch (apiError) {
       console.log("❌ Resend API call failed:", apiError);
       console.error('!!! RESEND API CALL FAILED !!!:', apiError);
-<<<<<<< HEAD
       return new Response(
         JSON.stringify({ error: 'Failed to send email', details: apiError.message }),
         { 
@@ -148,9 +133,6 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
-=======
-      throw apiError; // Re-throw to ensure the function fails as expected
->>>>>>> ed4ff60d414419cde21cca73f742c35e0184a312
     }
 
   } catch (error) {

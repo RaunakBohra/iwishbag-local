@@ -22,7 +22,7 @@ export const DeliveryOptionsDisplay = ({ routeId }: DeliveryOptionsDisplayProps)
           .from('shipping_routes')
           .select('delivery_options, processing_days')
           .eq('id', routeId)
-          .single();
+          .maybeSingle();
 
         if (error) {
           throw error;

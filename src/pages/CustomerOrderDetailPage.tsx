@@ -1,4 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Package, User, Home, Ship } from "lucide-react";
 import { useCustomerOrderDetail } from "@/hooks/useCustomerOrderDetail";
@@ -9,6 +11,7 @@ import { OrderReceipt } from "@/components/dashboard/OrderReceipt";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 const CustomerOrderDetailPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -71,7 +74,7 @@ const CustomerOrderDetailPage = () => {
             
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                  <h1 className="text-2xl font-bold">Order {displayId}</h1>
-                 <Badge variant="secondary" className="capitalize text-base">{order.status}</Badge>
+                 <StatusBadge status={order.status} />
             </div>
 
             <OrderTimeline currentStatus={order.status} />

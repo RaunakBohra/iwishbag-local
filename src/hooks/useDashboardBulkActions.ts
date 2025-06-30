@@ -1,6 +1,5 @@
-
-import { useOptimisticCartMutations } from "./useOptimisticCartMutations";
-import { useAdvancedToast } from "./useAdvancedToast";
+import { useCartMutations } from "./useCartMutations";
+import { useToast } from "./use-toast";
 import { Tables } from "@/integrations/supabase/types";
 
 type Quote = Tables<'quotes'>;
@@ -21,9 +20,9 @@ export const useDashboardBulkActions = ({
     isAddingBulk, 
     bulkRemoveFromCart, 
     isRemovingBulk 
-  } = useOptimisticCartMutations();
+  } = useCartMutations();
   
-  const { showSuccessToast, showErrorToast, showUndoableToast } = useAdvancedToast();
+  const { toast } = useToast();
 
   const handleBulkAddToCart = async () => {
     const idsToAdd = selectedQuoteIds.filter(id => {
@@ -35,25 +34,27 @@ export const useDashboardBulkActions = ({
       try {
         bulkAddToCart(idsToAdd);
         setSelectedQuoteIds([]);
-        showSuccessToast(
-          "Items added to cart",
-          `${idsToAdd.length} item(s) successfully added to your cart.`,
-          {
-            actionLabel: "View Cart",
-            onAction: () => window.location.href = "/cart"
+        toast({
+          title: "Items added to cart",
+          description: `${idsToAdd.length} item(s) successfully added to your cart.`,
+          action: {
+            label: "View Cart",
+            onClick: () => window.location.href = "/cart"
           }
-        );
+        });
       } catch (error) {
-        showErrorToast(
-          "Failed to add items",
-          "Please try again or contact support if the problem persists."
-        );
+        toast({
+          title: "Failed to add items",
+          description: "Please try again or contact support if the problem persists.",
+          variant: "destructive"
+        });
       }
     } else {
-      showErrorToast(
-        "No items to add",
-        "Select approved quotes that are not already in your cart."
-      );
+      toast({
+        title: "No items to add",
+        description: "Select approved quotes that are not already in your cart.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -67,25 +68,30 @@ export const useDashboardBulkActions = ({
       try {
         bulkRemoveFromCart(idsToRemove);
         setSelectedQuoteIds([]);
-        showUndoableToast(
-          "Items removed from cart",
-          () => {
-            // Undo action - add items back to cart
-            bulkAddToCart(idsToRemove);
-          },
-          `${idsToRemove.length} item(s) removed from your cart.`
-        );
+        toast({
+          title: "Items removed from cart",
+          description: `${idsToRemove.length} item(s) removed from your cart.`,
+          action: {
+            label: "Undo",
+            onClick: () => {
+              // Undo action - add items back to cart
+              bulkAddToCart(idsToRemove);
+            }
+          }
+        });
       } catch (error) {
-        showErrorToast(
-          "Failed to remove items",
-          "Please try again or contact support if the problem persists."
-        );
+        toast({
+          title: "Failed to remove items",
+          description: "Please try again or contact support if the problem persists.",
+          variant: "destructive"
+        });
       }
     } else {
-      showErrorToast(
-        "No items to remove",
-        "Select quotes that are already in your cart."
-      );
+      toast({
+        title: "No items to remove",
+        description: "Select quotes that are already in your cart.",
+        variant: "destructive"
+      });
     }
   };
 

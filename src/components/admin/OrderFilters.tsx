@@ -1,4 +1,3 @@
-
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -8,6 +7,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search } from "lucide-react";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
+import { Badge } from "@/components/ui/badge";
 
 type OrderFiltersProps = {
   searchTerm: string;
@@ -22,6 +23,13 @@ export const OrderFilters = ({
   statusFilter,
   onStatusFilterChange,
 }: OrderFiltersProps) => {
+  const { orderStatuses } = useStatusManagement();
+
+  // Get only order statuses for filtering
+  const availableOrderStatuses = (orderStatuses || [])
+    .filter(status => status.isActive)
+    .sort((a, b) => a.order - b.order);
+
   return (
     <div className="flex flex-col sm:flex-row gap-4">
       <div className="relative flex-1">
@@ -39,13 +47,15 @@ export const OrderFilters = ({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Orders</SelectItem>
-          <SelectItem value="cod_pending">COD Pending</SelectItem>
-          <SelectItem value="bank_transfer_pending">Bank Transfer Pending</SelectItem>
-          <SelectItem value="paid">Paid</SelectItem>
-          <SelectItem value="ordered">Ordered</SelectItem>
-          <SelectItem value="shipped">Shipped</SelectItem>
-          <SelectItem value="completed">Completed</SelectItem>
-          <SelectItem value="cancelled">Cancelled</SelectItem>
+          {availableOrderStatuses.map((status) => (
+            <SelectItem key={status.name} value={status.name}>
+              <div className="flex items-center gap-2">
+                <Badge variant={status.color} className="text-xs">
+                  {status.label}
+                </Badge>
+              </div>
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>

@@ -6,6 +6,8 @@ import { Tables } from "@/integrations/supabase/types";
 import { useNavigate } from "react-router-dom";
 import { MultiCurrencyDisplay } from "./MultiCurrencyDisplay";
 import { useAdminCurrencyDisplay } from "@/hooks/useAdminCurrencyDisplay";
+import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 type QuoteWithItems = Tables<'quotes'> & { 
   quote_items: Tables<'quote_items'>[];
@@ -14,29 +16,10 @@ type QuoteWithItems = Tables<'quotes'> & {
 };
 
 interface AdminQuoteListItemProps {
-    quote: QuoteWithItems;
-    isSelected: boolean;
-    onSelect: (id: string) => void;
+  quote: QuoteWithItems;
+  isSelected: boolean;
+  onSelect: (quoteId: string, selected: boolean) => void;
 }
-
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'pending':
-        case 'cod_pending':
-        case 'bank_transfer_pending':
-        case 'calculated': 
-            return 'secondary';
-        case 'sent': 
-            return 'outline';
-        case 'accepted': 
-        case 'paid':
-            return 'default';
-        case 'cancelled': 
-            return 'destructive';
-        default: 
-            return 'default';
-    }
-};
 
 const getPriorityBadge = (priority: QuoteWithItems['priority']) => {
   if (!priority) return null;
@@ -73,53 +56,57 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
     }) : [];
 
     return (
-        <Card>
+        <Card className={`cursor-pointer transition-all duration-200 hover:shadow-md ${isSelected ? 'ring-2 ring-primary' : ''}`}>
             <CardContent className="p-4">
-                <div className="flex justify-between items-start gap-4">
-                    <div className="flex items-start gap-4 flex-1">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1">
                         <Checkbox
                             checked={isSelected}
-                            onCheckedChange={() => onSelect(quote.id)}
-                            aria-label="Select quote"
-                            className="mt-1"
+                            onCheckedChange={(checked) => onSelect(quote.id, checked as boolean)}
+                            onClick={(e) => e.stopPropagation()}
                         />
-                        <div className="flex-1 grid grid-cols-4 gap-4">
-                            <div>
-                                <h3 className="font-semibold">{quote.display_id || itemSummary}</h3>
-                                {quote.order_display_id && <p className="text-sm font-bold text-muted-foreground">Order ID: {quote.order_display_id}</p>}
-                                {quote.display_id && <p className="text-sm text-muted-foreground">{itemSummary}</p>}
-                                <p className="text-sm text-muted-foreground">Total items: {totalItems || quote.quantity || 0}</p>
-                                <p className="text-sm text-muted-foreground">{quote.email}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm">Country: {quote.country_code || 'Not set'}</p>
-                            </div>
-                            <div>
-                                <div>
-                                    <p className="text-sm mb-1">Final Total:</p>
-                                    {quote.final_total ? (
-                                        <MultiCurrencyDisplay 
-                                            currencies={currencyDisplays}
-                                            compact={true}
-                                        />
-                                    ) : (
-                                        <span className="text-sm text-muted-foreground">Not calculated</span>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-medium text-sm truncate">
+                                        {quote.display_id || quote.id.substring(0, 8)}
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground truncate">
+                                        {itemSummary}
+                                    </p>
+                                    {quote.email && (
+                                        <p className="text-xs text-muted-foreground">
+                                            {quote.email}
+                                        </p>
                                     )}
                                 </div>
-                            </div>
-                            <div>
-                                <div className="flex items-center flex-wrap gap-1">
-                                    <Badge variant={getStatusColor(quote.status) as any}>{quote.status}</Badge>
-                                    {getPriorityBadge(quote.priority)}
+                                <div>
+                                    <div>
+                                        <p className="text-sm mb-1">Final Total:</p>
+                                        {quote.final_total ? (
+                                            <MultiCurrencyDisplay 
+                                                currencies={currencyDisplays}
+                                                compact={true}
+                                            />
+                                        ) : (
+                                            <span className="text-sm text-muted-foreground">Not calculated</span>
+                                        )}
+                                    </div>
                                 </div>
-                                {quote.status === 'cancelled' && quote.rejection_reasons?.reason && (
-                                    <p className="text-xs text-red-600 mt-1" title={quote.rejection_reasons.reason}>
-                                        <strong>Reason:</strong> {quote.rejection_reasons.reason}
+                                <div>
+                                    <div className="flex items-center flex-wrap gap-1">
+                                        <StatusBadge status={quote.status} />
+                                        {getPriorityBadge(quote.priority)}
+                                    </div>
+                                    {quote.status === 'cancelled' && quote.rejection_reasons?.reason && (
+                                        <p className="text-xs text-red-600 mt-1" title={quote.rejection_reasons.reason}>
+                                            <strong>Reason:</strong> {quote.rejection_reasons.reason}
+                                        </p>
+                                    )}
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        {new Date(quote.created_at).toLocaleDateString()}
                                     </p>
-                                )}
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    {new Date(quote.created_at).toLocaleDateString()}
-                                </p>
+                                </div>
                             </div>
                         </div>
                     </div>

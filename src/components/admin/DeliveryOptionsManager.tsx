@@ -59,30 +59,74 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
           const originCountry = quote.origin_country || 'US';
           const destinationCountry = quote.country_code;
 
+          // First try to find exact match
           const { data: routeData, error: routeError } = await supabase
             .from('shipping_routes')
             .select('*')
             .eq('origin_country', originCountry)
             .eq('destination_country', destinationCountry)
             .eq('is_active', true)
-            .single();
+            .maybeSingle();
 
           if (routeError) {
             console.error('Error fetching shipping route:', routeError);
-            // Try to find any route for destination country
+          } else if (routeData) {
+            currentRoute = routeData;
+          }
+
+          // If no exact match found, try to find any route for destination country
+          if (!currentRoute) {
             const { data: fallbackRoute, error: fallbackError } = await supabase
               .from('shipping_routes')
               .select('*')
               .eq('destination_country', destinationCountry)
               .eq('is_active', true)
-              .single();
+              .maybeSingle();
             
-            if (fallbackError || !fallbackRoute) {
-              throw new Error(`No shipping route found for ${destinationCountry}. Please contact support.`);
+            if (fallbackError) {
+              console.error('Error fetching fallback shipping route:', fallbackError);
+            } else if (fallbackRoute) {
+              currentRoute = fallbackRoute;
             }
-            currentRoute = fallbackRoute;
-          } else {
-            currentRoute = routeData;
+          }
+
+          // If still no route found, create a default one
+          if (!currentRoute) {
+            console.warn(`No shipping route found for ${originCountry} → ${destinationCountry}, using default`);
+            currentRoute = {
+              id: 0,
+              origin_country: originCountry,
+              destination_country: destinationCountry,
+              base_shipping_cost: 25.00,
+              cost_per_kg: 5.00,
+              shipping_per_kg: 5.00,
+              cost_percentage: 2.5,
+              processing_days: 2,
+              customs_clearance_days: 3,
+              weight_unit: 'kg',
+              delivery_options: [
+                {
+                  id: 'default',
+                  name: 'Standard Delivery',
+                  carrier: 'Standard',
+                  min_days: 7,
+                  max_days: 14,
+                  price: 25.00,
+                  active: true
+                }
+              ],
+              weight_tiers: [
+                { min: 0, max: 1, cost: 15.00 },
+                { min: 1, max: 3, cost: 25.00 },
+                { min: 3, max: 5, cost: 35.00 },
+              ],
+              carriers: [
+                { name: 'Standard', costMultiplier: 1.0, days: '7-14' }
+              ],
+              is_active: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
           }
         }
 

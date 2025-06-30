@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 export const useDashboardState = () => {
   const { user } = useAuth();
@@ -9,6 +10,7 @@ export const useDashboardState = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQuoteIds, setSelectedQuoteIds] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const { orderStatuses } = useStatusManagement();
 
   const { data: allQuotes, isLoading, isError } = useQuery({
     queryKey: ['user-quotes-and-orders', user?.id],
@@ -27,10 +29,13 @@ export const useDashboardState = () => {
     enabled: !!user,
   });
 
-  const orderStatuses = useMemo(() => ['cod_pending', 'bank_transfer_pending', 'paid', 'ordered', 'shipped', 'completed', 'cancelled'], []);
+  const orderStatusNames = useMemo(() => 
+    orderStatuses ? orderStatuses.map(status => status.name) : [], 
+    [orderStatuses]
+  );
 
-  const quotes = useMemo(() => allQuotes?.filter(q => !orderStatuses.includes(q.status)) || [], [allQuotes, orderStatuses]);
-  const orders = useMemo(() => allQuotes?.filter(q => orderStatuses.includes(q.status)) || [], [allQuotes, orderStatuses]);
+  const quotes = useMemo(() => allQuotes?.filter(q => !orderStatusNames.includes(q.status)) || [], [allQuotes, orderStatusNames]);
+  const orders = useMemo(() => allQuotes?.filter(q => orderStatusNames.includes(q.status)) || [], [allQuotes, orderStatusNames]);
 
   const filteredQuotes = useMemo(() => {
     return quotes

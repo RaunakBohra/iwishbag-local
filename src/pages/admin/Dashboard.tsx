@@ -1,5 +1,4 @@
 import React from "react";
-import { SystemStatus } from "@/components/admin/SystemStatus";
 import { RecentActivity } from "@/components/admin/RecentActivity";
 import { DashboardSkeleton } from "@/components/admin/DashboardSkeleton";
 import { 
@@ -47,7 +46,6 @@ import { OrderManagementPage } from "@/components/admin/OrderManagementPage";
 import { CustomerManagementPage } from "@/components/admin/CustomerManagementPage";
 import { SystemSettings } from "@/components/admin/SystemSettings";
 import { PaymentGatewayManagement } from "@/components/admin/PaymentGatewayManagement";
-import { ExchangeRateManagement } from "@/components/admin/ExchangeRateManagement";
 import { CountrySettings } from "@/components/admin/CountrySettings";
 import { BankAccountSettings } from "@/components/admin/BankAccountSettings";
 import { HomePageSettings } from "@/components/admin/HomePageSettings";

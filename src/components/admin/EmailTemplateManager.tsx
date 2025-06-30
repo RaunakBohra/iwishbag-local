@@ -13,7 +13,13 @@ import {
   Trash2, 
   Copy,
   Save,
-  Settings
+  Settings,
+  Bell,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Truck,
+  Package
 } from "lucide-react";
 import { useCartAbandonmentEmails } from "@/hooks/useCartAbandonmentEmails";
 import { toast } from "sonner";
@@ -52,6 +58,27 @@ export default function EmailTemplateManager() {
 
   const queryClient = useQueryClient();
 
+  // Helper function to get boolean value from JSONB setting
+  const getSettingValue = (settingKey: string): boolean => {
+    const setting = emailSettings?.find(s => s.setting_key === settingKey);
+    if (!setting) return true; // Default to true if setting doesn't exist
+    
+    // Handle both boolean and JSONB values
+    if (typeof setting.setting_value === 'boolean') {
+      return setting.setting_value;
+    }
+    
+    // If it's JSONB, try to parse it
+    try {
+      const parsed = typeof setting.setting_value === 'string' 
+        ? JSON.parse(setting.setting_value) 
+        : setting.setting_value;
+      return parsed === true || parsed === 'true';
+    } catch {
+      return true; // Default to true if parsing fails
+    }
+  };
+
   const handleCreateTemplate = () => {
     setTemplateForm({ name: '', subject: '', html_content: '', template_type: 'cart_abandonment' });
     setShowCreateTemplate(true);
@@ -70,7 +97,11 @@ export default function EmailTemplateManager() {
 
   const handleSaveTemplate = () => {
     if (!templateForm.name || !templateForm.subject || !templateForm.html_content) {
-      toast.error('Please fill in all fields');
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -94,7 +125,10 @@ export default function EmailTemplateManager() {
   const handleDeleteTemplate = (templateId: string) => {
     // In a real implementation, this would delete from database
     console.log('Deleting template:', templateId);
-    toast.success('Template deleted successfully');
+    toast({
+      title: "Success",
+      description: "Template deleted successfully"
+    });
   };
 
   const handleCopyTemplate = (template: EmailTemplate) => {
@@ -103,7 +137,10 @@ Subject: ${template.subject}
 
 ${template.html_content}
     `);
-    toast.success('Template copied to clipboard');
+    toast({
+      title: "Success",
+      description: "Template copied to clipboard"
+    });
   };
 
   const saveTemplateMutation = useMutation({
@@ -140,6 +177,147 @@ ${template.html_content}
       });
     },
   });
+
+  // Create default status notification templates
+  const createDefaultStatusTemplates = async () => {
+    const defaultTemplates = [
+      {
+        name: 'Status Update - Quote Sent',
+        subject: 'Your Quote is Ready - {{quote_id}}',
+        html_content: `
+          <html>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2 style="color: #2563eb;">Your Quote is Ready!</h2>
+              
+              <p>Dear {{customer_name}},</p>
+              
+              <p>Your quote has been sent and is ready for review.</p>
+              
+              <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">Quote Details</h3>
+                <p><strong>Quote ID:</strong> {{quote_id}}</p>
+                <p><strong>Product:</strong> {{product_name}}</p>
+                <p><strong>Total Amount:</strong> {{total_amount}}</p>
+                <p><strong>Status:</strong> <span style="color: #2563eb; font-weight: bold;">Sent</span></p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="{{dashboard_url}}" 
+                   style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                  View Quote in Dashboard
+                </a>
+              </div>
+              
+              <p>If you have any questions, please don't hesitate to contact us.</p>
+              
+              <p>Best regards,<br>
+              The WishBag Team</p>
+            </div>
+          </body>
+          </html>
+        `,
+        template_type: 'status_notification'
+      },
+      {
+        name: 'Status Update - Quote Approved',
+        subject: 'Quote Approved - {{quote_id}}',
+        html_content: `
+          <html>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2 style="color: #16a34a;">Quote Approved!</h2>
+              
+              <p>Dear {{customer_name}},</p>
+              
+              <p>Great news! Your quote has been approved! You can now proceed with payment.</p>
+              
+              <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+                <h3 style="margin-top: 0; color: #16a34a;">Quote Details</h3>
+                <p><strong>Quote ID:</strong> {{quote_id}}</p>
+                <p><strong>Product:</strong> {{product_name}}</p>
+                <p><strong>Total Amount:</strong> {{total_amount}}</p>
+                <p><strong>Status:</strong> <span style="color: #16a34a; font-weight: bold;">Approved</span></p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="{{payment_url}}" 
+                   style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                  Proceed to Payment
+                </a>
+              </div>
+              
+              <p>Best regards,<br>
+              The WishBag Team</p>
+            </div>
+          </body>
+          </html>
+        `,
+        template_type: 'status_notification'
+      },
+      {
+        name: 'Status Update - Order Shipped',
+        subject: 'Your Order Has Been Shipped - {{order_id}}',
+        html_content: `
+          <html>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2 style="color: #7c3aed;">Your Order is on its Way!</h2>
+              
+              <p>Dear {{customer_name}},</p>
+              
+              <p>Exciting news! Your order has been shipped and is on its way to you.</p>
+              
+              <div style="background-color: #faf5ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #7c3aed;">
+                <h3 style="margin-top: 0; color: #7c3aed;">Order Details</h3>
+                <p><strong>Order ID:</strong> {{order_id}}</p>
+                <p><strong>Product:</strong> {{product_name}}</p>
+                <p><strong>Tracking Number:</strong> {{tracking_number}}</p>
+                <p><strong>Status:</strong> <span style="color: #7c3aed; font-weight: bold;">Shipped</span></p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="{{tracking_url}}" 
+                   style="background-color: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                  Track Your Order
+                </a>
+              </div>
+              
+              <p>We'll keep you updated on the delivery progress.</p>
+              
+              <p>Best regards,<br>
+              The WishBag Team</p>
+            </div>
+          </body>
+          </html>
+        `,
+        template_type: 'status_notification'
+      }
+    ];
+
+    try {
+      for (const template of defaultTemplates) {
+        await supabase
+          .from('email_templates')
+          .upsert(template)
+          .select()
+          .single();
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['email-templates'] });
+      toast({
+        title: "Success",
+        description: "Default status notification templates created successfully"
+      });
+    } catch (error) {
+      console.error('Error creating default templates:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create default templates",
+        variant: "destructive"
+      });
+    }
+  };
 
   if (loadingTemplates) {
     return (
@@ -188,7 +366,7 @@ ${template.html_content}
                   </p>
                 </div>
                 <Switch
-                  checked={emailSettings?.find(s => s.setting_key === 'email_sending_enabled')?.setting_value ?? true}
+                  checked={getSettingValue('email_sending_enabled')}
                   onCheckedChange={(checked) => 
                     updateEmailSetting({ settingKey: 'email_sending_enabled', value: checked })
                   }
@@ -205,7 +383,7 @@ ${template.html_content}
                   </p>
                 </div>
                 <Switch
-                  checked={emailSettings?.find(s => s.setting_key === 'cart_abandonment_enabled')?.setting_value ?? true}
+                  checked={getSettingValue('cart_abandonment_enabled')}
                   onCheckedChange={(checked) => 
                     updateEmailSetting({ settingKey: 'cart_abandonment_enabled', value: checked })
                   }
@@ -222,7 +400,7 @@ ${template.html_content}
                   </p>
                 </div>
                 <Switch
-                  checked={emailSettings?.find(s => s.setting_key === 'quote_notifications_enabled')?.setting_value ?? true}
+                  checked={getSettingValue('quote_notifications_enabled')}
                   onCheckedChange={(checked) => 
                     updateEmailSetting({ settingKey: 'quote_notifications_enabled', value: checked })
                   }
@@ -239,9 +417,26 @@ ${template.html_content}
                   </p>
                 </div>
                 <Switch
-                  checked={emailSettings?.find(s => s.setting_key === 'order_notifications_enabled')?.setting_value ?? true}
+                  checked={getSettingValue('order_notifications_enabled')}
                   onCheckedChange={(checked) => 
                     updateEmailSetting({ settingKey: 'order_notifications_enabled', value: checked })
+                  }
+                  disabled={isUpdating}
+                />
+              </div>
+
+              {/* Status Notifications Toggle */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">Status Change Notifications</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Send emails when quote or order status changes
+                  </p>
+                </div>
+                <Switch
+                  checked={getSettingValue('status_notifications_enabled')}
+                  onCheckedChange={(checked) => 
+                    updateEmailSetting({ settingKey: 'status_notifications_enabled', value: checked })
                   }
                   disabled={isUpdating}
                 />
@@ -258,13 +453,19 @@ ${template.html_content}
         <div>
           <h2 className="text-2xl font-bold">Email Templates</h2>
           <p className="text-muted-foreground">
-            Manage all email templates for quotes, orders, and cart abandonment recovery
+            Manage all email templates for quotes, orders, cart abandonment recovery, and status notifications
           </p>
         </div>
-        <Button onClick={() => setShowCreateTemplate(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Template
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={createDefaultStatusTemplates} variant="outline">
+            <Bell className="h-4 w-4 mr-2" />
+            Create Status Templates
+          </Button>
+          <Button onClick={() => setShowCreateTemplate(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Template
+          </Button>
+        </div>
       </div>
 
       {/* Templates List */}
@@ -283,6 +484,9 @@ ${template.html_content}
                   )}
                   {template.template_type === 'order_notification' && (
                     <Badge variant="outline">Order</Badge>
+                  )}
+                  {template.template_type === 'status_notification' && (
+                    <Badge variant="default">Status</Badge>
                   )}
                   {template.name.includes('Default') && (
                     <Badge variant="default">Default</Badge>
@@ -332,7 +536,7 @@ ${template.html_content}
                 </div>
               </div>
               <div className="text-xs text-muted-foreground">
-                Available variables: {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}
+                Available variables: {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'}
               </div>
             </CardContent>
           </Card>
@@ -371,6 +575,7 @@ ${template.html_content}
                   <SelectItem value="cart_abandonment">Cart Abandonment</SelectItem>
                   <SelectItem value="quote_notification">Quote Notification</SelectItem>
                   <SelectItem value="order_notification">Order Notification</SelectItem>
+                  <SelectItem value="status_notification">Status Notification</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -393,7 +598,7 @@ ${template.html_content}
                 rows={8}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Use {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'} as variables
+                Use {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'} as variables
               </p>
             </div>
             <div className="flex gap-2 pt-4">
@@ -445,6 +650,7 @@ ${template.html_content}
                   <SelectItem value="cart_abandonment">Cart Abandonment</SelectItem>
                   <SelectItem value="quote_notification">Quote Notification</SelectItem>
                   <SelectItem value="order_notification">Order Notification</SelectItem>
+                  <SelectItem value="status_notification">Status Notification</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -467,7 +673,7 @@ ${template.html_content}
                 rows={8}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Use {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'} as variables
+                Use {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'} as variables
               </p>
             </div>
             <div className="flex gap-2 pt-4">

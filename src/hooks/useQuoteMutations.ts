@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Tables } from "@/integrations/supabase/types";
+import { useStatusTransitions } from "./useStatusTransitions";
 
 type Quote = Tables<'quotes'>;
 type QuoteItem = Tables<'quote_items'>;
@@ -23,24 +24,45 @@ async function getAccessToken() {
 export const useQuoteMutations = (id: string | undefined) => {
     const queryClient = useQueryClient();
     const { toast } = useToast();
+    const { handleQuoteSent, handleAutoCalculation } = useStatusTransitions();
 
     const updateQuoteMutation = useMutation({
         mutationFn: async (quoteData: Partial<Quote> & { id: string }) => {
             if (!quoteData.id || quoteData.id === "undefined") {
                 throw new Error("Quote ID is missing or invalid.");
             }
+            
             // Remove undefined and 'undefined' string fields
             const cleanQuoteData = Object.fromEntries(
                 Object.entries(quoteData).filter(
                     ([, value]) => value !== undefined && value !== "undefined"
                 )
             );
+            
             console.log('[QUOTE UPDATE PAYLOAD]', cleanQuoteData);
+            
+            // Get current quote status before update
+            const { data: currentQuote } = await supabase
+                .from('quotes')
+                .select('status')
+                .eq('id', quoteData.id)
+                .single();
+            
             const { error } = await supabase
                 .from('quotes')
                 .update(cleanQuoteData)
                 .eq('id', quoteData.id);
+                
             if (error) throw new Error(error.message);
+
+            // Handle automatic status transitions
+            const newStatus = cleanQuoteData.status;
+            if (newStatus && currentQuote?.status !== newStatus) {
+                // If status changed to 'calculated' from 'pending', trigger auto-calculation transition
+                if (newStatus === 'calculated' && currentQuote?.status === 'pending') {
+                    await handleAutoCalculation(quoteData.id, currentQuote.status);
+                }
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-quote', id] });
@@ -109,31 +131,26 @@ export const useQuoteMutations = (id: string | undefined) => {
             const accessToken = await getAccessToken();
 
             if (accessToken) {
-            // Send email using the edge function
-            const { error: emailError } = await supabase.functions.invoke('send-email', {
-                body: {
-                    to: quote.email,
-                    subject: emailSubject,
-                    html: emailHtml,
+                // Send email using the edge function
+                const { error: emailError } = await supabase.functions.invoke('send-email', {
+                    body: {
+                        to: quote.email,
+                        subject: emailSubject,
+                        html: emailHtml,
                     },
                     headers: { Authorization: `Bearer ${accessToken}` }
-            });
+                });
 
-            if (emailError) {
-                console.error('Email sending error:', emailError);
-                throw new Error(`Failed to send email: ${emailError.message}`);
+                if (emailError) {
+                    console.error('Email sending error:', emailError);
+                    throw new Error(`Failed to send email: ${emailError.message}`);
                 }
             } else {
                 console.warn('No access token available, skipping email send');
             }
 
-            // Update quote status to sent
-            const { error } = await supabase
-                .from('quotes')
-                .update({ status: 'sent' })
-                .eq('id', quote.id);
-            
-            if (error) throw error;
+            // Use the new status transition system instead of direct update
+            await handleQuoteSent(quote.id, quote.status || 'pending');
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-quote', id] });

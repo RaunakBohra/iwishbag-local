@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Send, MapPin, Calculator, CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Send, MapPin, Calculator, CheckCircle, XCircle, Clock, AlertTriangle, FileText, DollarSign, ShoppingCart, Truck, Circle } from "lucide-react";
 import { QuoteDetailForm } from "@/components/admin/QuoteDetailForm";
 import { QuoteMessaging } from "@/components/messaging/QuoteMessaging";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,19 +28,10 @@ import { Separator } from "@/components/ui/separator";
 import { CustomsTierDisplay } from "./CustomsTierDisplay";
 import { supabase } from '../../integrations/supabase/client';
 import { useAllCountries } from '../../hooks/useAllCountries';
-
-// Status workflow configuration
-const STATUS_WORKFLOW = {
-  pending: { next: ['calculated', 'cancelled'], label: 'Pending', color: 'secondary' },
-  calculated: { next: ['sent', 'cancelled'], label: 'Calculated', color: 'default' },
-  sent: { next: ['accepted', 'cancelled'], label: 'Sent', color: 'outline' },
-  accepted: { next: ['paid', 'cancelled'], label: 'Accepted', color: 'default' },
-  paid: { next: ['ordered', 'cancelled'], label: 'Paid', color: 'default' },
-  ordered: { next: ['shipped', 'cancelled'], label: 'Ordered', color: 'default' },
-  shipped: { next: ['completed', 'cancelled'], label: 'Shipped', color: 'default' },
-  completed: { next: [], label: 'Completed', color: 'default' },
-  cancelled: { next: [], label: 'Cancelled', color: 'destructive' }
-};
+import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { Icon } from '@/components/ui/icon';
+import { StatusTransitionHistory } from './StatusTransitionHistory';
+import { StatusTransitionTest } from './StatusTransitionTest';
 
 // Helper function to create a stable hash for comparison
 const createStableHash = (obj: any): string => {
@@ -85,6 +76,14 @@ const AdminQuoteDetailPage = () => {
     updateQuote,
   } = useAdminQuoteDetail(id);
 
+  // Use the new status management hook
+  const { 
+    getStatusConfig, 
+    isValidTransition,
+    isLoading: statusLoading,
+    statuses,
+  } = useStatusManagement();
+
   const [isAutoCalculating, setIsAutoCalculating] = useState(false);
   const [calculationError, setCalculationError] = useState<string | null>(null);
   const [lastCalculationTime, setLastCalculationTime] = useState<Date | null>(null);
@@ -96,14 +95,17 @@ const AdminQuoteDetailPage = () => {
   const calculationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Extract shipping address from shipping_address column, fallback to internal_notes for legacy quotes
-  const shippingAddress = quote && quote.shipping_address
-    ? quote.shipping_address as any
+  const shippingAddress = quote?.shipping_address 
+    ? JSON.parse(quote.shipping_address)
     : (quote ? extractShippingAddressFromNotes(quote.internal_notes) : null);
   const hasAddress = !!shippingAddress;
 
-  const purchaseCountry = form?.control ? useWatch({ control: form.control, name: "country_code" }) : undefined;
+  const purchaseCountry = useWatch({ 
+    control: form?.control || {} as any, 
+    name: "country_code" 
+  });
 
-  const isOrder = quote && ['cod_pending', 'bank_transfer_pending', 'paid', 'ordered', 'shipped', 'completed', 'cancelled'].includes(quote.status);
+  const isOrder = quote && ['paid', 'ordered', 'shipped', 'completed', 'cancelled'].includes(quote.status);
   const canRecalculate = quote && !['shipped', 'completed', 'cancelled'].includes(quote.status);
 
   // Get country currency for item cards
@@ -229,28 +231,21 @@ const AdminQuoteDetailPage = () => {
         clearTimeout(calculationTimeoutRef.current);
       }
     };
-  }, [valuesHash, triggerAutoCalculation, quote, canRecalculate, insurance_amount, customs_percentage, sales_tax_price, merchant_shipping_price, domestic_shipping, handling_charge, discount, currency, country_code, items]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (calculationTimeoutRef.current) {
-        clearTimeout(calculationTimeoutRef.current);
-      }
-    };
-  }, []);
+  }, [valuesHash, quote, canRecalculate, triggerAutoCalculation]);
 
   // Status management functions
   const updateQuoteStatus = async (newStatus: string) => {
     if (!quote) return;
 
     const currentStatus = quote.status;
-    const allowedTransitions = STATUS_WORKFLOW[currentStatus as keyof typeof STATUS_WORKFLOW]?.next || [];
-
-    if (!allowedTransitions.includes(newStatus)) {
+    const category = isOrder ? 'order' : 'quote';
+    
+    if (!isValidTransition(currentStatus, newStatus, category)) {
+      const statusConfig = statuses?.find(s => s.name === currentStatus);
+      const allowedTransitions = statusConfig?.allowedTransitions || [];
       toast({
         title: "Invalid Status Transition",
-        description: `Cannot change status from \"${currentStatus}\" to \"${newStatus}\". Allowed transitions: ${allowedTransitions.join(', ')}`,
+        description: `Cannot change status from "${currentStatus}" to "${newStatus}". Allowed transitions: ${allowedTransitions.join(', ')}`,
         variant: "destructive",
       });
       return;
@@ -258,9 +253,10 @@ const AdminQuoteDetailPage = () => {
 
     try {
       await updateQuote({ id: quote.id, status: newStatus as any });
+      const statusConfig = getStatusConfig(newStatus, category);
       toast({
         title: "Status Updated",
-        description: `Quote status changed to \"${STATUS_WORKFLOW[newStatus as keyof typeof STATUS_WORKFLOW]?.label}\"`,
+        description: `Quote status changed to "${statusConfig?.label || newStatus}"`,
       });
     } catch (error: any) {
       toast({
@@ -404,6 +400,20 @@ const AdminQuoteDetailPage = () => {
     </div>
   );
 
+  // Show loading state while statuses are being loaded
+  if (statusLoading) {
+    return (
+      <div className="container py-8 space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading status configurations...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !quote) {
     console.log('[AdminQuoteDetailPage] Error or no quote:', { error, quote });
     return (
@@ -433,10 +443,58 @@ const AdminQuoteDetailPage = () => {
     );
   }
 
-  const currentStatus = quote.status;
-  const statusConfig = STATUS_WORKFLOW[currentStatus as keyof typeof STATUS_WORKFLOW];
-  const allowedNextStatuses = statusConfig?.next || [];
+  const currentStatus = quote?.status || 'pending';
+  const statusConfig = statuses?.find(s => s.name === currentStatus);
+  const allowedNextStatuses = statusConfig?.allowedTransitions || [];
   
+  // Status transition buttons
+  const renderStatusButtons = () => {
+    const currentStatus = quote?.status || 'pending';
+    
+    // Get allowed transitions from status management
+    const statusConfig = statuses?.find(s => s.name === currentStatus);
+    const allowedTransitions = statusConfig?.allowedTransitions || [];
+
+    if (!statuses || statuses.length === 0) {
+      return (
+        <div className="text-sm text-muted-foreground">
+          Loading status configurations...
+        </div>
+      );
+    }
+
+    if (allowedTransitions.length === 0) {
+      return (
+        <div className="text-sm text-muted-foreground">
+          No status transitions available
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-wrap gap-2">
+        {allowedTransitions.map((nextStatus) => {
+          const nextStatusConfig = statuses?.find(s => s.name === nextStatus);
+          if (!nextStatusConfig) return null;
+
+          return (
+            <Button
+              key={nextStatus}
+              variant="outline"
+              size="sm"
+              onClick={() => updateQuoteStatus(nextStatus)}
+              disabled={isUpdating}
+              className="flex items-center gap-2"
+            >
+              {nextStatusConfig?.icon && <Icon name={nextStatusConfig.icon} className="mr-1" />}
+              Change to {nextStatusConfig.label}
+            </Button>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <Form {...form}>
       <div className="container py-8 space-y-6">
@@ -452,7 +510,8 @@ const AdminQuoteDetailPage = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Status Management
-              <Badge variant={statusConfig?.color as any}>
+              <Badge style={{ backgroundColor: statusConfig?.color || undefined }}>
+                {statusConfig?.icon && <Icon name={statusConfig.icon} className="mr-1" />}
                 {statusConfig?.label}
               </Badge>
             </CardTitle>
@@ -461,76 +520,7 @@ const AdminQuoteDetailPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {/* Quick Status Action Buttons */}
-              {allowedNextStatuses.map((nextStatus) => {
-                const nextConfig = STATUS_WORKFLOW[nextStatus as keyof typeof STATUS_WORKFLOW];
-                const isDestructive = nextStatus === 'cancelled';
-                
-                return (
-                  <AlertDialog key={nextStatus}>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant={isDestructive ? "destructive" : "default"}
-                        size="sm"
-                        disabled={isUpdating}
-                      >
-                        {isDestructive ? <XCircle className="h-4 w-4 mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                        {nextConfig?.label}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          {isDestructive ? 'Cancel Quote' : `Mark as ${nextConfig?.label}`}
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {isDestructive 
-                            ? 'Are you sure you want to cancel this quote? This action cannot be undone.'
-                            : `This will change the quote status to "${nextConfig?.label}". Continue?`
-                          }
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={() => updateQuoteStatus(nextStatus)}
-                          className={isDestructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
-                        >
-                          {isDestructive ? 'Cancel Quote' : `Mark as ${nextConfig?.label}`}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                );
-              })}
-
-              {/* Send Quote Button (special case) */}
-              {(currentStatus === 'calculated' || currentStatus === 'sent') && (
-                <Button 
-                  onClick={handleSendQuote}
-                  disabled={isSendingEmail || isUpdating}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {currentStatus === 'sent' ? 'Resend to Customer' : 'Send to Customer'}
-                </Button>
-              )}
-
-              {/* Manual Recalculate Button */}
-              {canRecalculate && (
-                <Button 
-                  onClick={triggerAutoCalculation}
-                  disabled={isAutoCalculating || isUpdating}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Calculator className="h-4 w-4 mr-2" />
-                  {isAutoCalculating ? 'Calculating...' : 'Force Recalculate'}
-                </Button>
-              )}
-            </div>
+            {renderStatusButtons()}
 
             {/* Auto-Calculation Status */}
             {canRecalculate && (
@@ -638,8 +628,11 @@ const AdminQuoteDetailPage = () => {
                   disabled={isUpdating || !canRecalculate}
                   className="w-full"
               >
-                  {isUpdating ? 'Updating...' : 'Update & Recalculate'}
+                  {isUpdating ? 'Updating...' : 'Update Quote & Status'}
               </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                💡 Updates all form fields including status, then recalculates the quote
+              </p>
             </form>
             <div className="space-y-4">
               <QuoteCurrencySummary quote={quote} countries={countries} />
@@ -773,6 +766,12 @@ const AdminQuoteDetailPage = () => {
                   </div>
                 </CardContent>
               </Card>
+              
+              {/* Status Transition History */}
+              <StatusTransitionHistory quoteId={quote.id} />
+              
+              {/* Status Transition Testing */}
+              <StatusTransitionTest quoteId={quote.id} currentStatus={quote.status} />
               
               {/* Shipping Address Management Section */}
               <ShippingAddressDisplay 

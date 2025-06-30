@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Command, FileText, Package, Users, ShoppingCart, Settings, BarChart3, X } from "lucide-react";
+import { Search, Command, FileText, Package, Users, ShoppingCart, Settings, BarChart3, X, Cog, Route } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -152,6 +152,33 @@ const searchItems: SearchItem[] = [
     icon: Settings,
     category: "Settings",
     keywords: ["home", "page", "website", "footer", "settings"]
+  },
+  {
+    id: "auto-settings",
+    title: "Auto Quote Settings",
+    description: "Configure automatic quote generation rules",
+    url: "/admin/auto-settings",
+    icon: Cog,
+    category: "Settings",
+    keywords: ["auto", "quote", "settings", "rules", "configuration", "automation"]
+  },
+  {
+    id: "status-management",
+    title: "Status Management",
+    description: "Configure quote and order statuses and workflows",
+    url: "/admin/status-management",
+    icon: Settings,
+    category: "Settings",
+    keywords: ["status", "workflow", "quotes", "orders", "configuration", "management"]
+  },
+  {
+    id: "shipping-routes",
+    title: "Shipping Routes",
+    description: "Manage shipping routes and delivery options",
+    url: "/admin/shipping-routes",
+    icon: Route,
+    category: "Settings",
+    keywords: ["shipping", "routes", "delivery", "logistics", "settings"]
   },
 ];
 

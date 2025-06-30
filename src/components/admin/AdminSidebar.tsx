@@ -93,6 +93,16 @@ const menuGroups = [
         icon: Cog,
       },
       {
+        title: "Status Management",
+        url: "/admin/status-management",
+        icon: Settings,
+      },
+      {
+        title: "Status Test",
+        url: "/admin/status-test",
+        icon: BarChart3,
+      },
+      {
         title: "Shipping Routes",
         url: "/admin/shipping-routes",
         icon: Route,
