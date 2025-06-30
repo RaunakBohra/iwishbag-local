@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2, Edit } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminRole } from "@/hooks/useAdminRole";
 
 type CustomsCategory = Tables<'customs_categories'>;
 
@@ -18,47 +19,25 @@ export const CustomsCategories = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-
-  // Check user role for admin access
-  const { data: userRole } = useQuery({
-    queryKey: ['user-role', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error) {
-        console.error('Error checking user role:', error);
-        return null;
-      }
-      
-      return data;
-    },
-    enabled: !!user?.id,
-  });
+  const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
 
   const { data: categories, isLoading, error } = useQuery({
     queryKey: ['customs-categories'],
     queryFn: async () => {
+      if (!isAdmin) throw new Error('Not authorized');
       const { data, error } = await supabase
         .from('customs_categories')
         .select('*')
         .order('name');
-      
       if (error) {
         console.error('Error fetching customs categories:', error);
         throw new Error(`Failed to fetch customs categories: ${error.message}`);
       }
-      
       return data;
     },
     retry: 3,
     retryDelay: 1000,
-    enabled: !!user?.id && !!userRole, // Only run when user and user role are loaded
+    enabled: !!user?.id && !!isAdmin && !isAdminLoading,
   });
 
   const createMutation = useMutation({
@@ -170,11 +149,6 @@ export const CustomsCategories = () => {
 
   if (isLoading) return <div>Loading customs categories...</div>;
 
-  // Show loading while user role is being fetched
-  if (!userRole && user?.id) {
-    return <div>Loading user permissions...</div>;
-  }
-
   if (error) {
     return (
       <div className="space-y-6">
@@ -188,7 +162,7 @@ export const CustomsCategories = () => {
               <p className="text-muted-foreground mb-4">{error.message}</p>
               <p className="text-sm text-muted-foreground">
                 User ID: {user?.id || 'Not logged in'}<br/>
-                User Role: {userRole?.role || 'No role found'}<br/>
+                User Role: {isAdmin ? 'Admin' : 'Not Admin'}<br/>
                 This might be a permissions issue. Please check if you have admin access.
               </p>
             </div>
@@ -204,7 +178,7 @@ export const CustomsCategories = () => {
         <h2 className="text-2xl font-bold">Customs Categories</h2>
         <div className="flex items-center gap-4">
           <div className="text-sm text-muted-foreground">
-            User Role: <span className="font-medium">{userRole?.role || 'No role'}</span>
+            User Role: <span className="font-medium">{isAdmin ? 'Admin' : 'Not Admin'}</span>
           </div>
           <Button onClick={() => setIsCreating(true)}>Add Category</Button>
         </div>

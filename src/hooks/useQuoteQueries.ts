@@ -4,10 +4,8 @@ import { Tables } from "@/integrations/supabase/types";
 
 type Quote = Tables<'quotes'>;
 type QuoteItem = Tables<'quote_items'>;
-type RejectionReason = Tables<'rejection_reasons'>;
 type QuoteWithItems = Quote & { 
     quote_items: QuoteItem[];
-    rejection_reasons: RejectionReason | null;
 };
 
 export const useQuoteQueries = (id: string | undefined) => {
@@ -17,7 +15,7 @@ export const useQuoteQueries = (id: string | undefined) => {
             if (!id) return null;
             const { data, error } = await supabase
                 .from('quotes')
-                .select('*, quote_items(*), rejection_reasons(*)')
+                .select('*, quote_items(*)')
                 .eq('id', id)
                 .single();
             if (error) {

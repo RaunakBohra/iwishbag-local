@@ -95,12 +95,12 @@ export const StatusTransitionTest: React.FC<StatusTransitionTestProps> = ({
           <User className="h-5 w-5" />
           Status Transition Testing
         </CardTitle>
-        <CardDescription>
+        <div className="text-sm text-muted-foreground flex items-center gap-2">
           Test automatic status transitions for this quote. Current status: 
           <Badge className="ml-2" variant="outline">
             {currentStatusConfig?.label || currentStatus}
           </Badge>
-        </CardDescription>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
@@ -130,8 +130,8 @@ export const StatusTransitionTest: React.FC<StatusTransitionTestProps> = ({
           
           {testTransitions.every(t => !t.enabled) && (
             <div className="text-center py-4 text-muted-foreground">
-              <p>No automatic transitions available for current status.</p>
-              <p className="text-sm">Change the quote status to test different transitions.</p>
+              <div>No automatic transitions available for current status.</div>
+              <div className="text-sm">Change the quote status to test different transitions.</div>
             </div>
           )}
         </div>

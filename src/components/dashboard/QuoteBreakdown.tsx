@@ -30,7 +30,6 @@ import { formatAmountForDisplay } from '@/lib/currencyUtils';
 
 type QuoteWithItems = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
-  rejection_reasons?: { reason: string } | null;
 };
 
 interface QuoteBreakdownProps {

@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
@@ -197,6 +197,9 @@ const AuthForm = () => {
         <DialogContent className="bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Sign Up</DialogTitle>
+            <DialogDescription>
+              Create a new account to start using our services.
+            </DialogDescription>
           </DialogHeader>
           <Form {...signUpForm}>
             <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
@@ -303,6 +306,9 @@ const AuthForm = () => {
         <DialogContent className="bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Forgot Password</DialogTitle>
+            <DialogDescription>
+              Enter your email address and we'll send you a password reset link.
+            </DialogDescription>
           </DialogHeader>
           <Form {...forgotForm}>
             <form onSubmit={forgotForm.handleSubmit(handleForgotPassword)} className="space-y-4">

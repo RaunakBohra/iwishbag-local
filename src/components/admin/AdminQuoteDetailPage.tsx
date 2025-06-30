@@ -96,7 +96,7 @@ const AdminQuoteDetailPage = () => {
 
   // Extract shipping address from shipping_address column, fallback to internal_notes for legacy quotes
   const shippingAddress = quote?.shipping_address 
-    ? JSON.parse(quote.shipping_address)
+    ? (typeof quote.shipping_address === 'string' ? JSON.parse(quote.shipping_address) : quote.shipping_address)
     : (quote ? extractShippingAddressFromNotes(quote.internal_notes) : null);
   const hasAddress = !!shippingAddress;
 
@@ -515,9 +515,9 @@ const AdminQuoteDetailPage = () => {
                 {statusConfig?.label}
               </Badge>
             </CardTitle>
-            <CardDescription>
+            <div className="text-sm text-muted-foreground">
               Manage quote status and workflow transitions
-            </CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
             {renderStatusButtons()}
@@ -576,12 +576,11 @@ const AdminQuoteDetailPage = () => {
               </div>
           </CardHeader>
           <CardContent className="space-y-4">
-               <p><strong>Customer Email:</strong> {quote.email}</p>
-               {quote.status === 'cancelled' && quote.rejection_reasons && (
+               <div><strong>Customer Email:</strong> {quote.email}</div>
+               {quote.status === 'cancelled' && quote.rejection_details && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
                       <h4 className="font-semibold mb-1">Rejection Information</h4>
-                      <p><strong>Reason:</strong> {quote.rejection_reasons.reason}</p>
-                      {quote.rejection_details && <p className="mt-1"><strong>Details:</strong> {quote.rejection_details}</p>}
+                      <div><strong>Reason:</strong> {quote.rejection_details}</div>
                   </div>
                )}
           </CardContent>

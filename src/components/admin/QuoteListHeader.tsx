@@ -1,10 +1,8 @@
-
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tables } from "@/integrations/supabase/types";
 
 type QuoteWithItems = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
-  rejection_reasons: { reason: string } | null;
 };
 
 interface QuoteListHeaderProps {

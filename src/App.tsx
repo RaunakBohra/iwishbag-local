@@ -10,7 +10,6 @@ import { Toaster } from "@/components/ui/toaster";
 import Layout from "@/components/layout/Layout";
 import Index from "@/pages/Index";
 import Quote from "@/pages/Quote";
-import QuoteAuto from "@/pages/QuoteAuto";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import QuoteDetails from "@/pages/QuoteDetails";
@@ -32,8 +31,6 @@ import CartAnalyticsPage from "@/pages/admin/CartAnalytics";
 import CartRecoveryPage from "@/pages/admin/CartRecovery";
 import EmailTemplatesPage from "@/pages/admin/EmailTemplates";
 import PaymentManagement from "@/pages/admin/PaymentManagement";
-import AutoQuotesPage from "@/pages/admin/AutoQuotes";
-import AutoQuoteSettingsPage from "@/pages/admin/AutoQuoteSettings";
 import ShippingRoutesPage from "@/pages/admin/ShippingRoutes";
 import StatusManagementPage from "@/pages/admin/StatusManagement";
 
@@ -70,8 +67,6 @@ const router = createBrowserRouter([
           { path: "analytics", element: <AdminAnalytics /> },
           { path: "rejection-analytics", element: <RejectionAnalytics /> },
           { path: "quotes", element: <QuoteManagementPage /> },
-          { path: "auto-quotes", element: <AutoQuotesPage /> },
-          { path: "auto-settings", element: <AutoQuoteSettingsPage /> },
           { path: "orders", element: <OrderManagementPage /> },
           { path: "orders/:id", element: <AdminQuoteDetailPage /> },
           { path: "customers", element: <EnhancedCustomerManagementPage /> },
@@ -104,10 +99,6 @@ const router = createBrowserRouter([
       {
         path: "quote",
         element: <Quote />,
-      },
-      {
-        path: "quote-auto",
-        element: <QuoteAuto />,
       },
       {
         path: "auth",

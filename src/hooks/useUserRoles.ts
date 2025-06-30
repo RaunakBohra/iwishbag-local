@@ -92,7 +92,7 @@ export const useUserRoles = () => {
           usersWithRoles.unshift({
             id: currentUser.id,
             email: currentUser.email || 'current-user@example.com',
-            full_name: currentUser.user_metadata?.full_name || null,
+            full_name: currentUser.full_name || currentUser.email || null,
             role: null,
             role_id: null,
             created_at: currentUser.created_at,

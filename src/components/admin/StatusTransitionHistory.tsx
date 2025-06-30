@@ -16,7 +16,6 @@ interface StatusTransition {
   metadata: Record<string, any>;
   changed_by: string | null;
   changed_at: string;
-  user_email?: string;
 }
 
 interface StatusTransitionHistoryProps {
@@ -88,19 +87,13 @@ export const StatusTransitionHistory: React.FC<StatusTransitionHistoryProps> = (
     queryFn: async () => {
       const { data, error } = await supabase
         .from('status_transitions')
-        .select(`
-          *,
-          profiles:changed_by(email)
-        `)
+        .select('*')
         .eq('quote_id', quoteId)
         .order('changed_at', { ascending: false });
 
       if (error) throw error;
       
-      return data?.map(transition => ({
-        ...transition,
-        user_email: transition.profiles?.email
-      })) as StatusTransition[];
+      return data as StatusTransition[];
     },
     enabled: !!quoteId
   });
@@ -206,10 +199,10 @@ export const StatusTransitionHistory: React.FC<StatusTransitionHistoryProps> = (
                       </span>
                     </div>
                     
-                    {transition.user_email && (
+                    {transition.changed_by && (
                       <div className="flex items-center gap-2">
                         <User className="h-3 w-3" />
-                        <span>Changed by: {transition.user_email}</span>
+                        <span>Changed by: {transition.changed_by}</span>
                       </div>
                     )}
                     

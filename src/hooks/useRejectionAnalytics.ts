@@ -1,19 +1,16 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { startOfMonth, subMonths, format } from 'date-fns';
 
-type RejectedQuote = Tables<'quotes'> & {
-    rejection_reasons: Pick<Tables<'rejection_reasons'>, 'reason' | 'category'> | null;
-};
+type RejectedQuote = Tables<'quotes'>;
 
 const fetchRejectedQuotes = async (): Promise<RejectedQuote[]> => {
     const { data, error } = await supabase
         .from('quotes')
-        .select('final_total, rejected_at, approval_status, status, rejection_reasons(reason, category)')
+        .select('final_total, rejected_at, approval_status, status, rejection_reason_id, rejection_details')
         .or('status.eq.cancelled,approval_status.eq.rejected')
-        .not('rejection_reasons', 'is', null);
+        .not('rejection_reason_id', 'is', null);
     
     if (error) {
         console.error("Error fetching rejected quotes:", error);
@@ -43,7 +40,7 @@ export const useRejectionAnalytics = () => {
         const totalValueLost = rejectedQuotes.reduce((acc, quote) => acc + (quote.final_total || 0), 0);
 
         const reasonsCount = rejectedQuotes.reduce((acc, quote) => {
-            const reason = quote.rejection_reasons?.reason || 'Unknown';
+            const reason = quote.rejection_details || 'Unknown';
             acc[reason] = (acc[reason] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
@@ -53,7 +50,7 @@ export const useRejectionAnalytics = () => {
         const reasonsBreakdown = Object.entries(reasonsCount).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
 
         const categoryCount = rejectedQuotes.reduce((acc, quote) => {
-            const category = quote.rejection_reasons?.category || 'Unknown';
+            const category = quote.rejection_details || 'Unknown';
             acc[category] = (acc[category] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);

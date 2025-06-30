@@ -236,9 +236,3 @@ INSERT INTO shipping_routes (origin_country, destination_country, base_shipping_
   {"name": "DHL", "costMultiplier": 1.0, "days": "4-6"},
   {"name": "FedEx", "costMultiplier": 0.9, "days": "8-14"}
 ]', 40.0, ARRAY['liquids', 'batteries'], false, true);
-
--- Insert test auto quote settings
-INSERT INTO auto_quote_settings (name, website_domain, is_active, confidence_threshold, markup_percentage, auto_approval_limit) VALUES
-('Standard Auto Quote', 'amazon.com', true, 0.8, 5.0, 500.00),
-('Premium Auto Quote', 'ebay.com', true, 0.9, 3.0, 1000.00)
-ON CONFLICT (website_domain) DO NOTHING;

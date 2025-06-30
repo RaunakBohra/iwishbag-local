@@ -11,7 +11,6 @@ import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 type QuoteWithItems = Tables<'quotes'> & { 
   quote_items: Tables<'quote_items'>[];
-  rejection_reasons: { reason: string } | null;
   profiles?: { preferred_display_currency?: string } | null;
 };
 
@@ -98,9 +97,9 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                                         <StatusBadge status={quote.status} />
                                         {getPriorityBadge(quote.priority)}
                                     </div>
-                                    {quote.status === 'cancelled' && quote.rejection_reasons?.reason && (
-                                        <p className="text-xs text-red-600 mt-1" title={quote.rejection_reasons.reason}>
-                                            <strong>Reason:</strong> {quote.rejection_reasons.reason}
+                                    {quote.status === 'cancelled' && quote.rejection_details && (
+                                        <p className="text-xs text-red-600 mt-1" title={quote.rejection_details}>
+                                            <strong>Reason:</strong> {quote.rejection_details}
                                         </p>
                                     )}
                                     <p className="text-sm text-muted-foreground mt-1">

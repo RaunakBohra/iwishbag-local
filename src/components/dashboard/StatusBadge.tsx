@@ -3,12 +3,25 @@ import { cn } from "@/lib/utils";
 import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 interface StatusBadgeProps {
-  status: string;
+  status: string | null | undefined;
   className?: string;
 }
 
 export const StatusBadge = ({ status, className }: StatusBadgeProps) => {
   const { quoteStatuses, orderStatuses } = useStatusManagement();
+
+  // Handle null/undefined status
+  if (!status) {
+    return (
+      <Badge
+        variant="secondary"
+        className={cn("bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300", className)}
+        title="No status"
+      >
+        No Status
+      </Badge>
+    );
+  }
 
   // Helper function to determine if a status is a quote status
   const isQuoteStatus = (status: string): boolean => {

@@ -52,19 +52,6 @@ export interface ShippingCost {
   route?: ShippingRoute;
 }
 
-export interface AutoQuoteSettings {
-  id: number;
-  countryCode: string;
-  defaultDomesticShipping: number;
-  defaultHandlingCharge: number;
-  defaultInsuranceThreshold: number;
-  defaultInsuranceAmount: number;
-  maxAutoApprovalAmount: number;
-  autoApprovalEnabled: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface QuoteCalculationConfig {
   type: 'manual' | 'auto';
   useDefaults: boolean;
@@ -130,14 +117,4 @@ export interface ShippingRouteFormData {
   restrictedItems?: string[];
   requiresDocumentation: boolean;
   isActive: boolean;
-}
-
-export interface AutoQuoteSettingsFormData {
-  countryCode: string;
-  defaultDomesticShipping: number;
-  defaultHandlingCharge: number;
-  defaultInsuranceThreshold: number;
-  defaultInsuranceAmount: number;
-  maxAutoApprovalAmount: number;
-  autoApprovalEnabled: boolean;
 } 

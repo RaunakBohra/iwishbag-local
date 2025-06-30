@@ -58,11 +58,6 @@ const menuGroups = [
         icon: FileText,
       },
       {
-        title: "Auto Quotes",
-        url: "/admin/auto-quotes",
-        icon: Zap,
-      },
-      {
         title: "Order Management",
         url: "/admin/orders",
         icon: Package,
@@ -86,11 +81,6 @@ const menuGroups = [
         title: "Quote Templates",
         url: "/admin/templates",
         icon: FileCog,
-      },
-      {
-        title: "Auto Quote Settings",
-        url: "/admin/auto-settings",
-        icon: Cog,
       },
       {
         title: "Status Management",

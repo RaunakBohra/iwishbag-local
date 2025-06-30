@@ -32,8 +32,7 @@ export default function ShareTokenQuote() {
         .from('quotes')
         .select(`
           *,
-          quote_items (*),
-          rejection_reasons (reason)
+          quote_items (*)
         `)
         .eq('share_token', shareToken)
         .eq('is_anonymous', true)

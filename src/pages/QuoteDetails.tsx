@@ -10,7 +10,7 @@ import { DeliveryTimeline } from "@/components/dashboard/DeliveryTimeline";
 import { AddressEditForm } from "@/components/forms/AddressEditForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +18,7 @@ import { ArrowLeft, Edit, CheckCircle, XCircle, Clock, DollarSign } from "lucide
 import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShippingAddress } from "@/types/address";
+import { useAdminRole } from "@/hooks/useAdminRole";
 
 export default function QuoteDetails() {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ export default function QuoteDetails() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { approveQuote, rejectQuote, addToCart, isUpdating } = useQuoteState(id || '');
+  const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
 
   const { data: quote, isLoading, error } = useQuery({
     queryKey: ['quote', id],
@@ -34,8 +36,7 @@ export default function QuoteDetails() {
         .from('quotes')
         .select(`
           *,
-          quote_items (*),
-          rejection_reasons (reason)
+          quote_items (*)
         `)
         .eq('id', id)
         .single();
@@ -74,7 +75,6 @@ export default function QuoteDetails() {
   }
 
   const isOwner = user?.id === quote.user_id;
-  const isAdmin = user?.user_metadata?.role === "admin";
   
   // Parse shipping address from JSONB
   const shippingAddress = quote.shipping_address as unknown as ShippingAddress | null;
@@ -225,6 +225,9 @@ export default function QuoteDetails() {
       {/* Address Edit Dialog */}
       <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
         <DialogContent>
+          <DialogDescription>
+            Update your shipping address for this quote.
+          </DialogDescription>
           <AddressEditForm
             address={shippingAddress}
             onSuccess={() => {

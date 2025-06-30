@@ -173,29 +173,6 @@ function calculateStandardInternationalShipping(
 }
 
 /**
- * Get auto quote settings for a country
- */
-export async function getAutoQuoteSettings(countryCode: string): Promise<AutoQuoteSettings | null> {
-  try {
-    const { data, error } = await supabase
-      .from('auto_quote_settings')
-      .select('*')
-      .eq('country_code', countryCode)
-      .single();
-
-    if (error) {
-      console.error('Error getting auto quote settings:', error);
-      return null;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error getting auto quote settings:', error);
-    return null;
-  }
-}
-
-/**
  * Unified quote calculator that works for both manual and auto quotes
  * Uses the same logic as your current manual calculator
  */

@@ -42,7 +42,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         template: 'quote_sent',
         data: {
           quoteId: quoteId,
-          customerName: user?.user_metadata?.full_name || email.split('@')[0] || 'Customer',
+          customerName: user?.full_name || user?.email?.split('@')[0] || 'Customer',
           totalAmount: 'Pending',
           currency: selectedCountryCurrency
         }
@@ -70,8 +70,8 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
           .from('profiles')
           .insert({
             id: user.id,
-            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            phone: user.user_metadata?.phone || null,
+            full_name: user.full_name || user?.email?.split('@')[0] || 'User',
+            phone: user.phone || null,
             country: countryCode || 'US',
             preferred_display_currency: selectedCountryCurrency || 'USD',
             referral_code: 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase(),
@@ -202,8 +202,8 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
           .from('profiles')
           .insert({
             id: user.id,
-            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            phone: user.user_metadata?.phone || null,
+            full_name: user.full_name || user?.email?.split('@')[0] || 'User',
+            phone: user.phone || null,
             country: countryCode || 'US',
             preferred_display_currency: selectedCountryCurrency || 'USD',
             referral_code: 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase(),

@@ -43,8 +43,8 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                 currency: quote.currency || purchaseCurrency, // Use quote currency or determine from country
                 final_currency: quote.final_currency || 'USD',
                 priority: quote.priority ?? undefined,
-                internal_notes: quote.internal_notes,
-                status: quote.status,
+                internal_notes: quote.internal_notes ?? '',
+                status: quote.status ?? '',
                 items: quote.quote_items.map(item => ({
                     id: item.id,
                     item_price: item.item_price || 0,
@@ -112,11 +112,11 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                 
                 // Include status update if it has changed
                 if (data.status && data.status !== quote.status) {
-                    finalQuoteData.status = data.status;
+                    finalQuoteData.status = data.status || '';
                 }
                 
                 // Include other form fields
-                finalQuoteData.internal_notes = data.internal_notes;
+                finalQuoteData.internal_notes = data.internal_notes || '';
                 finalQuoteData.priority = data.priority;
                 
                 updateQuote(finalQuoteData);

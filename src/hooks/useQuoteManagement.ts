@@ -9,7 +9,6 @@ import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 type QuoteWithItems = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
-  rejection_reasons: { reason: string } | null;
 };
 
 export const useQuoteManagement = () => {
@@ -30,13 +29,16 @@ export const useQuoteManagement = () => {
         queryFn: async () => {
             let query = supabase
                 .from('quotes')
-                .select('*, quote_items(*), rejection_reasons(reason)')
+                .select('*, quote_items(*)')
                 .order('created_at', { ascending: false });
             
             // Filter out order statuses to show only quotes
             if (orderStatuses && orderStatuses.length > 0) {
                 const orderStatusNames = orderStatuses.map(status => status.name);
-                query = query.not('status', 'in', orderStatusNames);
+                // Apply not filters for each order status
+                orderStatusNames.forEach(status => {
+                    query = query.neq('status', status);
+                });
             }
         
             if (statusFilter !== 'all') {
