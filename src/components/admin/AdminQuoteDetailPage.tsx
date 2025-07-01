@@ -38,26 +38,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 
-// Helper function to create a stable hash for comparison
-const createStableHash = (obj: any): string => {
-  const normalizeValue = (value: any): any => {
-    if (value === null || value === undefined) return null;
-    if (typeof value === 'number') return Math.round(value * 100) / 100; // Round to 2 decimal places
-    if (typeof value === 'string') return value.trim();
-    if (Array.isArray(value)) return value.map(normalizeValue);
-    if (typeof value === 'object') {
-      const sortedKeys = Object.keys(value).sort();
-      return sortedKeys.reduce((acc, key) => {
-        acc[key] = normalizeValue(value[key]);
-        return acc;
-      }, {} as any);
-    }
-    return value;
-  };
-  
-  const normalized = normalizeValue(obj);
-  return JSON.stringify(normalized);
-};
+
 
 const AdminQuoteDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -90,7 +71,7 @@ const AdminQuoteDetailPage = () => {
     statuses,
   } = useStatusManagement();
 
-  const [isAutoCalculating, setIsAutoCalculating] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
   const [calculationError, setCalculationError] = useState<string | null>(null);
   const [lastCalculationTime, setLastCalculationTime] = useState<Date | null>(null);
   const [routeWeightUnit, setRouteWeightUnit] = useState<string | null>(null);
@@ -113,9 +94,7 @@ const AdminQuoteDetailPage = () => {
     enabled: !!quote?.user_id,
   });
   
-  // Use refs to store previous values for comparison
-  const previousValuesRef = useRef<string>('');
-  const calculationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
 
   // Extract shipping address from shipping_address column, fallback to internal_notes for legacy quotes
   const shippingAddress = quote?.shipping_address 
@@ -156,11 +135,11 @@ const AdminQuoteDetailPage = () => {
     return symbols[currency] || currency;
   };
 
-  // Auto-calculation with proper debouncing
-  const triggerAutoCalculation = useCallback(async () => {
-    if (!quote || !canRecalculate || isAutoCalculating) return;
+  // Manual calculation function
+  const triggerCalculation = useCallback(async () => {
+    if (!quote || !canRecalculate || isCalculating) return;
 
-    setIsAutoCalculating(true);
+    setIsCalculating(true);
     setCalculationError(null);
 
     try {
@@ -176,35 +155,67 @@ const AdminQuoteDetailPage = () => {
       
       await onSubmit(formValues);
       setLastCalculationTime(new Date());
-      toast({
-        title: "Quote Auto-Calculated",
-        description: "Quote has been automatically recalculated with the latest changes.",
-      });
+      // No toast for calculation
     } catch (error: any) {
-      setCalculationError(error.message || "Auto-calculation failed");
+      setCalculationError(error.message || "Calculation failed");
       toast({
-        title: "Auto-Calculation Failed",
-        description: error.message || "Failed to auto-calculate quote",
+        title: "Calculation Failed",
+        description: error.message || "Failed to calculate quote",
         variant: "destructive",
       });
     } finally {
-      setIsAutoCalculating(false);
+      setIsCalculating(false);
     }
-  }, [quote, canRecalculate, isAutoCalculating, onSubmit, toast, form]);
+  }, [quote, canRecalculate, isCalculating, onSubmit, toast, form]);
 
-  // Watch all form fields that affect calculation individually
-  const insurance_amount = useWatch({ control: form.control, name: 'insurance_amount' });
-  const customs_percentage = useWatch({ control: form.control, name: 'customs_percentage' });
-  const sales_tax_price = useWatch({ control: form.control, name: 'sales_tax_price' });
-  const merchant_shipping_price = useWatch({ control: form.control, name: 'merchant_shipping_price' });
-  const domestic_shipping = useWatch({ control: form.control, name: 'domestic_shipping' });
-  const handling_charge = useWatch({ control: form.control, name: 'handling_charge' });
-  const discount = useWatch({ control: form.control, name: 'discount' });
-  const currency = useWatch({ control: form.control, name: 'currency' });
-  const country_code = useWatch({ control: form.control, name: 'country_code' });
+  // Update function with validation and status logic
+  const handleUpdate = useCallback(async (formValues: any) => {
+    if (!quote || !canRecalculate) return;
 
-  
-  // Also watch individual item fields for better reactivity
+    if (!quote.final_total || quote.final_total === 0) {
+      toast({
+        title: "Calculation Required",
+        description: "Please calculate the quote costs first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const currentStatus = quote.status;
+      let newStatus = formValues.status; // Use the status selected in the form
+
+      // Only auto-advance from pending → sent if the form's status is still pending
+      if (currentStatus === 'pending' && formValues.status === 'pending') {
+        if (isValidTransition('pending', 'sent', 'quote')) {
+          newStatus = 'sent';
+        }
+      }
+
+      const { items, ...quoteFields } = formValues;
+      await updateQuote({ ...quoteFields, status: newStatus });
+
+      if (newStatus !== currentStatus) {
+        toast({
+          title: "Quote Status Changed",
+          description: `Quote status changed to ${newStatus}`,
+        });
+      } else {
+        toast({
+          title: "Quote Updated",
+          description: "Quote has been updated",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update quote",
+        variant: "destructive",
+      });
+    }
+  }, [quote, canRecalculate, updateQuote, toast, isValidTransition]);
+
+  // Watch items for customs tier calculation
   const items = useWatch({
     control: form.control,
     name: 'items'
@@ -217,70 +228,6 @@ const AdminQuoteDetailPage = () => {
   const formWeight = useMemo(() => {
     return (items || []).reduce((sum: number, item: any) => sum + (Number(item?.item_weight) || 0), 0);
   }, [items]);
-
-  // Create a stable hash of the watched values for comparison
-  const valuesHash = useMemo(() => {
-    const relevantValues = {
-      insurance_amount,
-      customs_percentage,
-      sales_tax_price,
-      merchant_shipping_price,
-      domestic_shipping,
-      handling_charge,
-      discount,
-      currency,
-      country_code,
-      items: items?.map(item => ({
-        item_price: item?.item_price,
-        item_weight: item?.item_weight,
-        quantity: item?.quantity,
-        product_name: item?.product_name,
-      })) || []
-    };
-    return createStableHash(relevantValues);
-  }, [insurance_amount, customs_percentage, sales_tax_price, merchant_shipping_price, domestic_shipping, handling_charge, discount, currency, country_code, items]);
-
-  // Auto-calculation effect with proper debouncing and change detection
-  useEffect(() => {
-    if (!quote || !canRecalculate) return;
-
-    // Only trigger if values have actually changed
-    if (valuesHash === previousValuesRef.current) {
-      return;
-    }
-
-    console.log('[AdminQuoteDetailPage] Values changed, triggering auto-calculation in 2 seconds:', {
-      insurance_amount,
-      customs_percentage,
-      sales_tax_price,
-      merchant_shipping_price,
-      domestic_shipping,
-      handling_charge,
-      discount,
-      currency,
-      country_code,
-      itemsCount: items?.length
-    });
-
-    // Clear existing timeout
-    if (calculationTimeoutRef.current) {
-      clearTimeout(calculationTimeoutRef.current);
-    }
-
-    // Set new timeout
-    calculationTimeoutRef.current = setTimeout(() => {
-      console.log('[AdminQuoteDetailPage] Executing auto-calculation...');
-      triggerAutoCalculation();
-      previousValuesRef.current = valuesHash;
-    }, 2000);
-
-    // Cleanup function
-    return () => {
-      if (calculationTimeoutRef.current) {
-        clearTimeout(calculationTimeoutRef.current);
-      }
-    };
-  }, [valuesHash, quote, canRecalculate, triggerAutoCalculation]);
 
   // Status management functions
   const updateQuoteStatus = async (newStatus: string) => {
@@ -773,39 +720,62 @@ const AdminQuoteDetailPage = () => {
 
                 {/* Bottom Section - Update Button and Status */}
                 <div className="border-t bg-muted/30 p-6 space-y-4">
-                  {/* Update Button */}
-                  <Button 
-                    type="submit"
-                    disabled={isUpdating || !canRecalculate}
-                    className="w-full h-12 text-lg"
-                    onClick={form.handleSubmit(onSubmit)}
-                  >
-                    {isUpdating ? (
-                      <>
-                        <Clock className="h-5 w-5 mr-2 animate-spin" />
-                        Updating...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-5 w-5 mr-2" />
-                        Update Quote & Calculate Costs
-                      </>
-                    )}
-                  </Button>
+                  {/* Calculate and Update Buttons */}
+                  <div className="flex gap-3">
+                    {/* Calculate Button */}
+                    <Button
+                      variant="outline"
+                      onClick={triggerCalculation}
+                      disabled={isCalculating || !canRecalculate}
+                      className="flex-1 h-12 text-lg"
+                    >
+                      {isCalculating ? (
+                        <>
+                          <Clock className="h-5 w-5 mr-2 animate-spin" />
+                          Calculating...
+                        </>
+                      ) : (
+                        <>
+                          <Calculator className="h-5 w-5 mr-2" />
+                          Calculate Now
+                        </>
+                      )}
+                    </Button>
 
-                  {/* Auto-Calculation Status */}
+                    {/* Update Button */}
+                    <Button 
+                      type="submit"
+                      disabled={isUpdating || !canRecalculate}
+                      className="flex-1 h-12 text-lg"
+                      onClick={form.handleSubmit(handleUpdate)}
+                    >
+                      {isUpdating ? (
+                        <>
+                          <Clock className="h-5 w-5 mr-2 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-5 w-5 mr-2" />
+                          Update Quote
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Calculation Status */}
                   {canRecalculate && (
                     <div className="p-3 bg-background rounded-lg border">
                       <div className="flex items-center gap-2 text-sm">
-                        {isAutoCalculating ? (
+                        {isCalculating ? (
                           <>
                             <Clock className="h-4 w-4 animate-spin" />
-                            <span>Auto-calculating...</span>
+                            <span>Calculating...</span>
                           </>
                         ) : calculationError ? (
                           <>
                             <AlertTriangle className="h-4 w-4 text-destructive" />
-                            <span className="text-destructive">Auto-calculation failed: {calculationError}</span>
+                            <span className="text-destructive">Calculation failed: {calculationError}</span>
                           </>
                         ) : lastCalculationTime ? (
                           <>
@@ -815,7 +785,9 @@ const AdminQuoteDetailPage = () => {
                         ) : (
                           <>
                             <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Auto-calculation will trigger when you make changes</span>
+                            <span className="text-muted-foreground">
+                              Use 'Calculate Now' to update costs
+                            </span>
                           </>
                         )}
                       </div>
