@@ -209,6 +209,14 @@ const AdminQuoteDetailPage = () => {
     name: 'items'
   });
 
+  // Compute real-time price and weight from form items
+  const formPrice = useMemo(() => {
+    return (items || []).reduce((sum: number, item: any) => sum + (Number(item?.item_price) || 0), 0);
+  }, [items]);
+  const formWeight = useMemo(() => {
+    return (items || []).reduce((sum: number, item: any) => sum + (Number(item?.item_weight) || 0), 0);
+  }, [items]);
+
   // Create a stable hash of the watched values for comparison
   const valuesHash = useMemo(() => {
     const relevantValues = {
@@ -364,18 +372,15 @@ const AdminQuoteDetailPage = () => {
   const [customsLoading, setCustomsLoading] = useState(true);
   const [customsError, setCustomsError] = useState<string | null>(null);
 
-  // Get origin/destination codes
+  // Get origin/destination codes from form state (not just quote)
   const originCountry = quote?.origin_country || purchaseCountry || 'US';
-  let destinationCountry = shippingAddress?.country || quote?.country_code;
+  let destinationCountry = shippingAddress?.country || purchaseCountry || quote?.country_code;
   if (destinationCountry && destinationCountry.length > 2) {
     const found = allCountries?.find(c => c.name === destinationCountry);
     if (found) destinationCountry = found.code;
   }
-  const quotePrice = quote?.quote_items?.reduce((sum: number, item: any) => sum + (item.item_price || 0), 0) || 0;
-  const quoteWeight = quote?.quote_items?.reduce((sum: number, item: any) => sum + (item.item_weight || 0), 0) || 0;
-  const appliedCustomsPercentage = quote?.customs_percentage;
 
-  // Fetch customs tiers and determine applied tier
+  // Fetch customs tiers and determine applied tier (always run on form change)
   useEffect(() => {
     const fetchCustomsTiers = async () => {
       if (!originCountry || !destinationCountry) {
@@ -393,8 +398,8 @@ const AdminQuoteDetailPage = () => {
           .order('priority_order', { ascending: true });
         if (error) throw error;
         setCustomsTiers(data || []);
-        // Determine which tier was applied
-        const applied = determineAppliedTier(data || [], quotePrice, quoteWeight, appliedCustomsPercentage);
+        // Determine which tier should be applied (use formPrice/formWeight only)
+        const applied = determineAppliedTier(data || [], formPrice, formWeight);
         setAppliedTier(applied);
       } catch (err: any) {
         setCustomsError(err.message);
@@ -403,17 +408,14 @@ const AdminQuoteDetailPage = () => {
       }
     };
     fetchCustomsTiers();
-  }, [originCountry, destinationCountry, quotePrice, quoteWeight, appliedCustomsPercentage, allCountries]);
+  }, [originCountry, destinationCountry, formPrice, formWeight, allCountries, items, purchaseCountry, shippingAddress]);
 
-  // Function to determine which tier was applied
+  // Function to determine which tier should be applied based on price/weight/logic only
   const determineAppliedTier = (
     tiers: any[],
     price: number,
-    weight: number,
-    appliedPercentage: number
+    weight: number
   ): any | null => {
-    const exactMatch = tiers.find(tier => tier.customs_percentage === appliedPercentage);
-    if (exactMatch) return exactMatch;
     for (const tier of tiers) {
       const priceMatch = (!tier.price_min || price >= tier.price_min) && (!tier.price_max || price <= tier.price_max);
       const weightMatch = (!tier.weight_min || weight >= tier.weight_min) && (!tier.weight_max || weight <= tier.weight_max);
