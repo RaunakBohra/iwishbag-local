@@ -91,99 +91,108 @@ export const EditableAdminQuoteItemCard = ({
   const currencySymbolFinal = getCurrencySymbol(countryCurrency);
 
   return (
-    <Card>
-      <CardHeader className="py-4">
-        <CardTitle className="text-base">Item {index + 1}</CardTitle>
+    <Card className="relative group border border-gray-200 shadow-sm rounded-xl p-0">
+      {/* Delete icon button top-right */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute top-3 right-3 z-10 text-destructive hover:bg-destructive/10"
+        onClick={onDelete}
+        tabIndex={-1}
+      >
+        <Trash2 className="h-5 w-5" />
+      </Button>
+      <CardHeader className="pb-2 pt-4 px-4 flex flex-row items-center gap-4">
+        {/* Image upload */}
+        <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center">
+          <FormField
+            control={control}
+            name={`items.${index}.image_url`}
+            render={({ field }) => (
+              <FormItem className="m-0">
+                <FormControl>
+                  <ImageUpload
+                    currentImageUrl={field.value}
+                    onImageUpload={field.onChange}
+                    onImageRemove={() => field.onChange(null)}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+        {/* Product name */}
+        <div className="flex-1">
+          <CardTitle className="text-base font-semibold mb-1">Item {index + 1}</CardTitle>
+          <FormField
+            control={control}
+            name={`items.${index}.product_name`}
+            render={({ field }) => (
+              <FormItem className="m-0">
+                <FormLabel className="text-xs font-medium text-muted-foreground">Product Name</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value || ''} placeholder="Product Name" className="h-9 mt-1" />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <FormField
-          control={control}
-          name={`items.${index}.product_name`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Product Name</FormLabel>
-              <FormControl>
-                <Input {...field} value={field.value || ''} placeholder="Product Name" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <div className="flex gap-4 items-start">
-          <div className="w-16 flex-shrink-0">
-            <FormField
-              control={control}
-              name={`items.${index}.image_url`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <div className="w-16 h-16">
-                      <ImageUpload
-                        currentImageUrl={field.value}
-                        onImageUpload={field.onChange}
-                        onImageRemove={() => field.onChange(null)}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="flex-grow space-y-4 text-sm">
+      <CardContent className="space-y-3 pt-0 px-4 pb-4">
+        {/* Product URL and Options row */}
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
             <FormField
               control={control}
               name={`items.${index}.product_url`}
               render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center gap-2">
-                    <FormLabel>Product URL</FormLabel>
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-medium text-muted-foreground">Product URL</FormLabel>
+                  <div className="flex gap-1 items-center mt-1">
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} placeholder="https://..." className="h-9" />
+                    </FormControl>
                     {field.value && (
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
+                        size="icon"
                         onClick={() => window.open(field.value, '_blank')}
-                        className="h-6 px-2 text-xs"
+                        className="h-9 w-9 ml-1"
+                        tabIndex={-1}
                       >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Open
+                        <ExternalLink className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
-                  <FormControl>
-                    <Input {...field} value={field.value || ''} placeholder="https://..." />
-                  </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
-            
+          </div>
+          <div className="w-48">
             <FormField
               control={control}
               name={`items.${index}.options`}
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Options</FormLabel>
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-medium text-muted-foreground">Options</FormLabel>
                   <FormControl>
-                    <Input {...field} value={field.value || ''} placeholder="e.g. Size, Color" />
+                    <Input {...field} value={field.value || ''} placeholder="e.g. Size, Color" className="h-9 mt-1" />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
           </div>
         </div>
-        
-        <div className="grid grid-cols-3 gap-4">
+        {/* Price, Weight, Quantity row */}
+        <div className="grid grid-cols-3 gap-3">
           <FormField
             control={control}
             name={`items.${index}.item_price`}
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Price ({currencySymbolFinal})</FormLabel>
+              <FormItem className="m-0">
+                <FormLabel className="text-xs font-medium text-muted-foreground">Price ({currencySymbolFinal})</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -192,13 +201,12 @@ export const EditableAdminQuoteItemCard = ({
                     value={field.value || ''}
                     onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : '')}
                     onWheel={handleNumberInputWheel}
+                    className="h-9 mt-1"
                   />
                 </FormControl>
-                <FormMessage />
               </FormItem>
             )}
           />
-          
           <FormField
             control={control}
             name={`items.${index}.item_weight`}
@@ -267,15 +275,9 @@ export const EditableAdminQuoteItemCard = ({
               const currentInputValue = weightInputValues[index] ?? getDisplayValue();
 
               return (
-                <FormItem>
-                  <FormLabel>
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-medium text-muted-foreground">
                     Weight ({displayWeightUnitFinal})
-                    {smartWeightUnit && smartWeightUnit !== 'kg' && (
-                      <span className="text-xs text-green-600 ml-1">(Auto-detected)</span>
-                    )}
-                    {routeWeightUnit && routeWeightUnit !== 'kg' && !smartWeightUnit && (
-                      <span className="text-xs text-blue-600 ml-1">(Route Unit)</span>
-                    )}
                   </FormLabel>
                   <FormControl>
                     <Input
@@ -293,20 +295,19 @@ export const EditableAdminQuoteItemCard = ({
                       onWheel={handleNumberInputWheel}
                       placeholder={`Weight in ${displayWeightUnitFinal}`}
                       inputMode="decimal"
+                      className="h-9 mt-1"
                     />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               );
             }}
           />
-          
           <FormField
             control={control}
             name={`items.${index}.quantity`}
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Quantity</FormLabel>
+              <FormItem className="m-0">
+                <FormLabel className="text-xs font-medium text-muted-foreground">Quantity</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -316,22 +317,13 @@ export const EditableAdminQuoteItemCard = ({
                     value={field.value || ''}
                     onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : '')}
                     onWheel={handleNumberInputWheel}
+                    className="h-9 mt-1"
                   />
                 </FormControl>
-                <FormMessage />
               </FormItem>
             )}
           />
         </div>
-
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={onDelete}
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Delete
-        </Button>
       </CardContent>
     </Card>
   );

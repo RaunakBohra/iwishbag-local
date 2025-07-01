@@ -38,12 +38,6 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
     return country?.currency || 'USD';
   }, [countryCode, allCountries]);
 
-  const countryName = useMemo(() => {
-    if (!countryCode || !allCountries) return '';
-    const country = allCountries.find(c => c.code === countryCode);
-    return country?.name || '';
-  }, [countryCode, allCountries]);
-
   // Watch final currency for dynamic labels
   const finalCurrency = useWatch({
     control: form.control,
@@ -90,49 +84,6 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
 
   return (
     <div className="space-y-6">
-      {/* Purchase Country Selection */}
-      <FormField
-        control={form.control}
-        name="country_code"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Purchase Country</FormLabel>
-            <Select onValueChange={field.onChange} value={field.value || ''}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select purchase country" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {allCountries?.map((country) => (
-                  <SelectItem key={country.code} value={country.code}>
-                    <div className="flex items-center gap-2">
-                      <span>{country.name}</span>
-                      {!country.purchase_allowed && (
-                        <Badge variant="secondary" className="text-xs">
-                          <ShoppingCart className="w-3 h-3 mr-1" />
-                          No Purchase
-                        </Badge>
-                      )}
-                      {!country.shipping_allowed && (
-                        <Badge variant="secondary" className="text-xs">
-                          <Truck className="w-3 h-3 mr-1" />
-                          No Shipping
-                        </Badge>
-                      )}
-                      {(!country.purchase_allowed || !country.shipping_allowed) && (
-                        <AlertTriangle className="w-3 h-3 text-yellow-500" />
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
       {/* Hidden Currency Field */}
       <FormField
         control={form.control}
@@ -146,26 +97,14 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
         )}
       />
 
-      {/* Currency Display */}
-      <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-        <Badge variant="outline" className="text-sm">
-          Currency: {currencySymbol} {countryCurrency}
-        </Badge>
-        {countryName && (
-          <span className="text-sm text-muted-foreground">
-            ({countryName})
-          </span>
-        )}
-      </div>
-
       {/* Customs Percentage */}
       <FormField
         control={form.control}
         name="customs_percentage"
         render={({ field }) => (
-          <FormItem>
-            <FormLabel>Customs Percentage (%)</FormLabel>
-            <div className="flex items-center gap-2">
+          <FormItem className="m-0">
+            <FormLabel className="text-xs font-medium text-muted-foreground">Customs Percentage (%)</FormLabel>
+            <div className="flex items-center gap-2 mt-1">
               <FormControl>
                 <Input 
                   type="number" 
@@ -174,6 +113,7 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
                   value={field.value ?? ''} 
                   onWheel={handleNumberInputWheel}
                   placeholder="0.00"
+                  className="h-9"
                 />
               </FormControl>
               {typeof detectedCustomsPercentage === 'number' && detectedCustomsPercentage !== Number(field.value) && (
@@ -187,19 +127,32 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
                 </Button>
               )}
             </div>
+            {/* Applied Customs Tier Box */}
+            {detectedCustomsTier && (
+              <div className="mt-2 p-2 rounded-md bg-blue-50 border border-blue-200 text-black text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{detectedCustomsTier.name || 'Customs Tier'} {detectedCustomsTier.customs_percentage}%</span>
+                </div>
+                {detectedCustomsTier.description && (
+                  <div className="text-xs mt-1">
+                    {detectedCustomsTier.description}
+                  </div>
+                )}
+              </div>
+            )}
             <FormMessage />
           </FormItem>
         )}
       />
 
-      {/* Other Form Fields */}
+      {/* Taxes, Shipping, Charges, Discount, Insurance in grid */}
       <div className="grid grid-cols-2 gap-4">
         <FormField
           control={form.control}
           name="sales_tax_price"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Sales Tax ({currencySymbol})</FormLabel>
+            <FormItem className="m-0">
+              <FormLabel className="text-xs font-medium text-muted-foreground">Sales Tax ({currencySymbol})</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
@@ -207,19 +160,18 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
                   {...field} 
                   value={field.value ?? ''} 
                   onWheel={handleNumberInputWheel}
+                  className="h-9 mt-1"
                 />
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="merchant_shipping_price"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Merchant Shipping ({currencySymbol})</FormLabel>
+            <FormItem className="m-0">
+              <FormLabel className="text-xs font-medium text-muted-foreground">Merchant Shipping ({currencySymbol})</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
@@ -227,19 +179,18 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
                   {...field} 
                   value={field.value ?? ''} 
                   onWheel={handleNumberInputWheel}
+                  className="h-9 mt-1"
                 />
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="domestic_shipping"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Domestic Shipping ({currencySymbol})</FormLabel>
+            <FormItem className="m-0">
+              <FormLabel className="text-xs font-medium text-muted-foreground">Domestic Shipping ({currencySymbol})</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
@@ -247,19 +198,18 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
                   {...field} 
                   value={field.value ?? ''} 
                   onWheel={handleNumberInputWheel}
+                  className="h-9 mt-1"
                 />
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="handling_charge"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Handling Charge ({currencySymbol})</FormLabel>
+            <FormItem className="m-0">
+              <FormLabel className="text-xs font-medium text-muted-foreground">Handling Charge ({currencySymbol})</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
@@ -267,19 +217,18 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
                   {...field} 
                   value={field.value ?? ''} 
                   onWheel={handleNumberInputWheel}
+                  className="h-9 mt-1"
                 />
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="discount"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Discount ({currencySymbol})</FormLabel>
+            <FormItem className="m-0">
+              <FormLabel className="text-xs font-medium text-muted-foreground">Discount ({currencySymbol})</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
@@ -287,19 +236,18 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
                   {...field} 
                   value={field.value ?? ''} 
                   onWheel={handleNumberInputWheel}
+                  className="h-9 mt-1"
                 />
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="insurance_amount"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Insurance ({currencySymbol})</FormLabel>
+            <FormItem className="m-0">
+              <FormLabel className="text-xs font-medium text-muted-foreground">Insurance ({currencySymbol})</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
@@ -307,9 +255,9 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
                   {...field} 
                   value={field.value ?? ''} 
                   onWheel={handleNumberInputWheel}
+                  className="h-9 mt-1"
                 />
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -320,11 +268,11 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
         control={form.control}
         name="status"
         render={({ field }) => (
-          <FormItem>
-            <FormLabel>Status</FormLabel>
+          <FormItem className="m-0">
+            <FormLabel className="text-xs font-medium text-muted-foreground">Status</FormLabel>
             <Select onValueChange={field.onChange} value={field.value || ''}>
               <FormControl>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 mt-1">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
               </FormControl>
@@ -350,13 +298,13 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
         control={form.control}
         name="internal_notes"
         render={({ field }) => (
-          <FormItem>
-            <FormLabel>Internal Notes</FormLabel>
+          <FormItem className="m-0">
+            <FormLabel className="text-xs font-medium text-muted-foreground">Internal Notes</FormLabel>
             <FormControl>
               <Textarea 
                 {...field} 
                 placeholder="Add internal notes about this quote..."
-                className="min-h-[100px]"
+                className="min-h-[80px] h-20 mt-1 text-sm"
               />
             </FormControl>
             <FormMessage />

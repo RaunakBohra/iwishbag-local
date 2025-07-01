@@ -129,11 +129,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         </div>
         
         <div className="space-y-1">
-          {uploading ? <p className="text-sm font-medium text-gray-600">Uploading...</p> : isDragActive ? <p className="text-sm font-medium text-primary">Drop your file here</p> : <>
-              <p className="text-sm font-medium text-gray-700">
-                Upload Image or File
-              </p>
-            </>}
+          {uploading ? <p className="text-sm font-medium text-gray-600">Uploading...</p> : isDragActive ? <p className="text-sm font-medium text-primary">Drop your file here</p> : null}
         </div>
       </div>
       

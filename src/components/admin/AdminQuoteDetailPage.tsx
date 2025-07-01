@@ -1,14 +1,15 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Send, MapPin, Calculator, CheckCircle, XCircle, Clock, AlertTriangle, FileText, DollarSign, ShoppingCart, Truck, Circle, User, Mail, Phone, Calendar, Package, Settings, TrendingUp, Eye, Edit3, MessageSquare, Globe, Flag, UserMinus } from "lucide-react";
+import { ArrowLeft, Send, MapPin, Calculator, CheckCircle, XCircle, Clock, AlertTriangle, FileText, DollarSign, ShoppingCart, Truck, Circle, User, Mail, Phone, Calendar, Package, Settings, TrendingUp, Eye, Edit3, MessageSquare, Globe, Flag, UserMinus, Plus } from "lucide-react";
 import { QuoteDetailForm } from "@/components/admin/QuoteDetailForm";
 import { QuoteMessaging } from "@/components/messaging/QuoteMessaging";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAdminQuoteDetail } from "@/hooks/useAdminQuoteDetail";
 import { QuoteCalculatedCosts } from "@/components/admin/QuoteCalculatedCosts";
 import { QuoteCurrencySummary } from "./QuoteCurrencySummary";
-import { Form } from "@/components/ui/form";
+import { Form, FormField, FormControl } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EditableAdminQuoteItemCard } from "./EditableAdminQuoteItemCard";
 import { OrderActions } from "./OrderActions";
 import { ShippingInfoForm } from "./ShippingInfoForm";
@@ -75,6 +76,7 @@ const AdminQuoteDetailPage = () => {
     form,
     fields,
     remove,
+    append,
     onSubmit,
     updateQuote,
   } = useAdminQuoteDetail(id);
@@ -134,6 +136,24 @@ const AdminQuoteDetailPage = () => {
     const country = allCountries.find(c => c.code === purchaseCountry);
     return country?.currency || 'USD';
   }, [purchaseCountry, allCountries]);
+
+  // Get currency symbol
+  const getCurrencySymbol = (currency: string) => {
+    const symbols: { [key: string]: string } = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'INR': '₹',
+      'CAD': 'C$',
+      'AUD': 'A$',
+      'JPY': '¥',
+      'CNY': '¥',
+      'SGD': 'S$',
+      'AED': 'د.إ',
+      'SAR': 'ر.س',
+    };
+    return symbols[currency] || currency;
+  };
 
   // Auto-calculation with proper debouncing
   const triggerAutoCalculation = useCallback(async () => {
@@ -564,9 +584,9 @@ const AdminQuoteDetailPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {/* Customer Info & Context in Single Row */}
+                {/* Customer Info, Name, Address & Context in Single Row */}
                 <div className="flex items-center justify-between gap-3">
-                  {/* Customer Info */}
+                  {/* Customer Info & Name */}
                   <div className="flex items-center gap-3 text-sm">
                     <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
                       <Mail className="h-3 w-3 text-muted-foreground" />
@@ -591,6 +611,22 @@ const AdminQuoteDetailPage = () => {
                       <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
                         <MessageSquare className="h-3 w-3 text-muted-foreground" />
                         <span className="font-medium">@{quote.social_handle}</span>
+                      </div>
+                    )}
+
+                    {/* Shipping Address inline */}
+                    {shippingAddress && (
+                      <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                        <MapPin className="h-3 w-3 text-green-600 flex-shrink-0" />
+                        <div className="flex items-center gap-2 text-green-800">
+                          {shippingAddress.recipient_name && (
+                            <span className="font-medium">👤 {shippingAddress.recipient_name}</span>
+                          )}
+                          <span>📍 {shippingAddress.city}, {shippingAddress.country}</span>
+                          {shippingAddress.phone && (
+                            <span>📞 {shippingAddress.phone}</span>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -618,24 +654,6 @@ const AdminQuoteDetailPage = () => {
                   </div>
                 </div>
 
-                {/* Compact Shipping Address */}
-                {shippingAddress && (
-                  <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                    <MapPin className="h-3 w-3 text-green-600 flex-shrink-0" />
-                    <div className="flex items-center gap-2 text-green-800">
-                      {shippingAddress.recipient_name && (
-                        <span className="font-medium">👤 {shippingAddress.recipient_name}</span>
-                      )}
-                      <span>📍 {shippingAddress.city}, {shippingAddress.country}</span>
-                      {shippingAddress.phone && (
-                        <span>📞 {shippingAddress.phone}</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-
-                
                 {quote.status === 'cancelled' && quote.rejection_details && (
                   <div className="p-2 bg-red-50 border border-red-200 rounded text-xs">
                     <div className="flex items-center gap-1 text-red-800 mb-1">
@@ -647,111 +665,169 @@ const AdminQuoteDetailPage = () => {
               </CardContent>
             </Card>
 
-            {/* Products Card - Main Data Entry Area */}
+            {/* Unified Quote Builder - Side by Side Layout */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Package className="h-5 w-5" />
-                  Products & Data Entry
-                </CardTitle>
-                <CardDescription>
-                  Review customer requests and enter product details, prices, and weights
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {fields && fields.length > 0 ? (
-                  <div className="space-y-4">
-                    {fields.map((item, index) => (
-                      <EditableAdminQuoteItemCard 
-                        key={item.id} 
-                        index={index}
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Package className="h-5 w-5" />
+                    Quote Builder
+                  </CardTitle>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-muted-foreground">Country:</span>
+                      <FormField
                         control={form.control}
-                        allCountries={allCountries}
-                        onDelete={() => remove(index)}
-                        routeWeightUnit={routeWeightUnit}
-                        smartWeightUnit={smartWeightUnit}
-                        countryCurrency={countryCurrency}
+                        name="country_code"
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl>
+                              <SelectTrigger className="w-40 h-8">
+                                <SelectValue placeholder="Select country" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {allCountries?.map((country) => (
+                                <SelectItem key={country.code} value={country.code}>
+                                  <div className="flex items-center gap-2">
+                                    <span>{country.name}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                       />
-                    ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-muted-foreground">Currency:</span>
+                      <Badge variant="outline" className="text-sm">
+                        {getCurrencySymbol(countryCurrency)} {countryCurrency}
+                      </Badge>
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>No products in this quote</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Cost Calculation Settings */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Calculator className="h-5 w-5" />
-                  Cost Calculation Settings
-                </CardTitle>
-                <CardDescription>
-                  Configure shipping, customs, and additional costs
-                </CardDescription>
+                </div>
               </CardHeader>
-              <CardContent>
-                <QuoteDetailForm 
-                  form={form}
-                  shippingAddress={shippingAddress}
-                  detectedCustomsPercentage={appliedTier?.customs_percentage}
-                  detectedCustomsTier={appliedTier}
-                />
-              </CardContent>
-            </Card>
+              <CardContent className="p-0">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+                  
+                  {/* Left Column - Products Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-muted-foreground">Products</h3>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => append({})}
+                        className="h-8"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Product
+                      </Button>
+                    </div>
+                    
+                    {fields && fields.length > 0 ? (
+                      <div className="space-y-3">
+                        {fields.map((item, index) => (
+                          <EditableAdminQuoteItemCard 
+                            key={item.id} 
+                            index={index}
+                            control={form.control}
+                            allCountries={allCountries}
+                            onDelete={() => remove(index)}
+                            routeWeightUnit={routeWeightUnit}
+                            smartWeightUnit={smartWeightUnit}
+                            countryCurrency={countryCurrency}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                        <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No products added yet</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => append({})}
+                          className="mt-2"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add First Product
+                        </Button>
+                      </div>
+                    )}
+                  </div>
 
-            {/* Update Button */}
-            <Button 
-              type="submit"
-              disabled={isUpdating || !canRecalculate}
-              className="w-full h-12 text-lg"
-              onClick={form.handleSubmit(onSubmit)}
-            >
-              {isUpdating ? (
-                <>
-                  <Clock className="h-5 w-5 mr-2 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Update Quote & Calculate Costs
-                </>
-              )}
-            </Button>
+                  {/* Right Column - Settings Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-muted-foreground">Calculation Settings</h3>
+                    
+                    <div className="space-y-4">
+                      <QuoteDetailForm 
+                        form={form}
+                        shippingAddress={shippingAddress}
+                        detectedCustomsPercentage={appliedTier?.customs_percentage}
+                        detectedCustomsTier={appliedTier}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-            {/* Auto-Calculation Status */}
-            {canRecalculate && (
-              <div className="p-4 bg-muted/50 rounded-lg border">
-                <div className="flex items-center gap-2 text-sm">
-                  {isAutoCalculating ? (
-                    <>
-                      <Clock className="h-4 w-4 animate-spin" />
-                      <span>Auto-calculating...</span>
-                    </>
-                  ) : calculationError ? (
-                    <>
-                      <AlertTriangle className="h-4 w-4 text-destructive" />
-                      <span className="text-destructive">Auto-calculation failed: {calculationError}</span>
-                    </>
-                  ) : lastCalculationTime ? (
-                    <>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span>Last calculated: {lastCalculationTime.toLocaleTimeString()}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Auto-calculation will trigger when you make changes</span>
-                    </>
+                {/* Bottom Section - Update Button and Status */}
+                <div className="border-t bg-muted/30 p-6 space-y-4">
+                  {/* Update Button */}
+                  <Button 
+                    type="submit"
+                    disabled={isUpdating || !canRecalculate}
+                    className="w-full h-12 text-lg"
+                    onClick={form.handleSubmit(onSubmit)}
+                  >
+                    {isUpdating ? (
+                      <>
+                        <Clock className="h-5 w-5 mr-2 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-5 w-5 mr-2" />
+                        Update Quote & Calculate Costs
+                      </>
+                    )}
+                  </Button>
+
+                  {/* Auto-Calculation Status */}
+                  {canRecalculate && (
+                    <div className="p-3 bg-background rounded-lg border">
+                      <div className="flex items-center gap-2 text-sm">
+                        {isAutoCalculating ? (
+                          <>
+                            <Clock className="h-4 w-4 animate-spin" />
+                            <span>Auto-calculating...</span>
+                          </>
+                        ) : calculationError ? (
+                          <>
+                            <AlertTriangle className="h-4 w-4 text-destructive" />
+                            <span className="text-destructive">Auto-calculation failed: {calculationError}</span>
+                          </>
+                        ) : lastCalculationTime ? (
+                          <>
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <span>Last calculated: {lastCalculationTime.toLocaleTimeString()}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Auto-calculation will trigger when you make changes</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right Column - Results & Actions */}
