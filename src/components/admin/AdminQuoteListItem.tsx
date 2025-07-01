@@ -215,60 +215,60 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                                     <StatusBadge status={quote.status} />
                                     {getPriorityBadge(quote.priority)}
                                 </div>
+                                {/* Combined Info Row: Email, Phone, Product Link, Date */}
                                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                    {/* Customer Info */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <span className="font-medium text-foreground">{customerName}</span>
-                                            {routeCountries && (
-                                                <>
-                                                    <span className="text-muted-foreground">•</span>
-                                                    <span className="text-muted-foreground">
-                                                        {getCountryName(routeCountries.origin)} → {getCountryName(routeCountries.destination)}
-                                                    </span>
-                                                </>
-                                            )}
-                                        </div>
+                                    {/* Customer Name & Route */}
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <span className="font-medium text-foreground">{customerName}</span>
+                                        {routeCountries && (
+                                            <>
+                                                <span className="text-muted-foreground">•</span>
+                                                <span className="text-muted-foreground">
+                                                    {getCountryName(routeCountries.origin)} → {getCountryName(routeCountries.destination)}
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
-                                    {/* Email and Phone */}
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-1">
+                                    {/* All info in one row */}
+                                    <div className="flex items-center gap-4">
+                                        {/* Email */}
+                                        <span className="flex items-center gap-1">
                                             <Mail className="h-4 w-4" />
                                             <span className="truncate">{quote.email}</span>
-                                        </div>
+                                        </span>
+                                        {/* Phone */}
                                         {customerPhone && (
-                                            <div className="flex items-center gap-1">
-                                                <span className="text-muted-foreground">|</span>
+                                            <span className="flex items-center gap-1">
                                                 <Phone className="h-4 w-4" />
                                                 <span className="truncate">{customerPhone}</span>
-                                            </div>
+                                            </span>
                                         )}
-                                    </div>
-                                    {/* Product Name as Link */}
-                                    <div className="flex items-center gap-1">
-                                        <Package className="h-3 w-3" />
-                                        {firstItem?.product_name && firstItem?.product_url ? (
-                                          <a
-                                            href={firstItem.product_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="underline hover:text-primary flex items-center gap-1"
-                                            onClick={e => e.stopPropagation()}
-                                          >
-                                            {firstItem.product_name}
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-external-link h-3 w-3 ml-0.5"><path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
-                                          </a>
-                                        ) : (
-                                          <span>{firstItem?.product_name || quote.product_name || "No items specified"}</span>
-                                        )}
-                                        {totalItems > 1 && (
-                                          <span className="ml-1 text-xs text-muted-foreground">+{totalItems - 1}</span>
-                                        )}
-                                    </div>
-                                    {/* Date */}
-                                    <div className="flex items-center gap-1">
-                                        <Calendar className="h-3 w-3" />
-                                        <span>{formatDate(quote.created_at)}</span>
+                                        {/* Product Name as Link */}
+                                        <span className="flex items-center gap-1">
+                                            <Package className="h-3 w-3" />
+                                            {firstItem?.product_url ? (
+                                              <a
+                                                href={firstItem.product_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="underline hover:text-primary flex items-center gap-1"
+                                                onClick={e => e.stopPropagation()}
+                                              >
+                                                {firstItem.product_name || "LINK"}
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-external-link h-3 w-3 ml-0.5"><path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+                                              </a>
+                                            ) : (
+                                              <span>{firstItem?.product_name || quote.product_name || "No items specified"}</span>
+                                            )}
+                                            {totalItems > 1 && (
+                                              <span className="ml-1 text-xs text-muted-foreground">+{totalItems - 1}</span>
+                                            )}
+                                        </span>
+                                        {/* Date */}
+                                        <span className="flex items-center gap-1">
+                                            <Calendar className="h-3 w-3" />
+                                            <span>{formatDate(quote.created_at)}</span>
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -332,13 +332,16 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                         <Package className="h-4 w-4" />
-                        {firstItem?.product_name ? (
+                        {firstItem?.product_url ? (
                             <>
-                                {firstItem.product_url ? (
-                                    <a href={firstItem.product_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">{firstItem.product_name}</a>
-                                ) : (
-                                    <span>{firstItem.product_name}</span>
+                                <a href={firstItem.product_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">{firstItem.product_name || "LINK"}</a>
+                                {quote.quote_items && quote.quote_items.length > 1 && (
+                                    <span className="text-muted-foreground ml-1">+{quote.quote_items.length - 1} more</span>
                                 )}
+                            </>
+                        ) : firstItem?.product_name ? (
+                            <>
+                                <span>{firstItem.product_name}</span>
                                 {quote.quote_items && quote.quote_items.length > 1 && (
                                     <span className="text-muted-foreground ml-1">+{quote.quote_items.length - 1} more</span>
                                 )}
