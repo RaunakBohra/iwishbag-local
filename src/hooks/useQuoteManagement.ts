@@ -9,6 +9,7 @@ import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 type QuoteWithItems = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
+  profiles?: { preferred_display_currency?: string } | null;
 };
 
 export const useQuoteManagement = () => {
@@ -29,7 +30,7 @@ export const useQuoteManagement = () => {
         queryFn: async () => {
             let query = supabase
                 .from('quotes')
-                .select('*, quote_items(*)')
+                .select('*, quote_items(*), profiles!quotes_user_id_fkey(preferred_display_currency)')
                 .order('created_at', { ascending: false });
             
             // Filter out order statuses to show only quotes

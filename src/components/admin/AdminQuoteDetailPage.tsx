@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Send, MapPin, Calculator, CheckCircle, XCircle, Clock, AlertTriangle, FileText, DollarSign, ShoppingCart, Truck, Circle } from "lucide-react";
+import { ArrowLeft, Send, MapPin, Calculator, CheckCircle, XCircle, Clock, AlertTriangle, FileText, DollarSign, ShoppingCart, Truck, Circle, User, Mail, Phone, Calendar, Package, Settings, TrendingUp, Eye, Edit3, MessageSquare, Globe, Flag, UserMinus } from "lucide-react";
 import { QuoteDetailForm } from "@/components/admin/QuoteDetailForm";
 import { QuoteMessaging } from "@/components/messaging/QuoteMessaging";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import { ShippingInfoForm } from "./ShippingInfoForm";
 import { OrderTimeline } from "@/components/dashboard/OrderTimeline";
 import { Badge } from "@/components/ui/badge";
 import { extractShippingAddressFromNotes } from "@/lib/addressUpdates";
-import { ShippingAddressDisplay } from "./ShippingAddressDisplay";
+
 import { useWatch } from "react-hook-form";
 import { getShippingRouteById } from '@/hooks/useShippingRoutes';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
@@ -32,6 +32,9 @@ import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { Icon } from '@/components/ui/icon';
 import { StatusTransitionHistory } from './StatusTransitionHistory';
 import { StatusTransitionTest } from './StatusTransitionTest';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 // Helper function to create a stable hash for comparison
 const createStableHash = (obj: any): string => {
@@ -89,6 +92,23 @@ const AdminQuoteDetailPage = () => {
   const [lastCalculationTime, setLastCalculationTime] = useState<Date | null>(null);
   const [routeWeightUnit, setRouteWeightUnit] = useState<string | null>(null);
   const [smartWeightUnit, setSmartWeightUnit] = useState<'kg' | 'lb'>('kg');
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  
+  // Fetch customer profile data
+  const { data: customerProfile } = useQuery({
+    queryKey: ['customer-profile', quote?.user_id],
+    queryFn: async () => {
+      if (!quote?.user_id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', quote.user_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!quote?.user_id,
+  });
   
   // Use refs to store previous values for comparison
   const previousValuesRef = useRef<string>('');
@@ -389,16 +409,18 @@ const AdminQuoteDetailPage = () => {
   };
 
   // Early return if still loading
-  if (quoteLoading) return (
-    <div className="container py-8 space-y-4">
-      <Skeleton className="h-8 w-48" />
-      <Skeleton className="h-12 w-full" />
-      <div className="grid md:grid-cols-2 gap-8">
-        <Skeleton className="h-96 w-full" />
-        <Skeleton className="h-96 w-full" />
+  if (quoteLoading) {
+    return (
+      <div className="container py-8 space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid md:grid-cols-3 gap-6">
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64" />
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   // Show loading state while statuses are being loaded
   if (statusLoading) {
@@ -417,13 +439,16 @@ const AdminQuoteDetailPage = () => {
   if (error || !quote) {
     console.log('[AdminQuoteDetailPage] Error or no quote:', { error, quote });
     return (
-      <div className="container py-12 text-center">
-        <h1 className="text-2xl font-bold mb-4">Quote Not Found</h1>
-        <p className="text-muted-foreground">{error?.message || "The quote could not be found."}</p>
-        <Button variant="destructive" onClick={() => navigate('/admin/quotes')} className="mt-4">
+      <div className="container py-8">
+        <div className="text-center space-y-4">
+          <XCircle className="h-12 w-12 text-destructive mx-auto" />
+          <h2 className="text-xl font-semibold">Error Loading Quote</h2>
+          <p className="text-muted-foreground">{error instanceof Error ? error.message : String(error || 'Quote not found')}</p>
+          <Button onClick={() => navigate('/admin/quotes')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Quotes
-        </Button>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -497,34 +522,211 @@ const AdminQuoteDetailPage = () => {
 
   return (
     <Form {...form}>
-      <div className="container py-8 space-y-6">
-          <div>
-              <Button variant="destructive" size="sm" onClick={() => navigate(isOrder ? '/admin/orders' : '/admin/quotes')}>
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  {isOrder ? 'Back to All Orders' : 'Back to All Quotes'}
-              </Button>
-          </div>
-
-        {/* Status Management Panel */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Status Management
-              <Badge style={{ backgroundColor: statusConfig?.color || undefined }}>
-                {statusConfig?.icon && <Icon name={statusConfig.icon} className="mr-1" />}
-                {statusConfig?.label}
-              </Badge>
-            </CardTitle>
-            <div className="text-sm text-muted-foreground">
-              Manage quote status and workflow transitions
+      <div className="container py-6 space-y-6">
+        {/* Header with Navigation and Quick Actions */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="sm" onClick={() => navigate(isOrder ? '/admin/orders' : '/admin/quotes')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {isOrder ? 'Orders' : 'Quotes'}
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">
+                {isOrder ? 'Order' : 'Quote'} #{quote.display_id || quote.id}
+              </h1>
             </div>
-          </CardHeader>
-          <CardContent>
-            {renderStatusButtons()}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Badge 
+              variant="outline" 
+              className="text-sm"
+              style={{ backgroundColor: statusConfig?.color || undefined }}
+            >
+              {statusConfig?.icon && <Icon name={statusConfig.icon} className="mr-1" />}
+              {statusConfig?.label || quote.status}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Main Dashboard Grid */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          
+          {/* Left Column - Customer & Products */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Customer Information Card - Compact */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <User className="h-4 w-4" />
+                  {customerProfile?.full_name || quote.customer_name || quote.email || 'Customer'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {/* Customer Info & Context in Single Row */}
+                <div className="flex items-center justify-between gap-3">
+                  {/* Customer Info */}
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
+                      <Mail className="h-3 w-3 text-muted-foreground" />
+                      <span className="font-medium">{quote.email || 'No email'}</span>
+                    </div>
+                    
+                    {quote.customer_name && (
+                      <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
+                        <User className="h-3 w-3 text-muted-foreground" />
+                        <span className="font-medium">{quote.customer_name}</span>
+                      </div>
+                    )}
+                    
+                    {quote.customer_phone && (
+                      <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
+                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        <span className="font-medium">{quote.customer_phone}</span>
+                      </div>
+                    )}
+                    
+                    {quote.social_handle && (
+                      <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
+                        <MessageSquare className="h-3 w-3 text-muted-foreground" />
+                        <span className="font-medium">@{quote.social_handle}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Context Info */}
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded">
+                      <Calendar className="h-3 w-3 text-blue-600" />
+                      <span className="text-blue-800">{new Date(quote.created_at).toLocaleDateString()}</span>
+                    </div>
+                    
+                    {quote.quote_source && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded">
+                        <Globe className="h-3 w-3 text-green-600" />
+                        <span className="text-green-800 capitalize">{quote.quote_source}</span>
+                      </div>
+                    )}
+                    
+                    {quote.priority && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 rounded">
+                        <Flag className="h-3 w-3 text-orange-600" />
+                        <span className="text-orange-800 capitalize">{quote.priority}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Compact Shipping Address */}
+                {shippingAddress && (
+                  <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                    <MapPin className="h-3 w-3 text-green-600 flex-shrink-0" />
+                    <div className="flex items-center gap-2 text-green-800">
+                      {shippingAddress.recipient_name && (
+                        <span className="font-medium">👤 {shippingAddress.recipient_name}</span>
+                      )}
+                      <span>📍 {shippingAddress.city}, {shippingAddress.country}</span>
+                      {shippingAddress.phone && (
+                        <span>📞 {shippingAddress.phone}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+
+                
+                {quote.status === 'cancelled' && quote.rejection_details && (
+                  <div className="p-2 bg-red-50 border border-red-200 rounded text-xs">
+                    <div className="flex items-center gap-1 text-red-800 mb-1">
+                      <XCircle className="h-3 w-3" />
+                      <span className="font-medium">Rejection: {quote.rejection_details}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Products Card - Main Data Entry Area */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Package className="h-5 w-5" />
+                  Products & Data Entry
+                </CardTitle>
+                <CardDescription>
+                  Review customer requests and enter product details, prices, and weights
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {fields && fields.length > 0 ? (
+                  <div className="space-y-4">
+                    {fields.map((item, index) => (
+                      <EditableAdminQuoteItemCard 
+                        key={item.id} 
+                        index={index}
+                        control={form.control}
+                        allCountries={allCountries}
+                        onDelete={() => remove(index)}
+                        routeWeightUnit={routeWeightUnit}
+                        smartWeightUnit={smartWeightUnit}
+                        countryCurrency={countryCurrency}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>No products in this quote</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Cost Calculation Settings */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Calculator className="h-5 w-5" />
+                  Cost Calculation Settings
+                </CardTitle>
+                <CardDescription>
+                  Configure shipping, customs, and additional costs
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <QuoteDetailForm 
+                  form={form}
+                  shippingAddress={shippingAddress}
+                  detectedCustomsPercentage={appliedTier?.customs_percentage}
+                  detectedCustomsTier={appliedTier}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Update Button */}
+            <Button 
+              type="submit"
+              disabled={isUpdating || !canRecalculate}
+              className="w-full h-12 text-lg"
+              onClick={form.handleSubmit(onSubmit)}
+            >
+              {isUpdating ? (
+                <>
+                  <Clock className="h-5 w-5 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                  Update Quote & Calculate Costs
+                </>
+              )}
+            </Button>
 
             {/* Auto-Calculation Status */}
             {canRecalculate && (
-              <div className="mt-4 p-3 bg-muted rounded-lg">
+              <div className="p-4 bg-muted/50 rounded-lg border">
                 <div className="flex items-center gap-2 text-sm">
                   {isAutoCalculating ? (
                     <>
@@ -539,7 +741,7 @@ const AdminQuoteDetailPage = () => {
                   ) : lastCalculationTime ? (
                     <>
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span>Last auto-calculated: {lastCalculationTime.toLocaleTimeString()}</span>
+                      <span>Last calculated: {lastCalculationTime.toLocaleTimeString()}</span>
                     </>
                   ) : (
                     <>
@@ -550,181 +752,144 @@ const AdminQuoteDetailPage = () => {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardHeader>
-              <div className="flex justify-between items-center">
-                  <div>
-                      <CardTitle>{isOrder ? 'Order Details' : 'Quote Details'}</CardTitle>
-                      <CardDescription>
-                          {isOrder && quote.order_display_id 
-                              ? `Order ID: ${quote.order_display_id}` 
-                              : `Quote ID: ${quote.display_id || quote.id}`}
-                      </CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div>Status: <span className="font-semibold">{quote.status}</span></div>
-                    {hasAddress && (
-                      <Badge variant="default">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        Address Provided
-                      </Badge>
-                    )}
-                  </div>
-              </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-               <div><strong>Customer Email:</strong> {quote.email}</div>
-               {quote.status === 'cancelled' && quote.rejection_details && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-                      <h4 className="font-semibold mb-1">Rejection Information</h4>
-                      <div><strong>Reason:</strong> {quote.rejection_details}</div>
-                  </div>
-               )}
-          </CardContent>
-        </Card>
+          {/* Right Column - Results & Actions */}
+          <div className="space-y-6">
+            
+            {/* Cost Breakdown - Always Visible */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <DollarSign className="h-5 w-5" />
+                  Cost Breakdown
+                </CardTitle>
+                <CardDescription>
+                  Final calculated costs and pricing
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <QuoteCalculatedCosts quote={quote} />
+              </CardContent>
+            </Card>
 
-        {isOrder && <OrderTimeline currentStatus={quote.status} />}
 
-        <div className="grid md:grid-cols-2 gap-8">
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+
+            {/* Status Management */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Settings className="h-5 w-5" />
+                  Status Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {renderStatusButtons()}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Edit3 className="h-5 w-5" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={handleSendQuote}
+                  disabled={isSendingEmail}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {isSendingEmail ? 'Sending...' : 'Send Quote Email'}
+                </Button>
+                
+                {isOrder && (
+                  <>
+                    <OrderActions quote={quote} />
+                    <ShippingInfoForm quote={quote} />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Advanced Information - Collapsible */}
+            <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
               <Card>
-                  <CardHeader><CardTitle>Products</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                      {fields && fields.length > 0 ? (
-                          fields.map((item, index) => (
-                              <EditableAdminQuoteItemCard 
-                                  key={item.id} 
-                                  index={index}
-                                  control={form.control}
-                                  allCountries={allCountries}
-                                  onDelete={() => remove(index)}
-                                  routeWeightUnit={routeWeightUnit}
-                                  smartWeightUnit={smartWeightUnit}
-                                  countryCurrency={countryCurrency}
-                              />
-                          ))
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <CardTitle className="flex items-center justify-between text-lg">
+                      <div className="flex items-center gap-2">
+                        <Eye className="h-5 w-5" />
+                        Advanced Information
+                      </div>
+                      {isAdvancedOpen ? (
+                        <ChevronDown className="h-4 w-4" />
                       ) : (
-                          <p>No items in this quote.</p>
+                        <ChevronRight className="h-4 w-4" />
                       )}
-                  </CardContent>
-              </Card>
-              <Card>
-                  <CardHeader><CardTitle>Costs and Settings</CardTitle></CardHeader>
-                  <CardContent>
-                      <QuoteDetailForm 
-                        form={form}
-                        shippingAddress={shippingAddress}
-                        detectedCustomsPercentage={appliedTier?.customs_percentage}
-                        detectedCustomsTier={appliedTier}
-                      />
-                  </CardContent>
-              </Card>
-              <Button 
-                  type="submit"
-                  disabled={isUpdating || !canRecalculate}
-                  className="w-full"
-              >
-                  {isUpdating ? 'Updating...' : 'Update Quote & Status'}
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                💡 Updates all form fields including status, then recalculates the quote
-              </p>
-            </form>
-            <div className="space-y-4">
-              <QuoteCurrencySummary quote={quote} countries={countries} />
-              <QuoteCalculatedCosts quote={quote} />
-              
-              {/* Customs Tiers Information */}
-              <CustomsTierDisplay 
-                quote={quote} 
-                shippingAddress={shippingAddress} 
-                customsTiers={customsTiers}
-                appliedTier={appliedTier}
-                loading={customsLoading}
-                error={customsError}
-              />
-              
-              {/* Shipping Route Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Shipping Route Information</CardTitle>
-                  <CardDescription>
-                    Details about the shipping method used for this quote
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium text-muted-foreground">Origin Country:</span>
-                      <div className="font-semibold">
-                        {purchaseCountry
-                          ? `🌍 ${allCountries?.find(c => c.code === purchaseCountry)?.name || purchaseCountry}`
-                          : (quote.origin_country ? `🌍 ${quote.origin_country}` : 'Not selected')}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="font-medium text-muted-foreground">Destination Country:</span>
-                      <div className="font-semibold">
-                        {destinationCountry
-                          ? `🌍 ${destinationCountry}`
-                          : (quote.country_code ? `🌍 ${quote.country_code}` : 'Not specified')}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="pt-2 border-t">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-muted-foreground">Shipping Method:</span>
-                      <Badge variant={quote?.shipping_method === 'route-specific' ? 'default' : 'secondary'}>
-                        {quote?.shipping_method === 'route-specific' ? 'Route-Specific' : 'Country Settings'}
-                      </Badge>
-                    </div>
+                    </CardTitle>
+                    <CardDescription>
+                      Shipping routes, customs tiers, and detailed information
+                    </CardDescription>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="space-y-4 pt-0">
                     
-                    {quote?.shipping_method === 'route-specific' && quote?.shipping_route_id && (
-                      <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="text-sm text-blue-800">
-                          <strong>Route ID:</strong> {quote.shipping_route_id}
-                        </div>
-                        <div className="text-xs text-blue-600 mt-1">
-                          This quote used a specific shipping route for more accurate pricing
-                        </div>
-                      </div>
-                    )}
+                    {/* Customs Tiers Information */}
+                    <CustomsTierDisplay 
+                      quote={quote} 
+                      shippingAddress={shippingAddress} 
+                      customsTiers={customsTiers}
+                      appliedTier={appliedTier}
+                      loading={customsLoading}
+                      error={customsError}
+                    />
                     
-                    {quote?.shipping_method === 'country_settings' && (
-                      <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                        <div className="text-sm text-gray-800">
-                          <strong>Fallback Method:</strong> Country-based shipping calculation
+                    {/* Shipping Route Information */}
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Shipping Route Information</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Origin:</span>
+                          <div className="font-medium">
+                            {purchaseCountry
+                              ? allCountries?.find(c => c.code === purchaseCountry)?.name || purchaseCountry
+                              : quote.origin_country || 'Not selected'}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-600 mt-1">
-                          No specific route found, using default country settings
+                        <div>
+                          <span className="text-muted-foreground">Destination:</span>
+                          <div className="font-medium">
+                            {destinationCountry || quote.country_code || 'Not specified'}
+                          </div>
                         </div>
                       </div>
-                    )}
-                  </div>
-                  
-                  <div className="pt-2 border-t">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-muted-foreground">International Shipping Cost:</span>
-                      <span className="font-semibold">
-                        ${quote.international_shipping?.toFixed(2) || '0.00'}
-                      </span>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Method:</span>
+                        <Badge variant={quote?.shipping_method === 'route-specific' ? 'default' : 'secondary'}>
+                          {quote?.shipping_method === 'route-specific' ? 'Route-Specific' : 'Country Settings'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Shipping Cost:</span>
+                        <span className="font-medium">
+                          ${quote.international_shipping?.toFixed(2) || '0.00'}
+                        </span>
+                      </div>
                     </div>
-                    {routeWeightUnit && (
-                      <div className="mt-2 text-xs text-blue-700">
-                        <strong>Weight Unit:</strong> {routeWeightUnit}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Weight Display Section */}
-                  <div className="pt-2 border-t">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-muted-foreground">Quote Weight:</span>
-                      <div className="text-right">
+
+                    {/* Weight Information */}
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Weight Information</h4>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Total Weight:</span>
                         <WeightDisplay 
                           weight={quote.item_weight}
                           routeWeightUnit={smartWeightUnit}
@@ -732,64 +897,59 @@ const AdminQuoteDetailPage = () => {
                         />
                       </div>
                     </div>
-                    
-                    {/* Individual Item Weights */}
-                    {quote.quote_items && quote.quote_items.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-100">
-                        <div className="text-xs font-medium text-muted-foreground mb-2">Item Weights:</div>
-                        <div className="space-y-1">
-                          {quote.quote_items.map((item, index) => (
-                            <div key={index} className="flex justify-between text-xs">
-                              <span className="text-muted-foreground">
-                                {item.product_name || `Item ${index + 1}`}:
-                              </span>
-                              <WeightDisplay 
-                                weight={item.item_weight}
-                                routeWeightUnit={smartWeightUnit}
-                                showOriginal={false}
-                                compact={true}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Delivery Options Management Section */}
-                  <div className="pt-4 border-t">
-                    <DeliveryOptionsManager 
-                      quote={quote}
-                      className="border-0 shadow-none p-0"
-                    />
-                  </div>
-                </CardContent>
+                    {/* Delivery Options */}
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Delivery Options</h4>
+                      <DeliveryOptionsManager 
+                        quote={quote}
+                        className="border-0 shadow-none p-0"
+                      />
+                    </div>
+
+
+
+                    {/* Status History */}
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Status History</h4>
+                      <StatusTransitionHistory quoteId={quote.id} />
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
               </Card>
-              
-              {/* Status Transition History */}
-              <StatusTransitionHistory quoteId={quote.id} />
-              
-              {/* Status Transition Testing */}
-              <StatusTransitionTest quoteId={quote.id} currentStatus={quote.status} />
-              
-              {/* Shipping Address Management Section */}
-              <ShippingAddressDisplay 
-                address={shippingAddress}
-                title="Shipping Address Management"
-                variant="detailed"
-              />
-              
-              {isOrder && (
-                <>
-                  <OrderActions quote={quote} />
-                  <ShippingInfoForm quote={quote} />
-                </>
-              )}
-              <div className="overflow-y-auto max-h-[70vh] border rounded-lg">
-                <QuoteMessaging quoteId={quote.id} quoteUserId={quote.user_id} />
-              </div>
-            </div>
+            </Collapsible>
+
+            {/* Messaging */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <FileText className="h-5 w-5" />
+                  Customer Messages
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64 overflow-y-auto border rounded-lg">
+                  <QuoteMessaging quoteId={quote.id} quoteUserId={quote.user_id} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
+
+        {/* Order Timeline for Orders */}
+        {isOrder && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="h-5 w-5" />
+                Order Timeline
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <OrderTimeline currentStatus={quote.status} />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </Form>
   );

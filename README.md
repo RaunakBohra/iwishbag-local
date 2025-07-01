@@ -70,3 +70,13 @@ src/
 3. Make your changes
 4. Submit a pull request
 
+## Important Development Notes
+
+### Dual Currency Display Requirement
+When working with admin quotes and orders, ensure that cost breakdowns display in both purchase currency and user's preferred currency. See `DUAL_CURRENCY_DISPLAY_REQUIREMENT.md` for detailed implementation guidelines.
+
+**Key Requirement:** Always include user profile information when fetching quotes/orders for admin display:
+```typescript
+.select('*, quote_items(*), profiles!quotes_user_id_fkey(preferred_display_currency)')
+```
+
