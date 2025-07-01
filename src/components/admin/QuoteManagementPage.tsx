@@ -20,11 +20,17 @@ import {
 } from "lucide-react";
 
 export const QuoteManagementPage = () => {
+    // Filter states managed in the page
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [searchInput, setSearchInput] = useState('');
+    const [purchaseCountryFilter, setPurchaseCountryFilter] = useState('all');
+    const [shippingCountryFilter, setShippingCountryFilter] = useState('all');
+    const [dateRange, setDateRange] = useState("all");
+    const [amountRange, setAmountRange] = useState("all");
+    const [countryFilter, setCountryFilter] = useState("all");
+    const [priorityFilter, setPriorityFilter] = useState("all");
+
     const {
-        statusFilter,
-        setStatusFilter,
-        searchInput,
-        setSearchInput,
         quotes,
         quotesLoading,
         isCreateDialogOpen,
@@ -42,13 +48,13 @@ export const QuoteManagementPage = () => {
         isUpdatingStatus,
         updateMultipleQuotesRejectionIsPending,
         activeStatusUpdate,
-    } = useQuoteManagement();
-
-    // New filter states
-    const [dateRange, setDateRange] = useState("all");
-    const [amountRange, setAmountRange] = useState("all");
-    const [countryFilter, setCountryFilter] = useState("all");
-    const [priorityFilter, setPriorityFilter] = useState("all");
+    } = useQuoteManagement({
+        statusFilter,
+        searchInput,
+        purchaseCountryFilter,
+        shippingCountryFilter,
+        // ...other filters if needed
+    });
 
     if (quotesLoading) {
         return (
@@ -93,77 +99,6 @@ export const QuoteManagementPage = () => {
                 onDownloadCSV={downloadCSV}
             />
 
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Total Quotes</p>
-                                <p className="text-2xl font-bold">{totalQuotes}</p>
-                            </div>
-                            <FileText className="h-8 w-8 text-blue-500" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                                <p className="text-2xl font-bold text-yellow-600">{pendingQuotes}</p>
-                            </div>
-                            <Clock className="h-8 w-8 text-yellow-500" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Total Value</p>
-                                <p className="text-2xl font-bold text-green-600">${totalValue.toLocaleString()}</p>
-                            </div>
-                            <DollarSign className="h-8 w-8 text-green-500" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Avg. Value</p>
-                                <p className="text-2xl font-bold">${averageValue.toFixed(0)}</p>
-                            </div>
-                            <TrendingUp className="h-8 w-8 text-purple-500" />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Status Summary */}
-            <div className="flex items-center gap-4 flex-wrap">
-                <Badge variant="outline" className="flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3 text-green-600" />
-                    Confirmed: {confirmedQuotes}
-                </Badge>
-                <Badge variant="outline" className="flex items-center gap-1">
-                    <DollarSign className="h-3 w-3 text-green-600" />
-                    Paid: {paidQuotes}
-                </Badge>
-                <Badge variant="outline" className="flex items-center gap-1">
-                    <XCircle className="h-3 w-3 text-red-600" />
-                    Cancelled: {cancelledQuotes}
-                </Badge>
-                <Badge variant="outline" className="flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3 text-yellow-600" />
-                    Pending: {pendingQuotes}
-                </Badge>
-            </div>
-
             {/* Dialogs */}
             <CreateQuoteDialog
                 isOpen={isCreateDialogOpen}
@@ -193,6 +128,10 @@ export const QuoteManagementPage = () => {
                 priorityFilter={priorityFilter}
                 onPriorityFilterChange={setPriorityFilter}
                 onClearFilters={clearAllFilters}
+                purchaseCountryFilter={purchaseCountryFilter}
+                onPurchaseCountryFilterChange={setPurchaseCountryFilter}
+                shippingCountryFilter={shippingCountryFilter}
+                onShippingCountryFilterChange={setShippingCountryFilter}
             />
 
             {/* Enhanced Bulk Actions */}

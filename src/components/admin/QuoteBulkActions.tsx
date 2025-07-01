@@ -117,6 +117,15 @@ export const QuoteBulkActions = ({
     return isUpdatingStatus && activeStatusUpdate === action;
   };
 
+  // Remove 'email' and 'duplicate' from the available actions
+  const actions = [
+    'accepted',
+    'cancelled',
+    'confirm_payment',
+    'export',
+    'priority',
+  ];
+
   return (
     <Card className="border-l-4 border-l-primary">
       <CardContent className="p-4">
@@ -198,97 +207,22 @@ export const QuoteBulkActions = ({
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Primary Actions */}
-          <div className="flex items-center gap-2">
-            <Button 
-              size="sm" 
-              onClick={() => onBulkAction('accepted')} 
-              disabled={isProcessing}
-              className="flex items-center gap-1"
+          {actions.map((action) => (
+            <Button
+              key={action}
+              variant={getActionVariant(action)}
+              size="sm"
+              onClick={() => onBulkAction(action as any)}
+              disabled={isProcessing || isActionLoading(action)}
             >
-              {isActionLoading('accepted') ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+              {isActionLoading(action) ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
-                getStatusIcon('accepted')
+                getStatusIcon(action)
               )}
-              {getActionLabel('accepted')}
+              {getActionLabel(action)}
             </Button>
-            
-            <Button 
-              size="sm" 
-              variant="destructive" 
-              onClick={() => onBulkAction('cancelled')}
-              disabled={isProcessing}
-              className="flex items-center gap-1"
-            >
-              {isActionLoading('cancelled') ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                getStatusIcon('cancelled')
-              )}
-              {getActionLabel('cancelled')}
-            </Button>
-            
-            <Button 
-              size="sm" 
-              onClick={() => onBulkAction('confirm_payment')}
-              disabled={isProcessing}
-              className="flex items-center gap-1"
-            >
-              {isActionLoading('confirm_payment') ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                getStatusIcon('confirm_payment')
-              )}
-              {getActionLabel('confirm_payment')}
-            </Button>
-          </div>
-
-          {/* Secondary Actions */}
-          <div className="flex items-center gap-2">
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => onBulkAction('email')}
-              disabled={isProcessing}
-              className="flex items-center gap-1"
-            >
-              {getStatusIcon('email')}
-              {getActionLabel('email')}
-            </Button>
-            
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => onBulkAction('export')}
-              disabled={isProcessing}
-              className="flex items-center gap-1"
-            >
-              {getStatusIcon('export')}
-              {getActionLabel('export')}
-            </Button>
-            
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => onBulkAction('duplicate')}
-              disabled={isProcessing}
-              className="flex items-center gap-1"
-            >
-              {getStatusIcon('duplicate')}
-              {getActionLabel('duplicate')}
-            </Button>
-            
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => onBulkAction('priority')}
-              disabled={isProcessing}
-              className="flex items-center gap-1"
-            >
-              {getStatusIcon('priority')}
-              {getActionLabel('priority')}
-            </Button>
-          </div>
+          ))}
         </div>
       </CardContent>
     </Card>

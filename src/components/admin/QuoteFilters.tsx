@@ -17,6 +17,7 @@ import {
 import { useStatusManagement } from "@/hooks/useStatusManagement";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAllCountries } from '@/hooks/useAllCountries';
 
 interface QuoteFiltersProps {
     searchTerm: string;
@@ -33,6 +34,11 @@ interface QuoteFiltersProps {
     priorityFilter?: string;
     onPriorityFilterChange?: (value: string) => void;
     onClearFilters?: () => void;
+    // Add purchase and shipping country filters
+    purchaseCountryFilter?: string;
+    onPurchaseCountryFilterChange?: (value: string) => void;
+    shippingCountryFilter?: string;
+    onShippingCountryFilterChange?: (value: string) => void;
 }
 
 export const QuoteFilters = ({ 
@@ -48,10 +54,15 @@ export const QuoteFilters = ({
     onCountryFilterChange,
     priorityFilter = "all",
     onPriorityFilterChange,
-    onClearFilters
+    onClearFilters,
+    purchaseCountryFilter,
+    onPurchaseCountryFilterChange,
+    shippingCountryFilter,
+    onShippingCountryFilterChange
 }: QuoteFiltersProps) => {
     const { quoteStatuses } = useStatusManagement();
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+    const { data: allCountries, isLoading: countriesLoading } = useAllCountries();
 
     // Get only quote statuses for filtering
     const availableQuoteStatuses = (quoteStatuses || [])
@@ -93,22 +104,15 @@ export const QuoteFilters = ({
         { value: "urgent", label: "Urgent" },
     ];
 
-    const countryOptions = [
-        { value: "all", label: "All Countries" },
-        { value: "US", label: "United States" },
-        { value: "CA", label: "Canada" },
-        { value: "GB", label: "United Kingdom" },
-        { value: "AU", label: "Australia" },
-        { value: "IN", label: "India" },
-        { value: "DE", label: "Germany" },
-        { value: "FR", label: "France" },
-        { value: "JP", label: "Japan" },
-        { value: "SG", label: "Singapore" },
+    // Build dynamic country options
+    const dynamicCountryOptions = [
+        { value: 'all', label: 'All Countries' },
+        ...(allCountries ? allCountries.map((c: any) => ({ value: c.code, label: c.name })) : [])
     ];
 
     return (
         <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 border-b">
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
                         <Filter className="h-5 w-5" />
@@ -148,7 +152,7 @@ export const QuoteFilters = ({
             </CardHeader>
             <CardContent className="space-y-4">
                 {/* Basic Filters - Always Visible */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     {/* Search */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -159,7 +163,6 @@ export const QuoteFilters = ({
                             className="pl-10"
                         />
                     </div>
-
                     {/* Status Filter */}
                     <Select value={statusFilter} onValueChange={onStatusFilterChange}>
                         <SelectTrigger>
@@ -178,7 +181,6 @@ export const QuoteFilters = ({
                             ))}
                         </SelectContent>
                     </Select>
-
                     {/* Date Range */}
                     <Select value={dateRange} onValueChange={onDateRangeChange}>
                         <SelectTrigger>
@@ -198,15 +200,47 @@ export const QuoteFilters = ({
                 {/* Advanced Filters - Collapsible */}
                 {isAdvancedOpen && (
                     <div className="pt-4 border-t space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Purchase Country Filter */}
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1">Purchase Country</label>
+                                <Select value={purchaseCountryFilter || 'all'} onValueChange={onPurchaseCountryFilterChange} disabled={countriesLoading}>
+                                    <SelectTrigger>
+                                        <MapPin className="h-4 w-4 mr-2" />
+                                        <SelectValue placeholder="Purchase Country" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {dynamicCountryOptions.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {/* Shipping Country Filter */}
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1">Shipping Country</label>
+                                <Select value={shippingCountryFilter || 'all'} onValueChange={onShippingCountryFilterChange} disabled={countriesLoading}>
+                                    <SelectTrigger>
+                                        <MapPin className="h-4 w-4 mr-2" />
+                                        <SelectValue placeholder="Shipping Country" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {dynamicCountryOptions.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             {/* Amount Range */}
                             <div>
-                                <label className="text-sm font-medium mb-2 block flex items-center gap-1">
-                                    <DollarSign className="h-4 w-4" />
-                                    Amount Range
-                                </label>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1">Amount Range</label>
                                 <Select value={amountRange} onValueChange={onAmountRangeChange}>
                                     <SelectTrigger>
+                                        <DollarSign className="h-4 w-4 mr-2" />
                                         <SelectValue placeholder="All Amounts" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -218,19 +252,16 @@ export const QuoteFilters = ({
                                     </SelectContent>
                                 </Select>
                             </div>
-
                             {/* Country Filter */}
                             <div>
-                                <label className="text-sm font-medium mb-2 block flex items-center gap-1">
-                                    <MapPin className="h-4 w-4" />
-                                    Country
-                                </label>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1">Country</label>
                                 <Select value={countryFilter} onValueChange={onCountryFilterChange}>
                                     <SelectTrigger>
+                                        <MapPin className="h-4 w-4 mr-2" />
                                         <SelectValue placeholder="All Countries" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {countryOptions.map((option) => (
+                                        {dynamicCountryOptions.map((option) => (
                                             <SelectItem key={option.value} value={option.value}>
                                                 {option.label}
                                             </SelectItem>
@@ -238,15 +269,12 @@ export const QuoteFilters = ({
                                     </SelectContent>
                                 </Select>
                             </div>
-
                             {/* Priority Filter */}
                             <div>
-                                <label className="text-sm font-medium mb-2 block flex items-center gap-1">
-                                    <Clock className="h-4 w-4" />
-                                    Priority
-                                </label>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1">Priority</label>
                                 <Select value={priorityFilter} onValueChange={onPriorityFilterChange}>
                                     <SelectTrigger>
+                                        <Clock className="h-4 w-4 mr-2" />
                                         <SelectValue placeholder="All Priorities" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -259,47 +287,6 @@ export const QuoteFilters = ({
                                 </Select>
                             </div>
                         </div>
-
-                        {/* Active Filters Display */}
-                        {hasActiveFilters && (
-                            <div className="pt-2 border-t">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <span>Active filters:</span>
-                                    <div className="flex flex-wrap gap-1">
-                                        {statusFilter !== 'all' && (
-                                            <Badge variant="outline" className="text-xs">
-                                                Status: {availableQuoteStatuses.find(s => s.name === statusFilter)?.label || statusFilter}
-                                            </Badge>
-                                        )}
-                                        {dateRange !== 'all' && (
-                                            <Badge variant="outline" className="text-xs">
-                                                Date: {dateRangeOptions.find(d => d.value === dateRange)?.label || dateRange}
-                                            </Badge>
-                                        )}
-                                        {amountRange !== 'all' && (
-                                            <Badge variant="outline" className="text-xs">
-                                                Amount: {amountRangeOptions.find(a => a.value === amountRange)?.label || amountRange}
-                                            </Badge>
-                                        )}
-                                        {countryFilter !== 'all' && (
-                                            <Badge variant="outline" className="text-xs">
-                                                Country: {countryOptions.find(c => c.value === countryFilter)?.label || countryFilter}
-                                            </Badge>
-                                        )}
-                                        {priorityFilter !== 'all' && (
-                                            <Badge variant="outline" className="text-xs">
-                                                Priority: {priorityOptions.find(p => p.value === priorityFilter)?.label || priorityFilter}
-                                            </Badge>
-                                        )}
-                                        {searchTerm.length > 0 && (
-                                            <Badge variant="outline" className="text-xs">
-                                                Search: "{searchTerm}"
-                                            </Badge>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 )}
             </CardContent>

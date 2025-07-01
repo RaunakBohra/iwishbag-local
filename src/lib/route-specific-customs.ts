@@ -236,4 +236,43 @@ export async function getAvailableCustomsRoutes(): Promise<Array<{origin: string
   });
 
   return routes;
+}
+
+/**
+ * Returns the origin and destination country codes for a quote, using unified logic.
+ * @param {any} quote - The quote object
+ * @param {any} shippingAddress - The shipping address (optional)
+ * @param {any[]} allCountries - List of all countries (optional, for name/code resolution)
+ * @param {function} fetchRouteById - Async function to fetch route by id (must return {origin_country, destination_country})
+ * @returns {Promise<{origin: string, destination: string}>}
+ */
+export async function getQuoteRouteCountries(quote, shippingAddress, allCountries, fetchRouteById) {
+  // 1. If shipping_route_id, fetch from DB
+  if (quote.shipping_route_id && fetchRouteById) {
+    try {
+      const route = await fetchRouteById(quote.shipping_route_id);
+      if (route && route.origin_country && route.destination_country) {
+        return { origin: route.origin_country, destination: route.destination_country };
+      }
+    } catch (e) {
+      // fallback below
+    }
+  }
+  // 2. Fallback: use quote fields
+  let origin = quote.origin_country || quote.country_code || 'US';
+  let destination = (shippingAddress && shippingAddress.country) || '';
+
+  // Optionally resolve to country codes if names are present
+  if (allCountries) {
+    // If origin/destination are names, convert to codes
+    const findCode = (val) => {
+      if (!val) return val;
+      if (val.length === 2) return val;
+      const found = allCountries.find(c => c.name === val);
+      return found ? found.code : val;
+    };
+    origin = findCode(origin);
+    destination = findCode(destination);
+  }
+  return { origin, destination };
 } 

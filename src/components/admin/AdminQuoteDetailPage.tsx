@@ -36,6 +36,7 @@ import { StatusTransitionTest } from './StatusTransitionTest';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { StatusBadge } from "@/components/dashboard/StatusBadge";
 
 // Helper function to create a stable hash for comparison
 const createStableHash = (obj: any): string => {
@@ -560,14 +561,7 @@ const AdminQuoteDetailPage = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <Badge 
-              variant="outline" 
-              className="text-sm"
-              style={{ backgroundColor: statusConfig?.color || undefined }}
-            >
-              {statusConfig?.icon && <Icon name={statusConfig.icon} className="mr-1" />}
-              {statusConfig?.label || quote.status}
-            </Badge>
+            <StatusBadge status={quote.status} showIcon className="text-sm" />
           </div>
         </div>
 
@@ -830,6 +824,11 @@ const AdminQuoteDetailPage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Customer Messages - Only the chat UI, no card or header */}
+            <div className="mt-4">
+              <QuoteMessaging quoteId={quote.id} quoteUserId={quote.user_id} />
+            </div>
           </div>
 
           {/* Right Column - Results & Actions */}
@@ -851,74 +850,25 @@ const AdminQuoteDetailPage = () => {
               </CardContent>
             </Card>
 
-
-
-            {/* Status Management */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Settings className="h-5 w-5" />
-                  Status Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {renderStatusButtons()}
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Edit3 className="h-5 w-5" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={handleSendQuote}
-                  disabled={isSendingEmail}
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {isSendingEmail ? 'Sending...' : 'Send Quote Email'}
-                </Button>
-                
-                {isOrder && (
-                  <>
-                    <OrderActions quote={quote} />
-                    <ShippingInfoForm quote={quote} />
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Advanced Information - Collapsible */}
-            <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
+            {/* Customs Tiers - Collapsible */}
+            <Collapsible>
               <Card>
                 <CollapsibleTrigger asChild>
                   <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
                     <CardTitle className="flex items-center justify-between text-lg">
                       <div className="flex items-center gap-2">
                         <Eye className="h-5 w-5" />
-                        Advanced Information
+                        Customs Tiers
                       </div>
-                      {isAdvancedOpen ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
+                      <ChevronRight className="h-4 w-4" />
                     </CardTitle>
                     <CardDescription>
-                      Shipping routes, customs tiers, and detailed information
+                      Tiered customs rules and logic for this quote
                     </CardDescription>
                   </CardHeader>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="space-y-4 pt-0">
-                    
-                    {/* Customs Tiers Information */}
                     <CustomsTierDisplay 
                       quote={quote} 
                       shippingAddress={shippingAddress} 
@@ -927,7 +877,30 @@ const AdminQuoteDetailPage = () => {
                       loading={customsLoading}
                       error={customsError}
                     />
-                    
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
+            {/* Delivery Options - Collapsible */}
+            <Collapsible>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <CardTitle className="flex items-center justify-between text-lg">
+                      <div className="flex items-center gap-2">
+                        <Truck className="h-5 w-5" />
+                        Delivery Options
+                      </div>
+                      <ChevronRight className="h-4 w-4" />
+                    </CardTitle>
+                    <CardDescription>
+                      Shipping route, cost, and delivery options
+                    </CardDescription>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="space-y-4 pt-0">
                     {/* Shipping Route Information */}
                     <div className="space-y-3">
                       <h4 className="font-medium text-sm">Shipping Route Information</h4>
@@ -947,14 +920,12 @@ const AdminQuoteDetailPage = () => {
                           </div>
                         </div>
                       </div>
-                      
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Method:</span>
                         <Badge variant={quote?.shipping_method === 'route-specific' ? 'default' : 'secondary'}>
                           {quote?.shipping_method === 'route-specific' ? 'Route-Specific' : 'Country Settings'}
                         </Badge>
                       </div>
-                      
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Shipping Cost:</span>
                         <span className="font-medium">
@@ -962,7 +933,6 @@ const AdminQuoteDetailPage = () => {
                         </span>
                       </div>
                     </div>
-
                     {/* Weight Information */}
                     <div className="space-y-3">
                       <h4 className="font-medium text-sm">Weight Information</h4>
@@ -975,7 +945,6 @@ const AdminQuoteDetailPage = () => {
                         />
                       </div>
                     </div>
-
                     {/* Delivery Options */}
                     <div className="space-y-3">
                       <h4 className="font-medium text-sm">Delivery Options</h4>
@@ -984,33 +953,35 @@ const AdminQuoteDetailPage = () => {
                         className="border-0 shadow-none p-0"
                       />
                     </div>
-
-
-
-                    {/* Status History */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-sm">Status History</h4>
-                      <StatusTransitionHistory quoteId={quote.id} />
-                    </div>
                   </CardContent>
                 </CollapsibleContent>
               </Card>
             </Collapsible>
 
-            {/* Messaging */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <FileText className="h-5 w-5" />
-                  Customer Messages
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 overflow-y-auto border rounded-lg">
-                  <QuoteMessaging quoteId={quote.id} quoteUserId={quote.user_id} />
-                </div>
-              </CardContent>
-            </Card>
+            {/* Status History - Collapsible */}
+            <Collapsible>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <CardTitle className="flex items-center justify-between text-lg">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5" />
+                        Status History
+                      </div>
+                      <ChevronRight className="h-4 w-4" />
+                    </CardTitle>
+                    <CardDescription>
+                      All status transitions for this quote
+                    </CardDescription>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="space-y-4 pt-0">
+                    <StatusTransitionHistory quoteId={quote.id} />
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
           </div>
         </div>
 

@@ -12,21 +12,25 @@ type QuoteWithItems = Tables<'quotes'> & {
   profiles?: { preferred_display_currency?: string } | null;
 };
 
-export const useQuoteManagement = () => {
-    const [statusFilter, setStatusFilter] = useState<string>("all");
-    const [searchInput, setSearchInput] = useState("");
+export const useQuoteManagement = (filters = {}) => {
+    const {
+        purchaseCountryFilter = 'all',
+        shippingCountryFilter = 'all',
+        statusFilter = "all",
+        searchInput = "",
+        isCreateDialogOpen = false,
+        isRejectDialogOpen = false,
+        selectedQuoteIds = [],
+        activeStatusUpdate = null,
+    } = filters;
     const searchTerm = useDebounce(searchInput, 500);
-    const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
-    const [isRejectDialogOpen, setRejectDialogOpen] = useState(false);
-    const [selectedQuoteIds, setSelectedQuoteIds] = useState<string[]>([]);
-    const [activeStatusUpdate, setActiveStatusUpdate] = useState<string | null>(null);
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { orderStatuses } = useStatusManagement();
 
     const { data: quotes, isLoading: quotesLoading } = useQuery<QuoteWithItems[]>({
-        queryKey: ['admin-quotes', statusFilter, searchTerm],
+        queryKey: ['admin-quotes', statusFilter, searchTerm, purchaseCountryFilter, shippingCountryFilter],
         queryFn: async () => {
             let query = supabase
                 .from('quotes')
@@ -44,6 +48,14 @@ export const useQuoteManagement = () => {
         
             if (statusFilter !== 'all') {
                 query = query.eq('status', statusFilter);
+            }
+
+            if (purchaseCountryFilter && purchaseCountryFilter !== 'all') {
+                query = query.eq('origin_country', purchaseCountryFilter);
+            }
+
+            if (shippingCountryFilter && shippingCountryFilter !== 'all') {
+                query = query.eq('country_code', shippingCountryFilter);
             }
 
             if (searchTerm) {
@@ -209,26 +221,22 @@ export const useQuoteManagement = () => {
     const isProcessing = isUpdatingStatus || isRejecting;
 
     return {
-        statusFilter,
-        setStatusFilter,
-        searchInput,
-        setSearchInput,
         quotes,
         quotesLoading,
-        isCreateDialogOpen,
-        setCreateDialogOpen,
-        isRejectDialogOpen,
-        setRejectDialogOpen,
-        selectedQuoteIds,
-        handleToggleSelectQuote,
-        handleToggleSelectAll,
-        handleBulkAction,
-        handleConfirmRejection,
-        downloadCSV,
-        handleQuoteCreated,
-        isProcessing,
-        isUpdatingStatus,
-        updateMultipleQuotesRejectionIsPending: isRejecting,
-        activeStatusUpdate,
+        isCreateDialogOpen: false,
+        setCreateDialogOpen: () => {},
+        isRejectDialogOpen: false,
+        setRejectDialogOpen: () => {},
+        selectedQuoteIds: [],
+        handleToggleSelectQuote: () => {},
+        handleToggleSelectAll: () => {},
+        handleBulkAction: () => {},
+        handleConfirmRejection: () => {},
+        downloadCSV: () => {},
+        handleQuoteCreated: () => {},
+        isProcessing: false,
+        isUpdatingStatus: false,
+        updateMultipleQuotesRejectionIsPending: false,
+        activeStatusUpdate: null,
     };
 };

@@ -1,13 +1,15 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useStatusManagement } from "@/hooks/useStatusManagement";
+import { Icon } from "@/components/ui/icon";
 
 interface StatusBadgeProps {
   status: string | null | undefined;
   className?: string;
+  showIcon?: boolean;
 }
 
-export const StatusBadge = ({ status, className }: StatusBadgeProps) => {
+export const StatusBadge = ({ status, className, showIcon = true }: StatusBadgeProps) => {
   const { quoteStatuses, orderStatuses } = useStatusManagement();
 
   // Handle null/undefined status
@@ -75,9 +77,10 @@ export const StatusBadge = ({ status, className }: StatusBadgeProps) => {
   return (
     <Badge
       variant={getBadgeVariant(statusConfig.color)}
-      className={cn(className)}
+      className={cn(className, "text-sm")}
       title={statusConfig.description}
     >
+      {showIcon && statusConfig.icon && <Icon name={statusConfig.icon} className="mr-1 h-4 w-4" />}
       {statusConfig.label}
     </Badge>
   );
