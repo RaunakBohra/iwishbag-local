@@ -18,6 +18,16 @@ import {
   TrendingUp,
   AlertTriangle
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 export const QuoteManagementPage = () => {
     // Filter states managed in the page
@@ -29,6 +39,8 @@ export const QuoteManagementPage = () => {
     const [amountRange, setAmountRange] = useState("all");
     const [countryFilter, setCountryFilter] = useState("all");
     const [priorityFilter, setPriorityFilter] = useState("all");
+    const [confirmAction, setConfirmAction] = useState<string | null>(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
     const {
         quotes,
@@ -48,6 +60,8 @@ export const QuoteManagementPage = () => {
         isUpdatingStatus,
         updateMultipleQuotesRejectionIsPending,
         activeStatusUpdate,
+        handleDeleteQuotes,
+        isDeletingQuotes,
     } = useQuoteManagement({
         statusFilter,
         searchInput,
@@ -89,6 +103,29 @@ export const QuoteManagementPage = () => {
         setAmountRange("all");
         setCountryFilter("all");
         setPriorityFilter("all");
+    };
+
+    // Confirmation dialog handlers
+    const handleRequestBulkAction = (action: string) => {
+        setConfirmAction(action);
+        setConfirmOpen(true);
+    };
+    const handleRequestDelete = () => {
+        setConfirmAction('delete');
+        setConfirmOpen(true);
+    };
+    const handleConfirm = () => {
+        if (confirmAction === 'delete') {
+            handleDeleteQuotes();
+        } else if (confirmAction) {
+            handleBulkAction(confirmAction as any);
+        }
+        setConfirmOpen(false);
+        setConfirmAction(null);
+    };
+    const handleCancel = () => {
+        setConfirmOpen(false);
+        setConfirmAction(null);
     };
 
     return (
@@ -134,21 +171,17 @@ export const QuoteManagementPage = () => {
                 onShippingCountryFilterChange={setShippingCountryFilter}
             />
 
-            {/* Enhanced Bulk Actions */}
-            <QuoteBulkActions
-                selectedCount={selectedQuoteIds.length}
-                selectedQuotes={selectedQuotes}
-                onBulkAction={handleBulkAction}
-                isProcessing={isProcessing}
-                isUpdatingStatus={isUpdatingStatus}
-                activeStatusUpdate={activeStatusUpdate}
-            />
-            
             {/* List Header */}
             <QuoteListHeader
                 quotes={quotes}
                 selectedQuoteIds={selectedQuoteIds}
                 onToggleSelectAll={handleToggleSelectAll}
+                onBulkAction={handleRequestBulkAction}
+                isProcessing={isProcessing}
+                isUpdatingStatus={isUpdatingStatus}
+                activeStatusUpdate={activeStatusUpdate}
+                onDeleteQuotes={handleRequestDelete}
+                isDeletingQuotes={isDeletingQuotes}
             />
 
             {/* Quotes List */}
@@ -184,6 +217,40 @@ export const QuoteManagementPage = () => {
                     </Card>
                 )}
             </div>
+
+            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {confirmAction === 'delete' && 'Delete Selected Quotes?'}
+                            {confirmAction === 'accepted' && 'Approve Selected Quotes?'}
+                            {confirmAction === 'cancelled' && 'Reject Selected Quotes?'}
+                            {confirmAction === 'confirm_payment' && 'Confirm Payment for Selected Quotes?'}
+                            {confirmAction === 'export' && 'Export Selected Quotes?'}
+                            {confirmAction === 'priority' && 'Change Priority for Selected Quotes?'}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {confirmAction === 'delete' && 'Are you sure you want to delete the selected quotes? This action cannot be undone.'}
+                            {confirmAction === 'accepted' && 'Are you sure you want to approve the selected quotes?'}
+                            {confirmAction === 'cancelled' && 'Are you sure you want to reject the selected quotes?'}
+                            {confirmAction === 'confirm_payment' && 'Are you sure you want to confirm payment for the selected quotes?'}
+                            {confirmAction === 'export' && 'Export the selected quotes?'}
+                            {confirmAction === 'priority' && 'Change the priority for the selected quotes?'}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={handleCancel}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirm} autoFocus>
+                            {confirmAction === 'delete' && 'Delete'}
+                            {confirmAction === 'accepted' && 'Approve'}
+                            {confirmAction === 'cancelled' && 'Reject'}
+                            {confirmAction === 'confirm_payment' && 'Confirm Payment'}
+                            {confirmAction === 'export' && 'Export'}
+                            {confirmAction === 'priority' && 'Change Priority'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

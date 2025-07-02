@@ -29,6 +29,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { extractShippingAddressFromNotes } from '@/lib/addressUpdates';
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 type QuoteWithItems = Tables<'quotes'> & { 
   quote_items: Tables<'quote_items'>[];
@@ -216,58 +217,58 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                                     {getPriorityBadge(quote.priority)}
                                 </div>
                                 {/* Combined Info Row: Email, Phone, Product Link, Date */}
-                                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-muted-foreground w-full">
                                     {/* Customer Name & Route */}
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <span className="font-medium text-foreground">{customerName}</span>
+                                    <div className="flex items-center gap-2 text-sm w-full sm:w-auto">
+                                        <span className="font-medium text-foreground truncate max-w-[120px] sm:max-w-none">{customerName}</span>
                                         {routeCountries && (
                                             <>
-                                                <span className="text-muted-foreground">•</span>
-                                                <span className="text-muted-foreground">
+                                                <span className="text-muted-foreground hidden sm:inline">•</span>
+                                                <span className="text-muted-foreground truncate max-w-[100px] sm:max-w-none">
                                                     {getCountryName(routeCountries.origin)} → {getCountryName(routeCountries.destination)}
                                                 </span>
                                             </>
                                         )}
                                     </div>
-                                    {/* All info in one row */}
-                                    <div className="flex items-center gap-4">
+                                    {/* All info in one row, responsive */}
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 w-full sm:w-auto">
                                         {/* Email */}
-                                        <span className="flex items-center gap-1">
-                                            <Mail className="h-4 w-4" />
-                                            <span className="truncate">{quote.email}</span>
+                                        <span className="flex items-center gap-1 min-w-0">
+                                            <Mail className="h-4 w-4 flex-shrink-0" />
+                                            <span className="truncate max-w-[110px] sm:max-w-[180px]">{quote.email}</span>
                                         </span>
-                                        {/* Phone */}
+                                        {/* Phone (hide on xs) */}
                                         {customerPhone && (
-                                            <span className="flex items-center gap-1">
-                                                <Phone className="h-4 w-4" />
-                                                <span className="truncate">{customerPhone}</span>
+                                            <span className="flex items-center gap-1 min-w-0 hidden xs:flex">
+                                                <Phone className="h-4 w-4 flex-shrink-0" />
+                                                <span className="truncate max-w-[90px] sm:max-w-[140px]">{customerPhone}</span>
                                             </span>
                                         )}
-                                        {/* Product Name as Link */}
-                                        <span className="flex items-center gap-1">
-                                            <Package className="h-3 w-3" />
+                                        {/* Product Name as Link (hide on xs) */}
+                                        <span className="flex items-center gap-1 min-w-0 hidden xs:flex">
+                                            <Package className="h-3 w-3 flex-shrink-0" />
                                             {firstItem?.product_url ? (
                                               <a
                                                 href={firstItem.product_url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="underline hover:text-primary flex items-center gap-1"
+                                                className="underline hover:text-primary flex items-center gap-1 truncate max-w-[90px] sm:max-w-[140px]"
                                                 onClick={e => e.stopPropagation()}
                                               >
                                                 {firstItem.product_name || "LINK"}
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-external-link h-3 w-3 ml-0.5"><path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
                                               </a>
                                             ) : (
-                                              <span>{firstItem?.product_name || quote.product_name || "No items specified"}</span>
+                                              <span className="truncate">{firstItem?.product_name || quote.product_name || "No items specified"}</span>
                                             )}
                                             {totalItems > 1 && (
                                               <span className="ml-1 text-xs text-muted-foreground">+{totalItems - 1}</span>
                                             )}
                                         </span>
-                                        {/* Date */}
-                                        <span className="flex items-center gap-1">
-                                            <Calendar className="h-3 w-3" />
-                                            <span>{formatDate(quote.created_at)}</span>
+                                        {/* Date (always visible) */}
+                                        <span className="flex items-center gap-1 min-w-0">
+                                            <Calendar className="h-3 w-3 flex-shrink-0" />
+                                            <span className="truncate max-w-[80px] sm:max-w-none">{formatDate(quote.created_at)}</span>
                                         </span>
                                     </div>
                                 </div>
@@ -299,12 +300,13 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                             <div className="flex-shrink-0 flex gap-1">
                                 <DialogTrigger asChild>
                                     <Button
-                                        size="sm"
-                                        variant="outline"
+                                        size="icon"
+                                        variant="ghost"
                                         onClick={e => { e.stopPropagation(); setIsPreviewOpen(true); }}
-                                        className="h-8 w-8 p-0"
+                                        className="h-9 w-9 rounded-full border border-muted hover:bg-primary/10 hover:border-primary focus-visible:ring-2 focus-visible:ring-primary transition"
+                                        aria-label="Quick Preview"
                                     >
-                                        <Eye className="h-4 w-4" />
+                                        <Eye className="h-5 w-5 text-primary" />
                                     </Button>
                                 </DialogTrigger>
                             </div>
@@ -365,7 +367,13 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button onClick={() => navigate(`/admin/quotes/${quote.id}`)} variant="default">Go to Full Page</Button>
+                    <Button 
+                        onClick={() => navigate(`/admin/quotes/${quote.id}`)} 
+                        variant="default"
+                        className="rounded-md px-4 py-2 font-semibold text-white bg-primary hover:bg-primary/90 transition"
+                    >
+                        Go to Full Page
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

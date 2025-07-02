@@ -214,6 +214,19 @@ export const QuoteBulkActions = ({
               size="sm"
               onClick={() => onBulkAction(action as any)}
               disabled={isProcessing || isActionLoading(action)}
+              className={[
+                // Common polish for all buttons
+                "rounded-md px-3 py-2 font-medium text-sm transition",
+                "focus-visible:ring-2 focus-visible:ring-primary",
+                // Outline/ghost/secondary
+                getActionVariant(action) === 'outline' ? "border border-muted bg-white hover:bg-primary/10 text-foreground" : "",
+                // Primary
+                getActionVariant(action) === 'default' ? "bg-primary text-white hover:bg-primary/90" : "",
+                // Destructive
+                getActionVariant(action) === 'destructive' ? "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 hover:text-red-900" : "",
+                // Compact on mobile
+                "sm:px-4 sm:py-2",
+              ].join(' ')}
             >
               {isActionLoading(action) ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />

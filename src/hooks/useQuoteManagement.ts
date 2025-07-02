@@ -18,11 +18,14 @@ export const useQuoteManagement = (filters = {}) => {
         shippingCountryFilter = 'all',
         statusFilter = "all",
         searchInput = "",
-        isCreateDialogOpen = false,
-        isRejectDialogOpen = false,
-        selectedQuoteIds = [],
-        activeStatusUpdate = null,
     } = filters;
+    
+    // Internal state management
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+    const [selectedQuoteIds, setSelectedQuoteIds] = useState<string[]>([]);
+    const [activeStatusUpdate, setActiveStatusUpdate] = useState<string | null>(null);
+    
     const searchTerm = useDebounce(searchInput, 500);
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -146,7 +149,7 @@ export const useQuoteManagement = (filters = {}) => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
             setSelectedQuoteIds([]);
-            setRejectDialogOpen(false);
+            setIsRejectDialogOpen(false);
             toast({ title: "Quotes rejected successfully" });
         },
         onError: (error: Error) => {
@@ -154,25 +157,53 @@ export const useQuoteManagement = (filters = {}) => {
         }
     });
 
-    const handleToggleSelectQuote = (id: string) => {
-        setSelectedQuoteIds(prev =>
-            prev.includes(id) ? prev.filter(quoteId => quoteId !== id) : [...prev, id]
-        );
+    const deleteQuotesMutation = useMutation({
+        mutationFn: async (ids: string[]) => {
+            const { error } = await supabase
+                .from('quotes')
+                .delete()
+                .in('id', ids);
+            if (error) throw new Error(error.message);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
+            setSelectedQuoteIds([]);
+            toast({ title: "Quotes deleted successfully" });
+        },
+        onError: (error: Error) => {
+            toast({ title: "Error deleting quotes", description: error.message, variant: "destructive" });
+        }
+    });
+
+    const handleToggleSelectQuote = (id: string, selected?: boolean) => {
+        setSelectedQuoteIds(prev => {
+            if (selected !== undefined) {
+                // If selected is explicitly provided, use it
+                return selected 
+                    ? [...prev, id]
+                    : prev.filter(quoteId => quoteId !== id);
+            } else {
+                // Toggle behavior for backward compatibility
+                return prev.includes(id) 
+                    ? prev.filter(quoteId => quoteId !== id) 
+                    : [...prev, id];
+            }
+        });
     };
 
-    const handleToggleSelectAll = () => {
-        if (selectedQuoteIds.length === quotes?.length) {
-            setSelectedQuoteIds([]);
-        } else {
+    const handleToggleSelectAll = (checked: boolean | "indeterminate") => {
+        if (checked) {
             setSelectedQuoteIds(quotes?.map(q => q.id) || []);
+        } else {
+            setSelectedQuoteIds([]);
         }
     };
 
-    const handleBulkAction = (action: 'accepted' | 'cancelled' | 'confirm_payment') => {
+    const handleBulkAction = (action: 'accepted' | 'cancelled' | 'confirm_payment' | 'email' | 'export' | 'duplicate' | 'priority') => {
         if (selectedQuoteIds.length === 0) return;
 
         if (action === 'cancelled') {
-            setRejectDialogOpen(true);
+            setIsRejectDialogOpen(true);
         } else if (action === 'accepted' || action === 'confirm_payment') {
             const status = action === 'confirm_payment' ? 'paid' : action;
             setActiveStatusUpdate(action);
@@ -212,31 +243,39 @@ export const useQuoteManagement = (filters = {}) => {
     };
 
     const handleQuoteCreated = (quoteId: string) => {
-        setCreateDialogOpen(false);
+        setIsCreateDialogOpen(false);
         navigate(`/admin/quotes/${quoteId}`);
+    };
+
+    const handleDeleteQuotes = () => {
+        if (selectedQuoteIds.length === 0) return;
+        deleteQuotesMutation.mutate(selectedQuoteIds);
     };
 
     const isUpdatingStatus = updateMultipleQuotesStatusMutation.isPending;
     const isRejecting = updateMultipleQuotesRejectionMutation.isPending;
     const isProcessing = isUpdatingStatus || isRejecting;
+    const isDeletingQuotes = deleteQuotesMutation.isPending;
 
     return {
         quotes,
         quotesLoading,
-        isCreateDialogOpen: false,
-        setCreateDialogOpen: () => {},
-        isRejectDialogOpen: false,
-        setRejectDialogOpen: () => {},
-        selectedQuoteIds: [],
-        handleToggleSelectQuote: () => {},
-        handleToggleSelectAll: () => {},
-        handleBulkAction: () => {},
-        handleConfirmRejection: () => {},
-        downloadCSV: () => {},
-        handleQuoteCreated: () => {},
-        isProcessing: false,
-        isUpdatingStatus: false,
-        updateMultipleQuotesRejectionIsPending: false,
-        activeStatusUpdate: null,
+        isCreateDialogOpen,
+        setCreateDialogOpen: setIsCreateDialogOpen,
+        isRejectDialogOpen,
+        setRejectDialogOpen: setIsRejectDialogOpen,
+        selectedQuoteIds,
+        handleToggleSelectQuote,
+        handleToggleSelectAll,
+        handleBulkAction,
+        handleConfirmRejection,
+        downloadCSV,
+        handleQuoteCreated,
+        isProcessing,
+        isUpdatingStatus,
+        updateMultipleQuotesRejectionIsPending: isRejecting,
+        activeStatusUpdate,
+        handleDeleteQuotes,
+        isDeletingQuotes,
     };
 };
