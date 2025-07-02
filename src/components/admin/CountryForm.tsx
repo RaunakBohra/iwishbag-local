@@ -22,6 +22,12 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
   const [shippingAllowed, setShippingAllowed] = useState(true);
   const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg'>('lbs');
   const [paymentGateway, setPaymentGateway] = useState('stripe');
+  const [priorityThresholds, setPriorityThresholds] = useState({
+    low: 0,
+    normal: 500,
+    urgent: 2000,
+  });
+  const [priorityError, setPriorityError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -31,18 +37,45 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
       setShippingAllowed(editingCountry.shipping_allowed ?? true);
       setWeightUnit(editingCountry.weight_unit as 'lbs' | 'kg' || 'lbs');
       setPaymentGateway(editingCountry.payment_gateway || 'stripe');
+      if (editingCountry.priority_thresholds) {
+        setPriorityThresholds({
+          low: editingCountry.priority_thresholds.low ?? 0,
+          normal: editingCountry.priority_thresholds.normal ?? 500,
+          urgent: editingCountry.priority_thresholds.urgent ?? 2000,
+        });
+      } else {
+        setPriorityThresholds({ low: 0, normal: 500, urgent: 2000 });
+      }
     } else {
-        setFormCurrency('');
-        setPurchaseAllowed(true);
-        setShippingAllowed(true);
-        setWeightUnit('lbs');
-        setPaymentGateway('stripe');
+      setFormCurrency('');
+      setPurchaseAllowed(true);
+      setShippingAllowed(true);
+      setWeightUnit('lbs');
+      setPaymentGateway('stripe');
+      setPriorityThresholds({ low: 0, normal: 500, urgent: 2000 });
     }
   }, [editingCountry]);
 
+  const handlePriorityChange = (key: 'low' | 'normal' | 'urgent', value: string) => {
+    setPriorityThresholds((prev) => ({ ...prev, [key]: Number(value) }));
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+    setPriorityError(null);
+    const { low, normal, urgent } = priorityThresholds;
+    if (
+      isNaN(low) || isNaN(normal) || isNaN(urgent) ||
+      low === null || normal === null || urgent === null ||
+      low === undefined || normal === undefined || urgent === undefined
+    ) {
+      setPriorityError('All priority thresholds are required.');
+      return;
+    }
+    if (!(low <= normal && normal <= urgent)) {
+      setPriorityError('Thresholds must be: Low ≤ Normal ≤ Urgent.');
+      return;
+    }
     try {
       const formData = new FormData(e.currentTarget);
       
@@ -81,6 +114,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
         payment_gateway: paymentGateway,
         purchase_allowed: purchaseAllowed,
         shipping_allowed: shippingAllowed,
+        priority_thresholds: priorityThresholds,
       };
 
       onSubmit(countryData);
@@ -281,6 +315,52 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                   Shipping Allowed
               </Label>
           </div>
+        </div>
+        <div className="col-span-2">
+          <Label className="font-semibold">Priority Thresholds</Label>
+          <div className="text-xs text-muted-foreground mb-2">Set the amount thresholds (in {formCurrency || 'main currency'}) for each priority. Quotes with a final total above each threshold will be assigned the corresponding priority, unless manually overridden.</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="priority-low">Low ({formCurrency || 'CUR'})</Label>
+              <Input
+                id="priority-low"
+                name="priority-low"
+                type="number"
+                step="0.01"
+                required
+                value={priorityThresholds.low}
+                onChange={e => handlePriorityChange('low', e.target.value)}
+                min={0}
+              />
+            </div>
+            <div>
+              <Label htmlFor="priority-normal">Normal ({formCurrency || 'CUR'})</Label>
+              <Input
+                id="priority-normal"
+                name="priority-normal"
+                type="number"
+                step="0.01"
+                required
+                value={priorityThresholds.normal}
+                onChange={e => handlePriorityChange('normal', e.target.value)}
+                min={priorityThresholds.low}
+              />
+            </div>
+            <div>
+              <Label htmlFor="priority-urgent">Urgent ({formCurrency || 'CUR'})</Label>
+              <Input
+                id="priority-urgent"
+                name="priority-urgent"
+                type="number"
+                step="0.01"
+                required
+                value={priorityThresholds.urgent}
+                onChange={e => handlePriorityChange('urgent', e.target.value)}
+                min={priorityThresholds.normal}
+              />
+            </div>
+          </div>
+          {priorityError && <div className="text-red-600 text-xs mt-1">{priorityError}</div>}
         </div>
         <div className="col-span-2 flex gap-2">
           <Button type="submit">{editingCountry ? 'Update' : 'Create'}</Button>

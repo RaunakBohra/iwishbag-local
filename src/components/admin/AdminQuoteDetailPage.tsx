@@ -438,6 +438,9 @@ const AdminQuoteDetailPage = () => {
     );
   }
 
+  // Only compute isAutoPriority if quote is defined
+  const isAutoPriority = (String(form.watch('priority')) === 'auto') || (!form.watch('priority') && (typeof quote.priority_auto === 'boolean' ? quote.priority_auto : true));
+
   const currentStatus = quote?.status || 'pending';
   const statusConfig = statuses?.find(s => s.name === currentStatus);
   const allowedNextStatuses = statusConfig?.allowedTransitions || [];
@@ -588,12 +591,28 @@ const AdminQuoteDetailPage = () => {
                       </div>
                     )}
                     
-                    {quote.priority && (
-                      <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 rounded">
-                        <Flag className="h-3 w-3 text-orange-600" />
-                        <span className="text-orange-800 capitalize">{quote.priority}</span>
-                      </div>
-                    )}
+                    {/* Priority Dropdown and Badge */}
+                    <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 rounded">
+                      <Flag className="h-3 w-3 text-orange-600" />
+                      <Select
+                        value={form.watch('priority') || quote.priority || 'normal'}
+                        onValueChange={val => {
+                          if (["low", "normal", "urgent", "high"].includes(val)) {
+                            form.setValue('priority', val as 'low' | 'normal' | 'urgent' | 'high');
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-24 h-6 text-xs px-2 py-1 bg-transparent border-none shadow-none">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 

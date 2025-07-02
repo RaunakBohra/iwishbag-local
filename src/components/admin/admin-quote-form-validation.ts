@@ -29,6 +29,7 @@ export const adminQuoteFormSchema = z.object({
     internal_notes: z.string().optional(),
     status: z.string().optional(),
     items: z.array(adminQuoteItemSchema),
+    priority_auto: z.boolean().optional(),
 });
 
 export type AdminQuoteFormValues = z.infer<typeof adminQuoteFormSchema>;

@@ -109,16 +109,40 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                 }
                 // Ensure the updated currency is included
                 finalQuoteData.currency = data.currency;
-                
                 // Include status update if it has changed
                 if (data.status && data.status !== quote.status) {
                     finalQuoteData.status = data.status || '';
                 }
-                
                 // Include other form fields
                 finalQuoteData.internal_notes = data.internal_notes || '';
-                finalQuoteData.priority = data.priority;
+
+                // --- Priority Logic ---
+                const country = allCountries?.find(c => c.code === quote.country_code);
+                const thresholds = country?.priority_thresholds || { low: 0, normal: 500, urgent: 2000 };
+                const finalTotal = finalQuoteData.final_total || 0;
+                // Always recalculate priority on calculate
+                let priority;
+                if (finalTotal < thresholds.normal) {
+                    priority = 'low';
+                } else if (finalTotal < thresholds.urgent) {
+                    priority = 'normal';
+                } else {
+                    priority = 'urgent';
+                }
+                finalQuoteData.priority = priority;
+                form.setValue('priority', priority);
                 
+                // Debug logging
+                console.log('[Priority Calculation]', {
+                    countryCode: quote.country_code,
+                    countryName: country?.name,
+                    thresholds,
+                    finalTotal,
+                    calculatedPriority: priority,
+                    previousPriority: data.priority
+                });
+                // --- End Priority Logic ---
+
                 updateQuote(finalQuoteData);
             }
         } catch (error: any) {

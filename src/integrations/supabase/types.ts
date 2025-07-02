@@ -34,6 +34,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      auto_quote_analytics: {
+        Row: {
+          created_at: string | null
+          id: string
+          processing_time: number | null
+          quote_id: string | null
+          rule_performance: Json
+          success_rate: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          processing_time?: number | null
+          quote_id?: string | null
+          rule_performance: Json
+          success_rate?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          processing_time?: number | null
+          quote_id?: string | null
+          rule_performance?: Json
+          success_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_quote_analytics_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auto_quote_settings: {
+        Row: {
+          auto_approval_limit: number | null
+          confidence_threshold: number | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          markup_percentage: number | null
+          name: string
+          price_validation: string | null
+          requires_admin_review: boolean | null
+          updated_at: string | null
+          website_domain: string
+          weight_estimation_method: string | null
+        }
+        Insert: {
+          auto_approval_limit?: number | null
+          confidence_threshold?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          markup_percentage?: number | null
+          name: string
+          price_validation?: string | null
+          requires_admin_review?: boolean | null
+          updated_at?: string | null
+          website_domain: string
+          weight_estimation_method?: string | null
+        }
+        Update: {
+          auto_approval_limit?: number | null
+          confidence_threshold?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          markup_percentage?: number | null
+          name?: string
+          price_validation?: string | null
+          requires_admin_review?: boolean | null
+          updated_at?: string | null
+          website_domain?: string
+          weight_estimation_method?: string | null
+        }
+        Relationships: []
+      }
       bank_account_details: {
         Row: {
           account_name: string
@@ -85,6 +165,7 @@ export type Database = {
           payment_gateway: string | null
           payment_gateway_fixed_fee: number | null
           payment_gateway_percent_fee: number | null
+          priority_thresholds: Json | null
           purchase_allowed: boolean | null
           rate_from_usd: number
           sales_tax: number | null
@@ -105,6 +186,7 @@ export type Database = {
           payment_gateway?: string | null
           payment_gateway_fixed_fee?: number | null
           payment_gateway_percent_fee?: number | null
+          priority_thresholds?: Json | null
           purchase_allowed?: boolean | null
           rate_from_usd: number
           sales_tax?: number | null
@@ -125,6 +207,7 @@ export type Database = {
           payment_gateway?: string | null
           payment_gateway_fixed_fee?: number | null
           payment_gateway_percent_fee?: number | null
+          priority_thresholds?: Json | null
           purchase_allowed?: boolean | null
           rate_from_usd?: number
           sales_tax?: number | null
@@ -133,6 +216,30 @@ export type Database = {
           vat?: number | null
           volumetric_divisor?: number | null
           weight_unit?: string | null
+        }
+        Relationships: []
+      }
+      customs_categories: {
+        Row: {
+          created_at: string
+          duty_percent: number
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duty_percent?: number
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duty_percent?: number
+          id?: string
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -328,6 +435,47 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_analysis_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          priority: string | null
+          quote_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string | null
+          quote_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string | null
+          quote_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_analysis_tasks_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           attachment_file_name: string | null
@@ -451,6 +599,53 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string | null
+          gateway_response: Json | null
+          id: string
+          payment_method: string | null
+          quote_id: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string | null
+          gateway_response?: Json | null
+          id?: string
+          payment_method?: string | null
+          quote_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string | null
+          gateway_response?: Json | null
+          id?: string
+          payment_method?: string | null
+          quote_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pricing_rules: {
         Row: {
@@ -761,6 +956,7 @@ export type Database = {
           payment_gateway_fee: number | null
           payment_method: string | null
           priority: Database["public"]["Enums"]["quote_priority"] | null
+          priority_auto: boolean | null
           product_name: string | null
           product_url: string | null
           quantity: number | null
@@ -837,6 +1033,7 @@ export type Database = {
           payment_gateway_fee?: number | null
           payment_method?: string | null
           priority?: Database["public"]["Enums"]["quote_priority"] | null
+          priority_auto?: boolean | null
           product_name?: string | null
           product_url?: string | null
           quantity?: number | null
@@ -913,6 +1110,7 @@ export type Database = {
           payment_gateway_fee?: number | null
           payment_method?: string | null
           priority?: Database["public"]["Enums"]["quote_priority"] | null
+          priority_auto?: boolean | null
           product_name?: string | null
           product_url?: string | null
           quantity?: number | null
@@ -968,6 +1166,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rejection_reasons: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          reason: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          reason: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          reason?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       route_customs_tiers: {
         Row: {
