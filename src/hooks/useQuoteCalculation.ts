@@ -207,8 +207,8 @@ export const useQuoteCalculation = () => {
                 origin_country: originCountry,
                 shipping_method: shippingMethod,
                 shipping_route_id: shippingRouteId ?? null,
-                // Preserve current status - only change to 'calculated' if it was 'pending'
-                status: (currentStatus === 'pending' ? 'calculated' : currentStatus) as any
+                // Preserve current status - don't change status on calculation
+                status: currentStatus as any
             };
             
             return updatedQuote;
@@ -263,8 +263,8 @@ export const useQuoteCalculation = () => {
                 origin_country: 'US',
                 shipping_method: 'country_settings',
                 shipping_route_id: null,
-                // Preserve current status - only change to 'calculated' if it was 'pending'
-                status: (currentStatus === 'pending' ? 'calculated' : currentStatus) as any
+                // Preserve current status - don't change status on calculation
+                status: currentStatus as any
             };
             
             return updatedQuote;

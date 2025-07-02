@@ -70,7 +70,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
           .from('profiles')
           .insert({
             id: user.id,
-            full_name: user.full_name || user?.email?.split('@')[0] || 'User',
+            full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
             phone: user.phone || null,
             country: countryCode || 'US',
             preferred_display_currency: selectedCountryCurrency || 'USD',
@@ -109,6 +109,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         user_id: user?.id ?? null,
         currency: selectedCountryCurrency,
         final_currency: 'NPR',
+        status: 'pending',
         in_cart: false
       };
 
@@ -202,7 +203,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
           .from('profiles')
           .insert({
             id: user.id,
-            full_name: user.full_name || user?.email?.split('@')[0] || 'User',
+            full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
             phone: user.phone || null,
             country: countryCode || 'US',
             preferred_display_currency: selectedCountryCurrency || 'USD',
@@ -238,6 +239,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       user_id: user?.id ?? null,
       currency: selectedCountryCurrency,
       final_currency: 'NPR',
+      status: 'pending',
       in_cart: false
     };
 
