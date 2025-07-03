@@ -41,12 +41,15 @@ export const useQuoteManagement = (filters = {}) => {
                 .order('created_at', { ascending: false });
             
             // Filter out order statuses to show only quotes
+            // This ensures that paid orders (paid, ordered, shipped, completed, cancelled) 
+            // do not appear in the quotes page and are only shown in the orders page
             if (orderStatuses && orderStatuses.length > 0) {
                 const orderStatusNames = orderStatuses.map(status => status.name);
-                // Apply not filters for each order status
-                orderStatusNames.forEach(status => {
-                    query = query.neq('status', status);
-                });
+                console.log('DEBUG: Filtering out order statuses from quotes page:', orderStatusNames);
+                // Use a single .not('status', 'in', ...) filter for all order statuses (no single quotes)
+                if (orderStatusNames.length > 0) {
+                    query = query.not('status', 'in', `(${orderStatusNames.join(',')})`);
+                }
             }
         
             if (statusFilter !== 'all') {
@@ -66,11 +69,15 @@ export const useQuoteManagement = (filters = {}) => {
                 query = query.or(`product_name.ilike.${searchString},email.ilike.${searchString},display_id.ilike.${searchString},country_code.ilike.${searchString}`);
             }
         
+            // Debug: print the query object
+            console.log('DEBUG: Final Supabase query for quotes:', query);
+            // Log the final query string (for REST API)
+            console.log('DEBUG: Query URL:', query.url.toString());
             const { data, error } = await query;
             if (error) throw new Error(error.message);
             return data || [];
         },
-        enabled: !!orderStatuses, // Only run query when orderStatuses is loaded
+        enabled: orderStatuses && orderStatuses.length > 0, // Only run query when orderStatuses is loaded
     });
 
     const updateMultipleQuotesStatusMutation = useMutation({

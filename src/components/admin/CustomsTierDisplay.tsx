@@ -4,7 +4,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { ChevronDown, ChevronUp, Shield, Percent, Package, DollarSign } from 'lucide-react';
 import { supabase } from '../../integrations/supabase/client';
-import { useAllCountries } from '../../hooks/useAllCountries';
+import { useCountryUtils, formatShippingRoute } from '../../lib/countryUtils';
 
 interface CustomsTierDisplayProps {
   quote: any;
@@ -42,7 +42,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
   loading,
   error
 }) => {
-  const { data: countries = [] } = useAllCountries();
+  const { countries, getCountryDisplayName } = useCountryUtils();
 
   // Get quote details
   const originCountry = quote.origin_country || 'US';
@@ -54,10 +54,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
   const quotePrice = quote.quote_items?.reduce((sum: number, item: any) => sum + (item.item_price || 0), 0) || 0;
   const quoteWeight = quote.quote_items?.reduce((sum: number, item: any) => sum + (item.item_weight || 0), 0) || 0;
 
-  const getCountryName = (code: string) => {
-    const country = countries.find(c => c.code === code);
-    return country ? country.name : code;
-  };
+
 
   // Check if conditions match
   const checkConditions = (tier: any): { priceMatch: boolean; weightMatch: boolean } => {
@@ -102,7 +99,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
             Customs Tiers
           </CardTitle>
           <CardDescription className="text-xs">
-            {getCountryName(originCountry)} → {getCountryName(destinationCountry)}
+            {formatShippingRoute(originCountry, destinationCountry, countries)}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
@@ -124,7 +121,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
               Customs Tiers
             </CardTitle>
             <CardDescription className="text-xs">
-              {getCountryName(originCountry)} → {getCountryName(destinationCountry)}
+              {formatShippingRoute(originCountry, destinationCountry, countries)}
             </CardDescription>
           </div>
         </div>

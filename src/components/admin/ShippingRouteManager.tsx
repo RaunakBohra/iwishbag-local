@@ -10,6 +10,7 @@ import { Switch } from '../ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useToast } from '../../hooks/use-toast';
+import { useCountryUtils, formatShippingRoute } from '../../lib/countryUtils';
 import type { ShippingRouteFormData, DeliveryOption } from '../../types/shipping';
 import { CustomsTiersManager } from './CustomsTiersManager';
 
@@ -341,10 +342,7 @@ export function ShippingRouteManager() {
     }
   };
 
-  const getCountryName = (code: string) => {
-    const country = countries.find(c => c.code === code);
-    return country ? `${country.name} (${code})` : code;
-  };
+  const { getCountryDisplayName } = useCountryUtils();
 
   // Map DB row to form data for editing
   const mapRouteToFormData = (route: any): ShippingRouteFormData => ({
@@ -465,7 +463,7 @@ export function ShippingRouteManager() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center space-x-2">
-                        <span>{getCountryName(route.origin_country)} → {getCountryName(route.destination_country)}</span>
+                        <span>{formatShippingRoute(route.origin_country, route.destination_country, countries, true)}</span>
                         <Badge variant={route.is_active ? 'default' : 'secondary'}>
                           {route.is_active ? 'Active' : 'Inactive'}
                         </Badge>

@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
-import { useAllCountries } from '@/hooks/useAllCountries';
+import { useCountryUtils, formatShippingRoute } from '@/lib/countryUtils';
 import { extractShippingAddressFromNotes } from '@/lib/addressUpdates';
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
@@ -85,7 +85,7 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
     const [routeCountries, setRouteCountries] = useState<{ origin: string; destination: string } | null>(null);
     const [customerProfile, setCustomerProfile] = useState<{ full_name: string | null; phone: string | null } | null>(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-    const { data: allCountries } = useAllCountries();
+    const { countries: allCountries } = useCountryUtils();
     
     const firstItem = quote.quote_items?.[0];
     const totalItems = quote.quote_items?.length || 0;
@@ -158,12 +158,7 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
     const customerName = customerProfile?.full_name || quote.customer_name || quote.email || 'Customer';
     const customerPhone = customerProfile?.phone || quote.customer_phone;
 
-    // Helper to get country name from code
-    const getCountryName = (code: string) => {
-      if (!allCountries) return code;
-      const country = allCountries.find(c => c.code === code);
-      return country ? country.name : code;
-    };
+    const { getCountryDisplayName } = useCountryUtils();
 
     return (
         <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
@@ -225,7 +220,7 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                                             <>
                                                 <span className="text-muted-foreground hidden sm:inline">•</span>
                                                 <span className="text-muted-foreground truncate max-w-[100px] sm:max-w-none">
-                                                    {getCountryName(routeCountries.origin)} → {getCountryName(routeCountries.destination)}
+                                                    {formatShippingRoute(routeCountries.origin, routeCountries.destination, allCountries)}
                                                 </span>
                                             </>
                                         )}
@@ -358,7 +353,7 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                     {routeCountries && (
                         <div className="flex items-center gap-2 text-sm">
                             <MapPin className="h-4 w-4" />
-                            <span>{getCountryName(routeCountries.origin)} → {getCountryName(routeCountries.destination)}</span>
+                            <span>{formatShippingRoute(routeCountries.origin, routeCountries.destination, allCountries)}</span>
                         </div>
                     )}
                     <div className="flex items-center gap-2 text-sm">

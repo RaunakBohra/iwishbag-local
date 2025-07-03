@@ -6,6 +6,8 @@ const quoteItemSchema = z.object({
   quantity: z.coerce.number().min(1, { message: "Quantity must be at least 1." }),
   options: z.string().optional(),
   imageUrl: z.string().optional(),
+  price: z.string().optional(),
+  weight: z.string().optional(),
 }).superRefine((data, ctx) => {
   const { productUrl, imageUrl, productName } = data;
   

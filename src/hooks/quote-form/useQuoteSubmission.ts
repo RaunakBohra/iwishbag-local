@@ -155,6 +155,8 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         quantity: item.quantity,
         options: item.options,
         image_url: item.imageUrl,
+        item_price: item.price ? parseFloat(item.price) : 0,
+        item_weight: item.weight ? parseFloat(item.weight) : 0,
       });
 
       if (itemsError) {
@@ -285,6 +287,8 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         quantity: item.quantity,
         options: item.options,
         image_url: item.imageUrl,
+        item_price: item.price ? parseFloat(item.price) : 0,
+        item_weight: item.weight ? parseFloat(item.weight) : 0,
     }));
 
     const { error: itemsError } = await supabase.from("quote_items").insert(quoteItemsToInsert);

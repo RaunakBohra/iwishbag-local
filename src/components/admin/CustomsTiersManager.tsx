@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAllCountries } from '../../hooks/useAllCountries';
+import { useCountryUtils, formatShippingRoute } from '../../lib/countryUtils';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -33,7 +33,7 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
   onCancel: () => void, 
   initialData?: Partial<CustomsTierFormData> 
 }) {
-  const { data: countries = [] } = useAllCountries();
+  const { countries } = useCountryUtils();
   const [formData, setFormData] = useState<CustomsTierFormData>({
     originCountry: initialData?.originCountry || '',
     destinationCountry: initialData?.destinationCountry || '',
@@ -271,7 +271,7 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
 }
 
 export function CustomsTiersManager() {
-  const { data: countries = [] } = useAllCountries();
+  const { countries, getCountryDisplayName } = useCountryUtils();
   const [tiers, setTiers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -356,10 +356,7 @@ export function CustomsTiersManager() {
     }
   };
 
-  const getCountryName = (code: string) => {
-    const country = countries.find(c => c.code === code);
-    return country ? `${country.name} (${code})` : code;
-  };
+
 
   const mapTierToFormData = (tier: any): CustomsTierFormData => ({
     originCountry: tier.origin_country,
@@ -464,7 +461,7 @@ export function CustomsTiersManager() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center space-x-2">
-                    <span>{getCountryName(tier.origin_country)} → {getCountryName(tier.destination_country)}</span>
+                    <span>{formatShippingRoute(tier.origin_country, tier.destination_country, countries, true)}</span>
                     <Badge variant={tier.is_active ? 'default' : 'secondary'}>
                       {tier.is_active ? 'Active' : 'Inactive'}
                     </Badge>

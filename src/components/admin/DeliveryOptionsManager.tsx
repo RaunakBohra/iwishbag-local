@@ -1,3 +1,18 @@
+// =========================
+// IMPORTANT DEVELOPER NOTE
+// =========================
+//
+// The shipping route display in this component MUST use the shared utilities:
+//   - getQuoteRouteCountries (from src/lib/route-specific-customs.ts)
+//   - formatShippingRoute (from src/lib/countryUtils.ts)
+//
+// This ensures the origin → destination route is always correct and consistent
+// with other admin UI sections (e.g., AdminQuoteDetailPage, AdminQuoteListItem, etc).
+//
+// If the route display ever breaks or needs to be changed, update the shared logic
+// in those utilities and all sections will remain in sync.
+// =========================
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +21,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Package, Truck, Clock, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAllCountries } from '@/hooks/useAllCountries';
+import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
+import { formatShippingRoute } from '@/lib/countryUtils';
 
 interface DeliveryOption {
   id: string;
@@ -26,11 +44,13 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
   onOptionsChange,
   className = ''
 }) => {
+  const { data: allCountries = [] } = useAllCountries();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shippingRoute, setShippingRoute] = useState<any>(null);
   const [allDeliveryOptions, setAllDeliveryOptions] = useState<DeliveryOption[]>([]);
   const [enabledOptions, setEnabledOptions] = useState<string[]>([]);
+  const [routeDisplay, setRouteDisplay] = useState<string>('');
 
   // Fetch shipping route and delivery options
   useEffect(() => {
@@ -132,6 +152,12 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
 
         setShippingRoute(currentRoute);
 
+        // --- NEW: Uniform route display logic ---
+        const shippingAddress = quote.shipping_address ? (typeof quote.shipping_address === 'string' ? JSON.parse(quote.shipping_address) : quote.shipping_address) : null;
+        const { origin, destination } = await getQuoteRouteCountries(quote, shippingAddress, allCountries);
+        setRouteDisplay(formatShippingRoute(origin, destination, allCountries, true));
+        // --- END NEW ---
+
         // Parse delivery options
         let options: DeliveryOption[] = [];
         if (currentRoute.delivery_options && Array.isArray(currentRoute.delivery_options)) {
@@ -175,7 +201,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
     };
 
     fetchShippingData();
-  }, [quote.id, quote.shipping_route_id, quote.origin_country, quote.country_code, quote.enabled_delivery_options]);
+  }, [quote.id, quote.shipping_route_id, quote.origin_country, quote.country_code, quote.enabled_delivery_options, allCountries]);
 
   const handleOptionToggle = async (optionId: string, enabled: boolean) => {
     try {
@@ -309,7 +335,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-sm text-blue-700">Shipping Route:</span>
             <span className="font-medium text-blue-900">
-              {shippingRoute.origin_country} → {shippingRoute.destination_country}
+              {routeDisplay}
             </span>
           </div>
         </div>

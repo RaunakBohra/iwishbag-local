@@ -285,3 +285,146 @@ const testCases = [
   - If status is "pending" → changes to "sent"
   - If status is anything else → preserves current status
 - **Status Transitions**: Follow the configured status workflow rules
+
+### Quote to Order Transition
+
+#### Automatic Transition
+When a quote is paid, it automatically moves from the **Quotes page** to the **Orders page**:
+
+1. **Payment Received** → status changes to "paid"
+2. **Quote disappears** from Quotes page (filtered out automatically)
+3. **Order appears** on Orders page
+4. **All future actions** (shipping, delivery) handled from Orders page
+
+**Important**: Once a quote becomes an order (status: paid, ordered, shipped, completed, cancelled), it will **never appear on the Quotes page again**. This ensures complete separation between quote management and order management workflows.
+
+#### Payment Webhook
+- **Stripe webhook** automatically updates quote status when payment is received
+- **Status transitions** are logged in the database
+- **Payment transactions** are recorded for tracking
+- **Order display ID** is generated automatically (e.g., "ORD-ABC123")
+
+#### Manual Payment Confirmation
+For manual payment methods (COD, Bank Transfer):
+- **Admin confirms payment** from Orders page
+- **Status changes** from "cod_pending" or "bank_transfer_pending" to "paid"
+- **Quote moves** to Orders page automatically
+
+#### Order Management
+Once a quote becomes an order:
+- **Shipping updates** handled from Orders page
+- **Delivery tracking** managed from Orders page
+- **Customer notifications** sent automatically
+- **Order completion** tracked through order statuses
+
+#### Page Filtering Behavior
+- **Quotes Page**: Shows only quotes with statuses: `pending`, `sent`, `approved`, `rejected`, `expired`, `calculated`
+- **Orders Page**: Shows only orders with statuses: `paid`, `ordered`, `shipped`, `completed`, `cancelled`
+- **Automatic Filtering**: The system automatically filters out order statuses from the quotes page
+- **No Overlap**: A quote/order will never appear on both pages simultaneously
+
+## Shipping Route Display Logic (Admin UI)
+
+All admin UI sections that display shipping routes (origin → destination) use the same shared logic:
+
+- `getQuoteRouteCountries` (from `src/lib/route-specific-customs.ts`): Determines the correct origin and destination country codes for a quote, using shipping_route_id, quote fields, and shipping address as needed.
+- `formatShippingRoute` (from `src/lib/countryUtils.ts`): Formats the route for display, converting codes to names as needed.
+
+**This ensures that the shipping route is always correct and consistent across:**
+- Quote detail pages
+- Quote list items
+- Delivery options management
+- Any other admin section that shows a shipping route
+
+**If the route display ever breaks or needs to be changed, update the shared logic in these utilities and all sections will remain in sync.**
+
+This approach prevents bugs where one section shows the wrong route while others are correct, and makes future maintenance much easier.
+
+## Quote Request Flow Improvements
+
+The quote request flow (`/quote`) has been enhanced with several user experience improvements:
+
+### Features Added
+
+1. **Product Summary for Review**
+   - Shows products before submission in the shipping step
+   - Displays total items, value, and individual product details
+   - Allows users to review what they're requesting
+
+2. **Edit/Correct Option**
+   - "Edit Products" button in review step
+   - Users can go back and fix mistakes before submitting
+   - Maintains all entered data when going back
+
+3. **Product Summary After Submission**
+   - Shows submitted products from local state (no DB call needed)
+   - Provides immediate feedback on what was submitted
+   - Helps users confirm their request was received correctly
+
+4. **Enhanced Progress Indicator**
+   - Clear 2-step process: Product Info → Shipping & Review
+   - Visual progress bar with step indicators
+   - Users know exactly where they are in the process
+
+5. **Estimated Response Time**
+   - Prominently displayed in success message
+   - Sets clear expectations: "24-48 hours"
+   - Reduces user anxiety about when they'll hear back
+
+### Technical Implementation
+
+- **ProductSummary Component**: Reusable component for displaying product details
+- **Local State Management**: Product data preserved throughout the flow
+- **Responsive Design**: Works well on mobile and desktop
+- **No Breaking Changes**: All existing functionality preserved
+
+### User Flow
+
+1. User enters product details (name, URL, price, quantity, country)
+2. User proceeds to shipping & contact information
+3. **NEW**: Product summary is shown for review with edit option
+4. User can edit products or proceed with submission
+5. **NEW**: After submission, product summary is shown again for confirmation
+6. Clear success message with estimated response time
+
+This flow minimizes friction while providing necessary feedback and review opportunities.
+
+## Quote Type Country Validation
+
+The quote request system implements intelligent country validation based on the selected quote type:
+
+### Combined Quotes
+- **Requirement**: All products must be from the same country
+- **Auto-sync**: When the first product's country is selected, all other products automatically sync to that country
+- **Visual indicators**: Country fields for products 2+ are disabled and show "(Auto-synced)" label
+- **Validation**: Prevents submission if different countries are detected
+- **User guidance**: Clear messaging about requirements and easy switch to separate quotes
+- **Benefits**: Better shipping rates and faster processing
+
+### Separate Quotes
+- **Flexibility**: Each product can be sourced from different countries
+- **Independent selection**: Full control over country selection for each product
+- **User guidance**: Clear messaging about flexibility and optimization
+- **Benefits**: Maximum flexibility for sourcing from optimal countries
+
+### Technical Implementation
+
+#### Auto-Sync Logic
+- `useEffect` watches `quoteType` and first product's country
+- `updateProduct` handles auto-sync when first product country changes
+- `addProduct` pre-fills new products with first product's country (if combined)
+- Visual feedback shows sync status with checkmarks and labels
+
+#### Validation
+- `validate()` checks country consistency for combined quotes
+- Shows clear error messages with helpful suggestions
+- Prevents form submission until validation passes
+- Provides easy switch to separate quotes if validation fails
+
+#### User Experience
+- **Informational messages** explain requirements for each quote type
+- **Visual indicators** show sync status and field states
+- **Error handling** with clear guidance and solutions
+- **Seamless switching** between quote types
+
+This feature ensures users understand the business logic and provides a smooth experience for both quote types.
