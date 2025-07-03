@@ -10,21 +10,25 @@
 // - Visual indicators: Country fields for products 2+ are disabled and show "Auto-synced"
 // - Validation: Prevents submission if different countries are detected
 // - User guidance: Clear messaging about requirements and easy switch to separate quotes
+// - Backend: Creates one quote with multiple items
 //
 // SEPARATE QUOTES:
-// - Each product can have different countries
-// - Independent country selection for all products
-// - Maximum flexibility for sourcing from optimal countries
-// - User guidance: Clear messaging about flexibility
+// - Each product gets its own separate quotation
+// - Auto-sync initially: Countries are auto-filled for convenience
+// - Individual control: Users can change each product's country independently
+// - Visual indicators: Country fields show "Auto-filled" but remain editable
+// - No validation restrictions: Users can have different countries
+// - Backend: Creates individual quote for each product
 //
 // AUTO-SYNC LOGIC:
-// - useEffect watches quoteType and first product's country
+// - useEffect watches first product's country for both quote types
 // - updateProduct handles auto-sync when first product country changes
-// - addProduct pre-fills new products with first product's country (if combined)
-// - Visual feedback shows sync status with checkmarks and labels
+// - addProduct pre-fills new products with first product's country
+// - Visual feedback shows sync/fill status with checkmarks and labels
 //
 // VALIDATION:
-// - validate() checks country consistency for combined quotes
+// - validate() only checks country consistency for combined quotes
+// - Separate quotes have no country restrictions
 // - Shows clear error messages with helpful suggestions
 // - Prevents form submission until validation passes
 // =========================
@@ -44,14 +48,14 @@ function isValidUrl(url) {
   }
 }
 
-export default function ProductInfoStep({ products, setProducts, next, quoteType, setQuoteType }) {
+export default function ProductInfoStep({ products, setProducts, quoteType, setQuoteType, next }) {
+  const { data: countries, isLoading, error: countryError } = usePurchaseCountries();
   const [errors, setErrors] = useState({});
   const [countryValidationError, setCountryValidationError] = useState('');
-  const { data: countries, isLoading, error: countryError } = usePurchaseCountries();
 
-  // Auto-sync countries for combined quotes
+  // Auto-sync countries for both combined and separate quotes (initial sync)
   useEffect(() => {
-    if (quoteType === 'combined' && products.length > 1) {
+    if (products.length > 1) {
       const firstCountry = products[0]?.country;
       if (firstCountry) {
         const updatedProducts = products.map((product, index) => ({
@@ -61,7 +65,7 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
         setProducts(updatedProducts);
       }
     }
-  }, [quoteType, products[0]?.country]);
+  }, [products[0]?.country]);
 
   const handleChange = (idx, field, value) => {
     const updated = products.map((p, i) => i === idx ? { ...p, [field]: value } : p);
@@ -76,7 +80,7 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
       quantity: 1, 
       price: '', 
       weight: '', 
-      country: quoteType === 'combined' ? products[0]?.country || '' : '' 
+      country: products[0]?.country || '' // Auto-sync for both quote types
     };
     setProducts([...products, newProduct]);
   };
@@ -87,8 +91,8 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
     const newProducts = [...products];
     newProducts[index] = { ...newProducts[index], [field]: value };
     
-    // Auto-sync countries for combined quotes
-    if (quoteType === 'combined' && field === 'country' && index === 0) {
+    // Auto-sync countries for both quote types when first product changes
+    if (field === 'country' && index === 0) {
       newProducts.forEach((product, i) => {
         if (i > 0) {
           product.country = value;
@@ -127,7 +131,7 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
     const newErrors = {};
     setCountryValidationError('');
     
-    // Validate combined quote country consistency
+    // Only validate country consistency for combined quotes
     if (quoteType === 'combined' && products.length > 1) {
       const firstCountry = products[0]?.country;
       const differentCountries = products.some((product, index) => 
@@ -172,12 +176,7 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
         color: 'blue'
       };
     }
-    return {
-      type: 'info', 
-      message: 'Each product can be sourced from different countries for maximum flexibility.',
-      icon: Globe,
-      color: 'green'
-    };
+    return null; // No message for separate quotes
   };
 
   const getCountryFieldProps = (index) => {
@@ -196,41 +195,16 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
   const quoteTypeMessage = getQuoteTypeMessage();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
       {/* Quote Type Selection */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center">
           <Globe className="h-5 w-5 mr-2" />
           How would you like your quote?
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-row flex-wrap gap-3 sm:gap-4">
           <div 
-            className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-              quoteType === 'combined' 
-                ? 'border-green-500 bg-green-50' 
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-            onClick={() => setQuoteType('combined')}
-          >
-            <div className="flex items-center mb-2">
-              <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                quoteType === 'combined' 
-                  ? 'border-green-500 bg-green-500' 
-                  : 'border-gray-300'
-              }`}>
-                {quoteType === 'combined' && (
-                  <div className="w-2 h-2 bg-white rounded-full m-0.5"></div>
-                )}
-              </div>
-              <span className="font-medium">Combined Quote</span>
-            </div>
-            <p className="text-sm text-gray-600 ml-7">
-              Get one quote for all items together - usually better shipping rates and faster processing
-            </p>
-          </div>
-          
-          <div 
-            className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+            className={`flex-1 min-w-[180px] p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
               quoteType === 'separate' 
                 ? 'border-green-500 bg-green-50' 
                 : 'border-gray-200 hover:border-gray-300'
@@ -250,25 +224,52 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
               <span className="font-medium">Separate Quotes</span>
             </div>
             <p className="text-sm text-gray-600 ml-7">
-              Get individual quotes for each item - more detailed breakdown and flexibility
+              Get individual quotes for each item
+            </p>
+          </div>
+          
+          <div 
+            className={`flex-1 min-w-[180px] p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
+              quoteType === 'combined' 
+                ? 'border-green-500 bg-green-50' 
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+            onClick={() => setQuoteType('combined')}
+          >
+            <div className="flex items-center mb-2">
+              <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
+                quoteType === 'combined' 
+                  ? 'border-green-500 bg-green-500' 
+                  : 'border-gray-300'
+              }`}>
+                {quoteType === 'combined' && (
+                  <div className="w-2 h-2 bg-white rounded-full m-0.5"></div>
+                )}
+              </div>
+              <span className="font-medium">Combined Quote</span>
+            </div>
+            <p className="text-sm text-gray-600 ml-7">
+              Get one quote for all items together
             </p>
           </div>
         </div>
 
-        {/* Quote Type Information Message */}
-        <div className={`mt-4 p-4 rounded-lg border border-${quoteTypeMessage.color}-200 bg-${quoteTypeMessage.color}-50`}>
-          <div className="flex items-start gap-3">
-            <quoteTypeMessage.icon className={`h-5 w-5 text-${quoteTypeMessage.color}-600 mt-0.5 flex-shrink-0`} />
-            <div className="text-sm">
-              <p className={`font-medium text-${quoteTypeMessage.color}-800 mb-1`}>
-                {quoteType === 'combined' ? 'Combined Quote Requirements' : 'Separate Quote Flexibility'}
-              </p>
-              <p className={`text-${quoteTypeMessage.color}-700`}>
-                {quoteTypeMessage.message}
-              </p>
+        {/* Quote Type Information Message - Only for Combined Quotes */}
+        {quoteTypeMessage && (
+          <div className={`mt-4 p-3 sm:p-4 rounded-lg border border-${quoteTypeMessage.color}-200 bg-${quoteTypeMessage.color}-50`}>
+            <div className="flex items-start gap-3">
+              <quoteTypeMessage.icon className={`h-5 w-5 text-${quoteTypeMessage.color}-600 mt-0.5 flex-shrink-0`} />
+              <div className="text-sm">
+                <p className={`font-medium text-${quoteTypeMessage.color}-800 mb-1`}>
+                  Combined Quote Requirements
+                </p>
+                <p className={`text-${quoteTypeMessage.color}-700`}>
+                  {quoteTypeMessage.message}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Country Validation Error */}
@@ -291,28 +292,28 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
       )}
 
       {/* Products Section */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="mb-6">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="mb-4 sm:mb-6">
           <h3 className="text-lg font-semibold">Product Information</h3>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {products.map((product, index) => (
-            <div key={index} className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
+            <div key={index} className="border rounded-lg p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
                 <h4 className="font-medium">Product {index + 1}</h4>
                 {products.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeProduct(index)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 p-1"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Purchase Country *
@@ -361,9 +362,9 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
                 </div>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-3 sm:mt-4">
                 <label className="block text-sm font-medium mb-1">Product URL or File Upload *</label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="url"
                     value={product.url}
@@ -371,7 +372,7 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
                     className="flex-1 border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="https://example.com/product"
                   />
-                  <label className="flex items-center px-3 py-2 bg-gray-100 border border-gray-300 rounded cursor-pointer hover:bg-gray-200">
+                  <label className="flex items-center justify-center px-3 py-2 bg-gray-100 border border-gray-300 rounded cursor-pointer hover:bg-gray-200 min-h-[42px]">
                     <Upload className="h-4 w-4 mr-1" />
                     Upload
                     <input
@@ -390,7 +391,7 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-3 sm:mt-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Quantity *</label>
                   <input
@@ -434,13 +435,13 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
         </div>
 
         {/* Add Product Button - Moved to bottom center */}
-        <div className="flex justify-center mt-6 pt-4 border-t border-gray-200">
+        <div className="flex justify-center mt-4 sm:mt-6 pt-4 border-t border-gray-200">
           <button
             type="button"
             onClick={addProduct}
-            className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm"
+            className="flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm text-sm sm:text-base"
           >
-            <Plus className="h-5 w-5 mr-2" />
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             Add Another Product
           </button>
         </div>
@@ -450,7 +451,7 @@ export default function ProductInfoStep({ products, setProducts, next, quoteType
         <button
           type="button"
           onClick={handleNext}
-          className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-base sm:text-lg font-semibold"
         >
           Continue to Shipping
         </button>

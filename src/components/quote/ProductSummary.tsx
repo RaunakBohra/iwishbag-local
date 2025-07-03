@@ -1,4 +1,4 @@
-import React from 'react';
+simport React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, Globe, DollarSign, Weight, ExternalLink } from 'lucide-react';
@@ -26,7 +26,7 @@ export default function ProductSummary({
   title = "Products Summary", 
   showEditButton = false, 
   onEdit,
-  className = "" 
+  className = ""
 }: ProductSummaryProps) {
   const totalItems = products.reduce((sum, product) => sum + product.quantity, 0);
   const totalValue = products.reduce((sum, product) => {

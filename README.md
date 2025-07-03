@@ -400,31 +400,90 @@ The quote request system implements intelligent country validation based on the 
 - **Validation**: Prevents submission if different countries are detected
 - **User guidance**: Clear messaging about requirements and easy switch to separate quotes
 - **Benefits**: Better shipping rates and faster processing
+- **Backend**: Creates one quote with multiple items
 
 ### Separate Quotes
-- **Flexibility**: Each product can be sourced from different countries
-- **Independent selection**: Full control over country selection for each product
-- **User guidance**: Clear messaging about flexibility and optimization
+- **Auto-sync initially**: Countries are auto-filled for convenience (same as first product)
+- **Individual control**: Users can change each product's country independently
+- **Visual indicators**: Country fields show "(Auto-filled)" but remain editable
+- **No validation restrictions**: Users can have different countries for different products
+- **User guidance**: Clear messaging about flexibility and individual quotations
 - **Benefits**: Maximum flexibility for sourcing from optimal countries
+- **Backend**: Creates individual quote for each product (separate quotations)
 
 ### Technical Implementation
 
 #### Auto-Sync Logic
-- `useEffect` watches `quoteType` and first product's country
+- `useEffect` watches first product's country for both quote types
 - `updateProduct` handles auto-sync when first product country changes
-- `addProduct` pre-fills new products with first product's country (if combined)
-- Visual feedback shows sync status with checkmarks and labels
+- `addProduct` pre-fills new products with first product's country
+- Visual feedback shows sync/fill status with checkmarks and labels
 
 #### Validation
-- `validate()` checks country consistency for combined quotes
+- `validate()` only checks country consistency for combined quotes
+- Separate quotes have no country restrictions
 - Shows clear error messages with helpful suggestions
 - Prevents form submission until validation passes
-- Provides easy switch to separate quotes if validation fails
+
+#### Backend Processing
+- **Combined quotes**: Single quote record with multiple items
+- **Separate quotes**: Individual quote record for each product
+- Each separate quote gets its own quotation ID and processing
 
 #### User Experience
 - **Informational messages** explain requirements for each quote type
-- **Visual indicators** show sync status and field states
+- **Visual indicators** show sync/fill status and field states
 - **Error handling** with clear guidance and solutions
 - **Seamless switching** between quote types
+- **Convenient auto-fill** for both quote types
 
-This feature ensures users understand the business logic and provides a smooth experience for both quote types.
+This feature ensures users understand the business logic and provides a smooth experience for both quote types while maintaining the flexibility to source from different countries when needed.
+
+## Quote Request Flow Improvements
+
+The quote request flow (`/quote`) has been enhanced with several user experience improvements:
+
+### Features Added
+
+1. **Product Summary for Review**
+   - Shows products before submission in the shipping step
+   - Displays total items, value, and individual product details
+   - Allows users to review what they're requesting
+
+2. **Edit/Correct Option**
+   - "Edit Products" button in review step
+   - Users can go back and fix mistakes before submitting
+   - Maintains all entered data when going back
+
+3. **Product Summary After Submission**
+   - Shows submitted products from local state (no DB call needed)
+   - Provides immediate feedback on what was submitted
+   - Helps users confirm their request was received correctly
+
+4. **Enhanced Progress Indicator**
+   - Clear 2-step process: Product Info → Shipping & Review
+   - Visual progress bar with step indicators
+   - Users know exactly where they are in the process
+
+5. **Estimated Response Time**
+   - Prominently displayed in success message
+   - Sets clear expectations: "24-48 hours"
+   - Reduces user anxiety about when they'll hear back
+
+### Technical Implementation
+
+- **ProductSummary Component**: Reusable component for displaying product details
+- **Local State Management**: Product data preserved throughout the flow
+- **Responsive Design**: Works well on mobile and desktop
+- **No Breaking Changes**: All existing functionality preserved
+
+### User Flow
+
+1. User enters product details (name, URL, price, quantity, country)
+2. User proceeds to shipping & contact information
+3. **NEW**: Product summary is shown for review with edit option
+4. User can edit products or proceed with submission
+5. **NEW**: After submission, product summary is shown again for confirmation
+6. Clear success message with estimated response time
+
+This flow minimizes friction while providing necessary feedback and review opportunities.
