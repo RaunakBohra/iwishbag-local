@@ -33,7 +33,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AddressList } from "@/components/profile/AddressList";
 import { PaymentMethodDebug } from "@/components/profile/PaymentMethodDebug";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -338,8 +337,6 @@ const Profile = () => {
                 </form>
               </Form>
             </Card>
-            
-            <AddressList />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">

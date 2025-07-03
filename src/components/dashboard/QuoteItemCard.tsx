@@ -24,19 +24,7 @@ export const QuoteItemCard: React.FC<QuoteItemCardProps> = ({ item }) => {
           </div>
           <div className="flex-1 min-w-0">
               <div className="space-y-2">
-                {item.product_url ? (
-                  <a 
-                    href={item.product_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  className="font-semibold hover:underline inline-flex items-center text-sm sm:text-base text-foreground hover:text-foreground/80 transition-colors duration-300"
-                  >
-                    {item.product_name || 'Item'}
-                    <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
-                  </a>
-                ) : (
                 <h4 className="font-semibold text-sm sm:text-base text-foreground transition-colors duration-300">{item.product_name || 'Item'}</h4>
-                )}
                 <div className="space-y-1">
                 <p className="text-xs sm:text-sm text-muted-foreground">Quantity: {item.quantity}</p>
                   {item.options && item.options.trim() !== '' && (

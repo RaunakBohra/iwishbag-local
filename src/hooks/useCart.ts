@@ -154,9 +154,9 @@ export const useCart = () => {
   };
 
   // FIXED: Improved bulk operations with better error handling
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (hasSelectedItems) {
-      bulkDelete(selectedItems);
+      await bulkDelete(selectedItems);
     }
   };
 

@@ -12,6 +12,10 @@ import Index from "@/pages/Index";
 import Quote from "@/pages/Quote";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
+import Quotes from "@/pages/dashboard/Quotes";
+import Orders from "@/pages/dashboard/Orders";
+import QuoteDetail from "@/pages/dashboard/QuoteDetail";
+import OrderDetail from "@/pages/dashboard/OrderDetail";
 import QuoteDetails from "@/pages/QuoteDetails";
 import Profile from "@/pages/Profile";
 import About from "@/pages/About";
@@ -33,6 +37,7 @@ import EmailTemplatesPage from "@/pages/admin/EmailTemplates";
 import PaymentManagement from "@/pages/admin/PaymentManagement";
 import ShippingRoutesPage from "@/pages/admin/ShippingRoutes";
 import StatusManagementPage from "@/pages/admin/StatusManagement";
+import Address from '@/pages/profile/Address';
 
 // Direct imports instead of lazy loading
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -128,6 +133,22 @@ const router = createBrowserRouter([
             element: <Dashboard />,
           },
           {
+            path: "dashboard/quotes",
+            element: <Quotes />,
+          },
+          {
+            path: "dashboard/quotes/:id",
+            element: <QuoteDetail />,
+          },
+          {
+            path: "dashboard/orders",
+            element: <Orders />,
+          },
+          {
+            path: "dashboard/orders/:id",
+            element: <OrderDetail />,
+          },
+          {
             path: "quote/:id",
             element: <QuoteDetails />,
           },
@@ -155,6 +176,10 @@ const router = createBrowserRouter([
           {
             path: "profile",
             element: <Profile />,
+          },
+          {
+            path: "profile/address",
+            element: <Address />,
           },
         ],
       },

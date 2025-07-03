@@ -135,12 +135,28 @@ export const useQuoteState = (quoteId: string) => {
       return { ...currentQuote, ...updateData };
     },
     onSuccess: (data, variables) => {
+      // Invalidate all quote-related queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ['quote', quoteId] });
+      queryClient.invalidateQueries({ queryKey: ['quote-detail', quoteId] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders'] });
       
       // If in_cart was updated, sync with Zustand store
       if (variables.in_cart !== undefined && user?.id) {
         loadFromServer(user.id);
+      }
+      
+      // Show success toast for cart operations
+      if (variables.in_cart === true && !variables.status) {
+        toast({
+          title: "Added to Cart",
+          description: "Item has been added to your cart successfully.",
+        });
+      } else if (variables.in_cart === false && !variables.status) {
+        toast({
+          title: "Removed from Cart",
+          description: "Item has been removed from your cart.",
+        });
       }
     },
     onError: (error: Error) => {
@@ -152,22 +168,45 @@ export const useQuoteState = (quoteId: string) => {
     }
   });
 
-  const approveQuote = () => {
-    return updateQuoteStateMutation.mutate({
-      status: 'accepted',
-      approval_status: 'approved',
-      in_cart: true
-    });
+  const approveQuote = async () => {
+    try {
+      await updateQuoteStateMutation.mutateAsync({
+        status: 'accepted',
+        approval_status: 'approved',
+        in_cart: false // Don't automatically add to cart when approved
+      });
+      
+      toast({
+        title: "Quote Approved",
+        description: "Quote has been approved successfully.",
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error approving quote:', error);
+      return false;
+    }
   };
 
   const rejectQuote = async (reasonId: string, details: string) => {
     try {
+      // Remove from cart store first
+      const { removeItem } = useCartStore.getState();
+      removeItem(quoteId);
+
       await updateQuoteStateMutation.mutateAsync({
-      status: 'cancelled',
-      approval_status: 'rejected',
-      rejection_reason_id: reasonId,
-      rejection_details: details
-    });
+        status: 'cancelled',
+        approval_status: 'rejected',
+        rejection_reason_id: reasonId,
+        rejection_details: details,
+        in_cart: false // Remove from cart when rejected/cancelled
+      });
+      
+      toast({
+        title: "Quote Rejected",
+        description: "Quote has been rejected and removed from cart.",
+      });
+      
       return true;
     } catch (error) {
       console.error('Error rejecting quote:', error);
@@ -207,14 +246,7 @@ export const useQuoteState = (quoteId: string) => {
       // Update quote status in database
       await updateQuoteStateMutation.mutateAsync({ in_cart: true });
 
-      toast({
-        title: "Added to Cart",
-        description: "Item has been added to your cart successfully.",
-      });
-
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders'] });
+      // The mutation's onSuccess callback will handle query invalidation and toast
 
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -226,10 +258,23 @@ export const useQuoteState = (quoteId: string) => {
     }
   };
 
-  const removeFromCart = () => {
-    return updateQuoteStateMutation.mutate({
-      in_cart: false
-    });
+  const removeFromCart = async () => {
+    try {
+      // Remove from cart store first
+      const { removeItem } = useCartStore.getState();
+      removeItem(quoteId);
+
+      await updateQuoteStateMutation.mutateAsync({
+        in_cart: false
+      });
+      
+      // The mutation's onSuccess callback will handle the toast
+      
+      return true;
+    } catch (error) {
+      console.error('Error removing from cart:', error);
+      return false;
+    }
   };
 
   const setPaymentMethod = (method: string) => {

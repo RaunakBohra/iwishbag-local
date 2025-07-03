@@ -275,19 +275,8 @@ const Header = () => {
                       </div>
                       
                       <div className="space-y-2">
-                        {hasAdminRole && (
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start"
-                            onClick={() => {
-                              navigate('/admin');
-                              setIsSheetOpen(false);
-                            }}
-                          >
-                            <Building className="h-4 w-4 mr-2" />
-                            Admin Dashboard
-                          </Button>
-                        )}
+                        {/* Account Section */}
+                        <div className="mb-1 mt-2 text-xs font-semibold text-muted-foreground tracking-wide uppercase">Account</div>
                         <Button
                           variant="outline"
                           className="w-full justify-start"
@@ -296,9 +285,81 @@ const Header = () => {
                             setIsSheetOpen(false);
                           }}
                         >
-                          <User className="h-4 w-4 mr-2" />
-                          Profile Settings
+                          <Settings className="mr-3 h-4 w-4" />
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">Profile Settings</span>
+                          </div>
                         </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => {
+                            navigate('/profile/address');
+                            setIsSheetOpen(false);
+                          }}
+                        >
+                          <Home className="mr-3 h-4 w-4" />
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">Shipping Address</span>
+                          </div>
+                        </Button>
+                        <div className="border-t border-gray-200 my-3" />
+                        {/* Orders & Quotes Section */}
+                        <div className="mb-1 text-xs font-semibold text-muted-foreground tracking-wide uppercase">Orders & Quotes</div>
+                        <Button
+                          variant="default"
+                          className="w-full justify-start"
+                          onClick={() => {
+                            navigate('/dashboard');
+                            setIsSheetOpen(false);
+                          }}
+                        >
+                          <LayoutDashboard className="mr-3 h-4 w-4" />
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">Dashboard</span>
+                          </div>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start relative"
+                          onClick={() => {
+                            navigate('/messages');
+                            setIsSheetOpen(false);
+                          }}
+                        >
+                          <MessageSquare className="mr-3 h-4 w-4" />
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">Messages</span>
+                          </div>
+                          {unreadMessagesCount > 0 && (
+                            <Badge variant="destructive" className="absolute top-2 right-2">
+                              {unreadMessagesCount}
+                            </Badge>
+                          )}
+                        </Button>
+                        {/* Admin Section */}
+                        {hasAdminRole && (
+                          <>
+                            <div className="border-t border-gray-200 my-3" />
+                            <div className="mb-1 text-xs font-semibold text-muted-foreground tracking-wide uppercase">Admin</div>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start"
+                              onClick={() => {
+                                navigate('/admin');
+                                setIsSheetOpen(false);
+                              }}
+                            >
+                              <Building className="mr-3 h-4 w-4" />
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">Admin Dashboard</span>
+                              </div>
+                            </Button>
+                          </>
+                        )}
+                        <div className="border-t border-gray-200 my-3" />
+                        {/* Settings Section */}
+                        <div className="mb-1 text-xs font-semibold text-muted-foreground tracking-wide uppercase">Settings</div>
                         {hasAdminRole && (
                           <Button
                             variant="outline"
@@ -309,9 +370,11 @@ const Header = () => {
                             {theme === "dark" ? "Light Mode" : "Dark Mode"}
                           </Button>
                         )}
+                        {/* Sign Out at the bottom */}
+                        <div className="border-t border-gray-200 my-3" />
                         <Button
-                          variant="outline"
-                          className="w-full justify-start text-destructive"
+                          variant="ghost"
+                          className="w-full justify-start text-destructive font-semibold"
                           onClick={() => {
                             handleSignOut();
                             setIsSheetOpen(false);
@@ -366,8 +429,17 @@ const Header = () => {
                           <span className="font-medium">Profile Settings</span>
                           <span className="text-xs text-muted-foreground">Manage your account</span>
                         </div>
-                    </Link>
-                  </DropdownMenuItem>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-md">
+                      <Link to="/profile/address" className="flex items-center w-full">
+                        <Home className="mr-3 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">Shipping Address</span>
+                          <span className="text-xs text-muted-foreground">Manage your shipping addresses</span>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
                     {hasAdminRole && (
                       <>
                         <DropdownMenuSeparator />

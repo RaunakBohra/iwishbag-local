@@ -188,7 +188,7 @@ export const CartDrawer = () => {
   // Handlers
   const handleRemoveFromCart = async (itemId: string) => {
     try {
-      removeItem(itemId);
+      await removeItem(itemId);
       toast({
         title: "Item removed",
         description: "Item has been removed from your cart.",
@@ -272,13 +272,22 @@ export const CartDrawer = () => {
     });
   };
 
-  const confirmBulkDelete = () => {
-    handleBulkDelete();
-    setShowBulkDeleteConfirm(false);
-    toast({
-      title: "Items deleted",
-      description: "Selected items have been deleted.",
-    });
+  const confirmBulkDelete = async () => {
+    try {
+      await handleBulkDelete();
+      setShowBulkDeleteConfirm(false);
+      toast({
+        title: "Items deleted",
+        description: "Selected items have been deleted.",
+      });
+    } catch (error) {
+      console.error('Error bulk deleting items:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete items. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Helper functions to get selected items

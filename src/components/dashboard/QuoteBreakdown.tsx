@@ -188,7 +188,7 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
   return (
     <Card className="w-full overflow-hidden bg-card border border-border">
       <CardContent className="pt-4 sm:pt-6 space-y-6 sm:space-y-8 pb-mobile-safe md:pb-6">
-        <QuoteStepper currentStep={uiState.step} rejected={uiState.step === 'rejected'} />
+        {/* <QuoteStepper currentStep={uiState.step} rejected={uiState.step === 'rejected'} /> */}
         <QuoteSummary
           status={uiState.summaryStatus}
           total={quoteTotal}
@@ -221,11 +221,11 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
           )}
         />
         <div className="space-y-4 sm:space-y-6">
-          <QuoteBreakdownHeader
+          {/* <QuoteBreakdownHeader
             quote={quote}
             isItemsExpanded={isItemsExpanded}
             onToggleItems={() => setIsItemsExpanded(!isItemsExpanded)}
-          />
+          /> */}
           {isItemsExpanded && (
             <div className="space-y-3 sm:space-y-4">
               {quote.quote_items?.map((item) => (

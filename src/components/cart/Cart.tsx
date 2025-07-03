@@ -197,12 +197,21 @@ export const Cart = () => {
     }
   }, [moveToCart, toast]);
 
-  const handleRemoveFromCart = useCallback((id: string) => {
-    removeItem(id);
-    toast({
-      title: "Item removed",
-      description: "Item has been removed from your cart.",
-    });
+  const handleRemoveFromCart = useCallback(async (id: string) => {
+    try {
+      await removeItem(id);
+      toast({
+        title: "Item removed",
+        description: "Item has been removed from your cart.",
+      });
+    } catch (error) {
+      console.error('Error removing item from cart:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove item from cart. Please try again.",
+        variant: "destructive",
+      });
+    }
   }, [removeItem, toast]);
 
   const confirmBulkSaveForLater = async () => {
@@ -241,13 +250,22 @@ export const Cart = () => {
     }
   };
 
-  const confirmBulkDelete = () => {
-    handleBulkDelete();
-    setShowBulkDeleteConfirm(false);
-    toast({
-      title: "Items deleted",
-      description: "Selected items have been deleted.",
-    });
+  const confirmBulkDelete = async () => {
+    try {
+      await handleBulkDelete();
+      setShowBulkDeleteConfirm(false);
+      toast({
+        title: "Items deleted",
+        description: "Selected items have been deleted.",
+      });
+    } catch (error) {
+      console.error('Error bulk deleting items:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete items. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCheckout = async () => {

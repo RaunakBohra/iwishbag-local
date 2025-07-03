@@ -104,12 +104,37 @@ export const useCartStore = create<CartStore>()(
           });
         },
 
-        removeItem: (id: string) => {
+        removeItem: async (id: string) => {
+          // Update local state immediately
           set((state) => ({
             ...state,
             items: state.items.filter(item => item.id !== id),
             selectedItems: state.selectedItems.filter(itemId => itemId !== id)
           }));
+
+          // Sync with server
+          try {
+            const { error } = await supabase
+              .from('quotes')
+              .update({ in_cart: false })
+              .eq('id', id);
+
+            if (error) {
+              console.error('Error syncing removeItem with server:', error);
+              // Revert local state on error
+              set((state) => ({
+                ...state,
+                items: [...state.items, state.items.find(item => item.id === id)].filter(Boolean)
+              }));
+            }
+          } catch (error) {
+            console.error('Error syncing removeItem with server:', error);
+            // Revert local state on error
+            set((state) => ({
+              ...state,
+              items: [...state.items, state.items.find(item => item.id === id)].filter(Boolean)
+            }));
+          }
         },
 
         updateQuantity: (id: string, quantity: number) => {
@@ -233,13 +258,44 @@ export const useCartStore = create<CartStore>()(
           }));
         },
 
-        bulkDelete: (ids: string[]) => {
+        bulkDelete: async (ids: string[]) => {
+          // Store items to revert if needed
+          const state = get();
+          const itemsToDelete = [...state.items, ...state.savedItems].filter(item => ids.includes(item.id));
+          
+          // Update local state immediately
           set((state) => ({
             ...state,
             items: state.items.filter(item => !ids.includes(item.id)),
             savedItems: state.savedItems.filter(item => !ids.includes(item.id)),
             selectedItems: state.selectedItems.filter(id => !ids.includes(id))
           }));
+
+          // Sync with server
+          try {
+            const { error } = await supabase
+              .from('quotes')
+              .update({ in_cart: false })
+              .in('id', ids);
+
+            if (error) {
+              console.error('Error syncing bulkDelete with server:', error);
+              // Revert local state on error
+              set((state) => ({
+                ...state,
+                items: [...state.items, ...itemsToDelete.filter(item => !state.savedItems.some(saved => saved.id === item.id))],
+                savedItems: [...state.savedItems, ...itemsToDelete.filter(item => state.savedItems.some(saved => saved.id === item.id))]
+              }));
+            }
+          } catch (error) {
+            console.error('Error syncing bulkDelete with server:', error);
+            // Revert local state on error
+            set((state) => ({
+              ...state,
+              items: [...state.items, ...itemsToDelete.filter(item => !state.savedItems.some(saved => saved.id === item.id))],
+              savedItems: [...state.savedItems, ...itemsToDelete.filter(item => state.savedItems.some(saved => saved.id === item.id))]
+            }));
+          }
         },
 
         bulkMove: async (ids: string[], toSaved: boolean) => {
