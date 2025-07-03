@@ -47,7 +47,14 @@ import {
   Percent,
   Shield,
   CreditCard,
-  Gift
+  Gift,
+  Star,
+  Zap,
+  Target,
+  TrendingUp,
+  User,
+  Building,
+  Phone
 } from 'lucide-react';
 import { formatAmountForDisplay } from '@/lib/currencyUtils';
 import { ShippingAddress } from '@/types/address';
@@ -198,127 +205,122 @@ export default function QuoteDetail() {
       totalMaxDays: number;
       processingDays: number;
       customsDays: number;
-      deliveryMinDays: number;
-      deliveryMaxDays: number;
-    } | null;
-    shippingRoute: any;
-    selectedOption: any;
+      shippingDays: number;
+    };
   } | null>(null);
+
   React.useEffect(() => {
     async function fetchDeliveryWindow() {
-      if (!quote) return;
-      let shippingRoute = null;
-      // Try to fetch by shipping_route_id if present
-      if (quote.shipping_route_id) {
-        const { data: routeById } = await supabase
+      if (!quote?.shipping_route_id) {
+        // Fallback calculation
+        const created = new Date(quote?.created_at || '');
+        const minDate = new Date(created.getTime() + (10 * 24 * 60 * 60 * 1000)); // 10 days
+        const maxDate = new Date(created.getTime() + (18 * 24 * 60 * 60 * 1000)); // 18 days
+        
+        setDeliveryWindow({
+          label: `${minDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${maxDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+          days: '10-18 days',
+          timeline: {
+            minDate,
+            maxDate,
+            totalMinDays: 10,
+            totalMaxDays: 18,
+            processingDays: 2,
+            customsDays: 3,
+            shippingDays: 5
+          }
+        });
+        return;
+      }
+
+      try {
+        const { data: route, error } = await supabase
           .from('shipping_routes')
           .select('*')
           .eq('id', quote.shipping_route_id)
-          .maybeSingle();
-        if (routeById) shippingRoute = routeById;
+          .single();
+
+        if (error || !route) {
+          console.error('Error fetching shipping route:', error);
+          return;
+        }
+
+        const created = new Date(quote.created_at);
+        const processingDays = route.processing_days || 2;
+        const customsDays = route.customs_clearance_days || 3;
+        const shippingDays = 5; // Default shipping days
+        
+        const totalMinDays = processingDays + customsDays + shippingDays;
+        const totalMaxDays = totalMinDays + 3; // Add buffer
+        
+        const minDate = new Date(created.getTime() + (totalMinDays * 24 * 60 * 60 * 1000));
+        const maxDate = new Date(created.getTime() + (totalMaxDays * 24 * 60 * 60 * 1000));
+        
+        const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        
+        setDeliveryWindow({
+          label: `${formatDate(minDate)} - ${formatDate(maxDate)}`,
+          days: `${totalMinDays}-${totalMaxDays} days`,
+          timeline: {
+            minDate,
+            maxDate,
+            totalMinDays,
+            totalMaxDays,
+            processingDays,
+            customsDays,
+            shippingDays
+          }
+        });
+      } catch (error) {
+        console.error('Error calculating delivery window:', error);
+        // Fallback calculation
+        const created = new Date(quote?.created_at || '');
+        const minDate = new Date(created.getTime() + (10 * 24 * 60 * 60 * 1000));
+        const maxDate = new Date(created.getTime() + (18 * 24 * 60 * 60 * 1000));
+        
+        const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        
+        setDeliveryWindow({
+          label: `${formatDate(minDate)} - ${formatDate(maxDate)}`,
+          days: '10-18 days',
+          timeline: {
+            minDate,
+            maxDate,
+            totalMinDays: 10,
+            totalMaxDays: 18,
+            processingDays: 2,
+            customsDays: 3,
+            shippingDays: 5
+          }
+        });
       }
-      // Fallback to origin/destination matching
-      if (!shippingRoute) {
-        const originCountry = quote.origin_country || 'US';
-        const destinationCountry = quote.country_code;
-        const { data: routeData } = await supabase
-          .from('shipping_routes')
-          .select('*')
-          .eq('origin_country', originCountry)
-          .eq('destination_country', destinationCountry)
-          .eq('is_active', true)
-          .maybeSingle();
-        if (routeData) shippingRoute = routeData;
-      }
-      // Fallback to any route for destination
-      if (!shippingRoute) {
-        const { data: fallbackRoute } = await supabase
-          .from('shipping_routes')
-          .select('*')
-          .eq('destination_country', quote.country_code)
-          .eq('is_active', true)
-          .maybeSingle();
-        if (fallbackRoute) shippingRoute = fallbackRoute;
-      }
-      // Default route if still not found
-      if (!shippingRoute) {
-        shippingRoute = {
-          processing_days: 2,
-          customs_clearance_days: 3,
-          delivery_options: [
-            { id: 'default', name: 'Standard Delivery', min_days: 7, max_days: 14, cost: 0 }
-          ]
-        };
-      }
-      // Get delivery options
-      let options = shippingRoute.delivery_options || [];
-      const enabledOptions = Array.isArray(quote.enabled_delivery_options) ? quote.enabled_delivery_options : [];
-      if (enabledOptions.length > 0) {
-        options = options.filter((opt: any) => enabledOptions.includes(opt.id));
-      }
-      const option = options[0];
-      if (!option) return;
-      // Calculate window
-      let startDate: Date = new Date();
-      // payment_date is not typed on quote, so use (quote as any)
-      if (typeof (quote as any).payment_date === 'string' && (quote as any).payment_date) {
-        startDate = new Date((quote as any).payment_date);
-      } else if (typeof quote.created_at === 'string' && quote.created_at) {
-        startDate = new Date(quote.created_at);
-      }
-      const minDays = (shippingRoute.processing_days || 0) + (shippingRoute.customs_clearance_days || 0) + (option.min_days || 0);
-      const maxDays = (shippingRoute.processing_days || 0) + (shippingRoute.customs_clearance_days || 0) + (option.max_days || 0);
-      const minDate = new Date(startDate); minDate.setDate(minDate.getDate() + minDays);
-      const maxDate = new Date(startDate); maxDate.setDate(maxDate.getDate() + maxDays);
-      const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      setDeliveryWindow({
-        label: `${formatDate(minDate)}-${formatDate(maxDate)}`,
-        days: `${minDays}-${maxDays} days`,
-        timeline: {
-          minDate,
-          maxDate,
-          totalMinDays: minDays,
-          totalMaxDays: maxDays,
-          processingDays: shippingRoute.processing_days || 0,
-          customsDays: shippingRoute.customs_clearance_days || 0,
-          deliveryMinDays: option.min_days || 0,
-          deliveryMaxDays: option.max_days || 0
-        },
-        shippingRoute,
-        selectedOption: option
-      });
     }
-    fetchDeliveryWindow();
+
+    if (quote) {
+      fetchDeliveryWindow();
+    }
   }, [quote]);
 
-  // Format date range helper
   const formatDateRange = (minDate: Date, maxDate: Date) => {
-    const minMonth = minDate.toLocaleDateString('en-US', { month: 'short' });
-    const minDay = minDate.getDate();
-    const maxMonth = maxDate.toLocaleDateString('en-US', { month: 'short' });
-    const maxDay = maxDate.getDate();
-    
-    if (minMonth === maxMonth) {
-      return `${minMonth} ${minDay}-${maxDay}`;
-    } else {
-      return `${minMonth} ${minDay} - ${maxMonth} ${maxDay}`;
-    }
+    const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `${formatDate(minDate)} - ${formatDate(maxDate)}`;
   };
 
   if (isLoading) {
     return (
-      <div className="container py-8 animate-in fade-in duration-500">
-        <div className="space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-64 w-full" />
-            </div>
-            <div className="space-y-6">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-48 w-full" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <div className="container py-8">
+          <div className="space-y-6">
+            <Skeleton className="h-8 w-64" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-6">
+                <Skeleton className="h-32" />
+                <Skeleton className="h-64" />
+              </div>
+              <div className="space-y-6">
+                <Skeleton className="h-48" />
+                <Skeleton className="h-48" />
+              </div>
             </div>
           </div>
         </div>
@@ -328,14 +330,16 @@ export default function QuoteDetail() {
 
   if (error || !quote) {
     return (
-      <div className="container py-8 animate-in fade-in duration-500">
-        <div className="text-center py-12">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Quote Not Found</h2>
-          <p className="text-gray-500 mb-4">The quote you're looking for doesn't exist or you don't have permission to view it.</p>
-          <Link to="/dashboard/quotes">
-            <Button>Back to Quotes</Button>
-          </Link>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <div className="container py-8">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Quote Not Found</h2>
+            <p className="text-gray-600 mb-4">The quote you're looking for doesn't exist or you don't have permission to view it.</p>
+            <Link to="/dashboard/quotes">
+              <Button>Back to Quotes</Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -343,65 +347,53 @@ export default function QuoteDetail() {
 
   const statusConfig = getStatusConfig(quote.status, quote.approval_status);
   const StatusIcon = statusConfig.icon;
-  const timeline = getDeliveryTimeline();
-  const isOwner = user?.id === quote.user_id;
+  const isOwner = quote.user_id === user?.id;
 
-  // Handler functions for quote actions
   const handleApprove = async () => {
     try {
       await approveQuote();
-      // The useQuoteState hook will handle query invalidation and show success toast
     } catch (error) {
       console.error('Error approving quote:', error);
     }
   };
 
   const handleReject = async () => {
-    try {
-      await rejectQuote('', 'Rejected by user');
-      // The useQuoteState hook will handle query invalidation and show success toast
-    } catch (error) {
-      console.error('Error rejecting quote:', error);
-    }
+    setRejectDialogOpen(true);
   };
 
   const handleAddToCart = async () => {
     try {
       await addToCart();
-      // The useQuoteState hook will handle query invalidation and show success toast
     } catch (error) {
       console.error('Error adding to cart:', error);
     }
   };
 
-  // Help functionality handlers
   const handleMessageSupport = () => {
+    setShowMessages(true);
     setHelpOpen(false);
     setMobileHelpOpen(false);
-    setShowMessages(true);
   };
 
   const handleFAQ = () => {
+    window.open('/faq', '_blank');
     setHelpOpen(false);
     setMobileHelpOpen(false);
-    // Open FAQ modal or link
-    window.open('/faq', '_blank');
   };
 
   const handleRequestChanges = () => {
+    // Implement request changes functionality
+    console.log('Request changes clicked');
     setHelpOpen(false);
     setMobileHelpOpen(false);
-    // Open request changes form/modal
-    // e.g., setShowRequestChanges(true)
   };
 
   const handleCancelQuote = () => {
+    setRejectDialogOpen(true);
     setHelpOpen(false);
     setMobileHelpOpen(false);
-    setRejectDialogOpen(true);
   };
 
-  // Breakdown modal handlers
   const handleOpenBreakdown = () => {
     setIsBreakdownOpen(true);
   };
@@ -410,15 +402,11 @@ export default function QuoteDetail() {
     setIsBreakdownOpen(false);
   };
 
-  // Helper function to render breakdown rows
   const renderBreakdownRow = (label: string, amount: number | null, isDiscount = false, icon?: React.ReactNode) => {
-    if (amount === null || amount === undefined || amount === 0) return null;
-
-    const sign = isDiscount ? '-' : '';
-    const colorClass = isDiscount ? 'text-green-600' : '';
-
+    if (!amount || amount === 0) return null;
+    const sign = isDiscount ? '-' : '+';
     return (
-      <div className={`flex justify-between items-center py-1.5 sm:py-2 ${colorClass}`}>
+      <div className="flex justify-between items-center py-1">
         <div className="flex items-center gap-1.5 sm:gap-2">
           {icon && <span className="text-gray-400">{icon}</span>}
           <div className="flex items-center gap-1">
@@ -431,466 +419,575 @@ export default function QuoteDetail() {
   };
 
   return (
-    <div className="container py-8 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="mb-8 animate-in slide-in-from-top duration-700">
-        <Link to="/dashboard/quotes" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors duration-200">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Quotes
-        </Link>
-        
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold">Quote #{quote.display_id || quote.id.slice(0, 8)}</h1>
-              <Badge className={`flex items-center gap-1 ${statusConfig.color} animate-in zoom-in duration-500`}>
-                <StatusIcon className="h-3 w-3" />
-                {statusConfig.label}
-              </Badge>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="container py-6 sm:py-8 animate-in fade-in duration-500">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8 animate-in slide-in-from-top duration-700">
+          <Link 
+            to="/dashboard/quotes" 
+            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-all duration-200 hover:scale-105 group"
+          >
+            <div className="p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm group-hover:shadow-md transition-all duration-200 mr-3">
+              <ArrowLeft className="h-4 w-4" />
             </div>
-            <p className="text-gray-500">Created on {new Date(quote.created_at).toLocaleDateString()}</p>
+            <span className="font-medium">Back to Quotes</span>
+          </Link>
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-2xl bg-gradient-to-r from-slate-600 to-gray-700 shadow-lg">
+                    <Receipt className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
+                      Quote #{quote.display_id || quote.id.slice(0, 8)}
+                    </h1>
+                    <p className="text-gray-500 text-sm sm:text-base">
+                      Created on {new Date(quote.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <Badge className={`flex items-center gap-1 px-3 py-1.5 rounded-full shadow-sm ${statusConfig.color} animate-in zoom-in duration-500`}>
+                  <StatusIcon className="h-3 w-3" />
+                  <span className="font-medium">{statusConfig.label}</span>
+                </Badge>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Status Stepper */}
-          <QuoteStepper currentStep={getQuoteUIState(quote).step} rejected={getQuoteUIState(quote).step === 'rejected'} />
-          {/* Product Hero Card */}
-          <Card className="overflow-hidden animate-in slide-in-from-left duration-700 delay-100 hover:shadow-lg transition-shadow duration-300">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Product Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {Array.isArray(quote.quote_items) && quote.quote_items.length > 1 ? (
-                <div className="flex flex-col gap-4">
-                  <div className="flex gap-4 overflow-x-auto pb-2">
-                    {quote.quote_items.map((item) => (
-                      <div key={item.id} className="flex flex-col items-center min-w-[120px] max-w-[140px] bg-muted rounded-lg p-3 border border-border">
-                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mb-2">
-                          {item.image_url ? (
-                            <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover rounded-lg" />
-                          ) : (
-                            <Package className="h-8 w-8 text-gray-400" />
-                          )}
-                        </div>
-                        <div className="text-sm font-medium text-center truncate w-full">
-                          {item.product_url ? (
-                            <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{item.product_name}</a>
-                          ) : (
-                            item.product_name
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">Qty: {item.quantity}</div>
-                      </div>
-                    ))}
-                  </div>
-                  {/* Cost Info Grouped - new order: country, cost, quote, weight, items */}
-                  <div className="flex flex-wrap gap-6 mt-2 items-center">
-                    <div className="flex flex-col items-start">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1"><Globe className="h-3 w-3" /> Country</span>
-                      <span className="text-lg font-semibold">{countryName}</span>
-                    </div>
-                    <div className="flex flex-col items-start">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1"><Package className="h-3 w-3" /> Cost of Goods</span>
-                      <span className="text-lg font-semibold">{formatAmount(quote.item_price)}</span>
-                    </div>
-                    <div className="flex flex-col items-start">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Receipt className="h-3 w-3" /> Quote Total
-                        <button 
-                          onClick={handleOpenBreakdown}
-                          className="ml-1 cursor-pointer"
-                        >
-                          <Info className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                        </button>
-                      </span>
-                      <span className="text-lg font-semibold">{formatAmount(quote.final_total)}</span>
-                    </div>
-                    <div className="flex flex-col items-start">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1"><Weight className="h-3 w-3" /> Weight</span>
-                      <span className="text-lg font-semibold">{quote.item_weight || 0} kg</span>
-                    </div>
-                    <div className="flex flex-col items-start">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1"><Package className="h-3 w-3" /> Items</span>
-                      <span className="text-lg font-semibold">{quote.quote_items.reduce((sum, item) => sum + (item.quantity || 0), 0)}</span>
-                    </div>
-                    <div className="flex flex-col items-start">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> Delivery Estimate</span>
-                      <span className="text-lg font-semibold">{deliveryWindow ? `${deliveryWindow.label} (${deliveryWindow.days})` : '—'}</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col sm:flex-row gap-6">
-                  {/* Product Image */}
-                  <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 hover:scale-105 transition-transform duration-200">
-                    {quote.image_url ? (
-                      <img src={quote.image_url} alt={quote.product_name} className="w-full h-full object-cover rounded-lg" />
-                    ) : (
-                      <Package className="h-8 w-8 text-gray-400" />
-                    )}
-                  </div>
-                  {/* Product Info + Status + Price */}
-                  <div className="flex-1 min-w-0 flex flex-col gap-2 justify-between">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold truncate">
-                          {quote.product_name || 'Product Name'}
-                        </h3>
-                        <Badge className={`flex items-center gap-1 ${statusConfig.color} animate-in zoom-in duration-500`}>
-                          <StatusIcon className="h-3 w-3" />
-                          {statusConfig.label}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-col gap-2 mt-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1"><Package className="h-3 w-3" /> Cost of Goods</span>
-                          <span className="text-lg font-semibold">{formatAmount(quote.item_price)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Receipt className="h-3 w-3" /> Quote Total
-                            <button 
-                              onClick={handleOpenBreakdown}
-                              className="ml-1 cursor-pointer"
-                            >
-                              <Info className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                            </button>
-                          </span>
-                          <span className="text-lg font-semibold">{formatAmount(quote.final_total)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mt-2">
-                      <div className="hover:bg-gray-50 p-2 rounded transition-colors duration-200">
-                        <span className="text-gray-500">Purchase Country:</span>
-                        <div className="font-medium flex items-center gap-1">
-                          <Globe className="h-3 w-3" />
-                          {countryName}
-                        </div>
-                      </div>
-                      <div className="hover:bg-gray-50 p-2 rounded transition-colors duration-200">
-                        <span className="text-gray-500">Weight:</span>
-                        <div className="font-medium flex items-center gap-1">
-                          <Weight className="h-3 w-3" />
-                          {quote.item_weight || 0} kg
-                        </div>
-                      </div>
-                      <div className="hover:bg-gray-50 p-2 rounded transition-colors duration-200">
-                        <span className="text-gray-500">Quantity:</span>
-                        <div className="font-medium">{Array.isArray(quote.quote_items) ? quote.quote_items.reduce((sum, item) => sum + (item.quantity || 0), 0) : (quote.quantity || 1)}</div>
-                      </div>
-                      <div className="hover:bg-gray-50 p-2 rounded transition-colors duration-200">
-                        <span className="text-gray-500">Delivery Estimate:</span>
-                        <div className="font-medium flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {deliveryWindow ? `${deliveryWindow.label} (${deliveryWindow.days})` : '—'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Need Help Section */}
-          <div className="flex justify-center py-3 sm:py-4 border-t border-b border-border">
-            <div className="md:block hidden">
-              <Popover open={isHelpOpen} onOpenChange={setHelpOpen}>
-                <PopoverTrigger asChild>
-                  <button className="text-base font-medium flex items-center gap-1 text-red-600 dark:text-red-400 bg-transparent border-none shadow-none px-0 py-0 hover:bg-transparent hover:text-red-500 focus:outline-none focus:ring-0" type="button">
-                    <HelpCircle className="w-5 h-5 text-red-600 dark:text-red-400" /> Need Help?
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="center" className="w-56 p-2 backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl">
-                  <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-gray-700" onClick={handleMessageSupport}>
-                    <MessageCircle className="w-4 h-4" /> Message Support
-                  </button>
-                  {quote.approval_status !== 'rejected' && (
-                    <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-red-600" onClick={handleCancelQuote}>
-                      <XCircle className="w-4 h-4" /> Cancel Quote
-                    </button>
-                  )}
-                  <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-gray-700" onClick={handleFAQ}>
-                    <BookOpen className="w-4 h-4" /> FAQ
-                  </button>
-                  <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-gray-700" onClick={handleRequestChanges}>
-                    <Edit2 className="w-4 h-4" /> Request Changes
-                  </button>
-                </PopoverContent>
-              </Popover>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Status Stepper */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+              <QuoteStepper currentStep={getQuoteUIState(quote).step} rejected={getQuoteUIState(quote).step === 'rejected'} />
             </div>
-            <div className="md:hidden block w-full">
-              <button
-                className="w-full text-sm sm:text-base font-medium flex items-center gap-1 justify-center py-2 text-red-600 dark:text-red-400 bg-transparent border-none shadow-none hover:bg-transparent hover:text-red-500 focus:outline-none focus:ring-0"
-                type="button"
-                onClick={() => setMobileHelpOpen(true)}
-              >
-                <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" /> Need Help?
-              </button>
-              <Dialog open={isMobileHelpOpen} onOpenChange={setMobileHelpOpen}>
-                <DialogContent className="sm:max-w-[300px] backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl">
-                  <div className="flex flex-col divide-y divide-white/20">
-                    <button 
-                      className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-gray-700" 
-                      onClick={handleMessageSupport}
-                    >
-                      <MessageCircle className="w-4 h-4" /> Message Support
-                    </button>
-                    {quote.approval_status !== 'rejected' && (
-                      <button 
-                        className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-red-600" 
-                        onClick={handleCancelQuote}
-                      >
-                        <XCircle className="w-4 h-4" /> Cancel Quote
+
+            {/* Product Hero Card */}
+            <Card className="overflow-hidden animate-in slide-in-from-left duration-700 delay-100 hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+              <CardHeader className="pb-4 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/50 dark:to-slate-950/50">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <div className="p-2 rounded-lg bg-gradient-to-r from-slate-600 to-gray-700">
+                    <Package className="h-5 w-5 text-white" />
+                  </div>
+                  Product Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {Array.isArray(quote.quote_items) && quote.quote_items.length > 1 ? (
+                  <div className="flex flex-col gap-6">
+                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                                              {quote.quote_items.map((item) => (
+                          <div key={item.id} className="flex flex-col items-center min-w-[140px] max-w-[160px] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50 shadow-sm hover:shadow-md transition-all duration-200">
+                            {item.image_url && (
+                              <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl flex items-center justify-center mb-3 shadow-inner">
+                                <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover rounded-xl" />
+                              </div>
+                            )}
+                            <div className="text-sm font-medium text-center truncate w-full">
+                              {item.product_url ? (
+                                <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{item.product_name}</a>
+                              ) : (
+                                item.product_name
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1 bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-full">Qty: {item.quantity}</div>
+                          </div>
+                        ))}
+                    </div>
+                    {/* Cost Info Grouped - new order: country, cost, quote, weight, items */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
+                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Globe className="h-4 w-4 text-gray-600" />
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Country</span>
+                        </div>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{countryName}</span>
+                      </div>
+                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Package className="h-4 w-4 text-gray-600" />
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Cost of Goods</span>
+                        </div>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatAmount(quote.item_price)}</span>
+                      </div>
+                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Receipt className="h-4 w-4 text-gray-600" />
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Quote Total</span>
+                          <button 
+                            onClick={handleOpenBreakdown}
+                            className="cursor-pointer hover:scale-110 transition-transform duration-200"
+                          >
+                            <Info className="h-3 w-3 text-gray-500 hover:text-gray-700" />
+                          </button>
+                        </div>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatAmount(quote.final_total)}</span>
+                      </div>
+                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Weight className="h-4 w-4 text-gray-600" />
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Weight</span>
+                        </div>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{quote.item_weight || 0} kg</span>
+                      </div>
+                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Package className="h-4 w-4 text-gray-600" />
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Items</span>
+                        </div>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{quote.quote_items.reduce((sum, item) => sum + (item.quantity || 0), 0)}</span>
+                      </div>
+                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Calendar className="h-4 w-4 text-gray-600" />
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Delivery</span>
+                        </div>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{deliveryWindow ? `${deliveryWindow.label} (${deliveryWindow.days})` : '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                                      <div className="flex flex-col sm:flex-row gap-6">
+                      {/* Product Image - Only show if image exists */}
+                      {quote.image_url && (
+                        <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-gray-100 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-2xl flex items-center justify-center flex-shrink-0 hover:scale-105 transition-transform duration-200 shadow-lg">
+                          <img src={quote.image_url} alt={quote.product_name} className="w-full h-full object-cover rounded-2xl" />
+                        </div>
+                      )}
+                      {/* Product Info + Status + Price */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-4 justify-between">
+                      <div className="flex flex-col gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                          <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent truncate">
+                            {quote.product_name || 'Product Name'}
+                          </h3>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Package className="h-4 w-4 text-gray-600" />
+                              <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Cost of Goods</span>
+                            </div>
+                            <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatAmount(quote.item_price)}</span>
+                          </div>
+                          <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Receipt className="h-4 w-4 text-gray-600" />
+                              <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Quote Total</span>
+                              <button 
+                                onClick={handleOpenBreakdown}
+                                className="cursor-pointer hover:scale-110 transition-transform duration-200"
+                              >
+                                <Info className="h-3 w-3 text-gray-500 hover:text-gray-700" />
+                              </button>
+                            </div>
+                            <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatAmount(quote.final_total)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Globe className="h-3 w-3 text-gray-600" />
+                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Country</span>
+                          </div>
+                          <div className="font-bold text-gray-900 dark:text-gray-100">{countryName}</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Weight className="h-3 w-3 text-gray-600" />
+                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Weight</span>
+                          </div>
+                          <div className="font-bold text-gray-900 dark:text-gray-100">{quote.item_weight || 0} kg</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Package className="h-3 w-3 text-gray-600" />
+                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Quantity</span>
+                          </div>
+                          <div className="font-bold text-gray-900 dark:text-gray-100">{Array.isArray(quote.quote_items) ? quote.quote_items.reduce((sum, item) => sum + (item.quantity || 0), 0) : (quote.quantity || 1)}</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Calendar className="h-3 w-3 text-gray-600" />
+                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Delivery</span>
+                          </div>
+                          <div className="font-bold text-gray-900 dark:text-gray-100">{deliveryWindow ? `${deliveryWindow.label} (${deliveryWindow.days})` : '—'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Need Help Section */}
+            <div className="flex justify-center py-4 sm:py-6">
+              <div className="md:block hidden">
+                <Popover open={isHelpOpen} onOpenChange={setHelpOpen}>
+                  <PopoverTrigger asChild>
+                                    <button className="text-base font-medium flex items-center gap-2 text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 border border-gray-200/50 dark:border-gray-600/50 shadow-sm hover:shadow-md px-4 py-2 rounded-xl transition-all duration-200 hover:scale-105" type="button">
+                  <HelpCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" /> Need Help?
+                </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="center" className="w-64 p-3 backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl rounded-2xl">
+                    <div className="space-y-2">
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" onClick={handleMessageSupport}>
+                        <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
+                          <MessageCircle className="w-4 h-4 text-blue-600" />
+                        </div>
+                        Message Support
                       </button>
-                    )}
-                    <button 
-                      className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-gray-700" 
-                      onClick={handleFAQ}
-                    >
-                      <BookOpen className="w-4 h-4" /> FAQ
-                    </button>
-                    <button 
-                      className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-gray-700" 
-                      onClick={handleRequestChanges}
-                    >
-                      <Edit2 className="w-4 h-4" /> Request Changes
-                    </button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-
-          {/* Messages section - only shown when Message Support is clicked */}
-          {showMessages && (
-            <div className="space-y-4">
-              <QuoteMessaging quoteId={quote.id} quoteUserId={quote.user_id} />
-            </div>
-          )}
-
-          {/* Breakdown Modal */}
-          <Dialog open={isBreakdownOpen} onOpenChange={setIsBreakdownOpen}>
-            <DialogContent className="max-w-4xl w-[95vw] md:w-[90vw] bg-card border border-border">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Receipt className="h-5 w-5" />
-                  Quote Breakdown
-                </h2>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Download PDF
-                </Button>
+                      {quote.approval_status !== 'rejected' && (
+                        <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105" onClick={handleCancelQuote}>
+                          <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
+                            <XCircle className="w-4 h-4 text-red-600" />
+                          </div>
+                          Cancel Quote
+                        </button>
+                      )}
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" onClick={handleFAQ}>
+                        <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50">
+                          <BookOpen className="w-4 h-4 text-green-600" />
+                        </div>
+                        FAQ
+                      </button>
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" onClick={handleRequestChanges}>
+                        <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
+                          <Edit2 className="w-4 h-4 text-purple-600" />
+                        </div>
+                        Request Changes
+                      </button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Items Section */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-base">Items</h3>
-                  <div className="space-y-3">
-                    {quote.quote_items?.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center bg-muted border border-border rounded-lg p-3">
-                        <div className="flex items-center gap-3">
+              <div className="md:hidden block w-full">
+                <button
+                  className="w-full text-sm sm:text-base font-medium flex items-center gap-2 justify-center py-3 text-red-600 dark:text-red-400 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/30 dark:to-pink-900/30 border border-red-200/50 dark:border-red-700/50 shadow-sm hover:shadow-md rounded-xl transition-all duration-200 hover:scale-105"
+                  type="button"
+                  onClick={() => setMobileHelpOpen(true)}
+                >
+                  <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" /> Need Help?
+                </button>
+                <Dialog open={isMobileHelpOpen} onOpenChange={setMobileHelpOpen}>
+                  <DialogContent className="sm:max-w-[350px] backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl rounded-2xl">
+                    <div className="space-y-2">
+                      <button 
+                        className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" 
+                        onClick={handleMessageSupport}
+                      >
+                        <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
+                          <MessageCircle className="w-4 h-4 text-blue-600" />
+                        </div>
+                        Message Support
+                      </button>
+                      {quote.approval_status !== 'rejected' && (
+                        <button 
+                          className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105" 
+                          onClick={handleCancelQuote}
+                        >
+                          <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
+                            <XCircle className="w-4 h-4 text-red-600" />
+                          </div>
+                          Cancel Quote
+                        </button>
+                      )}
+                      <button 
+                        className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" 
+                        onClick={handleFAQ}
+                      >
+                        <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50">
+                          <BookOpen className="w-4 h-4 text-green-600" />
+                        </div>
+                        FAQ
+                      </button>
+                      <button 
+                        className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" 
+                        onClick={handleRequestChanges}
+                      >
+                        <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
+                          <Edit2 className="w-4 h-4 text-purple-600" />
+                        </div>
+                        Request Changes
+                      </button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            {/* Messages section - only shown when Message Support is clicked */}
+            {showMessages && (
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+                <QuoteMessaging quoteId={quote.id} quoteUserId={quote.user_id} />
+              </div>
+            )}
+
+            {/* Breakdown Modal */}
+            <Dialog open={isBreakdownOpen} onOpenChange={setIsBreakdownOpen}>
+              <DialogContent className="max-w-4xl w-[95vw] md:w-[90vw] bg-white/95 backdrop-blur-xl border border-white/30 shadow-2xl rounded-2xl">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold flex items-center gap-3 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                    <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600">
+                      <Receipt className="h-5 w-5 text-white" />
+                    </div>
+                    Quote Breakdown
+                  </h2>
+                  <Button variant="outline" size="sm" className="gap-2 hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200/50">
+                    <Download className="h-4 w-4" />
+                    Download PDF
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Items Section */}
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Items</h3>
+                    <div className="space-y-3">
+                      {quote.quote_items?.map((item) => (
+                        <div key={item.id} className="flex justify-between items-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200/50 dark:border-gray-600/50 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200">
+                                                  <div className="flex items-center gap-3">
                           {item.image_url && (
                             <img 
                               src={item.image_url} 
                               alt={item.product_name}
-                              className="w-10 h-10 rounded-md object-cover"
+                              className="w-12 h-12 rounded-lg object-cover shadow-sm"
                             />
                           )}
-                          <div>
-                            <div className="font-medium text-sm">{item.product_name}</div>
-                            <div className="text-muted-foreground text-xs">Quantity: {item.quantity}</div>
+                          <div className={item.image_url ? "" : "flex-1"}>
+                            <div className="font-semibold text-sm">{item.product_name}</div>
+                            <div className="text-muted-foreground text-xs bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-full inline-block">Quantity: {item.quantity}</div>
                           </div>
                         </div>
-                        <span className="font-medium text-sm">{formatAmount(item.item_price * item.quantity)}</span>
-                      </div>
-                    ))}
+                          <span className="font-bold text-sm bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{formatAmount(item.item_price * item.quantity)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                {/* Charges & Fees Section */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-base">Charges & Fees</h3>
-                  <div className="space-y-2">
-                    {renderBreakdownRow("Total Item Price", quote.item_price, false, <Package className="h-4 w-4" />)}
-                    {renderBreakdownRow("Sales Tax", quote.sales_tax_price, false, <Percent className="h-4 w-4" />)}
-                    {renderBreakdownRow("Merchant Shipping", quote.merchant_shipping_price, false, <Truck className="h-4 w-4" />)}
-                    {renderBreakdownRow("International Shipping", quote.international_shipping, false, <Truck className="h-4 w-4" />)}
-                    {renderBreakdownRow("Customs & ECS", quote.customs_and_ecs, false, <Shield className="h-4 w-4" />)}
-                    {renderBreakdownRow("Domestic Shipping", quote.domestic_shipping, false, <Truck className="h-4 w-4" />)}
-                    {renderBreakdownRow("Handling Charge", quote.handling_charge, false, <Package className="h-4 w-4" />)}
-                    {renderBreakdownRow("Insurance", quote.insurance_amount, false, <Shield className="h-4 w-4" />)}
-                    {renderBreakdownRow("Payment Gateway Fee", quote.payment_gateway_fee, false, <CreditCard className="h-4 w-4" />)}
-                    {renderBreakdownRow("Discount", quote.discount, true, <Gift className="h-4 w-4" />)}
-                  </div>
-                  <Separator />
-                  <div className="space-y-2">
-                    {renderBreakdownRow("Subtotal", quote.sub_total, false, <Receipt className="h-4 w-4" />)}
-                    {renderBreakdownRow("VAT", quote.vat, false, <Percent className="h-4 w-4" />)}
-                  </div>
-                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                    <div className="flex justify-between items-center font-semibold text-base">
-                      <span>Total Amount</span>
-                      <span className="text-foreground">{formatAmount(quote.final_total)}</span>
+                  {/* Charges & Fees Section */}
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Charges & Fees</h3>
+                    <div className="space-y-3 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/50">
+                      {renderBreakdownRow("Total Item Price", quote.item_price, false, <Package className="h-4 w-4 text-blue-600" />)}
+                      {renderBreakdownRow("Sales Tax", quote.sales_tax_price, false, <Percent className="h-4 w-4 text-green-600" />)}
+                      {renderBreakdownRow("Merchant Shipping", quote.merchant_shipping_price, false, <Truck className="h-4 w-4 text-orange-600" />)}
+                      {renderBreakdownRow("International Shipping", quote.international_shipping, false, <Truck className="h-4 w-4 text-indigo-600" />)}
+                      {renderBreakdownRow("Customs & ECS", quote.customs_and_ecs, false, <Shield className="h-4 w-4 text-purple-600" />)}
+                      {renderBreakdownRow("Domestic Shipping", quote.domestic_shipping, false, <Truck className="h-4 w-4 text-teal-600" />)}
+                      {renderBreakdownRow("Handling Charge", quote.handling_charge, false, <Package className="h-4 w-4 text-amber-600" />)}
+                      {renderBreakdownRow("Insurance", quote.insurance_amount, false, <Shield className="h-4 w-4 text-emerald-600" />)}
+                      {renderBreakdownRow("Payment Gateway Fee", quote.payment_gateway_fee, false, <CreditCard className="h-4 w-4 text-rose-600" />)}
+                      {renderBreakdownRow("Discount", quote.discount, true, <Gift className="h-4 w-4 text-green-600" />)}
+                    </div>
+                    <Separator className="bg-gradient-to-r from-blue-200 to-purple-200" />
+                    <div className="space-y-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 rounded-xl p-4 border border-green-200/50 dark:border-green-700/50">
+                      {renderBreakdownRow("Subtotal", quote.sub_total, false, <Receipt className="h-4 w-4 text-green-600" />)}
+                      {renderBreakdownRow("VAT", quote.vat, false, <Percent className="h-4 w-4 text-emerald-600" />)}
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 border border-purple-300/50 dark:border-purple-600/50 rounded-xl p-6 shadow-lg">
+                      <div className="flex justify-between items-center font-bold text-lg">
+                        <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Total Amount</span>
+                        <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-xl">{formatAmount(quote.final_total)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
 
-          {/* Reject Quote Dialog */}
-          <CustomerRejectQuoteDialog
-            isOpen={isRejectDialogOpen}
-            onOpenChange={(open) => {
-              // Only allow closing if not submitting
-              if (!isUpdating) {
-                setRejectDialogOpen(open);
-              }
-            }}
-            onConfirm={async (reasonId, details) => {
-              try {
-                await rejectQuote(reasonId || details || '', 'Rejected by user');
-                setRejectDialogOpen(false);
-              } catch (error) {
-                // Keep dialog open on error
-                console.error('Error rejecting quote:', error);
-              }
-            }}
-            isPending={isUpdating}
-          />
-        </div>
+            {/* Reject Quote Dialog */}
+            <CustomerRejectQuoteDialog
+              isOpen={isRejectDialogOpen}
+              onOpenChange={(open) => {
+                // Only allow closing if not submitting
+                if (!isUpdating) {
+                  setRejectDialogOpen(open);
+                }
+              }}
+              onConfirm={async (reasonId, details) => {
+                try {
+                  await rejectQuote(reasonId || details || '', 'Rejected by user');
+                  setRejectDialogOpen(false);
+                } catch (error) {
+                  // Keep dialog open on error
+                  console.error('Error rejecting quote:', error);
+                }
+              }}
+              isPending={isUpdating}
+            />
+          </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Actions Card */}
-          {isOwner && (
-            <Card className="animate-in slide-in-from-right duration-700 delay-100 hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {quote.approval_status === 'pending' && (
-                  <>
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Actions Card */}
+            {isOwner && (
+              <Card className="animate-in slide-in-from-right duration-700 delay-100 hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+                <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/50 dark:to-slate-950/50">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <div className="p-2 rounded-lg bg-gradient-to-r from-slate-600 to-gray-700">
+                      <Zap className="h-5 w-5 text-white" />
+                    </div>
+                    Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  {quote.approval_status === 'pending' && (
+                    <>
+                      <Button 
+                        className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
+                        onClick={handleApprove}
+                        disabled={isUpdating}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Approve Quote
+                      </Button>
+                    </>
+                  )}
+                  
+                  {(quote.approval_status === 'rejected' || quote.status === 'cancelled') && (
                     <Button 
-                      className="w-full hover:scale-105 transition-transform duration-200"
+                      className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
                       onClick={handleApprove}
                       disabled={isUpdating}
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Approve Quote
+                      Re-Approve Quote
                     </Button>
-                  </>
-                )}
-                
-                {(quote.approval_status === 'rejected' || quote.status === 'cancelled') && (
-                  <Button 
-                    className="w-full hover:scale-105 transition-transform duration-200"
-                    onClick={handleApprove}
-                    disabled={isUpdating}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Re-Approve Quote
-                  </Button>
-                )}
-                
-                {quote.approval_status === 'approved' && !quote.in_cart && (
-                  <Button 
-                    className="w-full hover:scale-105 transition-transform duration-200"
-                    onClick={handleAddToCart}
-                    disabled={isUpdating}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Add to Cart
-                  </Button>
-                )}
-                
-                {quote.in_cart && (
-                  <Link to="/cart">
-                    <Button className="w-full hover:scale-105 transition-transform duration-200">
+                  )}
+                  
+                  {quote.approval_status === 'approved' && !quote.in_cart && (
+                    <Button 
+                      className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
+                      onClick={handleAddToCart}
+                      disabled={isUpdating}
+                    >
                       <ShoppingCart className="h-4 w-4 mr-2" />
-                      View in Cart
+                      Add to Cart
                     </Button>
-                  </Link>
+                  )}
+                  
+                  {quote.in_cart && (
+                    <Link to="/cart">
+                      <Button className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl">
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        View in Cart
+                      </Button>
+                    </Link>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Shipping Address */}
+            <Card className="animate-in slide-in-from-right duration-700 delay-200 hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/50 dark:to-slate-950/50">
+                <CardTitle className="flex items-center justify-between text-lg sm:text-xl">
+                  <span className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-gradient-to-r from-slate-600 to-gray-700">
+                      <MapPin className="h-5 w-5 text-white" />
+                    </div>
+                    Shipping Address
+                  </span>
+                  {isOwner && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="hover:scale-105 transition-all duration-200 bg-white/50 hover:bg-white/80"
+                      onClick={() => setIsAddressDialogOpen(true)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {shippingAddress ? (
+                  <div className="text-sm space-y-3 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
+                        <User className="h-3 w-3 text-gray-600" />
+                      </div>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{shippingAddress.fullName}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
+                        <MapPin className="h-3 w-3 text-gray-600" />
+                      </div>
+                      <p className="text-gray-700 dark:text-gray-300">{shippingAddress.streetAddress}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
+                        <Building className="h-3 w-3 text-gray-600" />
+                      </div>
+                      <p className="text-gray-700 dark:text-gray-300">{shippingAddress.city}{shippingAddress.state ? `, ${shippingAddress.state}` : ''} {shippingAddress.postalCode}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
+                        <Globe className="h-3 w-3 text-gray-600" />
+                      </div>
+                      <p className="text-gray-700 dark:text-gray-300">{shippingAddress.country}</p>
+                    </div>
+                    {shippingAddress.phone && (
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
+                          <Phone className="h-3 w-3 text-gray-600" />
+                        </div>
+                        <p className="text-gray-700 dark:text-gray-300">📞 {shippingAddress.phone}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
+                        <AlertCircle className="h-3 w-3 text-gray-500" />
+                      </div>
+                      <p className="font-medium">No shipping address set</p>
+                    </div>
+                    {isOwner && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200/50"
+                        onClick={() => setIsAddressDialogOpen(true)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Add Address
+                      </Button>
+                    )}
+                  </div>
                 )}
               </CardContent>
             </Card>
-          )}
-
-          {/* Shipping Address */}
-          <Card className="animate-in slide-in-from-right duration-700 delay-200 hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Shipping Address
-                </span>
-                {isOwner && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="hover:scale-105 transition-transform duration-200"
-                    onClick={() => setIsAddressDialogOpen(true)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {shippingAddress ? (
-                <div className="text-sm space-y-1">
-                  <p className="font-medium">{shippingAddress.fullName}</p>
-                  <p>{shippingAddress.streetAddress}</p>
-                  <p>{shippingAddress.city}{shippingAddress.state ? `, ${shippingAddress.state}` : ''} {shippingAddress.postalCode}</p>
-                  <p>{shippingAddress.country}</p>
-                  {shippingAddress.phone && <p className="text-gray-500">📞 {shippingAddress.phone}</p>}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-500">
-                  <p>No shipping address set</p>
-                  {isOwner && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="mt-2 w-full"
-                      onClick={() => setIsAddressDialogOpen(true)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Add Address
-                    </Button>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          </div>
         </div>
-      </div>
 
-      {/* Address Edit Dialog */}
-      <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
-        <DialogContent>
-          <DialogDescription>
-            Update your shipping address for this quote.
-          </DialogDescription>
-          <AddressEditForm
-            currentAddress={shippingAddress}
-            onSave={() => {
-              setIsAddressDialogOpen(false);
-              window.location.reload();
-            }}
-            onCancel={() => setIsAddressDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
+        {/* Address Edit Dialog */}
+        <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
+          <DialogContent className="backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl rounded-2xl">
+            <DialogDescription className="text-gray-600">
+              Update your shipping address for this quote.
+            </DialogDescription>
+            <AddressEditForm
+              currentAddress={shippingAddress}
+              onSave={async (updatedAddress) => {
+                await supabase
+                  .from('quotes')
+                  .update({ shipping_address: updatedAddress as any })
+                  .eq('id', quote.id);
+                setIsAddressDialogOpen(false);
+                refetch();
+              }}
+              onCancel={() => setIsAddressDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 } 

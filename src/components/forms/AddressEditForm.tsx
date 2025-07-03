@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -49,6 +49,7 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
   const { data: countries } = useAllCountries();
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  const lastAddressRef = useRef<string | undefined>();
 
   const form = useForm<AddressFormData>({
     resolver: zodResolver(addressFormSchema),
@@ -63,6 +64,37 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
       email: currentAddress?.email || '',
     },
   });
+
+  useEffect(() => {
+    // Only reset if the address actually changed
+    if (
+      currentAddress &&
+      countries &&
+      countries.length > 0 &&
+      lastAddressRef.current !== JSON.stringify(currentAddress)
+    ) {
+      let countryCode = currentAddress.country;
+      if (!/^[A-Z]{2}$/.test(countryCode)) {
+        const found = countries.find(
+          (c) =>
+            c.name.toLowerCase() === countryCode?.toLowerCase() ||
+            c.code.toLowerCase() === countryCode?.toLowerCase()
+        );
+        countryCode = found ? found.code : '';
+      }
+      form.reset({
+        fullName: currentAddress.fullName || '',
+        streetAddress: currentAddress.streetAddress || '',
+        city: currentAddress.city || '',
+        state: currentAddress.state || '',
+        postalCode: currentAddress.postalCode || '',
+        country: countryCode,
+        phone: currentAddress.phone || '',
+        email: currentAddress.email || '',
+      });
+      lastAddressRef.current = JSON.stringify(currentAddress);
+    }
+  }, [currentAddress, countries, form]);
 
   const watchedCountry = form.watch('country');
   const selectedCountry = countries?.find(c => c.code === watchedCountry);
@@ -235,7 +267,7 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select country" />
+                          <SelectValue placeholder={field.value ? countries?.find(c => c.code === field.value)?.name || field.value : "Select country"} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -267,20 +299,6 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
                       <Input placeholder="+1234567890" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="email@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
