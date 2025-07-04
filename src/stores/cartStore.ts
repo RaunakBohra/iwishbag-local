@@ -74,7 +74,7 @@ export const useCartStore = create<CartStore>()(
         items: [],
         savedItems: [],
         selectedItems: [],
-        isLoading: false,
+        isLoading: true,
         error: null,
         userId: null,
         isInitialized: false,
@@ -592,22 +592,30 @@ export const useCartStore = create<CartStore>()(
       };
     },
     {
-      name: 'cart-storage',
-      // FIXED: Only persist selectedItems and userId, not the actual cart data
+      name: 'cart-store',
+      getStorage: () => localStorage,
+      migrate: (persistedState, version) => {
+        return persistedState;
+      },
       partialize: (state) => ({
+        items: state.items,
+        savedItems: state.savedItems,
         selectedItems: state.selectedItems,
-        userId: state.userId
+        userId: state.userId,
       }),
-      // FIXED: Don't restore cart data from localStorage on page load
-      onRehydrateStorage: () => (state) => {
+      onRehydrateStorage: () => (state, error) => {
         if (state) {
-          // Clear any stale cart data from localStorage
-          state.items = [];
-          state.savedItems = [];
-          state.hasLoadedFromServer = false;
-          state.isInitialized = false;
+          state.isLoading = false;
         }
-      }
+      },
     }
   )
-); 
+);
+
+export function setCartStorageKey(userId: string) {
+  if (userId) {
+    useCartStore.persist.setOptions({
+      name: `cart-store-${userId}`
+    });
+  }
+} 

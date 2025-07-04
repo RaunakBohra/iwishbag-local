@@ -1,6 +1,7 @@
 import { useMemo, useEffect } from 'react';
-import { useCartStore, CartItem } from '@/stores/cartStore';
+import { useCartStore, CartItem, setCartStorageKey } from '@/stores/cartStore';
 import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 export const useCart = () => {
   const {
@@ -32,6 +33,15 @@ export const useCart = () => {
   } = useCartStore();
 
   const { formatAmount } = useUserCurrency();
+  const userProfile = useUserProfile();
+  const userId = userProfile?.data?.id;
+
+  // Set the storage key per user for cart persistence
+  useEffect(() => {
+    if (userId) {
+      setCartStorageKey(userId);
+    }
+  }, [userId]);
 
   // Cart calculations - FIXED: Use consistent calculation method
   const cartTotal = useMemo(() => {
@@ -173,6 +183,17 @@ export const useCart = () => {
       await bulkMove(selectedSavedItemIds, false);
     }
   };
+
+  // Wait for cart rehydration before exposing cart data
+  if (isLoading) {
+    return {
+      isLoading: true,
+      items: [],
+      savedItems: [],
+      selectedItems: [],
+      // ...other fields as needed
+    };
+  }
 
   return {
     // State

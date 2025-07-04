@@ -70,7 +70,8 @@ export default function Checkout() {
     selectedItems, 
     selectedItemsTotal, 
     formattedSelectedTotal,
-    getSelectedCartItems 
+    getSelectedCartItems,
+    isLoading: cartLoading
   } = useCart();
   
   // Payment gateway hook
@@ -338,6 +339,16 @@ export default function Checkout() {
       setIsProcessing(false);
     }
   };
+
+  // Show loading spinner while cart is rehydrating
+  if (cartLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-2" />
+        <span className="text-muted-foreground text-sm">Loading your cart...</span>
+      </div>
+    );
+  }
 
   // Loading states
   if (addressesLoading) {
