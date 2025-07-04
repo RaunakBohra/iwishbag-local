@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,12 +28,25 @@ import {
   Calculator
 } from 'lucide-react';
 import { useStatusManagement, StatusConfig } from '@/hooks/useStatusManagement';
+import { supabase } from '@/integrations/supabase/client';
 
 const colorOptions = [
   { value: 'default', label: 'Default', className: 'bg-blue-100 text-blue-800' },
   { value: 'secondary', label: 'Secondary', className: 'bg-gray-100 text-gray-800' },
   { value: 'outline', label: 'Outline', className: 'bg-white text-gray-800 border' },
-  { value: 'destructive', label: 'Destructive', className: 'bg-red-100 text-red-800' }
+  { value: 'destructive', label: 'Destructive', className: 'bg-red-100 text-red-800' },
+  { value: 'success', label: 'Success', className: 'bg-green-100 text-green-800' },
+  { value: 'warning', label: 'Warning', className: 'bg-yellow-100 text-yellow-800' },
+  { value: 'info', label: 'Info', className: 'bg-sky-100 text-sky-800' },
+  { value: 'purple', label: 'Purple', className: 'bg-purple-100 text-purple-800' },
+  { value: 'pink', label: 'Pink', className: 'bg-pink-100 text-pink-800' },
+  { value: 'indigo', label: 'Indigo', className: 'bg-indigo-100 text-indigo-800' },
+  { value: 'emerald', label: 'Emerald', className: 'bg-emerald-100 text-emerald-800' },
+  { value: 'amber', label: 'Amber', className: 'bg-amber-100 text-amber-800' },
+  { value: 'rose', label: 'Rose', className: 'bg-rose-100 text-rose-800' },
+  { value: 'violet', label: 'Violet', className: 'bg-violet-100 text-violet-800' },
+  { value: 'cyan', label: 'Cyan', className: 'bg-cyan-100 text-cyan-800' },
+  { value: 'lime', label: 'Lime', className: 'bg-lime-100 text-lime-800' }
 ];
 
 const iconOptions = [
@@ -55,6 +68,7 @@ export default function StatusManagement() {
   const [localQuoteStatuses, setLocalQuoteStatuses] = useState<StatusConfig[]>([]);
   const [localOrderStatuses, setLocalOrderStatuses] = useState<StatusConfig[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { 
     quoteStatuses, 
@@ -63,6 +77,31 @@ export default function StatusManagement() {
     error, 
     saveStatusSettings 
   } = useStatusManagement();
+
+  // Check authentication and role
+  React.useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        console.log('Current user:', user);
+        
+        if (user) {
+          const { data: roles } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id);
+          
+          console.log('User roles:', roles);
+        } else {
+          console.log('No authenticated user found');
+        }
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+      }
+    };
+    
+    checkAuth();
+  }, []);
 
   // Initialize local state when data loads
   React.useEffect(() => {
@@ -106,7 +145,37 @@ export default function StatusManagement() {
     if (editingStatus && editingStatus.id === statusId) {
       setEditingStatus(prev => prev ? { ...prev, ...updates } : null);
     }
+
+    // Clear existing timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    // Set new timeout for auto-save
+    autoSaveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const updatedQuoteStatuses = category === 'quote' 
+          ? localQuoteStatuses.map(s => s.id === statusId ? { ...s, ...updates } : s)
+          : localQuoteStatuses;
+        const updatedOrderStatuses = category === 'order'
+          ? localOrderStatuses.map(s => s.id === statusId ? { ...s, ...updates } : s)
+          : localOrderStatuses;
+        
+        await saveStatusSettings(updatedQuoteStatuses, updatedOrderStatuses);
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    }, 2000); // 2 second debounce
   };
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const deleteStatus = (statusId: string, category: 'quote' | 'order') => {
     if (category === 'quote') {
@@ -150,6 +219,32 @@ export default function StatusManagement() {
       await saveStatusSettings(localQuoteStatuses, localOrderStatuses);
     } catch (error) {
       console.error('Failed to save settings:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveIndividualStatus = async (statusId: string, category: 'quote' | 'order') => {
+    setIsSaving(true);
+    try {
+      console.log('Attempting to save status settings...');
+      console.log('Quote statuses:', localQuoteStatuses);
+      console.log('Order statuses:', localOrderStatuses);
+      
+      await saveStatusSettings(localQuoteStatuses, localOrderStatuses);
+      console.log('Status settings saved successfully');
+    } catch (error: any) {
+      console.error('Failed to save status:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      
+      // Show more specific error message
+      const errorMessage = error.message || 'Unknown error occurred';
+      alert(`Failed to save status settings: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -347,6 +442,23 @@ export default function StatusManagement() {
               </div>
             </div>
 
+            {/* Live Preview Section */}
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <Label className="text-sm font-medium mb-3 block">Live Preview</Label>
+              <div className="flex items-center gap-3">
+                <IconComponent className="h-5 w-5" />
+                <Badge variant={editingStatus.color}>{editingStatus.label || editingStatus.name}</Badge>
+                {editingStatus.isActive ? (
+                  <Badge variant="outline" className="text-green-600">Active</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-gray-500">Inactive</Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                This is how the status will appear in the application
+              </p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Order</Label>
@@ -425,9 +537,23 @@ export default function StatusManagement() {
                 Cancel
               </Button>
               <Button
-                onClick={() => setEditingStatus(null)}
+                onClick={async () => {
+                  await handleSaveIndividualStatus(editingStatus.id, editingStatus.category);
+                  setEditingStatus(null);
+                }}
+                disabled={isSaving}
               >
-                Save Changes
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -532,6 +658,9 @@ export default function StatusManagement() {
         </Tabs>
 
         <div className="flex gap-2 justify-end pt-6">
+          <div className="flex-1 text-sm text-muted-foreground">
+            <p>💡 Changes are auto-saved after 2 seconds. Use "Save All Changes" to save immediately.</p>
+          </div>
           <Button
             variant="outline"
             onClick={() => {
@@ -554,7 +683,7 @@ export default function StatusManagement() {
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Save Settings
+                Save All Changes
               </>
             )}
           </Button>

@@ -71,147 +71,28 @@ export const useQuoteState = (quoteId: string) => {
     };
   };
 
-  const updateQuoteStateMutation = useMutation({
-    mutationFn: async ({ 
-      status, 
-      approval_status, 
-      rejection_reason_id, 
-      rejection_details,
-      in_cart,
-      payment_method
-    }: Partial<Quote>) => {
-      // Get current quote state
-      const { data: currentQuote, error: fetchError } = await supabase
-        .from('quotes')
-        .select(`
-          *,
-          quote_items (*)
-        `)
-        .eq('id', quoteId)
-        .single();
+  const updateQuoteStatus = async (quoteId: string, status: string) => {
+    const { data, error } = await supabase
+      .from('quotes')
+      .update({ status })
+      .eq('id', quoteId)
+      .select()
+      .single();
 
-      if (fetchError) throw fetchError;
-      if (!currentQuote) throw new Error('Quote not found');
-
-      // Validate state transition
-      if (status && !isValidStatusTransition(currentQuote.status as QuoteStatus, status as QuoteStatus)) {
-        throw new Error(`Invalid status transition from ${currentQuote.status} to ${status}`);
-      }
-
-      // Prepare update data
-      const updateData: Partial<Quote> = {};
-      
-      if (status) {
-        updateData.status = status;
-        // Set timestamps based on status
-        if (status === 'accepted') {
-          updateData.approved_at = new Date().toISOString();
-        } else if (status === 'cancelled') {
-          updateData.rejected_at = new Date().toISOString();
-        }
-      }
-
-      if (approval_status) updateData.approval_status = approval_status;
-      if (rejection_reason_id) updateData.rejection_reason_id = rejection_reason_id;
-      if (rejection_details) updateData.rejection_details = rejection_details;
-      if (in_cart !== undefined) updateData.in_cart = in_cart;
-      if (payment_method) updateData.payment_method = payment_method;
-
-      // Update quote
-      const { error: updateError } = await supabase
-        .from('quotes')
-        .update(updateData)
-        .eq('id', quoteId);
-
-      if (updateError) throw updateError;
-
-      // Send email notifications based on status changes
-      if (status === 'accepted') {
-        await sendQuoteApprovedEmail(currentQuote);
-      } else if (status === 'cancelled') {
-        await sendQuoteRejectedEmail(currentQuote, rejection_details || 'No reason provided');
-      }
-
-      return { ...currentQuote, ...updateData };
-    },
-    onSuccess: (data, variables) => {
-      // Invalidate all quote-related queries to refresh the UI
-      queryClient.invalidateQueries({ queryKey: ['quote', quoteId] });
-      queryClient.invalidateQueries({ queryKey: ['quote-detail', quoteId] });
-      queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders'] });
-      
-      // If in_cart was updated, sync with Zustand store
-      if (variables.in_cart !== undefined && user?.id) {
-        loadFromServer(user.id);
-      }
-      
-      // Show success toast for cart operations
-      if (variables.in_cart === true && !variables.status) {
-        toast({
-          title: "Added to Cart",
-          description: "Item has been added to your cart successfully.",
-        });
-      } else if (variables.in_cart === false && !variables.status) {
-        toast({
-          title: "Removed from Cart",
-          description: "Item has been removed from your cart.",
-        });
-      }
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+    if (error) {
+      console.error('Error updating quote status:', error);
+      return null;
     }
-  });
 
-  const approveQuote = async () => {
-    try {
-      await updateQuoteStateMutation.mutateAsync({
-        status: 'accepted',
-        approval_status: 'approved',
-        in_cart: false // Don't automatically add to cart when approved
-      });
-      
-      toast({
-        title: "Quote Approved",
-        description: "Quote has been approved successfully.",
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Error approving quote:', error);
-      return false;
-    }
+    return data;
   };
 
-  const rejectQuote = async (reasonId: string, details: string) => {
-    try {
-      // Remove from cart store first
-      const { removeItem } = useCartStore.getState();
-      removeItem(quoteId);
+  const approveQuote = async (quoteId: string) => {
+    return updateQuoteStatus(quoteId, 'approved');
+  };
 
-      await updateQuoteStateMutation.mutateAsync({
-        status: 'cancelled',
-        approval_status: 'rejected',
-        rejection_reason_id: reasonId,
-        rejection_details: details,
-        in_cart: false // Remove from cart when rejected/cancelled
-      });
-      
-      toast({
-        title: "Quote Rejected",
-        description: "Quote has been rejected and removed from cart.",
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Error rejecting quote:', error);
-      return false;
-    }
+  const rejectQuote = async (quoteId: string) => {
+    return updateQuoteStatus(quoteId, 'rejected');
   };
 
   const addToCart = async () => {
@@ -244,7 +125,7 @@ export const useQuoteState = (quoteId: string) => {
       addItem(cartItem);
 
       // Update quote status in database
-      await updateQuoteStateMutation.mutateAsync({ in_cart: true });
+      await updateQuoteStatus(quoteId, 'accepted');
 
       // The mutation's onSuccess callback will handle query invalidation and toast
 
@@ -264,9 +145,7 @@ export const useQuoteState = (quoteId: string) => {
       const { removeItem } = useCartStore.getState();
       removeItem(quoteId);
 
-      await updateQuoteStateMutation.mutateAsync({
-        in_cart: false
-      });
+      await updateQuoteStatus(quoteId, 'cancelled');
       
       // The mutation's onSuccess callback will handle the toast
       
@@ -278,14 +157,11 @@ export const useQuoteState = (quoteId: string) => {
   };
 
   const setPaymentMethod = (method: string) => {
-    return updateQuoteStateMutation.mutate({
-      payment_method: method
-    });
+    return updateQuoteStatus(quoteId, method);
   };
 
   return {
-    updateQuoteState: updateQuoteStateMutation.mutate,
-    isUpdating: updateQuoteStateMutation.isPending,
+    updateQuoteStatus,
     approveQuote,
     rejectQuote,
     addToCart,

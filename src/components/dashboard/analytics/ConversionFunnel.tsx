@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tables } from "@/integrations/supabase/types";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, FunnelChart, Cell } from "recharts";
@@ -12,10 +11,9 @@ interface ConversionFunnelProps {
 
 export const ConversionFunnel = ({ quotes }: ConversionFunnelProps) => {
   // Calculate funnel stages
+  const sentQuotes = quotes.filter(q => q.status !== 'pending').length;
+  const approvedQuotes = quotes.filter(q => q.status === 'approved').length;
   const totalQuotes = quotes.length;
-  const sentQuotes = quotes.filter(q => q.status !== 'draft').length;
-  const approvedQuotes = quotes.filter(q => q.approval_status === 'approved').length;
-  const cartQuotes = quotes.filter(q => q.in_cart === true).length;
   const paidQuotes = quotes.filter(q => q.status === 'paid' || q.paid_at).length;
   const completedQuotes = quotes.filter(q => q.status === 'completed').length;
 
@@ -23,7 +21,7 @@ export const ConversionFunnel = ({ quotes }: ConversionFunnelProps) => {
     { stage: 'Quotes Created', count: totalQuotes, percentage: 100 },
     { stage: 'Quotes Sent', count: sentQuotes, percentage: totalQuotes > 0 ? (sentQuotes / totalQuotes * 100) : 0 },
     { stage: 'Approved', count: approvedQuotes, percentage: totalQuotes > 0 ? (approvedQuotes / totalQuotes * 100) : 0 },
-    { stage: 'In Cart', count: cartQuotes, percentage: totalQuotes > 0 ? (cartQuotes / totalQuotes * 100) : 0 },
+    { stage: 'In Cart', count: totalQuotes - sentQuotes - approvedQuotes, percentage: totalQuotes > 0 ? ((totalQuotes - sentQuotes - approvedQuotes) / totalQuotes * 100) : 0 },
     { stage: 'Paid', count: paidQuotes, percentage: totalQuotes > 0 ? (paidQuotes / totalQuotes * 100) : 0 },
     { stage: 'Completed', count: completedQuotes, percentage: totalQuotes > 0 ? (completedQuotes / totalQuotes * 100) : 0 }
   ];
@@ -32,8 +30,8 @@ export const ConversionFunnel = ({ quotes }: ConversionFunnelProps) => {
   const conversionRates = [
     { from: 'Created', to: 'Sent', rate: totalQuotes > 0 ? (sentQuotes / totalQuotes * 100) : 0 },
     { from: 'Sent', to: 'Approved', rate: sentQuotes > 0 ? (approvedQuotes / sentQuotes * 100) : 0 },
-    { from: 'Approved', to: 'Cart', rate: approvedQuotes > 0 ? (cartQuotes / approvedQuotes * 100) : 0 },
-    { from: 'Cart', to: 'Paid', rate: cartQuotes > 0 ? (paidQuotes / cartQuotes * 100) : 0 },
+    { from: 'Approved', to: 'In Cart', rate: approvedQuotes > 0 ? ((approvedQuotes / totalQuotes) * 100) : 0 },
+    { from: 'In Cart', to: 'Paid', rate: totalQuotes > 0 ? ((totalQuotes - sentQuotes - approvedQuotes) / totalQuotes * 100) : 0 },
     { from: 'Paid', to: 'Completed', rate: paidQuotes > 0 ? (completedQuotes / paidQuotes * 100) : 0 }
   ];
 

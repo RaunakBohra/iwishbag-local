@@ -19,7 +19,7 @@ import { useState } from "react";
 interface QuoteBulkActionsProps {
   selectedCount: number;
   selectedQuotes?: any[]; // Add selected quotes for summary
-  onBulkAction: (action: 'accepted' | 'cancelled' | 'confirm_payment' | 'email' | 'export' | 'duplicate' | 'priority') => void;
+  onBulkAction: (action: 'approved' | 'cancelled' | 'confirm_payment' | 'email' | 'export' | 'duplicate' | 'priority') => void;
   isProcessing: boolean;
   isUpdatingStatus: boolean;
   activeStatusUpdate: string | null;
@@ -54,7 +54,7 @@ export const QuoteBulkActions = ({
 
   const getStatusIcon = (action: string) => {
     switch (action) {
-      case 'accepted':
+      case 'approved':
         return <CheckCircle className="h-4 w-4" />;
       case 'cancelled':
         return <XCircle className="h-4 w-4" />;
@@ -73,8 +73,8 @@ export const QuoteBulkActions = ({
 
   const getActionLabel = (action: string) => {
     switch (action) {
-      case 'accepted':
-        return isUpdatingStatus && activeStatusUpdate === 'accepted' ? 'Approving...' : 'Approve Selected';
+      case 'approved':
+        return isUpdatingStatus && activeStatusUpdate === 'approved' ? 'Approving...' : 'Approve Selected';
       case 'cancelled':
         return isUpdatingStatus && activeStatusUpdate === 'cancelled' ? 'Rejecting...' : 'Reject Selected';
       case 'confirm_payment':
@@ -82,11 +82,11 @@ export const QuoteBulkActions = ({
       case 'email':
         return 'Send Email';
       case 'export':
-        return 'Export Selected';
+        return 'Export CSV';
       case 'duplicate':
         return 'Duplicate';
       case 'priority':
-        return 'Change Priority';
+        return 'Set Priority';
       default:
         return action;
     }
@@ -94,12 +94,12 @@ export const QuoteBulkActions = ({
 
   const getActionVariant = (action: string) => {
     switch (action) {
-      case 'accepted':
+      case 'approved':
         return 'default';
       case 'cancelled':
         return 'destructive';
       case 'confirm_payment':
-        return 'default';
+        return 'secondary';
       case 'email':
         return 'outline';
       case 'export':
@@ -117,12 +117,13 @@ export const QuoteBulkActions = ({
     return isUpdatingStatus && activeStatusUpdate === action;
   };
 
-  // Remove 'email' and 'duplicate' from the available actions
-  const actions = [
-    'accepted',
+  const actionButtons = [
+    'approved',
     'cancelled',
     'confirm_payment',
+    'email',
     'export',
+    'duplicate',
     'priority',
   ];
 
@@ -207,7 +208,7 @@ export const QuoteBulkActions = ({
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Primary Actions */}
-          {actions.map((action) => (
+          {actionButtons.map((action) => (
             <Button
               key={action}
               variant={getActionVariant(action)}

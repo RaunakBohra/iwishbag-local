@@ -11,7 +11,7 @@ interface QuoteListHeaderProps {
     quotes: QuoteWithItems[] | undefined;
     selectedQuoteIds: string[];
     onToggleSelectAll: (checked: boolean | "indeterminate") => void;
-    onBulkAction: (action: 'accepted' | 'cancelled' | 'confirm_payment' | 'export' | 'priority') => void;
+    onBulkAction: (action: 'approved' | 'cancelled' | 'confirm_payment' | 'export' | 'priority') => void;
     isProcessing: boolean;
     isUpdatingStatus: boolean;
     activeStatusUpdate: string | null;
@@ -21,7 +21,7 @@ interface QuoteListHeaderProps {
 
 const getStatusIcon = (action: string) => {
     switch (action) {
-      case 'accepted':
+      case 'approved':
         return <CheckCircle className="h-4 w-4" />;
       case 'cancelled':
         return <XCircle className="h-4 w-4" />;
@@ -38,35 +38,52 @@ const getStatusIcon = (action: string) => {
 
 const getActionLabel = (action: string, isUpdatingStatus: boolean, activeStatusUpdate: string | null) => {
     switch (action) {
-      case 'accepted':
-        return isUpdatingStatus && activeStatusUpdate === 'accepted' ? 'Approving...' : 'Approve';
-      case 'cancelled':
-        return isUpdatingStatus && activeStatusUpdate === 'cancelled' ? 'Rejecting...' : 'Reject';
-      case 'confirm_payment':
-        return isUpdatingStatus && activeStatusUpdate === 'confirm_payment' ? 'Confirming...' : 'Confirm Payment';
-      case 'export':
-        return 'Export';
-      case 'priority':
-        return 'Change Priority';
-      default:
-        return action;
+        case 'approved':
+            return isUpdatingStatus && activeStatusUpdate === 'approved' ? 'Approving...' : 'Approve';
+        case 'cancelled':
+            return isUpdatingStatus && activeStatusUpdate === 'cancelled' ? 'Rejecting...' : 'Reject';
+        case 'confirm_payment':
+            return isUpdatingStatus && activeStatusUpdate === 'confirm_payment' ? 'Confirming...' : 'Confirm Payment';
+        case 'export':
+            return 'Export';
+        case 'priority':
+            return 'Set Priority';
+        default:
+            return action;
+    }
+};
+
+const getActionIcon = (action: string) => {
+    switch (action) {
+        case 'approved':
+            return <CheckCircle className="h-4 w-4" />;
+        case 'cancelled':
+            return <XCircle className="h-4 w-4" />;
+        case 'confirm_payment':
+            return <DollarSign className="h-4 w-4" />;
+        case 'export':
+            return <Download className="h-4 w-4" />;
+        case 'priority':
+            return <AlertTriangle className="h-4 w-4" />;
+        default:
+            return <Clock className="h-4 w-4" />;
     }
 };
 
 const getActionVariant = (action: string) => {
     switch (action) {
-      case 'accepted':
-        return 'default';
-      case 'cancelled':
-        return 'destructive';
-      case 'confirm_payment':
-        return 'default';
-      case 'export':
-        return 'outline';
-      case 'priority':
-        return 'outline';
-      default:
-        return 'outline';
+        case 'approved':
+            return 'default';
+        case 'cancelled':
+            return 'destructive';
+        case 'confirm_payment':
+            return 'secondary';
+        case 'export':
+            return 'outline';
+        case 'priority':
+            return 'outline';
+        default:
+            return 'outline';
     }
 };
 
@@ -75,7 +92,7 @@ const isActionLoading = (action: string, isUpdatingStatus: boolean, activeStatus
 };
 
 const actions = [
-    'accepted',
+    'approved',
     'cancelled',
     'confirm_payment',
     'export',

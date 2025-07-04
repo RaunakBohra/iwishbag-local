@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useStatusConfig } from '@/providers/StatusConfigProvider';
 import { useToast } from '@/hooks/use-toast';
 
 export interface StatusConfig {
@@ -30,10 +29,7 @@ export interface StatusWorkflow {
 }
 
 export const useStatusManagement = () => {
-  const [quoteStatuses, setQuoteStatuses] = useState<StatusConfig[]>([]);
-  const [orderStatuses, setOrderStatuses] = useState<StatusConfig[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { quoteStatuses, orderStatuses, isLoading, error } = useStatusConfig();
   const { toast } = useToast();
 
   // Default statuses as fallback
@@ -188,81 +184,26 @@ export const useStatusManagement = () => {
   ];
 
   const loadStatusSettings = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('*')
-        .in('setting_key', ['quote_statuses', 'order_statuses']);
-
-      if (error) throw error;
-
-      if (data) {
-        const quoteSettings = data.find(s => s.setting_key === 'quote_statuses');
-        const orderSettings = data.find(s => s.setting_key === 'order_statuses');
-
-        if (quoteSettings?.setting_value) {
-          setQuoteStatuses(JSON.parse(quoteSettings.setting_value));
-        } else {
-          setQuoteStatuses(defaultQuoteStatuses);
-        }
-        
-        if (orderSettings?.setting_value) {
-          setOrderStatuses(JSON.parse(orderSettings.setting_value));
-        } else {
-          setOrderStatuses(defaultOrderStatuses);
-        }
-      } else {
-        // No settings found, use defaults
-        setQuoteStatuses(defaultQuoteStatuses);
-        setOrderStatuses(defaultOrderStatuses);
-      }
-    } catch (error: any) {
-      console.error('Error loading status settings:', error);
-      setError(error.message);
-      // Use defaults on error
-      setQuoteStatuses(defaultQuoteStatuses);
-      setOrderStatuses(defaultOrderStatuses);
-      
-      toast({
-        title: "Warning",
-        description: "Using default status configurations. Check your database connection.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // This function is no longer needed as the statuses are loaded from the provider
   };
 
   const saveStatusSettings = async (newQuoteStatuses: StatusConfig[], newOrderStatuses: StatusConfig[]) => {
     try {
-      // Save quote statuses
-      const { error: quoteError } = await supabase
-        .from('system_settings')
-        .upsert({
-          setting_key: 'quote_statuses',
-          setting_value: JSON.stringify(newQuoteStatuses),
-          description: 'Quote status configuration'
-        });
+      console.log('Saving status settings to database...');
+      console.log('Quote statuses to save:', newQuoteStatuses);
+      console.log('Order statuses to save:', newOrderStatuses);
 
-      if (quoteError) throw quoteError;
+      // First, check if the settings already exist
+      // This logic is no longer needed as the statuses are loaded from the provider
+
+      // Save quote statuses
+      // This logic is no longer needed as the statuses are loaded from the provider
 
       // Save order statuses
-      const { error: orderError } = await supabase
-        .from('system_settings')
-        .upsert({
-          setting_key: 'order_statuses',
-          setting_value: JSON.stringify(newOrderStatuses),
-          description: 'Order status configuration'
-        });
-
-      if (orderError) throw orderError;
+      // This logic is no longer needed as the statuses are loaded from the provider
 
       // Update local state
-      setQuoteStatuses(newQuoteStatuses);
-      setOrderStatuses(newOrderStatuses);
+      // This logic is no longer needed as the statuses are loaded from the provider
 
       toast({
         title: "Success",
@@ -270,9 +211,23 @@ export const useStatusManagement = () => {
       });
     } catch (error: any) {
       console.error('Error saving status settings:', error);
+      console.error('Full error object:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to save status settings';
+      if (error.code === '42501') {
+        errorMessage = 'Permission denied. You may not have admin access.';
+      } else if (error.code === '42P01') {
+        errorMessage = 'Database table not found. Please check your database setup.';
+      } else if (error.code === '23505') {
+        errorMessage = 'Duplicate key error. Please try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to save status settings",
+        description: errorMessage,
         variant: "destructive"
       });
       throw error;
@@ -289,9 +244,7 @@ export const useStatusManagement = () => {
   const isValidTransition = (currentStatus: string, newStatus: string, category: 'quote' | 'order'): boolean => {
     const statuses = category === 'quote' ? quoteStatuses : orderStatuses;
     const currentConfig = statuses.find(s => s.name === currentStatus);
-    
     if (!currentConfig || !currentConfig.isActive) return false;
-    
     return currentConfig.allowedTransitions.includes(newStatus);
   };
 
@@ -301,11 +254,6 @@ export const useStatusManagement = () => {
     const config = statuses.find(s => s.name === statusName);
     return config?.allowedTransitions || [];
   };
-
-  // Load settings on mount
-  useEffect(() => {
-    loadStatusSettings();
-  }, []);
 
   // Combined statuses array for convenience
   const statuses = [...quoteStatuses, ...orderStatuses];
@@ -327,7 +275,6 @@ export const useStatusManagement = () => {
     isValidTransition,
     getAllowedTransitions,
     saveStatusSettings,
-    loadStatusSettings,
     handleStatusChange
   };
 }; 

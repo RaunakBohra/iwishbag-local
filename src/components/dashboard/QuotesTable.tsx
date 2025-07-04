@@ -1,4 +1,3 @@
-
 import React from "react";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
@@ -80,10 +79,10 @@ export const QuotesTable = ({
               </TableCell>
               <TableCell>
                 <div className="flex gap-2">
-                  <StatusBadge status={quote.status} />
-                  {quote.approval_status !== 'pending' && (
-                    <Badge variant={quote.approval_status === 'approved' ? 'default' : 'destructive'}>
-                      {quote.approval_status}
+                  <StatusBadge status={quote.status} category="quote" />
+                  {quote.status !== 'pending' && (
+                    <Badge variant={quote.status === 'approved' ? 'default' : 'destructive'}>
+                      {quote.status}
                     </Badge>
                   )}
                 </div>

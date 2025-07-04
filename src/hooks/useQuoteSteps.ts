@@ -51,7 +51,7 @@ export const useQuoteSteps = (quote: Quote | null) => {
         icon: 'check-circle'
       });
     }
-    if (quote.status === 'accepted' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered') {
+    if (quote.status === 'approved' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered') {
       steps.push({
         id: 'paid',
         label: 'Paid',
@@ -98,9 +98,9 @@ export const useQuoteSteps = (quote: Quote | null) => {
       const step = steps[i];
       if (
         (step.id === 'requested' && quote.status !== 'pending') ||
-        (step.id === 'calculated' && (quote.status === 'calculated' || quote.status === 'sent' || quote.status === 'accepted' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
-        (step.id === 'sent' && (quote.status === 'sent' || quote.status === 'accepted' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
-        (step.id === 'approved' && (quote.status === 'accepted' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
+        (step.id === 'calculated' && (quote.status === 'calculated' || quote.status === 'sent' || quote.status === 'approved' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
+        (step.id === 'sent' && (quote.status === 'sent' || quote.status === 'approved' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
+        (step.id === 'approved' && (quote.status === 'approved' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
         (step.id === 'paid' && (quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
         (step.id === 'ordered' && (quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
         (step.id === 'shipped' && (quote.status === 'shipped' || quote.status === 'delivered')) ||

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { formatShippingRoute } from '@/lib/countryUtils';
 import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
@@ -32,7 +33,7 @@ export default function Quotes() {
     if (statusFilter !== 'all') {
       if (statusFilter === 'pending' && quote.status !== 'pending') return false;
       if (statusFilter === 'sent' && quote.status !== 'sent') return false;
-      if (statusFilter === 'approved' && quote.approval_status !== 'approved') return false;
+      if (statusFilter === 'approved' && quote.status !== 'approved') return false;
       if (statusFilter === 'rejected' && quote.status !== 'rejected') return false;
     }
     
@@ -171,19 +172,8 @@ export default function Quotes() {
     }
   }, [filteredQuotes, countries]);
 
-  const getStatusColor = (status: string, approvalStatus?: string) => {
-    if (approvalStatus === 'approved') return 'bg-green-100 text-green-800';
-    if (status === 'rejected') return 'bg-red-100 text-red-800';
-    if (status === 'sent') return 'bg-blue-100 text-blue-800';
-    if (status === 'pending') return 'bg-yellow-100 text-yellow-800';
-    return 'bg-gray-100 text-gray-800';
-  };
-
-  const getStatusLabel = (status: string, approvalStatus?: string) => {
-    if (approvalStatus === 'approved') return 'Approved';
-    if (status === 'rejected') return 'Rejected';
-    if (status === 'sent') return 'Sent';
-    if (status === 'pending') return 'Pending';
+  const getDisplayStatus = (status: string) => {
+    // For quotes, we now use only the status field
     return status;
   };
 
@@ -306,9 +296,7 @@ export default function Quotes() {
                         Quote #{quote.display_id || quote.id.slice(0, 8)}
                       </p>
                     </div>
-                    <Badge className={`${getStatusColor(quote.status, quote.approval_status)} text-xs px-2 py-1`}>
-                      {getStatusLabel(quote.status, quote.approval_status)}
-                    </Badge>
+                    <StatusBadge status={getDisplayStatus(quote.status)} category="quote" />
                   </div>
 
                   {/* Price */}
@@ -350,7 +338,7 @@ export default function Quotes() {
                         View Details
                       </Button>
                     </Link>
-                    {quote.approval_status === 'approved' && !quote.in_cart && (
+                    {quote.status === 'approved' && !quote.in_cart && (
                       <Link to={`/checkout/${quote.id}`} className="flex-1">
                         <Button size="sm" className="w-full h-10 text-sm bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800">
                           <ShoppingCart className="h-3 w-3 mr-1" />
@@ -358,7 +346,7 @@ export default function Quotes() {
                         </Button>
                       </Link>
                     )}
-                    {quote.approval_status === 'approved' && quote.in_cart && (
+                    {quote.status === 'approved' && quote.in_cart && (
                       <Link to="/dashboard/cart" className="flex-1">
                         <Button size="sm" variant="secondary" className="w-full h-10 text-sm">
                           <ShoppingCart className="h-3 w-3 mr-1" />
@@ -394,9 +382,7 @@ export default function Quotes() {
                               {formatAmount(quote.final_total)}
                             </div>
                           </div>
-                          <Badge className={getStatusColor(quote.status, quote.approval_status)}>
-                            {getStatusLabel(quote.status, quote.approval_status)}
-                          </Badge>
+                          <StatusBadge status={getDisplayStatus(quote.status)} category="quote" />
                         </div>
                       </div>
                       
@@ -436,7 +422,7 @@ export default function Quotes() {
                               View
                             </Button>
                           </Link>
-                          {quote.approval_status === 'approved' && !quote.in_cart && (
+                          {quote.status === 'approved' && !quote.in_cart && (
                             <Link to={`/checkout/${quote.id}`}>
                               <Button size="sm" className="flex items-center gap-1">
                                 <ShoppingCart className="h-3 w-3" />
@@ -444,7 +430,7 @@ export default function Quotes() {
                               </Button>
                             </Link>
                           )}
-                          {quote.approval_status === 'approved' && quote.in_cart && (
+                          {quote.status === 'approved' && quote.in_cart && (
                             <Link to="/dashboard/cart">
                               <Button size="sm" variant="secondary" className="flex items-center gap-1">
                                 <ShoppingCart className="h-3 w-3" />

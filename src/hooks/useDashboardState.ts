@@ -6,7 +6,7 @@ import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 export const useDashboardState = () => {
   const { user } = useAuth();
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'in_cart'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'sent' | 'approved' | 'rejected'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQuoteIds, setSelectedQuoteIds] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -34,7 +34,7 @@ export const useDashboardState = () => {
   });
 
   const orderStatusNames = useMemo(() => 
-    orderStatuses ? orderStatuses.map(status => status.name) : [], 
+    orderStatuses ? orderStatuses.map(status => status.name).filter(name => !['cancelled', 'rejected'].includes(name)) : [], 
     [orderStatuses]
   );
 
@@ -46,8 +46,9 @@ export const useDashboardState = () => {
       .filter(quote => {
         if (statusFilter === 'all') return true;
         if (statusFilter === 'pending') return quote.status === 'pending';
-        if (statusFilter === 'approved') return quote.approval_status === 'approved';
-        if (statusFilter === 'in_cart') return quote.in_cart;
+        if (statusFilter === 'sent') return quote.status === 'sent';
+        if (statusFilter === 'approved') return quote.status === 'approved';
+        if (statusFilter === 'rejected') return quote.status === 'rejected';
         return true;
       })
       .filter(quote => {
@@ -60,7 +61,7 @@ export const useDashboardState = () => {
   }, [quotes, statusFilter, searchTerm]);
 
   const selectableQuotes = useMemo(() => {
-    return filteredQuotes.filter(q => q.approval_status === 'approved');
+    return filteredQuotes.filter(q => q.status === 'approved');
   }, [filteredQuotes]);
 
   const handleSearchChange = (newSearchTerm: string) => {
@@ -111,6 +112,19 @@ export const useDashboardState = () => {
 
   const handleClearSelection = () => {
     setSelectedQuoteIds([]);
+  };
+
+  const filterQuotes = (quote: QuoteWithItems) => {
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'pending') return quote.status === 'pending';
+    if (statusFilter === 'sent') return quote.status === 'sent';
+    if (statusFilter === 'approved') return quote.status === 'approved';
+    if (statusFilter === 'rejected') return quote.status === 'rejected';
+    return true;
+  };
+
+  const getApprovedQuotes = () => {
+    return filteredQuotes.filter(q => q.status === 'approved');
   };
 
   return {

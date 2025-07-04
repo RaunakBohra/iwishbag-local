@@ -55,6 +55,7 @@ import { BankAccountSettings } from "@/components/admin/BankAccountSettings";
 import { SystemSettings } from "@/components/admin/SystemSettings";
 import { HomePageSettings } from "@/components/admin/HomePageSettings";
 import { StatusManagementTest } from "@/components/admin/StatusManagementTest";
+import { StatusConfigProvider } from './providers/StatusConfigProvider';
 
 const router = createBrowserRouter([
   {
@@ -198,8 +199,10 @@ function App() {
         <QueryProvider>
           <AuthProvider>
             <AccessibilityProvider>
-              <RouterProvider router={router} />
-              <Toaster />
+              <StatusConfigProvider>
+                <RouterProvider router={router} />
+                <Toaster />
+              </StatusConfigProvider>
             </AccessibilityProvider>
           </AuthProvider>
         </QueryProvider>

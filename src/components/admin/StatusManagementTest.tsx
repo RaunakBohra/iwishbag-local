@@ -50,7 +50,7 @@ export const StatusManagementTest = () => {
             {quoteStatuses?.map((status) => (
               <div key={status.name} className="border rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <StatusBadge status={status.name} />
+                  <StatusBadge status={status.name} category="quote" />
                   <Badge variant="outline" className="text-xs">
                     {status.name}
                   </Badge>
@@ -86,7 +86,7 @@ export const StatusManagementTest = () => {
             {orderStatuses?.map((status) => (
               <div key={status.name} className="border rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <StatusBadge status={status.name} />
+                  <StatusBadge status={status.name} category="order" />
                   <Badge variant="outline" className="text-xs">
                     {status.name}
                   </Badge>
@@ -123,10 +123,10 @@ export const StatusManagementTest = () => {
           </p>
           <div className="flex flex-wrap gap-2">
             {quoteStatuses?.map((status) => (
-              <StatusBadge key={status.name} status={status.name} />
+              <StatusBadge key={status.name} status={status.name} category="quote" />
             ))}
             {orderStatuses?.map((status) => (
-              <StatusBadge key={status.name} status={status.name} />
+              <StatusBadge key={status.name} status={status.name} category="order" />
             ))}
           </div>
         </CardContent>

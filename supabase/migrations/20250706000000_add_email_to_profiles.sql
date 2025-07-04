@@ -55,7 +55,7 @@ BEGIN
   INSERT INTO public.profiles (id, full_name, phone, country, preferred_display_currency, email)
   VALUES (
     new.id, 
-    new.raw_user_meta_data->>'full_name', 
+    COALESCE(new.raw_user_meta_data->>'name', new.raw_user_meta_data->>'full_name'), 
     new.raw_user_meta_data->>'phone',
     COALESCE(new.raw_user_meta_data->>'country', 'US'),
     COALESCE(new.raw_user_meta_data->>'currency', 'USD'),

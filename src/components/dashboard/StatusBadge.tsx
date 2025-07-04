@@ -1,16 +1,29 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useStatusManagement } from "@/hooks/useStatusManagement";
-import { Icon } from "@/components/ui/icon";
+import { 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  AlertTriangle, 
+  Package, 
+  Truck, 
+  DollarSign, 
+  FileText, 
+  ShoppingCart, 
+  Calculator,
+  Activity
+} from "lucide-react";
 
 interface StatusBadgeProps {
   status: string | null | undefined;
+  category: 'quote' | 'order';
   className?: string;
   showIcon?: boolean;
 }
 
-export const StatusBadge = ({ status, className, showIcon = true }: StatusBadgeProps) => {
-  const { quoteStatuses, orderStatuses } = useStatusManagement();
+export const StatusBadge = ({ status, category, className, showIcon = true }: StatusBadgeProps) => {
+  const { getStatusConfig } = useStatusManagement();
 
   // Handle null/undefined status
   if (!status) {
@@ -25,24 +38,8 @@ export const StatusBadge = ({ status, className, showIcon = true }: StatusBadgeP
     );
   }
 
-  // Helper function to determine if a status is a quote status
-  const isQuoteStatus = (status: string): boolean => {
-    return ['pending', 'sent', 'approved', 'rejected', 'expired', 'calculated'].includes(status);
-  };
-
-  // Helper function to determine if a status is an order status
-  const isOrderStatus = (status: string): boolean => {
-    return ['cod_pending', 'bank_transfer_pending', 'paid', 'ordered', 'shipped', 'completed', 'cancelled'].includes(status);
-  };
-
-  // Find status configuration from the management system
-  let statusConfig = null;
-  
-  if (isQuoteStatus(status)) {
-    statusConfig = (quoteStatuses || []).find(s => s.name === status);
-  } else if (isOrderStatus(status)) {
-    statusConfig = (orderStatuses || []).find(s => s.name === status);
-  }
+  // Get status configuration from the management system
+  const statusConfig = getStatusConfig(status, category);
 
   // Fallback to default if status not found in management system
   if (!statusConfig) {
@@ -63,24 +60,34 @@ export const StatusBadge = ({ status, className, showIcon = true }: StatusBadgeP
     );
   }
 
-  // Use the status management configuration
-  const getBadgeVariant = (color: string) => {
-    switch (color) {
-      case 'default': return 'default';
-      case 'secondary': return 'secondary';
-      case 'outline': return 'outline';
-      case 'destructive': return 'destructive';
-      default: return 'secondary';
-    }
+  // Get the icon component based on the icon name
+  const getIconComponent = (iconName: string) => {
+    const iconMap: Record<string, React.ComponentType<any>> = {
+      'Clock': Clock,
+      'CheckCircle': CheckCircle,
+      'XCircle': XCircle,
+      'AlertTriangle': AlertTriangle,
+      'Package': Package,
+      'Truck': Truck,
+      'DollarSign': DollarSign,
+      'FileText': FileText,
+      'ShoppingCart': ShoppingCart,
+      'Calculator': Calculator,
+      'Activity': Activity
+    };
+    
+    return iconMap[iconName] || Activity;
   };
+
+  const IconComponent = getIconComponent(statusConfig.icon);
 
   return (
     <Badge
-      variant={getBadgeVariant(statusConfig.color)}
+      variant={statusConfig.color as any}
       className={cn(className, "text-sm")}
       title={statusConfig.description}
     >
-      {showIcon && statusConfig.icon && <Icon name={statusConfig.icon} className="mr-1 h-4 w-4" />}
+      {showIcon && statusConfig.icon && <IconComponent className="mr-1 h-4 w-4" />}
       {statusConfig.label}
     </Badge>
   );

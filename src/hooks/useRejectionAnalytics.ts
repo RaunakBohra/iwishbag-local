@@ -8,9 +8,8 @@ type RejectedQuote = Tables<'quotes'>;
 const fetchRejectedQuotes = async (): Promise<RejectedQuote[]> => {
     const { data, error } = await supabase
         .from('quotes')
-        .select('final_total, rejected_at, approval_status, status, rejection_reason_id, rejection_details')
-        .or('status.eq.cancelled,approval_status.eq.rejected')
-        .not('rejection_reason_id', 'is', null);
+        .select('final_total, rejected_at, status, rejection_reason_id, rejection_details')
+        .or('status.eq.cancelled,status.eq.rejected');
     
     if (error) {
         console.error("Error fetching rejected quotes:", error);

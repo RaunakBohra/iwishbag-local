@@ -36,7 +36,7 @@
 import React, { useState, useEffect } from 'react';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
-import { Upload, X, Plus, Globe, Info, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, X, Plus, Globe, Info, AlertCircle, CheckCircle, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 function isValidUrl(url) {
@@ -80,7 +80,8 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
       quantity: 1, 
       price: '', 
       weight: '', 
-      country: products[0]?.country || '' // Auto-sync for both quote types
+      country: products[0]?.country || '', // Auto-sync for both quote types
+      notes: ''
     };
     setProducts([...products, newProduct]);
   };
@@ -430,6 +431,18 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                   />
                 </div>
               </div>
+
+              {/* Product Notes */}
+              <div className="mt-3 sm:mt-4">
+                <label className="block text-sm font-medium mb-1">Product Notes (optional)</label>
+                <textarea
+                  value={product.notes}
+                  onChange={(e) => updateProduct(index, 'notes', e.target.value)}
+                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[60px] resize-vertical"
+                  placeholder="E.g., Size, color, specific model, or any other product details..."
+                  rows={2}
+                />
+              </div>
             </div>
           ))}
         </div>
@@ -446,6 +459,8 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
           </button>
         </div>
       </div>
+
+
 
       <div className="flex justify-end">
         <button

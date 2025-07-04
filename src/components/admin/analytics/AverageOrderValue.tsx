@@ -13,8 +13,8 @@ export const AverageOrderValue = () => {
     queryFn: async () => {
       const { data: quotes, error } = await supabase
         .from('quotes')
-        .select('final_total_local, final_total, created_at, approval_status, country_code')
-        .eq('approval_status', 'approved');
+        .select('final_total_local, final_total, created_at, status, country_code')
+        .eq('status', 'approved');
       if (error) throw error;
       const totalRevenue = quotes?.reduce((sum, quote) => sum + (quote.final_total_local ?? quote.final_total ?? 0), 0) || 0;
       const totalOrders = quotes?.length || 0;

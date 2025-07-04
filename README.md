@@ -113,15 +113,16 @@ This logic is important for both displaying the route and calculating available 
 - Status configuration (label, color, icon, etc.) is managed via the status management system (`useStatusManagement` hook).
 
 ### How it Works
-- The `StatusBadge` component takes a `status` string and (optionally) a `showIcon` prop (default: true).
-- It looks up the status config (label, color, icon) from the status management system.
+- The `StatusBadge` component takes a `status` string, a required `category` prop ('quote' or 'order'), and (optionally) a `showIcon` prop (default: true).
+- It looks up the status config (label, color, icon) from the status management system using the provided category.
 - If the status is not found, it falls back to a generic badge with the status name.
 - The badge uses the same color and icon as defined in the config, ensuring visual consistency.
 
 ### Where to Use
-- **Quote List:** Use `<StatusBadge status={quote.status} />` in list items (e.g., `AdminQuoteListItem`).
-- **Quote Detail Page:** Use `<StatusBadge status={quote.status} showIcon />` in the header (e.g., `AdminQuoteDetailPage`).
-- **Order List/Detail:** Use the same component for order statuses.
+- **Quote List:** Use `<StatusBadge status={quote.status} category="quote" />` in list items (e.g., `AdminQuoteListItem`).
+- **Quote Detail Page:** Use `<StatusBadge status={quote.status} category="quote" showIcon />` in the header (e.g., `AdminQuoteDetailPage`).
+- **Order List/Detail:** Use `<StatusBadge status={order.status} category="order" />` for order statuses.
+- **Mixed Contexts:** For components that show both quotes and orders, determine the category based on the status: `category={['paid', 'ordered', 'shipped', 'completed', 'cancelled'].includes(status) ? 'order' : 'quote'}`
 
 ### How to Update/Extend
 - To add or change a status, update the status config in the database or in the `useStatusManagement` hook's defaults.

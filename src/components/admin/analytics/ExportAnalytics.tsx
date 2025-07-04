@@ -21,9 +21,9 @@ export const ExportAnalytics = () => {
       if (exportType === "quotes") {
         query = query.gte('created_at', daysAgo.toISOString());
       } else if (exportType === "orders") {
-        query = query.eq('approval_status', 'approved').gte('created_at', daysAgo.toISOString());
+        query = query.eq('status', 'approved').gte('created_at', daysAgo.toISOString());
       } else if (exportType === "revenue") {
-        query = query.eq('approval_status', 'approved').gte('created_at', daysAgo.toISOString());
+        query = query.eq('status', 'approved').gte('created_at', daysAgo.toISOString());
       }
       
       const { data, error } = await query;
@@ -52,7 +52,7 @@ export const ExportAnalytics = () => {
           item.id,
           item.email,
           item.country_code || 'N/A',
-          item.approval_status || 'pending',
+          item.status || 'pending',
           new Date(item.created_at).toLocaleDateString(),
           item.final_total_local || item.final_total || 0
         ];

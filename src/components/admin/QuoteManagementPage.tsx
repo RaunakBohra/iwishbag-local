@@ -4,7 +4,6 @@ import { RejectQuoteDialog } from "./RejectQuoteDialog";
 import { QuoteFilters } from "./QuoteFilters";
 import { useQuoteManagement } from "@/hooks/useQuoteManagement";
 import { QuoteManagementHeader } from "./QuoteManagementHeader";
-import { QuoteBulkActions } from "./QuoteBulkActions";
 import { QuoteListHeader } from "./QuoteListHeader";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -67,7 +66,9 @@ export const QuoteManagementPage = () => {
         searchInput,
         purchaseCountryFilter,
         shippingCountryFilter,
-        // ...other filters if needed
+        dateRange,
+        amountRange,
+        priorityFilter,
     });
 
     if (quotesLoading) {
@@ -86,7 +87,7 @@ export const QuoteManagementPage = () => {
     // Calculate statistics
     const totalQuotes = quotes?.length || 0;
     const pendingQuotes = quotes?.filter(q => q.status === 'pending').length || 0;
-    const confirmedQuotes = quotes?.filter(q => q.status === 'confirmed').length || 0;
+    const approvedQuotes = quotes?.filter(q => q.status === 'approved').length || 0;
     const paidQuotes = quotes?.filter(q => q.status === 'paid').length || 0;
     const cancelledQuotes = quotes?.filter(q => q.status === 'cancelled').length || 0;
     const totalValue = quotes?.reduce((sum, q) => sum + (q.final_total || 0), 0) || 0;
@@ -221,32 +222,23 @@ export const QuoteManagementPage = () => {
             <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {confirmAction === 'delete' && 'Delete Selected Quotes?'}
-                            {confirmAction === 'accepted' && 'Approve Selected Quotes?'}
+                        <AlertDialogTitle>Confirm Action</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {confirmAction === 'approved' && 'Approve Selected Quotes?'}
                             {confirmAction === 'cancelled' && 'Reject Selected Quotes?'}
                             {confirmAction === 'confirm_payment' && 'Confirm Payment for Selected Quotes?'}
                             {confirmAction === 'export' && 'Export Selected Quotes?'}
-                            {confirmAction === 'priority' && 'Change Priority for Selected Quotes?'}
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {confirmAction === 'delete' && 'Are you sure you want to delete the selected quotes? This action cannot be undone.'}
-                            {confirmAction === 'accepted' && 'Are you sure you want to approve the selected quotes?'}
-                            {confirmAction === 'cancelled' && 'Are you sure you want to reject the selected quotes?'}
-                            {confirmAction === 'confirm_payment' && 'Are you sure you want to confirm payment for the selected quotes?'}
-                            {confirmAction === 'export' && 'Export the selected quotes?'}
-                            {confirmAction === 'priority' && 'Change the priority for the selected quotes?'}
+                            {confirmAction === 'priority' && 'Set Priority for Selected Quotes?'}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={handleCancel}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirm} autoFocus>
-                            {confirmAction === 'delete' && 'Delete'}
-                            {confirmAction === 'accepted' && 'Approve'}
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirm}>
+                            {confirmAction === 'approved' && 'Approve'}
                             {confirmAction === 'cancelled' && 'Reject'}
                             {confirmAction === 'confirm_payment' && 'Confirm Payment'}
                             {confirmAction === 'export' && 'Export'}
-                            {confirmAction === 'priority' && 'Change Priority'}
+                            {confirmAction === 'priority' && 'Set Priority'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

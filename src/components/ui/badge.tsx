@@ -9,14 +9,36 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+          "border-transparent bg-blue-100 text-blue-800",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-transparent bg-gray-100 text-gray-800",
+        outline: "bg-white text-gray-800 border",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+          "border-transparent bg-red-100 text-red-800",
         success:
-          "border-transparent bg-emerald-600 text-emerald-50 hover:bg-emerald-600/80",
-        outline: "text-foreground",
+          "border-transparent bg-green-100 text-green-800",
+        warning:
+          "border-transparent bg-yellow-100 text-yellow-800",
+        info:
+          "border-transparent bg-sky-100 text-sky-800",
+        purple:
+          "border-transparent bg-purple-100 text-purple-800",
+        pink:
+          "border-transparent bg-pink-100 text-pink-800",
+        indigo:
+          "border-transparent bg-indigo-100 text-indigo-800",
+        emerald:
+          "border-transparent bg-emerald-100 text-emerald-800",
+        amber:
+          "border-transparent bg-amber-100 text-amber-800",
+        rose:
+          "border-transparent bg-rose-100 text-rose-800",
+        violet:
+          "border-transparent bg-violet-100 text-violet-800",
+        cyan:
+          "border-transparent bg-cyan-100 text-cyan-800",
+        lime:
+          "border-transparent bg-lime-100 text-lime-800",
       },
     },
     defaultVariants: {
@@ -24,6 +46,26 @@ const badgeVariants = cva(
     },
   }
 )
+
+/**
+ * Supported badge color variants (matches colorOptions in StatusManagement):
+ * - default (blue)
+ * - secondary (gray)
+ * - outline (border only)
+ * - destructive (red)
+ * - success (green)
+ * - warning (yellow)
+ * - info (sky blue)
+ * - purple
+ * - pink
+ * - indigo
+ * - emerald
+ * - amber
+ * - rose
+ * - violet
+ * - cyan
+ * - lime
+ */
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,

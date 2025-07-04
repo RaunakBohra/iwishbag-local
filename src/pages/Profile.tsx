@@ -154,8 +154,15 @@ const Profile = () => {
 
   useEffect(() => {
     if (profile) {
+      // Get name from profile, or fallback to user metadata, or email prefix
+      const displayName = profile.full_name || 
+                         user?.user_metadata?.name || 
+                         user?.user_metadata?.full_name || 
+                         user?.email?.split('@')[0] || 
+                         "";
+      
       form.reset({
-        full_name: profile.full_name || "",
+        full_name: displayName,
         email: user?.email || "",
         phone: profile.phone || "",
         country: profile.country || "US",

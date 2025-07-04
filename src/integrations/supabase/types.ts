@@ -910,9 +910,6 @@ export type Database = {
           address_updated_at: string | null
           address_updated_by: string | null
           applied_rules: Json | null
-          approval_status:
-            | Database["public"]["Enums"]["quote_approval_status"]
-            | null
           approved_at: string | null
           breakdown: Json | null
           confidence_score: number | null
@@ -987,9 +984,6 @@ export type Database = {
           address_updated_at?: string | null
           address_updated_by?: string | null
           applied_rules?: Json | null
-          approval_status?:
-            | Database["public"]["Enums"]["quote_approval_status"]
-            | null
           approved_at?: string | null
           breakdown?: Json | null
           confidence_score?: number | null
@@ -1064,9 +1058,6 @@ export type Database = {
           address_updated_at?: string | null
           address_updated_by?: string | null
           applied_rules?: Json | null
-          approval_status?:
-            | Database["public"]["Enums"]["quote_approval_status"]
-            | null
           approved_at?: string | null
           breakdown?: Json | null
           confidence_score?: number | null
@@ -1581,7 +1572,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "moderator"
-      quote_approval_status: "pending" | "approved" | "rejected"
+      quote_status: "pending" | "sent" | "approved" | "rejected" | "expired" | "calculated" | "paid" | "ordered" | "shipped" | "completed" | "cancelled"
       quote_priority: "low" | "normal" | "high" | "urgent"
     }
     CompositeTypes: {
@@ -1702,7 +1693,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "moderator"],
-      quote_approval_status: ["pending", "approved", "rejected"],
+      quote_status: ["pending", "sent", "approved", "rejected", "expired", "calculated", "paid", "ordered", "shipped", "completed", "cancelled"],
       quote_priority: ["low", "normal", "high", "urgent"],
     },
   },

@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { Tables } from "@/integrations/supabase/types";
@@ -21,7 +20,8 @@ export const TrendAnalysis = ({ quotes, orders }: TrendAnalysisProps) => {
     
     const monthQuotes = quotes.filter(q => q.created_at.startsWith(monthKey));
     const monthOrders = orders.filter(o => o.created_at.startsWith(monthKey));
-    const monthApproved = quotes.filter(q => q.approval_status === 'approved' && q.created_at.startsWith(monthKey));
+    const monthApproved = quotes.filter(q => q.status === 'approved' && q.created_at.startsWith(monthKey));
+    const monthRejected = quotes.filter(q => q.status === 'rejected' && q.created_at.startsWith(monthKey));
     
     const revenue = monthOrders
       .filter(o => o.final_total)
@@ -32,6 +32,7 @@ export const TrendAnalysis = ({ quotes, orders }: TrendAnalysisProps) => {
       quotes: monthQuotes.length,
       orders: monthOrders.length,
       approved: monthApproved.length,
+      rejected: monthRejected.length,
       revenue: revenue,
       approvalRate: monthQuotes.length > 0 ? (monthApproved.length / monthQuotes.length * 100) : 0
     };
@@ -53,7 +54,7 @@ export const TrendAnalysis = ({ quotes, orders }: TrendAnalysisProps) => {
       week: `Week ${i + 1}`,
       quotes: weekQuotes.length,
       pending: weekQuotes.filter(q => q.status === 'pending').length,
-      approved: weekQuotes.filter(q => q.approval_status === 'approved').length
+      approved: weekQuotes.filter(q => q.status === 'approved').length
     };
   });
 

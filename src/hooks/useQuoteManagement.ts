@@ -18,6 +18,9 @@ export const useQuoteManagement = (filters = {}) => {
         shippingCountryFilter = 'all',
         statusFilter = "all",
         searchInput = "",
+        dateRange = "all",
+        amountRange = "all",
+        priorityFilter = "all",
     } = filters;
     
     // Internal state management
@@ -33,7 +36,7 @@ export const useQuoteManagement = (filters = {}) => {
     const { orderStatuses } = useStatusManagement();
 
     const { data: quotes, isLoading: quotesLoading } = useQuery<QuoteWithItems[]>({
-        queryKey: ['admin-quotes', statusFilter, searchTerm, purchaseCountryFilter, shippingCountryFilter],
+        queryKey: ['admin-quotes', statusFilter, searchTerm, purchaseCountryFilter, shippingCountryFilter, dateRange, amountRange, priorityFilter],
         queryFn: async () => {
             let query = supabase
                 .from('quotes')
@@ -41,12 +44,13 @@ export const useQuoteManagement = (filters = {}) => {
                 .order('created_at', { ascending: false });
             
             // Filter out order statuses to show only quotes
-            // This ensures that paid orders (paid, ordered, shipped, completed, cancelled) 
+            // This ensures that paid orders (paid, ordered, shipped, completed) 
             // do not appear in the quotes page and are only shown in the orders page
             if (orderStatuses && orderStatuses.length > 0) {
-                const orderStatusNames = orderStatuses.map(status => status.name);
-                console.log('DEBUG: Filtering out order statuses from quotes page:', orderStatusNames);
-                // Use a single .not('status', 'in', ...) filter for all order statuses (no single quotes)
+                // Only filter out true order statuses, not cancelled/rejected
+                const orderStatusNames = orderStatuses
+                  .map(status => status.name)
+                  .filter(name => !['cancelled', 'rejected'].includes(name));
                 if (orderStatusNames.length > 0) {
                     query = query.not('status', 'in', `(${orderStatusNames.join(',')})`);
                 }
@@ -62,6 +66,65 @@ export const useQuoteManagement = (filters = {}) => {
 
             if (shippingCountryFilter && shippingCountryFilter !== 'all') {
                 query = query.eq('country_code', shippingCountryFilter);
+            }
+
+            if (priorityFilter && priorityFilter !== 'all') {
+                query = query.eq('priority', priorityFilter);
+            }
+
+            // Date filter
+            if (dateRange && dateRange !== 'all') {
+                const now = new Date();
+                let startDate: Date | null = null;
+                switch (dateRange) {
+                    case 'today':
+                        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        break;
+                    case 'yesterday':
+                        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+                        break;
+                    case '7days':
+                        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        break;
+                    case '30days':
+                        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        break;
+                    case '90days':
+                        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                        break;
+                    case 'thisMonth':
+                        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                        break;
+                    case 'lastMonth':
+                        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                        break;
+                    default:
+                        startDate = null;
+                }
+                if (startDate) {
+                    query = query.gte('created_at', startDate.toISOString());
+                }
+            }
+
+            // Amount filter
+            if (amountRange && amountRange !== 'all') {
+                switch (amountRange) {
+                    case '0-100':
+                        query = query.gte('final_total', 0).lte('final_total', 100);
+                        break;
+                    case '100-500':
+                        query = query.gte('final_total', 100).lte('final_total', 500);
+                        break;
+                    case '500-1000':
+                        query = query.gte('final_total', 500).lte('final_total', 1000);
+                        break;
+                    case '1000-5000':
+                        query = query.gte('final_total', 1000).lte('final_total', 5000);
+                        break;
+                    case '5000+':
+                        query = query.gte('final_total', 5000);
+                        break;
+                }
             }
 
             if (searchTerm) {
@@ -145,7 +208,7 @@ export const useQuoteManagement = (filters = {}) => {
             const { error } = await supabase
                 .from('quotes')
                 .update({ 
-                    status: 'cancelled',
+                    status: 'rejected',
                     rejection_reason_id: reasonId,
                     rejection_details: details,
                     rejected_at: new Date().toISOString()
@@ -206,15 +269,21 @@ export const useQuoteManagement = (filters = {}) => {
         }
     };
 
-    const handleBulkAction = (action: 'accepted' | 'cancelled' | 'confirm_payment' | 'email' | 'export' | 'duplicate' | 'priority') => {
-        if (selectedQuoteIds.length === 0) return;
+    const handleBulkAction = (action: 'approved' | 'cancelled' | 'confirm_payment' | 'email' | 'export' | 'duplicate' | 'priority') => {
+        if (!selectedQuoteIds.length) return;
 
         if (action === 'cancelled') {
-            setIsRejectDialogOpen(true);
-        } else if (action === 'accepted' || action === 'confirm_payment') {
-            const status = action === 'confirm_payment' ? 'paid' : action;
-            setActiveStatusUpdate(action);
-            updateMultipleQuotesStatusMutation.mutate({ ids: selectedQuoteIds, status });
+            handleBulkReject();
+        } else if (action === 'approved' || action === 'confirm_payment') {
+            handleBulkApprove();
+        } else if (action === 'export') {
+            handleBulkExport();
+        } else if (action === 'email') {
+            handleBulkEmail();
+        } else if (action === 'duplicate') {
+            handleBulkDuplicate();
+        } else if (action === 'priority') {
+            handleBulkPriority();
         }
     };
 

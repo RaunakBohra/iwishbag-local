@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tables } from "@/integrations/supabase/types";
 import { TrendingUp, DollarSign, Clock, ShoppingCart, AlertTriangle, Target } from "lucide-react";
@@ -14,7 +13,7 @@ export const OverviewMetrics = ({ quotes, orders }: OverviewMetricsProps) => {
   // Calculate metrics
   const totalQuotes = quotes.length;
   const pendingQuotes = quotes.filter(q => q.status === 'pending').length;
-  const approvedQuotes = quotes.filter(q => q.approval_status === 'approved').length;
+  const approvedQuotes = quotes.filter(q => q.status === 'approved').length;
   const itemsInCart = quotes.filter(q => q.in_cart === true).length;
   const activeOrders = orders.filter(q => !['completed', 'cancelled', 'rejected'].includes(q.status)).length;
   

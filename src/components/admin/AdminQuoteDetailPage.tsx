@@ -378,6 +378,22 @@ const AdminQuoteDetailPage = () => {
     return null;
   };
 
+  // Fetch rejection reason if id is present
+  const { data: rejectionReason } = useQuery({
+    queryKey: ['rejection-reason', quote?.rejection_reason_id || 'none'],
+    queryFn: async () => {
+      if (!quote?.rejection_reason_id) return null;
+      const { data, error } = await supabase
+        .from('rejection_reasons')
+        .select('reason')
+        .eq('id', quote.rejection_reason_id)
+        .maybeSingle();
+      if (error) return null;
+      return typeof data?.reason === 'string' ? data.reason : null;
+    },
+    enabled: !!quote?.rejection_reason_id,
+  });
+
   // Early return if still loading
   if (quoteLoading) {
     return (
@@ -484,7 +500,7 @@ const AdminQuoteDetailPage = () => {
               disabled={isUpdating}
               className="flex items-center gap-2"
             >
-              {nextStatusConfig?.icon && <Icon name={nextStatusConfig.icon} className="mr-1" />}
+              <StatusBadge status={nextStatus} category={isOrder ? 'order' : 'quote'} showIcon className="text-xs" />
               Change to {nextStatusConfig.label}
             </Button>
           );
@@ -511,9 +527,28 @@ const AdminQuoteDetailPage = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <StatusBadge status={quote.status} showIcon className="text-sm" />
+            <StatusBadge status={quote.status} showIcon className="text-sm" category={isOrder ? 'order' : 'quote'} />
           </div>
         </div>
+
+        {/* Rejection Reason Banner (if cancelled/rejected) */}
+        {(quote.status === 'cancelled' || quote.status === 'rejected') && (
+          <div className="flex items-center gap-3 p-4 mb-2 border border-red-200 bg-red-50 rounded-lg text-sm text-red-900">
+            <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
+            <div>
+              <div className="font-semibold text-red-800">Quote was {quote.status === 'cancelled' ? 'Cancelled' : 'Rejected'} by Customer</div>
+              {quote.rejection_reason_id && (
+                <div><span className="font-medium">Reason:</span> {rejectionReason || 'Unknown reason'}</div>
+              )}
+              {quote.rejection_details && (
+                <div><span className="font-medium">Details:</span> {quote.rejection_details}</div>
+              )}
+              {!quote.rejection_reason_id && !quote.rejection_details && (
+                <div>No reason provided.</div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Main Dashboard Grid */}
         <div className="grid lg:grid-cols-3 gap-6">
@@ -521,109 +556,93 @@ const AdminQuoteDetailPage = () => {
           {/* Left Column - Customer & Products */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Customer Information Card - Compact */}
+            {/* Customer Information Card - Organized */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <User className="h-4 w-4" />
-                  {customerProfile?.full_name || quote.customer_name || quote.email || 'Customer'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {/* Customer Info, Name, Address & Context in Single Row */}
-                <div className="flex items-center justify-between gap-3">
-                  {/* Customer Info & Name */}
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
-                      <Mail className="h-3 w-3 text-muted-foreground" />
-                      <span className="font-medium">{quote.email || 'No email'}</span>
-                    </div>
-                    
-                    {quote.customer_name && (
-                      <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
-                        <User className="h-3 w-3 text-muted-foreground" />
-                        <span className="font-medium">{quote.customer_name}</span>
-                      </div>
-                    )}
-                    
-                    {quote.customer_phone && (
-                      <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
-                        <Phone className="h-3 w-3 text-muted-foreground" />
-                        <span className="font-medium">{quote.customer_phone}</span>
-                      </div>
-                    )}
-                    
-                    {quote.social_handle && (
-                      <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
-                        <MessageSquare className="h-3 w-3 text-muted-foreground" />
-                        <span className="font-medium">@{quote.social_handle}</span>
-                      </div>
-                    )}
-
-                    {/* Shipping Address inline */}
-                    {shippingAddress && (
-                      <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                        <MapPin className="h-3 w-3 text-green-600 flex-shrink-0" />
-                        <div className="flex items-center gap-2 text-green-800">
-                          {shippingAddress.recipient_name && (
-                            <span className="font-medium">👤 {shippingAddress.recipient_name}</span>
-                          )}
-                          <span>📍 {shippingAddress.city}, {shippingAddress.country}</span>
-                          {shippingAddress.phone && (
-                            <span>📞 {shippingAddress.phone}</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Context Info */}
-                  <div className="flex items-center gap-2 text-xs">
-                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded">
-                      <Calendar className="h-3 w-3 text-blue-600" />
-                      <span className="text-blue-800">{new Date(quote.created_at).toLocaleDateString()}</span>
-                    </div>
-                    
-                    {quote.quote_source && (
-                      <div className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded">
-                        <Globe className="h-3 w-3 text-green-600" />
-                        <span className="text-green-800 capitalize">{quote.quote_source}</span>
-                      </div>
-                    )}
-                    
-                    {/* Priority Dropdown and Badge */}
-                    <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 rounded">
-                      <Flag className="h-3 w-3 text-orange-600" />
-                      <Select
-                        value={form.watch('priority') || quote.priority || 'normal'}
-                        onValueChange={val => {
-                          if (["low", "normal", "urgent", "high"].includes(val)) {
-                            form.setValue('priority', val as 'low' | 'normal' | 'urgent' | 'high');
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-24 h-6 text-xs px-2 py-1 bg-transparent border-none shadow-none">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="normal">Normal</SelectItem>
-                          <SelectItem value="urgent">Urgent</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                        </SelectContent>
-                      </Select>
+                <div className="flex flex-col gap-2">
+                  {/* Inline Row: Name left, Website & Priority right */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    {/* Name left */}
+                    <span className="flex items-center gap-2 text-base font-bold">
+                      <User className="h-4 w-4" />
+                      {customerProfile?.full_name || quote.customer_name || quote.email || 'Customer'}
+                    </span>
+                    {/* Website & Priority right */}
+                    <div className="flex flex-wrap items-center gap-4 sm:justify-end">
+                      {quote.quote_source && (
+                        <span className="flex items-center gap-1 text-base text-green-800">
+                          <Globe className="h-4 w-4 text-green-600" />
+                          <span className="truncate">{quote.quote_source}</span>
+                        </span>
+                      )}
+                      <span className="flex items-center gap-2 text-base">
+                        <Flag className="h-4 w-4 text-orange-600" />
+                        <Select
+                          value={form.watch('priority') || quote.priority || 'normal'}
+                          onValueChange={val => {
+                            if (["low", "normal", "urgent", "high"].includes(val)) {
+                              form.setValue('priority', val as 'low' | 'normal' | 'urgent' | 'high');
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-24 h-7 text-base px-2 py-1 bg-transparent border-none shadow-none">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="normal">Normal</SelectItem>
+                            <SelectItem value="urgent">Urgent</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </span>
                     </div>
                   </div>
                 </div>
-
-                {quote.status === 'cancelled' && quote.rejection_details && (
-                  <div className="p-2 bg-red-50 border border-red-200 rounded text-xs">
-                    <div className="flex items-center gap-1 text-red-800 mb-1">
-                      <XCircle className="h-3 w-3" />
-                      <span className="font-medium">Rejection: {quote.rejection_details}</span>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                  {/* Left Column */}
+                  <div className="flex flex-col gap-2 min-w-0">
+                    {/* Email */}
+                    <div className="flex items-center gap-2 text-sm min-w-0">
+                      <Mail className="h-3 w-3 text-muted-foreground" />
+                      <span className="truncate">{quote.email || 'No email'}</span>
+                    </div>
+                    {/* Date */}
+                    <div className="flex items-center gap-2 text-sm min-w-0">
+                      <Calendar className="h-3 w-3 text-blue-600" />
+                      <span className="truncate">{new Date(quote.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
-                )}
+                  {/* Right Column */}
+                  <div className="flex flex-col gap-2 min-w-0 md:items-end">
+                    {/* Full Address - single line, comma separated */}
+                    {shippingAddress && (
+                      <div className="flex items-center gap-2 text-sm min-w-0">
+                        <MapPin className="h-3 w-3 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span className="text-green-800 truncate">
+                          {[
+                            shippingAddress.recipient_name || shippingAddress.fullName,
+                            shippingAddress.streetAddress,
+                            shippingAddress.addressLine2,
+                            shippingAddress.city,
+                            shippingAddress.state,
+                            shippingAddress.postalCode,
+                            shippingAddress.country
+                          ].filter(Boolean).join(', ')}
+                        </span>
+                      </div>
+                    )}
+                    {/* Phone */}
+                    {quote.customer_phone && (
+                      <div className="flex items-center gap-2 text-sm min-w-0">
+                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        <span className="truncate">{quote.customer_phone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
 

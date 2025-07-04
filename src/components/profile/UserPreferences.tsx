@@ -193,11 +193,11 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
               <span className="text-muted-foreground">Email:</span>
               <span>{user?.email}</span>
             </div>
-            {profile.full_name && (
+            {(profile.full_name || user?.user_metadata?.name || user?.user_metadata?.full_name) && (
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">Name:</span>
-                <span>{profile.full_name}</span>
+                <span>{profile.full_name || user?.user_metadata?.name || user?.user_metadata?.full_name}</span>
               </div>
             )}
             {profile.phone && (

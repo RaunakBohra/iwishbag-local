@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Search, ArrowLeft, Truck, CheckCircle, Clock } from 'lucide-react';
+import { ShoppingCart, Search, ArrowLeft, Truck, CheckCircle, Clock, DollarSign, Package, Eye, Calendar } from 'lucide-react';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import { formatDistanceToNow } from "date-fns";
+import { useUserCurrency } from "@/hooks/useUserCurrency";
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 export default function Orders() {
   const {
@@ -18,6 +26,7 @@ export default function Orders() {
   } = useDashboardState();
 
   const { data: countries } = useAllCountries();
+  const { orderStatuses } = useStatusManagement();
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Filter orders based on status and search
@@ -42,32 +51,6 @@ export default function Orders() {
     
     return true;
   }) || [];
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return 'bg-blue-100 text-blue-800';
-      case 'ordered': return 'bg-purple-100 text-purple-800';
-      case 'shipped': return 'bg-orange-100 text-orange-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'paid': return <CheckCircle className="h-4 w-4" />;
-      case 'ordered': return <ShoppingCart className="h-4 w-4" />;
-      case 'shipped': return <Truck className="h-4 w-4" />;
-      case 'completed': return <CheckCircle className="h-4 w-4" />;
-      case 'cancelled': return <Clock className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  };
 
   if (isLoading) {
     return (
@@ -121,11 +104,11 @@ export default function Orders() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="ordered">Ordered</SelectItem>
-                <SelectItem value="shipped">Shipped</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                {orderStatuses?.map((status) => (
+                  <SelectItem key={status.name} value={status.name}>
+                    {status.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -164,10 +147,7 @@ export default function Orders() {
                         Order #{order.order_display_id || order.display_id || order.id.slice(0, 8)}
                       </p>
                     </div>
-                    <Badge className={`flex items-center gap-1 ${getStatusColor(order.status)}`}>
-                      {getStatusIcon(order.status)}
-                      {getStatusLabel(order.status)}
-                    </Badge>
+                    <StatusBadge status={order.status} category="order" />
                   </div>
                   
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">

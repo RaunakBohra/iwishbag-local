@@ -31,7 +31,7 @@ interface EmailCampaign {
   template_id: string;
   target_count: number;
   sent_count: number;
-  status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed';
+  status: 'pending' | 'scheduled' | 'sending' | 'completed' | 'failed';
   created_at: string;
   scheduled_at?: string;
 }

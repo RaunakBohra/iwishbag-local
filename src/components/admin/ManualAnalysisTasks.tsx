@@ -140,6 +140,7 @@ export const ManualAnalysisTasks = () => {
   };
 
   const getStatusBadge = (status: string) => {
+    // For manual analysis tasks, we'll use a custom mapping since these are not quote/order statuses
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "outline",
       in_progress: "secondary",

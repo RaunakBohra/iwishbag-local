@@ -24,10 +24,14 @@ export const useDashboardBulkActions = ({
   
   const { toast } = useToast();
 
+  const canAddToCart = (quote: Quote) => {
+    return quote && quote.status === 'approved' && !quote.in_cart;
+  };
+
   const handleBulkAddToCart = async () => {
     const idsToAdd = selectedQuoteIds.filter(id => {
       const quote = quotes.find(q => q.id === id);
-      return quote && quote.approval_status === 'approved' && !quote.in_cart;
+      return quote && quote.status === 'approved' && !quote.in_cart;
     });
 
     if (idsToAdd.length > 0) {

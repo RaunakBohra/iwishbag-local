@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Clock, User, AlertCircle, CheckCircle, XCircle, FileText, DollarSign, Truck, Package } from 'lucide-react';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 interface StatusTransition {
   id: string;
@@ -178,7 +179,9 @@ export const StatusTransitionHistory: React.FC<StatusTransitionHistoryProps> = (
                     <div className="flex items-center gap-2">
                       {getTriggerIcon(transition.trigger)}
                       <span className="font-medium">
-                        {fromStatusConfig?.label || transition.from_status} → {toStatusConfig?.label || transition.to_status}
+                        <StatusBadge status={transition.from_status} category="quote" showIcon={false} className="text-xs" />
+                        <span className="mx-1">→</span>
+                        <StatusBadge status={transition.to_status} category="quote" showIcon={false} className="text-xs" />
                       </span>
                     </div>
                     <Badge className={`text-xs ${getTriggerColor(transition.trigger)}`}>

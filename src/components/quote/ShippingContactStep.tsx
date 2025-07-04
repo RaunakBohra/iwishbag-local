@@ -83,6 +83,12 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
   const handleChange = (field, value) => setShippingContact({ ...shippingContact, [field]: value });
 
   const validate = () => {
+    // For authenticated users with addresses, we don't need to validate form fields
+    if (user && addresses && addresses.length > 0 && address) {
+      return '';
+    }
+    
+    // For guests or users without addresses, validate all fields
     if (!shippingContact.address) return 'Address is required.';
     if (!shippingContact.country) return 'Country is required.';
     if (!shippingContact.state) return 'State is required.';
@@ -226,10 +232,11 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
             type="button"
             className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm"
             onClick={() => {
+              // Always set shipping contact from the selected address
               if (address) {
                 setShippingContact({
                   name: address.recipient_name || '',
-                  email: profile?.email || '',
+                  email: profile?.email || user?.email || '',
                   whatsapp: address.phone || '',
                   address: address.address_line1 || '',
                   country: address.country || '',
@@ -238,28 +245,61 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
                   city: address.city || '',
                   zip: address.postal_code || '',
                 });
-                setTimeout(() => {
-                  console.log('shippingContact at submit:', {
-                    name: address.recipient_name || '',
-                    email: profile?.email || '',
-                    whatsapp: address.phone || '',
-                    address: address.address_line1 || '',
-                    country: address.country || '',
-                    country_code: address.country || '',
-                    state: address.state_province_region || '',
-                    city: address.city || '',
-                    zip: address.postal_code || '',
-                  });
-                  next();
-                }, 0);
-              } else {
-                next();
               }
+              next();
             }}
           >
             Submit Quote Request
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // For authenticated users without addresses, show a message to add address first
+  if (user && (!addresses || addresses.length === 0)) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Shipping Address Required</h2>
+          <p className="text-gray-600">Please add a shipping address to continue with your quote request</p>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
+          <div className="mb-4">
+            <MapPin className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Shipping Address Found</h3>
+            <p className="text-gray-600 mb-6">
+              To request a quote, you need to add a shipping address to your profile first.
+            </p>
+          </div>
+          
+          <div className="flex gap-4 justify-center">
+            <button 
+              type="button" 
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium" 
+              onClick={() => { setAddressToEdit(null); setAddressModalOpen(true); }}
+            >
+              + Add Shipping Address
+            </button>
+            <button 
+              type="button" 
+              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium" 
+              onClick={() => window.location.href = '/profile/address'}
+            >
+              Manage Addresses
+            </button>
+          </div>
+        </div>
+        
+        <Dialog open={addressModalOpen} onOpenChange={setAddressModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Address</DialogTitle>
+            </DialogHeader>
+            <AddressForm address={addressToEdit} onSuccess={() => { setAddressModalOpen(false); refetch(); }} />
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -270,6 +310,11 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Shipping & Contact Information</h2>
         <p className="text-gray-600">Enter your shipping details and submit your quote request</p>
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-700">
+            💡 <strong>Tip:</strong> Sign up for an account to save your addresses and get a faster quote experience!
+          </p>
+        </div>
       </div>
       
       {showRoute && (

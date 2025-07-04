@@ -13,7 +13,8 @@ import {
   ShoppingCart,
   Truck,
   CheckCircle,
-  XCircle
+  XCircle,
+  AlertCircle
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
@@ -22,34 +23,20 @@ import { StatusBadge } from '@/components/dashboard/StatusBadge';
 export const RecentActivity = () => {
   const { formatAmount } = useUserCurrency();
   
-  const { data: recentQuotes } = useQuery({
-    queryKey: ['recent-quotes'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('quotes')
-        .select(`
-          id, 
-          email, 
-          final_total, 
-          final_total_local,
-          final_currency, 
-          approval_status, 
-          status,
-          created_at,
-          user_id
-        `)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (error) {
-        console.error('Error fetching recent quotes:', error);
-        throw error;
-      }
-      
-      console.log('Recent quotes data:', data);
-      return data;
-    },
-  });
+  const { data: recentQuotes, error } = await supabase
+    .from('quotes')
+    .select(`
+      id,
+      email,
+      final_total,
+      final_total_local,
+      status,
+      created_at,
+      product_name,
+      country_code
+    `)
+    .order('created_at', { ascending: false })
+    .limit(10);
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -68,18 +55,28 @@ export const RecentActivity = () => {
     }
   };
 
-  const getActivityIcon = (status: string, approvalStatus: string) => {
+  const getActivityIcon = (status: string, approvalStatus?: string) => {
     if (approvalStatus === 'approved' || status === 'paid' || status === 'completed') {
-      return <Package className="h-4 w-4 text-green-600" />;
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    } else if (status === 'pending' || status === 'processing') {
+      return <Clock className="h-4 w-4 text-yellow-500" />;
+    } else if (status === 'rejected' || status === 'cancelled') {
+      return <AlertCircle className="h-4 w-4 text-red-500" />;
+    } else {
+      return <Activity className="h-4 w-4 text-gray-500" />;
     }
-    return <FileText className="h-4 w-4 text-blue-600" />;
   };
 
-  const getActivityTitle = (status: string, approvalStatus: string) => {
+  const getActivityTitle = (status: string, approvalStatus?: string) => {
     if (approvalStatus === 'approved' || status === 'paid' || status === 'completed') {
-      return 'Order';
+      return 'Order Completed';
+    } else if (status === 'pending' || status === 'processing') {
+      return 'Quote Pending';
+    } else if (status === 'rejected' || status === 'cancelled') {
+      return 'Quote Rejected';
+    } else {
+      return 'Quote Created';
     }
-    return 'Quote';
   };
 
   return (
@@ -95,18 +92,18 @@ export const RecentActivity = () => {
           {recentQuotes?.map((quote) => {
             // Use final_total_local for display (user's preferred currency)
             const displayAmount = quote.final_total_local || quote.final_total || 0;
-            const isOrder = quote.approval_status === 'approved' || quote.status === 'paid' || quote.status === 'completed';
+            const isOrder = quote.status === 'approved' || quote.status === 'paid' || quote.status === 'completed';
             
             return (
               <div key={quote.id} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${isOrder ? 'bg-green-100' : 'bg-blue-100'}`}>
-                    {getActivityIcon(quote.status, quote.approval_status)}
+                    {getActivityIcon(quote.status, quote.status)}
                   </div>
                   <div>
                     <p className="font-medium text-sm">{quote.email}</p>
                     <p className="text-xs text-muted-foreground">
-                      {getActivityTitle(quote.status, quote.approval_status)} • {formatDistanceToNow(new Date(quote.created_at), { addSuffix: true })}
+                      {getActivityTitle(quote.status, quote.status)} • {formatDistanceToNow(new Date(quote.created_at), { addSuffix: true })}
                     </p>
                   </div>
                 </div>
@@ -114,7 +111,7 @@ export const RecentActivity = () => {
                   <p className="font-medium text-sm">
                     {formatAmount(displayAmount)}
                   </p>
-                  <StatusBadge status={quote.approval_status || quote.status || 'pending'} />
+                  <StatusBadge status={quote.status || 'pending'} category={['paid', 'ordered', 'shipped', 'completed', 'cancelled'].includes(quote.status || '') ? 'order' : 'quote'} />
                 </div>
               </div>
             );

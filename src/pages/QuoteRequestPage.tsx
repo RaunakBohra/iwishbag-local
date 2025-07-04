@@ -131,7 +131,7 @@ export default function QuoteRequestPage() {
           productUrl: product.url,
           productName: product.name,
           quantity: product.quantity,
-          options: '',
+          options: product.notes || '',
           imageUrl: product.file ? product.url : '',
           price: product.price,
           weight: product.weight,
@@ -182,7 +182,7 @@ export default function QuoteRequestPage() {
             productUrl: product.url,
             productName: product.name,
             quantity: product.quantity,
-            options: '',
+            options: product.notes || '',
             imageUrl: product.file ? product.url : '',
             price: product.price,
             weight: product.weight,
@@ -199,7 +199,7 @@ export default function QuoteRequestPage() {
               currency: 'USD',
               final_currency: 'USD',
               user_id: user ? user.id : undefined,
-              shipping_address: shippingAddressData
+                                      shipping_address: shippingAddressData
             })
             .select('id')
             .single();
@@ -301,6 +301,7 @@ export default function QuoteRequestPage() {
                     city: '',
                     zip: ''
                   });
+                  setCustomerNotes('');
                 }}
                 className="w-full sm:w-auto px-6 py-3 rounded-lg border border-blue-600 text-blue-600 bg-white hover:bg-blue-50 font-semibold shadow-sm transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
               >

@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tables } from "@/integrations/supabase/types";
 import { TrendingUp, TrendingDown, AlertTriangle, Target, DollarSign, Calendar } from "lucide-react";
@@ -45,19 +44,19 @@ export const PredictiveInsights = ({ quotes, orders }: PredictiveInsightsProps) 
   const predictedNextMonth = Math.round(currentMonthQuotes * (1 + averageGrowth / 100));
 
   // Calculate approval efficiency
+  const approvedQuotes = quotes.filter(q => q.status === 'approved').length;
   const totalQuotes = quotes.length;
-  const approvedQuotes = quotes.filter(q => q.approval_status === 'approved').length;
-  const approvalRate = totalQuotes > 0 ? (approvedQuotes / totalQuotes * 100) : 0;
+  const conversionRate = totalQuotes > 0 ? (approvedQuotes / totalQuotes) * 100 : 0;
+  const pendingQuotes = quotes.filter(q => q.status === 'pending').length;
 
   // Calculate revenue predictions
   const avgQuoteValue = quotes.filter(q => q.final_total).length > 0 ?
     quotes.filter(q => q.final_total).reduce((sum, q) => sum + Number(q.final_total), 0) / quotes.filter(q => q.final_total).length :
     0;
 
-  const predictedRevenue = predictedNextMonth * avgQuoteValue * (approvalRate / 100);
+  const predictedRevenue = predictedNextMonth * avgQuoteValue * (conversionRate / 100);
 
   // Identify bottlenecks
-  const pendingQuotes = quotes.filter(q => q.status === 'pending').length;
   const oldPendingQuotes = quotes.filter(q => {
     const createdDate = new Date(q.created_at);
     const daysDiff = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -96,11 +95,11 @@ export const PredictiveInsights = ({ quotes, orders }: PredictiveInsightsProps) 
     {
       type: 'efficiency',
       title: 'Approval Efficiency',
-      value: `${approvalRate.toFixed(1)}%`,
+      value: `${conversionRate.toFixed(1)}%`,
       description: `${approvedQuotes} of ${totalQuotes} approved`,
       icon: Target,
-      color: approvalRate > 75 ? 'text-green-600' : 'text-yellow-600',
-      bgColor: approvalRate > 75 ? 'bg-green-50' : 'bg-yellow-50'
+      color: conversionRate > 75 ? 'text-green-600' : 'text-yellow-600',
+      bgColor: conversionRate > 75 ? 'bg-green-50' : 'bg-yellow-50'
     }
   ];
 
@@ -115,8 +114,8 @@ export const PredictiveInsights = ({ quotes, orders }: PredictiveInsightsProps) 
     {
       priority: 'medium',
       title: 'Optimize Approval Rate',
-      description: `Current approval rate is ${approvalRate.toFixed(1)}%`,
-      action: approvalRate < 70 ? 'Review rejection reasons to improve quote quality' : 'Maintain current quality standards',
+      description: `Current approval rate is ${conversionRate.toFixed(1)}%`,
+      action: conversionRate < 70 ? 'Review rejection reasons to improve quote quality' : 'Maintain current quality standards',
       visible: true
     },
     {
@@ -246,7 +245,7 @@ export const PredictiveInsights = ({ quotes, orders }: PredictiveInsightsProps) 
             <div className="text-center p-4 bg-muted/30 rounded-lg">
               <div className="text-lg font-semibold">Efficiency Score</div>
               <div className="text-sm text-muted-foreground">
-                {(approvalRate + (monthOverMonthGrowth > 0 ? 10 : -10)).toFixed(0)}/100
+                {(conversionRate + (monthOverMonthGrowth > 0 ? 10 : -10)).toFixed(0)}/100
               </div>
             </div>
           </div>

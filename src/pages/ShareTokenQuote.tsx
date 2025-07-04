@@ -11,6 +11,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { ArrowLeft, Edit, CheckCircle, XCircle, Clock, DollarSign, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -101,19 +102,7 @@ export default function ShareTokenQuote() {
             <p className="text-muted-foreground">Quote ID: {quote.display_id || quote.id.substring(0, 8)}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={quote.status === 'paid' ? 'default' : 'secondary'}>
-              {quote.status === 'paid' ? (
-                <>
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Paid
-                </>
-              ) : (
-                <>
-                  <Clock className="h-3 w-3 mr-1" />
-                  {quote.status}
-                </>
-              )}
-            </Badge>
+            <StatusBadge status={quote.status} category="quote" />
             {isExpired && (
               <Badge variant="destructive">
                 <AlertTriangle className="h-3 w-3 mr-1" />
@@ -166,11 +155,19 @@ export default function ShareTokenQuote() {
                           <p className="text-sm text-muted-foreground">
                             Quantity: {item.quantity}
                           </p>
-                          {item.options && (
-                            <p className="text-sm text-muted-foreground">
-                              Options: {item.options}
-                            </p>
-                          )}
+                          {item.options && (() => {
+                            try {
+                              const options = JSON.parse(item.options);
+                              return options.notes ? (
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 my-2">
+                                  <span className="font-semibold text-blue-800">Product Notes:</span>
+                                  <span className="text-blue-900 ml-2 whitespace-pre-line">{options.notes}</span>
+                                </div>
+                              ) : null;
+                            } catch {
+                              return null;
+                            }
+                          })()}
                           {item.product_url && (
                             <a
                               href={item.product_url}

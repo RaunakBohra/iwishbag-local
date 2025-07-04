@@ -1,6 +1,6 @@
-
 import { Button } from "@/components/ui/button";
 import { useOrderMutations } from "@/hooks/useOrderMutations";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
 import { Tables } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -10,48 +10,57 @@ interface OrderActionsProps {
 
 export const OrderActions = ({ quote }: OrderActionsProps) => {
   const { updateOrderStatus, isUpdatingStatus } = useOrderMutations(quote.id);
+  const { getStatusConfig, getAllowedTransitions } = useStatusManagement();
 
   const handleStatusChange = (newStatus: string) => {
     updateOrderStatus(newStatus);
   };
   
   const renderActions = () => {
-      switch (quote.status) {
-          case 'cod_pending':
-          case 'bank_transfer_pending':
-              return (
-                  <Button type="button" onClick={() => handleStatusChange('paid')} disabled={isUpdatingStatus}>
-                      Confirm Payment Received
-                  </Button>
-              );
-          case 'paid':
-              return (
-                  <Button type="button" onClick={() => handleStatusChange('ordered')} disabled={isUpdatingStatus}>
-                      Mark as Ordered
-                  </Button>
-              );
-          case 'ordered':
-              return (
-                  <p className="text-sm text-muted-foreground">Waiting for shipping information.</p>
-              );
-          case 'shipped':
-              return (
-                  <Button type="button" onClick={() => handleStatusChange('completed')} disabled={isUpdatingStatus}>
-                      Mark as Completed
-                  </Button>
-              );
-          case 'completed':
-              return (
-                 <p className="text-sm text-green-600 font-medium">This order is complete.</p>
-              );
-          case 'cancelled':
-              return (
-                 <p className="text-sm text-red-600 font-medium">This order has been cancelled.</p>
-              );
-          default:
-              return null;
-      }
+    const currentStatusConfig = getStatusConfig(quote.status, 'order');
+    const allowedTransitions = getAllowedTransitions(quote.status, 'order');
+    
+    if (!currentStatusConfig) {
+      return <p className="text-sm text-muted-foreground">Unknown status: {quote.status}</p>;
+    }
+
+    if (currentStatusConfig.isTerminal) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          This order is in a terminal state: {currentStatusConfig.label}
+        </p>
+      );
+    }
+
+    if (allowedTransitions.length === 0) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          No actions available for current status: {currentStatusConfig.label}
+        </p>
+      );
+    }
+
+    return (
+      <div className="flex flex-wrap gap-2">
+        {allowedTransitions.map((transitionStatus) => {
+          const transitionConfig = getStatusConfig(transitionStatus, 'order');
+          return (
+            <Button
+              key={transitionStatus}
+              type="button"
+              onClick={() => handleStatusChange(transitionStatus)}
+              disabled={isUpdatingStatus}
+              variant="outline"
+            >
+              {transitionConfig?.label || transitionStatus}
+            </Button>
+          );
+        })}
+      </div>
+    );
   }
+
+  const currentStatusConfig = getStatusConfig(quote.status, 'order');
 
   return (
     <Card>
@@ -61,7 +70,9 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-4">
-            <p className="text-sm">Current Status: <span className="font-semibold capitalize">{quote.status}</span></p>
+            <p className="text-sm">
+              Current Status: <span className="font-semibold">{currentStatusConfig?.label || quote.status}</span>
+            </p>
             {renderActions()}
         </div>
       </CardContent>

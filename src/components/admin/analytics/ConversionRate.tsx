@@ -12,20 +12,20 @@ export const ConversionRate = () => {
       const { data: totalQuotes, error: quotesError } = await supabase
         .from('quotes')
         .select('id')
-        .not('status', 'eq', 'draft');
+        .not('status', 'eq', 'pending');
       
       if (quotesError) throw quotesError;
 
       // Get approved orders
-      const { data: approvedOrders, error: ordersError } = await supabase
+      const { data: approvedQuotes, error: ordersError } = await supabase
         .from('quotes')
-        .select('id, final_total_local, final_total')
-        .eq('approval_status', 'approved');
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'approved');
       
       if (ordersError) throw ordersError;
 
       const total = totalQuotes?.length || 0;
-      const approved = approvedOrders?.length || 0;
+      const approved = approvedQuotes?.length || 0;
       const rate = total > 0 ? (approved / total) * 100 : 0;
 
       // Calculate previous period for comparison
@@ -35,17 +35,17 @@ export const ConversionRate = () => {
       const { data: prevTotalQuotes } = await supabase
         .from('quotes')
         .select('id')
-        .not('status', 'eq', 'draft')
+        .not('status', 'eq', 'pending')
         .lt('created_at', thirtyDaysAgo.toISOString());
       
-      const { data: prevApprovedOrders } = await supabase
+      const { data: prevApprovedQuotes } = await supabase
         .from('quotes')
-        .select('id, final_total_local, final_total')
-        .eq('approval_status', 'approved')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'approved')
         .lt('created_at', thirtyDaysAgo.toISOString());
 
       const prevTotal = prevTotalQuotes?.length || 0;
-      const prevApproved = prevApprovedOrders?.length || 0;
+      const prevApproved = prevApprovedQuotes?.length || 0;
       const prevRate = prevTotal > 0 ? (prevApproved / prevTotal) * 100 : 0;
 
       const change = rate - prevRate;

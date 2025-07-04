@@ -20,7 +20,12 @@ import {
   DollarSign,
   AlertTriangle,
   Phone,
-  MapPin
+  MapPin,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Calculator,
+  Truck
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -44,39 +49,23 @@ interface AdminQuoteListItemProps {
 
 const getPriorityBadge = (priority: QuoteWithItems['priority']) => {
   if (!priority) return null;
-
-  const variants: { [key in NonNullable<QuoteWithItems['priority']>]: 'outline' | 'secondary' | 'default' | 'destructive' } = {
-    low: 'outline',
-    normal: 'secondary',
-    high: 'default',
-    urgent: 'destructive',
+  
+  const config = {
+    low: { label: 'Low', variant: 'secondary' as const, className: 'bg-gray-100 text-gray-700' },
+    medium: { label: 'Medium', variant: 'default' as const, className: 'bg-blue-100 text-blue-700' },
+    high: { label: 'High', variant: 'destructive' as const, className: 'bg-red-100 text-red-700' },
   };
-
+  
+  const badgeConfig = config[priority] || config.medium;
+  
   return (
-    <Badge variant={variants[priority]} className="capitalize text-xs">
-      {priority}
+    <Badge variant={badgeConfig.variant} className={cn("text-xs", badgeConfig.className)}>
+      {badgeConfig.label}
     </Badge>
   );
 };
 
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case 'pending':
-      return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-    case 'confirmed':
-      return <Eye className="h-4 w-4 text-blue-500" />;
-    case 'paid':
-      return <DollarSign className="h-4 w-4 text-green-500" />;
-    case 'shipped':
-      return <Package className="h-4 w-4 text-purple-500" />;
-    case 'completed':
-      return <Calendar className="h-4 w-4 text-gray-500" />;
-    case 'cancelled':
-      return <AlertTriangle className="h-4 w-4 text-red-500" />;
-    default:
-      return <Eye className="h-4 w-4 text-gray-500" />;
-  }
-};
+
 
 export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteListItemProps) => {
     const navigate = useNavigate();
@@ -197,9 +186,9 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                                 className="mt-0"
                             />
                             
-                            {/* Status Icon */}
+                            {/* Status Badge */}
                             <div className="flex-shrink-0">
-                                {getStatusIcon(quote.status)}
+                                <StatusBadge status={quote.status} category="quote" showIcon={false} />
                             </div>
 
                             {/* Quote ID and Basic Info */}
@@ -208,64 +197,56 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                                     <h3 className="font-semibold text-sm text-foreground">
                                         {quote.display_id || `QT-${quote.id.substring(0, 8).toUpperCase()}`}
                                     </h3>
-                                    <StatusBadge status={quote.status} />
                                     {getPriorityBadge(quote.priority)}
                                 </div>
-                                {/* Combined Info Row: Email, Phone, Product Link, Date */}
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-muted-foreground w-full">
-                                    {/* Customer Name & Route */}
-                                    <div className="flex items-center gap-2 text-sm w-full sm:w-auto">
-                                        <span className="font-medium text-foreground truncate max-w-[120px] sm:max-w-none">{customerName}</span>
-                                        {routeCountries && (
-                                            <>
-                                                <span className="text-muted-foreground hidden sm:inline">•</span>
-                                                <span className="text-muted-foreground truncate max-w-[100px] sm:max-w-none">
-                                                    {formatShippingRoute(routeCountries.origin, routeCountries.destination, allCountries)}
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
-                                    {/* All info in one row, responsive */}
-                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 w-full sm:w-auto">
-                                        {/* Email */}
-                                        <span className="flex items-center gap-1 min-w-0">
-                                            <Mail className="h-4 w-4 flex-shrink-0" />
-                                            <span className="truncate max-w-[110px] sm:max-w-[180px]">{quote.email}</span>
-                                        </span>
-                                        {/* Phone (hide on xs) */}
-                                        {customerPhone && (
-                                            <span className="flex items-center gap-1 min-w-0 hidden xs:flex">
-                                                <Phone className="h-4 w-4 flex-shrink-0" />
-                                                <span className="truncate max-w-[90px] sm:max-w-[140px]">{customerPhone}</span>
+                                {/* Combined Info Row: Date, Customer Name, Route, Website */}
+                                <div className="flex items-center gap-4 text-xs text-muted-foreground w-full">
+                                    {/* Date - Fixed width */}
+                                    <span className="flex items-center gap-1 flex-shrink-0 w-20">
+                                        <Calendar className="h-3 w-3 flex-shrink-0" />
+                                        <span className="truncate">{formatDate(quote.created_at)}</span>
+                                    </span>
+                                    {/* Customer Name - Fixed width */}
+                                    <span className="flex items-center gap-1 flex-shrink-0 w-32">
+                                        <User className="h-3 w-3 flex-shrink-0" />
+                                        <span className="font-medium text-foreground truncate">{customerName}</span>
+                                    </span>
+                                    {/* Route - Fixed width */}
+                                    {routeCountries && (
+                                        <span className="flex items-center gap-1 flex-shrink-0 w-28">
+                                            <MapPin className="h-3 w-3 flex-shrink-0" />
+                                            <span className="text-muted-foreground truncate">
+                                                {formatShippingRoute(routeCountries.origin, routeCountries.destination, allCountries)}
                                             </span>
-                                        )}
-                                        {/* Product Name as Link (hide on xs) */}
-                                        <span className="flex items-center gap-1 min-w-0 hidden xs:flex">
+                                        </span>
+                                    )}
+                                    {/* Product Domain Link - Fixed width */}
+                                    {firstItem?.product_url && (
+                                        <span className="flex items-center gap-1 flex-shrink-0 w-24">
                                             <Package className="h-3 w-3 flex-shrink-0" />
-                                            {firstItem?.product_url ? (
-                                              <a
+                                            <a
                                                 href={firstItem.product_url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="underline hover:text-primary flex items-center gap-1 truncate max-w-[90px] sm:max-w-[140px]"
+                                                className="underline hover:text-primary flex items-center gap-1 truncate"
                                                 onClick={e => e.stopPropagation()}
-                                              >
-                                                {firstItem.product_name || "LINK"}
+                                            >
+                                                {/* Extract and display only the domain */}
+                                                {(() => {
+                                                    try {
+                                                        const url = new URL(firstItem.product_url);
+                                                        return url.hostname.replace(/^www\./, '');
+                                                    } catch {
+                                                        return firstItem.product_url;
+                                                    }
+                                                })()}
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-external-link h-3 w-3 ml-0.5"><path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
-                                              </a>
-                                            ) : (
-                                              <span className="truncate">{firstItem?.product_name || quote.product_name || "No items specified"}</span>
-                                            )}
+                                            </a>
                                             {totalItems > 1 && (
-                                              <span className="ml-1 text-xs text-muted-foreground">+{totalItems - 1}</span>
+                                                <span className="ml-1 text-xs text-muted-foreground">+{totalItems - 1}</span>
                                             )}
                                         </span>
-                                        {/* Date (always visible) */}
-                                        <span className="flex items-center gap-1 min-w-0">
-                                            <Calendar className="h-3 w-3 flex-shrink-0" />
-                                            <span className="truncate max-w-[80px] sm:max-w-none">{formatDate(quote.created_at)}</span>
-                                        </span>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -317,7 +298,7 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                 <div className="space-y-2">
                     <div className="flex items-center gap-2 text-base font-semibold">
                         {quote.display_id || quote.id}
-                        <span className="ml-2">{getStatusIcon(quote.status)}</span>
+                        <StatusBadge status={quote.status} category="quote" showIcon={false} />
                         <span>{getPriorityBadge(quote.priority)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">

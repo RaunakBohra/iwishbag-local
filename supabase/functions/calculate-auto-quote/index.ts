@@ -495,8 +495,7 @@ async function createAutoQuote(quoteCalculation: any, userId: string | null, pur
     confidence_score: quoteCalculation.confidence_score,
     applied_rules: quoteCalculation.appliedRules,
     scraped_data: quoteCalculation.scrapedData,
-    status: quoteCalculation.status,
-    approval_status: 'pending',
+    status: 'pending',
     priority: 'normal',
     country_code: purchaseCountry,
     // New shipping route fields

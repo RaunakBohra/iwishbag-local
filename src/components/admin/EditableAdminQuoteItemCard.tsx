@@ -140,49 +140,33 @@ export const EditableAdminQuoteItemCard = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-0 px-4 pb-4">
-        {/* Product URL and Options row */}
-        <div className="flex gap-3 items-end">
-          <div className="flex-1">
+        {/* Product URL and Customer Notes block layout */}
+        <div className="flex flex-col gap-3 w-full">
+          <div className="flex items-end gap-2 w-full">
             <FormField
               control={control}
               name={`items.${index}.product_url`}
               render={({ field }) => (
-                <FormItem className="m-0">
+                <FormItem className="m-0 flex-1">
                   <FormLabel className="text-xs font-medium text-muted-foreground">Product URL</FormLabel>
-                  <div className="flex gap-1 items-center mt-1">
-                    <FormControl>
-                      <Input {...field} value={field.value || ''} placeholder="https://..." className="h-9" />
-                    </FormControl>
-                    {field.value && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => window.open(field.value, '_blank')}
-                        className="h-9 w-9 ml-1"
-                        tabIndex={-1}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="w-48">
-            <FormField
-              control={control}
-              name={`items.${index}.options`}
-              render={({ field }) => (
-                <FormItem className="m-0">
-                  <FormLabel className="text-xs font-medium text-muted-foreground">Options</FormLabel>
                   <FormControl>
-                    <Input {...field} value={field.value || ''} placeholder="e.g. Size, Color" className="h-9 mt-1" />
+                    <Input {...field} value={field.value || ''} placeholder="https://..." className="h-9 mt-1 w-full" />
                   </FormControl>
                 </FormItem>
               )}
             />
+            {control._formValues?.items?.[index]?.product_url && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => window.open(control._formValues.items[index].product_url, '_blank')}
+                className="h-9 w-9 mt-5"
+                tabIndex={-1}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
         {/* Price, Weight, Quantity row */}
@@ -322,6 +306,46 @@ export const EditableAdminQuoteItemCard = ({
                 </FormControl>
               </FormItem>
             )}
+          />
+        </div>
+        <div className="mt-3">
+          <FormField
+            control={control}
+            name={`items.${index}.options`}
+            render={({ field }) => {
+              // Parse the options JSON to get notes
+              let notes = '';
+              try {
+                if (field.value) {
+                  const options = JSON.parse(field.value);
+                  notes = options.notes || '';
+                }
+              } catch {
+                // If parsing fails, treat as plain text
+                notes = field.value || '';
+              }
+              return (
+                <FormItem className="m-0 w-full">
+                  <FormLabel className="text-xs font-medium text-muted-foreground">Customer Notes</FormLabel>
+                  <FormControl>
+                    <Input
+                      value={notes}
+                      placeholder="Customer notes..."
+                      className="h-9 mt-1 w-full"
+                      onChange={(e) => {
+                        // Update the field with JSON structure
+                        const newNotes = e.target.value;
+                        if (newNotes) {
+                          field.onChange(JSON.stringify({ notes: newNotes }));
+                        } else {
+                          field.onChange(null);
+                        }
+                      }}
+                    />
+                  </FormControl>
+                </FormItem>
+              );
+            }}
           />
         </div>
       </CardContent>

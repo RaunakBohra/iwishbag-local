@@ -15,7 +15,7 @@ const Dashboard = () => {
 
   // Metrics
   const activeQuotes = quotes?.filter(q => q.status === 'pending' || q.status === 'sent' || q.status === 'calculated').length || 0;
-  const approvedQuotes = quotes?.filter(q => q.approval_status === 'approved').length || 0;
+  const approvedQuotes = quotes?.filter(q => q.status === 'approved').length || 0;
   const ordersInProgress = orders?.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length || 0;
   const deliveredOrders = orders?.filter(o => o.status === 'completed').length || 0;
   const unreadMessages = 0; // TODO: Connect to real unread messages count

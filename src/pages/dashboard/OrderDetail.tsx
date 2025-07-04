@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { formatAmountForDisplay } from '@/lib/currencyUtils';
 import { ShippingAddress } from '@/types/address';
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -92,19 +93,6 @@ export default function OrderDetail() {
   const formatUserCurrency = (amount: number | null | undefined) => {
     if (!amount) return 'N/A';
     return formatAmountForDisplay(amount, userCurrency, exchangeRate);
-  };
-
-  // Get status configuration
-  const getStatusConfig = (status: string) => {
-    const configs = {
-      paid: { color: 'bg-purple-100 text-purple-800', icon: CreditCard, label: 'Payment Received' },
-      ordered: { color: 'bg-indigo-100 text-indigo-800', icon: ShoppingCart, label: 'Order Placed' },
-      shipped: { color: 'bg-orange-100 text-orange-800', icon: Truck, label: 'Shipped' },
-      completed: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Delivered' },
-      cancelled: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Cancelled' },
-    };
-
-    return configs[status as keyof typeof configs] || configs.paid;
   };
 
   // Get payment method display
@@ -172,8 +160,6 @@ export default function OrderDetail() {
     );
   }
 
-  const statusConfig = getStatusConfig(order.status);
-  const StatusIcon = statusConfig.icon;
   const paymentMethod = getPaymentMethodDisplay();
   const PaymentIcon = paymentMethod.icon;
   const isOwner = user?.id === order.user_id;
@@ -191,10 +177,7 @@ export default function OrderDetail() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold">Order #{order.order_display_id || order.display_id || order.id.slice(0, 8)}</h1>
-              <Badge className={`flex items-center gap-1 ${statusConfig.color} animate-in zoom-in duration-500`}>
-                <StatusIcon className="h-3 w-3" />
-                {statusConfig.label}
-              </Badge>
+              <StatusBadge status={order.status} category="order" showIcon />
             </div>
             <p className="text-gray-500">Placed on {new Date(order.created_at).toLocaleDateString()}</p>
           </div>

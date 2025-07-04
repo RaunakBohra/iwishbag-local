@@ -179,26 +179,10 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
     }
   };
 
-  const getStatusIcon = (status?: string) => {
-    switch (status) {
-      case 'completed':
-      case 'paid':
-      case 'shipped':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'pending':
-      case 'processing':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'cancelled':
-      case 'rejected':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <Activity className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
   const getStatusBadge = (status?: string) => {
     if (!status) return null;
-    return <StatusBadge status={status} />;
+    const category = ['paid', 'ordered', 'shipped', 'completed', 'cancelled'].includes(status) ? 'order' : 'quote';
+    return <StatusBadge status={status} category={category} />;
   };
 
   if (!customer) {
@@ -302,7 +286,7 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
                   </div>
                   
                   <div className="flex-shrink-0">
-                    {getStatusIcon(activity.status)}
+                    {getStatusBadge(activity.status)}
                   </div>
                 </div>
               ))}

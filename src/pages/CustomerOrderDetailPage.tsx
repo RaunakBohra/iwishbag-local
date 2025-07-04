@@ -74,7 +74,7 @@ const CustomerOrderDetailPage = () => {
             
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                  <h1 className="text-2xl font-bold">Order {displayId}</h1>
-                 <StatusBadge status={order.status} />
+                 <StatusBadge status={order.status} category="order" />
             </div>
 
             <OrderTimeline currentStatus={order.status} />
@@ -93,7 +93,19 @@ const CustomerOrderDetailPage = () => {
                                     {order.quote_items.map((item, index) => (
                                         <div key={item.id}>
                                             <p className="font-semibold">{item.product_name || 'N/A'}</p>
-                                            {item.options && <p className="text-sm text-muted-foreground">{item.options}</p>}
+                                            {item.options && (() => {
+                                                try {
+                                                    const options = JSON.parse(item.options);
+                                                    return options.notes ? (
+                                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 my-2">
+                                                            <span className="font-semibold text-blue-800">Product Notes:</span>
+                                                            <span className="text-blue-900 ml-2 whitespace-pre-line">{options.notes}</span>
+                                                        </div>
+                                                    ) : null;
+                                                } catch {
+                                                    return null;
+                                                }
+                                            })()}
                                             <p className="text-sm text-muted-foreground">Quantity: {item.quantity || 1}</p>
                                             {item.product_url && (
                                                 <Button variant="link" asChild className="p-0 h-auto mt-2">
@@ -107,7 +119,6 @@ const CustomerOrderDetailPage = () => {
                             ) : (
                                 <>
                                     <p className="font-semibold">{order.product_name}</p>
-                                    {order.options && <p className="text-sm text-muted-foreground">{order.options}</p>}
                                     <p className="text-sm text-muted-foreground">Quantity: {order.quantity || 1}</p>
                                     {order.product_url && (
                                         <Button variant="link" asChild className="p-0 h-auto mt-2">

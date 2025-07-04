@@ -103,7 +103,7 @@ export const CartAbandonmentManager = () => {
       template_id: campaignForm.template_id,
       target_count: getAbandonedCartsCount(),
       sent_count: 0,
-      status: 'draft',
+      status: 'pending',
       scheduled_at: campaignForm.scheduled_at || undefined
     });
 

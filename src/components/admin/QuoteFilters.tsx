@@ -99,7 +99,7 @@ export const QuoteFilters = ({
     const priorityOptions = [
         { value: "all", label: "All Priorities" },
         { value: "low", label: "Low Priority" },
-        { value: "medium", label: "Medium Priority" },
+        { value: "normal", label: "Normal Priority" },
         { value: "high", label: "High Priority" },
         { value: "urgent", label: "Urgent" },
     ];
@@ -111,8 +111,8 @@ export const QuoteFilters = ({
     ];
 
     return (
-        <Card>
-            <CardHeader className="pb-3 border-b">
+        <Card className="shadow-md rounded-xl border border-gray-100">
+            <CardHeader className="pb-3 border-b bg-white rounded-t-xl">
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
                         <Filter className="h-5 w-5" />
@@ -150,74 +150,97 @@ export const QuoteFilters = ({
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 py-6 bg-white rounded-b-xl">
                 {/* Basic Filters - Always Visible */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    {/* Search */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <div className="flex flex-col sm:flex-row gap-6 items-stretch">
+                    {/* Search - Visually dominant */}
+                    <div className="relative flex-[2_2_0%] min-w-0">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input
                             placeholder="Search by QT#, Product, Email, or Country..."
                             value={searchTerm}
                             onChange={(e) => onSearchTermChange(e.target.value)}
-                            className="pl-10"
+                            className="pl-11 h-11 bg-gray-50 border border-gray-200 rounded-lg shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/10 text-base placeholder:text-muted-foreground transition-all"
                         />
                     </div>
-                    {/* Status Filter */}
-                    <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="All Statuses" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Statuses</SelectItem>
-                            {availableQuoteStatuses.map((status) => (
-                                <SelectItem key={status.name} value={status.name}>
-                                    <div className="flex items-center gap-2">
-                                        <Badge variant={status.color} className="text-xs">
-                                            {status.label}
-                                        </Badge>
-                                    </div>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    {/* Date Range */}
-                    <Select value={dateRange} onValueChange={onDateRangeChange}>
-                        <SelectTrigger>
-                            <Calendar className="h-4 w-4 mr-2" />
-                            <SelectValue placeholder="All Time" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {dateRangeOptions.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    {/* Other filters */}
+                    <div className="flex flex-1 gap-6 min-w-0 items-center">
+                        {/* Status Filter */}
+                        <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+                            <SelectTrigger className="w-40 h-11 bg-gray-50 border border-gray-200 rounded-lg shadow-sm text-base text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <span className="flex items-center gap-2">
+                                    <Filter className="h-4 w-4 text-muted-foreground" />
+                                    <SelectValue placeholder="All Statuses" className="text-muted-foreground" />
+                                </span>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                {availableQuoteStatuses.map((status) => (
+                                    <SelectItem key={status.name} value={status.name}>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant={status.color} className="text-xs">
+                                                {status.label}
+                                            </Badge>
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {/* Date Range */}
+                        <Select value={dateRange} onValueChange={onDateRangeChange}>
+                            <SelectTrigger className="w-40 h-11 bg-gray-50 border border-gray-200 rounded-lg shadow-sm text-base text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <span className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    <SelectValue placeholder="All Time" className="text-muted-foreground" />
+                                </span>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {dateRangeOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {/* Purchase Country Filter */}
+                        <Select value={purchaseCountryFilter || 'all'} onValueChange={onPurchaseCountryFilterChange} disabled={countriesLoading}>
+                            <SelectTrigger className="w-40 h-11 bg-gray-50 border border-gray-200 rounded-lg shadow-sm text-base text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <span className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                                    <SelectValue placeholder="Purchase Country" className="text-muted-foreground" />
+                                </span>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {dynamicCountryOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {/* Priority Filter */}
+                        <Select value={priorityFilter} onValueChange={onPriorityFilterChange}>
+                            <SelectTrigger className="w-40 h-11 bg-gray-50 border border-gray-200 rounded-lg shadow-sm text-base text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <span className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                    <SelectValue placeholder="All Priorities" className="text-muted-foreground" />
+                                </span>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {priorityOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 {/* Advanced Filters - Collapsible */}
                 {isAdvancedOpen && (
                     <div className="pt-4 border-t space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {/* Purchase Country Filter */}
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Purchase Country</label>
-                                <Select value={purchaseCountryFilter || 'all'} onValueChange={onPurchaseCountryFilterChange} disabled={countriesLoading}>
-                                    <SelectTrigger>
-                                        <MapPin className="h-4 w-4 mr-2" />
-                                        <SelectValue placeholder="Purchase Country" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {dynamicCountryOptions.map((option) => (
-                                            <SelectItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
                             {/* Shipping Country Filter */}
                             <div>
                                 <label className="block text-xs font-medium text-muted-foreground mb-1">Shipping Country</label>
@@ -245,40 +268,6 @@ export const QuoteFilters = ({
                                     </SelectTrigger>
                                     <SelectContent>
                                         {amountRangeOptions.map((option) => (
-                                            <SelectItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            {/* Country Filter */}
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Country</label>
-                                <Select value={countryFilter} onValueChange={onCountryFilterChange}>
-                                    <SelectTrigger>
-                                        <MapPin className="h-4 w-4 mr-2" />
-                                        <SelectValue placeholder="All Countries" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {dynamicCountryOptions.map((option) => (
-                                            <SelectItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            {/* Priority Filter */}
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Priority</label>
-                                <Select value={priorityFilter} onValueChange={onPriorityFilterChange}>
-                                    <SelectTrigger>
-                                        <Clock className="h-4 w-4 mr-2" />
-                                        <SelectValue placeholder="All Priorities" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {priorityOptions.map((option) => (
                                             <SelectItem key={option.value} value={option.value}>
                                                 {option.label}
                                             </SelectItem>

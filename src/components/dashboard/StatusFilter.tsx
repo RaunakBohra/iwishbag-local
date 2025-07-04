@@ -6,7 +6,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useStatusManagement } from "@/hooks/useStatusManagement";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/dashboard/StatusBadge";
 
 interface StatusFilterProps {
   onStatusChange: (status: string) => void;
@@ -30,9 +30,7 @@ export const StatusFilter = ({ onStatusChange }: StatusFilterProps) => {
         {availableQuoteStatuses.map((status) => (
           <SelectItem key={status.name} value={status.name}>
             <div className="flex items-center gap-2">
-              <Badge variant={status.color} className="text-xs">
-                {status.label}
-              </Badge>
+              <StatusBadge status={status.name} category="quote" showIcon={false} />
             </div>
           </SelectItem>
         ))}

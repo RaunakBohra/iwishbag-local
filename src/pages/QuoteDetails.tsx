@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { ArrowLeft, Edit, CheckCircle, XCircle, Clock, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -97,19 +98,7 @@ export default function QuoteDetails() {
             <p className="text-muted-foreground">Quote ID: {quote.id}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={quote.status === 'paid' ? 'default' : 'secondary'}>
-              {quote.status === 'paid' ? (
-                <>
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Paid
-                </>
-              ) : (
-                <>
-                  <Clock className="h-3 w-3 mr-1" />
-                  {quote.status}
-                </>
-              )}
-            </Badge>
+            <StatusBadge status={quote.status} category="quote" />
           </div>
         </div>
       </div>

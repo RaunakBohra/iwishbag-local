@@ -21,11 +21,59 @@ export type PaymentMethod =
   | 'bank_transfer'    // Bank transfer
   | null;              // No payment method selected
 
+export interface Quote {
+  id: string;
+  user_id: string;
+  email: string;
+  product_name: string;
+  product_url: string;
+  product_image_url?: string;
+  product_notes?: string;
+  quantity: number;
+  weight_kg: number;
+  dimensions_cm: {
+    length: number;
+    width: number;
+    height: number;
+  };
+  country_code: string;
+  status: QuoteStatus;
+  final_total: number;
+  final_total_local: number;
+  final_currency: string;
+  in_cart: boolean;
+  created_at: string;
+  updated_at: string;
+  approved_at?: string;
+  rejected_at?: string;
+  rejection_reason_id?: string;
+  rejection_details?: string;
+  payment_method?: string;
+  paid_at?: string;
+  ordered_at?: string;
+  shipped_at?: string;
+  completed_at?: string;
+  cancelled_at?: string;
+  priority?: QuotePriority;
+  display_id?: string;
+  share_token?: string;
+  shipping_route_id?: string;
+  shipping_carrier?: string;
+  customs_percentage?: number;
+  breakdown?: QuoteBreakdown;
+  quote_items?: QuoteItem[];
+}
+
 export interface QuoteState {
   status: QuoteStatus;
-  approval_status: QuoteApprovalStatus;
   in_cart: boolean;
-  payment_method: PaymentMethod;
+  approved_at?: string;
+  rejected_at?: string;
+  paid_at?: string;
+  ordered_at?: string;
+  shipped_at?: string;
+  completed_at?: string;
+  cancelled_at?: string;
 }
 
 // Status transition validation
@@ -58,17 +106,10 @@ export const isValidStatusTransition = (currentState: QuoteState, newState: Part
     }
   }
 
-  // If approval status is changing
-  if (newState.approval_status && newState.approval_status !== currentState.approval_status) {
-    // Can only change approval status when quote is in 'sent' state
-    if (currentState.status !== 'sent') return false;
-    return ['approved', 'rejected'].includes(newState.approval_status);
-  }
-
   // If cart status is changing
   if (newState.in_cart !== undefined && newState.in_cart !== currentState.in_cart) {
     // Can only add to cart if quote is approved
-    if (newState.in_cart && currentState.approval_status !== 'approved') return false;
+    if (newState.in_cart && currentState.status !== 'approved') return false;
     // Can only remove from cart if quote is in cart
     if (!newState.in_cart && !currentState.in_cart) return false;
     return true;
@@ -83,7 +124,7 @@ export const isQuoteEditable = (state: QuoteState): boolean => {
 };
 
 export const isQuoteApproved = (state: QuoteState): boolean => {
-  return state.approval_status === 'approved';
+  return state.status === 'approved';
 };
 
 export const isQuoteInCart = (state: QuoteState): boolean => {
@@ -100,6 +141,10 @@ export const isQuoteCompleted = (state: QuoteState): boolean => {
 
 export const isQuoteCancelled = (state: QuoteState): boolean => {
   return state.status === 'cancelled';
+};
+
+export const canAddToCart = (state: QuoteState): boolean => {
+  return state.status === 'approved' && !state.in_cart;
 };
 
 // Status update function

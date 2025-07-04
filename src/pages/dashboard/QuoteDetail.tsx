@@ -64,6 +64,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { QuoteMessaging } from '@/components/messaging/QuoteMessaging';
 import { CustomerRejectQuoteDialog } from '@/components/dashboard/CustomerRejectQuoteDialog';
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -142,22 +143,7 @@ export default function QuoteDetail() {
     return formatAmountForDisplay(amount, userCurrency, exchangeRate);
   };
 
-  // Get status configuration
-  const getStatusConfig = (status: string, approvalStatus?: string) => {
-    const configs = {
-      pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending Review' },
-      sent: { color: 'bg-blue-100 text-blue-800', icon: Package, label: 'Quote Sent' },
-      approved: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Approved' },
-      rejected: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Rejected' },
-      paid: { color: 'bg-purple-100 text-purple-800', icon: DollarSign, label: 'Paid' },
-      ordered: { color: 'bg-indigo-100 text-indigo-800', icon: ShoppingCart, label: 'Ordered' },
-      shipped: { color: 'bg-orange-100 text-orange-800', icon: Truck, label: 'Shipped' },
-      completed: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Delivered' },
-    };
 
-    const statusKey = approvalStatus === 'approved' ? 'approved' : status;
-    return configs[statusKey as keyof typeof configs] || configs.pending;
-  };
 
   // Calculate delivery timeline
   const getDeliveryTimeline = () => {
@@ -175,24 +161,34 @@ export default function QuoteDetail() {
   const shippingAddress = quote?.shipping_address as unknown as ShippingAddress | null;
 
   // Mapping function for quote state (inlined from QuoteBreakdown)
-  function getQuoteUIState(quote) {
-    const { status, approval_status, in_cart } = quote;
-    let step: QuoteStep = 'review';
-    if (status === 'pending' && approval_status === 'pending') {
+  const getQuoteUIState = (quote: any) => {
+    const { status, in_cart } = quote;
+    
+    let step: 'review' | 'approve' | 'cart' | 'checkout' | 'rejected' = 'review';
+    let summaryStatus: 'pending' | 'approved' | 'rejected' | 'in_cart' = 'pending';
+    
+    if (status === 'pending') {
       step = 'review';
-    } else if ((status === 'calculated' || status === 'sent') && approval_status === 'pending') {
-      step = 'review';
-    } else if (status === 'accepted' && approval_status === 'approved' && !in_cart) {
+      summaryStatus = 'pending';
+    } else if (status === 'sent') {
       step = 'approve';
-    } else if ((status === 'accepted' || status === 'paid' || status === 'ordered' || status === 'shipped' || status === 'completed') && approval_status === 'approved' && in_cart) {
+      summaryStatus = 'pending';
+    } else if (status === 'approved' && !in_cart) {
+      step = 'approve';
+      summaryStatus = 'approved';
+    } else if (status === 'approved' && in_cart) {
       step = 'cart';
-    } else if (status === 'cancelled' || approval_status === 'rejected') {
+      summaryStatus = 'in_cart';
+    } else if (status === 'rejected') {
       step = 'rejected';
+      summaryStatus = 'rejected';
     } else if (status === 'paid' || status === 'ordered' || status === 'shipped' || status === 'completed') {
       step = 'checkout';
+      summaryStatus = 'approved';
     }
+    
     return { step, rejected: step === 'rejected' };
-  }
+  };
 
   // --- Delivery Window Calculation ---
   const [deliveryWindow, setDeliveryWindow] = React.useState<{ 
@@ -345,8 +341,6 @@ export default function QuoteDetail() {
     );
   }
 
-  const statusConfig = getStatusConfig(quote.status, quote.approval_status);
-  const StatusIcon = statusConfig.icon;
   const isOwner = quote.user_id === user?.id;
 
   const handleApprove = async () => {
@@ -449,10 +443,7 @@ export default function QuoteDetail() {
                     </p>
                   </div>
                 </div>
-                <Badge className={`flex items-center gap-1 px-3 py-1.5 rounded-full shadow-sm ${statusConfig.color} animate-in zoom-in duration-500`}>
-                  <StatusIcon className="h-3 w-3" />
-                  <span className="font-medium">{statusConfig.label}</span>
-                </Badge>
+                <StatusBadge status={quote.status} category="quote" showIcon className="text-sm" />
               </div>
             </div>
           </div>
@@ -478,43 +469,50 @@ export default function QuoteDetail() {
               </CardHeader>
               <CardContent className="p-6">
                 {Array.isArray(quote.quote_items) && quote.quote_items.length > 1 ? (
-                  <div className="flex flex-col gap-6">
+                  <>
+                    {/* Horizontally scrollable product cards */}
                     <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                                              {quote.quote_items.map((item) => (
-                          <div key={item.id} className="flex flex-col items-center min-w-[140px] max-w-[160px] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50 shadow-sm hover:shadow-md transition-all duration-200">
-                            {item.image_url && (
-                              <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl flex items-center justify-center mb-3 shadow-inner">
-                                <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover rounded-xl" />
-                              </div>
+                      {quote.quote_items.map((item) => (
+                        <div key={item.id} className="flex flex-col items-center min-w-[140px] max-w-[160px] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50 shadow-sm hover:shadow-md transition-all duration-200">
+                          <div className="text-sm font-medium text-center truncate w-full">
+                            {item.product_url ? (
+                              <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{item.product_name}</a>
+                            ) : (
+                              item.product_name
                             )}
-                            <div className="text-sm font-medium text-center truncate w-full">
-                              {item.product_url ? (
-                                <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{item.product_name}</a>
-                              ) : (
-                                item.product_name
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1 bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-full">Qty: {item.quantity}</div>
                           </div>
-                        ))}
-                    </div>
-                    {/* Cost Info Grouped - new order: country, cost, quote, weight, items */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
-                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Globe className="h-4 w-4 text-gray-600" />
-                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Country</span>
+                          <div className="text-xs text-muted-foreground mt-1 bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-full inline-block">Qty: {item.quantity}</div>
+                          {/* Product Notes Blue Box */}
+                          {item.options && (() => {
+                            try {
+                              const options = JSON.parse(item.options);
+                              return options.notes ? (
+                                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
+                                  <span className="font-medium text-blue-800">Notes:</span> {options.notes}
+                                </div>
+                              ) : null;
+                            } catch {
+                              // If not JSON, treat as plain text notes
+                              return (
+                                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
+                                  <span className="font-medium text-blue-800">Notes:</span> {item.options}
+                                </div>
+                              );
+                            }
+                          })()}
                         </div>
-                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{countryName}</span>
-                      </div>
-                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                      ))}
+                    </div>
+                    {/* Summary section: 2 rows, first row split in half, second row split in quarters */}
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50 flex flex-col justify-between">
                         <div className="flex items-center gap-2 mb-2">
                           <Package className="h-4 w-4 text-gray-600" />
                           <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Cost of Goods</span>
                         </div>
                         <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatAmount(quote.item_price)}</span>
                       </div>
-                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50 flex flex-col justify-between">
                         <div className="flex items-center gap-2 mb-2">
                           <Receipt className="h-4 w-4 text-gray-600" />
                           <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Quote Total</span>
@@ -527,12 +525,21 @@ export default function QuoteDetail() {
                         </div>
                         <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatAmount(quote.final_total)}</span>
                       </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
                       <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
                         <div className="flex items-center gap-2 mb-2">
                           <Weight className="h-4 w-4 text-gray-600" />
                           <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Weight</span>
                         </div>
                         <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{quote.item_weight || 0} kg</span>
+                      </div>
+                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Globe className="h-4 w-4 text-gray-600" />
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Country</span>
+                        </div>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{countryName}</span>
                       </div>
                       <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
                         <div className="flex items-center gap-2 mb-2">
@@ -549,23 +556,45 @@ export default function QuoteDetail() {
                         <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{deliveryWindow ? `${deliveryWindow.label} (${deliveryWindow.days})` : '—'}</span>
                       </div>
                     </div>
-                  </div>
+                  </>
                 ) : (
-                                      <div className="flex flex-col sm:flex-row gap-6">
-                      {/* Product Image - Only show if image exists */}
-                      {quote.image_url && (
-                        <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-gray-100 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-2xl flex items-center justify-center flex-shrink-0 hover:scale-105 transition-transform duration-200 shadow-lg">
-                          <img src={quote.image_url} alt={quote.product_name} className="w-full h-full object-cover rounded-2xl" />
-                        </div>
-                      )}
-                      {/* Product Info + Status + Price */}
-                      <div className="flex-1 min-w-0 flex flex-col gap-4 justify-between">
+                  <div className="flex flex-col sm:flex-row gap-6">
+                    {/* Product Image - Only show if image exists */}
+                    {quote.image_url && (
+                      <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-gray-100 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-2xl flex items-center justify-center flex-shrink-0 hover:scale-105 transition-transform duration-200 shadow-lg">
+                        <img src={quote.image_url} alt={quote.product_name} className="w-full h-full object-cover rounded-2xl" />
+                      </div>
+                    )}
+                    {/* Product Info + Status + Price */}
+                    <div className="flex-1 min-w-0 flex flex-col gap-4 justify-between">
                       <div className="flex flex-col gap-3">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                           <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent truncate">
-                            {quote.product_name || 'Product Name'}
+                            {quote.quote_items && quote.quote_items[0] && quote.quote_items[0].product_url ? (
+                              <a href={quote.quote_items[0].product_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{quote.product_name || 'Product Name'}</a>
+                            ) : (
+                              quote.product_name || 'Product Name'
+                            )}
                           </h3>
                         </div>
+                        {/* Product Notes Blue Box for single product */}
+                        {quote.quote_items && quote.quote_items[0] && quote.quote_items[0].options && (() => {
+                          try {
+                            const options = JSON.parse(quote.quote_items[0].options);
+                            return options.notes ? (
+                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
+                                <span className="font-medium text-blue-800">Notes:</span> {options.notes}
+                              </div>
+                            ) : null;
+                          } catch {
+                            // If not JSON, treat as plain text notes
+                            return (
+                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
+                                <span className="font-medium text-blue-800">Notes:</span> {quote.quote_items[0].options}
+                              </div>
+                            );
+                          }
+                        })()}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
                             <div className="flex items-center gap-2 mb-2">
@@ -642,7 +671,7 @@ export default function QuoteDetail() {
                         </div>
                         Message Support
                       </button>
-                      {quote.approval_status !== 'rejected' && (
+                      {quote.status !== 'rejected' && (
                         <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105" onClick={handleCancelQuote}>
                           <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
                             <XCircle className="w-4 h-4 text-red-600" />
@@ -686,7 +715,7 @@ export default function QuoteDetail() {
                         </div>
                         Message Support
                       </button>
-                      {quote.approval_status !== 'rejected' && (
+                      {quote.status !== 'rejected' && (
                         <button 
                           className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105" 
                           onClick={handleCancelQuote}
@@ -749,21 +778,41 @@ export default function QuoteDetail() {
                     <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Items</h3>
                     <div className="space-y-3">
                       {quote.quote_items?.map((item) => (
-                        <div key={item.id} className="flex justify-between items-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200/50 dark:border-gray-600/50 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200">
-                                                  <div className="flex items-center gap-3">
-                          {item.image_url && (
-                            <img 
-                              src={item.image_url} 
-                              alt={item.product_name}
-                              className="w-12 h-12 rounded-lg object-cover shadow-sm"
-                            />
-                          )}
-                          <div className={item.image_url ? "" : "flex-1"}>
-                            <div className="font-semibold text-sm">{item.product_name}</div>
-                            <div className="text-muted-foreground text-xs bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-full inline-block">Quantity: {item.quantity}</div>
+                        <div key={item.id} className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200/50 dark:border-gray-600/50 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-3">
+                              {item.image_url && (
+                                <img 
+                                  src={item.image_url} 
+                                  alt={item.product_name}
+                                  className="w-12 h-12 rounded-lg object-cover shadow-sm"
+                                />
+                              )}
+                              <div className={item.image_url ? "" : "flex-1"}>
+                                <div className="font-semibold text-sm">{item.product_name}</div>
+                                <div className="text-muted-foreground text-xs bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-full inline-block">Quantity: {item.quantity}</div>
+                              </div>
+                            </div>
+                            <span className="font-bold text-sm bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{formatAmount(item.item_price * item.quantity)}</span>
                           </div>
-                        </div>
-                          <span className="font-bold text-sm bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{formatAmount(item.item_price * item.quantity)}</span>
+                          {/* Product Notes */}
+                          {item.options && (() => {
+                            try {
+                              const options = JSON.parse(item.options);
+                              return options.notes ? (
+                                <div className="mt-3 pt-3 border-t border-gray-200/50 dark:border-gray-600/50">
+                                  <div className="flex items-start gap-2">
+                                    <Edit2 className="h-3 w-3 text-gray-500 mt-0.5 flex-shrink-0" />
+                                    <div className="text-xs text-gray-600 dark:text-gray-300 bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-lg">
+                                      <span className="font-medium">Notes:</span> {options.notes}
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : null;
+                            } catch {
+                              return null;
+                            }
+                          })()}
                         </div>
                       ))}
                     </div>
@@ -836,7 +885,7 @@ export default function QuoteDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
-                  {quote.approval_status === 'pending' && (
+                  {quote.status === 'pending' && (
                     <>
                       <Button 
                         className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
@@ -849,7 +898,7 @@ export default function QuoteDetail() {
                     </>
                   )}
                   
-                  {(quote.approval_status === 'rejected' || quote.status === 'cancelled') && (
+                  {(quote.status === 'rejected' || quote.status === 'cancelled') && (
                     <Button 
                       className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
                       onClick={handleApprove}
@@ -860,7 +909,7 @@ export default function QuoteDetail() {
                     </Button>
                   )}
                   
-                  {quote.approval_status === 'approved' && !quote.in_cart && (
+                  {quote.status === 'approved' && !quote.in_cart && (
                     <Button 
                       className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
                       onClick={handleAddToCart}

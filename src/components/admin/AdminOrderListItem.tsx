@@ -8,6 +8,28 @@ import { MultiCurrencyDisplay } from "./MultiCurrencyDisplay";
 import { useAdminCurrencyDisplay } from "@/hooks/useAdminCurrencyDisplay";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
+import { 
+  ChevronDown, 
+  ChevronRight, 
+  Mail, 
+  Copy, 
+  Eye, 
+  Calendar,
+  User,
+  Package,
+  DollarSign,
+  AlertTriangle,
+  Phone,
+  MapPin
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
+import { useCountryUtils, formatShippingRoute } from '@/lib/countryUtils';
+import { extractShippingAddressFromNotes } from '@/lib/addressUpdates';
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 type OrderWithItems = Tables<'quotes'> & { 
   quote_items: Tables<'quote_items'>[];
@@ -19,22 +41,6 @@ interface AdminOrderListItemProps {
     isSelected: boolean;
     onSelect: (id: string) => void;
 }
-
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'paid':
-        case 'ordered':
-            return 'default';
-        case 'shipped': 
-            return 'secondary';
-        case 'completed': 
-            return 'outline';
-        case 'cancelled': 
-            return 'destructive';
-        default: 
-            return 'default';
-    }
-};
 
 const getPriorityBadge = (priority: OrderWithItems['priority']) => {
   if (!priority) return null;
@@ -119,7 +125,7 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect }: AdminOrderLi
                             </div>
                             <div>
                                 <div className="flex items-center flex-wrap gap-1">
-                                    <StatusBadge status={order.status} />
+                                    <StatusBadge status={order.status} category="order" />
                                     {getPriorityBadge(order.priority)}
                                 </div>
                                 {order.status === 'cancelled' && order.rejection_details && (

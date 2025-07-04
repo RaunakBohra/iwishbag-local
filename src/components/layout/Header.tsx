@@ -69,7 +69,7 @@ const Header = () => {
         .from('quotes')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .eq('approval_status', 'approved');
+        .eq('status', 'approved');
       
       if (error) {
         console.error('Error fetching approved quotes count:', error);
@@ -87,9 +87,15 @@ const Header = () => {
   };
 
   const getDisplayName = () => {
+    // Check for name in user metadata (from sign-up)
+    if (user?.user_metadata?.name) {
+      return user.user_metadata.name;
+    }
+    // Check for full_name (from OAuth providers like Google)
     if (user?.user_metadata?.full_name) {
       return user.user_metadata.full_name;
     }
+    // Fallback to email prefix
     if (user?.email) {
       return user.email.split('@')[0];
     }

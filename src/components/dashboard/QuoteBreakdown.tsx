@@ -44,50 +44,34 @@ interface QuoteBreakdownProps {
   onAddToCart?: (quoteId: string) => void;
 }
 
-// Mapping function for quote state
-function getQuoteUIState(quote) {
-  const { status, approval_status, in_cart } = quote;
+const getQuoteUIState = (quote: any) => {
+  const { status, in_cart } = quote;
+  
   let step: 'review' | 'approve' | 'cart' | 'checkout' | 'rejected' = 'review';
   let summaryStatus: 'pending' | 'approved' | 'rejected' | 'in_cart' = 'pending';
-  let canApprove = false;
-  let canReject = false;
-  let canAddToCart = false;
-  let canGoToCart = false;
-  let canReApprove = false;
-  let showCancelLink = false;
-
-  // Handle pending quotes (new quotes awaiting review)
-  if (status === 'pending' && approval_status === 'pending') {
+  
+  if (status === 'pending') {
     step = 'review';
     summaryStatus = 'pending';
-    showCancelLink = true;
-  } else if ((status === 'calculated' || status === 'sent') && approval_status === 'pending') {
-    step = 'review';
+  } else if (status === 'sent') {
+    step = 'approve';
     summaryStatus = 'pending';
-    canApprove = true;
-    canReject = true;
-    showCancelLink = true;
-  } else if (status === 'accepted' && approval_status === 'approved' && !in_cart) {
+  } else if (status === 'approved' && !in_cart) {
     step = 'approve';
     summaryStatus = 'approved';
-    canAddToCart = true;
-    showCancelLink = true;
-  } else if ((status === 'accepted' || status === 'paid' || status === 'ordered' || status === 'shipped' || status === 'completed') && approval_status === 'approved' && in_cart) {
+  } else if (status === 'approved' && in_cart) {
     step = 'cart';
     summaryStatus = 'in_cart';
-    canGoToCart = true;
-    showCancelLink = true;
-  } else if (status === 'cancelled' || approval_status === 'rejected') {
+  } else if (status === 'rejected') {
     step = 'rejected';
     summaryStatus = 'rejected';
-    canReApprove = true;
   } else if (status === 'paid' || status === 'ordered' || status === 'shipped' || status === 'completed') {
     step = 'checkout';
     summaryStatus = 'approved';
   }
-
-  return { step, summaryStatus, canApprove, canReject, canAddToCart, canGoToCart, canReApprove, showCancelLink };
-}
+  
+  return { step, rejected: step === 'rejected' };
+};
 
 export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onRecalculate, onSave, onCancel, onAddToCart }: QuoteBreakdownProps) {
   const [isItemsExpanded, setIsItemsExpanded] = useState(true);
@@ -193,18 +177,18 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
           status={uiState.summaryStatus}
           total={quoteTotal}
           itemCount={quote.quote_items?.length || 0}
-          onApprove={uiState.canApprove ? handleApproveClick : undefined}
+          onApprove={uiState.step === 'approve' ? handleApproveClick : undefined}
           isProcessing={isProcessing}
           countryCode={quote.country_code}
           renderActions={() => (
             <>
-              {uiState.canAddToCart && (
+              {quote.status !== 'rejected' && (
                 <Button onClick={handleAddToCart} disabled={isProcessing} className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm">
                   <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                   Add to Cart
                 </Button>
               )}
-              {uiState.canGoToCart && (
+              {quote.status !== 'rejected' && (
                 <Button asChild className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm">
                   <Link to="/cart">
                     <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
@@ -212,7 +196,7 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
                   </Link>
                 </Button>
               )}
-              {uiState.canReApprove && (
+              {quote.status !== 'rejected' && (
                 <Button onClick={handleReApprove} disabled={isProcessing} className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm">
                   Re-Approve Quote
                 </Button>
@@ -278,7 +262,7 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
                 <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-gray-700" onClick={handleMessageSupport}>
                   <MessageCircle className="w-4 h-4" /> Message Support
                 </button>
-                {quote.approval_status !== 'rejected' && (
+                {quote.status !== 'rejected' && (
                   <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-red-600" onClick={handleCancelQuote}>
                     <XCircle className="w-4 h-4" /> Cancel Quote
                   </button>
@@ -309,7 +293,7 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
                   >
                     <MessageCircle className="w-4 h-4" /> Message Support
                   </button>
-                  {quote.approval_status !== 'rejected' && (
+                  {quote.status !== 'rejected' && (
                     <button 
                       className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-red-600" 
                       onClick={handleCancelQuote}

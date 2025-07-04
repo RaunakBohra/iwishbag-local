@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tables } from "@/integrations/supabase/types";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
@@ -16,7 +15,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 export const DashboardAnalytics = ({ quotes, orders }: DashboardAnalyticsProps) => {
   // Status distribution for charts
   const statusCounts = quotes.reduce((acc, quote) => {
-    const status = quote.approval_status || quote.status;
+    const status = quote.status;
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);

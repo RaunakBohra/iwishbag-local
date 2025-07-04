@@ -13,8 +13,8 @@ export const TopCountries = () => {
     queryFn: async () => {
       const { data: quotes, error } = await supabase
         .from('quotes')
-        .select('country_code, final_total_local, final_total, approval_status')
-        .eq('approval_status', 'approved');
+        .select('country_code, final_total_local, final_total, status')
+        .eq('status', 'approved');
       
       if (error) throw error;
 

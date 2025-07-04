@@ -69,7 +69,7 @@ const AdminDashboard = () => {
         supabase.from('quotes').select('*', { count: 'exact', head: true }),
         supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['paid', 'ordered', 'shipped', 'completed']),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending', 'confirmed']),
+        supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending', 'approved']),
       ]);
 
       // Try to get payment data, but handle gracefully if table doesn't exist
