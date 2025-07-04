@@ -12,13 +12,13 @@ export const useHomePageSettings = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // Check user role for admin access
+  // Check user role for admin access (only for authenticated users)
   const { data: userRole } = useQuery({
     queryKey: ['user-role', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       
-      console.log('Checking user role for home page settings:', user.id);
+      // Checking user role for home page settings
       
       const { data, error } = await supabase
         .from('user_roles')
@@ -31,7 +31,7 @@ export const useHomePageSettings = () => {
         return null;
       }
       
-      console.log('User role for home page settings:', data);
+      // User role retrieved successfully
       return data;
     },
     enabled: !!user?.id,
@@ -40,9 +40,7 @@ export const useHomePageSettings = () => {
   const { data: homePageSettings, isLoading, error, refetch } = useQuery({
     queryKey: ['home-page-settings'],
     queryFn: async () => {
-      console.log('Fetching home page settings...');
-      console.log('Current user:', user?.id);
-      console.log('User role:', userRole?.role);
+      // Fetching home page settings
       
       const { data, error } = await supabase
         .from('footer_settings')
@@ -52,12 +50,12 @@ export const useHomePageSettings = () => {
         console.error('Error fetching footer settings:', error);
         throw new Error(`Failed to fetch footer settings: ${error.message}`);
       }
-      console.log('Home page settings fetched successfully');
+      // Home page settings fetched successfully
       return data;
     },
     staleTime: 0, // Always fetch fresh data
     refetchOnWindowFocus: true, // Refetch when window gains focus
-    enabled: !!user?.id && !!userRole, // Only run when user and user role are loaded
+    // Remove user dependency - allow fetching for all users
   });
 
   const [formData, setFormData] = useState<HomePageSettingsData>({
@@ -116,6 +114,11 @@ export const useHomePageSettings = () => {
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: HomePageSettingsData) => {
+      // Only allow updates for admin users
+      if (!user || !userRole?.role || userRole.role !== 'admin') {
+        throw new Error('Unauthorized: Admin access required');
+      }
+
       let id = homePageSettings?.id;
       if (!id) {
         const { data: row } = await supabase.from('footer_settings').select('id').single();
@@ -177,6 +180,7 @@ export const useHomePageSettings = () => {
     handleInputChange,
     handleSubmit,
     refetch,
+    isAdmin: userRole?.role === 'admin',
   };
 };
 

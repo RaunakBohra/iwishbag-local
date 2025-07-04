@@ -465,12 +465,13 @@ export default function OrderDetail() {
             Update your shipping address for this order.
           </DialogDescription>
           <AddressEditForm
-            address={shippingAddress}
-            onSuccess={() => {
+            currentAddress={shippingAddress}
+            onSave={() => {
               setIsAddressDialogOpen(false);
               // Refresh the order data
               window.location.reload();
             }}
+            onCancel={() => setIsAddressDialogOpen(false)}
           />
         </DialogContent>
       </Dialog>

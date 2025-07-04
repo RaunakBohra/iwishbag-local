@@ -33,6 +33,7 @@ const Contact = () => {
       }
       return data;
     },
+    // Allow fetching for all users, not just authenticated ones
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -70,7 +70,21 @@ src/
 3. Make your changes
 4. Submit a pull request
 
-## Important Development Notes
+## Documentation
+
+### Technical Documentation
+For comprehensive technical documentation covering recent features and implementations, see [`TECHNICAL_DOCUMENTATION.md`](./TECHNICAL_DOCUMENTATION.md). This includes:
+
+- **Address Edit & Shipping Address UX**: Country field handling, form optimization, and database updates
+- **Quote Request Flow**: Multi-step quote submission with product review
+- **Country Utilities System**: Consistent country code/name handling across the app
+- **Payment Webhook System**: Stripe integration and automated quote status updates
+- **Quote Status & Priority Calculation**: Automated priority assignment and status workflow
+- **UI/UX Improvements**: Supreme mobile design and responsive layouts
+- **Testing & Debugging**: Comprehensive testing guidelines
+- **Future Development**: Enhancement roadmap and maintenance notes
+
+### Important Development Notes
 
 ### Dual Currency Display Requirement
 When working with admin quotes and orders, ensure that cost breakdowns display in both purchase currency and user's preferred currency. See `DUAL_CURRENCY_DISPLAY_REQUIREMENT.md` for detailed implementation guidelines.

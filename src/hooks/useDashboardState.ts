@@ -19,7 +19,11 @@ export const useDashboardState = () => {
       
       const { data, error } = await supabase
         .from('quotes')
-        .select('*')
+        .select(`
+          *,
+          quote_items (*),
+          profiles!quotes_user_id_fkey(preferred_display_currency)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       

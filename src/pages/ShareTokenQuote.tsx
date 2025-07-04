@@ -301,9 +301,13 @@ export default function ShareTokenQuote() {
       <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
         <DialogContent className="max-w-2xl">
           <AddressEditForm
-            quoteId={quote.id}
-            onClose={() => setIsAddressDialogOpen(false)}
-            isAnonymous={true}
+            currentAddress={shippingAddress}
+            onSave={() => {
+              setIsAddressDialogOpen(false);
+              // Refresh the page to get updated data
+              window.location.reload();
+            }}
+            onCancel={() => setIsAddressDialogOpen(false)}
           />
         </DialogContent>
       </Dialog>

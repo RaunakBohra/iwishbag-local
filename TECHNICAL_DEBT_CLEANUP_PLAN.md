@@ -81,6 +81,7 @@
 ## 📝 Implementation Checklist
 
 ### Phase 1: Debug Code Removal
+- [x] Remove console.log from useHomePageSettings.ts
 - [ ] Remove console.log from useCustomerManagement.ts
 - [ ] Remove console.log from Cart.tsx
 - [ ] Remove console.log from cartStore.ts

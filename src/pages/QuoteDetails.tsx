@@ -229,11 +229,12 @@ export default function QuoteDetails() {
             Update your shipping address for this quote.
           </DialogDescription>
           <AddressEditForm
-            address={shippingAddress}
-            onSuccess={() => {
+            currentAddress={shippingAddress}
+            onSave={() => {
               setIsAddressDialogOpen(false);
               queryClient.invalidateQueries(['quote', id]);
             }}
+            onCancel={() => setIsAddressDialogOpen(false)}
           />
         </DialogContent>
       </Dialog>
