@@ -419,7 +419,7 @@ export default function QuoteDetail() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className={`container py-6 sm:py-8 animate-in fade-in duration-500 ${isMobile ? 'pb-24' : ''}`}>
+      <div className={`container px-4 sm:px-6 py-4 sm:py-6 lg:py-8 animate-in fade-in duration-500 ${isMobile ? 'pb-24' : ''}`}>
         {/* Header */}
         <div className="mb-6 sm:mb-8 animate-in slide-in-from-top duration-700">
           <Link 
@@ -432,33 +432,35 @@ export default function QuoteDetail() {
             <span className="font-medium">Back to Quotes</span>
           </Link>
           
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-2xl bg-gradient-to-r from-slate-600 to-gray-700 shadow-lg">
-                    <Receipt className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
-                      Quote #{quote.display_id || quote.id.slice(0, 8)}
-                    </h1>
-                    <p className="text-gray-500 text-sm sm:text-base">
-                      Created on {new Date(quote.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
+          {/* Mobile-optimized header layout */}
+          <div className="space-y-4">
+            {/* Quote ID and Status Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-gradient-to-r from-slate-600 to-gray-700 shadow-lg">
+                  <Receipt className="h-6 w-6 text-white" />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 truncate">
+                    Quote #{quote.display_id || quote.id.slice(0, 8)}
+                  </h1>
+                  <p className="text-gray-500 text-sm sm:text-base">
+                    Created on {new Date(quote.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-center sm:justify-start">
                 <StatusBadge status={quote.status} category="quote" showIcon className="text-sm" />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Status Stepper */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-4 sm:p-6">
               <QuoteStepper currentStep={getQuoteUIState(quote).step} rejected={getQuoteUIState(quote).step === 'rejected'} />
             </div>
 
@@ -472,7 +474,7 @@ export default function QuoteDetail() {
                   Product Details
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 {Array.isArray(quote.quote_items) && quote.quote_items.length > 1 ? (
                   <>
                     {/* Horizontally scrollable product cards */}
