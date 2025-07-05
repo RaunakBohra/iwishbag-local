@@ -5,6 +5,7 @@ import { useDashboardState } from '@/hooks/useDashboardState';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { useUserCurrency } from '@/hooks/useUserCurrency';
 import { useQuoteState } from '@/hooks/useQuoteState';
+import { useCartStore } from '@/stores/cartStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -47,6 +48,14 @@ export default function Quotes() {
   const { formatAmount } = useUserCurrency();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deliveryEstimates, setDeliveryEstimates] = useState<Record<string, any>>({});
+  
+  // Subscribe to cart store to make quotes list reactive to cart changes
+  const cartItems = useCartStore((state) => state.items);
+
+  // Helper function to check if a quote is in cart
+  const isQuoteInCart = (quoteId: string) => {
+    return cartItems.some(item => item.quoteId === quoteId);
+  };
 
   // Filter quotes based on status and search
   const filteredQuotes = quotes?.filter(quote => {
@@ -369,12 +378,12 @@ export default function Quotes() {
                         View Details
                       </Button>
                     </Link>
-                    {quote.status === 'approved' && !quote.in_cart && (
+                    {quote.status === 'approved' && !isQuoteInCart(quote.id) && (
                       <div className="flex-1">
                         <AddToCartButton quoteId={quote.id} className="w-full h-10 text-sm" />
                       </div>
                     )}
-                    {quote.status === 'approved' && quote.in_cart && (
+                    {quote.status === 'approved' && isQuoteInCart(quote.id) && (
                       <Link to="/cart" className="flex-1">
                         <Button size="sm" variant="secondary" className="w-full h-10 text-sm">
                           <ShoppingCart className="h-3 w-3 mr-1" />
@@ -460,10 +469,10 @@ export default function Quotes() {
                               View
                             </Button>
                           </Link>
-                          {quote.status === 'approved' && !quote.in_cart && (
+                          {quote.status === 'approved' && !isQuoteInCart(quote.id) && (
                             <AddToCartButton quoteId={quote.id} />
                           )}
-                          {quote.status === 'approved' && quote.in_cart && (
+                          {quote.status === 'approved' && isQuoteInCart(quote.id) && (
                             <Link to="/cart">
                               <Button size="sm" variant="secondary" className="flex items-center gap-1">
                                 <ShoppingCart className="h-3 w-3" />
