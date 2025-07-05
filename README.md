@@ -2,842 +2,259 @@
 
 A comprehensive e-commerce platform with advanced features for managing global wishlists and orders.
 
-## Getting Started
+## 🚀 Quick Start
 
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Copy `.env.example` to `.env` and configure your environment variables
-4. Start the development server: `npm run dev`
-5. Navigate to `http://localhost:8082` to view the application
+1. **Clone & Install**
+   ```bash
+   git clone <repository-url>
+   cd iwishBag-new
+   npm install
+   ```
 
-## Features
+2. **Environment Setup**
+   ```bash
+   cp .env.example .env
+   # Configure your Supabase credentials
+   ```
 
-- Advanced e-commerce functionality
-- Real-time analytics and reporting
-- Admin dashboard with comprehensive management tools
-- Customer management and order processing
-- Quote management and approval workflows
-- Multi-currency support
-- Bank transfer and cash on delivery payment options
-- Responsive design with modern UI
-- And much more...
+3. **Start Development**
+   ```bash
+   npm run dev
+   # Frontend: http://localhost:8082
+   # Supabase Functions: http://localhost:54321
+   ```
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- React + TypeScript
-- Vite
-- Tailwind CSS
-- Shadcn/ui
-- Supabase (Backend & Database)
-- React Query (Data fetching)
-- React Router (Navigation)
+- **Frontend**: React + TypeScript + Vite
+- **Styling**: Tailwind CSS + Shadcn/ui
+- **Backend**: Supabase (Database + Edge Functions)
+- **State Management**: Zustand + React Query
+- **Routing**: React Router
 
-## Environment Variables
+## 📋 Available Scripts
 
-Create a `.env` file in the root directory with the following variables:
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Run ESLint |
+| `npm run type-check` | Run TypeScript checking |
 
-```bash
-# Supabase Configuration
-VITE_SUPABASE_URL=your_supabase_url_here
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-```
-
-## Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-- `npm run type-check` - Run TypeScript type checking
-
-## Project Structure
+## 🏗️ Project Structure
 
 ```
 src/
 ├── components/     # Reusable UI components
+│   ├── admin/     # Admin-specific components
+│   ├── cart/      # Cart functionality
+│   ├── dashboard/ # Dashboard components
+│   └── ui/        # Base UI components
 ├── pages/         # Page components
 ├── hooks/         # Custom React hooks
 ├── contexts/      # React contexts
-├── lib/           # Utility functions and configurations
-├── types/         # TypeScript type definitions
-└── config/        # Configuration files
+├── lib/           # Utility functions
+├── stores/        # State management
+└── types/         # TypeScript definitions
 ```
 
-## Contributing
+## 🎯 Core Features
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+### **E-commerce Platform**
+- ✅ **Quote Management**: Multi-step quote creation and approval
+- ✅ **Order Processing**: Automated quote-to-order transitions
+- ✅ **Payment Integration**: Stripe, COD, Bank Transfer support
+- ✅ **Multi-currency**: Dynamic currency conversion and display
+- ✅ **Cart System**: Reactive cart with persistence and loading states
 
-## Documentation
+### **Admin Dashboard**
+- ✅ **Quote Management**: Status tracking, priority calculation
+- ✅ **Order Management**: Shipping, delivery tracking
+- ✅ **Analytics**: Real-time metrics and reporting
+- ✅ **Customer Management**: User profiles and communication
 
-### Technical Documentation
-For comprehensive technical documentation covering recent features and implementations, see [`TECHNICAL_DOCUMENTATION.md`](./TECHNICAL_DOCUMENTATION.md). This includes:
+### **User Experience**
+- ✅ **Responsive Design**: Mobile-first approach
+- ✅ **Real-time Updates**: Instant UI feedback
+- ✅ **Progressive Enhancement**: Graceful degradation
+- ✅ **Accessibility**: WCAG compliant components
 
-- **Address Edit & Shipping Address UX**: Country field handling, form optimization, and database updates
-- **Quote Request Flow**: Multi-step quote submission with product review
-- **Country Utilities System**: Consistent country code/name handling across the app
-- **Payment Webhook System**: Stripe integration and automated quote status updates
-- **Quote Status & Priority Calculation**: Automated priority assignment and status workflow
-- **UI/UX Improvements**: Supreme mobile design and responsive layouts
-- **Testing & Debugging**: Comprehensive testing guidelines
-- **Future Development**: Enhancement roadmap and maintenance notes
+## 🔧 Key Systems
 
-### Important Development Notes
+### **Cart System** 🛒
 
-### Dual Currency Display Requirement
-When working with admin quotes and orders, ensure that cost breakdowns display in both purchase currency and user's preferred currency. See `DUAL_CURRENCY_DISPLAY_REQUIREMENT.md` for detailed implementation guidelines.
+#### **Reactive Cart Management**
+- **Instant Updates**: All pages update immediately when cart changes
+- **Cross-page Sync**: Cart state consistent across all pages
+- **No Page Refresh**: Users see instant feedback
 
-**Key Requirement:** Always include user profile information when fetching quotes/orders for admin display:
+#### **Cart Persistence**
+- **Per-user Storage**: Isolated cart data per user
+- **localStorage Sync**: Automatic persistence across sessions
+- **Server Loading**: Robust loading states prevent "no products" errors
+
+#### **Implementation Pattern**
 ```typescript
+// Required for all cart-dependent pages
+const { items: cartItems, isLoading, hasLoadedFromServer, loadFromServer } = useCart();
+
+useEffect(() => {
+  if (user && !isLoading && !hasLoadedFromServer) {
+    loadFromServer(user.id);
+  }
+}, [user, loadFromServer, isLoading, hasLoadedFromServer]);
+```
+
+### **Quote Management** 📋
+
+#### **Quote Status Workflow**
+1. **User submits** → `pending`
+2. **Admin calculates** → `pending` (no change)
+3. **Admin updates** → `pending` → `sent`
+4. **User approves** → `approved`
+5. **Payment received** → `paid` (moves to Orders)
+
+#### **Priority Calculation**
+- **Automatic**: Based on final total and country thresholds
+- **Country-specific**: Configurable thresholds per currency
+- **Visual Indicators**: Color-coded priority badges
+
+#### **Quote Types**
+- **Combined Quotes**: All products from same country (better rates)
+- **Separate Quotes**: Individual quotes per product (maximum flexibility)
+
+### **Payment System** 💳
+
+#### **Supported Methods**
+- **Stripe**: Credit/debit cards with webhook processing
+- **Cash on Delivery**: Manual payment confirmation
+- **Bank Transfer**: Manual payment confirmation
+
+#### **Quote-to-Order Transition**
+- **Automatic**: When payment received, quote becomes order
+- **Page Separation**: Orders never appear on Quotes page
+- **Status Tracking**: Complete order lifecycle management
+
+### **Shipping & Delivery** 📦
+
+#### **Route Display Logic**
+- **Smart Detection**: Uses shipping_route_id or falls back to quote data
+- **Consistent Display**: Shared utilities ensure accuracy
+- **Origin/Destination**: Clear route visualization
+
+#### **Delivery Options**
+- **Country-specific**: Available options per shipping route
+- **Cost Calculation**: Real-time shipping cost estimation
+- **Timeline Estimates**: Expected delivery dates
+
+## 🎨 UI/UX Systems
+
+### **Status Badge System**
+```typescript
+// Consistent status display across all admin pages
+<StatusBadge status={quote.status} category="quote" showIcon />
+```
+
+### **Multi-currency Display**
+```typescript
+// Always include user profile for admin displays
 .select('*, quote_items(*), profiles!quotes_user_id_fkey(preferred_display_currency)')
 ```
 
-## Delivery Options: How Purchase and Shipping Country Are Determined
+### **Responsive Design**
+- **Mobile-first**: Optimized for mobile devices
+- **Progressive Enhancement**: Works without JavaScript
+- **Accessibility**: WCAG 2.1 AA compliant
 
-The Delivery Options section displays the shipping route as `ORIGIN → DESTINATION` using `shippingRoute.origin_country` and `shippingRoute.destination_country`.
+## 🔄 Recent Improvements
 
-- If `quote.shipping_route_id` is present, the route is fetched from the database and its `origin_country` and `destination_country` are used.
-- If not, the system falls back to:
-  - `quote.origin_country` or `quote.country_code` (or `'US'` if not set) for the origin (purchase country)
-  - `shippingAddress.country` for the destination (shipping country)
+### **Cart System Cleanup** (Latest)
+- ✅ **Removed unused components**: `useCartMutations.ts`, `CartItem.tsx`
+- ✅ **Simplified cart logic**: Removed unused grid view functionality
+- ✅ **Updated bulk actions**: Now uses unified cart store
+- ✅ **Reduced bundle size**: ~450 lines of unused code removed
 
-This logic is important for both displaying the route and calculating available delivery options.
+### **Checkout Page Redesign**
+- ✅ **Single-page layout**: Shopify-style checkout experience
+- ✅ **Removed customer info**: Focus on shipping and payment
+- ✅ **Better UX**: Cleaner, more focused checkout flow
+- ✅ **Fixed JavaScript errors**: Resolved duplicate variable declarations
 
-## Status Badge System (Admin Quote/Order UI)
+### **Quote Request Flow**
+- ✅ **Product review**: Users can review before submission
+- ✅ **Edit functionality**: Go back and fix mistakes
+- ✅ **Progress indicators**: Clear 2-step process
+- ✅ **Response time**: Clear expectations (24-48 hours)
 
-### Overview
-- Status badges for quotes and orders are rendered using the `StatusBadge` component (`src/components/dashboard/StatusBadge.tsx`).
-- This component ensures consistent display of status label, color, and icon across both the quote list and the quote detail page.
-- Status configuration (label, color, icon, etc.) is managed via the status management system (`useStatusManagement` hook).
+## 🚨 Critical Development Notes
 
-### How it Works
-- The `StatusBadge` component takes a `status` string, a required `category` prop ('quote' or 'order'), and (optionally) a `showIcon` prop (default: true).
-- It looks up the status config (label, color, icon) from the status management system using the provided category.
-- If the status is not found, it falls back to a generic badge with the status name.
-- The badge uses the same color and icon as defined in the config, ensuring visual consistency.
+### **Cart Loading Requirements**
+**IMPORTANT**: All cart-dependent pages MUST include server loading logic:
 
-### Where to Use
-- **Quote List:** Use `<StatusBadge status={quote.status} category="quote" />` in list items (e.g., `AdminQuoteListItem`).
-- **Quote Detail Page:** Use `<StatusBadge status={quote.status} category="quote" showIcon />` in the header (e.g., `AdminQuoteDetailPage`).
-- **Order List/Detail:** Use `<StatusBadge status={order.status} category="order" />` for order statuses.
-- **Mixed Contexts:** For components that show both quotes and orders, determine the category based on the status: `category={['paid', 'ordered', 'shipped', 'completed', 'cancelled'].includes(status) ? 'order' : 'quote'}`
+```typescript
+// Required pattern for cart pages
+const { items: cartItems, isLoading, hasLoadedFromServer, loadFromServer } = useCart();
 
-### How to Update/Extend
-- To add or change a status, update the status config in the database or in the `useStatusManagement` hook's defaults.
-- To change the appearance (icon, color, label), update the config for that status.
-- If you want to show/hide the icon, use the `showIcon` prop on `StatusBadge`.
-- Always use `StatusBadge` for status display to ensure consistency.
+useEffect(() => {
+  if (user && !isLoading && !hasLoadedFromServer) {
+    loadFromServer(user.id);
+  }
+}, [user, loadFromServer, isLoading, hasLoadedFromServer]);
 
-### Why This Matters
-- This approach prevents UI drift and ensures that any change to status logic or appearance is reflected everywhere in the admin UI.
-- Future developers should always use the shared `StatusBadge` component and never hardcode status badges or icons in individual pages.
-
-## Priority Calculation System
-
-### Overview
-The priority calculation system automatically assigns priority levels to quotes based on the final total amount and country-specific thresholds. This helps admins quickly identify high-value orders that may need special attention.
-
-### How It Works
-
-#### 1. Priority Levels
-- **Low**: Standard priority for regular orders
-- **Normal**: Medium priority for moderate-value orders  
-- **Urgent**: High priority for high-value orders requiring immediate attention
-
-#### 2. Country-Specific Thresholds
-Each country has configurable priority thresholds in their local currency:
-
-```json
-{
-  "low": 0,
-  "normal": 500,      // Amount threshold for normal priority
-  "urgent": 2000      // Amount threshold for urgent priority
+// Handle loading states
+if (cartLoading) {
+  return <LoadingSpinner />;
 }
 ```
 
-**Example thresholds by country:**
-- **US (USD)**: Low: $0, Normal: $500, Urgent: $2,000
-- **India (INR)**: Low: ₹0, Normal: ₹41,500, Urgent: ₹166,000
-- **Nepal (NPR)**: Low: ₨0, Normal: ₨66,500, Urgent: ₨266,000
-- **Japan (JPY)**: Low: ¥0, Normal: ¥75,000, Urgent: ¥300,000
+### **Quote Expiration System**
+- **7-day default**: Configurable via `autoExpireHours` setting
+- **Based on 'sent' time**: Never resets on approval
+- **Automatic enforcement**: Database trigger + Edge Function
+- **UI indicators**: Countdown timer and expiry badges
 
-#### 3. Calculation Logic
-When the calculate button is pressed on a quote:
+### **Status Management**
+- **Use StatusBadge component**: Never hardcode status display
+- **Category-based**: 'quote' vs 'order' categories
+- **Consistent styling**: Colors and icons from config
 
-```typescript
-// Priority calculation logic (src/hooks/useAdminQuoteDetail.ts)
-const country = allCountries?.find(c => c.code === quote.country_code);
-const thresholds = country?.priority_thresholds || { low: 0, normal: 500, urgent: 2000 };
-const finalTotal = finalQuoteData.final_total || 0;
+## 🐛 Troubleshooting
 
-let priority;
-if (finalTotal < thresholds.normal) {
-    priority = 'low';
-} else if (finalTotal < thresholds.urgent) {
-    priority = 'normal';
-} else {
-    priority = 'urgent';
-}
-```
+### **Common Cart Issues**
+1. **"No products" error**: Missing server loading logic
+2. **Button not updating**: Not subscribed to cart store
+3. **Inconsistent state**: Different quoteId formats
 
-#### 4. Automatic Updates
-- **Always recalculated**: Priority is automatically recalculated every time the calculate button is pressed
-- **Form synchronization**: The priority field in the admin form is automatically updated
-- **Database update**: The quote record is updated with the new priority
-- **Debug logging**: Console logs show the calculation details for debugging
+### **Quote Issues**
+1. **Priority not updating**: Check country thresholds
+2. **Status not changing**: Verify workflow rules
+3. **Expiration wrong**: Check `expires_at` field usage
 
-### Configuration
+### **Payment Issues**
+1. **Webhook not working**: Check Stripe configuration
+2. **Order not appearing**: Verify status transitions
+3. **Manual payment**: Use Orders page for confirmation
 
-#### Setting Priority Thresholds
-1. Go to **Admin → Country Settings**
-2. Edit a country
-3. Set the priority thresholds in the country's main currency
-4. Save the changes
+## 📚 Additional Documentation
 
-#### Database Schema
-Priority thresholds are stored in the `country_settings` table:
+- **Technical Details**: See `TECHNICAL_DOCUMENTATION.md`
+- **Currency Requirements**: See `DUAL_CURRENCY_DISPLAY_REQUIREMENT.md`
+- **Payment Setup**: See `PAYMENT_SETUP.md`
+- **Webhook Configuration**: See `WEBHOOK_SETUP.md`
 
-```sql
-ALTER TABLE country_settings 
-ADD COLUMN priority_thresholds JSONB DEFAULT '{"low":0,"normal":500,"urgent":2000}';
-```
+## 🤝 Contributing
 
-### Usage in Admin Interface
+1. **Fork** the repository
+2. **Create** a feature branch
+3. **Follow** the coding standards
+4. **Test** thoroughly
+5. **Submit** a pull request
 
-#### Quote List View
-- Priority badges are displayed next to each quote
-- Color coding: Low (outline), Normal (secondary), Urgent (destructive)
-- Quick visual identification of high-priority quotes
+## 📄 License
 
-#### Quote Detail Page
-- Priority field shows current priority level
-- Automatically updates when calculate button is pressed
-- Can be manually overridden if needed
+This project is licensed under the MIT License.
 
-### Debugging
+---
 
-#### Console Logs
-When priority is calculated, debug information is logged:
-
-```javascript
-console.log('[Priority Calculation]', {
-    countryCode: quote.country_code,
-    countryName: country?.name,
-    thresholds,
-    finalTotal,
-    calculatedPriority: priority,
-    previousPriority: data.priority
-});
-```
-
-#### Common Issues
-1. **Priority not updating**: Check if country has priority thresholds configured
-2. **Wrong currency**: Ensure thresholds are in the country's main currency
-3. **Calculation errors**: Verify the final total is being calculated correctly
-
-### Testing
-
-#### Manual Testing
-1. Create a quote with items totaling different amounts
-2. Press the calculate button
-3. Verify the priority updates correctly based on thresholds
-4. Check console logs for calculation details
-
-#### Automated Testing
-Use the priority calculation test script to verify logic:
-
-```javascript
-// Test cases for different amounts and countries
-const testCases = [
-    { countryCode: 'US', amount: 100, expected: 'low' },
-    { countryCode: 'US', amount: 750, expected: 'normal' },
-    { countryCode: 'US', amount: 2500, expected: 'urgent' }
-];
-```
-
-### Future Development
-
-#### Adding New Countries
-1. Add country to `country_settings` table
-2. Set appropriate priority thresholds in local currency
-3. Test with sample quotes
-
-#### Modifying Priority Logic
-- Update the calculation logic in `src/hooks/useAdminQuoteDetail.ts`
-- Ensure the logic always recalculates priority (don't add conditions that skip calculation)
-- Add appropriate debug logging
-- Update tests to cover new scenarios
-
-#### Priority Display
-- Use the existing priority badge system for consistent UI
-- Priority badges are rendered using the same component across the admin interface
-- Colors and styling are defined in the badge component
-
-### Important Notes
-- **Always recalculate**: The system is designed to always recalculate priority when calculate is pressed
-- **Currency conversion**: Thresholds are in the country's local currency, not USD
-- **Fallback values**: If country thresholds are not set, defaults are used (low: 0, normal: 500, urgent: 2000)
-- **Manual override**: Admins can manually change priority after calculation if needed
-- **Consistent display**: Always use the shared priority badge component for consistent UI
-- **Initial status**: All quotes created by users are automatically set to "pending" status
-- **Status preservation**: Calculate button does not change quote status - it only updates calculations
-- **Status progression**: Update button changes status from "pending" to "sent", but preserves other statuses
-
-### Quote Status Workflow
-
-#### Status Flow
-1. **User submits quote** → status = "pending"
-2. **Admin calculates quote** → status stays "pending" (no change)
-3. **Admin presses "Update"** → status changes from "pending" to "sent"
-4. **Admin calculates again** → status stays "sent" (no change)
-5. **Admin presses "Update" again** → status stays "sent" (no change)
-
-#### Key Behaviors
-- **Calculate Button**: Only updates calculations and priority - never changes status
-- **Update Button**: 
-  - If status is "pending" → changes to "sent"
-  - If status is anything else → preserves current status
-- **Status Transitions**: Follow the configured status workflow rules
-
-### Quote to Order Transition
-
-#### Automatic Transition
-When a quote is paid, it automatically moves from the **Quotes page** to the **Orders page**:
-
-1. **Payment Received** → status changes to "paid"
-2. **Quote disappears** from Quotes page (filtered out automatically)
-3. **Order appears** on Orders page
-4. **All future actions** (shipping, delivery) handled from Orders page
-
-**Important**: Once a quote becomes an order (status: paid, ordered, shipped, completed, cancelled), it will **never appear on the Quotes page again**. This ensures complete separation between quote management and order management workflows.
-
-#### Payment Webhook
-- **Stripe webhook** automatically updates quote status when payment is received
-- **Status transitions** are logged in the database
-- **Payment transactions** are recorded for tracking
-- **Order display ID** is generated automatically (e.g., "ORD-ABC123")
-
-#### Manual Payment Confirmation
-For manual payment methods (COD, Bank Transfer):
-- **Admin confirms payment** from Orders page
-- **Status changes** from "cod_pending" or "bank_transfer_pending" to "paid"
-- **Quote moves** to Orders page automatically
-
-#### Order Management
-Once a quote becomes an order:
-- **Shipping updates** handled from Orders page
-- **Delivery tracking** managed from Orders page
-- **Customer notifications** sent automatically
-- **Order completion** tracked through order statuses
-
-#### Page Filtering Behavior
-- **Quotes Page**: Shows only quotes with statuses: `pending`, `sent`, `approved`, `rejected`, `expired`, `calculated`
-- **Orders Page**: Shows only orders with statuses: `paid`, `ordered`, `shipped`, `completed`, `cancelled`
-- **Automatic Filtering**: The system automatically filters out order statuses from the quotes page
-- **No Overlap**: A quote/order will never appear on both pages simultaneously
-
-## Shipping Route Display Logic (Admin UI)
-
-All admin UI sections that display shipping routes (origin → destination) use the same shared logic:
-
-- `getQuoteRouteCountries` (from `src/lib/route-specific-customs.ts`): Determines the correct origin and destination country codes for a quote, using shipping_route_id, quote fields, and shipping address as needed.
-- `formatShippingRoute` (from `src/lib/countryUtils.ts`): Formats the route for display, converting codes to names as needed.
-
-**This ensures that the shipping route is always correct and consistent across:**
-- Quote detail pages
-- Quote list items
-- Delivery options management
-- Any other admin section that shows a shipping route
-
-**If the route display ever breaks or needs to be changed, update the shared logic in these utilities and all sections will remain in sync.**
-
-This approach prevents bugs where one section shows the wrong route while others are correct, and makes future maintenance much easier.
-
-## Quote Request Flow Improvements
-
-The quote request flow (`/quote`) has been enhanced with several user experience improvements:
-
-### Features Added
-
-1. **Product Summary for Review**
-   - Shows products before submission in the shipping step
-   - Displays total items, value, and individual product details
-   - Allows users to review what they're requesting
-
-2. **Edit/Correct Option**
-   - "Edit Products" button in review step
-   - Users can go back and fix mistakes before submitting
-   - Maintains all entered data when going back
-
-3. **Product Summary After Submission**
-   - Shows submitted products from local state (no DB call needed)
-   - Provides immediate feedback on what was submitted
-   - Helps users confirm their request was received correctly
-
-4. **Enhanced Progress Indicator**
-   - Clear 2-step process: Product Info → Shipping & Review
-   - Visual progress bar with step indicators
-   - Users know exactly where they are in the process
-
-5. **Estimated Response Time**
-   - Prominently displayed in success message
-   - Sets clear expectations: "24-48 hours"
-   - Reduces user anxiety about when they'll hear back
-
-### Technical Implementation
-
-- **ProductSummary Component**: Reusable component for displaying product details
-- **Local State Management**: Product data preserved throughout the flow
-- **Responsive Design**: Works well on mobile and desktop
-- **No Breaking Changes**: All existing functionality preserved
-
-### User Flow
-
-1. User enters product details (name, URL, price, quantity, country)
-2. User proceeds to shipping & contact information
-3. **NEW**: Product summary is shown for review with edit option
-4. User can edit products or proceed with submission
-5. **NEW**: After submission, product summary is shown again for confirmation
-6. Clear success message with estimated response time
-
-This flow minimizes friction while providing necessary feedback and review opportunities.
-
-## Quote Type Country Validation
-
-The quote request system implements intelligent country validation based on the selected quote type:
-
-### Combined Quotes
-- **Requirement**: All products must be from the same country
-- **Auto-sync**: When the first product's country is selected, all other products automatically sync to that country
-- **Visual indicators**: Country fields for products 2+ are disabled and show "(Auto-synced)" label
-- **Validation**: Prevents submission if different countries are detected
-- **User guidance**: Clear messaging about requirements and easy switch to separate quotes
-- **Benefits**: Better shipping rates and faster processing
-- **Backend**: Creates one quote with multiple items
-
-### Separate Quotes
-- **Auto-sync initially**: Countries are auto-filled for convenience (same as first product)
-- **Individual control**: Users can change each product's country independently
-- **Visual indicators**: Country fields show "(Auto-filled)" but remain editable
-- **No validation restrictions**: Users can have different countries for different products
-- **User guidance**: Clear messaging about flexibility and individual quotations
-- **Benefits**: Maximum flexibility for sourcing from optimal countries
-- **Backend**: Creates individual quote for each product (separate quotations)
-
-### Technical Implementation
-
-#### Auto-Sync Logic
-- `useEffect` watches first product's country for both quote types
-- `updateProduct` handles auto-sync when first product country changes
-- `addProduct` pre-fills new products with first product's country
-- Visual feedback shows sync/fill status with checkmarks and labels
-
-#### Validation
-- `validate()` only checks country consistency for combined quotes
-- Separate quotes have no country restrictions
-- Shows clear error messages with helpful suggestions
-- Prevents form submission until validation passes
-
-#### Backend Processing
-- **Combined quotes**: Single quote record with multiple items
-- **Separate quotes**: Individual quote record for each product
-- Each separate quote gets its own quotation ID and processing
-
-#### User Experience
-- **Informational messages** explain requirements for each quote type
-- **Visual indicators** show sync/fill status and field states
-- **Error handling** with clear guidance and solutions
-- **Seamless switching** between quote types
-- **Convenient auto-fill** for both quote types
-
-This feature ensures users understand the business logic and provides a smooth experience for both quote types while maintaining the flexibility to source from different countries when needed.
-
-## Quote Request Flow Improvements
-
-The quote request flow (`/quote`) has been enhanced with several user experience improvements:
-
-### Features Added
-
-1. **Product Summary for Review**
-   - Shows products before submission in the shipping step
-   - Displays total items, value, and individual product details
-   - Allows users to review what they're requesting
-
-2. **Edit/Correct Option**
-   - "Edit Products" button in review step
-   - Users can go back and fix mistakes before submitting
-   - Maintains all entered data when going back
-
-3. **Product Summary After Submission**
-   - Shows submitted products from local state (no DB call needed)
-   - Provides immediate feedback on what was submitted
-   - Helps users confirm their request was received correctly
-
-4. **Enhanced Progress Indicator**
-   - Clear 2-step process: Product Info → Shipping & Review
-   - Visual progress bar with step indicators
-   - Users know exactly where they are in the process
-
-5. **Estimated Response Time**
-   - Prominently displayed in success message
-   - Sets clear expectations: "24-48 hours"
-   - Reduces user anxiety about when they'll hear back
-
-### Technical Implementation
-
-- **ProductSummary Component**: Reusable component for displaying product details
-- **Local State Management**: Product data preserved throughout the flow
-- **Responsive Design**: Works well on mobile and desktop
-- **No Breaking Changes**: All existing functionality preserved
-
-### User Flow
-
-1. User enters product details (name, URL, price, quantity, country)
-2. User proceeds to shipping & contact information
-3. **NEW**: Product summary is shown for review with edit option
-4. User can edit products or proceed with submission
-5. **NEW**: After submission, product summary is shown again for confirmation
-6. Clear success message with estimated response time
-
-This flow minimizes friction while providing necessary feedback and review opportunities.
-
-## Cart Persistence and Loading Improvements
-
-The cart system has been enhanced with robust persistence and loading states to ensure a seamless user experience across page reloads and navigation.
-
-### Features Added
-
-1. **Per-User Cart Persistence**
-   - Cart data is automatically saved to localStorage with a unique key per user
-   - Cart persists across browser sessions, page reloads, and navigation
-   - Each user has their own isolated cart storage
-   - Automatic cleanup when user logs out
-
-2. **Robust Rehydration System**
-   - Cart data is rehydrated from localStorage on app startup
-   - Loading state prevents premature access to cart data
-   - Graceful fallback if localStorage is unavailable
-   - Automatic sync with server data when user is authenticated
-
-3. **Enhanced Checkout Flow**
-   - Loading spinner displayed while cart is rehydrating
-   - Prevents "no products" errors during checkout
-   - Clear user feedback during loading states
-   - Robust error handling for edge cases
-
-4. **Improved User Experience**
-   - No lost cart items when refreshing the page
-   - Seamless checkout process even after page reloads
-   - Clear loading indicators for better UX
-   - Consistent cart state across all pages
-
-### Technical Implementation
-
-#### Cart Store (`src/stores/cartStore.ts`)
-- Uses Zustand's persist middleware for automatic localStorage sync
-- Unique storage key per user: `cart-${userId || 'anonymous'}`
-- Loading state management with `isLoading` flag
-- Automatic rehydration before exposing cart data
-
-#### Cart Hook (`src/hooks/useCart.ts`)
-- Exposes `isLoading` state for UI components
-- Waits for rehydration before returning cart data
-- Provides loading state to prevent premature access
-- Maintains all existing cart functionality
-
-#### Checkout Page (`src/pages/Checkout.tsx`)
-- Displays loading spinner while cart is rehydrating
-- Prevents checkout with empty cart during loading
-- Clear user feedback: "Loading your cart..."
-- Robust error handling for edge cases
-
-### User Flow
-
-1. **User adds items to cart** → Items saved to localStorage
-2. **User navigates or refreshes** → Cart persists automatically
-3. **User clicks checkout** → Loading spinner shows during rehydration
-4. **Cart loads** → Checkout proceeds with all items intact
-5. **User completes purchase** → Cart cleared and order created
-
-### Benefits
-
-- **No Lost Items**: Cart survives page reloads and navigation
-- **Seamless Checkout**: No "no products" errors during checkout
-- **Better UX**: Clear loading states and feedback
-- **Robust**: Handles edge cases and errors gracefully
-- **Scalable**: Per-user isolation prevents conflicts
-
-### Configuration
-
-The cart persistence is automatically configured and requires no additional setup. The system:
-
-- Automatically detects user authentication state
-- Creates unique storage keys per user
-- Handles anonymous users with temporary storage
-- Cleans up old data when users log out
-- Syncs with server data when authenticated
-
-This ensures a reliable and user-friendly shopping experience across all devices and sessions.
-
-## Quote Expiration System: How It Works, Maintenance, and Troubleshooting
-
-### Overview
-- Quotes automatically expire after a configurable period (default: 7 days) from the time they are first sent to the customer (status = 'sent').
-- Expiry is **never** reset by customer actions (approve/reject/approve again). It is always based on the original 'sent' time.
-- Expired quotes are marked as 'expired' and cannot be approved or paid.
-- The expiration system is enforced at the database level (trigger), in the backend (Edge Function), and in the UI (timer and badges).
-
-### How It Works
-1. **When a quote is sent:**
-   - The database trigger sets `sent_at = NOW()` and `expires_at = NOW() + INTERVAL '7 days'` (or the configured duration).
-   - The expiration time is only set when status changes to 'sent', never when it is approved.
-2. **If a quote is approved, rejected, or re-approved:**
-   - The expiration time does **not** change. It is always based on the original 'sent' time.
-3. **Expiration:**
-   - A scheduled Edge Function (see `supabase/functions/expire-quotes/`) runs regularly and marks any quote with status 'sent' and `expires_at <= NOW()` as 'expired'.
-   - The UI shows a countdown timer and a red expiry badge for quotes with an expiration date.
-
-### Changing the Expiration Duration
-- The expiration duration is controlled by the `autoExpireHours` field in the status config for 'sent' (see `add-status-settings.sql`).
-- To change the default (e.g., to 5 days):
-  1. Update the `autoExpireHours` value for the 'sent' status in the system settings table or via migration.
-  2. The trigger and Edge Function will automatically use the new value for all new quotes sent after the change.
-  3. **Existing quotes** will keep their original expiration unless manually updated.
-
-### Maintenance & Debugging
-- **If quotes are not expiring:**
-  - Check the trigger function (`set_quote_expiration`) in the database. It should only set expiration when status changes to 'sent'.
-  - Ensure the Edge Function is running on schedule (see `supabase/config.toml` or your cron setup).
-  - Check for errors in the Edge Function logs (`supabase functions logs expire-quotes`).
-- **If the timer is wrong in the UI:**
-  - Make sure the UI is using the `expires_at` field from the quote, not recalculating from approval.
-  - The timer should show for both 'sent' and 'approved' statuses, but always count down from the original sent time.
-- **If you need to manually update expiration:**
-  - You can run a SQL update to set `expires_at` for affected quotes. Example:
-    ```sql
-    UPDATE quotes SET expires_at = sent_at + INTERVAL '7 days' WHERE status IN ('sent', 'approved') AND expires_at IS NULL;
-    ```
-- **To test expiration:**
-  - Use the test script (`test-quote-expiration.js`) or manually update a quote's status to 'sent' and set `expires_at` to a past date, then run the Edge Function.
-
-### For Future Developers
-- **Never reset expiration on approval.** Only the first 'sent' event should set the timer.
-- **Keep the trigger and Edge Function in sync** with the business logic described above.
-- **Document any changes** to the expiration logic in this section and in the relevant migration files.
-- **UI/UX:** Always show the timer and expiry badge based on `expires_at`, and use a red badge for strong visual emphasis.
-
-For more details, see:
-- `supabase/migrations/20250705000011_fix_quote_expiration_trigger.sql`
-- `supabase/functions/expire-quotes/`
-- `src/pages/dashboard/Quotes.tsx` (UI badge)
-- `src/components/dashboard/QuoteExpirationTimer.tsx` (timer)
-
-## Unified Cart System: Reactive Add to Cart Functionality
-
-The cart system has been unified across all pages to provide instant, reactive updates when adding or removing quotes from the cart. This eliminates the need for page refreshes and ensures consistent behavior throughout the application.
-
-### Overview
-- **Reactive UI**: All pages instantly update when cart state changes
-- **Unified Functionality**: Same "Add to Cart" behavior across quotes list, detail pages, and mobile
-- **Real-time Sync**: Cart changes reflect immediately across all open pages
-- **No Page Refresh**: Users see instant feedback without manual page reloads
-
-### How It Works
-
-#### 1. **Cart Store Subscription**
-All pages that show "Add to Cart" buttons subscribe to the cart store:
-```typescript
-// Subscribe to cart store to make UI reactive to cart changes
-const cartItems = useCartStore((state) => state.items);
-
-// Helper function to check if a quote is in cart
-const isQuoteInCart = (quoteId: string) => {
-  return cartItems.some(item => item.quoteId === quoteId);
-};
-```
-
-#### 2. **Reactive Button Logic**
-Instead of using static `quote.in_cart` properties, all pages use the reactive function:
-```typescript
-// Before: Static property (required page refresh)
-{quote.status === 'approved' && !quote.in_cart && (
-  <AddToCartButton quoteId={quote.id} />
-)}
-
-// After: Reactive function (instant updates)
-{quote.status === 'approved' && !isQuoteInCart(quote.id) && (
-  <AddToCartButton quoteId={quote.id} />
-)}
-```
-
-#### 3. **Unified AddToCartButton Component**
-A reusable component handles the cart functionality consistently:
-```typescript
-const AddToCartButton = ({ quoteId, className = "" }) => {
-  const { addToCart } = useQuoteState(quoteId);
-  
-  const handleAddToCart = async () => {
-    await addToCart();
-  };
-
-  return (
-    <Button 
-      size="sm" 
-      className={`flex items-center gap-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 ${className}`}
-      onClick={handleAddToCart}
-    >
-      <ShoppingCart className="h-3 w-3" />
-      Add to Cart
-    </Button>
-  );
-};
-```
-
-### Pages Updated
-
-#### 1. **Quotes List Page** (`/dashboard/quotes`)
-- **Mobile Layout**: Full-width "Add to Cart" button
-- **Desktop Layout**: Compact button with icon and text
-- **Instant Updates**: Button changes to "In Cart" immediately when added
-
-#### 2. **Quote Detail Page** (`/dashboard/quotes/:id`)
-- **Main Actions**: "Add to Cart" button in the actions section
-- **Instant Updates**: Button changes to "View in Cart" immediately
-- **Cross-page Sync**: Changes reflect on the quotes list page instantly
-
-#### 3. **Sticky Action Bar** (Mobile)
-- **Mobile Actions**: "Add to Cart" button in sticky bottom bar
-- **Instant Updates**: Button changes immediately when cart state changes
-- **Consistent UX**: Same behavior as desktop version
-
-### Technical Implementation
-
-#### Cart Store (`src/stores/cartStore.ts`)
-- **Zustand Store**: Reactive state management with automatic subscriptions
-- **Persistent Storage**: Cart data saved to localStorage per user
-- **Real-time Updates**: All subscribers notified immediately of changes
-
-#### Quote State Hook (`src/hooks/useQuoteState.ts`)
-- **addToCart Function**: Handles adding quotes to cart with proper error handling
-- **Database Sync**: Updates `in_cart` flag in database
-- **Query Invalidation**: Refreshes relevant queries after cart changes
-
-#### Reactive Components
-- **Quotes List**: `src/pages/dashboard/Quotes.tsx`
-- **Quote Detail**: `src/pages/dashboard/QuoteDetail.tsx`
-- **Sticky Bar**: `src/components/dashboard/StickyActionBar.tsx`
-
-### User Experience Benefits
-
-#### 1. **Instant Feedback**
-- **Before**: User clicks "Add to Cart" → Page refresh needed to see change
-- **After**: User clicks "Add to Cart" → Button changes to "In Cart" instantly
-
-#### 2. **Cross-page Consistency**
-- **Before**: Different pages might show different states
-- **After**: All pages show the same cart state simultaneously
-
-#### 3. **Mobile Optimization**
-- **Before**: Mobile users had to refresh to see cart changes
-- **After**: Sticky action bar updates instantly on mobile
-
-#### 4. **No Lost Context**
-- **Before**: Page refresh could lose user's scroll position or filters
-- **After**: User stays exactly where they were, just with updated buttons
-
-### Developer Benefits
-
-#### 1. **Unified Codebase**
-- **Single Implementation**: One `AddToCartButton` component used everywhere
-- **Consistent Logic**: Same cart checking function across all pages
-- **Easier Maintenance**: Changes to cart logic only need to be made in one place
-
-#### 2. **Type Safety**
-- **TypeScript Support**: Full type checking for cart operations
-- **Error Handling**: Proper error boundaries and user feedback
-- **Debugging**: Clear console logs for cart operations
-
-#### 3. **Performance**
-- **Efficient Updates**: Only affected components re-render
-- **No Unnecessary API Calls**: Cart state managed locally with server sync
-- **Optimized Re-renders**: Zustand's selective subscriptions
-
-### Troubleshooting
-
-#### Common Issues
-
-1. **Button not updating instantly**
-   - Check that the component is subscribed to `useCartStore`
-   - Verify `isQuoteInCart()` function is being used instead of `quote.in_cart`
-   - Ensure `addToCart()` function is being called correctly
-
-2. **Cart state inconsistent across pages**
-   - Verify all pages are using the same cart store subscription
-   - Check that `quoteId` matches between cart items and quotes
-   - Ensure database sync is working properly
-
-3. **Mobile sticky bar not updating**
-   - Check `StickyActionBar` component is using reactive cart store
-   - Verify mobile detection is working correctly
-   - Ensure sticky bar is receiving updated quote props
-
-#### Debugging Tips
-
-```typescript
-// Add this to debug cart state changes
-const cartItems = useCartStore((state) => {
-  console.log('Cart items updated:', state.items);
-  return state.items;
-});
-
-// Check if quote is in cart
-console.log('Quote in cart:', isQuoteInCart(quote.id));
-```
-
-### Future Development
-
-#### Adding New Pages
-When adding cart functionality to new pages:
-
-1. **Import cart store**:
-   ```typescript
-   import { useCartStore } from '@/stores/cartStore';
-   ```
-
-2. **Subscribe to cart state**:
-   ```typescript
-   const cartItems = useCartStore((state) => state.items);
-   ```
-
-3. **Use reactive function**:
-   ```typescript
-   const isQuoteInCart = (quoteId: string) => {
-     return cartItems.some(item => item.quoteId === quoteId);
-   };
-   ```
-
-4. **Use unified component**:
-   ```typescript
-   {quote.status === 'approved' && !isQuoteInCart(quote.id) && (
-     <AddToCartButton quoteId={quote.id} />
-   )}
-   ```
-
-#### Extending Cart Functionality
-- **Bulk Operations**: Add support for bulk add/remove from cart
-- **Cart Persistence**: Enhance localStorage sync with server backup
-- **Cart Analytics**: Track cart abandonment and conversion rates
-- **Cart Sharing**: Allow users to share cart contents
-
-### Configuration
-
-The unified cart system requires no additional configuration. It automatically:
-
-- **Detects User**: Uses user ID for cart isolation
-- **Syncs with Server**: Updates database when cart changes
-- **Handles Errors**: Provides user feedback for failed operations
-- **Manages State**: Handles loading states and edge cases
-
-This ensures a seamless, reactive cart experience across all devices and user scenarios.
+**Need Help?** Check the troubleshooting section or create an issue with detailed information about your problem.
