@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, ShoppingCart, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, ShoppingCart, Clock, HelpCircle } from 'lucide-react';
 import { QuoteExpirationTimer } from './QuoteExpirationTimer';
 
 interface StickyActionBarProps {
@@ -12,6 +12,7 @@ interface StickyActionBarProps {
   onReject: () => void;
   onAddToCart: () => void;
   onRenewed?: () => void;
+  onNeedHelp?: () => void;
 }
 
 export const StickyActionBar: React.FC<StickyActionBarProps> = ({
@@ -21,7 +22,8 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
   onApprove,
   onReject,
   onAddToCart,
-  onRenewed
+  onRenewed,
+  onNeedHelp
 }) => {
   if (!isOwner) return null;
 
@@ -122,11 +124,28 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
     return null;
   };
 
+  const renderNeedHelpButton = () => {
+    if (onNeedHelp) {
+      return (
+        <Button
+          variant="outline"
+          className="w-full mt-2 hover:scale-105 transition-all duration-200 border-red-200 text-red-600 hover:bg-red-50"
+          onClick={onNeedHelp}
+        >
+          <HelpCircle className="h-4 w-4 mr-2" />
+          Need Help?
+        </Button>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg">
       <div className="px-4 py-3 max-w-md mx-auto">
         {renderExpirationTimer()}
         {renderActions()}
+        {renderNeedHelpButton()}
       </div>
     </div>
   );

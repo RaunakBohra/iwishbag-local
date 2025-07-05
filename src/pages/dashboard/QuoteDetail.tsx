@@ -393,6 +393,10 @@ export default function QuoteDetail() {
     setMobileHelpOpen(false);
   };
 
+  const handleMobileNeedHelp = () => {
+    setMobileHelpOpen(true);
+  };
+
   const handleOpenBreakdown = () => {
     setIsBreakdownOpen(true);
   };
@@ -661,100 +665,45 @@ export default function QuoteDetail() {
               </CardContent>
             </Card>
 
-            {/* Need Help Section */}
-            <div className="flex justify-center py-4 sm:py-6">
-              <div className="md:block hidden">
-                <Popover open={isHelpOpen} onOpenChange={setHelpOpen}>
-                  <PopoverTrigger asChild>
-                                    <button className="text-base font-medium flex items-center gap-2 text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 border border-gray-200/50 dark:border-gray-600/50 shadow-sm hover:shadow-md px-4 py-2 rounded-xl transition-all duration-200 hover:scale-105" type="button">
-                  <HelpCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" /> Need Help?
-                </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="center" className="w-64 p-3 backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl rounded-2xl">
-                    <div className="space-y-2">
-                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" onClick={handleMessageSupport}>
-                        <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
-                          <MessageCircle className="w-4 h-4 text-blue-600" />
+            {/* Need Help Section - Desktop Only */}
+            <div className="hidden md:flex justify-center py-4 sm:py-6">
+              <Popover open={isHelpOpen} onOpenChange={setHelpOpen}>
+                <PopoverTrigger asChild>
+                  <button className="text-base font-medium flex items-center gap-2 text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 border border-gray-200/50 dark:border-gray-600/50 shadow-sm hover:shadow-md px-4 py-2 rounded-xl transition-all duration-200 hover:scale-105" type="button">
+                    <HelpCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" /> Need Help?
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="center" className="w-64 p-3 backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl rounded-2xl">
+                  <div className="space-y-2">
+                    <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" onClick={handleMessageSupport}>
+                      <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
+                        <MessageCircle className="w-4 h-4 text-blue-600" />
+                      </div>
+                      Message Support
+                    </button>
+                    {quote.status !== 'rejected' && (
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105" onClick={handleCancelQuote}>
+                        <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
+                          <XCircle className="w-4 h-4 text-red-600" />
                         </div>
-                        Message Support
+                        Cancel Quote
                       </button>
-                      {quote.status !== 'rejected' && (
-                        <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105" onClick={handleCancelQuote}>
-                          <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
-                            <XCircle className="w-4 h-4 text-red-600" />
-                          </div>
-                          Cancel Quote
-                        </button>
-                      )}
-                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" onClick={handleFAQ}>
-                        <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50">
-                          <BookOpen className="w-4 h-4 text-green-600" />
-                        </div>
-                        FAQ
-                      </button>
-                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" onClick={handleRequestChanges}>
-                        <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
-                          <Edit2 className="w-4 h-4 text-purple-600" />
-                        </div>
-                        Request Changes
-                      </button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="md:hidden block w-full">
-                <button
-                  className="w-full text-sm sm:text-base font-medium flex items-center gap-2 justify-center py-3 text-red-600 dark:text-red-400 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/30 dark:to-pink-900/30 border border-red-200/50 dark:border-red-700/50 shadow-sm hover:shadow-md rounded-xl transition-all duration-200 hover:scale-105"
-                  type="button"
-                  onClick={() => setMobileHelpOpen(true)}
-                >
-                  <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" /> Need Help?
-                </button>
-                <Dialog open={isMobileHelpOpen} onOpenChange={setMobileHelpOpen}>
-                  <DialogContent className="sm:max-w-[350px] backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl rounded-2xl">
-                    <div className="space-y-2">
-                      <button 
-                        className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" 
-                        onClick={handleMessageSupport}
-                      >
-                        <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
-                          <MessageCircle className="w-4 h-4 text-blue-600" />
-                        </div>
-                        Message Support
-                      </button>
-                      {quote.status !== 'rejected' && (
-                        <button 
-                          className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105" 
-                          onClick={handleCancelQuote}
-                        >
-                          <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
-                            <XCircle className="w-4 h-4 text-red-600" />
-                          </div>
-                          Cancel Quote
-                        </button>
-                      )}
-                      <button 
-                        className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" 
-                        onClick={handleFAQ}
-                      >
-                        <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50">
-                          <BookOpen className="w-4 h-4 text-green-600" />
-                        </div>
-                        FAQ
-                      </button>
-                      <button 
-                        className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" 
-                        onClick={handleRequestChanges}
-                      >
-                        <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
-                          <Edit2 className="w-4 h-4 text-purple-600" />
-                        </div>
-                        Request Changes
-                      </button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
+                    )}
+                    <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" onClick={handleFAQ}>
+                      <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50">
+                        <BookOpen className="w-4 h-4 text-green-600" />
+                      </div>
+                      FAQ
+                    </button>
+                    <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" onClick={handleRequestChanges}>
+                      <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
+                        <Edit2 className="w-4 h-4 text-purple-600" />
+                      </div>
+                      Request Changes
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Messages section - only shown when Message Support is clicked */}
@@ -763,6 +712,52 @@ export default function QuoteDetail() {
                 <QuoteMessaging quoteId={quote.id} quoteUserId={quote.user_id} />
               </div>
             )}
+
+            {/* Mobile Help Dialog */}
+            <Dialog open={isMobileHelpOpen} onOpenChange={setMobileHelpOpen}>
+              <DialogContent className="sm:max-w-[350px] backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl rounded-2xl">
+                <div className="space-y-2">
+                  <button 
+                    className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" 
+                    onClick={handleMessageSupport}
+                  >
+                    <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
+                      <MessageCircle className="w-4 h-4 text-blue-600" />
+                    </div>
+                    Message Support
+                  </button>
+                  {quote.status !== 'rejected' && (
+                    <button 
+                      className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105" 
+                      onClick={handleCancelQuote}
+                    >
+                      <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
+                        <XCircle className="w-4 h-4 text-red-600" />
+                      </div>
+                      Cancel Quote
+                    </button>
+                  )}
+                  <button 
+                    className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" 
+                    onClick={handleFAQ}
+                  >
+                    <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50">
+                      <BookOpen className="w-4 h-4 text-green-600" />
+                    </div>
+                    FAQ
+                  </button>
+                  <button 
+                    className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" 
+                    onClick={handleRequestChanges}
+                  >
+                    <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
+                      <Edit2 className="w-4 h-4 text-purple-600" />
+                    </div>
+                    Request Changes
+                  </button>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Breakdown Modal */}
             <Dialog open={isBreakdownOpen} onOpenChange={setIsBreakdownOpen}>
@@ -1089,6 +1084,7 @@ export default function QuoteDetail() {
             // Refetch the quote data to update the UI
             refetch();
           }}
+          onNeedHelp={handleMobileNeedHelp}
         />
       )}
     </div>
