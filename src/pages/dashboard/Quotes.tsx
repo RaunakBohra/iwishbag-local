@@ -4,6 +4,7 @@ import { Package, Search, Filter, ArrowLeft, Plus, Calendar, Globe, DollarSign, 
 import { useDashboardState } from '@/hooks/useDashboardState';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { useQuoteState } from '@/hooks/useQuoteState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,6 +13,26 @@ import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { formatShippingRoute } from '@/lib/countryUtils';
 import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
+
+// AddToCartButton component
+const AddToCartButton = ({ quoteId, className = "" }: { quoteId: string; className?: string }) => {
+  const { addToCart } = useQuoteState(quoteId);
+  
+  const handleAddToCart = async () => {
+    await addToCart();
+  };
+
+  return (
+    <Button 
+      size="sm" 
+      className={`flex items-center gap-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 ${className}`}
+      onClick={handleAddToCart}
+    >
+      <ShoppingCart className="h-3 w-3" />
+      Add to Cart
+    </Button>
+  );
+};
 
 export default function Quotes() {
   const {
@@ -349,12 +370,9 @@ export default function Quotes() {
                       </Button>
                     </Link>
                     {quote.status === 'approved' && !quote.in_cart && (
-                      <Link to={`/checkout/${quote.id}`} className="flex-1">
-                        <Button size="sm" className="w-full h-10 text-sm bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800">
-                          <ShoppingCart className="h-3 w-3 mr-1" />
-                          Add to Cart
-                        </Button>
-                      </Link>
+                      <div className="flex-1">
+                        <AddToCartButton quoteId={quote.id} className="w-full h-10 text-sm" />
+                      </div>
                     )}
                     {quote.status === 'approved' && quote.in_cart && (
                       <Link to="/dashboard/cart" className="flex-1">
@@ -443,12 +461,7 @@ export default function Quotes() {
                             </Button>
                           </Link>
                           {quote.status === 'approved' && !quote.in_cart && (
-                            <Link to={`/checkout/${quote.id}`}>
-                              <Button size="sm" className="flex items-center gap-1">
-                                <ShoppingCart className="h-3 w-3" />
-                                Add to Cart
-                              </Button>
-                            </Link>
+                            <AddToCartButton quoteId={quote.id} />
                           )}
                           {quote.status === 'approved' && quote.in_cart && (
                             <Link to="/dashboard/cart">
