@@ -26,19 +26,6 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
   if (!isOwner) return null;
 
   const renderActions = () => {
-    // Show expiration timer if quote has expiry
-    if ((quote.status === 'sent' || quote.status === 'approved') && quote.expires_at) {
-      return (
-        <div className="flex items-center justify-center p-3 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg">
-          <QuoteExpirationTimer 
-            expiresAt={quote.expires_at}
-            compact={true}
-            className="text-center text-red-700"
-          />
-        </div>
-      );
-    }
-
     // Show appropriate action buttons based on status
     switch (quote.status) {
       case 'sent':
@@ -120,9 +107,25 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
     }
   };
 
+  const renderExpirationTimer = () => {
+    if ((quote.status === 'sent' || quote.status === 'approved') && quote.expires_at) {
+      return (
+        <div className="flex items-center justify-center p-2 mb-2 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg">
+          <QuoteExpirationTimer 
+            expiresAt={quote.expires_at}
+            compact={true}
+            className="text-center text-red-700 text-sm"
+          />
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg">
       <div className="px-4 py-3 max-w-md mx-auto">
+        {renderExpirationTimer()}
         {renderActions()}
       </div>
     </div>
