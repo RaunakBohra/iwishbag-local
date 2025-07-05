@@ -116,9 +116,10 @@ export default function Checkout() {
   const { formatAmount } = useUserCurrency();
 
   // Get selected cart items based on quote IDs
-  const selectedCartItems = cartItems.filter(item => 
-    selectedQuoteIds.includes(item.quoteId)
-  );
+  // If no URL parameters, use all cart items (for direct navigation to /checkout)
+  const selectedCartItems = selectedQuoteIds.length > 0 
+    ? cartItems.filter(item => selectedQuoteIds.includes(item.quoteId))
+    : cartItems; // Use all cart items when no specific quotes are selected
 
   // Set recommended payment method when available methods load
   useEffect(() => {
@@ -363,7 +364,23 @@ export default function Checkout() {
     );
   }
 
-  if (selectedCartItems.length === 0) {
+  // Show loading state while cart is loading
+  if (cartLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-12 text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <h2 className="text-xl font-semibold">Loading your cart...</h2>
+            <p className="text-muted-foreground">Please wait while we load your items.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show no items message only after cart has loaded and is empty
+  if (!cartLoading && selectedCartItems.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
