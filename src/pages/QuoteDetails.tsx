@@ -175,11 +175,11 @@ export default function QuoteDetails() {
               <CardContent className="space-y-3">
                 {/* Expiration Timer */}
                 {quote.expires_at && (
-                  <div className="flex items-center justify-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-center p-3 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg">
                     <QuoteExpirationTimer 
                       expiresAt={quote.expires_at}
                       compact={true}
-                      className="text-center"
+                      className="text-center text-red-700"
                     />
                   </div>
                 )}
