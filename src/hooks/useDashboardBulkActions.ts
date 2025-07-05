@@ -1,4 +1,4 @@
-import { useCartMutations } from "./useCartMutations";
+import { useCartStore } from "@/stores/cartStore";
 import { useToast } from "./use-toast";
 import { Tables } from "@/integrations/supabase/types";
 
@@ -16,11 +16,9 @@ export const useDashboardBulkActions = ({
   setSelectedQuoteIds,
 }: UseDashboardBulkActionsProps) => {
   const { 
-    bulkAddToCart, 
-    isAddingBulk, 
-    bulkRemoveFromCart, 
-    isRemovingBulk 
-  } = useCartMutations();
+    bulkDelete,
+    bulkMove
+  } = useCartStore();
   
   const { toast } = useToast();
 
@@ -36,7 +34,29 @@ export const useDashboardBulkActions = ({
 
     if (idsToAdd.length > 0) {
       try {
-        bulkAddToCart(idsToAdd);
+        // Convert quotes to cart items and add them
+        const cartItems = idsToAdd.map(id => {
+          const quote = quotes.find(q => q.id === id);
+          return {
+            id: quote!.id,
+            quoteId: quote!.id,
+            productName: quote!.product_name || 'Unknown Product',
+            finalTotal: quote!.final_total || 0,
+            quantity: 1,
+            itemWeight: quote!.item_weight || 0,
+            countryCode: quote!.country_code || 'US',
+            inCart: true,
+            isSelected: false,
+            createdAt: new Date(quote!.created_at),
+            updatedAt: new Date(quote!.updated_at)
+          };
+        });
+
+        // Add items to cart store
+        cartItems.forEach(item => {
+          useCartStore.getState().addItem(item);
+        });
+
         setSelectedQuoteIds([]);
         toast({
           title: "Items added to cart",
@@ -70,18 +90,12 @@ export const useDashboardBulkActions = ({
 
     if (idsToRemove.length > 0) {
       try {
-        bulkRemoveFromCart(idsToRemove);
+        // Remove items from cart store
+        await bulkDelete(idsToRemove);
         setSelectedQuoteIds([]);
         toast({
           title: "Items removed from cart",
           description: `${idsToRemove.length} item(s) removed from your cart.`,
-          action: {
-            label: "Undo",
-            onClick: () => {
-              // Undo action - add items back to cart
-              bulkAddToCart(idsToRemove);
-            }
-          }
         });
       } catch (error) {
         toast({
@@ -102,7 +116,7 @@ export const useDashboardBulkActions = ({
   return {
     handleBulkAddToCart,
     handleBulkRemoveFromCart,
-    isAddingBulk,
-    isRemovingBulk,
+    isAddingBulk: false, // Cart store handles this internally
+    isRemovingBulk: false, // Cart store handles this internally
   };
 };

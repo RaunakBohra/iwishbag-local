@@ -43,7 +43,7 @@ import Address from '@/pages/profile/Address';
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
 import { QuoteManagementPage } from "@/components/admin/QuoteManagementPage";
-import { OrderManagementPage } from "@/components/admin/OrderManagementPage";
+
 import { EnhancedCustomerManagementPage } from "@/components/admin/EnhancedCustomerManagementPage";
 import { CountrySettings } from "@/components/admin/CountrySettings";
 import { CustomsCategories } from "@/components/admin/CustomsCategories";
@@ -54,7 +54,7 @@ import { QuoteTemplatesPage } from "@/components/admin/QuoteTemplatesPage";
 import { BankAccountSettings } from "@/components/admin/BankAccountSettings";
 import { SystemSettings } from "@/components/admin/SystemSettings";
 import { HomePageSettings } from "@/components/admin/HomePageSettings";
-import { StatusManagementTest } from "@/components/admin/StatusManagementTest";
+
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 
 const router = createBrowserRouter([
@@ -73,7 +73,7 @@ const router = createBrowserRouter([
           { path: "analytics", element: <AdminAnalytics /> },
           { path: "rejection-analytics", element: <RejectionAnalytics /> },
           { path: "quotes", element: <QuoteManagementPage /> },
-          { path: "orders", element: <OrderManagementPage /> },
+          
           { path: "orders/:id", element: <AdminQuoteDetailPage /> },
           { path: "customers", element: <EnhancedCustomerManagementPage /> },
           { path: "templates", element: <QuoteTemplatesPage /> },
@@ -88,7 +88,7 @@ const router = createBrowserRouter([
           { path: "payment-management", element: <PaymentManagement /> },
           { path: "shipping-routes", element: <ShippingRoutesPage /> },
           { path: "status-management", element: <StatusManagementPage /> },
-          { path: "status-test", element: <StatusManagementTest /> },
+          
           { path: "*", element: <NotFound /> },
         ],
       },

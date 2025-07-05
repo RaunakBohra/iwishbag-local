@@ -205,7 +205,7 @@ export const useCart = () => {
     isSyncing,
     hasLoadedFromServer,
     
-    // Calculations
+    // Computed values
     cartTotal,
     cartWeight,
     selectedItemsTotal,
@@ -213,20 +213,12 @@ export const useCart = () => {
     itemCount,
     savedItemCount,
     selectedItemCount,
-    selectedCartItemCount, // NEW: Selected cart items count
-    
-    // Formatted values
+    selectedCartItemCount,
     formattedCartTotal,
     formattedSelectedTotal,
-    formattedSelectedCartTotal, // NEW: Formatted selected cart total
+    formattedSelectedCartTotal,
     
-    // Utility functions
-    isItemSelected,
-    getSelectedItems,
-    getSelectedCartItems,
-    getSelectedSavedItems,
-    
-    // Computed values
+    // Boolean flags
     hasSelectedItems,
     hasCartItems,
     hasSavedItems,
@@ -254,11 +246,19 @@ export const useCart = () => {
     selectAllSaved,
     clearCart,
     
-    // FIXED: Improved handlers
-    handleSelectAllCart,
-    handleSelectAllSaved,
+    // Utility functions
+    isItemSelected,
+    getSelectedItems,
+    getSelectedCartItems,
+    getSelectedSavedItems,
+    
+    // Bulk operation handlers
     handleBulkDelete,
     handleBulkMoveToSaved,
     handleBulkMoveToCart,
+    handleSelectAllCart,
+    handleSelectAllSaved,
   };
-}; 
+};
+
+ 

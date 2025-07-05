@@ -32,7 +32,7 @@ import { useAllCountries } from '../../hooks/useAllCountries';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { Icon } from '@/components/ui/icon';
 import { StatusTransitionHistory } from './StatusTransitionHistory';
-import { StatusTransitionTest } from './StatusTransitionTest';
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";

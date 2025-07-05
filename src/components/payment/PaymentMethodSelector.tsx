@@ -57,12 +57,14 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   disabled = false
 }) => {
   const [showMobileWarning, setShowMobileWarning] = useState(false);
-  const { data: availableMethods, isLoading, getRecommendedPaymentMethod, isMobileOnlyPayment, getPaymentMethodDisplay } = usePaymentGateways();
+  const { availableMethods, methodsLoading: isLoading, getRecommendedPaymentMethod, isMobileOnlyPayment, getPaymentMethodDisplay, PAYMENT_METHOD_DISPLAYS } = usePaymentGateways();
 
   // Ensure selectedMethod is always a valid available method
   const validSelectedMethod = availableMethods?.includes(selectedMethod) 
     ? selectedMethod 
     : availableMethods?.[0] || 'bank_transfer';
+    
+
 
   // Notify parent if the valid method differs from the prop
   useEffect(() => {
@@ -70,6 +72,8 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       onMethodChange(validSelectedMethod);
     }
   }, [validSelectedMethod, selectedMethod, availableMethods, onMethodChange]);
+
+
 
   if (isLoading) {
     return (
@@ -97,8 +101,10 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     );
   }
 
-  const availablePaymentMethods = availableMethods?.map(code => getPaymentMethodDisplay(code)) || [];
+  const availablePaymentMethods = availableMethods?.map(code => getPaymentMethodDisplay(code)).filter(Boolean) || [];
   const recommendedMethod = getRecommendedPaymentMethod();
+
+
 
   const handleMethodChange = (method: string) => {
     if (disabled) return;
@@ -227,6 +233,8 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             </AlertDescription>
           </Alert>
         )}
+        
+
         
         <RadioGroup 
           key={validSelectedMethod}

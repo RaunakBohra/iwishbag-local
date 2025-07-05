@@ -3,7 +3,7 @@ import { CreateQuoteDialog } from "./CreateQuoteDialog";
 import { RejectQuoteDialog } from "./RejectQuoteDialog";
 import { QuoteFilters } from "./QuoteFilters";
 import { useQuoteManagement } from "@/hooks/useQuoteManagement";
-import { QuoteManagementHeader } from "./QuoteManagementHeader";
+
 import { QuoteListHeader } from "./QuoteListHeader";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -132,10 +132,7 @@ export const QuoteManagementPage = () => {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <QuoteManagementHeader 
-                onOpenCreateDialog={() => setCreateDialogOpen(true)}
-                onDownloadCSV={downloadCSV}
-            />
+
 
             {/* Dialogs */}
             <CreateQuoteDialog

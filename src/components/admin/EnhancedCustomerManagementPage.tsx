@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { CustomerStats } from "./CustomerStats";
 import { CustomerActivityTimeline } from "./CustomerActivityTimeline";
-import { CustomerAddresses } from "./CustomerAddresses";
+
 import { CustomerEmailDialog } from "./CustomerEmailDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";

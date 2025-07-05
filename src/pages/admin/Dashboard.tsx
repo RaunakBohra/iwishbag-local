@@ -34,7 +34,7 @@ import { ManualAnalysisTasks } from "@/components/admin/ManualAnalysisTasks";
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminBottomNav } from "@/components/admin/AdminBottomNav";
-import { EmergencyAdminAccess } from "@/components/admin/EmergencyAdminAccess";
+
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -42,8 +42,7 @@ import { Tables } from "@/integrations/supabase/types";
 import { CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuoteManagementPage } from "@/components/admin/QuoteManagementPage";
-import { OrderManagementPage } from "@/components/admin/OrderManagementPage";
-import { CustomerManagementPage } from "@/components/admin/CustomerManagementPage";
+
 import { SystemSettings } from "@/components/admin/SystemSettings";
 import { PaymentGatewayManagement } from "@/components/admin/PaymentGatewayManagement";
 import { CountrySettings } from "@/components/admin/CountrySettings";

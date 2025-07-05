@@ -236,12 +236,18 @@ if (cartLoading) {
 2. **Order not appearing**: Verify status transitions
 3. **Manual payment**: Use Orders page for confirmation
 
-## 📚 Additional Documentation
+## 📚 Documentation
 
-- **Technical Details**: See `TECHNICAL_DOCUMENTATION.md`
-- **Currency Requirements**: See `DUAL_CURRENCY_DISPLAY_REQUIREMENT.md`
-- **Payment Setup**: See `PAYMENT_SETUP.md`
-- **Webhook Configuration**: See `WEBHOOK_SETUP.md`
+For comprehensive documentation, see the [docs/](docs/) directory:
+
+- **[📖 Documentation Index](docs/README.md)** - Complete documentation overview
+- **[🏗️ Architecture Overview](docs/technical/ARCHITECTURE_OVERVIEW.md)** - System design and architecture
+- **[🚀 Development Guide](docs/guides/DEVELOPMENT_GUIDE.md)** - Getting started for developers
+- **[💳 Payment Setup](docs/guides/PAYMENT_SETUP.md)** - Stripe and payment configuration
+- **[🚀 Payment Enhancement Plan](docs/technical/PAYMENT_ENHANCEMENT_PLAN.md)** - Advanced payment features roadmap
+- **[⚡ Payment Quick Start](docs/guides/PAYMENT_QUICK_START.md)** - High-impact payment improvements
+- **[🧪 PayU Testing Guide](docs/guides/PAYU_TESTING_GUIDE.md)** - Comprehensive PayU integration testing
+- **[🔧 Status Management](docs/technical/STATUS_SYSTEM.md)** - Quote/order status workflow
 
 ## 🤝 Contributing
 

@@ -9,7 +9,7 @@ import { ShoppingCart, Package, ArrowRight, Save, Search, SortAsc, SortDesc, Tra
 import { useUserCurrency } from "@/hooks/useUserCurrency";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { CartItem } from "./CartItem";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,7 +24,7 @@ import { Tables } from '@/integrations/supabase/types';
 import { useCart } from '@/hooks/useCart';
 
 type SortOption = "date-desc" | "date-asc" | "price-desc" | "price-asc" | "name-asc" | "name-desc";
-type ViewMode = "list";
+
 
 interface CartItemProps {
   item: CartQuoteItem;
@@ -94,7 +94,7 @@ export const CartDrawer = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
-  const [viewMode] = useState<ViewMode>("list");
+
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
 

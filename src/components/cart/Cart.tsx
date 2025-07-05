@@ -18,9 +18,7 @@ import {
   SortDesc, 
   Package, 
   ArrowRight, 
-  X,
-  Grid3X3,
-  List
+  X
 } from "lucide-react";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
 import { useToast } from "@/hooks/use-toast";
@@ -29,7 +27,7 @@ import { useCart } from '@/hooks/useCart';
 import { useDebounce } from '@/hooks/useDebounce';
 
 type SortOption = "date-desc" | "date-asc" | "price-desc" | "price-asc" | "name-asc" | "name-desc";
-type ViewMode = "list" | "grid";
+
 
 export const Cart = () => {
   const { user } = useAuth();
@@ -82,7 +80,7 @@ export const Cart = () => {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
+
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   // Debounced search
@@ -359,63 +357,62 @@ export const Cart = () => {
           )}
         </div>
 
-        {/* Items Grid/List */}
-        {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cartItems.map((item) => (
-              <Card key={item.id} className="relative">
-                <CardContent className="p-4">
-                  <div className="absolute top-2 right-2">
-                    <Checkbox
-                      checked={selectedItems.includes(item.id)}
-                      onCheckedChange={() => handleSelectItem(item.id)}
-                    />
-                  </div>
-                  <div className="aspect-square mb-3">
-                    <img
-                      src={item.imageUrl || '/placeholder.svg'}
-                      alt={item.productName}
-                      className="w-full h-full object-cover rounded-md"
-                    />
-                  </div>
-                  <h3 className="font-medium truncate mb-2">{item.productName}</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
-                      >
-                        -
-                      </Button>
-                      <span className="w-8 text-center">{item.quantity}</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                      >
-                        +
-                      </Button>
+        {/* Items List */}
+        <div className="space-y-4">
+          {cartItems.map((item) => (
+            <Card key={item.id}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  <Checkbox
+                    checked={selectedItems.includes(item.id)}
+                    onCheckedChange={() => handleSelectItem(item.id)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium truncate">{item.productName}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {item.countryCode} • {(item.itemWeight * item.quantity).toFixed(2)}kg
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
+                          >
+                            -
+                          </Button>
+                          <span className="w-8 text-center">{item.quantity}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleSaveForLater(item.id)}
+                          className="h-8 w-8"
+                        >
+                          <Save className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveFromCart(item.id)}
+                          className="h-8 w-8"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleSaveForLater(item.id)}
-                        className="h-8 w-8"
-                      >
-                        <Save className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveFromCart(item.id)}
-                        className="h-8 w-8"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="text-right">
+                    <div className="text-right mt-2">
                       <div className="font-bold">
                         {formatAmount(item.finalTotal * item.quantity)}
                       </div>
@@ -424,80 +421,11 @@ export const Cart = () => {
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {cartItems.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <Checkbox
-                      checked={selectedItems.includes(item.id)}
-                      onCheckedChange={() => handleSelectItem(item.id)}
-                      className="mt-1"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium truncate">{item.productName}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {item.countryCode} • {(item.itemWeight * item.quantity).toFixed(2)}kg
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
-                            >
-                              -
-                            </Button>
-                            <span className="w-8 text-center">{item.quantity}</span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                            >
-                              +
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleSaveForLater(item.id)}
-                            className="h-8 w-8"
-                          >
-                            <Save className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveFromCart(item.id)}
-                            className="h-8 w-8"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="text-right mt-2">
-                        <div className="font-bold">
-                          {formatAmount(item.finalTotal * item.quantity)}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   };
@@ -553,63 +481,62 @@ export const Cart = () => {
           )}
         </div>
 
-        {/* Items Grid/List */}
-        {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {savedItems.map((item) => (
-              <Card key={item.id} className="relative">
-                <CardContent className="p-4">
-                  <div className="absolute top-2 right-2">
-                    <Checkbox
-                      checked={selectedItems.includes(item.id)}
-                      onCheckedChange={() => handleSelectItem(item.id)}
-                    />
-                  </div>
-                  <div className="aspect-square mb-3">
-                    <img
-                      src={item.imageUrl || '/placeholder.svg'}
-                      alt={item.productName}
-                      className="w-full h-full object-cover rounded-md"
-                    />
-                  </div>
-                  <h3 className="font-medium truncate mb-2">{item.productName}</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
-                      >
-                        -
-                      </Button>
-                      <span className="w-8 text-center">{item.quantity}</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                      >
-                        +
-                      </Button>
+        {/* Items List */}
+        <div className="space-y-4">
+          {savedItems.map((item) => (
+            <Card key={item.id}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  <Checkbox
+                    checked={selectedItems.includes(item.id)}
+                    onCheckedChange={() => handleSelectItem(item.id)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium truncate">{item.productName}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {item.countryCode} • {(item.itemWeight * item.quantity).toFixed(2)}kg
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
+                          >
+                            -
+                          </Button>
+                          <span className="w-8 text-center">{item.quantity}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleMoveToCart(item.id)}
+                          className="h-8 w-8"
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveFromCart(item.id)}
+                          className="h-8 w-8"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleMoveToCart(item.id)}
-                        className="h-8 w-8"
-                      >
-                        <ShoppingCart className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveFromCart(item.id)}
-                        className="h-8 w-8"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="text-right">
+                    <div className="text-right mt-2">
                       <div className="font-bold">
                         {formatAmount(item.finalTotal * item.quantity)}
                       </div>
@@ -618,80 +545,11 @@ export const Cart = () => {
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {savedItems.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <Checkbox
-                      checked={selectedItems.includes(item.id)}
-                      onCheckedChange={() => handleSelectItem(item.id)}
-                      className="mt-1"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium truncate">{item.productName}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {item.countryCode} • {(item.itemWeight * item.quantity).toFixed(2)}kg
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
-                            >
-                              -
-                            </Button>
-                            <span className="w-8 text-center">{item.quantity}</span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                            >
-                              +
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleMoveToCart(item.id)}
-                            className="h-8 w-8"
-                          >
-                            <ShoppingCart className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveFromCart(item.id)}
-                            className="h-8 w-8"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="text-right mt-2">
-                        <div className="font-bold">
-                          {formatAmount(item.finalTotal * item.quantity)}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   };

@@ -20,15 +20,16 @@ import {
   Landmark, 
   Loader2, 
   CheckCircle2,
-  ArrowRight,
-  ArrowLeft,
   Shield,
   Lock,
   Truck,
   Clock,
   AlertCircle,
   Plus,
-  Edit3
+  Edit3,
+  User,
+  Mail,
+  Phone
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
@@ -39,13 +40,13 @@ import { useCart } from "@/hooks/useCart";
 import { usePaymentGateways } from "@/hooks/usePaymentGateways";
 import { PaymentMethodSelector } from "@/components/payment/PaymentMethodSelector";
 import { QRPaymentModal } from "@/components/payment/QRPaymentModal";
+import { PaymentStatusTracker } from "@/components/payment/PaymentStatusTracker";
+import { PaymentDebug } from "@/components/debug/PaymentDebug";
 import { PaymentGateway, PaymentRequest } from "@/types/payment";
 import { cn } from "@/lib/utils";
 
 type QuoteType = Tables<'quotes'>;
 type ProfileType = Tables<'profiles'>;
-
-type CheckoutStep = 'address' | 'payment' | 'review';
 
 interface AddressFormData {
   address_line1: string;
@@ -64,14 +65,16 @@ export default function Checkout() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   
-  // Cart store
+  // Cart store with enforced loading
   const { 
     items: cartItems, 
     selectedItems, 
     selectedItemsTotal, 
     formattedSelectedTotal,
     getSelectedCartItems,
-    isLoading: cartLoading
+    isLoading: cartLoading,
+    hasLoadedFromServer,
+    loadFromServer
   } = useCart();
   
   // Payment gateway hook
@@ -88,7 +91,6 @@ export default function Checkout() {
   } = usePaymentGateways();
   
   // State
-  const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
   const [selectedAddress, setSelectedAddress] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentGateway>('bank_transfer');
@@ -99,6 +101,8 @@ export default function Checkout() {
     transactionId: string;
     gateway: PaymentGateway;
   } | null>(null);
+  const [showPaymentStatus, setShowPaymentStatus] = useState(false);
+  const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   const [addressFormData, setAddressFormData] = useState<AddressFormData>({
     address_line1: '',
     address_line2: '',
@@ -114,6 +118,14 @@ export default function Checkout() {
 
   const { data: userProfile } = useUserProfile();
   const { formatAmount } = useUserCurrency();
+
+  // Load cart data from server when component mounts (same as Cart component)
+  useEffect(() => {
+    if (user && !cartLoading && !hasLoadedFromServer) {
+      // Only load from server if not already loading and not already loaded
+      loadFromServer(user.id);
+    }
+  }, [user, loadFromServer, cartLoading, hasLoadedFromServer]);
 
   // Get selected cart items based on quote IDs
   // If no URL parameters, use all cart items (for direct navigation to /checkout)
@@ -188,15 +200,24 @@ export default function Checkout() {
       }
     },
     onError: (error: Error) => {
-      toast({ title: "Order Placement Failed", description: error.message, variant: "destructive" });
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive"
+      });
     },
   });
 
   const addAddressMutation = useMutation({
     mutationFn: async (addressData: AddressFormData) => {
+      if (!user) throw new Error('User not authenticated');
+      
       const { data, error } = await supabase
         .from('user_addresses')
-        .insert([{ ...addressData, user_id: user?.id }])
+        .insert({
+          user_id: user.id,
+          ...addressData
+        })
         .select()
         .single();
       
@@ -216,42 +237,40 @@ export default function Checkout() {
         country: '',
         is_default: false
       });
-      toast({ title: "Address Added", description: "Your new address has been saved." });
+      toast({ title: "Success", description: "Address added successfully." });
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive"
+      });
     },
   });
 
-  // Computed values using cart store
-  const allowCod = userProfile?.cod_enabled ?? false;
-  const totalAmount = selectedCartItems.reduce((sum, item) => sum + (item.finalTotal * item.quantity), 0);
-  const canProceedToPayment = selectedAddress && addresses && addresses.length > 0;
-  const canProceedToReview = canProceedToPayment && paymentMethod;
+  // Calculations
+  const totalAmount = selectedCartItems.reduce((total, item) => {
+    return total + ((item.finalTotal || 0) * (item.quantity || 1));
+  }, 0);
 
-  // Handlers
-  const handleNextStep = () => {
-    if (currentStep === 'address' && canProceedToPayment) {
-      setCurrentStep('payment');
-    } else if (currentStep === 'payment' && canProceedToReview) {
-      setCurrentStep('review');
-    }
-  };
+  const cartQuoteIds = selectedCartItems.map(item => item.quoteId);
 
-  const handlePreviousStep = () => {
-    if (currentStep === 'payment') {
-      setCurrentStep('address');
-    } else if (currentStep === 'review') {
-      setCurrentStep('payment');
-    }
-  };
+  // Validation
+  const canPlaceOrder = selectedAddress && paymentMethod && selectedCartItems.length > 0;
 
-  const handleAddAddress = () => {
-    if (!addressFormData.address_line1 || !addressFormData.city || !addressFormData.state_province_region || !addressFormData.postal_code || !addressFormData.country) {
-      toast({ title: "Missing Information", description: "Please fill in all required fields.", variant: "destructive" });
+  const handleAddAddress = async () => {
+    if (!addressFormData.address_line1 || !addressFormData.city || 
+        !addressFormData.state_province_region || !addressFormData.postal_code || 
+        !addressFormData.country) {
+      toast({ 
+        title: "Missing Information", 
+        description: "Please fill in all required fields.", 
+        variant: "destructive"
+      });
       return;
     }
-    addAddressMutation.mutate(addressFormData);
+
+    await addAddressMutation.mutateAsync(addressFormData);
   };
 
   const handlePaymentMethodChange = (method: PaymentGateway) => {
@@ -259,34 +278,21 @@ export default function Checkout() {
   };
 
   const handlePaymentSuccess = (data: any) => {
-    if (data.qr_code) {
-      // Show QR modal for mobile payments
-      setQrPaymentData({
-        qrCodeUrl: data.qr_code,
-        transactionId: data.transaction_id,
-        gateway: paymentMethod
-      });
-      setShowQRModal(true);
-    } else if (data.url) {
-      // Redirect to payment gateway
-      window.location.href = data.url;
-    }
+    toast({ title: "Payment Successful", description: "Your payment has been processed successfully." });
+    navigate(`/order-confirmation/${data.id}`);
   };
 
   const handleQRPaymentComplete = () => {
     setShowQRModal(false);
-    setQrPaymentData(null);
-    // Navigate to order confirmation
-    const orderId = selectedQuoteIds[0];
-    navigate(`/order-confirmation/${orderId}`);
+    toast({ title: "Payment Successful", description: "Your payment has been processed successfully." });
+    navigate('/dashboard/orders');
   };
 
   const handleQRPaymentFailed = () => {
     setShowQRModal(false);
-    setQrPaymentData(null);
-    toast({
-      title: "Payment Failed",
-      description: "The payment was not completed. Please try again.",
+    toast({ 
+      title: "Payment Failed", 
+      description: "There was an issue processing your payment. Please try again.", 
       variant: "destructive"
     });
   };
@@ -303,12 +309,12 @@ export default function Checkout() {
     }
 
     const paymentRequest: PaymentRequest = {
-      quoteIds: selectedQuoteIds,
+      quoteIds: cartQuoteIds,
       amount: totalAmount,
       currency: userProfile?.preferred_display_currency || 'USD',
       gateway: paymentMethod,
       success_url: `${window.location.origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${window.location.origin}/checkout?quotes=${selectedQuoteIds.join(',')}`,
+      cancel_url: `${window.location.origin}/checkout?quotes=${cartQuoteIds.join(',')}`,
     };
 
     const { isValid, errors } = validatePaymentRequest(paymentRequest);
@@ -323,13 +329,41 @@ export default function Checkout() {
       const paymentResponse = await createPaymentAsync(paymentRequest);
 
       if (paymentResponse.url) {
-        window.location.href = paymentResponse.url;
+        // For redirect-based payments (Stripe)
+        if (paymentMethod === 'payu' && paymentResponse.method === 'POST') {
+          // Handle PayU POST form submission
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = paymentResponse.url;
+          form.target = '_blank';
+          
+          // Add form data
+          Object.entries(paymentResponse.formData).forEach(([key, value]) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value as string;
+            form.appendChild(input);
+          });
+          
+          document.body.appendChild(form);
+          form.submit();
+          document.body.removeChild(form);
+        } else {
+          // For other redirect-based payments (Stripe)
+          window.location.href = paymentResponse.url;
+        }
+      } else if (paymentResponse.transactionId) {
+        // For non-redirect payments, show status tracker
+        setCurrentTransactionId(paymentResponse.transactionId);
+        setShowPaymentStatus(true);
+        toast({ title: "Payment Initiated", description: "Your payment is being processed." });
       } else {
         // This case would be for non-redirect flows like COD or Bank Transfer
-        toast({ title: "Order Submitted", description: "Your order for has been received." });
+        toast({ title: "Order Submitted", description: "Your order has been received." });
         
         await updateQuotesMutation.mutateAsync({ 
-          ids: selectedQuoteIds, 
+          ids: cartQuoteIds, 
           status: 'ordered', 
           method: paymentMethod 
         });
@@ -364,21 +398,6 @@ export default function Checkout() {
     );
   }
 
-  // Show loading state while cart is loading
-  if (cartLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="py-12 text-center space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <h2 className="text-xl font-semibold">Loading your cart...</h2>
-            <p className="text-muted-foreground">Please wait while we load your items.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   // Show no items message only after cart has loaded and is empty
   if (!cartLoading && selectedCartItems.length === 0) {
     return (
@@ -397,346 +416,211 @@ export default function Checkout() {
     );
   }
 
-  const steps = [
-    { id: 'address', title: 'Shipping Address', icon: MapPin },
-    { id: 'payment', title: 'Payment Method', icon: CreditCard },
-    { id: 'review', title: 'Review & Place Order', icon: CheckCircle2 },
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gray-50">
       <div className="container py-8">
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Complete Your Order</h1>
-            <p className="text-muted-foreground">Just a few steps to complete your purchase</p>
-          </div>
-
-          {/* Progress Stepper */}
-          <div className="flex items-center justify-center">
-            <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center space-x-6">
-                {steps.map((step, index) => {
-                  const Icon = step.icon;
-                  const isActive = currentStep === step.id;
-                  const isCompleted = steps.findIndex(s => s.id === currentStep) > index;
-                  
-                  return (
-                    <div key={step.id} className="flex items-center">
-                      <div className={cn(
-                        "flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 backdrop-blur-xl",
-                        isActive 
-                          ? "bg-gradient-to-r from-primary to-primary/80 border-primary text-white shadow-lg shadow-primary/20 scale-110" : 
-                        isCompleted 
-                          ? "bg-gradient-to-r from-green-500 to-green-600 border-green-500 text-white shadow-md shadow-green-500/20" :
-                          "bg-white/20 border-white/30 text-gray-500 hover:border-primary/50 hover:bg-white/30"
-                      )}>
-                        {isCompleted ? (
-                          <CheckCircle2 className="h-6 w-6" />
-                        ) : (
-                          <Icon className="h-6 w-6" />
-                        )}
-                      </div>
-                      <span className={cn(
-                        "ml-3 text-sm font-medium hidden sm:block transition-colors duration-300",
-                        isActive ? "text-primary font-semibold" : 
-                        isCompleted ? "text-green-600 font-medium" : "text-gray-500"
-                      )}>
-                        {step.title}
-                      </span>
-                      {index < steps.length - 1 && (
-                        <div className={cn(
-                          "w-12 h-1 mx-6 rounded-full transition-all duration-300",
-                          isCompleted ? "bg-gradient-to-r from-green-500 to-green-600" : "bg-white/30"
-                        )} />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Checkout</h1>
+            <p className="text-gray-600 mt-2">Complete your order securely</p>
           </div>
 
           <div className="grid gap-8 lg:grid-cols-3">
-            {/* Main Content */}
+            {/* Main Checkout Form */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Step 1: Shipping Address */}
-              {currentStep === 'address' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5" />
-                      Shipping Address
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {!addresses || addresses.length === 0 ? (
-                      <div className="text-center py-8">
-                        <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-medium mb-2">No addresses found</h3>
-                        <p className="text-muted-foreground mb-4">Please add a shipping address to continue.</p>
-                        <Button onClick={() => setShowAddressForm(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Address
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <RadioGroup value={selectedAddress} onValueChange={setSelectedAddress}>
-                          <div className="space-y-3">
-                            {addresses.map((address) => (
-                              <div key={address.id} className="flex items-start space-x-3 p-4 border rounded-lg hover:border-primary transition-colors">
-                                <RadioGroupItem value={address.id} id={address.id} className="mt-1" />
-                                <Label htmlFor={address.id} className="flex-1 cursor-pointer">
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium">{address.address_line1}</span>
-                                      {address.is_default && <Badge variant="secondary">Default</Badge>}
-                                    </div>
-                                    {address.address_line2 && (
-                                      <p className="text-sm text-muted-foreground">{address.address_line2}</p>
-                                    )}
-                                    <p className="text-sm text-muted-foreground">
-                                      {address.city}, {address.state_province_region} {address.postal_code}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">{address.country}</p>
+              {/* Shipping Address */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Shipping Address
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!addresses || addresses.length === 0 ? (
+                    <div className="text-center py-6">
+                      <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-medium mb-2">No addresses found</h3>
+                      <p className="text-muted-foreground mb-4">Please add a shipping address to continue.</p>
+                      <Button onClick={() => setShowAddressForm(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Address
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <RadioGroup value={selectedAddress} onValueChange={setSelectedAddress}>
+                        <div className="space-y-3">
+                          {addresses.map((address) => (
+                            <div key={address.id} className="flex items-start space-x-3 p-4 border rounded-lg hover:border-primary transition-colors">
+                              <RadioGroupItem value={address.id} id={address.id} className="mt-1" />
+                              <Label htmlFor={address.id} className="flex-1 cursor-pointer">
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{address.address_line1}</span>
+                                    {address.is_default && <Badge variant="secondary">Default</Badge>}
                                   </div>
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        </RadioGroup>
-                        
-                        <div className="pt-4 border-t">
-                          <Button 
-                            variant="outline" 
-                            onClick={() => setShowAddressForm(true)}
-                            className="w-full"
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add New Address
-                          </Button>
+                                  {address.address_line2 && (
+                                    <p className="text-sm text-muted-foreground">{address.address_line2}</p>
+                                  )}
+                                  <p className="text-sm text-muted-foreground">
+                                    {address.city}, {address.state_province_region} {address.postal_code}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">{address.country}</p>
+                                </div>
+                              </Label>
+                            </div>
+                          ))}
                         </div>
-                      </>
-                    )}
-
-                    {/* Inline Address Form */}
-                    {showAddressForm && (
-                      <div className="border rounded-lg p-6 bg-gray-50 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium">Add New Address</h4>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => setShowAddressForm(false)}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="md:col-span-2">
-                            <Label htmlFor="address_line1">Street Address *</Label>
-                            <Input
-                              id="address_line1"
-                              value={addressFormData.address_line1}
-                              onChange={(e) => setAddressFormData({...addressFormData, address_line1: e.target.value})}
-                              placeholder="123 Main St"
-                            />
-                          </div>
-                          <div className="md:col-span-2">
-                            <Label htmlFor="address_line2">Apartment, suite, etc. (optional)</Label>
-                            <Input
-                              id="address_line2"
-                              value={addressFormData.address_line2}
-                              onChange={(e) => setAddressFormData({...addressFormData, address_line2: e.target.value})}
-                              placeholder="Apt 4B"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="city">City *</Label>
-                            <Input
-                              id="city"
-                              value={addressFormData.city}
-                              onChange={(e) => setAddressFormData({...addressFormData, city: e.target.value})}
-                              placeholder="New York"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="state">State/Province *</Label>
-                            <Input
-                              id="state"
-                              value={addressFormData.state_province_region}
-                              onChange={(e) => setAddressFormData({...addressFormData, state_province_region: e.target.value})}
-                              placeholder="NY"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="postal_code">Postal Code *</Label>
-                            <Input
-                              id="postal_code"
-                              value={addressFormData.postal_code}
-                              onChange={(e) => setAddressFormData({...addressFormData, postal_code: e.target.value})}
-                              placeholder="10001"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="country">Country *</Label>
-                            <Input
-                              id="country"
-                              value={addressFormData.country}
-                              onChange={(e) => setAddressFormData({...addressFormData, country: e.target.value})}
-                              placeholder="United States"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="is_default"
-                            checked={addressFormData.is_default}
-                            onCheckedChange={(checked) => setAddressFormData({...addressFormData, is_default: checked as boolean})}
-                          />
-                          <Label htmlFor="is_default">Set as default address</Label>
-                        </div>
-                        
+                      </RadioGroup>
+                      
+                      <div className="pt-4 border-t">
                         <Button 
-                          onClick={handleAddAddress}
-                          disabled={addAddressMutation.isPending}
+                          variant="outline" 
+                          onClick={() => setShowAddressForm(true)}
                           className="w-full"
                         >
-                          {addAddressMutation.isPending ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Adding Address...
-                            </>
-                          ) : (
-                            'Add Address'
-                          )}
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add New Address
                         </Button>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+                    </>
+                  )}
 
-              {/* Step 2: Payment Method */}
-              {currentStep === 'payment' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CreditCard className="h-5 w-5" />
-                      Payment Method
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <PaymentMethodSelector
-                      selectedMethod={paymentMethod}
-                      onMethodChange={handlePaymentMethodChange}
-                      amount={totalAmount}
-                      currency={userProfile?.preferred_display_currency || 'USD'}
-                      showRecommended={true}
-                      disabled={isProcessing}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Step 3: Review */}
-              {currentStep === 'review' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5" />
-                      Review Your Order
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Selected Address */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Shipping Address</h4>
-                      {addresses?.find(addr => addr.id === selectedAddress) && (
-                        <div className="p-3 border rounded-lg bg-gray-50">
-                          <p className="font-medium">{addresses.find(addr => addr.id === selectedAddress)?.address_line1}</p>
-                          {addresses.find(addr => addr.id === selectedAddress)?.address_line2 && (
-                            <p className="text-sm text-muted-foreground">{addresses.find(addr => addr.id === selectedAddress)?.address_line2}</p>
-                          )}
-                          <p className="text-sm text-muted-foreground">
-                            {addresses.find(addr => addr.id === selectedAddress)?.city}, {addresses.find(addr => addr.id === selectedAddress)?.state_province_region} {addresses.find(addr => addr.id === selectedAddress)?.postal_code}
-                          </p>
-                          <p className="text-sm text-muted-foreground">{addresses.find(addr => addr.id === selectedAddress)?.country}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Payment Method */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Payment Method</h4>
-                      <div className="p-3 border rounded-lg bg-gray-50">
-                        <div className="flex items-center gap-2">
-                          {paymentMethod === 'stripe' && <CreditCard className="h-4 w-4" />}
-                          {paymentMethod === 'payu' && <CreditCard className="h-4 w-4" />}
-                          {paymentMethod === 'esewa' && <Banknote className="h-4 w-4" />}
-                          {paymentMethod === 'khalti' && <Banknote className="h-4 w-4" />}
-                          {paymentMethod === 'fonepay' && <Banknote className="h-4 w-4" />}
-                          {paymentMethod === 'airwallex' && <CreditCard className="h-4 w-4" />}
-                          {paymentMethod === 'cod' && <Banknote className="h-4 w-4" />}
-                          {paymentMethod === 'bank_transfer' && <Landmark className="h-4 w-4" />}
-                          <span className="font-medium">
-                            {paymentMethod === 'stripe' && 'Credit Card (Stripe)'}
-                            {paymentMethod === 'payu' && 'PayU'}
-                            {paymentMethod === 'esewa' && 'eSewa'}
-                            {paymentMethod === 'khalti' && 'Khalti'}
-                            {paymentMethod === 'fonepay' && 'Fonepay'}
-                            {paymentMethod === 'airwallex' && 'Airwallex'}
-                            {paymentMethod === 'cod' && 'Cash on Delivery'}
-                            {paymentMethod === 'bank_transfer' && 'Bank Transfer'}
-                          </span>
-                        </div>
+                  {/* Inline Address Form */}
+                  {showAddressForm && (
+                    <div className="border rounded-lg p-6 bg-gray-50 space-y-4 mt-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium">Add New Address</h4>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setShowAddressForm(false)}
+                        >
+                          Cancel
+                        </Button>
                       </div>
-                    </div>
-
-                    {/* Security Notice */}
-                    <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
-                      <div className="flex items-start gap-3">
-                        <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                          <Label htmlFor="address_line1">Street Address *</Label>
+                          <Input
+                            id="address_line1"
+                            value={addressFormData.address_line1}
+                            onChange={(e) => setAddressFormData({...addressFormData, address_line1: e.target.value})}
+                            placeholder="123 Main St"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <Label htmlFor="address_line2">Apartment, suite, etc. (optional)</Label>
+                          <Input
+                            id="address_line2"
+                            value={addressFormData.address_line2}
+                            onChange={(e) => setAddressFormData({...addressFormData, address_line2: e.target.value})}
+                            placeholder="Apt 4B"
+                          />
+                        </div>
                         <div>
-                          <h4 className="font-medium text-blue-900">Secure Checkout</h4>
-                          <p className="text-sm text-blue-700 mt-1">
-                            Your payment information is encrypted and secure. We never store your card details.
-                          </p>
+                          <Label htmlFor="city">City *</Label>
+                          <Input
+                            id="city"
+                            value={addressFormData.city}
+                            onChange={(e) => setAddressFormData({...addressFormData, city: e.target.value})}
+                            placeholder="New York"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="state">State/Province *</Label>
+                          <Input
+                            id="state"
+                            value={addressFormData.state_province_region}
+                            onChange={(e) => setAddressFormData({...addressFormData, state_province_region: e.target.value})}
+                            placeholder="NY"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="postal_code">Postal Code *</Label>
+                          <Input
+                            id="postal_code"
+                            value={addressFormData.postal_code}
+                            onChange={(e) => setAddressFormData({...addressFormData, postal_code: e.target.value})}
+                            placeholder="10001"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="country">Country *</Label>
+                          <Input
+                            id="country"
+                            value={addressFormData.country}
+                            onChange={(e) => setAddressFormData({...addressFormData, country: e.target.value})}
+                            placeholder="United States"
+                          />
                         </div>
                       </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="is_default"
+                          checked={addressFormData.is_default}
+                          onCheckedChange={(checked) => setAddressFormData({...addressFormData, is_default: checked as boolean})}
+                        />
+                        <Label htmlFor="is_default">Set as default address</Label>
+                      </div>
+                      
+                      <Button 
+                        onClick={handleAddAddress}
+                        disabled={addAddressMutation.isPending}
+                        className="w-full"
+                      >
+                        {addAddressMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Adding Address...
+                          </>
+                        ) : (
+                          'Add Address'
+                        )}
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  )}
+                </CardContent>
+              </Card>
 
-              {/* Navigation */}
-              <div className="flex justify-between">
-                <Button
-                  variant="outline"
-                  onClick={handlePreviousStep}
-                  disabled={currentStep === 'address'}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Previous
-                </Button>
-                
-                {currentStep !== 'review' && (
-                  <Button
-                    onClick={handleNextStep}
-                    disabled={
-                      (currentStep === 'address' && !canProceedToPayment) ||
-                      (currentStep === 'payment' && !canProceedToReview)
-                    }
-                  >
-                    Next
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                )}
-              </div>
+              {/* Payment Method */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Payment Method
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PaymentMethodSelector
+                    selectedMethod={paymentMethod}
+                    onMethodChange={handlePaymentMethodChange}
+                    amount={totalAmount}
+                    currency={userProfile?.preferred_display_currency || 'USD'}
+                    showRecommended={true}
+                    disabled={isProcessing}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Security Notice */}
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-blue-900">Secure Checkout</h4>
+                      <p className="text-sm text-blue-700 mt-1">
+                        Your payment information is encrypted and secure. We never store your card details.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Order Summary Sidebar */}
@@ -779,25 +663,23 @@ export default function Checkout() {
                     </div>
                   </div>
 
-                  {currentStep === 'review' && (
-                    <Button 
-                      onClick={handlePlaceOrder} 
-                      disabled={!selectedAddress || isProcessing || !addresses || addresses.length === 0}
-                      className="w-full"
-                      size="lg"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          Place Order - {formatAmount(totalAmount)}
-                        </>
-                      )}
-                    </Button>
-                  )}
+                  <Button 
+                    onClick={handlePlaceOrder} 
+                    disabled={!canPlaceOrder || isProcessing || !addresses || addresses.length === 0}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Place Order - {formatAmount(totalAmount)}
+                      </>
+                    )}
+                  </Button>
 
                   <p className="text-xs text-muted-foreground text-center">
                     By placing this order, you agree to our terms and conditions.
@@ -823,6 +705,39 @@ export default function Checkout() {
           onPaymentFailed={handleQRPaymentFailed}
         />
       )}
+
+      {/* Payment Status Tracker */}
+      {showPaymentStatus && currentTransactionId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <PaymentStatusTracker
+              transactionId={currentTransactionId}
+              gateway={paymentMethod}
+              onStatusChange={(status) => {
+                if (status === 'completed') {
+                  setShowPaymentStatus(false);
+                  toast({ title: "Payment Successful", description: "Your payment has been processed successfully." });
+                  navigate('/dashboard/orders');
+                } else if (status === 'failed') {
+                  setShowPaymentStatus(false);
+                  toast({ 
+                    title: "Payment Failed", 
+                    description: "There was an issue processing your payment. Please try again.", 
+                    variant: "destructive"
+                  });
+                }
+              }}
+              autoRefresh={true}
+              refreshInterval={3000}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Debug Component - Remove after testing */}
+      <div className="mt-8">
+        <PaymentDebug />
+      </div>
     </div>
   );
 }

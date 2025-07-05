@@ -243,35 +243,32 @@ INSERT INTO footer_settings (company_name, company_description, primary_phone, s
 ON CONFLICT (id) DO NOTHING;
 
 -- Insert test shipping routes
-INSERT INTO shipping_routes (origin_country, destination_country, shipping_carrier, estimated_days, customs_clearance_days, shipping_per_kg, weight_unit, is_active, customs_percentage, customs_tiers) VALUES
-('US', 'IN', 'DHL', 7, 2, 15.00, 'kg', true, 18.0, '[
-  {"min_weight": 0, "max_weight": 5, "rate": 15.00},
-  {"min_weight": 5, "max_weight": 10, "rate": 12.00},
-  {"min_weight": 10, "max_weight": 20, "rate": 10.00}
+INSERT INTO shipping_routes (origin_country, destination_country, base_shipping_cost, cost_per_kg, cost_percentage, carriers) VALUES
+('US', 'IN', 30.00, 10.00, 2.5, '[
+  {"name": "DHL", "cost_multiplier": 1.0, "days": "7-10"},
+  {"name": "FedEx", "cost_multiplier": 0.9, "days": "8-12"}
 ]'),
-('US', 'NP', 'FedEx', 10, 3, 20.00, 'kg', true, 13.0, '[
-  {"min_weight": 0, "max_weight": 5, "rate": 20.00},
-  {"min_weight": 5, "max_weight": 10, "rate": 18.00},
-  {"min_weight": 10, "max_weight": 20, "rate": 15.00}
+('US', 'NP', 35.00, 12.00, 3.0, '[
+  {"name": "DHL", "cost_multiplier": 1.0, "days": "10-14"},
+  {"name": "FedEx", "cost_multiplier": 0.9, "days": "12-16"}
 ]'),
-('IN', 'US', 'DHL', 8, 1, 25.00, 'kg', true, 5.0, '[
-  {"min_weight": 0, "max_weight": 5, "rate": 25.00},
-  {"min_weight": 5, "max_weight": 10, "rate": 22.00},
-  {"min_weight": 10, "max_weight": 20, "rate": 20.00}
+('IN', 'US', 40.00, 15.00, 3.5, '[
+  {"name": "DHL", "cost_multiplier": 1.0, "days": "8-12"},
+  {"name": "FedEx", "cost_multiplier": 0.9, "days": "10-14"}
 ]');
 
--- Insert test customer profiles with names
-INSERT INTO profiles (id, full_name, cod_enabled, internal_notes, created_at) VALUES
-('550e8400-e29b-41d4-a716-446655440001', 'John Smith', true, 'VIP customer - high value orders', NOW() - INTERVAL '30 days'),
-('550e8400-e29b-41d4-a716-446655440002', 'Sarah Johnson', false, 'New customer - first order pending', NOW() - INTERVAL '15 days'),
-('550e8400-e29b-41d4-a716-446655440003', 'Michael Brown', true, 'Regular customer - COD enabled', NOW() - INTERVAL '7 days'),
-('550e8400-e29b-41d4-a716-446655440004', 'Emily Davis', false, 'Customer from India', NOW() - INTERVAL '3 days'),
-('550e8400-e29b-41d4-a716-446655440005', 'David Wilson', true, 'VIP customer - multiple orders', NOW() - INTERVAL '1 day');
+-- Insert test customer profiles with names (commented out due to foreign key constraints)
+-- INSERT INTO profiles (id, full_name, cod_enabled, internal_notes, created_at) VALUES
+-- ('550e8400-e29b-41d4-a716-446655440001', 'John Smith', true, 'VIP customer - high value orders', NOW() - INTERVAL '30 days'),
+-- ('550e8400-e29b-41d4-a716-446655440002', 'Sarah Johnson', false, 'New customer - first order pending', NOW() - INTERVAL '15 days'),
+-- ('550e8400-e29b-41d4-a716-446655440003', 'Michael Brown', true, 'Regular customer - COD enabled', NOW() - INTERVAL '7 days'),
+-- ('550e8400-e29b-41d4-a716-446655440004', 'Emily Davis', false, 'Customer from India', NOW() - INTERVAL '3 days'),
+-- ('550e8400-e29b-41d4-a716-446655440005', 'David Wilson', true, 'VIP customer - multiple orders', NOW() - INTERVAL '1 day');
 
--- Insert test customer addresses
-INSERT INTO user_addresses (id, user_id, address_line1, address_line2, city, state_province_region, postal_code, country, is_default, created_at) VALUES
-('660e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440001', '123 Main Street', 'Apt 4B', 'New York', 'NY', '10001', 'US', true, NOW()),
-('660e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440002', '456 Oak Avenue', NULL, 'Los Angeles', 'CA', '90210', 'US', true, NOW()),
-('660e8400-e29b-41d4-a716-446655440003', '550e8400-e29b-41d4-a716-446655440003', '789 Pine Road', 'Suite 12', 'Chicago', 'IL', '60601', 'US', true, NOW()),
-('660e8400-e29b-41d4-a716-446655440004', '550e8400-e29b-41d4-a716-446655440004', '321 Elm Street', NULL, 'Mumbai', 'Maharashtra', '400001', 'IN', true, NOW()),
-('660e8400-e29b-41d4-a716-446655440005', '550e8400-e29b-41d4-a716-446655440005', '654 Maple Drive', 'Floor 3', 'Toronto', 'ON', 'M5V 3A8', 'CA', true, NOW());
+-- Insert test customer addresses (commented out due to foreign key constraints)
+-- INSERT INTO user_addresses (id, user_id, address_line1, address_line2, city, state_province_region, postal_code, country, is_default, created_at) VALUES
+-- ('660e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440001', '123 Main Street', 'Apt 4B', 'New York', 'NY', '10001', 'US', true, NOW()),
+-- ('660e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440002', '456 Oak Avenue', NULL, 'Los Angeles', 'CA', '90210', 'US', true, NOW()),
+-- ('660e8400-e29b-41d4-a716-446655440003', '550e8400-e29b-41d4-a716-446655440003', '789 Pine Road', 'Suite 12', 'Chicago', 'IL', '60601', 'US', true, NOW()),
+-- ('660e8400-e29b-41d4-a716-446655440004', '550e8400-e29b-41d4-a716-446655440004', '321 Elm Street', NULL, 'Mumbai', 'Maharashtra', '400001', 'IN', true, NOW()),
+-- ('660e8400-e29b-41d4-a716-446655440005', '550e8400-e29b-41d4-a716-446655440005', '654 Maple Drive', 'Floor 3', 'Toronto', 'ON', 'M5V 3A8', 'CA', true, NOW());

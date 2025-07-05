@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { CustomerCodToggle } from './CustomerCodToggle';
 import { CustomerEmailDialog } from './CustomerEmailDialog';
-import { CustomerAddresses } from './CustomerAddresses';
+
 import { format } from 'date-fns';
 import React from 'react';
 
@@ -362,7 +362,28 @@ export const EnhancedCustomerTable = ({
                                 </CardTitle>
                               </CardHeader>
                               <CardContent>
-                                <CustomerAddresses addresses={customer.user_addresses} />
+                                <div>
+                                  <p className="text-sm font-medium text-muted-foreground mb-2">Shipping Addresses</p>
+                                  {customer.user_addresses && customer.user_addresses.length > 0 ? (
+                                    <div className="space-y-1">
+                                      {customer.user_addresses.map((address) => (
+                                        <div key={address.id} className="flex items-center space-x-2">
+                                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                                          <span className="text-sm">
+                                            {`${address.address_line1}${address.address_line2 ? `, ${address.address_line2}` : ''}, ${address.city}, ${address.country}`}
+                                          </span>
+                                          {address.is_default && (
+                                            <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
+                                              Default
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">No addresses saved.</p>
+                                  )}
+                                </div>
                               </CardContent>
                             </Card>
 

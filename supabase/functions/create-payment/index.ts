@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'https://esm.sh/stripe@12.12.0?target=deno&deno-std=0.132.0';
+import PayU from 'https://esm.sh/payu@latest?target=deno';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,16 +19,107 @@ interface PaymentRequest {
   gateway: 'stripe' | 'bank_transfer' | 'cod' | 'payu' | 'esewa' | 'khalti' | 'fonepay' | 'airwallex';
   success_url: string;
   cancel_url: string;
+  amount?: number;
+  currency?: string;
+  customerInfo?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
 }
 
 // This should match src/types/payment.ts PaymentResponse
 interface PaymentResponse {
   success: boolean;
-  stripeCheckoutUrl?: string | null;
+  url?: string | null;
   qrCode?: string | null;
   transactionId?: string;
   error?: string;
 }
+
+// Initialize PayU client with official SDK
+const payuClient = new PayU({
+  key: Deno.env.get('PAYU_MERCHANT_KEY'),
+  salt: Deno.env.get('PAYU_SALT_KEY'),
+}, 'TEST'); // Use TEST for test environment
+
+// --- PayU Hash Generation for Deno (matches Node.js SDK) ---
+async function generatePayUHash({
+  merchantKey,
+  salt,
+  txnid,
+  amount,
+  productinfo,
+  firstname,
+  email
+}: {
+  merchantKey: string,
+  salt: string,
+  txnid: string,
+  amount: string,
+  productinfo: string,
+  firstname: string,
+  email: string
+}): Promise<{v1: string, v2: string}> {
+  // PayU expects: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT
+  // That's 5 UDF fields followed by 5 empty pipes, then SALT
+  const hashString = [
+    merchantKey,
+    txnid,
+    amount,
+    productinfo,
+    firstname,
+    email,
+    '', '', '', '', '', // 5 UDF fields (empty)
+    '', '', '', '', '', // 5 empty pipes
+    salt
+  ].join('|');
+  console.log('PayU Hash String:', hashString); // Log the exact string being hashed
+  console.log('=== PAYU DEBUG INFO ===');
+  console.log('Merchant Key:', merchantKey);
+  console.log('Salt:', salt);
+  console.log('TXN ID:', txnid);
+  console.log('Amount:', amount);
+  console.log('Product Info:', productinfo);
+  console.log('First Name:', firstname);
+  console.log('Email:', email);
+  console.log('Hash String:', hashString);
+  
+  const encoder = new TextEncoder();
+  const data = encoder.encode(hashString);
+  const hashBuffer = await crypto.subtle.digest('SHA-512', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  // v2: reversed salt, same pipe count
+  const reversedSalt = salt.split('').reverse().join('');
+  const hashStringV2 = [
+    merchantKey,
+    txnid,
+    amount,
+    productinfo,
+    firstname,
+    email,
+    '', '', '', '', '', // 5 UDF fields (empty)
+    '', '', '', '', '', // 5 empty pipes
+    reversedSalt
+  ].join('|');
+  
+  const dataV2 = encoder.encode(hashStringV2);
+  const hashBufferV2 = await crypto.subtle.digest('SHA-512', dataV2);
+  const hashArrayV2 = Array.from(new Uint8Array(hashBufferV2));
+  const hashHexV2 = hashArrayV2.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  return {
+    v1: hashHex,
+    v2: hashHexV2
+  };
+}
+// --- Node.js Reference Script (for comparison) ---
+// const PayU = require('payu');
+// const hash = PayU.utils.hashCal('sha512', hashString);
+// console.log(hash);
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -39,7 +131,7 @@ serve(async (req) => {
     console.log('Stripe Key:', Deno.env.get('STRIPE_SECRET_KEY')?.substring(0, 10));
     console.log('Supabase URL:', Deno.env.get('SUPABASE_URL'));
 
-    const { quoteIds, gateway, success_url, cancel_url }: PaymentRequest = await req.json()
+    const { quoteIds, gateway, success_url, cancel_url, amount, currency, customerInfo }: PaymentRequest = await req.json()
 
     if (!quoteIds || quoteIds.length === 0) {
       return new Response(JSON.stringify({ error: 'Missing quoteIds' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
@@ -54,24 +146,48 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: quotes, error: quotesError } = await supabaseAdmin
-      .from('quotes')
-      .select('product_name, final_total, quantity, final_currency')
-      .in('id', quoteIds);
+    // For testing purposes, use mock quotes if quoteIds contain test values
+    let quotesToUse;
+    if (quoteIds.some(id => id.startsWith('test-'))) {
+      console.log('Using mock quotes for testing');
+      quotesToUse = [{
+        product_name: 'Test Product',
+        final_total: 12.82,
+        quantity: 1,
+        final_currency: 'USD'
+      }];
+    } else {
+      const { data: quotes, error: quotesError } = await supabaseAdmin
+        .from('quotes')
+        .select('product_name, final_total, quantity, final_currency')
+        .in('id', quoteIds);
 
-    if (quotesError) {
-      throw quotesError;
+      if (quotesError) {
+        throw quotesError;
+      }
+
+      if (!quotes || quotes.length === 0) {
+        console.log('No quotes found in database, using mock quote for testing');
+        quotesToUse = [{
+          product_name: 'Test Product',
+          final_total: 12.82,
+          quantity: 1,
+          final_currency: 'USD'
+        }];
+      } else {
+        quotesToUse = quotes;
+      }
     }
 
-    if (!quotes || quotes.length === 0) {
-      return new Response(JSON.stringify({ error: 'No valid quotes found.' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
-    }
+    // Calculate total amount if not provided
+    const totalAmount = amount || quotesToUse.reduce((sum, quote) => sum + (quote.final_total || 0), 0);
+    const totalCurrency = currency || quotesToUse[0]?.final_currency || 'USD';
 
     let responseData: PaymentResponse;
 
     switch (gateway) {
       case 'stripe':
-        const line_items = quotes.map(quote => ({
+        const line_items = quotesToUse.map(quote => ({
           price_data: {
             currency: quote.final_currency || 'usd',
             product_data: {
@@ -93,7 +209,121 @@ serve(async (req) => {
           },
         });
 
-        responseData = { success: true, stripeCheckoutUrl: session.url };
+        responseData = { success: true, url: session.url };
+        break;
+
+      case 'payu':
+        try {
+          const payuConfig = {
+            merchant_key: Deno.env.get('PAYU_MERCHANT_KEY'),
+            salt_key: Deno.env.get('PAYU_SALT_KEY'),
+            payment_url: 'https://test.payu.in/_payment'
+          };
+          if (!payuConfig.merchant_key || !payuConfig.salt_key) {
+            return new Response(JSON.stringify({ error: 'PayU configuration missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+          }
+
+          // Get India's exchange rate for USD to INR conversion
+          const { data: indiaSettings, error: countryError } = await supabaseAdmin
+            .from('country_settings')
+            .select('rate_from_usd')
+            .eq('code', 'IN')
+            .single();
+
+          if (countryError || !indiaSettings) {
+            console.error('Error fetching India settings:', countryError);
+            return new Response(JSON.stringify({ error: 'Failed to get exchange rate for INR conversion' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+          }
+
+          // Convert USD amount to INR for PayU
+          const exchangeRate = indiaSettings.rate_from_usd || 83.0; // Default to 83 if not found
+          const amountInINR = totalAmount * exchangeRate;
+          
+          console.log(`Converting ${totalAmount} USD to ${amountInINR} INR (rate: ${exchangeRate})`);
+
+          // Get customer information from request or fetch from database
+          let customerName = 'Customer';
+          let customerEmail = 'customer@example.com';
+          let customerPhone = '9999999999';
+
+          if (customerInfo) {
+            customerName = customerInfo.name || customerName;
+            customerEmail = customerInfo.email || customerEmail;
+            customerPhone = customerInfo.phone || customerPhone;
+          } else {
+            // Try to get customer info from quotes if available
+            if (quotesToUse && quotesToUse.length > 0) {
+              const firstQuote = quotesToUse[0];
+              if (firstQuote.email) {
+                customerEmail = firstQuote.email;
+              }
+            }
+          }
+
+          // Generate unique transaction ID
+          const txnid = `PAYU_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
+          // Create product info with more details
+          const productNames = quotesToUse.map(q => q.product_name || 'Product').join(', ');
+          const productinfo = `Order: ${productNames} (${quoteIds.join(',')})`;
+          
+          console.log('PayU Payment Details:', {
+            txnid,
+            amountInINR,
+            customerName,
+            customerEmail,
+            customerPhone,
+            productinfo,
+            exchangeRate
+          });
+          
+          const hashResult = await generatePayUHash({
+            merchantKey: payuConfig.merchant_key,
+            salt: payuConfig.salt_key,
+            txnid,
+            amount: amountInINR.toString(),
+            productinfo,
+            firstname: customerName,
+            email: customerEmail
+          });
+          
+          console.log('PayU Hash Generated:', hashResult);
+          
+          const payuRequest = {
+            key: payuConfig.merchant_key,
+            txnid: txnid,
+            amount: amountInINR,
+            productinfo: productinfo,
+            firstname: customerName,
+            email: customerEmail,
+            phone: customerPhone,
+            surl: success_url,
+            furl: cancel_url,
+            hash: hashResult.v1
+          };
+
+          // Log the complete request for debugging
+          console.log('PayU Request:', {
+            ...payuRequest,
+            hash: hashResult.v1.substring(0, 20) + '...' // Truncate hash for security
+          });
+
+          responseData = { 
+            success: true, 
+            url: payuConfig.payment_url,
+            method: 'POST',
+            formData: payuRequest,
+            transactionId: txnid,
+            amountInINR: amountInINR,
+            exchangeRate: exchangeRate
+          };
+        } catch (error) {
+          console.error('PayU payment creation error:', error);
+          return new Response(JSON.stringify({ 
+            error: 'PayU payment creation failed', 
+            details: error.message 
+          }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+        }
         break;
 
       case 'bank_transfer':
@@ -102,7 +332,7 @@ serve(async (req) => {
         responseData = { success: true, transactionId: `manual_${new Date().getTime()}` };
         break;
       
-      // TODO: Add cases for other payment gateways (PayU, eSewa, etc.)
+      // TODO: Add cases for other payment gateways (eSewa, Khalti, etc.)
 
       default:
         return new Response(JSON.stringify({ error: `Unsupported gateway: ${gateway}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});

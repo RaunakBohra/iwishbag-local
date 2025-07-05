@@ -19,9 +19,11 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  CreditCard
 } from 'lucide-react';
 import { PaymentAnalytics, PaymentGateway } from '@/types/payment';
+import { Progress } from '@/components/ui/progress';
 
 interface PaymentAnalyticsProps {
   timeRange?: '7d' | '30d' | '90d' | '1y';
@@ -107,6 +109,20 @@ export const PaymentAnalytics: React.FC<PaymentAnalyticsProps> = ({ timeRange = 
           });
         });
 
+        // Get quotes for conversion funnel
+        const { data: quotes, error: quotesError } = await supabase
+          .from('quotes')
+          .select('status, created_at')
+          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()); // Last 30 days
+
+        if (quotesError) throw quotesError;
+
+        // Calculate conversion funnel
+        const cartAdded = quotes?.filter(q => q.status === 'pending').length || 0;
+        const checkoutStarted = quotes?.filter(q => q.status === 'sent').length || 0;
+        const paymentInitiated = quotes?.filter(q => q.status === 'approved').length || 0;
+        const paymentCompleted = completedTransactions.length;
+
         return {
           total_transactions: totalTransactions,
           total_amount: totalAmount,
@@ -125,7 +141,17 @@ export const PaymentAnalytics: React.FC<PaymentAnalyticsProps> = ({ timeRange = 
             date,
             count: data.count,
             amount: data.amount
-          }))
+          })),
+          successful_transactions: completedTransactions.length,
+          total_revenue: totalAmount,
+          revenue_by_gateway: gatewayBreakdown,
+          conversion_funnel: {
+            cart_added: cartAdded,
+            checkout_started: checkoutStarted,
+            payment_initiated: paymentInitiated,
+            payment_completed: paymentCompleted,
+          },
+          recent_transactions: transactions?.slice(0, 10) || []
         };
       } catch (error) {
         console.warn('Payment transactions table not available:', error);
@@ -143,7 +169,17 @@ export const PaymentAnalytics: React.FC<PaymentAnalyticsProps> = ({ timeRange = 
           },
           failed_transactions: 0,
           pending_transactions: 0,
-          daily_trends: []
+          daily_trends: [],
+          successful_transactions: 0,
+          total_revenue: 0,
+          revenue_by_gateway: {},
+          conversion_funnel: {
+            cart_added: 0,
+            checkout_started: 0,
+            payment_initiated: 0,
+            payment_completed: 0,
+          },
+          recent_transactions: []
         };
       }
     }
@@ -223,6 +259,23 @@ export const PaymentAnalytics: React.FC<PaymentAnalyticsProps> = ({ timeRange = 
       </div>
     );
   }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'failed': return 'bg-red-100 text-red-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getGatewayIcon = (gateway: string) => {
+    switch (gateway) {
+      case 'stripe': return <CreditCard className="h-4 w-4" />;
+      case 'payu': return <DollarSign className="h-4 w-4" />;
+      default: return <CreditCard className="h-4 w-4" />;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -475,6 +528,119 @@ export const PaymentAnalytics: React.FC<PaymentAnalyticsProps> = ({ timeRange = 
           </TabsContent>
         </Tabs>
       )}
+
+      {/* Conversion Funnel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Conversion Funnel
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Cart Added</span>
+              <span className="text-sm font-medium">{analytics?.conversion_funnel.cart_added}</span>
+            </div>
+            <Progress value={100} className="h-2" />
+            
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Checkout Started</span>
+              <span className="text-sm font-medium">{analytics?.conversion_funnel.checkout_started}</span>
+            </div>
+            <Progress 
+              value={analytics?.conversion_funnel.cart_added > 0 ? 
+                (analytics.conversion_funnel.checkout_started / analytics.conversion_funnel.cart_added) * 100 : 0
+              } 
+              className="h-2" 
+            />
+            
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Payment Initiated</span>
+              <span className="text-sm font-medium">{analytics?.conversion_funnel.payment_initiated}</span>
+            </div>
+            <Progress 
+              value={analytics?.conversion_funnel.checkout_started > 0 ? 
+                (analytics.conversion_funnel.payment_initiated / analytics.conversion_funnel.checkout_started) * 100 : 0
+              } 
+              className="h-2" 
+            />
+            
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Payment Completed</span>
+              <span className="text-sm font-medium">{analytics?.conversion_funnel.payment_completed}</span>
+            </div>
+            <Progress 
+              value={analytics?.conversion_funnel.payment_initiated > 0 ? 
+                (analytics.conversion_funnel.payment_completed / analytics.conversion_funnel.payment_initiated) * 100 : 0
+              } 
+              className="h-2" 
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Revenue by Gateway */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Revenue by Payment Gateway
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {Object.entries(analytics?.revenue_by_gateway || {}).map(([gateway, revenue]) => (
+              <div key={gateway} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-2">
+                  {getGatewayIcon(gateway)}
+                  <span className="font-medium capitalize">{gateway}</span>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold">${revenue.toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {((revenue / analytics.total_amount) * 100).toFixed(1)}% of total
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Transactions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Recent Transactions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {analytics?.recent_transactions.map((transaction) => (
+              <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  {getGatewayIcon(transaction.gateway_code)}
+                  <div>
+                    <div className="font-medium capitalize">{transaction.gateway_code}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(transaction.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold">${transaction.amount?.toFixed(2)} {transaction.currency}</div>
+                  <Badge className={`text-xs ${getStatusColor(transaction.status)}`}>
+                    {transaction.status}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }; 
