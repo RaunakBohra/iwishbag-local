@@ -375,7 +375,7 @@ export default function Quotes() {
                       </div>
                     )}
                     {quote.status === 'approved' && quote.in_cart && (
-                      <Link to="/dashboard/cart" className="flex-1">
+                      <Link to="/cart" className="flex-1">
                         <Button size="sm" variant="secondary" className="w-full h-10 text-sm">
                           <ShoppingCart className="h-3 w-3 mr-1" />
                           In Cart
@@ -464,7 +464,7 @@ export default function Quotes() {
                             <AddToCartButton quoteId={quote.id} />
                           )}
                           {quote.status === 'approved' && quote.in_cart && (
-                            <Link to="/dashboard/cart">
+                            <Link to="/cart">
                               <Button size="sm" variant="secondary" className="flex items-center gap-1">
                                 <ShoppingCart className="h-3 w-3" />
                                 In Cart
