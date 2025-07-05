@@ -7,6 +7,7 @@ import { useUserCurrency } from '@/hooks/useUserCurrency';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { useQuoteState } from '@/hooks/useQuoteState';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { useCartStore } from '@/stores/cartStore';
 import { QuoteBreakdown } from '@/components/dashboard/QuoteBreakdown';
 import { DeliveryTimeline } from '@/components/dashboard/DeliveryTimeline';
 import { AddressEditForm } from '@/components/forms/AddressEditForm';
@@ -87,6 +88,14 @@ export default function QuoteDetail() {
 
   // Use the existing quote state hook for approve/reject functionality
   const { approveQuote, rejectQuote, addToCart, isUpdating } = useQuoteState(id || '');
+  
+  // Subscribe to cart store to make quote detail reactive to cart changes
+  const cartItems = useCartStore((state) => state.items);
+  
+  // Helper function to check if this quote is in cart
+  const isQuoteInCart = (quoteId: string) => {
+    return cartItems.some(item => item.quoteId === quoteId);
+  };
 
   const { data: quote, isLoading, error, refetch } = useQuery({
     queryKey: ['quote-detail', id],
@@ -936,7 +945,7 @@ export default function QuoteDetail() {
                     </Button>
                   )}
                   
-                  {quote.status === 'approved' && !quote.in_cart && (
+                  {quote.status === 'approved' && !isQuoteInCart(quote.id) && (
                     <Button 
                       className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
                       onClick={handleAddToCart}
@@ -947,7 +956,7 @@ export default function QuoteDetail() {
                     </Button>
                   )}
                   
-                  {quote.in_cart && (
+                  {isQuoteInCart(quote.id) && (
                     <Link to="/cart">
                       <Button className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl">
                         <ShoppingCart className="h-4 w-4 mr-2" />

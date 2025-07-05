@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, ShoppingCart, Clock } from 'lucide-react';
 import { QuoteExpirationTimer } from './QuoteExpirationTimer';
+import { useCartStore } from '@/stores/cartStore';
 
 interface StickyActionBarProps {
   quote: any;
@@ -24,6 +25,14 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
   onRenewed
 }) => {
   if (!isOwner) return null;
+
+  // Subscribe to cart store to make sticky bar reactive to cart changes
+  const cartItems = useCartStore((state) => state.items);
+  
+  // Helper function to check if this quote is in cart
+  const isQuoteInCart = (quoteId: string) => {
+    return cartItems.some(item => item.quoteId === quoteId);
+  };
 
   const renderActions = () => {
     // Show appropriate action buttons based on status
@@ -65,7 +74,7 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
         );
 
       case 'approved':
-        if (!quote.in_cart) {
+        if (!isQuoteInCart(quote.id)) {
           return (
             <Button 
               className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
