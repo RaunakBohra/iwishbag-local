@@ -67,6 +67,8 @@ import { CustomerRejectQuoteDialog } from '@/components/dashboard/CustomerReject
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { QuoteExpirationTimer } from '@/components/dashboard/QuoteExpirationTimer';
 import { RenewQuoteButton } from '@/components/RenewQuoteButton';
+import { StickyActionBar } from '@/components/dashboard/StickyActionBar';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -81,6 +83,7 @@ export default function QuoteDetail() {
   const [showMessages, setShowMessages] = useState(false);
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
   const [isRejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // Use the existing quote state hook for approve/reject functionality
   const { approveQuote, rejectQuote, addToCart, isUpdating } = useQuoteState(id || '');
@@ -416,7 +419,7 @@ export default function QuoteDetail() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className="container py-6 sm:py-8 animate-in fade-in duration-500">
+      <div className={`container py-6 sm:py-8 animate-in fade-in duration-500 ${isMobile ? 'pb-24' : ''}`}>
         {/* Header */}
         <div className="mb-6 sm:mb-8 animate-in slide-in-from-top duration-700">
           <Link 
@@ -875,8 +878,8 @@ export default function QuoteDetail() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Actions Card */}
-            {isOwner && (
+            {/* Actions Card - Hidden on mobile */}
+            {isOwner && !isMobile && (
               <Card className="animate-in slide-in-from-right duration-700 delay-100 hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm border-0 shadow-xl">
                 <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/50 dark:to-slate-950/50">
                   <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
@@ -1070,6 +1073,22 @@ export default function QuoteDetail() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Sticky Action Bar for Mobile */}
+      {isMobile && quote && (
+        <StickyActionBar
+          quote={quote}
+          isOwner={isOwner}
+          isUpdating={isUpdating}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          onAddToCart={handleAddToCart}
+          onRenewed={() => {
+            // Refetch the quote data to update the UI
+            refetch();
+          }}
+        />
+      )}
     </div>
   );
 } 

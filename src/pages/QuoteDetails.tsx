@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { QuoteExpirationTimer } from "@/components/dashboard/QuoteExpirationTimer";
+import { StickyActionBar } from "@/components/dashboard/StickyActionBar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ArrowLeft, Edit, CheckCircle, XCircle, Clock, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +31,7 @@ export default function QuoteDetails() {
   const { user } = useAuth();
   const { approveQuote, rejectQuote, addToCart, isUpdating } = useQuoteState(id || '');
   const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
+  const isMobile = useIsMobile();
 
   const { data: quote, isLoading, error } = useQuery({
     queryKey: ['quote', id],
@@ -82,7 +85,7 @@ export default function QuoteDetails() {
   const shippingAddress = quote.shipping_address as unknown as ShippingAddress | null;
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className={`container mx-auto px-4 py-8 ${isMobile ? 'pb-24' : ''}`}>
       <div className="mb-6">
         <Button
           variant="ghost"
@@ -163,8 +166,8 @@ export default function QuoteDetails() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Actions */}
-          {isOwner && (quote.status === 'sent' || quote.status === 'approved') && (
+          {/* Actions - Hidden on mobile */}
+          {isOwner && (quote.status === 'sent' || quote.status === 'approved') && !isMobile && (
             <Card>
               <CardHeader>
                 <CardTitle>Actions</CardTitle>
@@ -243,6 +246,18 @@ export default function QuoteDetails() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Sticky Action Bar for Mobile */}
+      {isMobile && quote && (
+        <StickyActionBar
+          quote={quote}
+          isOwner={isOwner}
+          isUpdating={isUpdating}
+          onApprove={() => approveQuote()}
+          onReject={() => rejectQuote()}
+          onAddToCart={() => addToCart()}
+        />
+      )}
     </div>
   );
 }

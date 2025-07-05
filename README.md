@@ -580,3 +580,56 @@ The cart persistence is automatically configured and requires no additional setu
 - Syncs with server data when authenticated
 
 This ensures a reliable and user-friendly shopping experience across all devices and sessions.
+
+## Quote Expiration System: How It Works, Maintenance, and Troubleshooting
+
+### Overview
+- Quotes automatically expire after a configurable period (default: 7 days) from the time they are first sent to the customer (status = 'sent').
+- Expiry is **never** reset by customer actions (approve/reject/approve again). It is always based on the original 'sent' time.
+- Expired quotes are marked as 'expired' and cannot be approved or paid.
+- The expiration system is enforced at the database level (trigger), in the backend (Edge Function), and in the UI (timer and badges).
+
+### How It Works
+1. **When a quote is sent:**
+   - The database trigger sets `sent_at = NOW()` and `expires_at = NOW() + INTERVAL '7 days'` (or the configured duration).
+   - The expiration time is only set when status changes to 'sent', never when it is approved.
+2. **If a quote is approved, rejected, or re-approved:**
+   - The expiration time does **not** change. It is always based on the original 'sent' time.
+3. **Expiration:**
+   - A scheduled Edge Function (see `supabase/functions/expire-quotes/`) runs regularly and marks any quote with status 'sent' and `expires_at <= NOW()` as 'expired'.
+   - The UI shows a countdown timer and a red expiry badge for quotes with an expiration date.
+
+### Changing the Expiration Duration
+- The expiration duration is controlled by the `autoExpireHours` field in the status config for 'sent' (see `add-status-settings.sql`).
+- To change the default (e.g., to 5 days):
+  1. Update the `autoExpireHours` value for the 'sent' status in the system settings table or via migration.
+  2. The trigger and Edge Function will automatically use the new value for all new quotes sent after the change.
+  3. **Existing quotes** will keep their original expiration unless manually updated.
+
+### Maintenance & Debugging
+- **If quotes are not expiring:**
+  - Check the trigger function (`set_quote_expiration`) in the database. It should only set expiration when status changes to 'sent'.
+  - Ensure the Edge Function is running on schedule (see `supabase/config.toml` or your cron setup).
+  - Check for errors in the Edge Function logs (`supabase functions logs expire-quotes`).
+- **If the timer is wrong in the UI:**
+  - Make sure the UI is using the `expires_at` field from the quote, not recalculating from approval.
+  - The timer should show for both 'sent' and 'approved' statuses, but always count down from the original sent time.
+- **If you need to manually update expiration:**
+  - You can run a SQL update to set `expires_at` for affected quotes. Example:
+    ```sql
+    UPDATE quotes SET expires_at = sent_at + INTERVAL '7 days' WHERE status IN ('sent', 'approved') AND expires_at IS NULL;
+    ```
+- **To test expiration:**
+  - Use the test script (`test-quote-expiration.js`) or manually update a quote's status to 'sent' and set `expires_at` to a past date, then run the Edge Function.
+
+### For Future Developers
+- **Never reset expiration on approval.** Only the first 'sent' event should set the timer.
+- **Keep the trigger and Edge Function in sync** with the business logic described above.
+- **Document any changes** to the expiration logic in this section and in the relevant migration files.
+- **UI/UX:** Always show the timer and expiry badge based on `expires_at`, and use a red badge for strong visual emphasis.
+
+For more details, see:
+- `supabase/migrations/20250705000011_fix_quote_expiration_trigger.sql`
+- `supabase/functions/expire-quotes/`
+- `src/pages/dashboard/Quotes.tsx` (UI badge)
+- `src/components/dashboard/QuoteExpirationTimer.tsx` (timer)
