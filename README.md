@@ -633,3 +633,211 @@ For more details, see:
 - `supabase/functions/expire-quotes/`
 - `src/pages/dashboard/Quotes.tsx` (UI badge)
 - `src/components/dashboard/QuoteExpirationTimer.tsx` (timer)
+
+## Unified Cart System: Reactive Add to Cart Functionality
+
+The cart system has been unified across all pages to provide instant, reactive updates when adding or removing quotes from the cart. This eliminates the need for page refreshes and ensures consistent behavior throughout the application.
+
+### Overview
+- **Reactive UI**: All pages instantly update when cart state changes
+- **Unified Functionality**: Same "Add to Cart" behavior across quotes list, detail pages, and mobile
+- **Real-time Sync**: Cart changes reflect immediately across all open pages
+- **No Page Refresh**: Users see instant feedback without manual page reloads
+
+### How It Works
+
+#### 1. **Cart Store Subscription**
+All pages that show "Add to Cart" buttons subscribe to the cart store:
+```typescript
+// Subscribe to cart store to make UI reactive to cart changes
+const cartItems = useCartStore((state) => state.items);
+
+// Helper function to check if a quote is in cart
+const isQuoteInCart = (quoteId: string) => {
+  return cartItems.some(item => item.quoteId === quoteId);
+};
+```
+
+#### 2. **Reactive Button Logic**
+Instead of using static `quote.in_cart` properties, all pages use the reactive function:
+```typescript
+// Before: Static property (required page refresh)
+{quote.status === 'approved' && !quote.in_cart && (
+  <AddToCartButton quoteId={quote.id} />
+)}
+
+// After: Reactive function (instant updates)
+{quote.status === 'approved' && !isQuoteInCart(quote.id) && (
+  <AddToCartButton quoteId={quote.id} />
+)}
+```
+
+#### 3. **Unified AddToCartButton Component**
+A reusable component handles the cart functionality consistently:
+```typescript
+const AddToCartButton = ({ quoteId, className = "" }) => {
+  const { addToCart } = useQuoteState(quoteId);
+  
+  const handleAddToCart = async () => {
+    await addToCart();
+  };
+
+  return (
+    <Button 
+      size="sm" 
+      className={`flex items-center gap-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 ${className}`}
+      onClick={handleAddToCart}
+    >
+      <ShoppingCart className="h-3 w-3" />
+      Add to Cart
+    </Button>
+  );
+};
+```
+
+### Pages Updated
+
+#### 1. **Quotes List Page** (`/dashboard/quotes`)
+- **Mobile Layout**: Full-width "Add to Cart" button
+- **Desktop Layout**: Compact button with icon and text
+- **Instant Updates**: Button changes to "In Cart" immediately when added
+
+#### 2. **Quote Detail Page** (`/dashboard/quotes/:id`)
+- **Main Actions**: "Add to Cart" button in the actions section
+- **Instant Updates**: Button changes to "View in Cart" immediately
+- **Cross-page Sync**: Changes reflect on the quotes list page instantly
+
+#### 3. **Sticky Action Bar** (Mobile)
+- **Mobile Actions**: "Add to Cart" button in sticky bottom bar
+- **Instant Updates**: Button changes immediately when cart state changes
+- **Consistent UX**: Same behavior as desktop version
+
+### Technical Implementation
+
+#### Cart Store (`src/stores/cartStore.ts`)
+- **Zustand Store**: Reactive state management with automatic subscriptions
+- **Persistent Storage**: Cart data saved to localStorage per user
+- **Real-time Updates**: All subscribers notified immediately of changes
+
+#### Quote State Hook (`src/hooks/useQuoteState.ts`)
+- **addToCart Function**: Handles adding quotes to cart with proper error handling
+- **Database Sync**: Updates `in_cart` flag in database
+- **Query Invalidation**: Refreshes relevant queries after cart changes
+
+#### Reactive Components
+- **Quotes List**: `src/pages/dashboard/Quotes.tsx`
+- **Quote Detail**: `src/pages/dashboard/QuoteDetail.tsx`
+- **Sticky Bar**: `src/components/dashboard/StickyActionBar.tsx`
+
+### User Experience Benefits
+
+#### 1. **Instant Feedback**
+- **Before**: User clicks "Add to Cart" → Page refresh needed to see change
+- **After**: User clicks "Add to Cart" → Button changes to "In Cart" instantly
+
+#### 2. **Cross-page Consistency**
+- **Before**: Different pages might show different states
+- **After**: All pages show the same cart state simultaneously
+
+#### 3. **Mobile Optimization**
+- **Before**: Mobile users had to refresh to see cart changes
+- **After**: Sticky action bar updates instantly on mobile
+
+#### 4. **No Lost Context**
+- **Before**: Page refresh could lose user's scroll position or filters
+- **After**: User stays exactly where they were, just with updated buttons
+
+### Developer Benefits
+
+#### 1. **Unified Codebase**
+- **Single Implementation**: One `AddToCartButton` component used everywhere
+- **Consistent Logic**: Same cart checking function across all pages
+- **Easier Maintenance**: Changes to cart logic only need to be made in one place
+
+#### 2. **Type Safety**
+- **TypeScript Support**: Full type checking for cart operations
+- **Error Handling**: Proper error boundaries and user feedback
+- **Debugging**: Clear console logs for cart operations
+
+#### 3. **Performance**
+- **Efficient Updates**: Only affected components re-render
+- **No Unnecessary API Calls**: Cart state managed locally with server sync
+- **Optimized Re-renders**: Zustand's selective subscriptions
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **Button not updating instantly**
+   - Check that the component is subscribed to `useCartStore`
+   - Verify `isQuoteInCart()` function is being used instead of `quote.in_cart`
+   - Ensure `addToCart()` function is being called correctly
+
+2. **Cart state inconsistent across pages**
+   - Verify all pages are using the same cart store subscription
+   - Check that `quoteId` matches between cart items and quotes
+   - Ensure database sync is working properly
+
+3. **Mobile sticky bar not updating**
+   - Check `StickyActionBar` component is using reactive cart store
+   - Verify mobile detection is working correctly
+   - Ensure sticky bar is receiving updated quote props
+
+#### Debugging Tips
+
+```typescript
+// Add this to debug cart state changes
+const cartItems = useCartStore((state) => {
+  console.log('Cart items updated:', state.items);
+  return state.items;
+});
+
+// Check if quote is in cart
+console.log('Quote in cart:', isQuoteInCart(quote.id));
+```
+
+### Future Development
+
+#### Adding New Pages
+When adding cart functionality to new pages:
+
+1. **Import cart store**:
+   ```typescript
+   import { useCartStore } from '@/stores/cartStore';
+   ```
+
+2. **Subscribe to cart state**:
+   ```typescript
+   const cartItems = useCartStore((state) => state.items);
+   ```
+
+3. **Use reactive function**:
+   ```typescript
+   const isQuoteInCart = (quoteId: string) => {
+     return cartItems.some(item => item.quoteId === quoteId);
+   };
+   ```
+
+4. **Use unified component**:
+   ```typescript
+   {quote.status === 'approved' && !isQuoteInCart(quote.id) && (
+     <AddToCartButton quoteId={quote.id} />
+   )}
+   ```
+
+#### Extending Cart Functionality
+- **Bulk Operations**: Add support for bulk add/remove from cart
+- **Cart Persistence**: Enhance localStorage sync with server backup
+- **Cart Analytics**: Track cart abandonment and conversion rates
+- **Cart Sharing**: Allow users to share cart contents
+
+### Configuration
+
+The unified cart system requires no additional configuration. It automatically:
+
+- **Detects User**: Uses user ID for cart isolation
+- **Syncs with Server**: Updates database when cart changes
+- **Handles Errors**: Provides user feedback for failed operations
+- **Manages State**: Handles loading states and edge cases
+
+This ensures a seamless, reactive cart experience across all devices and user scenarios.
