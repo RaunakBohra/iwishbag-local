@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import { QuoteExpirationTimer } from "@/components/dashboard/QuoteExpirationTimer";
 import { ArrowLeft, Edit, CheckCircle, XCircle, Clock, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -163,29 +164,44 @@ export default function QuoteDetails() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Actions */}
-          {isOwner && quote.status === 'sent' && (
+          {isOwner && (quote.status === 'sent' || quote.status === 'approved') && (
             <Card>
               <CardHeader>
                 <CardTitle>Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button
-                  onClick={() => approveQuote()}
-                  disabled={isUpdating}
-                  className="w-full"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve Quote
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => rejectQuote()}
-                  disabled={isUpdating}
-                  className="w-full"
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Reject Quote
-                </Button>
+                {/* Expiration Timer */}
+                {quote.expires_at && (
+                  <div className="flex items-center justify-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                    <QuoteExpirationTimer 
+                      expiresAt={quote.expires_at}
+                      compact={true}
+                      className="text-center"
+                    />
+                  </div>
+                )}
+                
+                {quote.status === 'sent' && (
+                  <>
+                    <Button
+                      onClick={() => approveQuote()}
+                      disabled={isUpdating}
+                      className="w-full"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approve Quote
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => rejectQuote()}
+                      disabled={isUpdating}
+                      className="w-full"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Reject Quote
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}

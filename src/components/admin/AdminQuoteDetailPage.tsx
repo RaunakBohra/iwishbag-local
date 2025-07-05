@@ -37,6 +37,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import { QuoteExpirationTimer } from '@/components/dashboard/QuoteExpirationTimer';
 
 
 
@@ -987,6 +988,16 @@ const AdminQuoteDetailPage = () => {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="space-y-4 pt-0">
+                    {/* Expiration Timer */}
+                    {(quote.status === 'sent' || quote.status === 'approved') && quote.expires_at && (
+                      <div className="flex items-center justify-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                        <QuoteExpirationTimer 
+                          expiresAt={quote.expires_at}
+                          compact={true}
+                          className="text-center"
+                        />
+                      </div>
+                    )}
                     <StatusTransitionHistory quoteId={quote.id} />
                   </CardContent>
                 </CollapsibleContent>
@@ -1009,6 +1020,14 @@ const AdminQuoteDetailPage = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Quote Details */}
+        <div className="space-y-6">
+          {/* Quote Header */}
+          <Card className="animate-in slide-in-from-left duration-700 hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+            {/* Quote Header Content */}
+          </Card>
+        </div>
       </div>
     </Form>
   );

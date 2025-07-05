@@ -65,6 +65,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { QuoteMessaging } from '@/components/messaging/QuoteMessaging';
 import { CustomerRejectQuoteDialog } from '@/components/dashboard/CustomerRejectQuoteDialog';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
+import { QuoteExpirationTimer } from '@/components/dashboard/QuoteExpirationTimer';
+import { RenewQuoteButton } from '@/components/RenewQuoteButton';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -885,7 +887,18 @@ export default function QuoteDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
-                  {quote.status === 'pending' && (
+                  {/* Expiration Timer */}
+                  {(quote.status === 'sent' || quote.status === 'approved') && quote.expires_at && (
+                    <div className="flex items-center justify-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                      <QuoteExpirationTimer 
+                        expiresAt={quote.expires_at}
+                        compact={true}
+                        className="text-center"
+                      />
+                    </div>
+                  )}
+                  
+                  {quote.status === 'sent' && (
                     <>
                       <Button 
                         className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
@@ -894,6 +907,15 @@ export default function QuoteDetail() {
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Approve Quote
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        className="w-full hover:scale-105 transition-all duration-200 border-red-200 text-red-600 hover:bg-red-50"
+                        onClick={handleReject}
+                        disabled={isUpdating}
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Reject Quote
                       </Button>
                     </>
                   )}
@@ -927,6 +949,17 @@ export default function QuoteDetail() {
                         View in Cart
                       </Button>
                     </Link>
+                  )}
+                  
+                  {quote.status === 'expired' && quote.renewal_count < 1 && (
+                    <RenewQuoteButton 
+                      quoteId={quote.id}
+                      onRenewed={() => {
+                        // Refetch the quote data to update the UI
+                        refetch();
+                      }}
+                      className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl"
+                    />
                   )}
                 </CardContent>
               </Card>

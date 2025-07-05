@@ -198,41 +198,80 @@ ON CONFLICT (setting_key) DO NOTHING;
 -- Insert test footer settings
 INSERT INTO footer_settings (company_name, company_description, primary_phone, secondary_phone, primary_email, support_email, primary_address, secondary_address, business_hours, social_twitter, social_facebook, social_instagram, social_linkedin, website_logo_url, hero_banner_url, hero_headline, hero_subheadline, hero_cta_text, hero_cta_link, how_it_works_steps, value_props) VALUES
 ('iWishBag', 'Your trusted partner for international shopping and delivery', '+1-555-0123', '+1-555-0124', 'hello@iwishbag.com', 'support@iwishbag.com', '123 Main St, New York, NY 10001', '456 Business Ave, San Francisco, CA 94102', 'Mon-Fri: 9AM-6PM EST', 'https://twitter.com/iwishbag', 'https://facebook.com/iwishbag', 'https://instagram.com/iwishbag', 'https://linkedin.com/company/iwishbag', 'https://iwishbag.com/logo.png', 'https://iwishbag.com/hero-banner.jpg', 'Shop Globally, Delivered Locally', 'Get anything from anywhere in the world delivered to your doorstep', 'Get Started', '/quote', '[
-  {"step": 1, "title": "Find your product", "description": "Tell us what you want to buy"},
-  {"step": 2, "title": "Get a quote", "description": "We provide transparent pricing"},
-  {"step": 3, "title": "Place order", "description": "Pay securely and track your order"}
+  {
+    "title": "Find Your Product",
+    "description": "Search for any product from global marketplaces",
+    "icon": "Search"
+  },
+  {
+    "title": "Get Your Quote",
+    "description": "Receive a detailed quote with shipping and customs",
+    "icon": "Calculator"
+  },
+  {
+    "title": "Place Your Order",
+    "description": "We handle the purchase and shipping for you",
+    "icon": "ShoppingCart"
+  },
+  {
+    "title": "Track & Receive",
+    "description": "Track your package and receive it at your doorstep",
+    "icon": "Truck"
+  }
 ]', '[
-  {"title": "Global Access", "description": "Shop from any international website"},
-  {"title": "Transparent Pricing", "description": "No hidden fees or surprises"},
-  {"title": "Secure Payments", "description": "Multiple secure payment options"},
-  {"title": "Fast Delivery", "description": "Quick and reliable shipping worldwide"}
-]');
+  {
+    "title": "Global Access",
+    "description": "Shop from any country or marketplace worldwide",
+    "icon": "Globe"
+  },
+  {
+    "title": "Transparent Pricing",
+    "description": "No hidden fees - see exactly what you pay",
+    "icon": "DollarSign"
+  },
+  {
+    "title": "Secure Shipping",
+    "description": "Professional packaging and reliable delivery",
+    "icon": "Shield"
+  },
+  {
+    "title": "24/7 Support",
+    "description": "Get help anytime with our customer support team",
+    "icon": "Headphones"
+  }
+]')
+ON CONFLICT (id) DO NOTHING;
 
 -- Insert test shipping routes
-INSERT INTO shipping_routes (origin_country, destination_country, base_shipping_cost, cost_per_kg, shipping_per_kg, cost_percentage, processing_days, customs_clearance_days, weight_unit, delivery_options, weight_tiers, carriers, max_weight, restricted_items, requires_documentation, is_active) VALUES
-('US', 'IN', 25.00, 5.00, 3.00, 2.5, 2, 3, 'kg', '[
-  {"id": "express", "name": "Express Delivery", "carrier": "DHL", "min_days": 3, "max_days": 5, "price": 45.00, "active": true},
-  {"id": "standard", "name": "Standard Delivery", "carrier": "FedEx", "min_days": 7, "max_days": 12, "price": 25.00, "active": true},
-  {"id": "economy", "name": "Economy Delivery", "carrier": "USPS", "min_days": 14, "max_days": 21, "price": 15.00, "active": true}
-]', '[
-  {"min": 0, "max": 1, "cost": 15.00},
-  {"min": 1, "max": 3, "cost": 25.00},
-  {"min": 3, "max": 5, "cost": 35.00},
-  {"min": 5, "max": null, "cost": 45.00}
-]', '[
-  {"name": "DHL", "costMultiplier": 1.0, "days": "3-5"},
-  {"name": "FedEx", "costMultiplier": 0.9, "days": "5-7"},
-  {"name": "USPS", "costMultiplier": 0.7, "days": "7-14"}
-]', 50.0, ARRAY['liquids', 'batteries'], false, true),
-('US', 'NP', 30.00, 6.00, 4.00, 3.0, 3, 4, 'kg', '[
-  {"id": "express", "name": "Express Delivery", "carrier": "DHL", "min_days": 4, "max_days": 6, "price": 55.00, "active": true},
-  {"id": "standard", "name": "Standard Delivery", "carrier": "FedEx", "min_days": 8, "max_days": 14, "price": 30.00, "active": true}
-]', '[
-  {"min": 0, "max": 1, "cost": 20.00},
-  {"min": 1, "max": 3, "cost": 30.00},
-  {"min": 3, "max": 5, "cost": 40.00},
-  {"min": 5, "max": null, "cost": 50.00}
-]', '[
-  {"name": "DHL", "costMultiplier": 1.0, "days": "4-6"},
-  {"name": "FedEx", "costMultiplier": 0.9, "days": "8-14"}
-]', 40.0, ARRAY['liquids', 'batteries'], false, true);
+INSERT INTO shipping_routes (origin_country, destination_country, shipping_carrier, estimated_days, customs_clearance_days, shipping_per_kg, weight_unit, is_active, customs_percentage, customs_tiers) VALUES
+('US', 'IN', 'DHL', 7, 2, 15.00, 'kg', true, 18.0, '[
+  {"min_weight": 0, "max_weight": 5, "rate": 15.00},
+  {"min_weight": 5, "max_weight": 10, "rate": 12.00},
+  {"min_weight": 10, "max_weight": 20, "rate": 10.00}
+]'),
+('US', 'NP', 'FedEx', 10, 3, 20.00, 'kg', true, 13.0, '[
+  {"min_weight": 0, "max_weight": 5, "rate": 20.00},
+  {"min_weight": 5, "max_weight": 10, "rate": 18.00},
+  {"min_weight": 10, "max_weight": 20, "rate": 15.00}
+]'),
+('IN', 'US', 'DHL', 8, 1, 25.00, 'kg', true, 5.0, '[
+  {"min_weight": 0, "max_weight": 5, "rate": 25.00},
+  {"min_weight": 5, "max_weight": 10, "rate": 22.00},
+  {"min_weight": 10, "max_weight": 20, "rate": 20.00}
+]');
+
+-- Insert test customer profiles with names
+INSERT INTO profiles (id, full_name, cod_enabled, internal_notes, created_at) VALUES
+('550e8400-e29b-41d4-a716-446655440001', 'John Smith', true, 'VIP customer - high value orders', NOW() - INTERVAL '30 days'),
+('550e8400-e29b-41d4-a716-446655440002', 'Sarah Johnson', false, 'New customer - first order pending', NOW() - INTERVAL '15 days'),
+('550e8400-e29b-41d4-a716-446655440003', 'Michael Brown', true, 'Regular customer - COD enabled', NOW() - INTERVAL '7 days'),
+('550e8400-e29b-41d4-a716-446655440004', 'Emily Davis', false, 'Customer from India', NOW() - INTERVAL '3 days'),
+('550e8400-e29b-41d4-a716-446655440005', 'David Wilson', true, 'VIP customer - multiple orders', NOW() - INTERVAL '1 day');
+
+-- Insert test customer addresses
+INSERT INTO user_addresses (id, user_id, address_line1, address_line2, city, state_province_region, postal_code, country, is_default, created_at) VALUES
+('660e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440001', '123 Main Street', 'Apt 4B', 'New York', 'NY', '10001', 'US', true, NOW()),
+('660e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440002', '456 Oak Avenue', NULL, 'Los Angeles', 'CA', '90210', 'US', true, NOW()),
+('660e8400-e29b-41d4-a716-446655440003', '550e8400-e29b-41d4-a716-446655440003', '789 Pine Road', 'Suite 12', 'Chicago', 'IL', '60601', 'US', true, NOW()),
+('660e8400-e29b-41d4-a716-446655440004', '550e8400-e29b-41d4-a716-446655440004', '321 Elm Street', NULL, 'Mumbai', 'Maharashtra', '400001', 'IN', true, NOW()),
+('660e8400-e29b-41d4-a716-446655440005', '550e8400-e29b-41d4-a716-446655440005', '654 Maple Drive', 'Floor 3', 'Toronto', 'ON', 'M5V 3A8', 'CA', true, NOW());

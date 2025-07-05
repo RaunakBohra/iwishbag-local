@@ -21,6 +21,7 @@ import { GuestEmailField } from "@/components/forms/quote-form-fields/GuestEmail
 import { useQuery } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormControl as SelectFormControl, FormItem, FormLabel } from "@/components/ui/form";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 interface CreateQuoteDialogProps {
     isOpen: boolean;
@@ -114,12 +115,16 @@ export const CreateQuoteDialog = ({ isOpen, onOpenChange, onQuoteCreated }: Crea
     
         const { items, countryCode, email, userId } = values;
     
+        // Get default status from status management
+        const { getDefaultQuoteStatus } = useStatusManagement();
+        const defaultStatus = getDefaultQuoteStatus();
+
         const { data: quote, error: quoteError } = await supabase
           .from("quotes")
           .insert({
             email,
             country_code: countryCode,
-            status: 'pending',
+            status: defaultStatus,
             user_id: userId || null,
           })
           .select('id')

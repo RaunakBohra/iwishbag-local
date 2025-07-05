@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import { RenewQuoteButton } from "@/components/RenewQuoteButton";
 import { ArrowLeft, Edit, CheckCircle, XCircle, Clock, DollarSign, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -267,6 +268,25 @@ export default function ShareTokenQuote() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Renew Quote Button for Expired Quotes */}
+          {quote.status === 'expired' && quote.renewal_count < 1 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Quote Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RenewQuoteButton 
+                  quoteId={quote.id}
+                  onRenewed={() => {
+                    // Refresh the page to get updated data
+                    window.location.reload();
+                  }}
+                  className="w-full"
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Contact Information */}
           {quote.customer_name && (

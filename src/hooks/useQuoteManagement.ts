@@ -33,7 +33,7 @@ export const useQuoteManagement = (filters = {}) => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const { toast } = useToast();
-    const { orderStatuses } = useStatusManagement();
+    const { getStatusesForQuotesList } = useStatusManagement();
 
     const { data: quotes, isLoading: quotesLoading } = useQuery<QuoteWithItems[]>({
         queryKey: ['admin-quotes', statusFilter, searchTerm, purchaseCountryFilter, shippingCountryFilter, dateRange, amountRange, priorityFilter],
@@ -43,17 +43,11 @@ export const useQuoteManagement = (filters = {}) => {
                 .select('*, quote_items(*), profiles!quotes_user_id_fkey(preferred_display_currency)')
                 .order('created_at', { ascending: false });
             
-            // Filter out order statuses to show only quotes
-            // This ensures that paid orders (paid, ordered, shipped, completed) 
-            // do not appear in the quotes page and are only shown in the orders page
-            if (orderStatuses && orderStatuses.length > 0) {
-                // Only filter out true order statuses, not cancelled/rejected
-                const orderStatusNames = orderStatuses
-                  .map(status => status.name)
-                  .filter(name => !['cancelled', 'rejected'].includes(name));
-                if (orderStatusNames.length > 0) {
-                    query = query.not('status', 'in', `(${orderStatusNames.join(',')})`);
-                }
+            // Filter based on status management configuration
+            // Only show quotes with statuses that are configured to show in quotes list
+            const quoteStatusNames = getStatusesForQuotesList();
+            if (quoteStatusNames.length > 0) {
+                query = query.in('status', quoteStatusNames);
             }
         
             if (statusFilter !== 'all') {
@@ -140,7 +134,7 @@ export const useQuoteManagement = (filters = {}) => {
             if (error) throw new Error(error.message);
             return data || [];
         },
-        enabled: orderStatuses && orderStatuses.length > 0, // Only run query when orderStatuses is loaded
+        enabled: true, // Always run query - filtering is handled by getStatusesForQuotesList
     });
 
     const updateMultipleQuotesStatusMutation = useMutation({

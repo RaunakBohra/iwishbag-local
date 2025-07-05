@@ -14,7 +14,7 @@ export const useOrderManagement = () => {
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [searchInput, setSearchInput] = useState("");
     const searchTerm = useDebounce(searchInput, 500);
-    const { orderStatuses } = useStatusManagement();
+    const { getStatusesForOrdersList } = useStatusManagement();
 
     // Fetch orders, which are quotes with specific statuses
     const { data: orders, isLoading: ordersLoading } = useQuery<Order[]>({
@@ -25,9 +25,10 @@ export const useOrderManagement = () => {
                 .select('*, quote_items(*), profiles!quotes_user_id_fkey(preferred_display_currency)')
                 .order('created_at', { ascending: false });
             
-            // Filter to show only order statuses
-            if (orderStatuses && orderStatuses.length > 0) {
-                const orderStatusNames = orderStatuses.map(status => status.name);
+            // Filter based on status management configuration
+            // Only show quotes with statuses that are configured to show in orders list
+            const orderStatusNames = getStatusesForOrdersList();
+            if (orderStatusNames.length > 0) {
                 query = query.in('status', orderStatusNames);
             }
         
@@ -44,7 +45,7 @@ export const useOrderManagement = () => {
             if (error) throw new Error(error.message);
             return data || [];
         },
-        enabled: !!orderStatuses, // Only run query when orderStatuses is loaded
+        enabled: true, // Always run query - filtering is handled by getStatusesForOrdersList
     });
 
     return {

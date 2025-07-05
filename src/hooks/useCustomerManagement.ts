@@ -31,52 +31,50 @@ export const useCustomerManagement = () => {
     queryKey: ['admin-customers'],
     queryFn: async () => {
       try {
-        // Try the Edge Function first
-        const { data, error } = await supabase.functions.invoke('get-users-with-emails');
-
-        if (error) {
-          console.error('Edge Function error:', error);
-          // Fallback to direct database query
-          const { data: profiles, error: profilesError } = await supabase
-            .from('profiles')
-            .select(`
+        console.log('[CustomerManagement] Using direct database query...');
+        
+        // Direct database query to get profiles with addresses
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            full_name,
+            cod_enabled,
+            internal_notes,
+            created_at,
+            user_addresses (
               id,
-              full_name,
-              cod_enabled,
-              internal_notes,
-              created_at,
-              user_addresses (
-                id,
-                address_line1,
-                address_line2,
-                city,
-                country,
-                postal_code,
-                is_default
-              )
-            `);
+              address_line1,
+              address_line2,
+              city,
+              country,
+              postal_code,
+              is_default
+            )
+          `);
 
-          if (profilesError) {
-            console.error('Direct query error:', profilesError);
-            throw profilesError;
-          }
+        if (profilesError) {
+          console.error('[CustomerManagement] Direct query error:', profilesError);
+          throw profilesError;
+        }
 
-          // Add mock email for testing
-          const customersWithEmails = profiles?.map(profile => ({
+        console.log('[CustomerManagement] Raw profiles data:', profiles);
+
+        // Use mock emails for now to test the full_name field
+        const customersWithEmails = profiles?.map(profile => {
+          const email = `user-${profile.id}@example.com`;
+          console.log(`[CustomerManagement] Profile ${profile.id}: full_name="${profile.full_name}", email="${email}"`);
+          
+          return {
             ...profile,
-            email: `user-${profile.id}@example.com` // Mock email for testing
-          })) || [];
+            email
+          };
+        }) || [];
 
-          return customersWithEmails;
-        }
-
-        if (!data?.data) {
-          return [];
-        }
-
-        return data.data as CustomerWithEmail[];
+        console.log('[CustomerManagement] Final customers data:', customersWithEmails);
+        return customersWithEmails;
       } catch (error) {
-        console.error('Error fetching customers:', error);
+        console.error('[CustomerManagement] Error fetching customers:', error);
         throw error;
       }
     }

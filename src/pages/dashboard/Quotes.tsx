@@ -330,6 +330,16 @@ export default function Quotes() {
                     </div>
                   )}
 
+                  {/* Expiry Date */}
+                  {quote.expires_at && (
+                    <div className="mb-2 flex items-center gap-2 text-xs">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 border border-red-100 text-red-700 font-medium">
+                        <Calendar className="h-3 w-3 text-red-400" />
+                        Expires: {new Date(quote.expires_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="flex gap-2">
                     <Link to={`/dashboard/quotes/${quote.id}`} className="flex-1">
@@ -386,7 +396,7 @@ export default function Quotes() {
                         </div>
                       </div>
                       
-                      {/* Bottom Row: Created Date + Route + Delivery Estimate + Actions */}
+                      {/* Bottom Row: Created Date + Route + Delivery Estimate + Expiry Date + Actions */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4 text-sm">
                           {/* Created Date */}
@@ -412,6 +422,16 @@ export default function Quotes() {
                               <span className="text-sm text-gray-600">({deliveryEstimate.days.replace('d', ' days')})</span>
                             )}
                           </div>
+
+                          {/* Expiry Date */}
+                          {quote.expires_at && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4 text-red-400" />
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 border border-red-100 text-red-700 font-medium text-xs">
+                                Expires: {new Date(quote.expires_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         
                         {/* Actions */}

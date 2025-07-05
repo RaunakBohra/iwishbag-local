@@ -1,5 +1,6 @@
 import { useStatusConfig } from '@/providers/StatusConfigProvider';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface StatusConfig {
   id: string;
@@ -14,6 +15,15 @@ export interface StatusConfig {
   autoExpireHours?: number;
   isTerminal: boolean;
   category: 'quote' | 'order';
+  
+  // NEW: Flow-specific properties
+  triggersEmail?: boolean;           // Should send email when this status is set?
+  emailTemplate?: string;            // Which email template to use
+  requiresAction?: boolean;          // Does this status require admin action?
+  showsInQuotesList?: boolean;      // Show in quotes page?
+  showsInOrdersList?: boolean;      // Show in orders page?
+  canBePaid?: boolean;              // Can quotes with this status be paid?
+  isDefaultQuoteStatus?: boolean;    // Is this the default status for new quotes?
 }
 
 export interface StatusWorkflow {
@@ -29,7 +39,7 @@ export interface StatusWorkflow {
 }
 
 export const useStatusManagement = () => {
-  const { quoteStatuses, orderStatuses, isLoading, error } = useStatusConfig();
+  const { quoteStatuses, orderStatuses, isLoading, error, refreshData } = useStatusConfig();
   const { toast } = useToast();
 
   // Default statuses as fallback
@@ -45,7 +55,14 @@ export const useStatusManagement = () => {
       order: 1,
       allowedTransitions: ['sent', 'rejected'],
       isTerminal: false,
-      category: 'quote'
+      category: 'quote',
+      // Flow properties
+      triggersEmail: false,
+      requiresAction: true,
+      showsInQuotesList: true,
+      showsInOrdersList: false,
+      canBePaid: false,
+      isDefaultQuoteStatus: true
     },
     {
       id: 'sent',
@@ -59,7 +76,14 @@ export const useStatusManagement = () => {
       allowedTransitions: ['approved', 'rejected', 'expired'],
       autoExpireHours: 168, // 7 days
       isTerminal: false,
-      category: 'quote'
+      category: 'quote',
+      // Flow properties
+      triggersEmail: true,
+      emailTemplate: 'quote_sent',
+      requiresAction: false,
+      showsInQuotesList: true,
+      showsInOrdersList: false,
+      canBePaid: false
     },
     {
       id: 'approved',
@@ -70,9 +94,16 @@ export const useStatusManagement = () => {
       icon: 'CheckCircle',
       isActive: true,
       order: 3,
-      allowedTransitions: ['rejected'],
+      allowedTransitions: ['rejected', 'paid'],
       isTerminal: false,
-      category: 'quote'
+      category: 'quote',
+      // Flow properties
+      triggersEmail: true,
+      emailTemplate: 'quote_approved',
+      requiresAction: false,
+      showsInQuotesList: true,
+      showsInOrdersList: false,
+      canBePaid: true
     },
     {
       id: 'rejected',
@@ -85,7 +116,14 @@ export const useStatusManagement = () => {
       order: 4,
       allowedTransitions: ['approved'],
       isTerminal: true,
-      category: 'quote'
+      category: 'quote',
+      // Flow properties
+      triggersEmail: true,
+      emailTemplate: 'quote_rejected',
+      requiresAction: false,
+      showsInQuotesList: true,
+      showsInOrdersList: false,
+      canBePaid: false
     },
     {
       id: 'expired',
@@ -98,7 +136,14 @@ export const useStatusManagement = () => {
       order: 5,
       allowedTransitions: ['approved'],
       isTerminal: true,
-      category: 'quote'
+      category: 'quote',
+      // Flow properties
+      triggersEmail: true,
+      emailTemplate: 'quote_expired',
+      requiresAction: false,
+      showsInQuotesList: true,
+      showsInOrdersList: false,
+      canBePaid: false
     },
     {
       id: 'calculated',
@@ -111,7 +156,13 @@ export const useStatusManagement = () => {
       order: 6,
       allowedTransitions: ['sent', 'approved', 'rejected'],
       isTerminal: false,
-      category: 'quote'
+      category: 'quote',
+      // Flow properties
+      triggersEmail: false,
+      requiresAction: true,
+      showsInQuotesList: true,
+      showsInOrdersList: false,
+      canBePaid: false
     }
   ];
 
@@ -127,7 +178,14 @@ export const useStatusManagement = () => {
       order: 1,
       allowedTransitions: ['ordered', 'cancelled'],
       isTerminal: false,
-      category: 'order'
+      category: 'order',
+      // Flow properties
+      triggersEmail: true,
+      emailTemplate: 'payment_received',
+      requiresAction: true,
+      showsInQuotesList: false,
+      showsInOrdersList: true,
+      canBePaid: false
     },
     {
       id: 'ordered',
@@ -140,7 +198,14 @@ export const useStatusManagement = () => {
       order: 2,
       allowedTransitions: ['shipped', 'cancelled'],
       isTerminal: false,
-      category: 'order'
+      category: 'order',
+      // Flow properties
+      triggersEmail: true,
+      emailTemplate: 'order_placed',
+      requiresAction: false,
+      showsInQuotesList: false,
+      showsInOrdersList: true,
+      canBePaid: false
     },
     {
       id: 'shipped',
@@ -153,7 +218,14 @@ export const useStatusManagement = () => {
       order: 3,
       allowedTransitions: ['completed', 'cancelled'],
       isTerminal: false,
-      category: 'order'
+      category: 'order',
+      // Flow properties
+      triggersEmail: true,
+      emailTemplate: 'order_shipped',
+      requiresAction: false,
+      showsInQuotesList: false,
+      showsInOrdersList: true,
+      canBePaid: false
     },
     {
       id: 'completed',
@@ -166,7 +238,14 @@ export const useStatusManagement = () => {
       order: 4,
       allowedTransitions: [],
       isTerminal: true,
-      category: 'order'
+      category: 'order',
+      // Flow properties
+      triggersEmail: true,
+      emailTemplate: 'order_completed',
+      requiresAction: false,
+      showsInQuotesList: false,
+      showsInOrdersList: true,
+      canBePaid: false
     },
     {
       id: 'cancelled',
@@ -179,7 +258,14 @@ export const useStatusManagement = () => {
       order: 5,
       allowedTransitions: [],
       isTerminal: true,
-      category: 'order'
+      category: 'order',
+      // Flow properties
+      triggersEmail: true,
+      emailTemplate: 'order_cancelled',
+      requiresAction: false,
+      showsInQuotesList: true,
+      showsInOrdersList: true,
+      canBePaid: false
     }
   ];
 
@@ -193,22 +279,46 @@ export const useStatusManagement = () => {
       console.log('Quote statuses to save:', newQuoteStatuses);
       console.log('Order statuses to save:', newOrderStatuses);
 
-      // First, check if the settings already exist
-      // This logic is no longer needed as the statuses are loaded from the provider
-
       // Save quote statuses
-      // This logic is no longer needed as the statuses are loaded from the provider
+      const { error: quoteError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'quote_statuses',
+          setting_value: JSON.stringify(newQuoteStatuses),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'setting_key'
+        });
+
+      if (quoteError) {
+        console.error('Error saving quote statuses:', quoteError);
+        throw quoteError;
+      }
 
       // Save order statuses
-      // This logic is no longer needed as the statuses are loaded from the provider
+      const { error: orderError } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'order_statuses',
+          setting_value: JSON.stringify(newOrderStatuses),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'setting_key'
+        });
 
-      // Update local state
-      // This logic is no longer needed as the statuses are loaded from the provider
+      if (orderError) {
+        console.error('Error saving order statuses:', orderError);
+        throw orderError;
+      }
 
       toast({
         title: "Success",
         description: "Status settings saved successfully"
       });
+
+      // Refresh the provider data to pick up the new settings
+      await refreshData();
+
     } catch (error: any) {
       console.error('Error saving status settings:', error);
       console.error('Full error object:', error);
@@ -258,6 +368,44 @@ export const useStatusManagement = () => {
   // Combined statuses array for convenience
   const statuses = [...quoteStatuses, ...orderStatuses];
 
+  // NEW: Flow-specific helper functions
+  const getDefaultQuoteStatus = (): string => {
+    const defaultStatus = quoteStatuses.find(s => s.isDefaultQuoteStatus);
+    return defaultStatus?.name || 'pending';
+  };
+
+  const getStatusesForQuotesList = (): string[] => {
+    return quoteStatuses
+      .filter(s => s.showsInQuotesList)
+      .map(s => s.name);
+  };
+
+  const getStatusesForOrdersList = (): string[] => {
+    return orderStatuses
+      .filter(s => s.showsInOrdersList)
+      .map(s => s.name);
+  };
+
+  const canQuoteBePaid = (status: string): boolean => {
+    const config = getStatusConfig(status, 'quote');
+    return config?.canBePaid || false;
+  };
+
+  const shouldTriggerEmail = (status: string, category: 'quote' | 'order'): boolean => {
+    const config = getStatusConfig(status, category);
+    return config?.triggersEmail || false;
+  };
+
+  const getEmailTemplate = (status: string, category: 'quote' | 'order'): string | undefined => {
+    const config = getStatusConfig(status, category);
+    return config?.emailTemplate;
+  };
+
+  const requiresAdminAction = (status: string, category: 'quote' | 'order'): boolean => {
+    const config = getStatusConfig(status, category);
+    return config?.requiresAction || false;
+  };
+
   // Handle status change (for use in components)
   const handleStatusChange = async (newStatus: string) => {
     // This function would typically update a quote's status
@@ -275,6 +423,15 @@ export const useStatusManagement = () => {
     isValidTransition,
     getAllowedTransitions,
     saveStatusSettings,
-    handleStatusChange
+    handleStatusChange,
+    // NEW: Flow helper functions
+    getDefaultQuoteStatus,
+    getStatusesForQuotesList,
+    getStatusesForOrdersList,
+    canQuoteBePaid,
+    shouldTriggerEmail,
+    getEmailTemplate,
+    requiresAdminAction,
+    refreshData
   };
 }; 

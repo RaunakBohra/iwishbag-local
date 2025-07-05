@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { useQuoteCalculation } from "@/hooks/useQuoteCalculation";
 import { useAllCountries } from "@/hooks/useAllCountries";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 const quoteItemSchema = z.object({
   productUrl: z.string().optional(),
@@ -220,12 +221,16 @@ export const AdminQuoteCreator: React.FC<AdminQuoteCreatorProps> = ({ onQuoteCre
       // Determine currency based on origin country
       const originCurrency = allCountries?.find(c => c.code === originCountry)?.currency || 'USD';
 
+      // Get default status from status management
+      const { getDefaultQuoteStatus } = useStatusManagement();
+      const defaultStatus = getDefaultQuoteStatus();
+
       // Prepare quote data
       const quoteInsertData: any = {
         country_code: countryCode,
         origin_country: originCountry,
         currency: originCurrency, // Use currency from origin country
-        status: 'pending',
+        status: defaultStatus,
         priority: quoteData.priority,
         internal_notes: quoteData.internalNotes,
         quote_source: quoteData.quoteSource,

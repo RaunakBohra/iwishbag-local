@@ -6,6 +6,7 @@ import { useEmailNotifications } from "./useEmailNotifications";
 import { useCartStore, CartItem } from "@/stores/cartStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tables } from "@/integrations/supabase/types";
+import { useStatusManagement } from "./useStatusManagement";
 
 type QuoteWithItems = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
@@ -17,6 +18,7 @@ export const useQuoteState = (quoteId: string) => {
   const { sendQuoteApprovedEmail, sendQuoteRejectedEmail } = useEmailNotifications();
   const { loadFromServer, addItem } = useCartStore();
   const { user } = useAuth();
+  const { isValidTransition } = useStatusManagement();
 
   // Helper function to convert quote to cart item
   const convertQuoteToCartItem = (quote: QuoteWithItems): CartItem => {
@@ -72,6 +74,33 @@ export const useQuoteState = (quoteId: string) => {
   };
 
   const updateQuoteStatus = async (quoteId: string, status: string) => {
+    // Get current quote to validate transition
+    const { data: currentQuote, error: fetchError } = await supabase
+      .from('quotes')
+      .select('status')
+      .eq('id', quoteId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching current quote status:', fetchError);
+      toast({
+        title: "Error",
+        description: "Failed to fetch quote status",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    // Validate status transition
+    if (!isValidTransition(currentQuote.status, status, 'quote')) {
+      toast({
+        title: "Invalid Status Transition",
+        description: `Cannot change status from "${currentQuote.status}" to "${status}"`,
+        variant: "destructive",
+      });
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('quotes')
       .update({ status })
@@ -81,17 +110,48 @@ export const useQuoteState = (quoteId: string) => {
 
     if (error) {
       console.error('Error updating quote status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update quote status",
+        variant: "destructive",
+      });
       return null;
     }
+
+    // Invalidate relevant queries
+    queryClient.invalidateQueries({ queryKey: ['quote-detail', quoteId] });
+    queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders'] });
+
+    toast({
+      title: "Status Updated",
+      description: `Quote status changed to "${status}"`,
+    });
 
     return data;
   };
 
-  const approveQuote = async (quoteId: string) => {
+  const approveQuote = async () => {
     return updateQuoteStatus(quoteId, 'approved');
   };
 
-  const rejectQuote = async (quoteId: string) => {
+  const rejectQuote = async (reason: string = '') => {
+    // Remove from cart if in cart
+    const { data: quote, error: fetchError } = await supabase
+      .from('quotes')
+      .select('in_cart')
+      .eq('id', quoteId)
+      .single();
+    if (!fetchError && quote && quote.in_cart) {
+      // Remove from cart store
+      const { removeItem } = useCartStore.getState();
+      removeItem(quoteId);
+      // Update in_cart flag in DB
+      await supabase
+        .from('quotes')
+        .update({ in_cart: false })
+        .eq('id', quoteId);
+    }
+    // Now update status to rejected
     return updateQuoteStatus(quoteId, 'rejected');
   };
 
@@ -124,10 +184,20 @@ export const useQuoteState = (quoteId: string) => {
       // Add item to cart store
       addItem(cartItem);
 
-      // Update quote status in database
-      await updateQuoteStatus(quoteId, 'accepted');
+      // Update quote to mark as in cart (don't change status, just add in_cart flag)
+      await supabase
+        .from('quotes')
+        .update({ in_cart: true })
+        .eq('id', quoteId);
 
-      // The mutation's onSuccess callback will handle query invalidation and toast
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['quote-detail', quoteId] });
+      queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders'] });
+
+      toast({
+        title: "Added to Cart",
+        description: "Quote has been added to your cart",
+      });
 
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -145,13 +215,29 @@ export const useQuoteState = (quoteId: string) => {
       const { removeItem } = useCartStore.getState();
       removeItem(quoteId);
 
-      await updateQuoteStatus(quoteId, 'cancelled');
+      // Update quote to remove in_cart flag
+      await supabase
+        .from('quotes')
+        .update({ in_cart: false })
+        .eq('id', quoteId);
       
-      // The mutation's onSuccess callback will handle the toast
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['quote-detail', quoteId] });
+      queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders'] });
+
+      toast({
+        title: "Removed from Cart",
+        description: "Quote has been removed from your cart",
+      });
       
       return true;
     } catch (error) {
       console.error('Error removing from cart:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove item from cart",
+        variant: "destructive",
+      });
       return false;
     }
   };

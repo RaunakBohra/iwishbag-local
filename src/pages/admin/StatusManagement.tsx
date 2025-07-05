@@ -293,6 +293,35 @@ export default function StatusManagement() {
             )}
           </div>
 
+          {/* NEW: Flow Properties */}
+          <div className="border-t pt-4">
+            <Label className="text-xs text-muted-foreground font-medium">Flow Behavior</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${status.showsInQuotesList ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <span>Quotes List</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${status.showsInOrdersList ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <span>Orders List</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${status.canBePaid ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <span>Can Be Paid</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${status.triggersEmail ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <span>Sends Email</span>
+              </div>
+              {status.isDefaultQuoteStatus && (
+                <div className="col-span-2 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span className="font-medium">Default Quote Status</span>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div>
             <Label className="text-xs text-muted-foreground">Allowed Transitions</Label>
             <div className="flex flex-wrap gap-1 mt-1">
@@ -501,6 +530,81 @@ export default function StatusManagement() {
                 checked={editingStatus.isTerminal}
                 onCheckedChange={(checked) => updateStatus(editingStatus.id, { isTerminal: checked }, editingStatus.category)}
               />
+            </div>
+
+            {/* NEW: Flow Properties */}
+            <div className="border-t pt-4">
+              <Label className="text-sm font-medium">Flow Behavior</Label>
+              <div className="space-y-3 mt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm">Show in Quotes List</Label>
+                    <p className="text-xs text-muted-foreground">Display quotes with this status on the Quotes page</p>
+                  </div>
+                  <Switch
+                    checked={editingStatus.showsInQuotesList || false}
+                    onCheckedChange={(checked) => updateStatus(editingStatus.id, { showsInQuotesList: checked }, editingStatus.category)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm">Show in Orders List</Label>
+                    <p className="text-xs text-muted-foreground">Display quotes with this status on the Orders page</p>
+                  </div>
+                  <Switch
+                    checked={editingStatus.showsInOrdersList || false}
+                    onCheckedChange={(checked) => updateStatus(editingStatus.id, { showsInOrdersList: checked }, editingStatus.category)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm">Can Be Paid</Label>
+                    <p className="text-xs text-muted-foreground">Allow payment for quotes with this status</p>
+                  </div>
+                  <Switch
+                    checked={editingStatus.canBePaid || false}
+                    onCheckedChange={(checked) => updateStatus(editingStatus.id, { canBePaid: checked }, editingStatus.category)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm">Send Email</Label>
+                    <p className="text-xs text-muted-foreground">Send email notification when this status is set</p>
+                  </div>
+                  <Switch
+                    checked={editingStatus.triggersEmail || false}
+                    onCheckedChange={(checked) => updateStatus(editingStatus.id, { triggersEmail: checked }, editingStatus.category)}
+                  />
+                </div>
+
+                {editingStatus.category === 'quote' && (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm">Default Quote Status</Label>
+                      <p className="text-xs text-muted-foreground">Use this status for new quotes</p>
+                    </div>
+                    <Switch
+                      checked={editingStatus.isDefaultQuoteStatus || false}
+                      onCheckedChange={(checked) => updateStatus(editingStatus.id, { isDefaultQuoteStatus: checked }, editingStatus.category)}
+                    />
+                  </div>
+                )}
+
+                {editingStatus.triggersEmail && (
+                  <div>
+                    <Label className="text-sm">Email Template</Label>
+                    <Input
+                      value={editingStatus.emailTemplate || ''}
+                      onChange={(e) => updateStatus(editingStatus.id, { emailTemplate: e.target.value }, editingStatus.category)}
+                      placeholder="e.g., quote_approved"
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>
