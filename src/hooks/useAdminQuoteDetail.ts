@@ -30,7 +30,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
             const purchaseCountry = quote.country_code;
             const purchaseCurrency = allCountries?.find(c => c.code === purchaseCountry)?.currency || 'USD';
             
-            const formData = {
+            const formData: any = {
                 id: quote.id,
                 sales_tax_price: quote.sales_tax_price,
                 merchant_shipping_price: quote.merchant_shipping_price,
@@ -56,6 +56,15 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                     image_url: item.image_url,
                 }))
             };
+            // Map snake_case to camelCase for UI breakdown
+            formData.salesTaxPrice = quote.sales_tax_price;
+            formData.merchantShippingPrice = quote.merchant_shipping_price;
+            formData.interNationalShipping = quote.international_shipping;
+            formData.customsAndECS = quote.customs_and_ecs;
+            formData.domesticShipping = quote.domestic_shipping;
+            formData.handlingCharge = quote.handling_charge;
+            formData.insuranceAmount = quote.insurance_amount;
+            formData.paymentGatewayFee = quote.payment_gateway_fee;
             try {
                 form.reset(formData);
             } catch (error) {
@@ -77,7 +86,6 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
             quantity: item.quantity,
             product_name: item.product_name,
             options: item.options,
-            item_currency: item.item_currency,
             product_url: item.product_url,
             image_url: item.image_url,
         }));
@@ -118,7 +126,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
 
                 // --- Priority Logic ---
                 const country = allCountries?.find(c => c.code === quote.country_code);
-                const thresholds = country?.priority_thresholds || { low: 0, normal: 500, urgent: 2000 };
+                const thresholds = (country?.priority_thresholds || { low: 0, normal: 500, urgent: 2000 }) as any;
                 const finalTotal = finalQuoteData.final_total || 0;
                 // Always recalculate priority on calculate
                 let priority;
@@ -142,6 +150,29 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                     previousPriority: data.priority
                 });
                 // --- End Priority Logic ---
+
+                // --- Map snake_case to camelCase for UI breakdown (using USD-calculated values) ---
+                (finalQuoteData as any).salesTaxPrice = finalQuoteData.sales_tax_price;
+                (finalQuoteData as any).domesticShipping = finalQuoteData.domestic_shipping;
+                (finalQuoteData as any).handlingCharge = finalQuoteData.handling_charge;
+                (finalQuoteData as any).insuranceAmount = finalQuoteData.insurance_amount;
+                (finalQuoteData as any).merchantShippingPrice = finalQuoteData.merchant_shipping_price;
+                (finalQuoteData as any).discount = finalQuoteData.discount;
+                (finalQuoteData as any).interNationalShipping = finalQuoteData.international_shipping;
+                (finalQuoteData as any).customsAndECS = finalQuoteData.customs_and_ecs;
+                (finalQuoteData as any).paymentGatewayFee = finalQuoteData.payment_gateway_fee;
+                // --- End UI mapping ---
+
+                // --- Remove camelCase fields before DB save ---
+                delete (finalQuoteData as any).salesTaxPrice;
+                delete (finalQuoteData as any).merchantShippingPrice;
+                delete (finalQuoteData as any).interNationalShipping;
+                delete (finalQuoteData as any).customsAndECS;
+                delete (finalQuoteData as any).domesticShipping;
+                delete (finalQuoteData as any).handlingCharge;
+                delete (finalQuoteData as any).insuranceAmount;
+                delete (finalQuoteData as any).paymentGatewayFee;
+                // --- End removal ---
 
                 updateQuote(finalQuoteData);
             }

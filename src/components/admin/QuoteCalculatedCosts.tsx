@@ -79,6 +79,8 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
     if (!shouldShowUSD) {
       currencies = currencies.filter(c => c.currency !== 'USD');
     }
+    // Debug: Log item price USD value and displayed values
+    console.log(`[Breakdown Debug] Total Item Price: USD value =`, quote.item_price, '| Displayed =', currencies.map(c => `${c.amount} (${c.currency})`).join(' / '));
     return (
       <div key="Total Item Price" className="flex justify-between items-center">
         <p className="text-sm">Total Item Price:</p>
@@ -97,11 +99,9 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
 
   // Patch renderRow to filter out USD if not needed
   const renderRow = (label: string, value: number | null, isDiscount = false) => {
-    if (value === null || value === undefined || value === 0) return null;
-
-    const sign = isDiscount ? '-' : '';
+    // Debug: Log calculated value and displayed values side by side, even for 0/null
     let currencies = formatMultiCurrency({
-      usdAmount: value,
+      usdAmount: value || 0,
       quoteCurrency: quote.final_currency,
       customerPreferredCurrency: quote.profiles?.preferred_display_currency,
       showAllVariations: true
@@ -109,6 +109,11 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
     if (!shouldShowUSD) {
       currencies = currencies.filter(c => c.currency !== 'USD');
     }
+    console.log(`[Breakdown Debug] ${label}: USD value =`, value, '| Displayed =', currencies.map(c => `${c.amount} (${c.currency})`).join(' / '));
+
+    if (value === null || value === undefined || value === 0) return null;
+
+    const sign = isDiscount ? '-' : '';
     return (
       <div key={label} className="flex justify-between items-center">
         <p className="text-sm">{label}:</p>
@@ -139,6 +144,8 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
     if (!shouldShowUSD) {
       currencies = currencies.filter(c => c.currency !== 'USD');
     }
+    // Debug: Log final total USD value and displayed values
+    console.log(`[Breakdown Debug] Final Total: USD value =`, quote.final_total, '| Displayed =', currencies.map(c => `${c.amount} (${c.currency})`).join(' / '));
     return (
       <div className="flex justify-between items-center">
         <p className="font-semibold text-base">Final Total:</p>
@@ -166,9 +173,40 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
     if (!shouldShowUSD) {
       currencies = currencies.filter(c => c.currency !== 'USD');
     }
+    // Debug: Log subtotal USD value and displayed values
+    console.log(`[Breakdown Debug] Subtotal: USD value =`, quote.sub_total, '| Displayed =', currencies.map(c => `${c.amount} (${c.currency})`).join(' / '));
     return (
       <div className="flex justify-between items-center">
         <p className="font-semibold">Subtotal:</p>
+        <div className="text-right font-semibold">
+          <MultiCurrencyDisplay 
+            currencies={currencies}
+            orientation="horizontal"
+            showLabels={false}
+            compact={false}
+            cleanFormat={true}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  // Patch VAT row to use correct values for each currency
+  const renderVatRow = () => {
+    let currencies = formatMultiCurrency({
+      usdAmount: quote.vat || 0,
+      quoteCurrency: quote.final_currency,
+      customerPreferredCurrency: quote.profiles?.preferred_display_currency,
+      showAllVariations: true
+    });
+    if (!shouldShowUSD) {
+      currencies = currencies.filter(c => c.currency !== 'USD');
+    }
+    // Debug: Log VAT USD value and displayed values
+    console.log(`[Breakdown Debug] VAT: USD value =`, quote.vat, '| Displayed =', currencies.map(c => `${c.amount} (${c.currency})`).join(' / '));
+    return (
+      <div className="flex justify-between items-center">
+        <p className="font-semibold">VAT:</p>
         <div className="text-right font-semibold">
           <MultiCurrencyDisplay 
             currencies={currencies}
@@ -196,21 +234,20 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
           <div className="border-t my-1"></div>
           
           {renderItemPriceRow()}
-          {renderRow("Sales Tax", quote.sales_tax_price)}
-          {renderRow("Merchant Shipping", quote.merchant_shipping_price)}
-          {renderRow("International Shipping", quote.international_shipping)}
-          {renderRow("Customs & ECS", quote.customs_and_ecs)}
-          {renderRow("Domestic Shipping", quote.domestic_shipping)}
-          {renderRow("Handling Charge", quote.handling_charge)}
-          {renderRow("Insurance", quote.insurance_amount)}
-          {renderRow("Payment Gateway Fee", quote.payment_gateway_fee)}
+          {renderRow("Sales Tax", quote.salesTaxPrice)}
+          {renderRow("Merchant Shipping", quote.merchantShippingPrice)}
+          {renderRow("International Shipping", quote.interNationalShipping)}
+          {renderRow("Customs & ECS", quote.customsAndECS)}
+          {renderRow("Domestic Shipping", quote.domesticShipping)}
+          {renderRow("Handling Charge", quote.handlingCharge)}
+          {renderRow("Insurance", quote.insuranceAmount)}
+          {renderRow("Payment Gateway Fee", quote.paymentGatewayFee)}
           {renderRow("Discount", quote.discount, true)}
 
           <div className="border-t my-2"></div>
           
           {renderSubtotalRow()}
-          
-          {renderRow("VAT", quote.vat)}
+          {renderVatRow()}
 
           <div className="border-t my-2"></div>
 

@@ -201,6 +201,13 @@ export const useQuoteCalculation = () => {
                 international_shipping: internationalShippingCost,
                 customs_and_ecs: fallbackQuote.customsAndECS,
                 payment_gateway_fee: paymentGatewayFee,
+                // Add the USD-converted values for UI breakdown
+                sales_tax_price: cleanFormDataInUSD.sales_tax_price,
+                merchant_shipping_price: cleanFormDataInUSD.merchant_shipping_price,
+                domestic_shipping: cleanFormDataInUSD.domestic_shipping,
+                handling_charge: cleanFormDataInUSD.handling_charge,
+                insurance_amount: cleanFormDataInUSD.insurance_amount,
+                discount: cleanFormDataInUSD.discount,
                 final_currency: finalQuoteCurrency,
                 final_total_local: finalTotal * finalExchangeRate,
                 // New fields for shipping routes
@@ -257,6 +264,13 @@ export const useQuoteCalculation = () => {
                 international_shipping: calculatedQuote.interNationalShipping,
                 customs_and_ecs: calculatedQuote.customsAndECS,
                 payment_gateway_fee: calculatedQuote.paymentGatewayFee,
+                // Add the USD-converted values for UI breakdown
+                sales_tax_price: cleanFormDataInUSD.sales_tax_price,
+                merchant_shipping_price: cleanFormDataInUSD.merchant_shipping_price,
+                domestic_shipping: cleanFormDataInUSD.domestic_shipping,
+                handling_charge: cleanFormDataInUSD.handling_charge,
+                insurance_amount: cleanFormDataInUSD.insurance_amount,
+                discount: cleanFormDataInUSD.discount,
                 final_currency: finalQuoteCurrency,
                 final_total_local: calculatedQuote.finalTotal * finalExchangeRate,
                 // Fallback fields

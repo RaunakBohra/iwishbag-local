@@ -23,6 +23,17 @@ export const useQuoteQueries = (id: string | undefined) => {
                 console.error("Error fetching quote:", error);
                 throw error;
             };
+            // Map snake_case to camelCase for UI breakdown
+            if (data) {
+                data.salesTaxPrice = data.sales_tax_price;
+                data.merchantShippingPrice = data.merchant_shipping_price;
+                data.interNationalShipping = data.international_shipping;
+                data.customsAndECS = data.customs_and_ecs;
+                data.domesticShipping = data.domestic_shipping;
+                data.handlingCharge = data.handling_charge;
+                data.insuranceAmount = data.insurance_amount;
+                data.paymentGatewayFee = data.payment_gateway_fee;
+            }
             return data;
         },
         enabled: !!id,
