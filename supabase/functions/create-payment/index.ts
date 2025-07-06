@@ -217,7 +217,7 @@ serve(async (req) => {
           const payuConfig = {
             merchant_key: Deno.env.get('PAYU_MERCHANT_KEY'),
             salt_key: Deno.env.get('PAYU_SALT_KEY'),
-            payment_url: 'https://test.payu.in/_payment'
+            payment_url: 'https://secure.payu.in/_payment'
           };
           if (!payuConfig.merchant_key || !payuConfig.salt_key) {
             return new Response(JSON.stringify({ error: 'PayU configuration missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
