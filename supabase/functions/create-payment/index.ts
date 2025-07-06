@@ -289,6 +289,14 @@ serve(async (req) => {
           
           console.log('PayU Hash Generated:', hashResult);
           
+          // Create proper success and failure URLs
+          const baseUrl = success_url.includes('localhost') 
+            ? 'http://localhost:5173' 
+            : 'https://your-domain.com'; // Replace with your actual domain
+          
+          const payuSuccessUrl = `${baseUrl}/payment-success?gateway=payu`;
+          const payuFailureUrl = `${baseUrl}/payment-failure?gateway=payu`;
+          
           const payuRequest = {
             key: payuConfig.merchant_key,
             txnid: txnid,
@@ -297,8 +305,8 @@ serve(async (req) => {
             firstname: customerName,
             email: customerEmail,
             phone: customerPhone,
-            surl: success_url,
-            furl: cancel_url,
+            surl: payuSuccessUrl,
+            furl: payuFailureUrl,
             hash: hashResult.v1
           };
 

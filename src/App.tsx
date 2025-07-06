@@ -30,6 +30,8 @@ import { Cart } from "@/components/cart/Cart";
 import CostEstimatorPage from "@/pages/CostEstimator";
 import CustomerOrderDetailPage from "@/pages/CustomerOrderDetailPage";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
+import PaymentSuccess from "@/pages/PaymentSuccess";
+import PaymentFailure from "@/pages/PaymentFailure";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import CartAnalyticsPage from "@/pages/admin/CartAnalytics";
 import CartRecoveryPage from "@/pages/admin/CartRecovery";
@@ -173,6 +175,14 @@ const router = createBrowserRouter([
           {
             path: "order-confirmation/:id", // New route for order confirmation
             element: <OrderConfirmationPage />,
+          },
+          {
+            path: "payment-success", // PayU success redirect
+            element: <PaymentSuccess />,
+          },
+          {
+            path: "payment-failure", // PayU failure redirect
+            element: <PaymentFailure />,
           },
           {
             path: "profile",
