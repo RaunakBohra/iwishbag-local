@@ -16,7 +16,9 @@ import {
   AlertTriangle,
   CheckCircle,
   QrCode,
-  ExternalLink
+  ExternalLink,
+  AlertCircle,
+  IndianRupee
 } from 'lucide-react';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
 import { PaymentGateway, PaymentMethodDisplay } from '@/types/payment';
@@ -47,6 +49,23 @@ const getIcon = (iconName: string) => {
       return <CreditCard className="h-4 w-4" />;
   }
 };
+
+// Add this component for PayU amount display notice
+const PayUAmountNotice = () => (
+  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+    <div className="flex items-start gap-2">
+      <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+      <div className="text-sm text-amber-800">
+        <p className="font-medium">PayU Amount Display Notice</p>
+        <p className="mt-1">
+          PayU may display the amount in paise (smallest currency unit) instead of rupees. 
+          This is normal and the payment will process correctly. 
+          For example: ₹10,334.33 may appear as 1033433.
+        </p>
+      </div>
+    </div>
+  </div>
+);
 
 export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   selectedMethod,
@@ -275,6 +294,11 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
               The payment will be processed once you complete the transaction in the app.
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* PayU Amount Display Notice */}
+        {validSelectedMethod === 'payu' && (
+          <PayUAmountNotice />
         )}
       </CardContent>
     </Card>

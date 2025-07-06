@@ -12,6 +12,7 @@ This guide covers the complete integration of PayU payment gateway into your iwi
 - ✅ **User Data Integration**: Customer information from profiles and quotes
 - ✅ **Status Tracking**: Real-time payment status tracking
 - ✅ **Error Handling**: Comprehensive error handling and logging
+- ✅ **Amount Format**: Correct paise format for PayU requirements
 
 ## 🔧 Setup Instructions
 
@@ -151,7 +152,26 @@ const exchangeRate = indiaSettings.rate_from_usd || 83.0;
 const amountInINR = totalAmount * exchangeRate;
 ```
 
-### 3. Hash Generation
+### 3. Amount Formatting (CRITICAL)
+
+**PayU requires amounts in paise (smallest currency unit), not rupees with decimals:**
+
+```typescript
+// ❌ WRONG: Decimal format (causes "Invalid amount" error)
+const formattedAmount = amountInINR.toFixed(2); // "83.00"
+
+// ✅ CORRECT: Paise format (multiply by 100)
+const amountInPaise = Math.round(amountInINR * 100);
+const formattedAmount = amountInPaise.toString(); // "8300"
+```
+
+**Example:**
+- USD Amount: $1.00
+- Exchange Rate: 83 INR per USD
+- INR Amount: ₹83.00
+- **PayU Amount: 8300** (paise)
+
+### 4. Hash Generation
 
 PayU requires SHA-512 hash verification:
 
@@ -160,7 +180,7 @@ PayU requires SHA-512 hash verification:
 const hashString = [
   merchantKey,
   txnid,
-  amount,
+  amount, // This should be in paise format
   productinfo,
   firstname,
   email,
@@ -170,7 +190,7 @@ const hashString = [
 ].join('|');
 ```
 
-### 4. Webhook Processing
+### 5. Webhook Processing
 
 PayU sends payment status updates via webhooks:
 

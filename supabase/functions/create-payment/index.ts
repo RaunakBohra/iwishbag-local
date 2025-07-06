@@ -220,38 +220,25 @@ serve(async (req) => {
 
       case 'payu':
         try {
-          // TEMPORARILY DISABLED: Rate limiting check to debug PayU rate limiting
-          // const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-          // const now = Date.now();
-          // const clientRequests = payuRequestCache.get(clientIP) || [];
-          // 
-          // // Remove old requests (older than 1 minute)
-          // const recentRequests = clientRequests.filter(timestamp => now - timestamp < PAYU_RATE_LIMIT_MS);
-          // 
-          // if (recentRequests.length >= PAYU_MAX_REQUESTS_PER_MINUTE) {
-          //   console.log(`Rate limit exceeded for IP: ${clientIP}`);
-          //   return new Response(JSON.stringify({ 
-          //     error: 'Too many requests. Please wait 60 seconds before trying again.',
-          //     retryAfter: 60
-          //   }), { 
-          //     status: 429, 
-          //     headers: { 
-          //       ...corsHeaders, 
-          //       'Content-Type': 'application/json',
-          //       'Retry-After': '60'
-          //     }
-          //   });
-          // }
-          // 
-          // // Add current request to cache
-          // recentRequests.push(now);
-          // payuRequestCache.set(clientIP, recentRequests);
-          
+          // Fetch PayU config from payment_gateways table
+          const { data: payuGateway, error: payuGatewayError } = await supabaseAdmin
+            .from('payment_gateways')
+            .select('config, test_mode')
+            .eq('code', 'payu')
+            .single();
+
+          if (payuGatewayError || !payuGateway) {
+            return new Response(JSON.stringify({ error: 'PayU gateway config missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+          }
+
+          const config = payuGateway.config || {};
+          const testMode = payuGateway.test_mode;
           const payuConfig = {
-            merchant_key: Deno.env.get('PAYU_MERCHANT_KEY'),
-            salt_key: Deno.env.get('PAYU_SALT_KEY'),
-            payment_url: 'https://secure.payu.in/_payment'
+            merchant_key: config.merchant_key,
+            salt_key: config.salt_key,
+            payment_url: testMode ? 'https://test.payu.in/_payment' : 'https://secure.payu.in/_payment'
           };
+          console.log('Loaded PayU config:', payuConfig);
           if (!payuConfig.merchant_key || !payuConfig.salt_key) {
             return new Response(JSON.stringify({ error: 'PayU configuration missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
           }
@@ -271,6 +258,13 @@ serve(async (req) => {
           // Convert USD amount to INR for PayU
           const exchangeRate = indiaSettings.rate_from_usd || 83.0; // Default to 83 if not found
           const amountInINR = totalAmount * exchangeRate;
+          
+          // Check minimum amount (PayU typically requires at least 1 INR)
+          if (amountInINR < 1) {
+            return new Response(JSON.stringify({ 
+              error: 'Amount too small for PayU. Minimum amount is ₹1 INR.' 
+            }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+          }
           
           console.log(`Converting ${totalAmount} USD to ${amountInINR} INR (rate: ${exchangeRate})`);
 
@@ -293,8 +287,8 @@ serve(async (req) => {
             }
           }
 
-          // Generate unique transaction ID with better uniqueness
-          const txnid = `PAYU_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 5)}`;
+          // Generate unique transaction ID (PayU format: alphanumeric only)
+          const txnid = `PAYU_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           
           // Create product info with more details
           const productNames = quotesToUse.map(q => q.product_name || 'Product').join(', ');
@@ -303,6 +297,8 @@ serve(async (req) => {
           console.log('PayU Payment Details:', {
             txnid,
             amountInINR,
+            amountInPaise: Math.round(amountInINR * 100),
+            formattedAmount: Math.round(amountInINR * 100).toString(),
             customerName,
             customerEmail,
             customerPhone,
@@ -310,11 +306,16 @@ serve(async (req) => {
             exchangeRate
           });
           
+          // PayU expects amount in paise (smallest currency unit), not rupees with decimals
+          // Convert INR amount to paise (multiply by 100)
+          const amountInPaise = Math.round(amountInINR * 100);
+          const formattedAmount = amountInPaise.toString();
+          
           const hashResult = await generatePayUHash({
             merchantKey: payuConfig.merchant_key,
             salt: payuConfig.salt_key,
             txnid,
-            amount: amountInINR.toString(),
+            amount: formattedAmount,
             productinfo,
             firstname: customerName,
             email: customerEmail
@@ -323,34 +324,39 @@ serve(async (req) => {
           console.log('PayU Hash Generated:', hashResult);
           
           // Create proper success and failure URLs
+          // For live mode, use a proper domain instead of localhost
           const baseUrl = success_url.includes('localhost') 
-            ? 'http://localhost:5173' 
-            : 'https://your-domain.com'; // Replace with your actual domain
+            ? 'https://iwishbag.com' // Replace with your actual domain
+            : success_url.replace('/success', '').replace('/cancel', '');
           
           const payuSuccessUrl = `${baseUrl}/payment-success?gateway=payu`;
           const payuFailureUrl = `${baseUrl}/payment-failure?gateway=payu`;
           
+          // Prepare PayU POST form data
           const payuRequest = {
             key: payuConfig.merchant_key,
             txnid: txnid,
-            amount: amountInINR,
+            amount: formattedAmount,
             productinfo: productinfo,
             firstname: customerName,
             email: customerEmail,
             phone: customerPhone,
             surl: payuSuccessUrl,
             furl: payuFailureUrl,
-            hash: hashResult.v1
+            hash: hashResult.v1,
+            mode: 'CC',
+            udf1: '',
+            udf2: '',
+            udf3: '',
+            udf4: '',
+            udf5: ''
           };
 
           // Log the complete request for debugging
-          console.log('PayU Request:', {
-            ...payuRequest,
-            hash: hashResult.v1.substring(0, 20) + '...' // Truncate hash for security
-          });
-
-          // TEMPORARILY DISABLED: Delay to debug PayU rate limiting
-          // await new Promise(resolve => setTimeout(resolve, 1000));
+          console.log('PayU Request:', payuRequest);
+          
+          // DEBUG: Log the PayU form amount and its type
+          console.log('PayU Form Amount:', payuRequest.amount, typeof payuRequest.amount);
           
           responseData = { 
             success: true, 
@@ -359,6 +365,7 @@ serve(async (req) => {
             formData: payuRequest,
             transactionId: txnid,
             amountInINR: amountInINR,
+            amountInPaise: amountInPaise,
             exchangeRate: exchangeRate
           };
         } catch (error) {

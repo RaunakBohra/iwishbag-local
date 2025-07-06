@@ -297,6 +297,38 @@ export default function Checkout() {
     });
   };
 
+  // Function to submit PayU form with data
+  const submitPayUForm = (url: string, formData: any) => {
+    console.log('🔧 Submitting PayU form...');
+    console.log('URL:', url);
+    console.log('Form Data:', formData);
+    
+    // Create a temporary form element
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = url;
+    form.style.display = 'none';
+    form.target = '_self'; // Ensure it opens in same window
+
+    // Add all form fields
+    Object.keys(formData).forEach(key => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = formData[key];
+      form.appendChild(input);
+    });
+
+    // Add form to page and submit
+    document.body.appendChild(form);
+    
+    // Add a small delay to ensure form is properly added
+    setTimeout(() => {
+      console.log('📤 Submitting form to PayU...');
+      form.submit();
+    }, 100);
+  };
+
   const handlePlaceOrder = async () => {
     if (!paymentMethod) {
       toast({ title: "Payment Error", description: "Please select a payment method.", variant: "destructive" });
@@ -329,26 +361,16 @@ export default function Checkout() {
       const paymentResponse = await createPaymentAsync(paymentRequest);
 
       if (paymentResponse.url) {
-        // For redirect-based payments (Stripe)
-        if (paymentMethod === 'payu' && paymentResponse.method === 'POST') {
-          // Handle PayU POST form submission
-          const form = document.createElement('form');
-          form.method = 'POST';
-          form.action = paymentResponse.url;
-          form.target = '_blank';
-          
-          // Add form data
-          Object.entries(paymentResponse.formData).forEach(([key, value]) => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = key;
-            input.value = value as string;
-            form.appendChild(input);
-          });
-          
-          document.body.appendChild(form);
-          form.submit();
-          document.body.removeChild(form);
+        // For redirect-based payments (Stripe, PayU Hosted Checkout)
+        if (paymentMethod === 'payu' && paymentResponse.formData) {
+          // Handle PayU Hosted Checkout - submit form with data
+          console.log('🎯 PayU payment detected with form data');
+          console.log('Payment Response:', paymentResponse);
+          submitPayUForm(paymentResponse.url, paymentResponse.formData);
+        } else if (paymentMethod === 'payu') {
+          // PayU without form data - fallback to redirect
+          console.log('⚠️ PayU payment without form data, using redirect');
+          window.location.href = paymentResponse.url;
         } else {
           // For other redirect-based payments (Stripe)
           window.location.href = paymentResponse.url;
