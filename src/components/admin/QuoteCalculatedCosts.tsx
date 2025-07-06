@@ -5,6 +5,7 @@ import { useAdminCurrencyDisplay } from "@/hooks/useAdminCurrencyDisplay";
 
 type Quote = Tables<'quotes'> & {
   profiles?: { preferred_display_currency?: string } | null;
+  quote_items?: any[];
 };
 
 interface QuoteCalculatedCostsProps {
@@ -98,10 +99,19 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
   };
 
   // Patch renderRow to filter out USD if not needed
-  const renderRow = (label: string, value: number | null, isDiscount = false) => {
+  const renderRow = (label: string, value: number | null, isDiscount = false, originalFieldName?: string) => {
+    // Get the original input value from the quote object (in purchase currency)
+    let originalInput = undefined;
+    if (originalFieldName && quote[originalFieldName] !== undefined) {
+      originalInput = quote[originalFieldName];
+    }
+    
+    // Use the value directly (camelCase fields now contain USD values)
+    let usdValue = value || 0;
+    
     // Debug: Log calculated value and displayed values side by side, even for 0/null
     let currencies = formatMultiCurrency({
-      usdAmount: value || 0,
+      usdAmount: usdValue,
       quoteCurrency: quote.final_currency,
       customerPreferredCurrency: quote.profiles?.preferred_display_currency,
       showAllVariations: true
@@ -109,24 +119,19 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
     if (!shouldShowUSD) {
       currencies = currencies.filter(c => c.currency !== 'USD');
     }
-    console.log(`[Breakdown Debug] ${label}: USD value =`, value, '| Displayed =', currencies.map(c => `${c.amount} (${c.currency})`).join(' / '));
+    
+    console.log(`[Breakdown Debug] ${label}: USD value =`, usdValue, '| Displayed =', currencies.map(c => `${c.amount} (${c.currency})`).join(' / '), '| Original input =', originalInput);
 
-    if (value === null || value === undefined || value === 0) return null;
-
+    if (usdValue === null || usdValue === undefined || usdValue === 0) return null;
     const sign = isDiscount ? '-' : '';
     return (
-      <div key={label} className="flex justify-between items-center">
-        <p className="text-sm">{label}:</p>
-        <div className="text-right">
-          {sign && <span className="text-green-600">{sign}</span>}
-          <MultiCurrencyDisplay 
-            currencies={currencies}
-            orientation="horizontal"
-            showLabels={false}
-            compact={false}
-            cleanFormat={true}
-          />
-        </div>
+      <div className="flex justify-between">
+        <span>{label}</span>
+        <span className={isDiscount ? 'text-red-600' : ''}>
+          {sign}{currencies.map((c, i) => (
+            <span key={c.currency} className={i > 0 ? 'ml-2 text-muted-foreground' : ''}>{c.amount} <span className="text-xs">{c.currency}</span></span>
+          ))}
+        </span>
       </div>
     );
   };
@@ -234,15 +239,15 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
           <div className="border-t my-1"></div>
           
           {renderItemPriceRow()}
-          {renderRow("Sales Tax", quote.salesTaxPrice)}
-          {renderRow("Merchant Shipping", quote.merchantShippingPrice)}
-          {renderRow("International Shipping", quote.interNationalShipping)}
-          {renderRow("Customs & ECS", quote.customsAndECS)}
-          {renderRow("Domestic Shipping", quote.domesticShipping)}
-          {renderRow("Handling Charge", quote.handlingCharge)}
-          {renderRow("Insurance", quote.insuranceAmount)}
-          {renderRow("Payment Gateway Fee", quote.paymentGatewayFee)}
-          {renderRow("Discount", quote.discount, true)}
+          {renderRow("Sales Tax", (quote as any).salesTaxPrice, false, 'sales_tax_price')}
+          {renderRow("Merchant Shipping", (quote as any).merchantShippingPrice, false, 'merchant_shipping_price')}
+          {renderRow("International Shipping", (quote as any).interNationalShipping, false)}
+          {renderRow("Customs & ECS", (quote as any).customsAndECS, false)}
+          {renderRow("Domestic Shipping", (quote as any).domesticShipping, false, 'domestic_shipping')}
+          {renderRow("Handling Charge", (quote as any).handlingCharge, false, 'handling_charge')}
+          {renderRow("Insurance", (quote as any).insuranceAmount, false, 'insurance_amount')}
+          {renderRow("Payment Gateway Fee", (quote as any).paymentGatewayFee, false)}
+          {renderRow("Discount", (quote as any).discount, true, 'discount')}
 
           <div className="border-t my-2"></div>
           

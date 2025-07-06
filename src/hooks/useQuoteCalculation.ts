@@ -201,15 +201,17 @@ export const useQuoteCalculation = () => {
                 international_shipping: internationalShippingCost,
                 customs_and_ecs: fallbackQuote.customsAndECS,
                 payment_gateway_fee: paymentGatewayFee,
-                // Add the USD-converted values for UI breakdown
-                sales_tax_price: cleanFormDataInUSD.sales_tax_price,
-                merchant_shipping_price: cleanFormDataInUSD.merchant_shipping_price,
-                domestic_shipping: cleanFormDataInUSD.domestic_shipping,
-                handling_charge: cleanFormDataInUSD.handling_charge,
-                insurance_amount: cleanFormDataInUSD.insurance_amount,
-                discount: cleanFormDataInUSD.discount,
+                // Store the ORIGINAL input values (in purchase currency) - NOT the USD values
+                sales_tax_price: cleanFormData.sales_tax_price,
+                merchant_shipping_price: cleanFormData.merchant_shipping_price,
+                domestic_shipping: cleanFormData.domestic_shipping,
+                handling_charge: cleanFormData.handling_charge,
+                insurance_amount: cleanFormData.insurance_amount,
+                discount: cleanFormData.discount,
                 final_currency: finalQuoteCurrency,
                 final_total_local: finalTotal * finalExchangeRate,
+                // Store the exchange rate for converting original values to USD
+                exchange_rate: purchaseCurrencyRate,
                 // New fields for shipping routes
                 origin_country: originCountry,
                 shipping_method: shippingMethod,
@@ -217,6 +219,16 @@ export const useQuoteCalculation = () => {
                 // Preserve current status - don't change status on calculation
                 status: currentStatus as any
             };
+            
+            // Log the values returned in the calculation result
+            console.log('[QuoteCalc Debug] Calculation result (ORIGINAL values returned):', {
+                sales_tax_price: updatedQuote.sales_tax_price,
+                merchant_shipping_price: updatedQuote.merchant_shipping_price,
+                domestic_shipping: updatedQuote.domestic_shipping,
+                handling_charge: updatedQuote.handling_charge,
+                discount: updatedQuote.discount,
+                insurance_amount: updatedQuote.insurance_amount
+            });
             
             return updatedQuote;
 
@@ -264,15 +276,17 @@ export const useQuoteCalculation = () => {
                 international_shipping: calculatedQuote.interNationalShipping,
                 customs_and_ecs: calculatedQuote.customsAndECS,
                 payment_gateway_fee: calculatedQuote.paymentGatewayFee,
-                // Add the USD-converted values for UI breakdown
-                sales_tax_price: cleanFormDataInUSD.sales_tax_price,
-                merchant_shipping_price: cleanFormDataInUSD.merchant_shipping_price,
-                domestic_shipping: cleanFormDataInUSD.domestic_shipping,
-                handling_charge: cleanFormDataInUSD.handling_charge,
-                insurance_amount: cleanFormDataInUSD.insurance_amount,
-                discount: cleanFormDataInUSD.discount,
+                // Store the ORIGINAL input values (in purchase currency) - NOT the USD values
+                sales_tax_price: cleanFormData.sales_tax_price,
+                merchant_shipping_price: cleanFormData.merchant_shipping_price,
+                domestic_shipping: cleanFormData.domestic_shipping,
+                handling_charge: cleanFormData.handling_charge,
+                insurance_amount: cleanFormData.insurance_amount,
+                discount: cleanFormData.discount,
                 final_currency: finalQuoteCurrency,
                 final_total_local: calculatedQuote.finalTotal * finalExchangeRate,
+                // Store the exchange rate for converting original values to USD
+                exchange_rate: purchaseCurrencyRate,
                 // Fallback fields
                 origin_country: 'US',
                 shipping_method: 'country_settings',

@@ -25,14 +25,39 @@ export const useQuoteQueries = (id: string | undefined) => {
             };
             // Map snake_case to camelCase for UI breakdown
             if (data) {
-                data.salesTaxPrice = data.sales_tax_price;
-                data.merchantShippingPrice = data.merchant_shipping_price;
+                // Convert original input values (in purchase currency) to USD for breakdown display
+                const exchangeRate = data.exchange_rate || 1;
+                
+                console.log('[useQuoteQueries Debug] Exchange rate:', exchangeRate);
+                console.log('[useQuoteQueries Debug] Original values:', {
+                    sales_tax_price: data.sales_tax_price,
+                    merchant_shipping_price: data.merchant_shipping_price,
+                    domestic_shipping: data.domestic_shipping,
+                    handling_charge: data.handling_charge,
+                    insurance_amount: data.insurance_amount
+                });
+                
+                data.salesTaxPrice = data.sales_tax_price ? data.sales_tax_price / exchangeRate : 0;
+                data.merchantShippingPrice = data.merchant_shipping_price ? data.merchant_shipping_price / exchangeRate : 0;
                 data.interNationalShipping = data.international_shipping;
                 data.customsAndECS = data.customs_and_ecs;
-                data.domesticShipping = data.domestic_shipping;
-                data.handlingCharge = data.handling_charge;
-                data.insuranceAmount = data.insurance_amount;
+                data.domesticShipping = data.domestic_shipping ? data.domestic_shipping / exchangeRate : 0;
+                data.handlingCharge = data.handling_charge ? data.handling_charge / exchangeRate : 0;
+                data.insuranceAmount = data.insurance_amount ? data.insurance_amount / exchangeRate : 0;
                 data.paymentGatewayFee = data.payment_gateway_fee;
+                // Fix: Convert discount to USD for breakdown
+                data.discount = data.discount ? data.discount / exchangeRate : 0;
+                // Debug: Log discount and VAT
+                console.log('[useQuoteQueries Debug] Discount conversion:', { discount: data.discount, original: data.discount ? data.discount * exchangeRate : 0 });
+                console.log('[useQuoteQueries Debug] VAT value:', data.vat);
+                
+                console.log('[useQuoteQueries Debug] Converted USD values:', {
+                    salesTaxPrice: data.salesTaxPrice,
+                    merchantShippingPrice: data.merchantShippingPrice,
+                    domesticShipping: data.domesticShipping,
+                    handlingCharge: data.handlingCharge,
+                    insuranceAmount: data.insuranceAmount
+                });
             }
             return data;
         },

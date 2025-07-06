@@ -30,6 +30,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
             const purchaseCountry = quote.country_code;
             const purchaseCurrency = allCountries?.find(c => c.code === purchaseCountry)?.currency || 'USD';
             
+            // Always use the original input values from the quote (in purchase currency)
             const formData: any = {
                 id: quote.id,
                 sales_tax_price: quote.sales_tax_price,
@@ -56,7 +57,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                     image_url: item.image_url,
                 }))
             };
-            // Map snake_case to camelCase for UI breakdown
+            // Map snake_case to camelCase for UI breakdown (for display only)
             formData.salesTaxPrice = quote.sales_tax_price;
             formData.merchantShippingPrice = quote.merchant_shipping_price;
             formData.interNationalShipping = quote.international_shipping;
