@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'https://esm.sh/stripe@12.12.0?target=deno&deno-std=0.132.0';
-import PayU from 'https://esm.sh/payu@latest?target=deno';
+// REMOVED: PayU SDK import as it might be causing additional API calls
+// import PayU from 'https://esm.sh/payu@latest?target=deno';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,11 +39,16 @@ interface PaymentResponse {
   error?: string;
 }
 
-// Initialize PayU client with official SDK
-const payuClient = new PayU({
-  key: Deno.env.get('PAYU_MERCHANT_KEY'),
-  salt: Deno.env.get('PAYU_SALT_KEY'),
-}, 'TEST'); // Use TEST for test environment
+// REMOVED: PayU client initialization to avoid additional API calls
+// const payuClient = new PayU({
+//   key: Deno.env.get('PAYU_MERCHANT_KEY'),
+//   salt: Deno.env.get('PAYU_SALT_KEY'),
+// }, 'LIVE'); // Use LIVE for production environment
+
+// Rate limiting for PayU requests
+const payuRequestCache = new Map();
+const PAYU_RATE_LIMIT_MS = 60000; // 60 seconds between requests
+const PAYU_MAX_REQUESTS_PER_MINUTE = 10;
 
 // --- PayU Hash Generation for Deno (matches Node.js SDK) ---
 async function generatePayUHash({
@@ -214,6 +220,33 @@ serve(async (req) => {
 
       case 'payu':
         try {
+          // TEMPORARILY DISABLED: Rate limiting check to debug PayU rate limiting
+          // const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+          // const now = Date.now();
+          // const clientRequests = payuRequestCache.get(clientIP) || [];
+          // 
+          // // Remove old requests (older than 1 minute)
+          // const recentRequests = clientRequests.filter(timestamp => now - timestamp < PAYU_RATE_LIMIT_MS);
+          // 
+          // if (recentRequests.length >= PAYU_MAX_REQUESTS_PER_MINUTE) {
+          //   console.log(`Rate limit exceeded for IP: ${clientIP}`);
+          //   return new Response(JSON.stringify({ 
+          //     error: 'Too many requests. Please wait 60 seconds before trying again.',
+          //     retryAfter: 60
+          //   }), { 
+          //     status: 429, 
+          //     headers: { 
+          //       ...corsHeaders, 
+          //       'Content-Type': 'application/json',
+          //       'Retry-After': '60'
+          //     }
+          //   });
+          // }
+          // 
+          // // Add current request to cache
+          // recentRequests.push(now);
+          // payuRequestCache.set(clientIP, recentRequests);
+          
           const payuConfig = {
             merchant_key: Deno.env.get('PAYU_MERCHANT_KEY'),
             salt_key: Deno.env.get('PAYU_SALT_KEY'),
@@ -260,8 +293,8 @@ serve(async (req) => {
             }
           }
 
-          // Generate unique transaction ID
-          const txnid = `PAYU_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          // Generate unique transaction ID with better uniqueness
+          const txnid = `PAYU_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 5)}`;
           
           // Create product info with more details
           const productNames = quotesToUse.map(q => q.product_name || 'Product').join(', ');
@@ -316,6 +349,9 @@ serve(async (req) => {
             hash: hashResult.v1.substring(0, 20) + '...' // Truncate hash for security
           });
 
+          // TEMPORARILY DISABLED: Delay to debug PayU rate limiting
+          // await new Promise(resolve => setTimeout(resolve, 1000));
+          
           responseData = { 
             success: true, 
             url: payuConfig.payment_url,
