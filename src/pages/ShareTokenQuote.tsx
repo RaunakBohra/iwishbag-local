@@ -47,7 +47,7 @@ export default function ShareTokenQuote() {
           quote_items (*)
         `)
         .eq('share_token', shareToken)
-        .eq('is_anonymous', true)
+        // Remove is_anonymous filter to allow both anonymous and identified shared quotes
         .single();
 
       if (error) throw error;
