@@ -18,11 +18,16 @@ import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShippingAddress } from "@/types/address";
 import { useQuoteState } from "@/hooks/useQuoteState";
+import { GuestApprovalDialog } from "@/components/share/GuestApprovalDialog";
 
 export default function ShareTokenQuote() {
   const { shareToken } = useParams<{ shareToken: string }>();
   const navigate = useNavigate();
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
+  const [guestApprovalDialog, setGuestApprovalDialog] = useState<{
+    isOpen: boolean;
+    action: 'approve' | 'reject';
+  }>({ isOpen: false, action: 'approve' });
 
   // Fetch quote by share token (no authentication required)
   const { data: quote, isLoading, error } = useQuery({
@@ -48,6 +53,20 @@ export default function ShareTokenQuote() {
 
   // Use quote state for actions (will handle anonymous users)
   const { approveQuote, rejectQuote, addToCart, isUpdating } = useQuoteState(quote?.id || '');
+
+  // Custom handlers for guest approval flow
+  const handleGuestApprove = () => {
+    setGuestApprovalDialog({ isOpen: true, action: 'approve' });
+  };
+
+  const handleGuestReject = () => {
+    setGuestApprovalDialog({ isOpen: true, action: 'reject' });
+  };
+
+  const handleGuestApprovalSuccess = () => {
+    // Reload the page to show updated quote status
+    window.location.reload();
+  };
 
   if (isLoading) {
     return (
@@ -228,8 +247,8 @@ export default function ShareTokenQuote() {
           {/* Quote Breakdown */}
           <QuoteBreakdown 
             quote={quote} 
-            onApprove={approveQuote}
-            onReject={(reason: string) => rejectQuote('', reason)}
+            onApprove={handleGuestApprove}
+            onReject={handleGuestReject}
             onCalculate={() => {}} // Not used in customer view
             onRecalculate={() => {}} // Not used in customer view
             onSave={() => {}} // Not used in customer view
@@ -328,6 +347,15 @@ export default function ShareTokenQuote() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Guest Approval Dialog */}
+      <GuestApprovalDialog
+        isOpen={guestApprovalDialog.isOpen}
+        onClose={() => setGuestApprovalDialog({ isOpen: false, action: 'approve' })}
+        quoteId={quote?.id || ''}
+        action={guestApprovalDialog.action}
+        onSuccess={handleGuestApprovalSuccess}
+      />
     </div>
   );
 } 
