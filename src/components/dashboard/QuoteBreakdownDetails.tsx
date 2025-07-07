@@ -61,7 +61,7 @@ const chargeDescriptions = {
   "VAT": "Value Added Tax based on your location",
 };
 
-export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
+export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
   quote,
   countrySettings,
 }) => {
@@ -407,4 +407,4 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
       </div>
     </div>
   );
-};
+});

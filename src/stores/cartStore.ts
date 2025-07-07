@@ -459,8 +459,8 @@ export const useCartStore = create<CartStore>()(
             // Set user ID
             set({ userId });
 
-            // Fetch cart quotes (in_cart = true)
-            const { data: cartQuotes, error: cartError } = await supabase
+            // Fetch all quotes in a single query (optimized for performance)
+            const { data: allQuotes, error: quotesError } = await supabase
               .from('quotes')
               .select(`
                 *,
@@ -476,38 +476,16 @@ export const useCartStore = create<CartStore>()(
                 )
               `)
               .eq('user_id', userId)
-              .eq('in_cart', true)
               .order('created_at', { ascending: false });
 
-            if (cartError) {
-              console.error('❌ Error fetching cart quotes:', cartError);
-              throw cartError;
+            if (quotesError) {
+              logger.error('Error fetching quotes', quotesError, 'Cart');
+              throw quotesError;
             }
 
-            // Fetch saved quotes (in_cart = false)
-            const { data: savedQuotes, error: savedError } = await supabase
-              .from('quotes')
-              .select(`
-                *,
-                quote_items (
-                  id,
-                  product_name,
-                  product_url,
-                  quantity,
-                  item_price,
-                  item_weight,
-                  image_url,
-                  options
-                )
-              `)
-              .eq('user_id', userId)
-              .eq('in_cart', false)
-              .order('created_at', { ascending: false });
-
-            if (savedError) {
-              console.error('❌ Error fetching saved quotes:', savedError);
-              throw savedError;
-            }
+            // Separate cart and saved quotes locally (more efficient than 2 DB calls)
+            const cartQuotes = allQuotes?.filter(q => q.in_cart) || [];
+            const savedQuotes = allQuotes?.filter(q => !q.in_cart) || [];
 
             // Helper function to convert quote to cart item
             const convertQuoteToCartItem = (quote: any): CartItem => {

@@ -8,54 +8,57 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { QueryProvider } from './providers/QueryProvider';
 import { Toaster } from "@/components/ui/toaster";
 import Layout from "@/components/layout/Layout";
-import Index from "@/pages/Index";
-import Quote from "@/pages/Quote";
-import Auth from "@/pages/Auth";
-import Dashboard from "@/pages/Dashboard";
-import Quotes from "@/pages/dashboard/Quotes";
-import Orders from "@/pages/dashboard/Orders";
-import QuoteDetail from "@/pages/dashboard/QuoteDetail";
-import OrderDetail from "@/pages/dashboard/OrderDetail";
-import QuoteDetails from "@/pages/QuoteDetails";
-import Profile from "@/pages/Profile";
-import About from "@/pages/About";
-import Blog from "@/pages/Blog";
-import Contact from "@/pages/Contact";
-import Checkout from "@/pages/Checkout";
-import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AdminProtectedRoute from "@/components/auth/AdminProtectedRoute";
-import { MessageCenter } from "@/components/messaging/MessageCenter";
-import { Cart } from "@/components/cart/Cart";
-import CostEstimatorPage from "@/pages/CostEstimator";
-import CustomerOrderDetailPage from "@/pages/CustomerOrderDetailPage";
-import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
-import PaymentSuccess from "@/pages/PaymentSuccess";
-import PaymentFailure from "@/pages/PaymentFailure";
-import AdminDashboard from "@/pages/admin/Dashboard";
-import CartAnalyticsPage from "@/pages/admin/CartAnalytics";
-import CartRecoveryPage from "@/pages/admin/CartRecovery";
-import EmailTemplatesPage from "@/pages/admin/EmailTemplates";
-import PaymentManagement from "@/pages/admin/PaymentManagement";
-import ShippingRoutesPage from "@/pages/admin/ShippingRoutes";
-import StatusManagementPage from "@/pages/admin/StatusManagement";
-import Address from '@/pages/profile/Address';
 
-// Direct imports instead of lazy loading
-import { AdminLayout } from "@/components/admin/AdminLayout";
-import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
-import { QuoteManagementPage } from "@/components/admin/QuoteManagementPage";
+// Lazy load pages for code splitting
+const Index = React.lazy(() => import("@/pages/Index"));
+const Quote = React.lazy(() => import("@/pages/Quote"));
+const Auth = React.lazy(() => import("@/pages/Auth"));
+const Dashboard = React.lazy(() => import("@/pages/Dashboard"));
+const Quotes = React.lazy(() => import("@/pages/dashboard/Quotes"));
+const Orders = React.lazy(() => import("@/pages/dashboard/Orders"));
+const QuoteDetail = React.lazy(() => import("@/pages/dashboard/QuoteDetail"));
+const OrderDetail = React.lazy(() => import("@/pages/dashboard/OrderDetail"));
+const QuoteDetails = React.lazy(() => import("@/pages/QuoteDetails"));
+const Profile = React.lazy(() => import("@/pages/Profile"));
+const About = React.lazy(() => import("@/pages/About"));
+const Blog = React.lazy(() => import("@/pages/Blog"));
+const Contact = React.lazy(() => import("@/pages/Contact"));
+const Checkout = React.lazy(() => import("@/pages/Checkout"));
+const NotFound = React.lazy(() => import("@/pages/NotFound"));
+const MessageCenter = React.lazy(() => import("@/components/messaging/MessageCenter").then(m => ({ default: m.MessageCenter })));
+const Cart = React.lazy(() => import("@/components/cart/Cart").then(m => ({ default: m.Cart })));
+const CostEstimatorPage = React.lazy(() => import("@/pages/CostEstimator"));
+const CustomerOrderDetailPage = React.lazy(() => import("@/pages/CustomerOrderDetailPage"));
+const OrderConfirmationPage = React.lazy(() => import("@/pages/OrderConfirmationPage"));
+const PaymentSuccess = React.lazy(() => import("@/pages/PaymentSuccess"));
+const PaymentFailure = React.lazy(() => import("@/pages/PaymentFailure"));
 
-import { EnhancedCustomerManagementPage } from "@/components/admin/EnhancedCustomerManagementPage";
-import { CountrySettings } from "@/components/admin/CountrySettings";
-import { CustomsCategories } from "@/components/admin/CustomsCategories";
-import { UserRoles } from "@/components/admin/UserRoles";
-import AdminQuoteDetailPage from "@/components/admin/AdminQuoteDetailPage";
-import { RejectionAnalytics } from "@/components/admin/RejectionAnalytics";
-import { QuoteTemplatesPage } from "@/components/admin/QuoteTemplatesPage";
-import { BankAccountSettings } from "@/components/admin/BankAccountSettings";
-import { SystemSettings } from "@/components/admin/SystemSettings";
-import { HomePageSettings } from "@/components/admin/HomePageSettings";
+// Admin pages (lazy loaded)
+const AdminDashboard = React.lazy(() => import("@/pages/admin/Dashboard"));
+const CartAnalyticsPage = React.lazy(() => import("@/pages/admin/CartAnalytics"));
+const CartRecoveryPage = React.lazy(() => import("@/pages/admin/CartRecovery"));
+const EmailTemplatesPage = React.lazy(() => import("@/pages/admin/EmailTemplates"));
+const PaymentManagement = React.lazy(() => import("@/pages/admin/PaymentManagement"));
+const ShippingRoutesPage = React.lazy(() => import("@/pages/admin/ShippingRoutes"));
+const StatusManagementPage = React.lazy(() => import("@/pages/admin/StatusManagement"));
+const Address = React.lazy(() => import('@/pages/profile/Address'));
+
+// Admin components (lazy loaded for better performance)
+const AdminLayout = React.lazy(() => import("@/components/admin/AdminLayout").then(m => ({ default: m.AdminLayout })));
+const AdminAnalytics = React.lazy(() => import("@/components/admin/AdminAnalytics").then(m => ({ default: m.AdminAnalytics })));
+const QuoteManagementPage = React.lazy(() => import("@/components/admin/QuoteManagementPage").then(m => ({ default: m.QuoteManagementPage })));
+const EnhancedCustomerManagementPage = React.lazy(() => import("@/components/admin/EnhancedCustomerManagementPage").then(m => ({ default: m.EnhancedCustomerManagementPage })));
+const CountrySettings = React.lazy(() => import("@/components/admin/CountrySettings").then(m => ({ default: m.CountrySettings })));
+const CustomsCategories = React.lazy(() => import("@/components/admin/CustomsCategories").then(m => ({ default: m.CustomsCategories })));
+const UserRoles = React.lazy(() => import("@/components/admin/UserRoles").then(m => ({ default: m.UserRoles })));
+const AdminQuoteDetailPage = React.lazy(() => import("@/components/admin/AdminQuoteDetailPage"));
+const RejectionAnalytics = React.lazy(() => import("@/components/admin/RejectionAnalytics").then(m => ({ default: m.RejectionAnalytics })));
+const QuoteTemplatesPage = React.lazy(() => import("@/components/admin/QuoteTemplatesPage").then(m => ({ default: m.QuoteTemplatesPage })));
+const BankAccountSettings = React.lazy(() => import("@/components/admin/BankAccountSettings").then(m => ({ default: m.BankAccountSettings })));
+const SystemSettings = React.lazy(() => import("@/components/admin/SystemSettings").then(m => ({ default: m.SystemSettings })));
+const HomePageSettings = React.lazy(() => import("@/components/admin/HomePageSettings").then(m => ({ default: m.HomePageSettings })));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 
@@ -210,7 +213,9 @@ function App() {
           <AuthProvider>
             <AccessibilityProvider>
               <StatusConfigProvider>
-                <RouterProvider router={router} />
+                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+                  <RouterProvider router={router} />
+                </Suspense>
                 <Toaster />
               </StatusConfigProvider>
             </AccessibilityProvider>

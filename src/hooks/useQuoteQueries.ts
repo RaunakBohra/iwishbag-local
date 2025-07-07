@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
+import { logger } from "@/lib/logger";
 
 type Quote = Tables<'quotes'>;
 type QuoteItem = Tables<'quote_items'>;
@@ -20,13 +21,13 @@ export const useQuoteQueries = (id: string | undefined) => {
                 .eq('id', id)
                 .single();
             if (error) {
-                console.error("Error fetching quote:", error);
+                logger.error("Error fetching quote", error);
                 throw error;
             };
             // Map snake_case to camelCase for UI breakdown
             if (data) {
                 // Use original values in purchase currency - no USD conversion needed
-                console.log('[useQuoteQueries Debug] Purchase currency values:', {
+                logger.debug('Purchase currency values', {
                     sales_tax_price: data.sales_tax_price,
                     merchant_shipping_price: data.merchant_shipping_price,
                     domestic_shipping: data.domestic_shipping,
@@ -46,7 +47,7 @@ export const useQuoteQueries = (id: string | undefined) => {
                 data.paymentGatewayFee = data.payment_gateway_fee || 0;
                 data.discount = data.discount || 0;
                 
-                console.log('[useQuoteQueries Debug] Mapped values (purchase currency):', {
+                logger.debug('Mapped values (purchase currency)', {
                     salesTaxPrice: data.salesTaxPrice,
                     merchantShippingPrice: data.merchantShippingPrice,
                     domesticShipping: data.domesticShipping,

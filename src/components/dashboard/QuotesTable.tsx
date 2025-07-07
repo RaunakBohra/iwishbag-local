@@ -25,7 +25,7 @@ interface QuoteRowProps {
   onSelect: (checked: boolean) => void;
 }
 
-const QuoteRow = ({ quote, isSelected, onSelect }: QuoteRowProps) => {
+const QuoteRow = React.memo<QuoteRowProps>(({ quote, isSelected, onSelect }) => {
   const { formatAmount } = useQuoteDisplayCurrency({ quote });
   
   return (
@@ -65,7 +65,7 @@ const QuoteRow = ({ quote, isSelected, onSelect }: QuoteRowProps) => {
       </TableCell>
     </TableRow>
   );
-};
+});
 
 interface QuotesTableProps {
   quotes: Quote[];
@@ -76,7 +76,7 @@ interface QuotesTableProps {
   allCountries?: CountrySetting[] | null;
 }
 
-export const QuotesTable = ({ 
+export const QuotesTable = React.memo<QuotesTableProps>(({ 
   quotes, 
   selectedQuoteIds, 
   onSelectQuote, 
@@ -117,4 +117,4 @@ export const QuotesTable = ({
       </TableBody>
     </Table>
   );
-};
+});
