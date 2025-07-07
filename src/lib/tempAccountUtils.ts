@@ -12,6 +12,8 @@ export interface TempAccount {
  */
 export const createTempAccount = async (email: string): Promise<TempAccount> => {
   try {
+    console.log('Creating temp account for email:', email);
+    
     // Generate a unique temporary password using crypto
     const generateTempId = () => {
       const array = new Uint8Array(16);
@@ -21,6 +23,8 @@ export const createTempAccount = async (email: string): Promise<TempAccount> => 
     
     // Create a temporary password (user won't know this)
     const tempPassword = `temp_${generateTempId()}_${Date.now()}`;
+    
+    console.log('Attempting to create user with Supabase Auth...');
     
     // Create user account with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -34,6 +38,8 @@ export const createTempAccount = async (email: string): Promise<TempAccount> => 
         }
       }
     });
+    
+    console.log('Auth signup result:', { authData, authError });
 
     if (authError) {
       console.error('Auth error creating temp account:', authError);

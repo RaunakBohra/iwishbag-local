@@ -65,12 +65,24 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
         [action === 'approve' ? 'approved_at' : 'rejected_at']: new Date().toISOString(),
       };
 
-      const { error } = await supabase
+      console.log('Updating quote with data:', updateData, 'for quoteId:', quoteId);
+
+      const { data, error } = await supabase
         .from('quotes')
         .update(updateData)
-        .eq('id', quoteId);
+        .eq('id', quoteId)
+        .select();
 
-      if (error) throw error;
+      console.log('Update result:', { data, error });
+
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error('No quote was updated. Quote may not exist or you may not have permission to update it.');
+      }
 
       toast({
         title: action === 'approve' ? "Quote Approved!" : "Quote Rejected",
