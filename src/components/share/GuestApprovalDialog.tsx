@@ -59,10 +59,12 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
     
     try {
       // Update quote with guest email and approval status
+      // Since the guest is providing an email, transition from anonymous to non-anonymous
       const updateData = {
-        email: email, // Use existing email field instead of guest_email
+        email: email,
         status: action === 'approve' ? 'approved' : 'rejected',
         [action === 'approve' ? 'approved_at' : 'rejected_at']: new Date().toISOString(),
+        is_anonymous: false, // Transition from anonymous to identified guest
       };
 
       console.log('Updating quote with data:', JSON.stringify(updateData), 'for quoteId:', quoteId);
