@@ -46,7 +46,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
 
   // Get quote details
   const originCountry = quote.origin_country || 'US';
-  let destinationCountry = shippingAddress?.country || quote.country_code;
+  let destinationCountry = shippingAddress?.country_code || shippingAddress?.country || quote.country_code;
   if (destinationCountry && destinationCountry.length > 2) {
     const found = countries.find(c => c.name === destinationCountry);
     if (found) destinationCountry = found.code;

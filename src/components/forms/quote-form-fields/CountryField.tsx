@@ -11,9 +11,11 @@ interface CountryFieldProps {
   control: Control<any>;
   isLoading: boolean;
   filter?: 'purchase' | 'shipping';
+  name?: string;
+  label?: string;
 }
 
-export const CountryField = ({ control, isLoading, filter }: CountryFieldProps) => {
+export const CountryField = ({ control, isLoading, filter, name = "countryCode", label }: CountryFieldProps) => {
   const { data: purchaseCountries, isLoading: purchaseLoading } = usePurchaseCountries();
   const { data: shippingCountries, isLoading: shippingLoading } = useShippingCountries();
   
@@ -25,11 +27,11 @@ export const CountryField = ({ control, isLoading, filter }: CountryFieldProps) 
   return (
     <FormField
       control={control}
-      name="countryCode"
+      name={name}
       render={({ field }) => (
         <FormItem>
           <FormLabel>
-            {filter === 'shipping' ? 'Shipping Country' : 'Purchase Country'}
+            {label || (filter === 'shipping' ? 'Shipping Country' : 'Purchase Country')}
           </FormLabel>
           <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoading || countriesLoading}>
             <FormControl>

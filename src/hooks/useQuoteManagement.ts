@@ -24,7 +24,6 @@ export const useQuoteManagement = (filters = {}) => {
     } = filters;
     
     // Internal state management
-    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
     const [selectedQuoteIds, setSelectedQuoteIds] = useState<string[]>([]);
     const [activeStatusUpdate, setActiveStatusUpdate] = useState<string | null>(null);
@@ -313,7 +312,6 @@ export const useQuoteManagement = (filters = {}) => {
     };
 
     const handleQuoteCreated = (quoteId: string) => {
-        setIsCreateDialogOpen(false);
         navigate(`/admin/quotes/${quoteId}`);
     };
 
@@ -330,8 +328,6 @@ export const useQuoteManagement = (filters = {}) => {
     return {
         quotes,
         quotesLoading,
-        isCreateDialogOpen,
-        setCreateDialogOpen: setIsCreateDialogOpen,
         isRejectDialogOpen,
         setRejectDialogOpen: setIsRejectDialogOpen,
         selectedQuoteIds,

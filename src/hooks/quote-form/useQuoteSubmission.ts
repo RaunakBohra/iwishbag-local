@@ -104,7 +104,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       
       // Prepare quote data
       const quoteData: any = {
-        email: finalEmail,
+        email: finalEmail || null, // Allow null email for anonymous quotes
         country_code: countryCode,
         user_id: user?.id ?? null,
         currency: selectedCountryCurrency,
@@ -172,18 +172,22 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       createdQuotes.push(quote.id);
     }
 
-    // Send confirmation emails for each quote
-    for (const quoteId of createdQuotes) {
-      try {
-        await sendConfirmationEmail(quoteId, finalEmail);
-      } catch (error) {
-        console.error(`Error sending confirmation for quote ${quoteId}:`, error);
+    // Send confirmation emails for each quote (only if email provided)
+    if (finalEmail) {
+      for (const quoteId of createdQuotes) {
+        try {
+          await sendConfirmationEmail(quoteId, finalEmail);
+        } catch (error) {
+          console.error(`Error sending confirmation for quote ${quoteId}:`, error);
+        }
       }
     }
 
     toast({
       title: "Quotes Requested!",
-      description: `We've received your ${items.length} separate quote requests. You'll receive confirmation emails shortly, and your quotes will be ready within 24-48 hours.`,
+      description: finalEmail 
+        ? `We've received your ${items.length} separate quote requests. You'll receive confirmation emails shortly, and your quotes will be ready within 24-48 hours.`
+        : `We've received your ${items.length} separate quote requests. Your quotes will be ready within 24-48 hours.`,
     });
     return true;
   };
@@ -236,7 +240,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
 
     // Prepare quote data
     const quoteData: any = {
-      email: finalEmail,
+      email: finalEmail || null, // Allow null email for anonymous quotes
       country_code: countryCode,
       user_id: user?.id ?? null,
       currency: selectedCountryCurrency,
@@ -303,16 +307,20 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       return false;
     }
 
-    // Send confirmation email
-    try {
-      await sendConfirmationEmail(quote.id, finalEmail);
-    } catch (error) {
-      console.error("Error sending confirmation email:", error);
+    // Send confirmation email (only if email provided)
+    if (finalEmail) {
+      try {
+        await sendConfirmationEmail(quote.id, finalEmail);
+      } catch (error) {
+        console.error("Error sending confirmation email:", error);
+      }
     }
 
     toast({
       title: "Quote Requested!",
-      description: "We've received your request and will email your confirmation shortly. Your quote will be ready within 24-48 hours.",
+      description: finalEmail 
+        ? "We've received your request and will email your confirmation shortly. Your quote will be ready within 24-48 hours."
+        : "We've received your request. Your quote will be ready within 24-48 hours.",
     });
     return true;
   };
@@ -322,7 +330,8 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
 
     const finalEmail = user?.email || values.email;
 
-    if (!finalEmail || !z.string().email().safeParse(finalEmail).success) {
+    // Only require email for authenticated users or when email is provided
+    if (user && (!finalEmail || !z.string().email().safeParse(finalEmail).success)) {
       form.setError("email", {
         type: "manual",
         message: "Please enter a valid email address.",
@@ -330,6 +339,21 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       toast({
         title: "Invalid Email",
         description: "A valid email is required to submit a quote.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+    
+    // If email is provided (even for anonymous), validate it
+    if (finalEmail && !z.string().email().safeParse(finalEmail).success) {
+      form.setError("email", {
+        type: "manual",
+        message: "Please enter a valid email address.",
+      });
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
         variant: "destructive",
       });
       setLoading(false);

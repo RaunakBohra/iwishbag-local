@@ -1,5 +1,5 @@
 import { AdminQuoteListItem } from "./AdminQuoteListItem";
-import { CreateQuoteDialog } from "./CreateQuoteDialog";
+import { CreateQuoteModal } from "./CreateQuoteModal";
 import { RejectQuoteDialog } from "./RejectQuoteDialog";
 import { QuoteFilters } from "./QuoteFilters";
 import { useQuoteManagement } from "@/hooks/useQuoteManagement";
@@ -8,6 +8,7 @@ import { QuoteListHeader } from "./QuoteListHeader";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   FileText, 
   Clock, 
@@ -40,12 +41,11 @@ export const QuoteManagementPage = () => {
     const [priorityFilter, setPriorityFilter] = useState("all");
     const [confirmAction, setConfirmAction] = useState<string | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     const {
         quotes,
         quotesLoading,
-        isCreateDialogOpen,
-        setCreateDialogOpen,
         isRejectDialogOpen,
         setRejectDialogOpen,
         selectedQuoteIds,
@@ -132,13 +132,24 @@ export const QuoteManagementPage = () => {
     return (
         <div className="space-y-6">
             {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold">Quote Management</h1>
+                    <p className="text-muted-foreground">Manage customer quotes and quote requests</p>
+                </div>
+                <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Create New Quote
+                </Button>
+            </div>
 
-
-            {/* Dialogs */}
-            <CreateQuoteDialog
-                isOpen={isCreateDialogOpen}
-                onOpenChange={setCreateDialogOpen}
-                onQuoteCreated={handleQuoteCreated}
+            {/* Create Quote Modal */}
+            <CreateQuoteModal
+                isOpen={isCreateModalOpen}
+                onOpenChange={setIsCreateModalOpen}
+                onQuoteCreated={(quoteId) => {
+                    handleQuoteCreated(quoteId);
+                }}
             />
 
             <RejectQuoteDialog
@@ -205,7 +216,7 @@ export const QuoteManagementPage = () => {
                             </p>
                             {!searchInput && statusFilter === 'all' && dateRange === 'all' && amountRange === 'all' && countryFilter === 'all' && priorityFilter === 'all' && (
                                 <button
-                                    onClick={() => setCreateDialogOpen(true)}
+                                    onClick={() => setIsCreateModalOpen(true)}
                                     className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
                                 >
                                     Create Quote

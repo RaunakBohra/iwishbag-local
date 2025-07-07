@@ -260,7 +260,7 @@ export async function getQuoteRouteCountries(quote, shippingAddress, allCountrie
   }
   // 2. Fallback: use quote fields
   let origin = quote.origin_country || quote.country_code || 'US';
-  let destination = (shippingAddress && shippingAddress.country) || '';
+  let destination = (shippingAddress && (shippingAddress.country_code || shippingAddress.country)) || '';
 
   // Optionally resolve to country codes if names are present
   if (allCountries) {

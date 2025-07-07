@@ -34,6 +34,7 @@ const CustomerOrderDetailPage = React.lazy(() => import("@/pages/CustomerOrderDe
 const OrderConfirmationPage = React.lazy(() => import("@/pages/OrderConfirmationPage"));
 const PaymentSuccess = React.lazy(() => import("@/pages/PaymentSuccess"));
 const PaymentFailure = React.lazy(() => import("@/pages/PaymentFailure"));
+const ShareTokenQuote = React.lazy(() => import("@/pages/ShareTokenQuote"));
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import("@/pages/admin/Dashboard"));
@@ -130,6 +131,10 @@ const router = createBrowserRouter([
       {
         path: "cost-estimator",
         element: <CostEstimatorPage />,
+      },
+      {
+        path: "s/:shareToken",
+        element: <ShareTokenQuote />,
       },
       {
         element: <ProtectedRoute />,

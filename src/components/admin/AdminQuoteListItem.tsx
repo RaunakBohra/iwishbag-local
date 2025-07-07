@@ -8,6 +8,7 @@ import { MultiCurrencyDisplay } from "./MultiCurrencyDisplay";
 import { useAdminCurrencyDisplay } from "@/hooks/useAdminCurrencyDisplay";
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
+import { ShareQuoteButton } from './ShareQuoteButton';
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -187,8 +188,9 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                             />
                             
                             {/* Status Badge */}
-                            <div className="flex-shrink-0">
+                            <div className="flex-shrink-0 flex items-center gap-2">
                                 <StatusBadge status={quote.status} category="quote" showIcon={false} />
+                                <ShareQuoteButton quote={quote} variant="icon" />
                             </div>
 
                             {/* Quote ID and Basic Info */}
@@ -272,20 +274,6 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                                 )}
                             </div>
 
-                            {/* Quick Actions */}
-                            <div className="flex-shrink-0 flex gap-1">
-                                <DialogTrigger asChild>
-                                    <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={e => { e.stopPropagation(); setIsPreviewOpen(true); }}
-                                        className="h-9 w-9 rounded-full border border-muted hover:bg-primary/10 hover:border-primary focus-visible:ring-2 focus-visible:ring-primary transition"
-                                        aria-label="Quick Preview"
-                                    >
-                                        <Eye className="h-5 w-5 text-primary" />
-                                    </Button>
-                                </DialogTrigger>
-                            </div>
                         </div>
                     </div>
                 </CardContent>

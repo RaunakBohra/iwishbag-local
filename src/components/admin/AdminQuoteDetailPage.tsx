@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useAdminQuoteDetail } from "@/hooks/useAdminQuoteDetail";
 import { QuoteCalculatedCosts } from "@/components/admin/QuoteCalculatedCosts";
 import { QuoteCurrencySummary } from "./QuoteCurrencySummary";
+import { ShareQuoteButton } from './ShareQuoteButton';
 import { Form, FormField, FormControl } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EditableAdminQuoteItemCard } from "./EditableAdminQuoteItemCard";
@@ -303,7 +304,7 @@ const AdminQuoteDetailPage = () => {
   useEffect(() => {
     if (quote) {
       const originCountry = quote.origin_country || purchaseCountry;
-      const destCountry = shippingAddress?.country || quote.country_code;
+      const destCountry = shippingAddress?.country_code || shippingAddress?.country || quote.country_code;
       
       const appropriateUnit = getAppropriateWeightUnit(
         originCountry,
@@ -313,7 +314,7 @@ const AdminQuoteDetailPage = () => {
       
       setSmartWeightUnit(appropriateUnit);
     }
-  }, [quote, routeWeightUnit, purchaseCountry, shippingAddress?.country]);
+  }, [quote, routeWeightUnit, purchaseCountry, shippingAddress?.country_code, shippingAddress?.country]);
 
   // Customs Tier Detection Logic
   const [customsTiers, setCustomsTiers] = useState<any[]>([]);
@@ -323,7 +324,7 @@ const AdminQuoteDetailPage = () => {
 
   // Get origin/destination codes from form state (not just quote)
   const originCountry = quote?.origin_country || purchaseCountry || 'US';
-  let destinationCountry = shippingAddress?.country || purchaseCountry || quote?.country_code;
+  let destinationCountry = shippingAddress?.country_code || shippingAddress?.country || purchaseCountry || quote?.country_code;
   if (destinationCountry && destinationCountry.length > 2) {
     const found = allCountries?.find(c => c.name === destinationCountry);
     if (found) destinationCountry = found.code;
@@ -528,6 +529,7 @@ const AdminQuoteDetailPage = () => {
           </div>
           
           <div className="flex items-center gap-2">
+            <ShareQuoteButton quote={quote} variant="button" size="sm" />
             <StatusBadge status={quote.status} showIcon className="text-sm" category={isOrder ? 'order' : 'quote'} />
           </div>
         </div>
@@ -566,7 +568,7 @@ const AdminQuoteDetailPage = () => {
                     {/* Name left */}
                     <span className="flex items-center gap-2 text-base font-bold">
                       <User className="h-4 w-4" />
-                      {customerProfile?.full_name || quote.customer_name || quote.email || 'Customer'}
+                      {quote.customer_name || customerProfile?.full_name || quote.email || 'Customer'}
                     </span>
                     {/* Website & Priority right */}
                     <div className="flex flex-wrap items-center gap-4 sm:justify-end">
@@ -608,7 +610,10 @@ const AdminQuoteDetailPage = () => {
                     {/* Email */}
                     <div className="flex items-center gap-2 text-sm min-w-0">
                       <Mail className="h-3 w-3 text-muted-foreground" />
-                      <span className="truncate">{quote.email || 'No email'}</span>
+                      <span className="truncate">{quote.email || 'No email provided'}</span>
+                      {!quote.user_id && quote.email && (
+                        <Badge variant="secondary" className="text-xs">Admin Created</Badge>
+                      )}
                     </div>
                     {/* Date */}
                     <div className="flex items-center gap-2 text-sm min-w-0">
