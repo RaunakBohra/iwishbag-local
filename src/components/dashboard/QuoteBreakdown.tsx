@@ -68,9 +68,13 @@ const getQuoteUIState = (quote: any) => {
   } else if (status === 'paid' || status === 'ordered' || status === 'shipped' || status === 'completed') {
     step = 'checkout';
     summaryStatus = 'approved';
+  } else {
+    // Default case for any unexpected status values
+    step = 'review';
+    summaryStatus = 'pending';
   }
   
-  return { step, rejected: step === 'rejected' };
+  return { step, summaryStatus, rejected: step === 'rejected' };
 };
 
 export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onRecalculate, onSave, onCancel, onAddToCart }: QuoteBreakdownProps) {

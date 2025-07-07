@@ -40,7 +40,7 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
     label: statusConfig.label,
     color: statusConfig.color || 'bg-gray-100 text-gray-800'
   } : {
-    label: status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
+    label: status ? status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ') : 'Unknown',
     color: 'bg-gray-100 text-gray-800'
   };
 
