@@ -65,7 +65,7 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
         [action === 'approve' ? 'approved_at' : 'rejected_at']: new Date().toISOString(),
       };
 
-      console.log('Updating quote with data:', updateData, 'for quoteId:', quoteId);
+      console.log('Updating quote with data:', JSON.stringify(updateData), 'for quoteId:', quoteId);
 
       // First, let's check what the current quote looks like
       const { data: currentQuote, error: fetchError } = await supabase
@@ -74,7 +74,7 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
         .eq('id', quoteId)
         .single();
 
-      console.log('Current quote before update:', currentQuote);
+      console.log('Current quote before update:', JSON.stringify(currentQuote));
       
       if (fetchError) {
         console.error('Error fetching current quote:', fetchError);
@@ -88,7 +88,8 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
         .eq('id', quoteId)
         .select();
 
-      console.log('Update result:', { data, error });
+      console.log('Update result data:', JSON.stringify(data));
+      console.log('Update result error:', JSON.stringify(error));
 
       if (error) {
         console.error('Database update error:', error);
