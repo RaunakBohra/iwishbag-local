@@ -81,29 +81,24 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
         throw new Error(`Cannot access quote: ${fetchError.message}`);
       }
 
-      // Use Edge Function to handle guest approval with proper permissions
-      console.log('Calling Edge Function to approve shared quote...');
+      // Update the quote directly - RLS policy should allow this for shared quotes
+      console.log('Updating shared quote directly...');
       
-      const { data, error } = await supabase.functions.invoke('approve-shared-quote', {
-        body: {
-          quoteId: quoteId,
-          email: email,
-          action: action
-        }
-      });
+      const { data, error } = await supabase
+        .from('quotes')
+        .update(updateData)
+        .eq('id', quoteId)
+        .select();
 
-      console.log('Edge Function result:', JSON.stringify({ data, error }));
+      console.log('Update result:', JSON.stringify({ data, error }));
 
       if (error) {
-        throw new Error(`Edge Function error: ${error.message}`);
+        console.error('Database update error:', error);
+        throw new Error(`Database error: ${error.message}`);
       }
 
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      if (!data?.success) {
-        throw new Error('Quote update failed');
+      if (!data || data.length === 0) {
+        throw new Error('No quote was updated. The quote may have expired or the link may be invalid.');
       }
 
       toast({
