@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { QuoteBreakdown } from "@/components/dashboard/QuoteBreakdown";
 import { DeliveryTimeline } from "@/components/dashboard/DeliveryTimeline";
@@ -26,6 +26,7 @@ export default function ShareTokenQuote() {
   const { shareToken } = useParams<{ shareToken: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
   const [guestApprovalDialog, setGuestApprovalDialog] = useState<{
     isOpen: boolean;
@@ -68,8 +69,14 @@ export default function ShareTokenQuote() {
   };
 
   const handleGuestApprovalSuccess = () => {
-    // Reload the page to show updated quote status
-    window.location.reload();
+    // Refresh the query instead of reloading the page
+    queryClient.invalidateQueries({ queryKey: ['share-quote', shareToken] });
+    
+    // Show success message
+    toast({
+      title: "Quote Updated!",
+      description: "Your response has been recorded. You can now proceed with your order.",
+    });
   };
 
   const handleGuestAddToCart = () => {
@@ -104,6 +111,7 @@ export default function ShareTokenQuote() {
   }
 
   if (error || !quote) {
+    console.log('ShareTokenQuote error or no quote:', { error, quote });
     return (
       <div className="container mx-auto px-4 py-8">
         <Alert variant="destructive">
@@ -120,6 +128,15 @@ export default function ShareTokenQuote() {
       </div>
     );
   }
+
+  // Debug: Log quote data after updates
+  console.log('ShareTokenQuote quote data:', { 
+    id: quote.id, 
+    status: quote.status, 
+    email: quote.email, 
+    is_anonymous: quote.is_anonymous,
+    share_token: quote.share_token 
+  });
 
   // Check if quote has expired
   const isExpired = quote.expires_at && new Date(quote.expires_at) < new Date();
