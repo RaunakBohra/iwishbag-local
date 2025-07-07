@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Button } from './ui/button';
-import { useQuoteRenewal } from '../hooks/useQuoteRenewal';
-import { useToast } from '../hooks/use-toast';
 import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useQuoteRenewal } from '@/hooks/useQuoteRenewal';
+import { useToast } from '@/hooks/use-toast';
 
 interface RenewQuoteButtonProps {
   quoteId: string;
