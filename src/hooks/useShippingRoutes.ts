@@ -10,6 +10,7 @@ import {
 } from '../lib/unified-shipping-calculator';
 import type { 
   ShippingRoute, 
+  ShippingRouteDB,
   AutoQuoteSettings,
   ShippingRouteFormData,
   AutoQuoteSettingsFormData,
@@ -21,7 +22,7 @@ import type {
  * Hook for managing shipping routes
  */
 export function useShippingRoutes() {
-  const [routes, setRoutes] = useState<ShippingRoute[]>([]);
+  const [routes, setRoutes] = useState<ShippingRouteDB[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

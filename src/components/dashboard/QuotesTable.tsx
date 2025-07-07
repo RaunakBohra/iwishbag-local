@@ -13,11 +13,59 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "./StatusBadge";
 import { Tables } from "@/integrations/supabase/types";
-import { useUserCurrency } from "@/hooks/useUserCurrency";
+import { useQuoteDisplayCurrency } from "@/hooks/useQuoteDisplayCurrency";
 
 type Quote = Tables<'quotes'>;
 type CountrySetting = Tables<'country_settings'>;
 type Profile = Tables<'profiles'>;
+
+interface QuoteRowProps {
+  quote: Quote;
+  isSelected: boolean;
+  onSelect: (checked: boolean) => void;
+}
+
+const QuoteRow = ({ quote, isSelected, onSelect }: QuoteRowProps) => {
+  const { formatAmount } = useQuoteDisplayCurrency({ quote });
+  
+  return (
+    <TableRow>
+      <TableCell>
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={onSelect}
+        />
+      </TableCell>
+      <TableCell>
+        <Link
+          to={`/quote/${quote.id}`}
+          className="text-blue-600 hover:underline"
+        >
+          {quote.display_id || quote.id.substring(0, 8)}
+        </Link>
+      </TableCell>
+      <TableCell className="max-w-xs truncate">
+        {quote.product_name || "N/A"}
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-2">
+          <StatusBadge status={quote.status} category="quote" />
+          {quote.status !== 'pending' && (
+            <Badge variant={quote.status === 'approved' ? 'default' : 'destructive'}>
+              {quote.status}
+            </Badge>
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        <div>{formatAmount(quote.final_total)}</div>
+      </TableCell>
+      <TableCell>
+        {format(new Date(quote.created_at), "MMM d, yyyy")}
+      </TableCell>
+    </TableRow>
+  );
+};
 
 interface QuotesTableProps {
   quotes: Quote[];
@@ -37,7 +85,6 @@ export const QuotesTable = ({
   allCountries 
 }: QuotesTableProps) => {
   const allSelected = quotes.length > 0 && selectedQuoteIds.length === quotes.length;
-  const { formatAmount } = useUserCurrency();
 
   return (
     <Table>
@@ -59,41 +106,12 @@ export const QuotesTable = ({
       <TableBody>
         {quotes.map((quote) => {
           return (
-            <TableRow key={quote.id}>
-              <TableCell>
-                <Checkbox
-                  checked={selectedQuoteIds.includes(quote.id)}
-                  onCheckedChange={(checked) => onSelectQuote(quote.id, checked as boolean)}
-                />
-              </TableCell>
-              <TableCell>
-                <Link
-                  to={`/quote/${quote.id}`}
-                  className="text-blue-600 hover:underline"
-                >
-                  {quote.display_id || quote.id.substring(0, 8)}
-                </Link>
-              </TableCell>
-              <TableCell className="max-w-xs truncate">
-                {quote.product_name || "N/A"}
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-2">
-                  <StatusBadge status={quote.status} category="quote" />
-                  {quote.status !== 'pending' && (
-                    <Badge variant={quote.status === 'approved' ? 'default' : 'destructive'}>
-                      {quote.status}
-                    </Badge>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                <div>{formatAmount(quote.final_total)}</div>
-              </TableCell>
-              <TableCell>
-                {format(new Date(quote.created_at), "MMM d, yyyy")}
-              </TableCell>
-            </TableRow>
+            <QuoteRow 
+              key={quote.id}
+              quote={quote}
+              isSelected={selectedQuoteIds.includes(quote.id)}
+              onSelect={(checked) => onSelectQuote(quote.id, checked)}
+            />
           );
         })}
       </TableBody>

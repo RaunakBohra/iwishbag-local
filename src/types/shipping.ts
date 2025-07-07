@@ -10,14 +10,39 @@ export interface DeliveryOption {
   active: boolean;
 }
 
+// Database interface (matches actual database structure)
+export interface ShippingRouteDB {
+  id: number;
+  origin_country: string;
+  destination_country: string;
+  exchange_rate?: number;
+  base_shipping_cost: number;
+  cost_per_kg: number;
+  shipping_per_kg?: number;
+  cost_percentage: number;
+  processing_days: number;
+  customs_clearance_days: number;
+  weight_unit: 'kg' | 'lb';
+  delivery_options: DeliveryOption[];
+  weight_tiers: WeightTier[];
+  carriers: Carrier[];
+  max_weight?: number;
+  restricted_items?: string[];
+  requires_documentation: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ShippingRoute {
   id: number;
-  originCountry: string;
+  originCountry: string; // Purchase country (all costs below are in this currency)
   destinationCountry: string;
-  baseShippingCost: number;
-  costPerKg: number;
-  shippingPerKg: number;
-  costPercentage: number;
+  exchangeRate: number;
+  baseShippingCost: number; // In origin country currency
+  costPerKg: number; // In origin country currency
+  shippingPerKg: number; // In origin country currency
+  costPercentage: number; // In origin country currency
   processingDays: number;
   customsClearanceDays: number;
   weightUnit: 'kg' | 'lb';
@@ -101,12 +126,13 @@ export interface UnifiedQuoteResult {
 }
 
 export interface ShippingRouteFormData {
-  originCountry: string;
+  originCountry: string; // Purchase country (all costs below are in this currency)
   destinationCountry: string;
-  baseShippingCost: number;
-  costPerKg: number;
-  shippingPerKg: number;
-  costPercentage: number;
+  exchangeRate: number; // Exchange rate from origin to destination currency
+  baseShippingCost: number; // In origin country currency
+  costPerKg: number; // In origin country currency
+  shippingPerKg: number; // In origin country currency
+  costPercentage: number; // In origin country currency
   processingDays: number;
   customsClearanceDays: number;
   weightUnit: 'kg' | 'lb';

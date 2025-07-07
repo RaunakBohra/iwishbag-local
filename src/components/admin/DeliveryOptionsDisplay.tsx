@@ -4,12 +4,21 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Truck, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryOption } from '@/types/shipping';
+import { formatDualCurrency, getCountryCurrency } from '@/lib/currencyUtils';
 
 interface DeliveryOptionsDisplayProps {
   routeId: number;
+  purchaseCountry?: string;
+  deliveryCountry?: string;
+  exchangeRate?: number;
 }
 
-export const DeliveryOptionsDisplay = ({ routeId }: DeliveryOptionsDisplayProps) => {
+export const DeliveryOptionsDisplay = ({ 
+  routeId, 
+  purchaseCountry = 'US', 
+  deliveryCountry = 'US', 
+  exchangeRate 
+}: DeliveryOptionsDisplayProps) => {
   const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +101,19 @@ export const DeliveryOptionsDisplay = ({ routeId }: DeliveryOptionsDisplayProps)
                   </div>
                   <div className="flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
-                    <span>${option.price.toFixed(2)}</span>
+                    {(() => {
+                      const dualCurrency = formatDualCurrency(option.price, purchaseCountry, deliveryCountry, exchangeRate);
+                      const showDualCurrency = purchaseCountry !== deliveryCountry && exchangeRate && exchangeRate !== 1;
+                      
+                      return showDualCurrency ? (
+                        <div className="text-xs">
+                          <div>{dualCurrency.purchase}</div>
+                          <div className="text-muted-foreground">{dualCurrency.delivery}</div>
+                        </div>
+                      ) : (
+                        <span>${option.price.toFixed(2)}</span>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

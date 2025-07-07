@@ -1,13 +1,16 @@
 import { supabase } from '../integrations/supabase/client';
+import { getExchangeRate, convertCurrency, getCountryCurrency } from './currencyUtils';
 import type { 
   ShippingCost, 
   ShippingRoute, 
-  AutoQuoteSettings,
+  ShippingRouteDB,
   UnifiedQuoteInput,
   UnifiedQuoteResult,
   QuoteCalculationConfig
 } from '../types/shipping';
-import type { CountrySettings } from '../lib/database.types';
+import type { Tables } from '../integrations/supabase/types';
+
+type CountrySettings = Tables<'country_settings'>;
 
 /**
  * Unified Shipping Calculator
@@ -173,13 +176,13 @@ function calculateStandardInternationalShipping(
 }
 
 /**
- * Unified quote calculator that works for both manual and auto quotes
- * Uses the same logic as your current manual calculator
+ * Enhanced unified quote calculator with proper currency conversion
+ * All calculations done in origin currency, with exchange rate for display
  */
 export async function calculateUnifiedQuote(
   input: UnifiedQuoteInput,
   supabaseClient: any = supabase
-): Promise<UnifiedQuoteResult> {
+): Promise<UnifiedQuoteResult & { exchangeRate: number; exchangeRateSource: string; warning?: string }> {
   const {
     itemPrice,
     itemWeight,
@@ -195,7 +198,13 @@ export async function calculateUnifiedQuote(
     config
   } = input;
 
-  // Get shipping cost
+  console.log(`[calculateUnifiedQuote] ${originCountry} → ${destinationCountry}, Item: ${itemPrice}, Weight: ${itemWeight}`);
+
+  // Get exchange rate for currency conversion
+  const exchangeRateResult = await getExchangeRate(originCountry, destinationCountry);
+  console.log(`[calculateUnifiedQuote] Exchange rate: ${exchangeRateResult.rate} (${exchangeRateResult.source})`);
+
+  // Get shipping cost (returns cost in origin currency)
   const shippingCost = await getShippingCost(originCountry, destinationCountry, itemWeight, itemPrice);
 
   // Get country settings for customs and VAT calculations
@@ -205,20 +214,47 @@ export async function calculateUnifiedQuote(
     .eq('code', destinationCountry)
     .single();
 
-  // Calculate customs duty (same as manual calculator)
-  const customsDuty = countrySettings 
-    ? (itemPrice * countrySettings.customs_percent) / 100
-    : 0;
+  // All calculations in origin currency
+  const originCurrency = getCountryCurrency(originCountry);
+  const destinationCurrency = getCountryCurrency(destinationCountry);
 
-  // Calculate VAT (same as manual calculator)
-  const vat = countrySettings 
-    ? ((itemPrice + shippingCost.cost + customsDuty) * countrySettings.vat_percent) / 100
-    : 0;
+  // Calculate customs duty (applied to converted amount if different currency)
+  let customsDuty = 0;
+  if (countrySettings?.customs_percent) {
+    if (originCurrency === destinationCurrency) {
+      customsDuty = (itemPrice * countrySettings.customs_percent) / 100;
+    } else {
+      // Convert item price to destination currency for customs calculation
+      const convertedItemPrice = convertCurrency(itemPrice, exchangeRateResult.rate, destinationCurrency);
+      customsDuty = (convertedItemPrice * countrySettings.customs_percent) / 100;
+      // Convert customs duty back to origin currency for total calculation
+      customsDuty = convertCurrency(customsDuty, 1 / exchangeRateResult.rate, originCurrency);
+    }
+  }
 
-  // Calculate total (same as manual calculator logic)
+  // Calculate VAT (applied to converted amounts if different currency)
+  let vat = 0;
+  if (countrySettings?.vat_percent) {
+    if (originCurrency === destinationCurrency) {
+      vat = ((itemPrice + shippingCost.cost + customsDuty) * countrySettings.vat_percent) / 100;
+    } else {
+      // Convert all amounts to destination currency for VAT calculation
+      const convertedItemPrice = convertCurrency(itemPrice, exchangeRateResult.rate, destinationCurrency);
+      const convertedShipping = convertCurrency(shippingCost.cost, exchangeRateResult.rate, destinationCurrency);
+      const convertedCustoms = convertCurrency(customsDuty, exchangeRateResult.rate, destinationCurrency);
+      
+      vat = ((convertedItemPrice + convertedShipping + convertedCustoms) * countrySettings.vat_percent) / 100;
+      // Convert VAT back to origin currency for total calculation
+      vat = convertCurrency(vat, 1 / exchangeRateResult.rate, originCurrency);
+    }
+  }
+
+  // Calculate total in origin currency
   const subtotal = itemPrice + salesTax + merchantShipping + domesticShipping + shippingCost.cost;
   const totalWithCharges = subtotal + handlingCharge + insuranceAmount + customsDuty + vat;
   const finalTotal = totalWithCharges - discount;
+
+  console.log(`[calculateUnifiedQuote] Final total: ${finalTotal} ${originCurrency}`);
 
   return {
     totalCost: Math.round(finalTotal * 100) / 100,
@@ -240,14 +276,17 @@ export async function calculateUnifiedQuote(
       usedSettings: shippingCost.method === 'route-specific' ? 'route-specific' : 'default',
       originCountry,
       destinationCountry
-    }
+    },
+    exchangeRate: exchangeRateResult.rate,
+    exchangeRateSource: exchangeRateResult.source,
+    warning: exchangeRateResult.warning
   };
 }
 
 /**
  * Get all shipping routes for admin management
  */
-export async function getShippingRoutes(): Promise<ShippingRoute[]> {
+export async function getShippingRoutes(): Promise<ShippingRouteDB[]> {
   try {
     const { data, error } = await supabase
       .from('shipping_routes')
@@ -260,7 +299,7 @@ export async function getShippingRoutes(): Promise<ShippingRoute[]> {
       return [];
     }
 
-    return data || [];
+    return (data as ShippingRouteDB[]) || [];
   } catch (error) {
     console.error('Error getting shipping routes:', error);
     return [];
@@ -272,15 +311,32 @@ export async function getShippingRoutes(): Promise<ShippingRoute[]> {
  */
 export async function upsertShippingRoute(routeData: any): Promise<{ success: boolean; error?: string }> {
   try {
-    let onConflict;
-    if (routeData.id) {
-      onConflict = 'id';
-    } else {
-      onConflict = 'origin_country,destination_country';
-    }
+    // Map camelCase form fields to snake_case database fields
+    const dbData = {
+      id: routeData.id,
+      origin_country: routeData.originCountry,
+      destination_country: routeData.destinationCountry,
+      exchange_rate: routeData.exchangeRate,
+      base_shipping_cost: routeData.baseShippingCost,
+      cost_per_kg: routeData.costPerKg,
+      shipping_per_kg: routeData.shippingPerKg,
+      cost_percentage: routeData.costPercentage,
+      processing_days: routeData.processingDays,
+      customs_clearance_days: routeData.customsClearanceDays,
+      weight_unit: routeData.weightUnit,
+      delivery_options: routeData.deliveryOptions,
+      weight_tiers: routeData.weightTiers,
+      carriers: routeData.carriers,
+      max_weight: routeData.maxWeight,
+      restricted_items: routeData.restrictedItems,
+      requires_documentation: routeData.requiresDocumentation,
+      is_active: routeData.isActive
+    };
+
+    const onConflict: string = routeData.id ? 'id' : 'origin_country,destination_country';
     const { error } = await supabase
       .from('shipping_routes')
-      .upsert(routeData, { onConflict });
+      .upsert(dbData, { onConflict });
 
     if (error) {
       console.error('Error upserting shipping route:', error);

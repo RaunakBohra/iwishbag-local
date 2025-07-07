@@ -192,7 +192,12 @@ INSERT INTO system_settings (setting_key, setting_value, description) VALUES
     "isTerminal": true,
     "category": "order"
   }
-]', 'Order status configuration')
+]', 'Order status configuration'),
+('exchange_rate_markup_percentage', '2.5', 'Exchange rate markup percentage applied to all currency conversions'),
+('auto_exchange_rate_enabled', 'true', 'Enable automatic exchange rate updates'),
+('exchange_rate_update_interval_hours', '24', 'Interval in hours for automatic exchange rate updates'),
+('wishlist_enabled', 'true', 'Enable wishlist feature for users'),
+('email_notifications_enabled', 'true', 'Enable system-wide email notifications')
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- Insert test footer settings

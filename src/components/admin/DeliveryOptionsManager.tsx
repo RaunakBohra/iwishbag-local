@@ -24,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
 import { formatShippingRoute } from '@/lib/countryUtils';
+import { formatDualCurrency, getCountryCurrency } from '@/lib/currencyUtils';
 
 interface DeliveryOption {
   id: string;
@@ -59,6 +60,10 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
         setLoading(true);
         setError(null);
 
+        // --- Use getQuoteRouteCountries for consistent logic ---
+        const shippingAddress = quote.shipping_address ? (typeof quote.shipping_address === 'string' ? JSON.parse(quote.shipping_address) : quote.shipping_address) : null;
+        const { origin, destination } = await getQuoteRouteCountries(quote, shippingAddress, allCountries);
+
         let currentRoute = null;
         // 1. Try to fetch by shipping_route_id if present
         if (quote.shipping_route_id) {
@@ -74,17 +79,14 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
           }
         }
 
-        // 2. Fallback to origin/destination matching
+        // 2. Fallback to origin/destination matching using getQuoteRouteCountries
         if (!currentRoute) {
-          const originCountry = quote.origin_country || 'US';
-          const destinationCountry = quote.country_code;
-
           // First try to find exact match
           const { data: routeData, error: routeError } = await supabase
             .from('shipping_routes')
             .select('*')
-            .eq('origin_country', originCountry)
-            .eq('destination_country', destinationCountry)
+            .eq('origin_country', origin)
+            .eq('destination_country', destination)
             .eq('is_active', true)
             .maybeSingle();
 
@@ -99,7 +101,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
             const { data: fallbackRoute, error: fallbackError } = await supabase
               .from('shipping_routes')
               .select('*')
-              .eq('destination_country', destinationCountry)
+              .eq('destination_country', destination)
               .eq('is_active', true)
               .maybeSingle();
             
@@ -112,11 +114,11 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
 
           // If still no route found, create a default one
           if (!currentRoute) {
-            console.warn(`No shipping route found for ${originCountry} → ${destinationCountry}, using default`);
+            console.warn(`No shipping route found for ${origin} → ${destination}, using default`);
             currentRoute = {
               id: 0,
-              origin_country: originCountry,
-              destination_country: destinationCountry,
+              origin_country: origin,
+              destination_country: destination,
               base_shipping_cost: 25.00,
               cost_per_kg: 5.00,
               shipping_per_kg: 5.00,
@@ -151,10 +153,9 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
         }
 
         setShippingRoute(currentRoute);
+        console.log('DEBUG: shippingRoute used in DeliveryOptionsManager:', currentRoute);
 
-        // --- NEW: Uniform route display logic ---
-        const shippingAddress = quote.shipping_address ? (typeof quote.shipping_address === 'string' ? JSON.parse(quote.shipping_address) : quote.shipping_address) : null;
-        const { origin, destination } = await getQuoteRouteCountries(quote, shippingAddress, allCountries);
+        // --- Uniform route display logic ---
         setRouteDisplay(formatShippingRoute(origin, destination, allCountries, true));
         // --- END NEW ---
 
@@ -201,7 +202,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
     };
 
     fetchShippingData();
-  }, [quote.id, quote.shipping_route_id, quote.origin_country, quote.country_code, quote.enabled_delivery_options, allCountries]);
+  }, [quote.id, quote.shipping_route_id, allCountries]);
 
   const handleOptionToggle = async (optionId: string, enabled: boolean) => {
     try {
@@ -374,7 +375,22 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
                         </Badge>
                         {option.cost > 0 && (
                           <Badge variant="outline">
-                            ${option.cost.toFixed(2)}
+                            {(() => {
+                              const purchaseCountry = quote.country_code || 'US';
+                              const deliveryCountry = quote.destination_country || 'US';
+                              const exchangeRate = quote.exchange_rate;
+                              const dualCurrency = formatDualCurrency(option.cost, purchaseCountry, deliveryCountry, exchangeRate);
+                              const showDualCurrency = purchaseCountry !== deliveryCountry && exchangeRate && exchangeRate !== 1;
+                              
+                              return showDualCurrency ? (
+                                <div className="text-xs">
+                                  <div>{dualCurrency.purchase}</div>
+                                  <div className="text-muted-foreground">{dualCurrency.delivery}</div>
+                                </div>
+                              ) : (
+                                `${option.cost.toFixed(2)}`
+                              );
+                            })()}
                           </Badge>
                         )}
                       </div>

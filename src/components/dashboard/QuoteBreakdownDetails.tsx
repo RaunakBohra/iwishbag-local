@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { Tables } from "@/integrations/supabase/types";
-import { useUserCurrency } from "@/hooks/useUserCurrency";
-import { MultiCurrencyDisplay } from "@/components/admin/MultiCurrencyDisplay";
-import { useAdminCurrencyDisplay } from "@/hooks/useAdminCurrencyDisplay";
+import { useQuoteCurrencyDisplay } from "@/hooks/useCurrencyConversion";
+import { formatCustomerCurrency, getCountryCurrency } from "@/lib/currencyUtils";
 import { Receipt, Percent, Package, Truck, Shield, CreditCard, Gift, Info, ChevronDown, ChevronUp, Download, Hash, Calendar, MapPin } from "lucide-react";
 import {
   Tooltip,
@@ -66,28 +65,84 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
   quote,
   countrySettings,
 }) => {
-  const { formatAmount } = useUserCurrency();
-  const { formatMultiCurrency } = useAdminCurrencyDisplay();
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
 
-  const finalTotalCurrencies = quote.final_total ? formatMultiCurrency({
-    usdAmount: quote.final_total,
-    quoteCurrency: quote.final_currency,
-    customerPreferredCurrency: quote.profiles?.preferred_display_currency,
-    showAllVariations: true
-  }) : [];
+  // Get origin and destination countries from quote
+  const originCountry = quote.country_code || 'US';
+  
+  // Try to get destination country from multiple sources
+  let destinationCountry = 'US';
+  if ((quote as any).destination_country) {
+    destinationCountry = (quote as any).destination_country;
+  } else if (quote.shipping_address) {
+    try {
+      const shippingAddress = typeof quote.shipping_address === 'string' 
+        ? JSON.parse(quote.shipping_address) 
+        : quote.shipping_address;
+      
+      // Get country from shipping address
+      let country = shippingAddress?.country_code || shippingAddress?.country || 'US';
+      
+      // Convert country names to country codes
+      const countryNameToCode: { [key: string]: string } = {
+        'Nepal': 'NP',
+        'India': 'IN', 
+        'United States': 'US',
+        'USA': 'US',
+        'China': 'CN',
+        'Australia': 'AU',
+        'United Kingdom': 'GB',
+        'Canada': 'CA'
+      };
+      
+      // If it's a country name, convert to code
+      if (countryNameToCode[country]) {
+        destinationCountry = countryNameToCode[country];
+      } else if (country.length === 2) {
+        // Already a country code
+        destinationCountry = country.toUpperCase();
+      } else {
+        // Unknown format, log for debugging
+        console.warn('Unknown country format in shipping address:', country);
+        destinationCountry = 'US';
+      }
+      
+      console.log('[Country Detection] Raw:', country, '→ Code:', destinationCountry);
+    } catch (e) {
+      console.warn('Could not parse shipping address:', e);
+    }
+  }
+  
+  const customerPreferredCurrency = quote.profiles?.preferred_display_currency || getCountryCurrency(destinationCountry);
+
+  // Use our new currency display hook - show customer's preferred currency only
+  const currencyDisplay = useQuoteCurrencyDisplay({
+    originCountry,
+    destinationCountry,
+    customerPreferredCurrency,
+    isAdminView: false // Show single currency in customer preferred format
+  });
+  
+  console.log('[QuoteBreakdownDetails] Debug info:', {
+    originCountry,
+    destinationCountry,
+    customerPreferredCurrency,
+    exchangeRate: currencyDisplay.exchangeRate,
+    exchangeRateSource: currencyDisplay.exchangeRateSource,
+    warning: currencyDisplay.warning,
+    quote_id: quote.id
+  });
 
   const totalWeight = quote.quote_items?.reduce((sum, item) => sum + (item.item_weight || 0), 0) || 0;
-
-  // Find the user's preferred currency (or fallback to quote.final_currency)
-  const userCurrency = quote.profiles?.preferred_display_currency || quote.final_currency;
-  const userCurrencyAmount = finalTotalCurrencies.find(c => c.currency === userCurrency) || finalTotalCurrencies[0];
 
   const renderRow = (label: string, amount: number | null, isDiscount = false, icon?: React.ReactNode) => {
     if (amount === null || amount === undefined || amount === 0) return null;
 
     const sign = isDiscount ? '-' : '';
     const colorClass = isDiscount ? 'text-green-600' : '';
+
+    // Format amount in customer's preferred currency (single currency)
+    const formattedAmount = currencyDisplay.formatAmount(amount);
 
     return (
       <div className={`flex justify-between items-center py-1.5 sm:py-2 ${colorClass}`}>
@@ -107,13 +162,25 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
             </TooltipProvider>
           </div>
         </div>
-        <span className="font-medium text-xs sm:text-sm">{sign}{formatAmount(amount)}</span>
+        <div className="text-right">
+          <span className="font-medium text-xs sm:text-sm">{sign}{formattedAmount}</span>
+        </div>
       </div>
     );
   };
 
   return (
     <div className="bg-card border border-border rounded-lg p-4 sm:p-6">
+      {/* Debug Currency Info */}
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
+        <strong>🔍 Currency Debug:</strong> {originCountry} → {destinationCountry} | 
+        Rate: {currencyDisplay.exchangeRate} ({currencyDisplay.exchangeRateSource}) | 
+        Test amount ₹1000 = {currencyDisplay.formatAmount(1000)}
+        {currencyDisplay.warning && <div className="text-orange-600 mt-1">⚠️ {currencyDisplay.warning}</div>}
+        <div className="mt-1 text-gray-600">
+          Raw shipping address country: {JSON.stringify(quote.shipping_address)}
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
         <div className="bg-muted border border-border rounded-lg p-4 sm:p-6">
           <div className="space-y-3 sm:space-y-4">
@@ -133,7 +200,10 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                 </TooltipProvider>
               </div>
               <span className="text-base sm:text-lg font-semibold text-foreground">
-                {formatAmount(quote.item_price || 0)}
+                {typeof currencyDisplay.formatAmount(quote.item_price || 0) === 'string' 
+                  ? currencyDisplay.formatAmount(quote.item_price || 0)
+                  : (currencyDisplay.formatAmount(quote.item_price || 0) as any).short || '0'
+                }
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -269,7 +339,33 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                       <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 sm:p-4">
                         <div className="flex justify-between items-center font-semibold text-sm sm:text-base">
                           <span>Total Amount</span>
-                          <span className="text-foreground">{formatAmount(quote.final_total)}</span>
+                          {(() => {
+                            const purchaseCountry = quote.country_code || 'US';
+                            
+                            // Try to get destination country from various possible fields
+                            let deliveryCountry = 'US';
+                            if (quote.destination_country) {
+                              deliveryCountry = quote.destination_country;
+                            } else if (quote.shipping_address) {
+                              const shippingAddress = typeof quote.shipping_address === 'string' 
+                                ? JSON.parse(quote.shipping_address) 
+                                : quote.shipping_address;
+                              deliveryCountry = shippingAddress?.country_code || shippingAddress?.country || 'US';
+                            }
+                            
+                            const exchangeRate = quote.exchange_rate;
+                            const dualCurrency = formatDualCurrency(quote.final_total, purchaseCountry, deliveryCountry, exchangeRate);
+                            const showDualCurrency = purchaseCountry !== deliveryCountry && exchangeRate && exchangeRate !== 1;
+
+                            return showDualCurrency ? (
+                              <div className="text-right">
+                                <div className="text-foreground">{dualCurrency.purchase}</div>
+                                <div className="text-sm text-muted-foreground">{dualCurrency.delivery}</div>
+                              </div>
+                            ) : (
+                              <span className="text-foreground">{formatAmount(quote.final_total)}</span>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -277,9 +373,35 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                 </DialogContent>
               </Dialog>
             </div>
-            <span className="text-base sm:text-lg font-semibold text-foreground">
-              {formatAmount(quote.final_total)}
-            </span>
+            {(() => {
+              const purchaseCountry = quote.country_code || 'US';
+              
+              // Try to get destination country from various possible fields
+              let deliveryCountry = 'US';
+              if (quote.destination_country) {
+                deliveryCountry = quote.destination_country;
+              } else if (quote.shipping_address) {
+                const shippingAddress = typeof quote.shipping_address === 'string' 
+                  ? JSON.parse(quote.shipping_address) 
+                  : quote.shipping_address;
+                deliveryCountry = shippingAddress?.country_code || shippingAddress?.country || 'US';
+              }
+              
+              const exchangeRate = quote.exchange_rate;
+              const dualCurrency = formatDualCurrency(quote.final_total, purchaseCountry, deliveryCountry, exchangeRate);
+              const showDualCurrency = purchaseCountry !== deliveryCountry && exchangeRate && exchangeRate !== 1;
+
+              return showDualCurrency ? (
+                <div className="text-right">
+                  <div className="text-base sm:text-lg font-semibold text-foreground">{dualCurrency.purchase}</div>
+                  <div className="text-sm text-muted-foreground">{dualCurrency.delivery}</div>
+                </div>
+              ) : (
+                <span className="text-base sm:text-lg font-semibold text-foreground">
+                  {formatAmount(quote.final_total)}
+                </span>
+              );
+            })()}
           </div>
         </div>
       </div>

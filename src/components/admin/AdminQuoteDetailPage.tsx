@@ -687,6 +687,22 @@ const AdminQuoteDetailPage = () => {
                         {getCurrencySymbol(countryCurrency)} {countryCurrency}
                       </Badge>
                     </div>
+                    {quote.exchange_rate && quote.exchange_rate !== 1 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Exchange Rate:</span>
+                        <Badge variant="outline" className="text-sm">
+                          {(() => {
+                            const originCurrency = purchaseCountry === 'US' ? 'USD' : 
+                                                 purchaseCountry === 'IN' ? 'INR' : 
+                                                 purchaseCountry === 'NP' ? 'NPR' : 'USD';
+                            const destCurrency = destinationCountry === 'US' ? 'USD' : 
+                                               destinationCountry === 'IN' ? 'INR' : 
+                                               destinationCountry === 'NP' ? 'NPR' : 'USD';
+                            return `${originCurrency} → ${destCurrency}: ${quote.exchange_rate}`;
+                          })()}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -943,6 +959,22 @@ const AdminQuoteDetailPage = () => {
                           ${quote.international_shipping?.toFixed(2) || '0.00'}
                         </span>
                       </div>
+                      {quote.exchange_rate && quote.exchange_rate !== 1 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Exchange Rate:</span>
+                          <span className="font-medium">
+                            {(() => {
+                              const originCurrency = purchaseCountry === 'US' ? 'USD' : 
+                                                   purchaseCountry === 'IN' ? 'INR' : 
+                                                   purchaseCountry === 'NP' ? 'NPR' : 'USD';
+                              const destCurrency = destinationCountry === 'US' ? 'USD' : 
+                                                 destinationCountry === 'IN' ? 'INR' : 
+                                                 destinationCountry === 'NP' ? 'NPR' : 'USD';
+                              return `${originCurrency} → ${destCurrency}: ${quote.exchange_rate}`;
+                            })()}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     {/* Weight Information */}
                     <div className="space-y-3">

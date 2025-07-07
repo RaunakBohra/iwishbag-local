@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Package, Search, Filter, ArrowLeft, Plus, Calendar, Globe, DollarSign, ShoppingCart, Eye } from 'lucide-react';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import { useAllCountries } from '@/hooks/useAllCountries';
-import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
 import { useQuoteState } from '@/hooks/useQuoteState';
 import { useCartStore } from '@/stores/cartStore';
 import { Button } from '@/components/ui/button';
@@ -35,17 +35,170 @@ const AddToCartButton = ({ quoteId, className = "" }: { quoteId: string; classNa
   );
 };
 
+// QuoteCard component with proper currency conversion
+const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
+  quote: any;
+  deliveryEstimate: any;
+  countries: any;
+  isQuoteInCart: (quoteId: string) => boolean;
+}) => {
+  const { formatAmount } = useQuoteDisplayCurrency({ quote });
+  
+  const numberOfItems = Array.isArray(quote.quote_items) 
+    ? quote.quote_items.length 
+    : 1;
+  const firstItem = Array.isArray(quote.quote_items) && quote.quote_items.length > 0 
+    ? quote.quote_items[0] 
+    : null;
+    
+  // Get origin country name for fallback display
+  const originCountry = quote.origin_country || quote.country_code || 'US';
+  const originCountryName = countries?.find(c => c.code === originCountry)?.name || originCountry;
+  const fallbackName = `${originCountryName} Quote`;
+  
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md hover:border-gray-200 transition-all duration-200">
+      {/* Mobile Layout */}
+      <div className="block sm:hidden">
+        {/* Header with Product Name and Status */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1 min-w-0 pr-3">
+            <h3 className="text-base font-semibold text-gray-900 truncate">
+              {quote.product_name || firstItem?.product_name || fallbackName}
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <StatusBadge status={quote.status} category="quote" />
+              {isQuoteInCart(quote.id) && (
+                <Badge variant="secondary" className="text-xs">In Cart</Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Price */}
+        <div className="mb-4">
+          <div className="text-lg font-bold text-green-600">
+            {formatAmount(quote.final_total)}
+          </div>
+        </div>
+
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4 text-xs">
+          <div className="flex items-center gap-1 text-gray-600">
+            <Calendar className="h-3 w-3 text-gray-400" />
+            <span>{new Date(quote.created_at).toLocaleDateString()}</span>
+          </div>
+          <div className="flex items-center gap-1 text-gray-600">
+            <Globe className="h-3 w-3 text-gray-400" />
+            <span className="truncate">{deliveryEstimate?.routeDisplay || '—'}</span>
+          </div>
+        </div>
+
+        {/* Delivery Estimate */}
+        {deliveryEstimate && (
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="flex items-center gap-2 text-xs">
+              <Calendar className="h-3 w-3 text-blue-500" />
+              <span className="text-blue-700 font-medium">
+                Delivery: {deliveryEstimate.label} ({deliveryEstimate.days.replace('d', ' days')})
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Expiry Date */}
+        {quote.expires_at && (
+          <div className="mb-2 flex items-center gap-2 text-xs">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 border border-red-100 text-red-700 font-medium">
+              <Calendar className="h-3 w-3 text-red-400" />
+              Expires: {new Date(quote.expires_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <Link to={`/dashboard/quotes/${quote.id}`} className="flex-1">
+            <Button variant="outline" size="sm" className="w-full h-10 text-sm">
+              <Eye className="h-3 w-3 mr-1" />
+              View Details
+            </Button>
+          </Link>
+          {quote.status === 'approved' && !isQuoteInCart(quote.id) && (
+            <AddToCartButton quoteId={quote.id} className="flex-1" />
+          )}
+        </div>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden sm:flex sm:items-center sm:justify-between">
+        <div className="flex items-center gap-6 flex-1 min-w-0">
+          {/* Product Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-1">
+              <h3 className="text-base font-semibold text-gray-900 truncate">
+                {quote.product_name || firstItem?.product_name || fallbackName}
+              </h3>
+              <div className="flex items-center gap-2">
+                <StatusBadge status={quote.status} category="quote" />
+                {isQuoteInCart(quote.id) && (
+                  <Badge variant="secondary" className="text-xs">In Cart</Badge>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              <span className="flex items-center gap-1">
+                <Package className="h-3 w-3 text-gray-400" />
+                {numberOfItems} item{numberOfItems !== 1 ? 's' : ''}
+              </span>
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-gray-400" />
+                {new Date(quote.created_at).toLocaleDateString()}
+              </span>
+              <span className="flex items-center gap-1">
+                <Globe className="h-3 w-3 text-gray-400" />
+                {deliveryEstimate?.routeDisplay || '—'}
+              </span>
+            </div>
+          </div>
+
+          {/* Price and Actions */}
+          <div className="flex items-center gap-3 ml-4">
+            <div className="text-right">
+              <div className="text-lg font-bold text-green-600">
+                {formatAmount(quote.final_total)}
+              </div>
+            </div>
+            <StatusBadge status={quote.status} category="quote" />
+            <Link to={`/dashboard/quotes/${quote.id}`}>
+              <Button variant="outline" size="sm" className="h-9">
+                <Eye className="h-3 w-3 mr-1" />
+                View
+              </Button>
+            </Link>
+            {quote.status === 'approved' && !isQuoteInCart(quote.id) && (
+              <AddToCartButton quoteId={quote.id} />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function Quotes() {
   const {
     quotes,
     isLoading,
+    filteredQuotes,
     searchTerm,
+    setSearchTerm,
     handleSearchChange,
     isSearching,
   } = useDashboardState();
 
   const { data: countries } = useAllCountries();
-  const { formatAmount } = useUserCurrency();
+  // formatAmount will be handled per quote with useQuoteDisplayCurrency
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deliveryEstimates, setDeliveryEstimates] = useState<Record<string, any>>({});
   
@@ -57,80 +210,36 @@ export default function Quotes() {
     return cartItems.some(item => item.quoteId === quoteId);
   };
 
-  // Filter quotes based on status and search
-  const filteredQuotes = quotes?.filter(quote => {
-    // Status filter
-    if (statusFilter !== 'all') {
-      if (statusFilter === 'pending' && quote.status !== 'pending') return false;
-      if (statusFilter === 'sent' && quote.status !== 'sent') return false;
-      if (statusFilter === 'approved' && quote.status !== 'approved') return false;
-      if (statusFilter === 'rejected' && quote.status !== 'rejected') return false;
-    }
-    
-    // Search filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      const productMatch = quote.product_name?.toLowerCase().includes(searchLower);
-      const productUrlMatch = quote.product_url?.toLowerCase().includes(searchLower);
-      const quoteIdMatch = quote.display_id?.toLowerCase().includes(searchLower);
-      
-      // Get country name for search
-      const countryName = countries?.find(c => c.code === quote.country_code)?.name;
-      const countryMatch = countryName?.toLowerCase().includes(searchLower);
-      
-      if (!productMatch && !productUrlMatch && !quoteIdMatch && !countryMatch) return false;
-    }
-    
-    return true;
-  }) || [];
+  // Filter quotes by status
+  const statusFilteredQuotes = useMemo(() => {
+    if (statusFilter === 'all') return filteredQuotes;
+    return filteredQuotes.filter(quote => quote.status === statusFilter);
+  }, [filteredQuotes, statusFilter]);
 
-  // Calculate delivery estimates for all quotes
-  useMemo(() => {
+  // Calculate delivery estimates when quotes change
+  React.useEffect(() => {
     const calculateDeliveryEstimates = async () => {
       const estimates: Record<string, any> = {};
       
-      for (const quote of filteredQuotes) {
+      for (const quote of statusFilteredQuotes) {
         try {
-          let shippingRoute = null;
-          
-          // Try to fetch by shipping_route_id if present
+          // Get shipping route data
+          let shippingRoute: any;
           if (quote.shipping_route_id) {
-            const { data: routeById } = await supabase
+            const { data } = await supabase
               .from('shipping_routes')
               .select('*')
               .eq('id', quote.shipping_route_id)
               .maybeSingle();
-            if (routeById) shippingRoute = routeById;
+            shippingRoute = data;
           }
           
-          // Fallback to origin/destination matching
-          if (!shippingRoute) {
-            const originCountry = quote.origin_country || 'US';
-            const destinationCountry = quote.country_code;
-            const { data: routeData } = await supabase
-              .from('shipping_routes')
-              .select('*')
-              .eq('origin_country', originCountry)
-              .eq('destination_country', destinationCountry)
-              .eq('is_active', true)
-              .maybeSingle();
-            if (routeData) shippingRoute = routeData;
-          }
-          
-          // Fallback to any route for destination
-          if (!shippingRoute) {
-            const { data: fallbackRoute } = await supabase
-              .from('shipping_routes')
-              .select('*')
-              .eq('destination_country', quote.country_code)
-              .eq('is_active', true)
-              .maybeSingle();
-            if (fallbackRoute) shippingRoute = fallbackRoute;
-          }
-          
-          // Default route if still not found
+          // Fallback if no shipping route
           if (!shippingRoute) {
             shippingRoute = {
+              id: 'fallback',
+              origin_country: quote.country_code || 'US',
+              destination_country: 'US',
               processing_days: 2,
               customs_clearance_days: 3,
               delivery_options: [
@@ -197,10 +306,10 @@ export default function Quotes() {
       setDeliveryEstimates(estimates);
     };
     
-    if (filteredQuotes.length > 0) {
+    if (statusFilteredQuotes.length > 0) {
       calculateDeliveryEstimates();
     }
-  }, [filteredQuotes, countries]);
+  }, [statusFilteredQuotes, countries]);
 
   const getDisplayStatus = (status: string) => {
     // For quotes, we now use only the status field
@@ -231,48 +340,49 @@ export default function Quotes() {
           <span className="hidden sm:inline">Back to Dashboard</span>
         </Link>
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">My Quotes</h1>
-          <p className="text-gray-500 text-xs sm:text-sm">Manage and track your quote requests</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Quotes</h1>
+          <p className="text-sm text-gray-500 mt-1">Track your quote requests and manage your orders</p>
         </div>
       </div>
 
-      {/* Filters and Search */}
-      <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl shadow-lg border border-gray-200/50 p-5 sm:p-6 mb-6 backdrop-blur-sm">
-        <div className="flex flex-col gap-4">
-          {/* Search Bar */}
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
-            </div>
-            <Input
-              placeholder="Search quotes by product name or ID..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-12 h-14 text-base bg-white/80 backdrop-blur-sm border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
-            />
-          </div>
-          
-          {/* Filter Dropdown */}
-          <div className="relative">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-14 text-base bg-white/80 backdrop-blur-sm border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent className="bg-white/95 backdrop-blur-sm border-gray-200 rounded-xl shadow-xl">
-                <SelectItem value="all" className="hover:bg-blue-50 rounded-lg mx-2 my-1">All Statuses</SelectItem>
-                <SelectItem value="pending" className="hover:bg-yellow-50 rounded-lg mx-2 my-1">Pending</SelectItem>
-                <SelectItem value="sent" className="hover:bg-blue-50 rounded-lg mx-2 my-1">Sent</SelectItem>
-                <SelectItem value="approved" className="hover:bg-green-50 rounded-lg mx-2 my-1">Approved</SelectItem>
-                <SelectItem value="rejected" className="hover:bg-red-50 rounded-lg mx-2 my-1">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search quotes by product name or quote ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-white"
+            disabled={isSearching}
+          />
+        </div>
+        <div className="flex gap-2 sm:gap-3">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-32 sm:w-40">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+          <Link to="/quote">
+            <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg">
+              <Plus className="h-4 w-4 mr-1.5" />
+              <span className="hidden sm:inline">New Quote</span>
+              <span className="sm:hidden">New</span>
+            </Button>
+          </Link>
         </div>
       </div>
 
       {/* Quotes List */}
       <div className="space-y-3 sm:space-y-4">
-        {filteredQuotes.length === 0 ? (
+        {statusFilteredQuotes.length === 0 ? (
           <div className="text-center py-12 px-4">
             <div className="bg-gray-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
               <Package className="h-8 w-8 text-gray-400" />
@@ -293,203 +403,17 @@ export default function Quotes() {
             )}
           </div>
         ) : (
-          filteredQuotes.map((quote) => {
-            const deliveryEstimate = deliveryEstimates[quote.id];
-            const numberOfItems = Array.isArray(quote.quote_items) 
-              ? quote.quote_items.length 
-              : 1;
-            const firstItem = Array.isArray(quote.quote_items) && quote.quote_items.length > 0 
-              ? quote.quote_items[0] 
-              : null;
-            
-            // Get origin country name for fallback display
-            const originCountry = quote.origin_country || quote.country_code || 'US';
-            const originCountryName = countries?.find(c => c.code === originCountry)?.name || originCountry;
-            const fallbackName = `${originCountryName} Quote`;
-            
-            return (
-              <div key={quote.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md hover:border-gray-200 transition-all duration-200">
-                {/* Mobile Layout */}
-                <div className="block sm:hidden">
-                  {/* Header with Product Name and Status */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0 pr-3">
-                                              <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-base truncate">
-                            {firstItem?.product_name || quote.product_name || fallbackName}
-                            {numberOfItems > 1 && (
-                              <span className="text-xs text-gray-500 ml-1">+{numberOfItems - 1} more</span>
-                            )}
-                          </h3>
-                        </div>
-                      <p className="text-gray-500 text-xs">
-                        Quote #{quote.display_id || quote.id.slice(0, 8)}
-                      </p>
-                    </div>
-                    <StatusBadge status={getDisplayStatus(quote.status)} category="quote" />
-                  </div>
-
-                  {/* Price */}
-                  <div className="mb-4">
-                    <div className="text-lg font-bold text-green-600">
-                      {formatAmount(quote.final_total)}
-                    </div>
-                  </div>
-
-                  {/* Info Grid */}
-                  <div className="grid grid-cols-2 gap-3 mb-4 text-xs">
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <Calendar className="h-3 w-3 text-gray-400" />
-                      <span>{new Date(quote.created_at).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <Globe className="h-3 w-3 text-gray-400" />
-                      <span className="truncate">{deliveryEstimate?.routeDisplay || '—'}</span>
-                    </div>
-                  </div>
-
-                  {/* Delivery Estimate */}
-                  {deliveryEstimate && (
-                    <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                      <div className="flex items-center gap-2 text-xs">
-                        <Calendar className="h-3 w-3 text-blue-500" />
-                        <span className="text-blue-700 font-medium">
-                          Delivery: {deliveryEstimate.label} ({deliveryEstimate.days.replace('d', ' days')})
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Expiry Date */}
-                  {quote.expires_at && (
-                    <div className="mb-2 flex items-center gap-2 text-xs">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 border border-red-100 text-red-700 font-medium">
-                        <Calendar className="h-3 w-3 text-red-400" />
-                        Expires: {new Date(quote.expires_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <Link to={`/dashboard/quotes/${quote.id}`} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full h-10 text-sm">
-                        <Eye className="h-3 w-3 mr-1" />
-                        View Details
-                      </Button>
-                    </Link>
-                    {quote.status === 'approved' && !isQuoteInCart(quote.id) && (
-                      <div className="flex-1">
-                        <AddToCartButton quoteId={quote.id} className="w-full h-10 text-sm" />
-                      </div>
-                    )}
-                    {quote.status === 'approved' && isQuoteInCart(quote.id) && (
-                      <Link to="/cart" className="flex-1">
-                        <Button size="sm" variant="secondary" className="w-full h-10 text-sm">
-                          <ShoppingCart className="h-3 w-3 mr-1" />
-                          In Cart
-                        </Button>
-                      </Link>
-                    )}
-                  </div>
-                </div>
-
-                {/* Desktop Layout */}
-                <div className="hidden sm:block">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      {/* Top Row: Product Name + Status + Price */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-lg truncate">
-                              {firstItem?.product_name || quote.product_name || fallbackName}
-                              {numberOfItems > 1 && (
-                                <span className="text-sm text-gray-500 ml-1">+{numberOfItems - 1} more</span>
-                              )}
-                            </h3>
-                          </div>
-                          <p className="text-gray-500 text-sm">
-                            Quote #{quote.display_id || quote.id.slice(0, 8)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3 ml-4">
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-green-600">
-                              {formatAmount(quote.final_total)}
-                            </div>
-                          </div>
-                          <StatusBadge status={getDisplayStatus(quote.status)} category="quote" />
-                        </div>
-                      </div>
-                      
-                      {/* Bottom Row: Created Date + Route + Delivery Estimate + Expiry Date + Actions */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 text-sm">
-                          {/* Created Date */}
-                          <div className="text-gray-500">
-                            {new Date(quote.created_at).toLocaleDateString()}
-                          </div>
-                          
-                          {/* Route */}
-                          <div className="flex items-center gap-1">
-                            <Globe className="h-4 w-4 text-gray-500" />
-                            <span className="text-gray-600">
-                              {deliveryEstimate?.routeDisplay || '—'}
-                            </span>
-                          </div>
-                          
-                          {/* Delivery Estimate */}
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4 text-blue-500" />
-                            <span className="text-gray-600">
-                              Delivery: {deliveryEstimate ? deliveryEstimate.label : '—'}
-                            </span>
-                            {deliveryEstimate && (
-                              <span className="text-sm text-gray-600">({deliveryEstimate.days.replace('d', ' days')})</span>
-                            )}
-                          </div>
-
-                          {/* Expiry Date */}
-                          {quote.expires_at && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4 text-red-400" />
-                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 border border-red-100 text-red-700 font-medium text-xs">
-                                Expires: {new Date(quote.expires_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Actions */}
-                        <div className="flex items-center gap-2">
-                          <Link to={`/dashboard/quotes/${quote.id}`}>
-                            <Button variant="outline" size="sm" className="flex items-center gap-1">
-                              <Eye className="h-3 w-3" />
-                              View
-                            </Button>
-                          </Link>
-                          {quote.status === 'approved' && !isQuoteInCart(quote.id) && (
-                            <AddToCartButton quoteId={quote.id} />
-                          )}
-                          {quote.status === 'approved' && isQuoteInCart(quote.id) && (
-                            <Link to="/cart">
-                              <Button size="sm" variant="secondary" className="flex items-center gap-1">
-                                <ShoppingCart className="h-3 w-3" />
-                                In Cart
-                              </Button>
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })
+          statusFilteredQuotes.map((quote) => (
+            <QuoteCard
+              key={quote.id}
+              quote={quote}
+              deliveryEstimate={deliveryEstimates[quote.id]}
+              countries={countries}
+              isQuoteInCart={isQuoteInCart}
+            />
+          ))
         )}
       </div>
     </div>
   );
-} 
+}

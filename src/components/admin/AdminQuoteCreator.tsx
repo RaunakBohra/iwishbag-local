@@ -1,4 +1,4 @@
-rimport React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -229,7 +229,8 @@ export const AdminQuoteCreator: React.FC<AdminQuoteCreatorProps> = ({ onQuoteCre
       const quoteInsertData: any = {
         country_code: countryCode,
         origin_country: originCountry,
-        currency: originCurrency, // Use currency from origin country
+        destination_country: countryCode,
+        currency: originCurrency,
         status: defaultStatus,
         priority: quoteData.priority,
         internal_notes: quoteData.internalNotes,

@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { useQuoteState } from '@/hooks/useQuoteState';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -57,7 +57,6 @@ import {
   Building,
   Phone
 } from 'lucide-react';
-import { formatAmountForDisplay } from '@/lib/currencyUtils';
 import { ShippingAddress } from '@/types/address';
 import { QuoteStepper } from '@/components/dashboard/QuoteStepper';
 import type { QuoteStep } from '@/components/dashboard/QuoteStepper';
@@ -74,7 +73,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { userCurrency, formatAmount } = useUserCurrency();
+  // Will get formatAmount from useQuoteDisplayCurrency when quote is loaded
   const { data: countries } = useAllCountries();
   const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
@@ -144,18 +143,7 @@ export default function QuoteDetail() {
     return countries?.find(c => c.code === quote?.country_code)?.name || quote?.country_code;
   }, [countries, quote?.country_code]);
 
-  // Get exchange rate for user's currency
-  const exchangeRate = useMemo(() => {
-    if (userCurrency === 'USD') return 1;
-    const country = countries?.find(c => c.currency === userCurrency);
-    return country?.rate_from_usd || 1;
-  }, [countries, userCurrency]);
-
-  // Format amounts in user's preferred currency
-  const formatUserCurrency = (amount: number | null | undefined) => {
-    if (!amount) return 'N/A';
-    return formatAmountForDisplay(amount, userCurrency, exchangeRate);
-  };
+  // Currency formatting is now handled by useQuoteDisplayCurrency hook
 
 
 
@@ -170,6 +158,9 @@ export default function QuoteDetail() {
       daysRemaining: Math.ceil((estimatedDelivery.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
     };
   };
+
+  // Get quote-specific currency formatting (must be called before any conditional returns)
+  const { formatAmount } = useQuoteDisplayCurrency({ quote });
 
   // Parse shipping address from JSONB
   const shippingAddress = quote?.shipping_address as unknown as ShippingAddress | null;
