@@ -67,6 +67,21 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
 
       console.log('Updating quote with data:', updateData, 'for quoteId:', quoteId);
 
+      // First, let's check what the current quote looks like
+      const { data: currentQuote, error: fetchError } = await supabase
+        .from('quotes')
+        .select('id, status, is_anonymous, share_token, email')
+        .eq('id', quoteId)
+        .single();
+
+      console.log('Current quote before update:', currentQuote);
+      
+      if (fetchError) {
+        console.error('Error fetching current quote:', fetchError);
+        throw new Error(`Cannot access quote: ${fetchError.message}`);
+      }
+
+      // Try to update with just the quote ID (most permissive)
       const { data, error } = await supabase
         .from('quotes')
         .update(updateData)
