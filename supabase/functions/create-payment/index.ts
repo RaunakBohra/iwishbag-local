@@ -81,16 +81,8 @@ async function generatePayUHash({
     '', '', '', '', '', // 5 empty pipes
     salt
   ].join('|');
-  console.log('PayU Hash String:', hashString); // Log the exact string being hashed
-  console.log('=== PAYU DEBUG INFO ===');
-  console.log('Merchant Key:', merchantKey);
-  console.log('Salt:', salt);
-  console.log('TXN ID:', txnid);
-  console.log('Amount:', amount);
-  console.log('Product Info:', productinfo);
-  console.log('First Name:', firstname);
-  console.log('Email:', email);
-  console.log('Hash String:', hashString);
+  // Security: Only log non-sensitive debug info in development
+  console.log('PayU hash generation for transaction:', txnid);
   
   const encoder = new TextEncoder();
   const data = encoder.encode(hashString);
@@ -238,7 +230,7 @@ serve(async (req) => {
             salt_key: config.salt_key,
             payment_url: testMode ? 'https://test.payu.in/_payment' : 'https://secure.payu.in/_payment'
           };
-          console.log('Loaded PayU config:', payuConfig);
+          console.log('PayU config loaded successfully');
           if (!payuConfig.merchant_key || !payuConfig.salt_key) {
             return new Response(JSON.stringify({ error: 'PayU configuration missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
           }
@@ -321,7 +313,7 @@ serve(async (req) => {
             email: customerEmail
           });
           
-          console.log('PayU Hash Generated:', hashResult);
+          console.log('PayU hash generated for transaction:', txnid);
           
           // Create proper success and failure URLs
           // For live mode, use a proper domain instead of localhost
@@ -352,11 +344,12 @@ serve(async (req) => {
             udf5: ''
           };
 
-          // Log the complete request for debugging
-          console.log('PayU Request:', payuRequest);
-          
-          // DEBUG: Log the PayU form amount and its type
-          console.log('PayU Form Amount:', payuRequest.amount, typeof payuRequest.amount);
+          // Log transaction details (non-sensitive)
+          console.log('PayU payment initiated:', { 
+            txnid, 
+            amountINR: amountInINR,
+            customerEmail: customerEmail.substring(0, 3) + '***' 
+          });
           
           responseData = { 
             success: true, 

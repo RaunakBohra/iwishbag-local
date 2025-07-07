@@ -25,7 +25,25 @@ class ErrorBoundaryClass extends React.Component<ErrorBoundaryProps, ErrorBounda
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("Error caught by boundary:", error, errorInfo);
+    // Log error with structured information for monitoring
+    const errorDetails = {
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+    };
+    
+    // Log to console in development, could be sent to monitoring service in production
+    console.error("Error Boundary caught error:", errorDetails);
+    
+    // In production, you might want to send this to an error tracking service
+    if (process.env.NODE_ENV === 'production') {
+      // Example: Send to error tracking service
+      // errorTrackingService.captureException(error, { extra: errorDetails });
+    }
+    
     this.setState({ error, errorInfo });
   }
 
@@ -148,4 +166,112 @@ export const AdminErrorFallback: React.FC<{ error: Error; resetError: () => void
       </Card>
     </div>
   );
-}; 
+};
+
+// Payment Error Boundary - for payment-related errors
+export const PaymentErrorFallback: React.FC<{ error: Error; resetError: () => void }> = ({ error, resetError }) => {
+  const navigateToQuotes = () => {
+    window.location.href = '/dashboard/quotes';
+  };
+  
+  return (
+    <div className="min-h-[400px] flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
+            <AlertTriangle className="h-6 w-6 text-yellow-600" />
+          </div>
+          <CardTitle className="text-xl">Payment Error</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-center text-muted-foreground">
+            We encountered an error while processing your payment. Your payment was not charged. Please try again or contact support.
+          </p>
+          
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <Button onClick={resetError} className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Try Again
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={navigateToQuotes}
+              className="flex items-center gap-2"
+            >
+              <Home className="h-4 w-4" />
+              Back to Quotes
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Quote Form Error Boundary - for quote creation errors
+export const QuoteFormErrorFallback: React.FC<{ error: Error; resetError: () => void }> = ({ error, resetError }) => {
+  return (
+    <div className="min-h-[300px] flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+            <AlertTriangle className="h-6 w-6 text-blue-600" />
+          </div>
+          <CardTitle className="text-xl">Quote Form Error</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-center text-muted-foreground">
+            We encountered an error while loading the quote form. Your data has been preserved.
+          </p>
+          
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <Button onClick={resetError} className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Reload Form
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Dashboard Error Boundary - for dashboard-specific errors
+export const DashboardErrorFallback: React.FC<{ error: Error; resetError: () => void }> = ({ error, resetError }) => {
+  const navigateToHome = () => {
+    window.location.href = '/';
+  };
+  
+  return (
+    <div className="min-h-[500px] flex items-center justify-center p-4">
+      <Card className="w-full max-w-lg">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
+            <AlertTriangle className="h-8 w-8 text-purple-600" />
+          </div>
+          <CardTitle className="text-2xl">Dashboard Error</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <p className="text-center text-muted-foreground">
+            We encountered an error while loading your dashboard. This might be due to a temporary connectivity issue.
+          </p>
+          
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Button onClick={resetError} className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Reload Dashboard
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={navigateToHome}
+              className="flex items-center gap-2"
+            >
+              <Home className="h-4 w-4" />
+              Go Home
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};

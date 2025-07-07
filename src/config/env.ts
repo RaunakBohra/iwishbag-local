@@ -9,10 +9,8 @@ export const env = {
   // ScrapeAPI configuration
   SCRAPER_API_KEY: import.meta.env.VITE_SCRAPER_API_KEY,
   
-  // PayU configuration (for frontend display/debugging)
-  PAYU_MERCHANT_KEY: import.meta.env.VITE_PAYU_MERCHANT_KEY,
-  PAYU_MERCHANT_ID: import.meta.env.VITE_PAYU_MERCHANT_ID,
-  PAYU_PAYMENT_URL: import.meta.env.VITE_PAYU_PAYMENT_URL,
+  // PayU configuration handled server-side for security
+  // Payment URLs are fetched from database configuration
   
   // Development settings
   NODE_ENV: import.meta.env.NODE_ENV,
