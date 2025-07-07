@@ -19,15 +19,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ShippingAddress } from "@/types/address";
 import { useQuoteState } from "@/hooks/useQuoteState";
 import { GuestApprovalDialog } from "@/components/share/GuestApprovalDialog";
+import { GuestCartDialog } from "@/components/share/GuestCartDialog";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function ShareTokenQuote() {
   const { shareToken } = useParams<{ shareToken: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
   const [guestApprovalDialog, setGuestApprovalDialog] = useState<{
     isOpen: boolean;
     action: 'approve' | 'reject';
   }>({ isOpen: false, action: 'approve' });
+  const [isGuestCartDialogOpen, setIsGuestCartDialogOpen] = useState(false);
 
   // Fetch quote by share token (no authentication required)
   const { data: quote, isLoading, error } = useQuery({
@@ -66,6 +70,25 @@ export default function ShareTokenQuote() {
   const handleGuestApprovalSuccess = () => {
     // Reload the page to show updated quote status
     window.location.reload();
+  };
+
+  const handleGuestAddToCart = () => {
+    // Check if quote is approved and has guest email
+    if (quote?.status !== 'approved' || !quote?.guest_email) {
+      toast({
+        title: "Approval Required",
+        description: "Please approve this quote first before adding to cart.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGuestCartDialogOpen(true);
+  };
+
+  const handleGuestCartSuccess = () => {
+    // Navigate to cart page
+    navigate('/cart');
   };
 
   if (isLoading) {
@@ -254,7 +277,7 @@ export default function ShareTokenQuote() {
             onSave={() => {}} // Not used in customer view
             onCancel={() => {}} // Not used in customer view
             isProcessing={isUpdating}
-            onAddToCart={addToCart}
+            onAddToCart={handleGuestAddToCart}
           />
         </div>
 
@@ -355,6 +378,15 @@ export default function ShareTokenQuote() {
         quoteId={quote?.id || ''}
         action={guestApprovalDialog.action}
         onSuccess={handleGuestApprovalSuccess}
+      />
+
+      {/* Guest Cart Dialog */}
+      <GuestCartDialog
+        isOpen={isGuestCartDialogOpen}
+        onClose={() => setIsGuestCartDialogOpen(false)}
+        quoteId={quote?.id || ''}
+        guestEmail={quote?.guest_email || ''}
+        onSuccess={handleGuestCartSuccess}
       />
     </div>
   );
