@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Quote, QuoteStatus, isValidStatusTransition } from "@/types/quote";
@@ -19,6 +20,7 @@ export const useQuoteState = (quoteId: string) => {
   const { loadFromServer, addItem } = useCartStore();
   const { user } = useAuth();
   const { isValidTransition } = useStatusManagement();
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Helper function to convert quote to cart item
   const convertQuoteToCartItem = (quote: QuoteWithItems): CartItem => {
@@ -131,31 +133,42 @@ export const useQuoteState = (quoteId: string) => {
   };
 
   const approveQuote = async () => {
-    return updateQuoteStatus(quoteId, 'approved');
+    setIsUpdating(true);
+    try {
+      return await updateQuoteStatus(quoteId, 'approved');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const rejectQuote = async (reason: string = '') => {
-    // Remove from cart if in cart
-    const { data: quote, error: fetchError } = await supabase
-      .from('quotes')
-      .select('in_cart')
-      .eq('id', quoteId)
-      .single();
-    if (!fetchError && quote && quote.in_cart) {
-      // Remove from cart store
-      const { removeItem } = useCartStore.getState();
-      removeItem(quoteId);
-      // Update in_cart flag in DB
-      await supabase
+    setIsUpdating(true);
+    try {
+      // Remove from cart if in cart
+      const { data: quote, error: fetchError } = await supabase
         .from('quotes')
-        .update({ in_cart: false })
-        .eq('id', quoteId);
+        .select('in_cart')
+        .eq('id', quoteId)
+        .single();
+      if (!fetchError && quote && quote.in_cart) {
+        // Remove from cart store
+        const { removeItem } = useCartStore.getState();
+        removeItem(quoteId);
+        // Update in_cart flag in DB
+        await supabase
+          .from('quotes')
+          .update({ in_cart: false })
+          .eq('id', quoteId);
+      }
+      // Now update status to rejected
+      return await updateQuoteStatus(quoteId, 'rejected');
+    } finally {
+      setIsUpdating(false);
     }
-    // Now update status to rejected
-    return updateQuoteStatus(quoteId, 'rejected');
   };
 
   const addToCart = async () => {
+    setIsUpdating(true);
     try {
       // Get quote with items
       const { data: quote, error: fetchError } = await supabase
@@ -206,10 +219,13 @@ export const useQuoteState = (quoteId: string) => {
         description: "Failed to add item to cart. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   const removeFromCart = async () => {
+    setIsUpdating(true);
     try {
       // Remove from cart store first
       const { removeItem } = useCartStore.getState();
@@ -239,6 +255,8 @@ export const useQuoteState = (quoteId: string) => {
         variant: "destructive",
       });
       return false;
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -252,6 +270,7 @@ export const useQuoteState = (quoteId: string) => {
     rejectQuote,
     addToCart,
     removeFromCart,
-    setPaymentMethod
+    setPaymentMethod,
+    isUpdating
   };
 }; 

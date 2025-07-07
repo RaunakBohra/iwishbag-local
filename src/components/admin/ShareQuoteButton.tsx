@@ -44,7 +44,11 @@ export const ShareQuoteButton: React.FC<ShareQuoteButtonProps> = ({
   const [expiresInDays, setExpiresInDays] = useState('7');
 
   const generateShareToken = () => {
-    return 'share_' + Math.random().toString(36).substr(2, 16) + Date.now().toString(36);
+    // Use crypto.getRandomValues for secure token generation
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    const randomString = Array.from(array, byte => byte.toString(36)).join('');
+    return 'share_' + randomString + Date.now().toString(36);
   };
 
   const generateShareLink = async () => {
