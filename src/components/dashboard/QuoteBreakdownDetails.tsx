@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { Tables } from "@/integrations/supabase/types";
 import { useQuoteCurrencyDisplay } from "@/hooks/useCurrencyConversion";
-import { formatCustomerCurrency, getCountryCurrency } from "@/lib/currencyUtils";
+import { formatCustomerCurrency, getCountryCurrency, formatAmountForDisplay, formatDualCurrency } from "@/lib/currencyUtils";
 import { Receipt, Percent, Package, Truck, Shield, CreditCard, Gift, Info, ChevronDown, ChevronUp, Download, Hash, Calendar, MapPin } from "lucide-react";
 import {
   Tooltip,
@@ -312,7 +312,7 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
                                 <div className="text-muted-foreground">Quantity: {item.quantity}</div>
                               </div>
                             </div>
-                            <span className="font-medium">{formatAmount(item.item_price * item.quantity)}</span>
+                            <span className="font-medium">{formatAmountForDisplay(item.item_price * item.quantity, getCountryCurrency(destinationCountry))}</span>
                           </div>
                         ))}
                       </div>
@@ -363,7 +363,7 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
                                 <div className="text-sm text-muted-foreground">{dualCurrency.delivery}</div>
                               </div>
                             ) : (
-                              <span className="text-foreground">{formatAmount(quote.final_total)}</span>
+                              <span className="text-foreground">{formatAmountForDisplay(quote.final_total, getCountryCurrency(destinationCountry))}</span>
                             );
                           })()}
                         </div>
@@ -398,7 +398,7 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
                 </div>
               ) : (
                 <span className="text-base sm:text-lg font-semibold text-foreground">
-                  {formatAmount(quote.final_total)}
+                  {formatAmountForDisplay(quote.final_total, getCountryCurrency(destinationCountry))}
                 </span>
               );
             })()}
