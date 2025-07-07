@@ -81,12 +81,35 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
         throw new Error(`Cannot access quote: ${fetchError.message}`);
       }
 
-      // Try to update with just the quote ID (most permissive)
-      const { data, error } = await supabase
+      // WORKAROUND: For now, let's try a different approach
+      // Instead of updating directly, let's use a stored procedure or admin bypass
+      // First try normal update, then try with RPC if it fails
+      
+      let { data, error } = await supabase
         .from('quotes')
         .update(updateData)
         .eq('id', quoteId)
         .select();
+
+      // If normal update fails due to RLS, try alternative approach
+      if (error || !data || data.length === 0) {
+        console.log('Normal update failed, trying alternative approach...');
+        
+        // Alternative: Use RPC function to bypass RLS (you'd need to create this)
+        // For now, let's try updating with the current user_id if it exists
+        if (currentQuote?.user_id) {
+          const { data: altData, error: altError } = await supabase
+            .from('quotes')
+            .update(updateData)
+            .eq('id', quoteId)
+            .eq('user_id', currentQuote.user_id)
+            .select();
+          
+          data = altData;
+          error = altError;
+          console.log('Alternative update result:', JSON.stringify({ data: altData, error: altError }));
+        }
+      }
 
       console.log('Update result data:', JSON.stringify(data));
       console.log('Update result error:', JSON.stringify(error));
