@@ -81,46 +81,29 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
         throw new Error(`Cannot access quote: ${fetchError.message}`);
       }
 
-      // WORKAROUND: For now, let's try a different approach
-      // Instead of updating directly, let's use a stored procedure or admin bypass
-      // First try normal update, then try with RPC if it fails
+      // Use Edge Function to handle guest approval with proper permissions
+      console.log('Calling Edge Function to approve shared quote...');
       
-      let { data, error } = await supabase
-        .from('quotes')
-        .update(updateData)
-        .eq('id', quoteId)
-        .select();
-
-      // If normal update fails due to RLS, try alternative approach
-      if (error || !data || data.length === 0) {
-        console.log('Normal update failed, trying alternative approach...');
-        
-        // Alternative: Use RPC function to bypass RLS (you'd need to create this)
-        // For now, let's try updating with the current user_id if it exists
-        if (currentQuote?.user_id) {
-          const { data: altData, error: altError } = await supabase
-            .from('quotes')
-            .update(updateData)
-            .eq('id', quoteId)
-            .eq('user_id', currentQuote.user_id)
-            .select();
-          
-          data = altData;
-          error = altError;
-          console.log('Alternative update result:', JSON.stringify({ data: altData, error: altError }));
+      const { data, error } = await supabase.functions.invoke('approve-shared-quote', {
+        body: {
+          quoteId: quoteId,
+          email: email,
+          action: action
         }
-      }
+      });
 
-      console.log('Update result data:', JSON.stringify(data));
-      console.log('Update result error:', JSON.stringify(error));
+      console.log('Edge Function result:', JSON.stringify({ data, error }));
 
       if (error) {
-        console.error('Database update error:', error);
-        throw error;
+        throw new Error(`Edge Function error: ${error.message}`);
       }
 
-      if (!data || data.length === 0) {
-        throw new Error('No quote was updated. Quote may not exist or you may not have permission to update it.');
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      if (!data?.success) {
+        throw new Error('Quote update failed');
       }
 
       toast({
