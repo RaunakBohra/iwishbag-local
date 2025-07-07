@@ -1,6 +1,7 @@
 import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
 
 interface AuthContextType {
   session: Session | null;
@@ -26,7 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(session?.user ?? null);
         }
       } catch (error) {
-        console.error('Error getting session:', error);
+        logger.error('Error getting session', error, 'Auth');
       } finally {
         if (mounted) {
           setLoading(false);
@@ -49,7 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         subscription.unsubscribe();
       };
     } catch (error) {
-      console.error('Error setting up auth state change listener:', error);
+      logger.error('Error setting up auth state change listener', error, 'Auth');
       setLoading(false);
       return () => {
         mounted = false;
@@ -83,14 +84,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             cacheNames.map(cacheName => caches.delete(cacheName))
           );
         } catch (e) {
-          console.error('Error clearing cache:', e);
+          logger.error('Error clearing cache', e, 'Auth');
         }
       }
       
       // Force a complete page reload
       window.location.href = '/';
     } catch (error) {
-      console.error('Error signing out:', error);
+      logger.error('Error signing out', error, 'Auth');
       // Even if there's an error, try to clear everything
       localStorage.clear();
       sessionStorage.clear();

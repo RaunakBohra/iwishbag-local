@@ -62,6 +62,10 @@ export interface Quote {
   customs_percentage?: number;
   breakdown?: QuoteBreakdown;
   quote_items?: QuoteItem[];
+  // Currency and shipping fields
+  exchange_rate?: number;
+  destination_country?: string;
+  shipping_address?: ShippingAddress | string; // JSONB field - can be object or JSON string
 }
 
 export interface QuoteState {
@@ -160,6 +164,18 @@ export const updateQuoteState = (
 
   return newState;
 }; 
+
+export interface ShippingAddress {
+  country: string;
+  country_code?: string;
+  state?: string;
+  city?: string;
+  postal_code?: string;
+  address_line1?: string;
+  address_line2?: string;
+  recipient_name?: string;
+  phone?: string;
+}
 
 export type QuoteItem = {
   id: string;

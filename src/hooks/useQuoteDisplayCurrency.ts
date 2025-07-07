@@ -1,9 +1,10 @@
 import { useMemo, useEffect, useState } from 'react';
 import { formatCustomerCurrency, getCountryCurrency, getDestinationCountryFromQuote, getExchangeRate } from '@/lib/currencyUtils';
 import { useUserProfile } from './useUserProfile';
+import { Quote } from '@/types/quote';
 
 interface UseQuoteDisplayCurrencyProps {
-  quote: any; // Quote object with country_code, shipping_address, final_total, etc.
+  quote: Quote | null; // Quote object with all necessary fields
   exchangeRate?: number; // Optional explicit exchange rate
 }
 

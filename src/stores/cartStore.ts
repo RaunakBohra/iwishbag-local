@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 export interface CartItem {
   id: string;
@@ -120,7 +121,7 @@ export const useCartStore = create<CartStore>()(
               .eq('id', id);
 
             if (error) {
-              console.error('Error syncing removeItem with server:', error);
+              logger.error('Error syncing removeItem with server', error, 'Cart');
               // Revert local state on error
               set((state) => ({
                 ...state,
@@ -447,11 +448,11 @@ export const useCartStore = create<CartStore>()(
           
           // Prevent multiple simultaneous loads
           if (state.isLoading) {
-            console.log('🔄 Cart load already in progress, skipping...');
+            logger.debug('Cart load already in progress, skipping');
             return;
           }
           
-          console.log('🔄 Loading cart from server for user:', userId);
+          logger.cart('Loading cart from server', { userId });
           set({ isLoading: true, error: null });
 
           try {
@@ -577,10 +578,10 @@ export const useCartStore = create<CartStore>()(
               isInitialized: true
             });
 
-            console.log('✅ Cart loaded successfully from server');
+            logger.cart('Cart loaded successfully from server');
 
           } catch (error) {
-            console.error('❌ Error loading cart from server:', error);
+            logger.error('Error loading cart from server', error, 'Cart');
             set({ 
               error: error instanceof Error ? error.message : 'Failed to load cart',
               isLoading: false 

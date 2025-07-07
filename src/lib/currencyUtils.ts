@@ -1,4 +1,6 @@
 import { supabase } from '../integrations/supabase/client';
+import { logger } from './logger';
+import { Quote, ShippingAddress } from '@/types/quote';
 
 export const formatAmountForDisplay = (
   amount: number | null | undefined,
@@ -161,7 +163,7 @@ export async function getExchangeRate(
     if (fromRate && toRate && fromRate > 0 && toRate > 0) {
       // Convert via USD: fromCurrency -> USD -> toCurrency
       const rate = toRate / fromRate;
-      console.log(`[Currency] USD-based conversion: ${fromCurr} (${fromRate}) → USD → ${toCurr} (${toRate}) = ${rate}`);
+      logger.currency(`USD-based conversion: ${fromCurr} (${fromRate}) → USD → ${toCurr} (${toRate}) = ${rate}`);
       return {
         rate,
         source: 'country_settings',
@@ -171,14 +173,14 @@ export async function getExchangeRate(
     }
 
     // Debug missing rates
-    console.warn(`[Currency] Missing exchange rates:`, {
+    logger.warn(`Missing exchange rates for ${fromCountry}→${toCountry}`, {
       fromCountry,
       toCountry,
       fromRate,
       toRate,
       fromSettings: fromSettings.data,
       toSettings: toSettings.data
-    });
+    }, 'Currency');
 
     // 3. Final fallback - warn admin about missing rates
     const missingCountries = [];
@@ -193,7 +195,7 @@ export async function getExchangeRate(
     };
 
   } catch (error) {
-    console.error('[Currency] Error getting exchange rate:', error);
+    logger.error('Error getting exchange rate', error, 'Currency');
     return {
       rate: 1,
       source: 'fallback',
@@ -320,7 +322,7 @@ export async function validateExchangeRate(
 }
 
 // Extract destination country from quote object
-export function getDestinationCountryFromQuote(quote: any): string {
+export function getDestinationCountryFromQuote(quote: Quote | null): string {
   // Return fallback if quote is null/undefined
   if (!quote) {
     return 'US';
@@ -333,7 +335,7 @@ export function getDestinationCountryFromQuote(quote: any): string {
   
   if (quote.shipping_address) {
     try {
-      const shippingAddress = typeof quote.shipping_address === 'string' 
+      const shippingAddress: ShippingAddress = typeof quote.shipping_address === 'string' 
         ? JSON.parse(quote.shipping_address) 
         : quote.shipping_address;
       
@@ -367,9 +369,9 @@ export function getDestinationCountryFromQuote(quote: any): string {
         return country.toUpperCase();
       }
       
-      console.warn('Unknown country format in shipping address:', country);
+      logger.warn('Unknown country format in shipping address', { country }, 'Currency');
     } catch (e) {
-      console.warn('Could not parse shipping address:', e);
+      logger.warn('Could not parse shipping address', e, 'Currency');
     }
   }
   
