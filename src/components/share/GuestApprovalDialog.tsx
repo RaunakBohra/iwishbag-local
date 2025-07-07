@@ -60,7 +60,7 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
     try {
       // Update quote with guest email and approval status
       const updateData = {
-        guest_email: email,
+        email: email, // Use existing email field instead of guest_email
         status: action === 'approve' ? 'approved' : 'rejected',
         [action === 'approve' ? 'approved_at' : 'rejected_at']: new Date().toISOString(),
       };

@@ -73,8 +73,8 @@ export default function ShareTokenQuote() {
   };
 
   const handleGuestAddToCart = () => {
-    // Check if quote is approved and has guest email
-    if (quote?.status !== 'approved' || !quote?.guest_email) {
+    // Check if quote is approved and has email
+    if (quote?.status !== 'approved' || !quote?.email) {
       toast({
         title: "Approval Required",
         description: "Please approve this quote first before adding to cart.",
@@ -385,7 +385,7 @@ export default function ShareTokenQuote() {
         isOpen={isGuestCartDialogOpen}
         onClose={() => setIsGuestCartDialogOpen(false)}
         quoteId={quote?.id || ''}
-        guestEmail={quote?.guest_email || ''}
+        guestEmail={quote?.email || ''}
         onSuccess={handleGuestCartSuccess}
       />
     </div>
