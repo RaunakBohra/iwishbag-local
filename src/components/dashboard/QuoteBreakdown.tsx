@@ -181,7 +181,8 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
           status={uiState.summaryStatus}
           total={quoteTotal}
           itemCount={quote.quote_items?.length || 0}
-          onApprove={uiState.step === 'approve' ? handleApproveClick : undefined}
+          onApprove={uiState.step === 'approve' || quote.status === 'pending' ? handleApproveClick : undefined}
+          onReject={quote.status === 'pending' ? handleRejectSummary : undefined}
           isProcessing={isProcessing}
           countryCode={quote.country_code}
           renderActions={() => (
