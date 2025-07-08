@@ -8,7 +8,6 @@ import { useAllCountries } from '@/hooks/useAllCountries';
 import { useQuoteState } from '@/hooks/useQuoteState';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useCartStore } from '@/stores/cartStore';
-import { QuoteAddressEditForm } from '@/components/forms/QuoteAddressEditForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,12 +20,10 @@ import {
   Truck, 
   CheckCircle, 
   Clock, 
-  MapPin, 
   Calendar,
   ExternalLink,
   Download,
   MessageCircle,
-  Edit,
   Globe,
   Weight,
   ShoppingCart,
@@ -38,18 +35,12 @@ import {
   Edit2,
   CreditCard,
   AlertTriangle,
-  User,
-  Building,
-  Phone,
   Zap,
   Gift,
   Shield,
   Percent,
-  Plus,
-  Check
 } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
-import { ShippingAddress } from '@/types/address';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { QuoteExpirationTimer } from '@/components/dashboard/QuoteExpirationTimer';
 import { useQuoteSteps } from '@/hooks/useQuoteSteps';
@@ -65,9 +56,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { StickyActionBar } from '@/components/dashboard/StickyActionBar';
 import { GuestApprovalDialog } from '@/components/share/GuestApprovalDialog';
 import { useToast } from '@/components/ui/use-toast';
-import { SelectAddressDialog } from '@/components/forms/SelectAddressDialog';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { Tables } from '@/integrations/supabase/types';
 
 interface UnifiedQuoteDetailProps {
@@ -89,8 +77,6 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
   const identifier = isGuestMode ? shareToken : id;
   
   // State for dialogs and UI
-  const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
-  const [isSelectAddressOpen, setIsSelectAddressOpen] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
@@ -188,67 +174,12 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
     return countries?.find(c => c.code === quote?.country_code)?.name || quote?.country_code;
   }, [countries, quote?.country_code]);
 
-  const shippingAddress = useMemo(() => {
-    if (!quote?.shipping_address) return null;
-    
-    try {
-      // Parse if it's a string
-      const parsed = typeof quote.shipping_address === 'string' 
-        ? JSON.parse(quote.shipping_address) 
-        : quote.shipping_address;
-      
-      // If it's a minimal address (only country_code), return null
-      // We don't want to display incomplete addresses
-      if (parsed && Object.keys(parsed).length === 1 && parsed.country_code) {
-        return null;
-      }
-      
-      return parsed as ShippingAddress;
-    } catch (e) {
-      console.warn('Failed to parse shipping address:', e);
-      return null;
-    }
-  }, [quote?.shipping_address]);
   
   const isQuoteOwner = quote?.user_id === user?.id;
   const canViewQuote = isGuestMode || isQuoteOwner || isAdmin;
   const canTakeActions = isGuestMode || isQuoteOwner;
   const isExpired = quote?.status === 'expired';
   
-  // Get the shipping country from the quote
-  const getQuoteShippingCountry = (quote: any): string => {
-    // First try to get from shipping address
-    if (quote.shipping_address) {
-      try {
-        const addr = typeof quote.shipping_address === 'string' 
-          ? JSON.parse(quote.shipping_address) 
-          : quote.shipping_address;
-        
-        if (addr?.country_code) return addr.country_code;
-        if (addr?.country) {
-          // If it's a 2-letter code, return it
-          if (/^[A-Z]{2}$/i.test(addr.country)) {
-            return addr.country.toUpperCase();
-          }
-          // Otherwise try to find the code from countries list
-          const found = countries?.find(c => 
-            c.name.toLowerCase() === addr.country.toLowerCase()
-          );
-          if (found) return found.code;
-        }
-      } catch (e) {
-        console.warn('Failed to parse shipping address:', e);
-      }
-    }
-    
-    // Fallback to purchase country
-    return quote.country_code || 'US';
-  };
-  
-  // State for user's available addresses
-  const [userAddresses, setUserAddresses] = useState<Tables<'user_addresses'>[]>([]);
-  const [selectedUserAddressId, setSelectedUserAddressId] = useState<string | null>(null);
-  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   
   // Check for pending actions from guest approval
   useEffect(() => {
@@ -339,35 +270,6 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
     checkPendingAction();
   }, [user, isGuestMode, quote, shareToken, approveQuote, navigate, toast]);
   
-  // Auto-load user's addresses for the shipping country
-  useEffect(() => {
-    const loadUserAddresses = async () => {
-      if (user && quote && !shippingAddress) {
-        setIsLoadingAddresses(true);
-        // Get the shipping country
-        const shippingCountry = getQuoteShippingCountry(quote);
-        
-        // Fetch user's addresses for this country
-        const { data: addresses, error } = await supabase
-          .from('user_addresses')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('country_code', shippingCountry)
-          .order('is_default', { ascending: false })
-          .order('created_at', { ascending: false });
-        
-        if (!error && addresses && addresses.length > 0) {
-          setUserAddresses(addresses);
-          // Pre-select default or first address
-          const defaultAddress = addresses.find(addr => addr.is_default);
-          setSelectedUserAddressId(defaultAddress ? defaultAddress.id : addresses[0].id);
-        }
-        setIsLoadingAddresses(false);
-      }
-    };
-    
-    loadUserAddresses();
-  }, [user, quote, shippingAddress]);
   
   // Get quote UI state
   const getQuoteUIState = (quote: any) => {
@@ -592,59 +494,6 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
     window.open('/faq', '_blank');
   };
 
-  // Handle address button click - show selection for registered users
-  const handleAddAddressClick = () => {
-    if (user) {
-      // For any logged-in user (even viewing shared quotes), show address selection dialog
-      setIsSelectAddressOpen(true);
-    } else {
-      // For guests only, go directly to add form
-      setIsAddressDialogOpen(true);
-    }
-  };
-
-  // Handle address selection from saved addresses
-  const handleAddressSelect = async (address: ShippingAddress) => {
-    try {
-      const { error } = await supabase
-        .from('quotes')
-        .update({ shipping_address: address })
-        .eq('id', quote?.id);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'Shipping address updated successfully',
-      });
-      
-      refetch();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update shipping address',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  // Handle using selected user address
-  const handleUseSelectedAddress = async () => {
-    const selected = userAddresses.find(addr => addr.id === selectedUserAddressId);
-    if (selected) {
-      const shippingAddress: ShippingAddress = {
-        fullName: selected.recipient_name,
-        streetAddress: selected.address_line1,
-        addressLine2: selected.address_line2 || undefined,
-        city: selected.city,
-        state: selected.state_province_region,
-        postalCode: selected.postal_code,
-        country: selected.country_code,
-        phone: selected.phone || undefined,
-      };
-      await handleAddressSelect(shippingAddress);
-    }
-  };
 
   const handleOpenBreakdown = () => {
     if (isMobile) {
@@ -1017,147 +866,6 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
               </CardContent>
             </Card>
 
-            {/* Shipping Address Card - Only shown on mobile */}
-            {isMobile && (
-              <Card className="animate-in slide-in-from-bottom duration-700 delay-300 hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-              <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/50 dark:to-slate-950/50">
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <div className="p-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-700">
-                    <MapPin className="h-5 w-5 text-white" />
-                  </div>
-                  Shipping Address
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                {shippingAddress ? (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-gray-600" />
-                        <p className="font-semibold text-gray-900">{shippingAddress.fullName || shippingAddress.recipientName}</p>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <Building className="h-4 w-4 text-gray-600 mt-0.5" />
-                        <div className="text-sm text-gray-700">
-                          <p>{shippingAddress.streetAddress}</p>
-                          {shippingAddress.addressLine2 && <p>{shippingAddress.addressLine2}</p>}
-                          <p>{shippingAddress.city}, {shippingAddress.state} {shippingAddress.postalCode}</p>
-                          <p>{shippingAddress.country}</p>
-                        </div>
-                      </div>
-                      {shippingAddress.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-gray-600" />
-                          <p className="text-sm text-gray-700">{shippingAddress.phone}</p>
-                        </div>
-                      )}
-                    </div>
-                    {(isAdmin || (canTakeActions && quote.status === 'pending')) && (
-                      <Button
-                        onClick={handleAddAddressClick}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Address
-                      </Button>
-                    )}
-                  </div>
-                ) : isLoadingAddresses ? (
-                  <div className="space-y-3">
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-20 w-full" />
-                  </div>
-                ) : userAddresses.length > 0 ? (
-                  <div className="space-y-4">
-                    <RadioGroup value={selectedUserAddressId || ''} onValueChange={setSelectedUserAddressId}>
-                      <div className="space-y-3">
-                        {userAddresses.map((address) => (
-                          <div 
-                            key={address.id} 
-                            className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                              selectedUserAddressId === address.id 
-                                ? 'border-primary bg-primary/5' 
-                                : 'hover:border-gray-300'
-                            }`}
-                            onClick={() => setSelectedUserAddressId(address.id)}
-                          >
-                            <div className="flex items-start space-x-3">
-                              <RadioGroupItem value={address.id} id={address.id} className="mt-1" />
-                              <Label htmlFor={address.id} className="flex-1 cursor-pointer">
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <User className="h-4 w-4 text-gray-600" />
-                                      <span className="font-semibold">{address.recipient_name}</span>
-                                    </div>
-                                    {address.is_default && (
-                                      <Badge variant="secondary" className="text-xs">
-                                        Default
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <div className="flex items-start gap-2">
-                                    <Building className="h-4 w-4 text-gray-600 mt-0.5" />
-                                    <div className="text-sm text-gray-700">
-                                      <p>{address.address_line1}</p>
-                                      {address.address_line2 && <p>{address.address_line2}</p>}
-                                      <p>{address.city}, {address.state_province_region} {address.postal_code}</p>
-                                    </div>
-                                  </div>
-                                  {address.phone && (
-                                    <div className="flex items-center gap-2">
-                                      <Phone className="h-4 w-4 text-gray-600" />
-                                      <span className="text-sm text-gray-700">{address.phone}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </Label>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </RadioGroup>
-                    
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleUseSelectedAddress}
-                        disabled={!selectedUserAddressId}
-                        className="flex-1"
-                      >
-                        <Check className="mr-2 h-4 w-4" />
-                        Use This Address
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={handleAddAddressClick}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add New
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Shipping Address</h3>
-                    <p className="text-gray-500 mb-4">
-                      Please add a shipping address to proceed with your order.
-                    </p>
-                    {(isAdmin || canTakeActions) && (
-                      <Button
-                        onClick={handleAddAddressClick}
-                        className="w-full sm:w-auto"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Shipping Address
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            )}
 
             {/* Need Help Section - Conditional for authenticated users */}
             {!isGuestMode && user && (
@@ -1243,147 +951,6 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
                 </Card>
               )}
 
-              {/* Shipping Address Card - Only shown on desktop in sidebar */}
-              {!isMobile && (
-                <Card className="animate-in slide-in-from-right duration-700 delay-200 hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-                  <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/50 dark:to-slate-950/50">
-                    <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                      <div className="p-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-700">
-                        <MapPin className="h-5 w-5 text-white" />
-                      </div>
-                      Shipping Address
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    {shippingAddress ? (
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-gray-600" />
-                            <p className="font-semibold text-gray-900">{shippingAddress.fullName || shippingAddress.recipientName}</p>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <Building className="h-4 w-4 text-gray-600 mt-0.5" />
-                            <div className="text-sm text-gray-700">
-                              <p>{shippingAddress.streetAddress}</p>
-                              {shippingAddress.addressLine2 && <p>{shippingAddress.addressLine2}</p>}
-                              <p>{shippingAddress.city}, {shippingAddress.state} {shippingAddress.postalCode}</p>
-                              <p>{shippingAddress.country}</p>
-                            </div>
-                          </div>
-                          {shippingAddress.phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-gray-600" />
-                              <p className="text-sm text-gray-700">{shippingAddress.phone}</p>
-                            </div>
-                          )}
-                        </div>
-                        {(isAdmin || (canTakeActions && quote.status === 'pending')) && (
-                          <Button
-                            onClick={handleAddAddressClick}
-                            variant="outline"
-                            className="w-full"
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Address
-                          </Button>
-                        )}
-                      </div>
-                    ) : isLoadingAddresses ? (
-                      <div className="space-y-3">
-                        <Skeleton className="h-20 w-full" />
-                        <Skeleton className="h-20 w-full" />
-                      </div>
-                    ) : userAddresses.length > 0 ? (
-                      <div className="space-y-4">
-                        <RadioGroup value={selectedUserAddressId || ''} onValueChange={setSelectedUserAddressId}>
-                          <div className="space-y-3">
-                            {userAddresses.map((address) => (
-                              <div 
-                                key={address.id} 
-                                className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                                  selectedUserAddressId === address.id 
-                                    ? 'border-primary bg-primary/5' 
-                                    : 'hover:border-gray-300'
-                                }`}
-                                onClick={() => setSelectedUserAddressId(address.id)}
-                              >
-                                <div className="flex items-start space-x-3">
-                                  <RadioGroupItem value={address.id} id={`desktop-${address.id}`} className="mt-1" />
-                                  <Label htmlFor={`desktop-${address.id}`} className="flex-1 cursor-pointer">
-                                    <div className="space-y-2">
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <User className="h-4 w-4 text-gray-600" />
-                                          <span className="font-semibold">{address.recipient_name}</span>
-                                        </div>
-                                        {address.is_default && (
-                                          <Badge variant="secondary" className="text-xs">
-                                            Default
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <div className="flex items-start gap-2">
-                                        <Building className="h-4 w-4 text-gray-600 mt-0.5" />
-                                        <div className="text-sm text-gray-700">
-                                          <p>{address.address_line1}</p>
-                                          {address.address_line2 && <p>{address.address_line2}</p>}
-                                          <p>{address.city}, {address.state_province_region} {address.postal_code}</p>
-                                        </div>
-                                      </div>
-                                      {address.phone && (
-                                        <div className="flex items-center gap-2">
-                                          <Phone className="h-4 w-4 text-gray-600" />
-                                          <span className="text-sm text-gray-700">{address.phone}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </Label>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </RadioGroup>
-                        
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={handleUseSelectedAddress}
-                            disabled={!selectedUserAddressId}
-                            className="flex-1"
-                          >
-                            <Check className="mr-2 h-4 w-4" />
-                            Use This Address
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={handleAddAddressClick}
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add New
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Shipping Address</h3>
-                        <p className="text-gray-500 mb-4">
-                          Please add a shipping address to proceed with your order.
-                        </p>
-                        {(isAdmin || canTakeActions) && (
-                          <Button
-                            onClick={handleAddAddressClick}
-                            className="w-full"
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Shipping Address
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
 
               {/* Mobile Help Button - Only for authenticated users */}
               {!isGuestMode && user && isMobile && (
@@ -1447,34 +1014,6 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
       </div>
 
       {/* Dialogs */}
-      <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <QuoteAddressEditForm 
-            quoteId={quote.id}
-            currentAddress={shippingAddress}
-            quote={quote}
-            onSuccess={() => {
-              setIsAddressDialogOpen(false);
-              refetch();
-            }}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Address Selection Dialog for any logged-in user */}
-      {user && quote && (
-        <SelectAddressDialog
-          isOpen={isSelectAddressOpen}
-          onClose={() => setIsSelectAddressOpen(false)}
-          onSelectAddress={handleAddressSelect}
-          onAddNewAddress={() => {
-            setIsSelectAddressOpen(false);
-            setIsAddressDialogOpen(true);
-          }}
-          shippingCountry={getQuoteShippingCountry(quote)}
-          countryName={countries?.find(c => c.code === getQuoteShippingCountry(quote))?.name}
-        />
-      )}
 
       {/* Guest Approval Dialog */}
       {isGuestMode && (
