@@ -48,15 +48,32 @@ export const useQuoteCalculation = () => {
             return null;
         }
 
-        // Clean and validate form data - all values are already in purchase currency
-        const cleanFormData = {
-            sales_tax_price: quoteDataFromForm.sales_tax_price ?? 0,
-            merchant_shipping_price: quoteDataFromForm.merchant_shipping_price ?? 0,
-            domestic_shipping: quoteDataFromForm.domestic_shipping ?? 0,
-            handling_charge: quoteDataFromForm.handling_charge ?? 0,
-            discount: quoteDataFromForm.discount ?? 0,
-            insurance_amount: quoteDataFromForm.insurance_amount ?? 0,
+        // Clean and validate form data - ensure all values are numbers in purchase currency
+        const parseToNumber = (value: any): number => {
+            if (value === null || value === undefined || value === '') return 0;
+            const parsed = typeof value === 'string' ? parseFloat(value) : Number(value);
+            return isNaN(parsed) ? 0 : parsed;
         };
+
+        const cleanFormData = {
+            sales_tax_price: parseToNumber(quoteDataFromForm.sales_tax_price),
+            merchant_shipping_price: parseToNumber(quoteDataFromForm.merchant_shipping_price),
+            domestic_shipping: parseToNumber(quoteDataFromForm.domestic_shipping),
+            handling_charge: parseToNumber(quoteDataFromForm.handling_charge),
+            discount: parseToNumber(quoteDataFromForm.discount),
+            insurance_amount: parseToNumber(quoteDataFromForm.insurance_amount),
+        };
+
+        console.log('[QuoteCalc Debug] Raw form data from form:', {
+            sales_tax_price: quoteDataFromForm.sales_tax_price,
+            merchant_shipping_price: quoteDataFromForm.merchant_shipping_price,
+            domestic_shipping: quoteDataFromForm.domestic_shipping,
+            handling_charge: quoteDataFromForm.handling_charge,
+            discount: quoteDataFromForm.discount,
+            insurance_amount: quoteDataFromForm.insurance_amount,
+        });
+
+        console.log('[QuoteCalc Debug] Cleaned form data (numbers):', cleanFormData);
 
         // Validate input values to prevent calculation errors
         const validateInputValue = (value: number, name: string): boolean => {
@@ -174,9 +191,32 @@ export const useQuoteCalculation = () => {
             console.log('[QuoteCalc Debug] Shipping cost result:', shippingCost);
 
             // Use customs percentage from form if provided, otherwise default to 0
-            const customsPercent = customs_percentage !== null && customs_percentage !== undefined 
-                ? customs_percentage 
+            // Ensure customs percentage is reasonable (should be like 5.2%, not 520000%)
+            let rawCustomsPercent = customs_percentage !== null && customs_percentage !== undefined 
+                ? parseToNumber(customs_percentage) 
                 : 0;
+            
+            // Handle extremely high percentages that might be stored incorrectly
+            let customsPercent = rawCustomsPercent;
+            if (rawCustomsPercent > 10000) {
+                // Likely stored as basis points (e.g., 520 for 5.2%)
+                customsPercent = rawCustomsPercent / 10000;
+            } else if (rawCustomsPercent > 100) {
+                // Likely stored as percentage * 100 (e.g., 520 for 5.2%)
+                customsPercent = rawCustomsPercent / 100;
+            }
+            
+            // Final safety check - customs should never exceed 50%
+            if (customsPercent > 50) {
+                console.warn('[QuoteCalc Debug] Extremely high customs percentage detected:', rawCustomsPercent);
+                customsPercent = Math.min(customsPercent / 100, 50); // Try one more division, cap at 50%
+            }
+            
+            console.log('[QuoteCalc Debug] Customs percentage:', {
+                raw: rawCustomsPercent,
+                adjusted: customsPercent,
+                willCalculateAs: `(item_total + taxes + shipping) * ${customsPercent}%`
+            });
 
             // Use the new shipping cost if available, otherwise fall back to old calculation
             let internationalShippingCost: number;
@@ -212,8 +252,21 @@ export const useQuoteCalculation = () => {
                     cleanFormData.insurance_amount -
                     cleanFormData.discount;
                 
+                // Ensure payment gateway percent fee is reasonable (should be like 2.5%, not 250%)
+                const gatewayPercentFee = countrySettings.payment_gateway_percent_fee || 0;
+                const reasonablePercentFee = gatewayPercentFee > 100 ? gatewayPercentFee / 100 : gatewayPercentFee;
+                
                 paymentGatewayFee = (countrySettings.payment_gateway_fixed_fee || 0) + 
-                    (subtotalBeforeGatewayFee * (countrySettings.payment_gateway_percent_fee || 0)) / 100;
+                    (subtotalBeforeGatewayFee * reasonablePercentFee) / 100;
+                
+                console.log('[QuoteCalc Debug] Payment gateway fee calculation:', {
+                    fixed_fee: countrySettings.payment_gateway_fixed_fee || 0,
+                    original_percent_fee: gatewayPercentFee,
+                    reasonable_percent_fee: reasonablePercentFee,
+                    subtotalBeforeGatewayFee,
+                    calculated_percent_fee: (subtotalBeforeGatewayFee * reasonablePercentFee) / 100,
+                    total_paymentGatewayFee: paymentGatewayFee
+                });
                 
                 console.log('[QuoteCalc Debug] Route-specific calculation:', {
                     internationalShippingCost,
