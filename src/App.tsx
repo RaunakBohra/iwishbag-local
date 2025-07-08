@@ -44,6 +44,7 @@ const PaymentManagement = React.lazy(() => import("@/pages/admin/PaymentManageme
 const ShippingRoutesPage = React.lazy(() => import("@/pages/admin/ShippingRoutes"));
 const StatusManagementPage = React.lazy(() => import("@/pages/admin/StatusManagement"));
 const Address = React.lazy(() => import('@/pages/profile/Address'));
+const OptimizedCalculatorDemo = React.lazy(() => import('@/pages/demo/OptimizedCalculatorDemo'));
 
 // Admin components (lazy loaded for better performance)
 const AdminLayout = React.lazy(() => import("@/components/admin/AdminLayout").then(m => ({ default: m.AdminLayout })));
@@ -138,6 +139,10 @@ const router = createBrowserRouter([
       {
         path: "guest-checkout",
         element: <Checkout />,
+      },
+      {
+        path: "demo/calculator",
+        element: <OptimizedCalculatorDemo />,
       },
       {
         element: <ProtectedRoute />,
