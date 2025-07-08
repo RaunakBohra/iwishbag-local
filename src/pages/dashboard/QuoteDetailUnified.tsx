@@ -250,6 +250,95 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
   const [selectedUserAddressId, setSelectedUserAddressId] = useState<string | null>(null);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   
+  // Check for pending actions from guest approval
+  useEffect(() => {
+    const checkPendingAction = async () => {
+      if (user && isGuestMode && quote) {
+        const pendingAction = sessionStorage.getItem('pendingQuoteAction');
+        if (pendingAction) {
+          const { action, quoteId, shareToken: savedToken } = JSON.parse(pendingAction);
+          
+          // Verify this is the same quote
+          if (quoteId === quote.id && savedToken === shareToken && action === 'approve') {
+            // Clear the pending action
+            sessionStorage.removeItem('pendingQuoteAction');
+            
+            // Check if quote is already approved by guest
+            if (quote.status === 'approved' && !quote.user_id) {
+              // Just transfer ownership without re-approving
+              try {
+                const { error: updateError } = await supabase
+                  .from('quotes')
+                  .update({ 
+                    user_id: user.id,
+                    is_anonymous: false,
+                    email: user.email 
+                  })
+                  .eq('id', quote.id);
+
+                if (updateError) throw updateError;
+                
+                toast({
+                  title: "Quote Linked!",
+                  description: "This quote has been linked to your account.",
+                });
+                
+                // Navigate to the user's quote page
+                setTimeout(() => {
+                  navigate(`/dashboard/quotes/${quote.id}`);
+                }, 1000);
+              } catch (error) {
+                console.error('Error linking quote:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to link quote. Please try again.",
+                  variant: "destructive",
+                });
+              }
+            } else {
+              // Execute the full approve action
+              try {
+                // Transfer ownership to the logged-in user
+                const { error: updateError } = await supabase
+                  .from('quotes')
+                  .update({ 
+                    user_id: user.id,
+                    is_anonymous: false,
+                    email: user.email 
+                  })
+                  .eq('id', quote.id);
+
+                if (updateError) throw updateError;
+
+                // Approve the quote
+                await approveQuote();
+                
+                toast({
+                  title: "Quote Approved!",
+                  description: "This quote has been transferred to your account and approved.",
+                });
+                
+                // Navigate to the user's quote page
+                setTimeout(() => {
+                  navigate(`/dashboard/quotes/${quote.id}`);
+                }, 1000);
+              } catch (error) {
+                console.error('Error processing pending approval:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to approve quote. Please try again.",
+                  variant: "destructive",
+                });
+              }
+            }
+          }
+        }
+      }
+    };
+    
+    checkPendingAction();
+  }, [user, isGuestMode, quote, shareToken, approveQuote, navigate, toast]);
+  
   // Auto-load user's addresses for the shipping country
   useEffect(() => {
     const loadUserAddresses = async () => {
