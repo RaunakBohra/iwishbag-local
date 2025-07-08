@@ -38,6 +38,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
 import { useCart } from "@/hooks/useCart";
 import { usePaymentGateways } from "@/hooks/usePaymentGateways";
+import { useAllCountries } from "@/hooks/useAllCountries";
 import { PaymentMethodSelector } from "@/components/payment/PaymentMethodSelector";
 import { QRPaymentModal } from "@/components/payment/QRPaymentModal";
 import { PaymentStatusTracker } from "@/components/payment/PaymentStatusTracker";
@@ -55,6 +56,9 @@ interface AddressFormData {
   state_province_region: string;
   postal_code: string;
   country: string;
+  country_code?: string;
+  recipient_name?: string;
+  phone?: string;
   is_default: boolean;
 }
 
@@ -110,6 +114,8 @@ export default function Checkout() {
     state_province_region: '',
     postal_code: '',
     country: '',
+    recipient_name: '',
+    phone: '',
     is_default: false
   });
 
@@ -139,6 +145,7 @@ export default function Checkout() {
 
   const { data: userProfile } = useUserProfile();
   const { formatAmount } = useUserCurrency();
+  const { data: countries } = useAllCountries();
 
   // Load cart data from server when component mounts (same as Cart component)
   useEffect(() => {
@@ -203,37 +210,45 @@ export default function Checkout() {
         productName: guestQuote.quote_items?.[0]?.product_name || "Product",
         quantity: guestQuote.quote_items?.reduce((sum, item) => sum + item.quantity, 0) || 1,
         finalTotal: guestQuote.final_total || 0,
-        countryCode: guestQuote.destination_country || "Unknown"
+        countryCode: guestQuote.country_code || "Unknown"
       }] : [])
     : selectedQuoteIds.length > 0 
     ? cartItems.filter(item => selectedQuoteIds.includes(item.quoteId))
     : cartItems; // Use all cart items when no specific quotes are selected
 
+  // Get the shipping country from selected items
+  // All quotes in checkout should have the same destination country
+  const shippingCountry = selectedCartItems.length > 0 ? selectedCartItems[0].countryCode : null;
+
   // Queries
   const { data: addresses, isLoading: addressesLoading } = useQuery({
-    queryKey: ['user_addresses', user?.id],
+    queryKey: ['user_addresses', user?.id, shippingCountry],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user || !shippingCountry) return [];
       const { data, error } = await supabase
         .from('user_addresses')
         .select('*')
         .eq('user_id', user.id)
-        .order('is_default', { ascending: false });
+        .eq('country_code', shippingCountry)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !isGuestCheckout, // Don't load for guest checkout
+    enabled: !!user && !isGuestCheckout && !!shippingCountry, // Don't load for guest checkout
   });
 
-  // Auto-select default address
+  // Auto-select default address or single address
   useEffect(() => {
     if (addresses && addresses.length > 0 && !selectedAddress) {
-      const defaultAddr = addresses.find(addr => addr.is_default);
-      if (defaultAddr) {
-        setSelectedAddress(defaultAddr.id);
-      } else {
+      // If only one address, select it automatically
+      if (addresses.length === 1) {
         setSelectedAddress(addresses[0].id);
+      } else {
+        // Otherwise, select the default one or the first one
+        const defaultAddr = addresses.find(addr => addr.is_default);
+        setSelectedAddress(defaultAddr ? defaultAddr.id : addresses[0].id);
       }
     }
   }, [addresses, selectedAddress]);
@@ -276,7 +291,9 @@ export default function Checkout() {
         .from('user_addresses')
         .insert({
           user_id: user.id,
-          ...addressData
+          ...addressData,
+          country_code: shippingCountry, // Ensure country_code is set
+          country: countries?.find(c => c.code === shippingCountry)?.name || shippingCountry
         })
         .select()
         .single();
@@ -294,7 +311,9 @@ export default function Checkout() {
         city: '',
         state_province_region: '',
         postal_code: '',
-        country: '',
+        country: shippingCountry || '',
+        recipient_name: '',
+        phone: '',
         is_default: false
       });
       toast({ title: "Success", description: "Address added successfully." });
@@ -327,9 +346,9 @@ export default function Checkout() {
     ));
 
   const handleAddAddress = async () => {
-    if (!addressFormData.address_line1 || !addressFormData.city || 
-        !addressFormData.state_province_region || !addressFormData.postal_code || 
-        !addressFormData.country) {
+    if (!addressFormData.recipient_name || !addressFormData.address_line1 || 
+        !addressFormData.city || !addressFormData.state_province_region || 
+        !addressFormData.postal_code || !addressFormData.country) {
       toast({ 
         title: "Missing Information", 
         description: "Please fill in all required fields.", 
@@ -938,12 +957,12 @@ export default function Checkout() {
                     <div className="text-center py-6">
                       <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-medium mb-2">
-                        {isGuestCheckout ? "Add Shipping Address" : "No addresses found"}
+                        {isGuestCheckout ? "Add Shipping Address" : `No addresses found for ${countries?.find(c => c.code === shippingCountry)?.name || shippingCountry}`}
                       </h3>
                       <p className="text-muted-foreground mb-4">
                         {isGuestCheckout 
                           ? "Please provide a shipping address for your order." 
-                          : "Please add a shipping address to continue."}
+                          : `Please add a shipping address for delivery to ${countries?.find(c => c.code === shippingCountry)?.name || shippingCountry}.`}
                       </p>
                       <Button onClick={() => setShowAddressForm(true)}>
                         <Plus className="h-4 w-4 mr-2" />
@@ -1005,6 +1024,24 @@ export default function Checkout() {
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="recipient_name">Recipient Name *</Label>
+                          <Input
+                            id="recipient_name"
+                            value={addressFormData.recipient_name || ''}
+                            onChange={(e) => setAddressFormData({...addressFormData, recipient_name: e.target.value})}
+                            placeholder="John Doe"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="phone">Phone Number</Label>
+                          <Input
+                            id="phone"
+                            value={addressFormData.phone || ''}
+                            onChange={(e) => setAddressFormData({...addressFormData, phone: e.target.value})}
+                            placeholder="+1 234 567 8900"
+                          />
+                        </div>
                         <div className="md:col-span-2">
                           <Label htmlFor="address_line1">Street Address *</Label>
                           <Input
@@ -1054,10 +1091,11 @@ export default function Checkout() {
                           <Label htmlFor="country">Country *</Label>
                           <Input
                             id="country"
-                            value={addressFormData.country}
-                            onChange={(e) => setAddressFormData({...addressFormData, country: e.target.value})}
-                            placeholder="United States"
+                            value={countries?.find(c => c.code === addressFormData.country)?.name || addressFormData.country}
+                            disabled
+                            className="bg-gray-100"
                           />
+                          <p className="text-xs text-muted-foreground mt-1">Country is determined by your quote's destination</p>
                         </div>
                       </div>
                       
