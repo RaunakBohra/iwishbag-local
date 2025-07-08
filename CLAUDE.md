@@ -12,6 +12,7 @@ user side pages and admin side pages are different, be careful while making chan
 - **Forms**: React Hook Form + Zod validation
 - **Payment**: PayU integration
 - **Routing**: React Router v6
+- follow DRY principles to enture you reuse components when available rather than creating new ones
 
 ## Important Notes
 - Always check RLS policies when modifying database queries
