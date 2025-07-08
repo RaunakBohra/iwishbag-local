@@ -21,6 +21,7 @@ import {
   X
 } from "lucide-react";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
+import { useQuoteDisplayCurrency } from "@/hooks/useQuoteDisplayCurrency";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useCart } from '@/hooks/useCart';
@@ -28,10 +29,50 @@ import { useDebounce } from '@/hooks/useDebounce';
 
 type SortOption = "date-desc" | "date-asc" | "price-desc" | "price-asc" | "name-asc" | "name-desc";
 
+// Component to display cart item price with proper currency conversion
+const CartItemPrice = ({ item, quantity }: { item: any; quantity: number }) => {
+  // Create a mock quote object for the cart item
+  const mockQuote = {
+    id: item.quoteId,
+    country_code: item.purchaseCountryCode || item.countryCode,
+    shipping_address: {
+      country_code: item.destinationCountryCode || item.countryCode
+    }
+  };
+  
+  // Use the quote display currency hook
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  
+  return <>{formatAmount(item.finalTotal * quantity)}</>;
+};
+
+// Component to display cart total with proper currency conversion
+const CartTotal = ({ items }: { items: any[] }) => {
+  // Use the first item to determine the quote format (all items should have same destination)
+  const firstItem = items[0];
+  if (!firstItem) return <>$0.00</>;
+  
+  const mockQuote = {
+    id: firstItem.quoteId,
+    country_code: firstItem.purchaseCountryCode || firstItem.countryCode,
+    shipping_address: {
+      country_code: firstItem.destinationCountryCode || firstItem.countryCode
+    }
+  };
+  
+  // Calculate total from all items
+  const totalAmount = items.reduce((sum, item) => sum + item.finalTotal * item.quantity, 0);
+  
+  // Use the quote display currency hook
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  
+  return <>{formatAmount(totalAmount)}</>;
+};
+
 
 export const Cart = () => {
   const { user } = useAuth();
-  const { formatAmount } = useUserCurrency();
+  const { formatAmount: formatUserAmount } = useUserCurrency();
   const { toast } = useToast();
   
   // Use the cart store and hook with FIXED calculations
@@ -414,10 +455,10 @@ export const Cart = () => {
                     </div>
                     <div className="text-right mt-2">
                       <div className="font-bold">
-                        {formatAmount(item.finalTotal * item.quantity)}
+                        <CartItemPrice item={item} quantity={item.quantity} />
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
+                        {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.destinationCountryCode || item.countryCode}
                       </div>
                     </div>
                   </div>
@@ -538,10 +579,10 @@ export const Cart = () => {
                     </div>
                     <div className="text-right mt-2">
                       <div className="font-bold">
-                        {formatAmount(item.finalTotal * item.quantity)}
+                        <CartItemPrice item={item} quantity={item.quantity} />
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
+                        {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.destinationCountryCode || item.countryCode}
                       </div>
                     </div>
                   </div>
@@ -605,7 +646,7 @@ export const Cart = () => {
                     </div>
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span>{formattedSelectedCartTotal}</span>
+                      <span><CartTotal items={getSelectedCartItems()} /></span>
                     </div>
                     <div className="flex justify-between">
                       <span>Weight:</span>
@@ -615,7 +656,7 @@ export const Cart = () => {
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total:</span>
-                    <span>{formattedSelectedCartTotal}</span>
+                    <span><CartTotal items={getSelectedCartItems()} /></span>
                   </div>
                   <Button 
                     onClick={handleCheckout} 

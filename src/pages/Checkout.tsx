@@ -36,6 +36,7 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Tables } from "@/integrations/supabase/types";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
+import { useQuoteDisplayCurrency } from "@/hooks/useQuoteDisplayCurrency";
 import { useCart } from "@/hooks/useCart";
 import { usePaymentGateways } from "@/hooks/usePaymentGateways";
 import { useAllCountries } from "@/hooks/useAllCountries";
@@ -61,6 +62,46 @@ interface AddressFormData {
   phone?: string;
   is_default: boolean;
 }
+
+// Component to display checkout item price with proper currency conversion
+const CheckoutItemPrice = ({ item }: { item: any }) => {
+  // Create a mock quote object for the cart item
+  const mockQuote = {
+    id: item.quoteId,
+    country_code: item.purchaseCountryCode || item.countryCode,
+    shipping_address: {
+      country_code: item.destinationCountryCode || item.countryCode
+    }
+  };
+  
+  // Use the quote display currency hook
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  
+  return <>{formatAmount(item.finalTotal)}</>;
+};
+
+// Component to display checkout total with proper currency conversion
+const CheckoutTotal = ({ items }: { items: any[] }) => {
+  // Use the first item to determine the quote format (all items should have same destination)
+  const firstItem = items[0];
+  if (!firstItem) return <>$0.00</>;
+  
+  const mockQuote = {
+    id: firstItem.quoteId,
+    country_code: firstItem.purchaseCountryCode || firstItem.countryCode,
+    shipping_address: {
+      country_code: firstItem.destinationCountryCode || firstItem.countryCode
+    }
+  };
+  
+  // Calculate total from all items
+  const totalAmount = items.reduce((sum, item) => sum + item.finalTotal, 0);
+  
+  // Use the quote display currency hook
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  
+  return <>{formatAmount(totalAmount)}</>;
+};
 
 export default function Checkout() {
   const { user } = useAuth();
@@ -1246,7 +1287,7 @@ export default function Checkout() {
                         <Badge variant="outline">{item.countryCode}</Badge> 
                       </div>
                       <div className="text-right">
-                        <div className="font-bold">{formatAmount(item.finalTotal)}</div>
+                        <div className="font-bold"><CheckoutItemPrice item={item} /></div>
                       </div>
                     </div>
                   ))}
@@ -1256,11 +1297,11 @@ export default function Checkout() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span>{formatAmount(totalAmount)}</span>
+                      <span><CheckoutTotal items={selectedCartItems} /></span>
                     </div>
                     <div className="flex justify-between font-bold text-lg">
                       <span>Total:</span>
-                      <span>{formatAmount(totalAmount)}</span>
+                      <span><CheckoutTotal items={selectedCartItems} /></span>
                     </div>
                   </div>
 
@@ -1279,7 +1320,11 @@ export default function Checkout() {
                       <>
                         {isGuestCheckout && checkoutMode === 'signin' && "Please Sign In Above First"}
                         {isGuestCheckout && checkoutMode === 'signup' && "Please Create Account Above First"}
-                        {(!isGuestCheckout || checkoutMode === 'guest') && `Place Order - ${formatAmount(totalAmount)}`}
+                        {(!isGuestCheckout || checkoutMode === 'guest') && (
+                          <>
+                            Place Order - <CheckoutTotal items={selectedCartItems} />
+                          </>
+                        )}
                       </>
                     )}
                   </Button>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ShoppingCart, Package, ArrowRight, Save, Search, SortAsc, SortDesc, Trash2, X } from "lucide-react";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
+import { useQuoteDisplayCurrency } from "@/hooks/useQuoteDisplayCurrency";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
@@ -24,6 +25,46 @@ import { Tables } from '@/integrations/supabase/types';
 import { useCart } from '@/hooks/useCart';
 
 type SortOption = "date-desc" | "date-asc" | "price-desc" | "price-asc" | "name-asc" | "name-desc";
+
+// Component to display cart item price with proper currency conversion
+const CartItemPrice = ({ item, quantity }: { item: any; quantity: number }) => {
+  // Create a mock quote object for the cart item
+  const mockQuote = {
+    id: item.quoteId,
+    country_code: item.purchaseCountryCode || item.countryCode,
+    shipping_address: {
+      country_code: item.destinationCountryCode || item.countryCode
+    }
+  };
+  
+  // Use the quote display currency hook
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  
+  return <>{formatAmount(item.finalTotal * quantity)}</>;
+};
+
+// Component to display cart total with proper currency conversion
+const CartTotal = ({ items }: { items: any[] }) => {
+  // Use the first item to determine the quote format (all items should have same destination)
+  const firstItem = items[0];
+  if (!firstItem) return <>$0.00</>;
+  
+  const mockQuote = {
+    id: firstItem.quoteId,
+    country_code: firstItem.purchaseCountryCode || firstItem.countryCode,
+    shipping_address: {
+      country_code: firstItem.destinationCountryCode || firstItem.countryCode
+    }
+  };
+  
+  // Calculate total from all items
+  const totalAmount = items.reduce((sum, item) => sum + item.finalTotal * item.quantity, 0);
+  
+  // Use the quote display currency hook
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  
+  return <>{formatAmount(totalAmount)}</>;
+};
 
 
 interface CartItemProps {
@@ -43,7 +84,7 @@ type CartQuoteItem = Tables<'quote_items'>;
 
 export const CartDrawer = () => {
   const { user } = useAuth();
-  const { formatAmount } = useUserCurrency();
+  const { formatAmount: formatUserAmount } = useUserCurrency();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -298,6 +339,11 @@ export const CartDrawer = () => {
   const getSelectedSavedItems = () => {
     return savedItems.filter(item => selectedItems.includes(item.id));
   };
+  
+  // Helper to get all selected items (both cart and saved)
+  const getAllSelectedItems = () => {
+    return [...cartItems, ...savedItems].filter(item => selectedItems.includes(item.id));
+  };
 
   const handleCheckout = async () => {
     if (!hasSelectedItems && hasCartItems) {
@@ -453,10 +499,10 @@ export const CartDrawer = () => {
                 </div>
                 <div className="text-right">
                   <div className="font-bold">
-                    {formatAmount(item.finalTotal * item.quantity)}
+                    <CartItemPrice item={item} quantity={item.quantity} />
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
+                    {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.destinationCountryCode || item.countryCode}
                   </div>
                 </div>
               </div>
@@ -539,10 +585,10 @@ export const CartDrawer = () => {
                 </div>
                 <div className="text-right">
                   <div className="font-bold">
-                    {formatAmount(item.finalTotal * item.quantity)}
+                    <CartItemPrice item={item} quantity={item.quantity} />
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.countryCode}
+                    {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.destinationCountryCode || item.countryCode}
                   </div>
                 </div>
               </div>
@@ -604,8 +650,10 @@ export const CartDrawer = () => {
                 <>
                   {/* Total Display */}
                   <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                    <span className="font-medium">Total ({selectedItems.length} items):</span>
-                    <span className="font-bold text-lg">{formattedSelectedTotal}</span>
+                    <span className="font-medium">Total ({getAllSelectedItems().length} items):</span>
+                    <span className="font-bold text-lg">
+                      <CartTotal items={getAllSelectedItems()} />
+                    </span>
                   </div>
                   <div className="flex gap-2">
                     <Button 
