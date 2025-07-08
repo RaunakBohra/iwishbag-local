@@ -40,8 +40,8 @@ const formSchema = z.object({
   items: z.array(quoteItemSchema).min(1, "Please add at least one item."),
   purchaseCountry: z.string().min(1, { message: "Please select purchase country." }),
   shippingCountry: z.string().min(1, { message: "Please select shipping country." }),
-  email: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal("")),
-  userId: z.string().optional(),
+  email: z.string().min(1, { message: "Please enter an email." }),
+  userId: z.string().nullable().optional(),
   customerCurrency: z.string().min(1, { message: "Please select customer currency." }),
 });
 
@@ -64,7 +64,7 @@ export const CreateQuoteModal = ({ isOpen, onOpenChange, onQuoteCreated }: Creat
       email: "",
       purchaseCountry: "",
       shippingCountry: "",
-      userId: undefined,
+      userId: null,
       customerCurrency: "",
     },
   });
@@ -100,6 +100,10 @@ export const CreateQuoteModal = ({ isOpen, onOpenChange, onQuoteCreated }: Creat
     // Determine origin currency from purchase country
     const originCurrency = allCountries?.find(c => c.code === purchaseCountry)?.currency || 'USD';
 
+    // Determine if this is for a registered user or guest
+    const isRegisteredUser = !!userId;
+    
+    
     const { data: quote, error: quoteError } = await supabase
       .from("quotes")
       .insert({
@@ -109,9 +113,9 @@ export const CreateQuoteModal = ({ isOpen, onOpenChange, onQuoteCreated }: Creat
         currency: originCurrency, // Currency for calculations
         final_currency: customerCurrency, // Customer's preferred display currency
         status: defaultStatus,
-        // Admin-created quotes don't link to user profiles
-        user_id: null,
-        is_anonymous: true, // Admin-created quotes are anonymous
+        // For registered users, link to their profile
+        user_id: isRegisteredUser ? userId : null,
+        is_anonymous: !isRegisteredUser, // Anonymous only for non-registered users
         shipping_address: {
           country_code: shippingCountry // Minimal address with just shipping country for calculator
         }
@@ -195,6 +199,7 @@ export const CreateQuoteModal = ({ isOpen, onOpenChange, onQuoteCreated }: Creat
                 setValue={form.setValue} 
                 enableUserSearch={true} 
               />
+              
               
               <div className="grid grid-cols-2 gap-4">
                 <CountryField 

@@ -33,16 +33,14 @@ interface GuestEmailFieldProps {
 }
 
 const fetchUserEmails = async () => {
-  console.log("Fetching user emails...");
   
   // First fetch registered users from profiles
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("id, email, full_name")
+    .select("*")
     .not("email", "is", null)
     .order("email");
 
-  console.log("Profiles query result:", { profiles, profilesError });
 
   if (profilesError) {
     console.error("Error fetching user profiles:", profilesError);
@@ -103,19 +101,13 @@ export const GuestEmailField = ({
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["user-emails-for-quote"],
     queryFn: fetchUserEmails,
-    enabled: enableUserSearch,
-    onSuccess: (data) => {
-      console.log("Fetched user emails:", data);
-    },
-    onError: (error) => {
-      console.error("Failed to fetch user emails:", error);
-    }
+    enabled: enableUserSearch
   });
 
   const handleSelect = (email: string, userId: string | null) => {
     setValue("email", email, { shouldValidate: true });
     if (enableUserSearch) {
-      setValue("userId", userId);
+      setValue("userId", userId, { shouldValidate: true });
     }
     setOpen(false);
     setSearch("");
@@ -126,6 +118,7 @@ export const GuestEmailField = ({
         u.email.toLowerCase().includes(search.toLowerCase())
       )
     : users;
+    
 
   return (
     <FormField
@@ -158,21 +151,46 @@ export const GuestEmailField = ({
             <PopoverContent className="w-[550px] p-0">
               <Command>
                 <CommandInput
-                  placeholder="Search email..."
+                  placeholder="Search or type new email..."
                   value={search}
                   onValueChange={setSearch}
+                  onKeyDown={(e) => {
+                    // Handle Enter key for new email
+                    if (e.key === 'Enter' && 
+                        search.length > 0 && 
+                        search.includes('@') && 
+                        search.includes('.') &&
+                        !filteredUsers.some(u => u.email === search)) {
+                      e.preventDefault();
+                      handleSelect(search, null);
+                      setSearch("");
+                    }
+                  }}
                 />
                 <CommandList>
                   {isLoading && (
                     <div className="p-2 text-sm text-center">Loading...</div>
                   )}
-                  {!isLoading && filteredUsers.length === 0 && search.length > 0 && (
-                     <CommandItem
-                       onSelect={() => handleSelect(search, null)}
-                       className="cursor-pointer"
-                     >
-                       Use new email: "{search}"
-                     </CommandItem>
+                  {!isLoading && search.length > 0 && !filteredUsers.some(u => u.email === search) && (
+                     <>
+                       {/* Show email validation hint if not valid */}
+                       {search.includes('@') && search.includes('.') ? (
+                         <CommandItem
+                           value={search}
+                           onSelect={() => {
+                             handleSelect(search, null);
+                             setSearch("");
+                           }}
+                           className="cursor-pointer"
+                         >
+                           Use new email: "{search}"
+                         </CommandItem>
+                       ) : (
+                         <div className="p-2 text-sm text-muted-foreground text-center">
+                           Type a valid email address (e.g., user@example.com)
+                         </div>
+                       )}
+                     </>
                    )}
                   {filteredUsers.some(u => u.userId) && (
                     <CommandGroup heading="Registered Users">
