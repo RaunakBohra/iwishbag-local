@@ -40,7 +40,7 @@ const formSchema = z.object({
   items: z.array(quoteItemSchema).min(1, "Please add at least one item."),
   purchaseCountry: z.string().min(1, { message: "Please select purchase country." }),
   shippingCountry: z.string().min(1, { message: "Please select shipping country." }),
-  email: z.string().min(1, { message: "Please enter an email." }),
+  email: z.string().optional().or(z.literal("")),
   userId: z.string().nullable().optional(),
   customerCurrency: z.string().min(1, { message: "Please select customer currency." }),
 });

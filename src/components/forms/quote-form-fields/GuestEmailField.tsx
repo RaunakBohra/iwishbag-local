@@ -126,7 +126,7 @@ export const GuestEmailField = ({
       name="email"
       render={({ field }) => (
         <FormItem>
-          <FormLabel>Customer Email</FormLabel>
+          <FormLabel>Customer Email (Optional)</FormLabel>
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
               <FormControl>
@@ -143,7 +143,7 @@ export const GuestEmailField = ({
                     ? field.value
                     : isLoading && enableUserSearch
                     ? "Loading emails..."
-                    : "Select or type an email..."}
+                    : "Select email or leave empty..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </FormControl>
