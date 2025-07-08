@@ -33,25 +33,61 @@ interface GuestEmailFieldProps {
 }
 
 const fetchUserEmails = async () => {
-  const { data, error } = await supabase
-    .from("quotes")
-    .select("email, user_id")
-    .not("email", "is", null);
+  console.log("Fetching user emails...");
+  
+  // First fetch registered users from profiles
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, email, full_name")
+    .not("email", "is", null)
+    .order("email");
 
-  if (error) {
-    console.error("Error fetching user emails:", error);
-    return [];
+  console.log("Profiles query result:", { profiles, profilesError });
+
+  if (profilesError) {
+    console.error("Error fetching user profiles:", profilesError);
   }
 
-  const distinctUsers: { email: string; userId: string | null }[] = [];
+  // Also fetch unique emails from quotes (for guest users)
+  const { data: quoteEmails, error: quotesError } = await supabase
+    .from("quotes")
+    .select("email, user_id")
+    .not("email", "is", null)
+    .is("user_id", null); // Only get guest emails
+
+  if (quotesError) {
+    console.error("Error fetching quote emails:", quotesError);
+  }
+
+  const distinctUsers: { email: string; userId: string | null; name?: string }[] = [];
   const seenEmails = new Set<string>();
 
-  data.forEach((item) => {
-    if (item.email && !seenEmails.has(item.email)) {
-      seenEmails.add(item.email);
-      distinctUsers.push({ email: item.email, userId: item.user_id });
-    }
-  });
+  // Add registered users first
+  if (profiles) {
+    profiles.forEach((profile) => {
+      if (profile.email && !seenEmails.has(profile.email)) {
+        seenEmails.add(profile.email);
+        distinctUsers.push({ 
+          email: profile.email, 
+          userId: profile.id,
+          name: profile.full_name 
+        });
+      }
+    });
+  }
+
+  // Add guest emails from quotes
+  if (quoteEmails) {
+    quoteEmails.forEach((item) => {
+      if (item.email && !seenEmails.has(item.email)) {
+        seenEmails.add(item.email);
+        distinctUsers.push({ 
+          email: item.email, 
+          userId: null 
+        });
+      }
+    });
+  }
 
   return distinctUsers;
 };
@@ -68,6 +104,12 @@ export const GuestEmailField = ({
     queryKey: ["user-emails-for-quote"],
     queryFn: fetchUserEmails,
     enabled: enableUserSearch,
+    onSuccess: (data) => {
+      console.log("Fetched user emails:", data);
+    },
+    onError: (error) => {
+      console.error("Failed to fetch user emails:", error);
+    }
   });
 
   const handleSelect = (email: string, userId: string | null) => {
@@ -132,25 +174,56 @@ export const GuestEmailField = ({
                        Use new email: "{search}"
                      </CommandItem>
                    )}
-                  <CommandGroup>
-                    {filteredUsers.map((user) => (
-                      <CommandItem
-                        value={user.email}
-                        key={user.email}
-                        onSelect={() => handleSelect(user.email, user.userId)}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            field.value === user.email
-                              ? "opacity-100"
-                              : "opacity-0"
-                          )}
-                        />
-                        {user.email}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
+                  {filteredUsers.some(u => u.userId) && (
+                    <CommandGroup heading="Registered Users">
+                      {filteredUsers.filter(u => u.userId).map((user) => (
+                        <CommandItem
+                          value={user.email}
+                          key={user.email}
+                          onSelect={() => handleSelect(user.email, user.userId)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              field.value === user.email
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span>{user.email}</span>
+                            {user.name && (
+                              <span className="text-sm text-muted-foreground">{user.name}</span>
+                            )}
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                  {filteredUsers.some(u => !u.userId) && (
+                    <CommandGroup heading="Guest Emails">
+                      {filteredUsers.filter(u => !u.userId).map((user) => (
+                        <CommandItem
+                          value={user.email}
+                          key={user.email}
+                          onSelect={() => handleSelect(user.email, user.userId)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              field.value === user.email
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span>{user.email}</span>
+                            <span className="text-xs text-muted-foreground">(Guest)</span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
                 </CommandList>
               </Command>
             </PopoverContent>

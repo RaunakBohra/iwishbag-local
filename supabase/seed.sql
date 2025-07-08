@@ -200,6 +200,20 @@ INSERT INTO system_settings (setting_key, setting_value, description) VALUES
 ('email_notifications_enabled', 'true', 'Enable system-wide email notifications')
 ON CONFLICT (setting_key) DO NOTHING;
 
+-- Insert customs categories (required for quote calculations)
+INSERT INTO public.customs_categories (name, duty_percent)
+VALUES
+('Electronics', 5.00),
+('Clothing & Textiles', 15.00),
+('Home & Garden', 8.00),
+('Beauty & Health', 10.00),
+('Sports & Outdoors', 12.00),
+('Toys & Games', 5.00),
+('Books & Media', 0.00),
+('Automotive', 8.00),
+('General Goods', 5.00)
+ON CONFLICT (name) DO NOTHING;
+
 -- Insert test footer settings
 INSERT INTO footer_settings (company_name, company_description, primary_phone, secondary_phone, primary_email, support_email, primary_address, secondary_address, business_hours, social_twitter, social_facebook, social_instagram, social_linkedin, website_logo_url, hero_banner_url, hero_headline, hero_subheadline, hero_cta_text, hero_cta_link, how_it_works_steps, value_props) VALUES
 ('iWishBag', 'Your trusted partner for international shopping and delivery', '+1-555-0123', '+1-555-0124', 'hello@iwishbag.com', 'support@iwishbag.com', '123 Main St, New York, NY 10001', '456 Business Ave, San Francisco, CA 94102', 'Mon-Fri: 9AM-6PM EST', 'https://twitter.com/iwishbag', 'https://facebook.com/iwishbag', 'https://instagram.com/iwishbag', 'https://linkedin.com/company/iwishbag', 'https://iwishbag.com/logo.png', 'https://iwishbag.com/hero-banner.jpg', 'Shop Globally, Delivered Locally', 'Get anything from anywhere in the world delivered to your doorstep', 'Get Started', '/quote', '[
@@ -261,6 +275,110 @@ INSERT INTO shipping_routes (origin_country, destination_country, base_shipping_
   {"name": "DHL", "cost_multiplier": 1.0, "days": "8-12"},
   {"name": "FedEx", "cost_multiplier": 0.9, "days": "10-14"}
 ]');
+
+-- Sync auth.users to profiles table after seed
+-- This ensures all authenticated users have a profile entry with email
+DO $$
+BEGIN
+  -- Insert any missing profiles from auth.users
+  INSERT INTO public.profiles (id, email, full_name, created_at, updated_at)
+  SELECT 
+    au.id,
+    au.email,
+    COALESCE(au.raw_user_meta_data->>'full_name', split_part(au.email, '@', 1)) as full_name,
+    au.created_at,
+    au.updated_at
+  FROM auth.users au
+  LEFT JOIN public.profiles p ON p.id = au.id
+  WHERE p.id IS NULL
+    AND au.email IS NOT NULL;
+
+  -- Update existing profiles that don't have email set
+  UPDATE public.profiles p
+  SET email = au.email
+  FROM auth.users au
+  WHERE p.id = au.id
+    AND p.email IS NULL
+    AND au.email IS NOT NULL;
+    
+  -- Update iwbtracking@gmail.com profile with a proper name if it exists
+  UPDATE public.profiles 
+  SET full_name = 'IWB Tracking' 
+  WHERE email = 'iwbtracking@gmail.com' AND (full_name IS NULL OR full_name = '');
+END $$;
+
+-- Verify database schema is correct for anonymous quotes
+-- This checks that migrations have been applied correctly
+DO $$
+DECLARE
+  v_user_id_nullable boolean;
+  v_email_nullable boolean;
+BEGIN
+  -- Check if user_id column is nullable
+  SELECT is_nullable = 'YES' INTO v_user_id_nullable
+  FROM information_schema.columns 
+  WHERE table_schema = 'public' 
+    AND table_name = 'quotes' 
+    AND column_name = 'user_id';
+    
+  -- Check if email column is nullable  
+  SELECT is_nullable = 'YES' INTO v_email_nullable
+  FROM information_schema.columns 
+  WHERE table_schema = 'public' 
+    AND table_name = 'quotes' 
+    AND column_name = 'email';
+    
+  -- Raise notice about the current state
+  IF NOT v_user_id_nullable THEN
+    RAISE NOTICE 'WARNING: quotes.user_id is NOT NULL - admin quote creation may fail!';
+    RAISE NOTICE 'Run migration 20250708000013_consolidate_anonymous_quotes.sql to fix this.';
+  END IF;
+  
+  IF NOT v_email_nullable THEN
+    RAISE NOTICE 'WARNING: quotes.email is NOT NULL - anonymous quote creation may fail!';
+    RAISE NOTICE 'Run migration 20250708000013_consolidate_anonymous_quotes.sql to fix this.';
+  END IF;
+  
+  IF v_user_id_nullable AND v_email_nullable THEN
+    RAISE NOTICE 'Schema check passed: Anonymous quotes are properly supported.';
+  END IF;
+END $$;
+
+-- Verify critical functions exist
+DO $$
+DECLARE
+  v_function_count integer;
+BEGIN
+  -- Check for critical functions
+  SELECT COUNT(*) INTO v_function_count
+  FROM pg_proc p
+  JOIN pg_namespace n ON p.pronamespace = n.oid
+  WHERE n.nspname = 'public' 
+    AND p.proname IN ('generate_display_id', 'get_shipping_cost', 'expire_quotes', 'has_role', 'handle_new_user', 'get_all_user_emails');
+    
+  IF v_function_count < 6 THEN
+    RAISE NOTICE 'WARNING: Some critical functions are missing! Expected 6, found %', v_function_count;
+    RAISE NOTICE 'Missing functions may include: generate_display_id, get_shipping_cost, expire_quotes, has_role, handle_new_user, get_all_user_emails';
+  ELSE
+    RAISE NOTICE 'Function check passed: All critical functions exist.';
+  END IF;
+  
+  -- Check for critical tables with data
+  PERFORM 1 FROM customs_categories LIMIT 1;
+  IF NOT FOUND THEN
+    RAISE NOTICE 'WARNING: customs_categories table is empty - quote calculations may fail!';
+  END IF;
+  
+  PERFORM 1 FROM country_settings LIMIT 1;
+  IF NOT FOUND THEN
+    RAISE NOTICE 'WARNING: country_settings table is empty - shipping calculations may fail!';
+  END IF;
+  
+  PERFORM 1 FROM system_settings WHERE setting_key = 'quote_statuses' LIMIT 1;
+  IF NOT FOUND THEN
+    RAISE NOTICE 'WARNING: quote_statuses not configured in system_settings!';
+  END IF;
+END $$;
 
 -- Insert test customer profiles with names (commented out due to foreign key constraints)
 -- INSERT INTO profiles (id, full_name, cod_enabled, internal_notes, created_at) VALUES

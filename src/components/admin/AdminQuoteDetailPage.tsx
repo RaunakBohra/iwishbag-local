@@ -87,7 +87,7 @@ const AdminQuoteDetailPage = () => {
       if (!quote?.user_id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, email')
+        .select('full_name, email, country')
         .eq('id', quote.user_id)
         .maybeSingle();
       if (error) throw error;
@@ -615,6 +615,15 @@ const AdminQuoteDetailPage = () => {
                         <Badge variant="secondary" className="text-xs">Admin Created</Badge>
                       )}
                     </div>
+                    {/* Country */}
+                    {customerProfile?.country && (
+                      <div className="flex items-center gap-2 text-sm min-w-0">
+                        <MapPin className="h-3 w-3 text-purple-600" />
+                        <span className="truncate">
+                          {allCountries?.find(c => c.code === customerProfile.country)?.name || customerProfile.country}
+                        </span>
+                      </div>
+                    )}
                     {/* Date */}
                     <div className="flex items-center gap-2 text-sm min-w-0">
                       <Calendar className="h-3 w-3 text-blue-600" />
@@ -628,15 +637,27 @@ const AdminQuoteDetailPage = () => {
                       <div className="flex items-center gap-2 text-sm min-w-0">
                         <MapPin className="h-3 w-3 text-green-600 flex-shrink-0 mt-0.5" />
                         <span className="text-green-800 truncate">
-                          {[
-                            shippingAddress.recipient_name || shippingAddress.fullName,
-                            shippingAddress.streetAddress,
-                            shippingAddress.addressLine2,
-                            shippingAddress.city,
-                            shippingAddress.state,
-                            shippingAddress.postalCode,
-                            shippingAddress.country
-                          ].filter(Boolean).join(', ')}
+                          {(() => {
+                            // Check if this is a minimal address (only country_code)
+                            const isMinimalAddress = Object.keys(shippingAddress).length === 1 && shippingAddress.country_code;
+                            
+                            if (isMinimalAddress) {
+                              // Display just the country name for minimal addresses
+                              const countryName = allCountries?.find(c => c.code === shippingAddress.country_code)?.name || shippingAddress.country_code;
+                              return `Shipping to: ${countryName}`;
+                            } else {
+                              // Full address display
+                              return [
+                                shippingAddress.recipient_name || shippingAddress.fullName,
+                                shippingAddress.streetAddress,
+                                shippingAddress.addressLine2,
+                                shippingAddress.city,
+                                shippingAddress.state,
+                                shippingAddress.postalCode,
+                                shippingAddress.country || shippingAddress.country_code
+                              ].filter(Boolean).join(', ');
+                            }
+                          })()}
                         </span>
                       </div>
                     )}

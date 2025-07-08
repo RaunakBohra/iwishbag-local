@@ -11,11 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, XCircle, Mail } from 'lucide-react';
+import { CheckCircle, XCircle } from 'lucide-react';
 
 interface GuestApprovalDialogProps {
   isOpen: boolean;
-  onClose: () => void;
+  onOpenChange?: (open: boolean) => void;
+  onClose?: () => void;
   quoteId: string;
   action: 'approve' | 'reject';
   onSuccess: () => void;
@@ -23,68 +24,25 @@ interface GuestApprovalDialogProps {
 
 export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
   isOpen,
+  onOpenChange,
   onClose,
   quoteId,
   action,
   onSuccess,
 }) => {
-  const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email.trim()) {
-      toast({
-        title: "Email Required",
-        description: "Please enter your email address to continue.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleSubmit = async () => {
     setIsSubmitting(true);
     
     try {
-      // Update quote with guest email and approval status
-      // Transition from anonymous to identified guest (user_id will be set when temp account is created)
+      // Simple update - just change the status, no email required
       const updateData = {
-        email: email,
         status: action === 'approve' ? 'approved' : 'rejected',
         [action === 'approve' ? 'approved_at' : 'rejected_at']: new Date().toISOString(),
-        is_anonymous: false, // Transition to identified guest
       };
 
-      console.log('Updating quote with data:', JSON.stringify(updateData), 'for quoteId:', quoteId);
-
-      // First, let's check what the current quote looks like
-      const { data: currentQuote, error: fetchError } = await supabase
-        .from('quotes')
-        .select('id, status, is_anonymous, share_token, email')
-        .eq('id', quoteId)
-        .single();
-
-      console.log('Current quote before update:', JSON.stringify(currentQuote));
-      
-      if (fetchError) {
-        console.error('Error fetching current quote:', fetchError);
-        throw new Error(`Cannot access quote: ${fetchError.message}`);
-      }
-
-      // Update the quote directly - RLS policy should allow this for shared quotes
-      console.log('Updating shared quote directly...');
       
       const { data, error } = await supabase
         .from('quotes')
@@ -92,7 +50,6 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
         .eq('id', quoteId)
         .select();
 
-      console.log('Update result:', JSON.stringify({ data, error }));
 
       if (error) {
         console.error('Database update error:', error);
@@ -105,12 +62,24 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
 
       toast({
         title: action === 'approve' ? "Quote Approved!" : "Quote Rejected",
-        description: `Thank you for your response. You'll receive updates at ${email}`,
+        description: action === 'approve' 
+          ? `Thank you for your approval. You'll now be redirected to checkout.`
+          : `Thank you for your response.`,
       });
 
+      // Call onSuccess first to refresh the quote data
       onSuccess();
-      onClose();
-      setEmail('');
+      
+      // If approved, redirect to guest checkout after a short delay
+      if (action === 'approve') {
+        setTimeout(() => {
+          // Navigate to guest checkout with just the quote ID
+          window.location.href = `/guest-checkout?quote=${quoteId}`;
+        }, 1000); // Give time for the success toast to show
+      } else {
+        if (onClose) onClose();
+        if (onOpenChange) onOpenChange(false);
+      }
       
     } catch (error: any) {
       console.error(`Error ${action}ing quote:`, error);
@@ -128,8 +97,13 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
   const actionColor = action === 'approve' ? 'text-green-600' : 'text-red-600';
   const ActionIcon = action === 'approve' ? CheckCircle : XCircle;
 
+  const handleClose = () => {
+    if (onClose) onClose();
+    if (onOpenChange) onOpenChange(false);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange || handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className={`flex items-center gap-2 ${actionColor}`}>
@@ -137,41 +111,25 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
             {actionText} Quote
           </DialogTitle>
           <DialogDescription>
-            Please provide your email address to {action === 'approve' ? 'approve' : 'reject'} this quote.
-            We'll send you updates and allow you to proceed with your order.
+            {action === 'approve' 
+              ? 'Approve this quote to proceed to checkout where you can complete your order.'
+              : 'Reject this quote if you do not wish to proceed with this order.'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="guest-email">Email Address</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="guest-email"
-                type="email"
-                placeholder="your.email@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
-                disabled={isSubmitting}
-                required
-              />
-            </div>
-          </div>
-
+        <div className="space-y-4">
           <div className="flex gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isSubmitting}
               className="flex-1"
             >
               Cancel
             </Button>
             <Button
-              type="submit"
+              onClick={handleSubmit}
               disabled={isSubmitting}
               className={`flex-1 ${
                 action === 'approve' 
@@ -192,22 +150,22 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
               )}
             </Button>
           </div>
-        </form>
+        </div>
 
         <div className="text-xs text-muted-foreground mt-4 p-3 bg-muted rounded-lg">
           <strong>What happens next?</strong>
           <ul className="mt-1 space-y-1">
             {action === 'approve' ? (
               <>
-                <li>• You'll be able to add this quote to your cart</li>
-                <li>• We'll create a secure account for you during checkout</li>
-                <li>• You'll receive order updates at this email</li>
+                <li>• You'll be redirected to checkout to complete your order</li>
+                <li>• You can choose to checkout as a guest or create an account</li>
+                <li>• We'll collect your contact details during checkout</li>
               </>
             ) : (
               <>
                 <li>• This quote will be marked as rejected</li>
-                <li>• You'll receive a confirmation email</li>
                 <li>• You can contact us if you change your mind</li>
+                <li>• No further action is required</li>
               </>
             )}
           </ul>

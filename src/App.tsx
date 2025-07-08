@@ -20,7 +20,6 @@ const Quotes = React.lazy(() => import("@/pages/dashboard/Quotes"));
 const Orders = React.lazy(() => import("@/pages/dashboard/Orders"));
 const QuoteDetail = React.lazy(() => import("@/pages/dashboard/QuoteDetail"));
 const OrderDetail = React.lazy(() => import("@/pages/dashboard/OrderDetail"));
-const QuoteDetails = React.lazy(() => import("@/pages/QuoteDetails"));
 const Profile = React.lazy(() => import("@/pages/Profile"));
 const About = React.lazy(() => import("@/pages/About"));
 const Blog = React.lazy(() => import("@/pages/Blog"));
@@ -34,7 +33,7 @@ const CustomerOrderDetailPage = React.lazy(() => import("@/pages/CustomerOrderDe
 const OrderConfirmationPage = React.lazy(() => import("@/pages/OrderConfirmationPage"));
 const PaymentSuccess = React.lazy(() => import("@/pages/PaymentSuccess"));
 const PaymentFailure = React.lazy(() => import("@/pages/PaymentFailure"));
-const ShareTokenQuote = React.lazy(() => import("@/pages/ShareTokenQuote"));
+const QuoteDetailUnified = React.lazy(() => import("@/pages/dashboard/QuoteDetailUnified"));
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import("@/pages/admin/Dashboard"));
@@ -134,7 +133,11 @@ const router = createBrowserRouter([
       },
       {
         path: "s/:shareToken",
-        element: <ShareTokenQuote />,
+        element: <QuoteDetailUnified isShareToken={true} />,
+      },
+      {
+        path: "guest-checkout",
+        element: <Checkout />,
       },
       {
         element: <ProtectedRoute />,
@@ -149,7 +152,7 @@ const router = createBrowserRouter([
           },
           {
             path: "dashboard/quotes/:id",
-            element: <QuoteDetail />,
+            element: <QuoteDetailUnified />,
           },
           {
             path: "dashboard/orders",
@@ -161,7 +164,7 @@ const router = createBrowserRouter([
           },
           {
             path: "quote/:id",
-            element: <QuoteDetails />,
+            element: <QuoteDetailUnified />,
           },
           {
             path: "order/:id",

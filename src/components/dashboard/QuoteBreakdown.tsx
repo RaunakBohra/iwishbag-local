@@ -42,6 +42,7 @@ interface QuoteBreakdownProps {
   onCancel: (quoteId: string) => void;
   isProcessing: boolean;
   onAddToCart?: (quoteId: string) => void;
+  addToCartText?: string;
 }
 
 const getQuoteUIState = (quote: any) => {
@@ -77,7 +78,7 @@ const getQuoteUIState = (quote: any) => {
   return { step, summaryStatus, rejected: step === 'rejected' };
 };
 
-export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onRecalculate, onSave, onCancel, onAddToCart }: QuoteBreakdownProps) {
+export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onRecalculate, onSave, onCancel, onAddToCart, addToCartText }: QuoteBreakdownProps) {
   const [isItemsExpanded, setIsItemsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -190,7 +191,7 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
               {quote.status !== 'rejected' && (
                 <Button onClick={handleAddToCart} disabled={isProcessing} className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm">
                   <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  Add to Cart
+                  {addToCartText || "Add to Cart"}
                 </Button>
               )}
               {quote.status !== 'rejected' && (

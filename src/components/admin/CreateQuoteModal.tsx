@@ -109,8 +109,9 @@ export const CreateQuoteModal = ({ isOpen, onOpenChange, onQuoteCreated }: Creat
         currency: originCurrency, // Currency for calculations
         final_currency: customerCurrency, // Customer's preferred display currency
         status: defaultStatus,
-        user_id: null, // Admin-created quotes don't link to user profiles to avoid showing admin info
-        is_anonymous: !cleanEmail, // Anonymous if no email provided
+        // Admin-created quotes don't link to user profiles
+        user_id: null,
+        is_anonymous: true, // Admin-created quotes are anonymous
         shipping_address: {
           country_code: shippingCountry // Minimal address with just shipping country for calculator
         }

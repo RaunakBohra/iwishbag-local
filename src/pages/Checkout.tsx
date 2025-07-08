@@ -115,23 +115,38 @@ export default function Checkout() {
 
   // Get selected quote IDs from URL params
   const selectedQuoteIds = searchParams.get('quotes')?.split(',') || [];
+  
+  // Check if this is a guest checkout
+  const guestQuoteId = searchParams.get('quote');
+  const isGuestCheckout = !!guestQuoteId;
+
+  // Guest checkout mode: 'guest', 'signup', 'signin'
+  const [checkoutMode, setCheckoutMode] = useState<'guest' | 'signup' | 'signin'>('guest');
+  
+  // Account creation fields (only used for signup/signin)
+  const [accountData, setAccountData] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  
+  // Guest contact info (for guest checkout)
+  const [guestContact, setGuestContact] = useState({
+    email: '',
+    fullName: ''
+  });
 
   const { data: userProfile } = useUserProfile();
   const { formatAmount } = useUserCurrency();
 
   // Load cart data from server when component mounts (same as Cart component)
   useEffect(() => {
-    if (user && !cartLoading && !hasLoadedFromServer) {
-      // Only load from server if not already loading and not already loaded
+    if (user && !cartLoading && !hasLoadedFromServer && !isGuestCheckout) {
+      // Only load from server if not already loading and not already loaded, and not guest checkout
       loadFromServer(user.id);
     }
-  }, [user, loadFromServer, cartLoading, hasLoadedFromServer]);
-
-  // Get selected cart items based on quote IDs
-  // If no URL parameters, use all cart items (for direct navigation to /checkout)
-  const selectedCartItems = selectedQuoteIds.length > 0 
-    ? cartItems.filter(item => selectedQuoteIds.includes(item.quoteId))
-    : cartItems; // Use all cart items when no specific quotes are selected
+  }, [user, loadFromServer, cartLoading, hasLoadedFromServer, isGuestCheckout]);
 
   // Set recommended payment method when available methods load
   useEffect(() => {
@@ -149,6 +164,51 @@ export default function Checkout() {
     }
   }, [availableMethods, getRecommendedPaymentMethod, paymentMethod]);
 
+  // Fetch guest quote if this is a guest checkout
+  const { data: guestQuote, isLoading: guestQuoteLoading } = useQuery({
+    queryKey: ['guest-quote', guestQuoteId],
+    queryFn: async () => {
+      if (!guestQuoteId) return null;
+      
+      const { data, error } = await supabase
+        .from('quotes')
+        .select(`
+          *,
+          quote_items (*)
+        `)
+        .eq('id', guestQuoteId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!guestQuoteId,
+  });
+
+  // Pre-fill guest contact info from quote if available
+  useEffect(() => {
+    if (guestQuote && isGuestCheckout) {
+      setGuestContact({
+        email: guestQuote.email || '',
+        fullName: guestQuote.customer_name || ''
+      });
+    }
+  }, [guestQuote, isGuestCheckout]);
+
+  // Get selected cart items based on quote IDs
+  // If no URL parameters, use all cart items (for direct navigation to /checkout)
+  const selectedCartItems = isGuestCheckout 
+    ? (guestQuote ? [{
+        quoteId: guestQuote.id,
+        productName: guestQuote.quote_items?.[0]?.product_name || "Product",
+        quantity: guestQuote.quote_items?.reduce((sum, item) => sum + item.quantity, 0) || 1,
+        finalTotal: guestQuote.final_total || 0,
+        countryCode: guestQuote.destination_country || "Unknown"
+      }] : [])
+    : selectedQuoteIds.length > 0 
+    ? cartItems.filter(item => selectedQuoteIds.includes(item.quoteId))
+    : cartItems; // Use all cart items when no specific quotes are selected
+
   // Queries
   const { data: addresses, isLoading: addressesLoading } = useQuery({
     queryKey: ['user_addresses', user?.id],
@@ -163,7 +223,7 @@ export default function Checkout() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!user && !isGuestCheckout, // Don't load for guest checkout
   });
 
   // Auto-select default address
@@ -256,7 +316,15 @@ export default function Checkout() {
   const cartQuoteIds = selectedCartItems.map(item => item.quoteId);
 
   // Validation
-  const canPlaceOrder = selectedAddress && paymentMethod && selectedCartItems.length > 0;
+  const canPlaceOrder = selectedAddress && paymentMethod && selectedCartItems.length > 0 && 
+    (!isGuestCheckout || (
+      checkoutMode === 'guest' 
+        ? (guestContact.email && guestContact.fullName)
+        : checkoutMode === 'signin'
+        ? (accountData.email && accountData.password)
+        : (accountData.email && accountData.password && accountData.fullName && 
+           accountData.password === accountData.confirmPassword)
+    ));
 
   const handleAddAddress = async () => {
     if (!addressFormData.address_line1 || !addressFormData.city || 
@@ -266,6 +334,18 @@ export default function Checkout() {
         title: "Missing Information", 
         description: "Please fill in all required fields.", 
         variant: "destructive"
+      });
+      return;
+    }
+
+    if (isGuestCheckout) {
+      // For guest checkout, we'll save the address after account creation
+      // For now, just close the form and mark address as "provided"
+      setShowAddressForm(false);
+      setSelectedAddress('guest-address'); // Use a placeholder ID
+      toast({ 
+        title: "Address Added", 
+        description: "Address will be saved when you complete your order." 
       });
       return;
     }
@@ -340,6 +420,31 @@ export default function Checkout() {
       return;
     }
 
+    // Validate guest checkout data
+    if (isGuestCheckout) {
+      if (checkoutMode === 'guest') {
+        if (!guestContact.email || !guestContact.fullName) {
+          toast({ title: "Missing Information", description: "Please fill in your contact details.", variant: "destructive" });
+          return;
+        }
+      } else if (checkoutMode === 'signin') {
+        if (!accountData.email || !accountData.password) {
+          toast({ title: "Missing Information", description: "Please fill in email and password.", variant: "destructive" });
+          return;
+        }
+      } else if (checkoutMode === 'signup') {
+        if (!accountData.email || !accountData.password || !accountData.fullName) {
+          toast({ title: "Missing Information", description: "Please fill in all account details.", variant: "destructive" });
+          return;
+        }
+        
+        if (accountData.password !== accountData.confirmPassword) {
+          toast({ title: "Password Mismatch", description: "Passwords do not match.", variant: "destructive" });
+          return;
+        }
+      }
+    }
+
     const paymentRequest: PaymentRequest = {
       quoteIds: cartQuoteIds,
       amount: totalAmount,
@@ -358,6 +463,61 @@ export default function Checkout() {
     setIsProcessing(true);
 
     try {
+      // Handle guest checkout
+      if (isGuestCheckout) {
+        try {
+          let userId: string | null = null;
+
+
+          if (checkoutMode === 'guest') {
+            // Pure guest checkout - no account creation
+            
+            // Update quote with guest contact info - set is_anonymous to false since we now have email
+            const { error: quoteUpdateError } = await supabase
+              .from('quotes')
+              .update({
+                customer_name: guestContact.fullName,
+                email: guestContact.email,
+                is_anonymous: false, // Set to false since we now have email (satisfies constraint)
+                user_id: null, // Keep user_id as null for guest checkout
+              })
+              .eq('id', guestQuoteId);
+
+            if (quoteUpdateError) {
+              console.error('Quote update error:', quoteUpdateError);
+              throw new Error(`Failed to update quote: ${quoteUpdateError.message}`);
+            }
+
+            toast({ 
+              title: "Processing Order", 
+              description: "Processing your order as a guest." 
+            });
+
+          } else {
+            // For signin/signup modes, this shouldn't be reached
+            toast({ 
+              title: "Action Required", 
+              description: checkoutMode === 'signin' 
+                ? "Please use the 'Sign In' button above first." 
+                : "Please use the 'Create Account' button above first.", 
+              variant: "destructive" 
+            });
+            setIsProcessing(false);
+            return;
+          }
+
+
+        } catch (error: any) {
+          console.error('Guest checkout failed:', error);
+          toast({ 
+            title: "Checkout Failed", 
+            description: error.message, 
+            variant: "destructive" 
+          });
+          return;
+        }
+      }
+
       const paymentResponse = await createPaymentAsync(paymentRequest);
 
       if (paymentResponse.url) {
@@ -397,18 +557,20 @@ export default function Checkout() {
     }
   };
 
-  // Show loading spinner while cart is rehydrating
-  if (cartLoading) {
+  // Show loading spinner while cart is rehydrating or guest quote is loading
+  if (cartLoading || (isGuestCheckout && guestQuoteLoading)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-2" />
-        <span className="text-muted-foreground text-sm">Loading your cart...</span>
+        <span className="text-muted-foreground text-sm">
+          {isGuestCheckout ? "Loading your quote..." : "Loading your cart..."}
+        </span>
       </div>
     );
   }
 
   // Loading states
-  if (addressesLoading) {
+  if (addressesLoading && !isGuestCheckout) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -421,7 +583,7 @@ export default function Checkout() {
   }
 
   // Show no items message only after cart has loaded and is empty
-  if (!cartLoading && selectedCartItems.length === 0) {
+  if (!cartLoading && !guestQuoteLoading && selectedCartItems.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -451,6 +613,318 @@ export default function Checkout() {
           <div className="grid gap-8 lg:grid-cols-3">
             {/* Main Checkout Form */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Guest Checkout Options */}
+              {isGuestCheckout && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="h-5 w-5" />
+                      Checkout Options
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Three checkout mode buttons */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        type="button"
+                        variant={checkoutMode === 'guest' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCheckoutMode('guest')}
+                        className="text-xs"
+                      >
+                        Guest Checkout
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={checkoutMode === 'signup' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCheckoutMode('signup')}
+                        className="text-xs"
+                      >
+                        Create Account
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={checkoutMode === 'signin' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCheckoutMode('signin')}
+                        className="text-xs"
+                      >
+                        Sign In
+                      </Button>
+                    </div>
+
+                    {/* Dynamic form based on checkout mode */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {checkoutMode === 'guest' && (
+                        <>
+                          <div>
+                            <Label htmlFor="guest-full-name">Full Name *</Label>
+                            <Input
+                              id="guest-full-name"
+                              value={guestContact.fullName}
+                              onChange={(e) => setGuestContact({...guestContact, fullName: e.target.value})}
+                              placeholder="John Doe"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="guest-email">Email Address *</Label>
+                            <Input
+                              id="guest-email"
+                              type="email"
+                              value={guestContact.email}
+                              onChange={(e) => setGuestContact({...guestContact, email: e.target.value})}
+                              placeholder="john@example.com"
+                              required
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {(checkoutMode === 'signup' || checkoutMode === 'signin') && (
+                        <>
+                          {checkoutMode === 'signup' && (
+                            <div>
+                              <Label htmlFor="account-full-name">Full Name *</Label>
+                              <Input
+                                id="account-full-name"
+                                value={accountData.fullName}
+                                onChange={(e) => setAccountData({...accountData, fullName: e.target.value})}
+                                placeholder="John Doe"
+                                required
+                              />
+                            </div>
+                          )}
+                          <div className={checkoutMode === 'signup' ? "" : "md:col-span-2"}>
+                            <Label htmlFor="account-email">Email Address *</Label>
+                            <Input
+                              id="account-email"
+                              type="email"
+                              value={accountData.email}
+                              onChange={(e) => setAccountData({...accountData, email: e.target.value})}
+                              placeholder="john@example.com"
+                              required
+                            />
+                          </div>
+                          <div className={checkoutMode === 'signup' ? "" : "md:col-span-2"}>
+                            <Label htmlFor="account-password">Password *</Label>
+                            <Input
+                              id="account-password"
+                              type="password"
+                              value={accountData.password}
+                              onChange={(e) => setAccountData({...accountData, password: e.target.value})}
+                              placeholder={checkoutMode === 'signin' ? "Enter your password" : "Create a secure password"}
+                              required
+                            />
+                          </div>
+                          {checkoutMode === 'signup' && (
+                            <div>
+                              <Label htmlFor="account-confirm-password">Confirm Password *</Label>
+                              <Input
+                                id="account-confirm-password"
+                                type="password"
+                                value={accountData.confirmPassword}
+                                onChange={(e) => setAccountData({...accountData, confirmPassword: e.target.value})}
+                                placeholder="Confirm your password"
+                                required
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
+                      <p>
+                        {checkoutMode === 'guest' && "Complete your order without creating an account. You'll receive order updates via email."}
+                        {checkoutMode === 'signin' && "Sign in to your existing account to track your order and access your purchase history."}
+                        {checkoutMode === 'signup' && "Create an account to easily track your order and manage future purchases."}
+                      </p>
+                    </div>
+
+                    {/* Action buttons for signin/signup */}
+                    {checkoutMode === 'signin' && (
+                      <div className="flex justify-between items-center">
+                        <Button
+                          type="button"
+                          onClick={async () => {
+                            if (!accountData.email || !accountData.password) {
+                              toast({ 
+                                title: "Missing Information", 
+                                description: "Please enter your email and password", 
+                                variant: "destructive" 
+                              });
+                              return;
+                            }
+                            
+                            setIsProcessing(true);
+                            try {
+                              const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                                email: accountData.email,
+                                password: accountData.password,
+                              });
+
+                              if (signInError) {
+                                toast({ 
+                                  title: "Sign In Failed", 
+                                  description: "Invalid email or password. Please check your credentials.", 
+                                  variant: "destructive" 
+                                });
+                                return;
+                              }
+
+                              // Update quote ownership
+                              if (signInData.user) {
+                                await supabase
+                                  .from('quotes')
+                                  .update({
+                                    user_id: signInData.user.id,
+                                    is_anonymous: false
+                                  })
+                                  .eq('id', guestQuoteId);
+                              }
+
+                              toast({ 
+                                title: "Welcome Back!", 
+                                description: "Successfully signed in. Redirecting...", 
+                              });
+                              
+                              // Reload to refresh auth state
+                              setTimeout(() => window.location.reload(), 1000);
+                            } catch (error) {
+                              toast({ 
+                                title: "Error", 
+                                description: "Failed to sign in. Please try again.", 
+                                variant: "destructive" 
+                              });
+                            } finally {
+                              setIsProcessing(false);
+                            }
+                          }}
+                          disabled={isProcessing}
+                          className="w-full"
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Signing in...
+                            </>
+                          ) : (
+                            <>
+                              <User className="mr-2 h-4 w-4" />
+                              Sign In
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+
+                    {checkoutMode === 'signup' && (
+                      <div className="flex justify-between items-center">
+                        <Button
+                          type="button"
+                          onClick={async () => {
+                            if (!accountData.email || !accountData.password || !accountData.fullName) {
+                              toast({ 
+                                title: "Missing Information", 
+                                description: "Please fill in all required fields", 
+                                variant: "destructive" 
+                              });
+                              return;
+                            }
+                            
+                            if (accountData.password !== accountData.confirmPassword) {
+                              toast({ 
+                                title: "Password Mismatch", 
+                                description: "Passwords do not match", 
+                                variant: "destructive" 
+                              });
+                              return;
+                            }
+                            
+                            setIsProcessing(true);
+                            try {
+                              const { data: authData, error: authError } = await supabase.auth.signUp({
+                                email: accountData.email,
+                                password: accountData.password,
+                                options: {
+                                  data: {
+                                    full_name: accountData.fullName,
+                                    created_via: 'guest_checkout'
+                                  }
+                                }
+                              });
+
+                              if (authError) {
+                                if (authError.message.includes('already registered')) {
+                                  toast({ 
+                                    title: "Account Already Exists", 
+                                    description: "An account with this email already exists. Please sign in instead.", 
+                                    variant: "destructive" 
+                                  });
+                                  setCheckoutMode('signin');
+                                  return;
+                                }
+                                throw authError;
+                              }
+
+                              // Update quote ownership
+                              if (authData.user) {
+                                await supabase
+                                  .from('quotes')
+                                  .update({
+                                    user_id: authData.user.id,
+                                    is_anonymous: false
+                                  })
+                                  .eq('id', guestQuoteId);
+                              }
+
+                              toast({ 
+                                title: "Account Created!", 
+                                description: "Please check your email to verify your account.", 
+                              });
+                              
+                              // Sign in immediately after signup
+                              const { error: signInError } = await supabase.auth.signInWithPassword({
+                                email: accountData.email,
+                                password: accountData.password,
+                              });
+                              
+                              if (!signInError) {
+                                setTimeout(() => window.location.reload(), 1000);
+                              }
+                            } catch (error: any) {
+                              toast({ 
+                                title: "Error", 
+                                description: error.message || "Failed to create account. Please try again.", 
+                                variant: "destructive" 
+                              });
+                            } finally {
+                              setIsProcessing(false);
+                            }
+                          }}
+                          disabled={isProcessing}
+                          className="w-full"
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Creating Account...
+                            </>
+                          ) : (
+                            <>
+                              <User className="mr-2 h-4 w-4" />
+                              Create Account
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Shipping Address */}
               <Card>
                 <CardHeader>
@@ -460,11 +934,17 @@ export default function Checkout() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {!addresses || addresses.length === 0 ? (
+                  {(!addresses || addresses.length === 0) || isGuestCheckout ? (
                     <div className="text-center py-6">
                       <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-medium mb-2">No addresses found</h3>
-                      <p className="text-muted-foreground mb-4">Please add a shipping address to continue.</p>
+                      <h3 className="text-lg font-medium mb-2">
+                        {isGuestCheckout ? "Add Shipping Address" : "No addresses found"}
+                      </h3>
+                      <p className="text-muted-foreground mb-4">
+                        {isGuestCheckout 
+                          ? "Please provide a shipping address for your order." 
+                          : "Please add a shipping address to continue."}
+                      </p>
                       <Button onClick={() => setShowAddressForm(true)}>
                         <Plus className="h-4 w-4 mr-2" />
                         Add Address
@@ -687,7 +1167,7 @@ export default function Checkout() {
 
                   <Button 
                     onClick={handlePlaceOrder} 
-                    disabled={!canPlaceOrder || isProcessing || !addresses || addresses.length === 0}
+                    disabled={!canPlaceOrder || isProcessing || (!isGuestCheckout && (!addresses || addresses.length === 0)) || (isGuestCheckout && checkoutMode !== 'guest')}
                     className="w-full"
                     size="lg"
                   >
@@ -698,10 +1178,13 @@ export default function Checkout() {
                       </>
                     ) : (
                       <>
-                        Place Order - {formatAmount(totalAmount)}
+                        {isGuestCheckout && checkoutMode === 'signin' && "Please Sign In Above First"}
+                        {isGuestCheckout && checkoutMode === 'signup' && "Please Create Account Above First"}
+                        {(!isGuestCheckout || checkoutMode === 'guest') && `Place Order - ${formatAmount(totalAmount)}`}
                       </>
                     )}
                   </Button>
+
 
                   <p className="text-xs text-muted-foreground text-center">
                     By placing this order, you agree to our terms and conditions.

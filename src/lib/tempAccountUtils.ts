@@ -117,15 +117,22 @@ export const isTempAccount = (user: any): boolean => {
  */
 export const getOrCreateTempAccount = async (email: string): Promise<TempAccount> => {
   try {
-    // First check if there's already a temporary account with this email
+    // First check if there's already ANY account with this email (temp or permanent)
     const { data: existingProfile } = await supabase
       .from('profiles')
       .select('id, email, is_temporary, created_at')
       .eq('email', email)
-      .eq('is_temporary', true)
       .single();
 
     if (existingProfile) {
+      console.log('Found existing account for email:', email, 'isTemporary:', existingProfile.is_temporary);
+      
+      // If it's a regular account, throw a specific error
+      if (!existingProfile.is_temporary) {
+        throw new Error('EXISTING_USER');
+      }
+      
+      // If it's a temporary account, return it
       return {
         id: existingProfile.id,
         email: existingProfile.email,

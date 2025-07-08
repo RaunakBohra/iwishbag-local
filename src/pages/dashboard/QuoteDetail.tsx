@@ -69,6 +69,7 @@ import { QuoteExpirationTimer } from '@/components/dashboard/QuoteExpirationTime
 import { RenewQuoteButton } from '@/components/RenewQuoteButton';
 import { StickyActionBar } from '@/components/dashboard/StickyActionBar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ShareQuoteButton } from '@/components/admin/ShareQuoteButton';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -449,8 +450,9 @@ export default function QuoteDetail() {
                   </p>
                 </div>
               </div>
-              <div className="flex justify-center sm:justify-start">
+              <div className="flex justify-center sm:justify-start gap-2">
                 <StatusBadge status={quote.status} category="quote" showIcon className="text-sm" />
+                {quote && <ShareQuoteButton quote={quote} variant="button" size="sm" />}
               </div>
             </div>
           </div>
