@@ -192,6 +192,24 @@ export default function Checkout() {
     enabled: !!guestQuoteId,
   });
 
+  // Get selected cart items based on quote IDs
+  // If no URL parameters, use all cart items (for direct navigation to /checkout)
+  const selectedCartItems = isGuestCheckout 
+    ? (guestQuote ? [{
+        quoteId: guestQuote.id,
+        productName: guestQuote.quote_items?.[0]?.product_name || "Product",
+        quantity: guestQuote.quote_items?.reduce((sum, item) => sum + item.quantity, 0) || 1,
+        finalTotal: guestQuote.final_total || 0,
+        countryCode: guestQuote.country_code || "Unknown"
+      }] : [])
+    : selectedQuoteIds.length > 0 
+    ? cartItems.filter(item => selectedQuoteIds.includes(item.quoteId))
+    : cartItems; // Use all cart items when no specific quotes are selected
+
+  // Get the shipping country from selected items
+  // All quotes in checkout should have the same destination country
+  const shippingCountry = selectedCartItems.length > 0 ? selectedCartItems[0].countryCode : null;
+
   // Pre-fill guest contact info from quote if available
   useEffect(() => {
     if (guestQuote && isGuestCheckout) {
@@ -211,24 +229,6 @@ export default function Checkout() {
       }));
     }
   }, [shippingCountry]);
-
-  // Get selected cart items based on quote IDs
-  // If no URL parameters, use all cart items (for direct navigation to /checkout)
-  const selectedCartItems = isGuestCheckout 
-    ? (guestQuote ? [{
-        quoteId: guestQuote.id,
-        productName: guestQuote.quote_items?.[0]?.product_name || "Product",
-        quantity: guestQuote.quote_items?.reduce((sum, item) => sum + item.quantity, 0) || 1,
-        finalTotal: guestQuote.final_total || 0,
-        countryCode: guestQuote.country_code || "Unknown"
-      }] : [])
-    : selectedQuoteIds.length > 0 
-    ? cartItems.filter(item => selectedQuoteIds.includes(item.quoteId))
-    : cartItems; // Use all cart items when no specific quotes are selected
-
-  // Get the shipping country from selected items
-  // All quotes in checkout should have the same destination country
-  const shippingCountry = selectedCartItems.length > 0 ? selectedCartItems[0].countryCode : null;
 
   // Queries
   const { data: addresses, isLoading: addressesLoading } = useQuery({
