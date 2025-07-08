@@ -202,6 +202,16 @@ export default function Checkout() {
     }
   }, [guestQuote, isGuestCheckout]);
 
+  // Update address form country when shippingCountry changes
+  useEffect(() => {
+    if (shippingCountry) {
+      setAddressFormData(prev => ({
+        ...prev,
+        country: shippingCountry
+      }));
+    }
+  }, [shippingCountry]);
+
   // Get selected cart items based on quote IDs
   // If no URL parameters, use all cart items (for direct navigation to /checkout)
   const selectedCartItems = isGuestCheckout 
@@ -1091,7 +1101,7 @@ export default function Checkout() {
                           <Label htmlFor="country">Country *</Label>
                           <Input
                             id="country"
-                            value={countries?.find(c => c.code === addressFormData.country)?.name || addressFormData.country}
+                            value={countries?.find(c => c.code === shippingCountry)?.name || shippingCountry || ''}
                             disabled
                             className="bg-gray-100"
                           />
