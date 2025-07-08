@@ -12,7 +12,9 @@ export interface CartItem {
   itemWeight: number;
   imageUrl?: string;
   deliveryDate?: string;
-  countryCode: string;
+  countryCode: string; // Keeping for backward compatibility
+  purchaseCountryCode: string; // Where we buy from (e.g., Japan)
+  destinationCountryCode: string; // Where we deliver to (e.g., Nepal)
   inCart: boolean;
   isSelected: boolean;
   createdAt: Date;
@@ -515,6 +517,23 @@ export const useCartStore = create<CartStore>()(
               const quantity = quote.quantity || firstItem?.quantity || 1;
               const itemWeight = firstItem?.item_weight || quote.item_weight || 0;
               
+              // Extract destination country from shipping address
+              let destinationCountry = quote.country_code || 'US'; // Default fallback
+              if (quote.shipping_address) {
+                try {
+                  const shippingAddr = typeof quote.shipping_address === 'string' 
+                    ? JSON.parse(quote.shipping_address) 
+                    : quote.shipping_address;
+                  if (shippingAddr?.country_code) {
+                    destinationCountry = shippingAddr.country_code;
+                  } else if (shippingAddr?.countryCode) {
+                    destinationCountry = shippingAddr.countryCode;
+                  }
+                } catch (e) {
+                  console.warn('Failed to parse shipping address:', e);
+                }
+              }
+              
               const cartItem = {
                 id: quote.id,
                 quoteId: quote.id,
@@ -524,7 +543,9 @@ export const useCartStore = create<CartStore>()(
                 itemWeight: itemWeight,
                 imageUrl: firstItem?.image_url || quote.image_url,
                 deliveryDate: quote.delivery_date,
-                countryCode: quote.country_code || 'US',
+                countryCode: destinationCountry, // For backward compatibility
+                purchaseCountryCode: quote.country_code || quote.origin_country || 'US',
+                destinationCountryCode: destinationCountry,
                 inCart: quote.in_cart || false,
                 isSelected: false,
                 createdAt: new Date(quote.created_at),

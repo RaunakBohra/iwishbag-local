@@ -654,6 +654,7 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
           </div>
         </div>
 
+
         {/* Progress Stepper - Only for authenticated users */}
         {!isGuestMode && user && (
           <div className="mb-6 sm:mb-8">
@@ -770,8 +771,8 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
                       ))
                     )}
 
-                    {/* Price Summary Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                    {/* Combined Price and Info Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
                       <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-xl p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Package className="h-4 w-4 text-gray-600" />
@@ -792,32 +793,75 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
                         </div>
                         <span className="text-xl font-bold">{formatAmount(quote.final_total)}</span>
                       </div>
+                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Weight className="h-4 w-4 text-gray-600" />
+                          <span className="text-xs text-gray-600 font-medium">Total Weight</span>
+                        </div>
+                        <span className="text-xl font-bold">{quote.item_weight || 0} kg</span>
+                      </div>
+                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Package className="h-4 w-4 text-gray-600" />
+                          <span className="text-xs text-gray-600 font-medium">Quantity</span>
+                        </div>
+                        <span className="text-xl font-bold">{Array.isArray(quote.quote_items) ? quote.quote_items.reduce((sum, item) => sum + (item.quantity || 0), 0) : (quote.quantity || 1)}</span>
+                      </div>
                     </div>
                     
                     {/* Info Grid for single product */}
                     {quote.quote_items.length === 1 && (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-                        <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Globe className="h-3 w-3 text-gray-600" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Country</span>
-                          </div>
-                          <div className="font-bold text-gray-900 dark:text-gray-100">{countryName}</div>
-                        </div>
-                        <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Weight className="h-3 w-3 text-gray-600" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Weight</span>
-                          </div>
-                          <div className="font-bold text-gray-900 dark:text-gray-100">{quote.item_weight || 0} kg</div>
-                        </div>
-                        <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Package className="h-3 w-3 text-gray-600" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Quantity</span>
-                          </div>
-                          <div className="font-bold text-gray-900 dark:text-gray-100">{Array.isArray(quote.quote_items) ? quote.quote_items.reduce((sum, item) => sum + (item.quantity || 0), 0) : (quote.quantity || 1)}</div>
-                        </div>
+                      <div className="grid grid-cols-2 gap-3 mt-4">
+                        {/* Shipping Route in Info Grid */}
+                        {(() => {
+                          const purchaseCountry = quote.country_code || quote.origin_country || 'US';
+                          let destinationCountry = null;
+                          
+                          // Extract destination country from shipping address
+                          if (quote.shipping_address) {
+                            try {
+                              const shippingAddr = typeof quote.shipping_address === 'string' 
+                                ? JSON.parse(quote.shipping_address) 
+                                : quote.shipping_address;
+                              
+                              if (shippingAddr?.country_code) {
+                                destinationCountry = shippingAddr.country_code;
+                              } else if (shippingAddr?.countryCode) {
+                                destinationCountry = shippingAddr.countryCode;
+                              }
+                            } catch (e) {
+                              console.warn('Failed to parse shipping address:', e);
+                            }
+                          }
+                          
+                          // Show route if different countries, otherwise just show country
+                          if (destinationCountry && purchaseCountry !== destinationCountry) {
+                            const fromCountryName = countries?.find(c => c.code === purchaseCountry)?.name || purchaseCountry;
+                            const toCountryName = countries?.find(c => c.code === destinationCountry)?.name || destinationCountry;
+                            
+                            return (
+                              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-blue-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Truck className="h-3 w-3 text-blue-600" />
+                                  <span className="text-xs text-blue-600 dark:text-gray-300 font-medium">Shipping Route</span>
+                                </div>
+                                <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">
+                                  {fromCountryName} → {toCountryName}
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Globe className="h-3 w-3 text-gray-600" />
+                                  <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Country</span>
+                                </div>
+                                <div className="font-bold text-gray-900 dark:text-gray-100">{countryName}</div>
+                              </div>
+                            );
+                          }
+                        })()}
                         <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
                           <div className="flex items-center gap-2 mb-1">
                             <Calendar className="h-3 w-3 text-gray-600" />
@@ -830,28 +874,57 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
                     
                     {/* Additional info for multiple products */}
                     {quote.quote_items.length > 1 && (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
-                        <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Weight className="h-4 w-4 text-gray-600" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Weight</span>
-                          </div>
-                          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{quote.item_weight || 0} kg</span>
-                        </div>
-                        <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Globe className="h-4 w-4 text-gray-600" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Country</span>
-                          </div>
-                          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{countryName}</span>
-                        </div>
-                        <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Package className="h-4 w-4 text-gray-600" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Items</span>
-                          </div>
-                          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{quote.quote_items.reduce((sum, item) => sum + (item.quantity || 0), 0)}</span>
-                        </div>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        {/* Shipping Route in Info Grid - Multiple Products */}
+                        {(() => {
+                          const purchaseCountry = quote.country_code || quote.origin_country || 'US';
+                          let destinationCountry = null;
+                          
+                          // Extract destination country from shipping address
+                          if (quote.shipping_address) {
+                            try {
+                              const shippingAddr = typeof quote.shipping_address === 'string' 
+                                ? JSON.parse(quote.shipping_address) 
+                                : quote.shipping_address;
+                              
+                              if (shippingAddr?.country_code) {
+                                destinationCountry = shippingAddr.country_code;
+                              } else if (shippingAddr?.countryCode) {
+                                destinationCountry = shippingAddr.countryCode;
+                              }
+                            } catch (e) {
+                              console.warn('Failed to parse shipping address:', e);
+                            }
+                          }
+                          
+                          // Show route if different countries, otherwise just show country
+                          if (destinationCountry && purchaseCountry !== destinationCountry) {
+                            const fromCountryName = countries?.find(c => c.code === purchaseCountry)?.name || purchaseCountry;
+                            const toCountryName = countries?.find(c => c.code === destinationCountry)?.name || destinationCountry;
+                            
+                            return (
+                              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-blue-200/50 dark:border-gray-600/50">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Truck className="h-4 w-4 text-blue-600" />
+                                  <span className="text-xs text-blue-600 dark:text-gray-300 font-medium">Shipping Route</span>
+                                </div>
+                                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                  {fromCountryName} → {toCountryName}
+                                </span>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Globe className="h-4 w-4 text-gray-600" />
+                                  <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Country</span>
+                                </div>
+                                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{countryName}</span>
+                              </div>
+                            );
+                          }
+                        })()}
                         <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
                           <div className="flex items-center gap-2 mb-2">
                             <Calendar className="h-4 w-4 text-gray-600" />

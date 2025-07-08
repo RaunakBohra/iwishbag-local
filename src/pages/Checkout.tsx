@@ -200,7 +200,22 @@ export default function Checkout() {
         productName: guestQuote.quote_items?.[0]?.product_name || "Product",
         quantity: guestQuote.quote_items?.reduce((sum, item) => sum + item.quantity, 0) || 1,
         finalTotal: guestQuote.final_total || 0,
-        countryCode: guestQuote.country_code || "Unknown"
+        countryCode: guestQuote.country_code || "Unknown",
+        purchaseCountryCode: guestQuote.country_code || "Unknown",
+        destinationCountryCode: (() => {
+          // Extract destination from shipping address for guest quotes
+          if (guestQuote.shipping_address) {
+            try {
+              const addr = typeof guestQuote.shipping_address === 'string' 
+                ? JSON.parse(guestQuote.shipping_address) 
+                : guestQuote.shipping_address;
+              return addr?.country_code || addr?.countryCode || guestQuote.country_code || "Unknown";
+            } catch (e) {
+              return guestQuote.country_code || "Unknown";
+            }
+          }
+          return guestQuote.country_code || "Unknown";
+        })()
       }] : [])
     : selectedQuoteIds.length > 0 
     ? cartItems.filter(item => selectedQuoteIds.includes(item.quoteId))
@@ -208,7 +223,14 @@ export default function Checkout() {
 
   // Get the shipping country from selected items
   // All quotes in checkout should have the same destination country
-  const shippingCountry = selectedCartItems.length > 0 ? selectedCartItems[0].countryCode : null;
+  const shippingCountry = selectedCartItems.length > 0 
+    ? (selectedCartItems[0].destinationCountryCode || selectedCartItems[0].countryCode) 
+    : null;
+  
+  // Get purchase country for route display
+  const purchaseCountry = selectedCartItems.length > 0 
+    ? (selectedCartItems[0].purchaseCountryCode || selectedCartItems[0].countryCode) 
+    : null;
 
   // Pre-fill guest contact info from quote if available
   useEffect(() => {
@@ -638,6 +660,35 @@ export default function Checkout() {
             <h1 className="text-3xl font-bold text-gray-900">Checkout</h1>
             <p className="text-gray-600 mt-2">Complete your order securely</p>
           </div>
+
+          {/* Shipping Route Display */}
+          {purchaseCountry && shippingCountry && (
+            <Card className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-center space-x-4">
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-blue-800">From</div>
+                    <div className="text-lg font-bold text-blue-900">
+                      🌍 {countries?.find(c => c.code === purchaseCountry)?.name || purchaseCountry}
+                    </div>
+                    <div className="text-xs text-blue-600">Purchase Country</div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-0.5 bg-blue-300"></div>
+                    <Truck className="h-5 w-5 text-blue-500" />
+                    <div className="w-8 h-0.5 bg-blue-300"></div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-blue-800">To</div>
+                    <div className="text-lg font-bold text-blue-900">
+                      🌍 {countries?.find(c => c.code === shippingCountry)?.name || shippingCountry}
+                    </div>
+                    <div className="text-xs text-blue-600">Delivery Country</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid gap-8 lg:grid-cols-3">
             {/* Main Checkout Form */}
