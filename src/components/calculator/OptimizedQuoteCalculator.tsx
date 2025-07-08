@@ -103,7 +103,19 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
       customs_percentage: watchedValues.customs_percentage,
       countrySettings
     };
-  }, [watchedValues, allCountries]);
+  }, [
+    watchedValues.items,
+    watchedValues.country_code,
+    watchedValues.currency,
+    watchedValues.sales_tax_price,
+    watchedValues.merchant_shipping_price,
+    watchedValues.domestic_shipping,
+    watchedValues.handling_charge,
+    watchedValues.discount,
+    watchedValues.insurance_amount,
+    watchedValues.customs_percentage,
+    allCountries
+  ]);
 
   // Real-time calculation
   const {

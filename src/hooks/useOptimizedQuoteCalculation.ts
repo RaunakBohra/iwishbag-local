@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { quoteCalculatorService, QuoteCalculationParams, QuoteCalculationResult } from '@/services/QuoteCalculatorService';
@@ -193,17 +193,20 @@ export function useRealTimeQuoteCalculation(
 ) {
   const { debounceMs = 500, enabled = true } = options;
   
-  // Create a debounced version of the calculation
-  const debouncedParams = useMemo(() => {
-    if (!params || !enabled) return null;
-    
-    // Create a simple debounce using setTimeout
-    let timeoutId: NodeJS.Timeout;
-    
-    return new Promise<QuoteCalculationParams>((resolve) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => resolve(params), debounceMs);
-    });
+  // Create a debounced query key
+  const [debouncedParams, setDebouncedParams] = useState<QuoteCalculationParams | null>(null);
+
+  useEffect(() => {
+    if (!params || !enabled) {
+      setDebouncedParams(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setDebouncedParams(params);
+    }, debounceMs);
+
+    return () => clearTimeout(timeoutId);
   }, [params, debounceMs, enabled]);
 
   // Use React Query for the actual calculation
@@ -215,11 +218,8 @@ export function useRealTimeQuoteCalculation(
   } = useQuery({
     queryKey: ['realTimeQuoteCalculation', debouncedParams],
     queryFn: async () => {
-      if (!params) return null;
-      const resolvedParams = await debouncedParams;
-      if (!resolvedParams) return null;
-      
-      return quoteCalculatorService.calculateQuote(resolvedParams);
+      if (!debouncedParams) return null;
+      return quoteCalculatorService.calculateQuote(debouncedParams);
     },
     enabled: !!debouncedParams && enabled,
     staleTime: 30000, // 30 seconds
@@ -229,7 +229,7 @@ export function useRealTimeQuoteCalculation(
   });
 
   // Call completion callback when calculation finishes
-  useMemo(() => {
+  useEffect(() => {
     if (result && options.onCalculationComplete) {
       options.onCalculationComplete(result);
     }
