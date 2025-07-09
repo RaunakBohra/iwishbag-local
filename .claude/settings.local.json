@@ -15,7 +15,8 @@
       "Bash(npm run build:*)",
       "Bash(node:*)",
       "Bash(supabase db:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

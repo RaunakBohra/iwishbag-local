@@ -34,37 +34,62 @@ export const PaymentProofButton = ({
 
   const uploadProofMutation = useMutation({
     mutationFn: async (file: File) => {
-      if (!user) throw new Error('Not authenticated');
+      if (!user) throw new Error('Authentication required. Please sign in to upload payment proof.');
       
       setUploading(true);
       
       try {
         let fileToUpload = file;
         
-        // Compress image
-        const options = {
-          maxSizeMB: 1.5,
-          maxWidthOrHeight: 2048,
-          useWebWorker: true,
-          fileType: file.type as 'image/jpeg' | 'image/png' | 'image/webp',
-          initialQuality: 0.85
-        };
-        
-        try {
-          fileToUpload = await imageCompression(file, options);
-          console.log(`Payment proof - Original: ${(file.size / 1024 / 1024).toFixed(2)}MB, Compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
-        } catch (compressionError) {
-          console.error('Image compression failed, using original:', compressionError);
+        // Only compress images, not PDFs
+        if (file.type.startsWith('image/')) {
+          const options = {
+            maxSizeMB: 1.5,
+            maxWidthOrHeight: 2048,
+            useWebWorker: true,
+            fileType: file.type as 'image/jpeg' | 'image/png' | 'image/webp',
+            initialQuality: 0.85
+          };
+          
+          try {
+            fileToUpload = await imageCompression(file, options);
+            console.log(`Payment proof - Original: ${(file.size / 1024 / 1024).toFixed(2)}MB, Compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
+          } catch (compressionError) {
+            console.error('Image compression failed, using original:', compressionError);
+            // Continue with original file if compression fails
+            fileToUpload = file;
+          }
         }
 
-        // Upload file
+        // Upload file with retry logic
         const fileExt = file.name.split('.').pop();
         const fileName = `payment-proof-${user.id}-${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from('message-attachments')
-          .upload(fileName, fileToUpload);
         
-        if (uploadError) throw uploadError;
+        let uploadAttempts = 0;
+        const maxAttempts = 3;
+        let uploadError: any = null;
+        
+        while (uploadAttempts < maxAttempts) {
+          const { error } = await supabase.storage
+            .from('message-attachments')
+            .upload(fileName, fileToUpload);
+          
+          if (!error) {
+            uploadError = null;
+            break;
+          } else {
+            uploadError = error;
+            uploadAttempts++;
+            if (uploadAttempts < maxAttempts) {
+              // Wait before retry
+              await new Promise(resolve => setTimeout(resolve, 1000 * uploadAttempts));
+            }
+          }
+        }
+        
+        if (uploadError) {
+          throw new Error(`Upload failed after ${maxAttempts} attempts: ${uploadError.message}`);
+        }
         
         const { data: urlData } = supabase.storage
           .from('message-attachments')
@@ -81,15 +106,25 @@ export const PaymentProofButton = ({
             content: `Payment proof uploaded for Order #${orderId}`,
             attachment_url: urlData.publicUrl,
             attachment_file_name: file.name,
-            message_type: 'payment_proof' // Special type for payment proofs
+            message_type: 'payment_proof'
           });
 
-        if (messageError) throw messageError;
+        if (messageError) {
+          throw new Error(`Failed to save payment proof record: ${messageError.message}`);
+        }
 
-        // Notify admins
-        await notifyAdmins(orderId);
+        // Notify admins (don't fail if this fails)
+        try {
+          await notifyAdmins(orderId);
+        } catch (notifyError) {
+          console.warn('Admin notification failed:', notifyError);
+          // Don't throw error for notification failure
+        }
         
         return { success: true };
+      } catch (error: any) {
+        console.error('Payment proof upload error:', error);
+        throw error;
       } finally {
         setUploading(false);
       }
@@ -148,21 +183,37 @@ export const PaymentProofButton = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
+    // Reset file input to allow re-selection of same file if needed
+    e.target.value = '';
+
+    // Validate file type - allow both images and PDFs for receipts
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.some(type => file.type.includes(type))) {
       toast({
         title: "Invalid file type",
-        description: "Please upload an image file (JPG, PNG, WebP)",
+        description: "Please upload an image file (JPG, PNG, WebP) or PDF document",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate file size (10MB before compression)
-    if (file.size > 10 * 1024 * 1024) {
+    // Validate file size (15MB for documents, 10MB for images)
+    const maxSize = file.type === 'application/pdf' ? 15 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      const maxSizeMB = file.type === 'application/pdf' ? '15MB' : '10MB';
       toast({
         title: "File too large",
-        description: "Please select an image smaller than 10MB",
+        description: `Please select a file smaller than ${maxSizeMB}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if user is authenticated before proceeding
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to upload payment proof",
         variant: "destructive",
       });
       return;

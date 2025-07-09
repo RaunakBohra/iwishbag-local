@@ -48,17 +48,35 @@ import { AlertTriangle, Globe, RefreshCw, UserCheck } from "lucide-react";
 const AdminDashboard = () => {
   const navigate = useNavigate();
 
-  // Fetch comprehensive data for analytics
+  // Fetch comprehensive data for analytics with optimized queries
   const { data: allQuotes, isLoading: quotesLoading } = useQuery({
     queryKey: ['admin-all-quotes'],
     queryFn: async () => {
+      // Only select needed columns for analytics to reduce data transfer
       const { data, error } = await supabase
         .from('quotes')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select(`
+          id,
+          display_id,
+          email,
+          status,
+          country_code,
+          final_total,
+          final_currency,
+          created_at,
+          product_name,
+          quantity,
+          payment_method,
+          payment_status,
+          user_id
+        `)
+        .order('created_at', { ascending: false })
+        .limit(1000); // Limit to prevent excessive data loading
       if (error) throw error;
       return data || [];
     },
+    staleTime: 300000, // Cache for 5 minutes
+    refetchInterval: 600000, // Refetch every 10 minutes
   });
 
   const { data: allOrders, isLoading: ordersLoading } = useQuery({
@@ -66,12 +84,29 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('quotes')
-        .select('*')
+        .select(`
+          id,
+          display_id,
+          email,
+          status,
+          country_code,
+          final_total,
+          final_currency,
+          created_at,
+          product_name,
+          quantity,
+          payment_method,
+          payment_status,
+          user_id
+        `)
         .in('status', ['paid', 'processing', 'shipped', 'delivered', 'completed'])
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(500); // Limit orders
       if (error) throw error;
       return data || [];
     },
+    staleTime: 300000, // Cache for 5 minutes
+    refetchInterval: 600000, // Refetch every 10 minutes
   });
 
   // Fetch quick stats

@@ -11,6 +11,7 @@ import { OrderReceipt } from "@/components/dashboard/OrderReceipt";
 import { QuoteMessaging } from "@/components/messaging/QuoteMessaging";
 import { PaymentStatusTracker } from "@/components/payment/PaymentStatusTracker";
 import { PaymentProofButton } from "@/components/payment/PaymentProofButton";
+import { DocumentManager } from "@/components/documents/DocumentManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -198,6 +199,14 @@ const CustomerOrderDetailPage = () => {
                             />
                         </CardContent>
                     </Card>
+                    
+                    {/* Documents & Downloads */}
+                    <DocumentManager 
+                        quoteId={order.id}
+                        orderId={displayId}
+                        isAdmin={false}
+                        canUpload={false}
+                    />
                     
                     <OrderReceipt order={order} />
                 </div>

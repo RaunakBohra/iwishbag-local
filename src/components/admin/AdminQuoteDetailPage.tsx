@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Send, MapPin, Calculator, CheckCircle, XCircle, Clock, AlertTriangle, FileText, DollarSign, ShoppingCart, Truck, Circle, User, Mail, Phone, Calendar, Package, Settings, TrendingUp, Eye, Edit3, MessageSquare, Globe, Flag, UserMinus, Plus } from "lucide-react";
 import { QuoteDetailForm } from "@/components/admin/QuoteDetailForm";
 import { QuoteMessaging } from "@/components/messaging/QuoteMessaging";
+import { DocumentManager } from "@/components/documents/DocumentManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAdminQuoteDetail } from "@/hooks/useAdminQuoteDetail";
 import { QuoteCalculatedCosts } from "@/components/admin/QuoteCalculatedCosts";
@@ -890,6 +891,16 @@ const AdminQuoteDetailPage = () => {
             {/* Customer Messages - Only the chat UI, no card or header */}
             <div className="mt-4">
               <QuoteMessaging quoteId={quote.id} quoteUserId={quote.user_id} />
+            </div>
+
+            {/* Document Management */}
+            <div className="mt-4">
+              <DocumentManager 
+                quoteId={quote.id}
+                orderId={quote.display_id || `#${quote.id.substring(0, 6)}`}
+                isAdmin={true}
+                canUpload={true}
+              />
             </div>
           </div>
 

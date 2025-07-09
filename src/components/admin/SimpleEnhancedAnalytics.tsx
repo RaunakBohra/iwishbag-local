@@ -4,10 +4,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Tables } from "@/integrations/supabase/types";
-import { TrendingUp, DollarSign, Users, Globe, Filter, Download, Package, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { TrendingUp, DollarSign, Users, Globe, Filter, Download, Package, CheckCircle, Clock, AlertCircle, FileSpreadsheet, FileJson } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAllCountries } from "@/hooks/useAllCountries";
 import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { useToast } from "@/hooks/use-toast";
 
 type Quote = Tables<'quotes'>;
 
@@ -20,9 +21,11 @@ export const SimpleEnhancedAnalytics = ({ quotes, orders }: SimpleEnhancedAnalyt
   const [dateFilter, setDateFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data: allCountries } = useAllCountries();
   const { quoteStatuses, orderStatuses } = useStatusManagement();
+  const { toast } = useToast();
 
   // Get all available statuses for filtering
   const allStatuses = [...(quoteStatuses || []), ...(orderStatuses || [])]
@@ -104,7 +107,97 @@ export const SimpleEnhancedAnalytics = ({ quotes, orders }: SimpleEnhancedAnalyt
     };
   }, [filteredData, orders]);
 
+  const exportData = async (format: 'csv' | 'json') => {
+    setIsExporting(true);
+    try {
+      const exportData = filteredData.map(quote => ({
+        id: quote.display_id || quote.id,
+        email: quote.email,
+        status: quote.status,
+        country: quote.country_code,
+        total: quote.final_total || 0,
+        created_at: quote.created_at,
+        product_name: quote.product_name,
+        quantity: quote.quantity || 1,
+        payment_method: quote.payment_method,
+        shipping_method: quote.shipping_method,
+        customer_phone: quote.customer_phone,
+      }));
+
+      if (format === 'csv') {
+        const headers = Object.keys(exportData[0] || {});
+        const csvContent = [
+          headers.join(','),
+          ...exportData.map(row => 
+            headers.map(header => {
+              const value = row[header as keyof typeof row];
+              // Escape commas and quotes in CSV
+              return typeof value === 'string' && (value.includes(',') || value.includes('"')) 
+                ? `"${value.replace(/"/g, '""')}"` 
+                : value;
+            }).join(',')
+          )
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `quotes-export-${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      } else if (format === 'json') {
+        const jsonContent = JSON.stringify({
+          exported_at: new Date().toISOString(),
+          filters: { dateFilter, countryFilter, statusFilter },
+          summary: metrics,
+          data: exportData
+        }, null, 2);
+
+        const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `quotes-export-${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      }
+
+      toast({
+        title: "Export successful",
+        description: `${exportData.length} records exported as ${format.toUpperCase()}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export failed",
+        description: "Failed to export data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const uniqueCountries = [...new Set(quotes.map(q => q.country_code).filter(Boolean))];
+
+  if (!quotes || quotes.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Enhanced Analytics
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <TrendingUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h3 className="text-lg font-medium mb-2">No Data Available</h3>
+            <p className="text-muted-foreground">No quotes found to analyze. Data will appear here once you have some quotes.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -167,7 +260,7 @@ export const SimpleEnhancedAnalytics = ({ quotes, orders }: SimpleEnhancedAnalyt
               </Select>
             </div>
             
-            <div className="flex items-end">
+            <div className="flex flex-col gap-2">
               <Button 
                 variant="outline" 
                 className="w-full"
@@ -179,6 +272,34 @@ export const SimpleEnhancedAnalytics = ({ quotes, orders }: SimpleEnhancedAnalyt
               >
                 Reset Filters
               </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => exportData('csv')}
+                  disabled={isExporting || metrics.totalQuotes === 0}
+                  className="flex-1"
+                >
+                  {isExporting ? (
+                    <Download className="h-4 w-4 animate-pulse" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => exportData('json')}
+                  disabled={isExporting || metrics.totalQuotes === 0}
+                  className="flex-1"
+                >
+                  {isExporting ? (
+                    <Download className="h-4 w-4 animate-pulse" />
+                  ) : (
+                    <FileJson className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
