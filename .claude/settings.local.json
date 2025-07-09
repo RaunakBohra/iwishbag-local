@@ -16,7 +16,9 @@
       "Bash(node:*)",
       "Bash(supabase db:*)",
       "Bash(docker exec:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(find:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

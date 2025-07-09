@@ -1,18 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, ExternalLink, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
-
-interface Document {
-  id: string;
-  file_name: string;
-  file_url: string;
-  document_type: string;
-  file_size: number;
-  description?: string;
-}
+import { QuoteDocument } from "./DocumentManager";
 
 interface DocumentViewerProps {
-  document: Document;
+  document: QuoteDocument;
   onDownload: () => void;
 }
 

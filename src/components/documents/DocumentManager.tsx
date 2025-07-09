@@ -9,10 +9,7 @@ import {
   Package, 
   Eye, 
   Upload,
-  Trash2,
-  Clock,
-  CheckCircle,
-  AlertCircle
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,17 +26,29 @@ import {
 import { DocumentUploader } from "./DocumentUploader";
 import { DocumentViewer } from "./DocumentViewer";
 
-interface Document {
+// Define document types as a const to ensure type safety
+const DOCUMENT_TYPES = {
+  INVOICE: 'invoice',
+  RECEIPT: 'receipt',
+  SHIPPING_LABEL: 'shipping_label',
+  CUSTOMS_FORM: 'customs_form',
+  INSURANCE_DOC: 'insurance_doc',
+  OTHER: 'other'
+} as const;
+
+export type DocumentType = typeof DOCUMENT_TYPES[keyof typeof DOCUMENT_TYPES];
+
+export interface QuoteDocument {
   id: string;
   quote_id: string;
-  document_type: 'invoice' | 'receipt' | 'shipping_label' | 'customs_form' | 'insurance_doc' | 'other';
+  document_type: DocumentType;
   file_name: string;
   file_url: string;
   file_size: number;
   uploaded_by: string;
   uploaded_at: string;
   is_customer_visible: boolean;
-  description?: string;
+  description?: string | null;
 }
 
 interface DocumentManagerProps {
@@ -58,12 +67,12 @@ export const DocumentManager = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<QuoteDocument | null>(null);
   const [showUploader, setShowUploader] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
 
   // Fetch documents for this quote
-  const { data: documents = [], isLoading } = useQuery({
+  const { data: documents = [], isLoading } = useQuery<QuoteDocument[]>({
     queryKey: ['quote-documents', quoteId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -73,7 +82,7 @@ export const DocumentManager = ({
         .order('uploaded_at', { ascending: false });
       
       if (error) throw error;
-      return data as Document[];
+      return data as QuoteDocument[];
     },
   });
 
@@ -82,7 +91,7 @@ export const DocumentManager = ({
     ? documents 
     : documents.filter(doc => doc.is_customer_visible);
 
-  const downloadDocument = async (document: Document) => {
+  const downloadDocument = async (document: QuoteDocument) => {
     try {
       const { data, error } = await supabase.storage
         .from('message-attachments')
@@ -139,7 +148,7 @@ export const DocumentManager = ({
     },
   });
 
-  const getDocumentIcon = (type: Document['document_type']) => {
+  const getDocumentIcon = (type: DocumentType) => {
     switch (type) {
       case 'invoice': return Receipt;
       case 'receipt': return Receipt;
@@ -150,7 +159,7 @@ export const DocumentManager = ({
     }
   };
 
-  const getDocumentTypeLabel = (type: Document['document_type']) => {
+  const getDocumentTypeLabel = (type: DocumentType) => {
     switch (type) {
       case 'invoice': return 'Invoice';
       case 'receipt': return 'Receipt';
@@ -161,7 +170,7 @@ export const DocumentManager = ({
     }
   };
 
-  const getDocumentTypeBadgeVariant = (type: Document['document_type']) => {
+  const getDocumentTypeBadgeVariant = (type: DocumentType) => {
     switch (type) {
       case 'invoice': return 'default';
       case 'receipt': return 'secondary';

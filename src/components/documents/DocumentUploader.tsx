@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { DocumentType } from "./DocumentManager";
 
 interface DocumentUploaderProps {
   quoteId: string;
@@ -19,7 +20,7 @@ interface DocumentUploaderProps {
   isAdmin?: boolean;
 }
 
-const DOCUMENT_TYPES = [
+const DOCUMENT_TYPES: readonly { value: DocumentType; label: string }[] = [
   { value: 'invoice', label: 'Invoice' },
   { value: 'receipt', label: 'Receipt' },
   { value: 'shipping_label', label: 'Shipping Label' },
@@ -37,7 +38,7 @@ export const DocumentUploader = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [documentType, setDocumentType] = useState<string>('');
+  const [documentType, setDocumentType] = useState<DocumentType | ''>('');
   const [fileName, setFileName] = useState('');
   const [description, setDescription] = useState('');
   const [isCustomerVisible, setIsCustomerVisible] = useState(true);
