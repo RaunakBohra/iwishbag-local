@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { BarChart3, Users, FileText, Globe, Settings, Moon, Sun, Building, Package, TrendingDown, FileCog, Landmark, UserCheck, LayoutDashboard, ShoppingCart, Mail, BookText, ChevronDown, Zap, Cog, Route } from "lucide-react";
+import { BarChart3, Users, FileText, Globe, Settings, Building, Package, FileCog, Landmark, UserCheck, LayoutDashboard, BookText, ChevronDown, Zap, Cog, Route } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,7 +12,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "next-themes";
 import { useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import React from "react";
@@ -26,26 +25,6 @@ const menuGroups = [
         title: "Dashboard",
         url: "/admin",
         icon: LayoutDashboard,
-      },
-    ]
-  },
-  {
-    title: "Analytics",
-    items: [
-      {
-        title: "Cart Analytics",
-        url: "/admin/cart-analytics",
-        icon: ShoppingCart,
-      },
-      {
-        title: "Cart Recovery",
-        url: "/admin/cart-recovery",
-        icon: Mail,
-      },
-      {
-        title: "Rejection Analytics",
-        url: "/admin/rejection-analytics",
-        icon: TrendingDown,
       },
     ]
   },
@@ -88,11 +67,6 @@ const menuGroups = [
         icon: Settings,
       },
       {
-        title: "Status Test",
-        url: "/admin/status-test",
-        icon: BarChart3,
-      },
-      {
         title: "Shipping Routes",
         url: "/admin/shipping-routes",
         icon: Route,
@@ -112,23 +86,12 @@ const menuGroups = [
         url: "/admin/bank-accounts",
         icon: Landmark,
       },
-      {
-        title: "User Roles",
-        url: "/admin/users",
-        icon: Users,
-      },
-      {
-        title: "Home Page Settings",
-        url: "/admin/footer",
-        icon: Building,
-      },
     ]
   },
 ];
 
 export const AdminSidebar = () => {
   const { state } = useSidebar();
-  const { theme, setTheme } = useTheme();
   const isCollapsed = state === "collapsed";
   const [openGroups, setOpenGroups] = useState<string[]>(['Overview']); // Keep Overview open by default
 
@@ -218,24 +181,6 @@ export const AdminSidebar = () => {
           </SidebarGroup>
         ))}
         
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                    className="w-full justify-start px-4 py-2"
-                  >
-                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    {!isCollapsed && <span className="ml-3">Toggle Theme</span>}
-                  </Button>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );

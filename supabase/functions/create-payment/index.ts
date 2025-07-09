@@ -372,8 +372,8 @@ serve(async (req) => {
 
       case 'bank_transfer':
       case 'cod':
-        // For manual methods, we can just mark as success and handle post-payment logic via webhooks or manually
-        responseData = { success: true, transactionId: `manual_${new Date().getTime()}` };
+        // For manual methods, just return success without transactionId to avoid showing payment status tracker
+        responseData = { success: true };
         break;
       
       // TODO: Add cases for other payment gateways (eSewa, Khalti, etc.)

@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { useStatusManagement, StatusConfig } from '@/hooks/useStatusManagement';
 import { supabase } from '@/integrations/supabase/client';
+import { FixStatusJSON } from '@/components/admin/FixStatusJSON';
+import { TestStatusFiltering } from '@/components/admin/TestStatusFiltering';
 
 const colorOptions = [
   { value: 'default', label: 'Default', className: 'bg-blue-100 text-blue-800' },
@@ -682,12 +684,14 @@ export default function StatusManagement() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-6xl mx-auto space-y-6">
           <Card className="border-red-200 bg-red-50">
             <CardContent className="pt-6">
               <p className="text-red-800">Error loading status settings: {error}</p>
             </CardContent>
           </Card>
+          <FixStatusJSON />
+          <TestStatusFiltering />
         </div>
       </div>
     );
@@ -760,6 +764,9 @@ export default function StatusManagement() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Test Status Filtering Component */}
+        <TestStatusFiltering />
 
         <div className="flex gap-2 justify-end pt-6">
           <div className="flex-1 text-sm text-muted-foreground">

@@ -1,9 +1,17 @@
 import { Link } from "react-router-dom";
 import { ShoppingBag, Twitter, Facebook, Instagram, Linkedin, Phone, Mail, MapPin, Clock } from "lucide-react";
-import { useHomePageSettings } from "@/hooks/useHomePageSettings";
 
 const Footer = () => {
-  const { settings: homePageSettings } = useHomePageSettings();
+  // Default footer settings
+  const homePageSettings = {
+    website_logo_url: null,
+    company_name: "iwishBag",
+    company_description: "Shop the world, delivered to your doorstep.",
+    social_twitter: "https://twitter.com/iwishbag",
+    social_facebook: "https://facebook.com/iwishbag",
+    social_instagram: "https://instagram.com/iwishbag",
+    social_linkedin: "https://linkedin.com/company/iwishbag"
+  };
 
   return (
     <footer className="border-t bg-card text-card-foreground">

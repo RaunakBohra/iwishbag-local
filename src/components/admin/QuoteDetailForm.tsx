@@ -13,11 +13,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { useStatusManagement } from "@/hooks/useStatusManagement";
 
-export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercentage, detectedCustomsTier }: {
+export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercentage, detectedCustomsTier, isOrder = false }: {
   form: any;
   shippingAddress?: any;
   detectedCustomsPercentage?: number;
   detectedCustomsTier?: any;
+  isOrder?: boolean;
 }) => {
   const { toast } = useToast();
   const { data: allCountries } = useAllCountries();
@@ -75,12 +76,13 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
     (e.currentTarget as HTMLInputElement).blur();
   };
 
-  // Get only quote statuses for the status dropdown
-  const availableQuoteStatuses = useMemo(() => {
-    return (quoteStatuses || [])
+  // Get appropriate statuses based on whether this is an order or quote
+  const availableStatuses = useMemo(() => {
+    const statuses = isOrder ? orderStatuses : quoteStatuses;
+    return (statuses || [])
       .filter(status => status.isActive)
       .sort((a, b) => a.order - b.order);
-  }, [quoteStatuses]);
+  }, [isOrder, quoteStatuses, orderStatuses]);
 
   return (
     <div className="space-y-6">
@@ -277,7 +279,7 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                {availableQuoteStatuses.map((status) => (
+                {availableStatuses.map((status) => (
                   <SelectItem key={status.name} value={status.name}>
                     <div className="flex items-center gap-2">
                       <Badge variant={status.color} className="text-xs">

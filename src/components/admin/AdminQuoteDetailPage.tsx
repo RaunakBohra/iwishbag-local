@@ -109,8 +109,16 @@ const AdminQuoteDetailPage = () => {
     name: "country_code" 
   });
 
-  const isOrder = quote && ['paid', 'ordered', 'shipped', 'completed', 'cancelled'].includes(quote.status);
-  const canRecalculate = quote && !['shipped', 'completed', 'cancelled'].includes(quote.status);
+  // Determine if this is an order based on status configuration
+  const isOrder = quote && (() => {
+    const statusConfig = getStatusConfig(quote.status, 'order');
+    return statusConfig && statusConfig.showsInOrdersList;
+  })();
+  // Check if quote can be recalculated based on terminal status
+  const canRecalculate = quote && (() => {
+    const statusConfig = getStatusConfig(quote.status, isOrder ? 'order' : 'quote');
+    return !statusConfig?.isTerminal;
+  })();
 
   // Get country currency for item cards
   const countryCurrency = useMemo(() => {
@@ -794,6 +802,7 @@ const AdminQuoteDetailPage = () => {
                         shippingAddress={shippingAddress}
                         detectedCustomsPercentage={appliedTier?.customs_percentage}
                         detectedCustomsTier={appliedTier}
+                        isOrder={isOrder}
                       />
                     </div>
                   </div>
@@ -1066,17 +1075,22 @@ const AdminQuoteDetailPage = () => {
 
         {/* Order Timeline for Orders */}
         {isOrder && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Order Timeline
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <OrderTimeline currentStatus={quote.status} />
-            </CardContent>
-          </Card>
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Order Timeline
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <OrderTimeline currentStatus={quote.status} />
+              </CardContent>
+            </Card>
+            
+            {/* Order Actions */}
+            <OrderActions quote={quote} />
+          </>
         )}
 
         {/* Quote Details */}

@@ -43,7 +43,6 @@ import { useAllCountries } from "@/hooks/useAllCountries";
 import { PaymentMethodSelector } from "@/components/payment/PaymentMethodSelector";
 import { QRPaymentModal } from "@/components/payment/QRPaymentModal";
 import { PaymentStatusTracker } from "@/components/payment/PaymentStatusTracker";
-import { PaymentDebug } from "@/components/debug/PaymentDebug";
 import { PaymentGateway, PaymentRequest } from "@/types/payment";
 import { cn } from "@/lib/utils";
 
@@ -1383,10 +1382,6 @@ export default function Checkout() {
         </div>
       )}
 
-      {/* Debug Component - Remove after testing */}
-      <div className="mt-8">
-        <PaymentDebug />
-      </div>
     </div>
   );
 }

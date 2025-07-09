@@ -193,6 +193,17 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                                 <ShareQuoteButton quote={quote} variant="icon" />
                             </div>
 
+                            {/* Product Image */}
+                            {firstItem?.image_url && (
+                                <div className="flex-shrink-0">
+                                    <img 
+                                        src={firstItem.image_url} 
+                                        alt="Product" 
+                                        className="w-12 h-12 object-cover rounded border"
+                                    />
+                                </div>
+                            )}
+
                             {/* Quote ID and Basic Info */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
@@ -298,6 +309,13 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                         <Package className="h-4 w-4" />
+                        {firstItem?.image_url && (
+                            <img 
+                                src={firstItem.image_url} 
+                                alt="Product" 
+                                className="w-8 h-8 object-cover rounded border mr-2"
+                            />
+                        )}
                         {firstItem?.product_url ? (
                             <>
                                 <a href={firstItem.product_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">{firstItem.product_name || "LINK"}</a>

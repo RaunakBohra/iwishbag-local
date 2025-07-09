@@ -136,24 +136,6 @@ const searchItems: SearchItem[] = [
     keywords: ["bank", "accounts", "payment", "financial", "settings"]
   },
   {
-    id: "users",
-    title: "User Roles",
-    description: "Manage user roles and permissions",
-    url: "/admin/users",
-    icon: Users,
-    category: "Settings",
-    keywords: ["users", "roles", "permissions", "access", "settings"]
-  },
-  {
-    id: "footer",
-    title: "Home Page Settings",
-    description: "Configure website and footer settings",
-    url: "/admin/footer",
-    icon: Settings,
-    category: "Settings",
-    keywords: ["home", "page", "website", "footer", "settings"]
-  },
-  {
     id: "auto-settings",
     title: "Auto Quote Settings",
     description: "Configure automatic quote generation rules",

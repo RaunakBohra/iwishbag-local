@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, MessageSquare, ShoppingCart, LayoutDashboard, User, Menu, Search, Sun, Moon, MoreVertical, Building, Home, Package, Settings } from "lucide-react";
+import { LogOut, MessageSquare, ShoppingCart, LayoutDashboard, User, Menu, Search, MoreVertical, Building, Home, Package, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -15,11 +15,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useAdminRole } from "@/hooks/useAdminRole";
-import { useHomePageSettings } from "@/hooks/useHomePageSettings";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { useSidebar } from "@/components/ui/sidebar";
 import { AdminSearch } from "@/components/admin/AdminSearch";
-import { useTheme } from "next-themes";
 import { useState } from "react";
 
 const Header = () => {
@@ -27,11 +25,15 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toggleSidebar } = useSidebar();
-  const { theme, setTheme } = useTheme();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const { data: hasAdminRole } = useAdminRole();
-  const { settings: homePageSettings } = useHomePageSettings();
+  
+  // Default homepage settings
+  const homePageSettings = {
+    website_logo_url: null,
+    company_name: "iwishBag"
+  };
 
   // Check if we're in admin area
   const isAdminArea = location.pathname.startsWith('/admin');
@@ -217,17 +219,6 @@ const Header = () => {
                   )}
                 </Button>
 
-                {/* Theme toggle for admin users */}
-                {hasAdminRole && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="hover:bg-accent flex-shrink-0 h-9 w-9 transition-colors"
-                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                >
-                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                </Button>
-              )}
               
                 {/* Separator */}
                 <div className="h-6 w-px bg-border mx-1 md:mx-2 lg:mx-3" />
@@ -366,16 +357,6 @@ const Header = () => {
                         <div className="border-t border-gray-200 my-3" />
                         {/* Settings Section */}
                         <div className="mb-1 text-xs font-semibold text-muted-foreground tracking-wide uppercase">Settings</div>
-                        {hasAdminRole && (
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start"
-                            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                          >
-                            {theme === "dark" ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
-                            {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                          </Button>
-                        )}
                         {/* Sign Out at the bottom */}
                         <div className="border-t border-gray-200 my-3" />
                         <Button

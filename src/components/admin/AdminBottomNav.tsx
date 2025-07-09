@@ -3,9 +3,7 @@ import {
   LayoutDashboard, 
   FileText, 
   Package, 
-  Users, 
-  ShoppingCart,
-  BarChart3
+  Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,11 +27,6 @@ const navItems = [
     title: "Customers",
     icon: Users,
     href: "/admin/customers",
-  },
-  {
-    title: "Analytics",
-    icon: BarChart3,
-    href: "/admin/cart-analytics",
   },
 ];
 

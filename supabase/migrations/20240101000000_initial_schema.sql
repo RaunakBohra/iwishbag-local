@@ -43,8 +43,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name TEXT,
     phone TEXT,
-    country TEXT DEFAULT 'US' NOT NULL,
-    preferred_display_currency TEXT DEFAULT 'USD' NOT NULL,
+    country TEXT,
+    preferred_display_currency TEXT,
     avatar_url TEXT,
     cod_enabled BOOLEAN DEFAULT FALSE,
     internal_notes TEXT,
@@ -53,8 +53,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     total_spent NUMERIC(10,2) DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-    CONSTRAINT valid_currency CHECK (preferred_display_currency IN ('USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'SGD', 'AED', 'SAR', 'EGP', 'TRY', 'INR', 'NPR')),
-    CONSTRAINT valid_country CHECK (country ~ '^[A-Z]{2}$')
+    CONSTRAINT valid_currency CHECK (preferred_display_currency IS NULL OR preferred_display_currency IN ('USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'SGD', 'AED', 'SAR', 'EGP', 'TRY', 'INR', 'NPR')),
+    CONSTRAINT valid_country CHECK (country IS NULL OR country ~ '^[A-Z]{2}$')
 );
 
 -- Country settings with comprehensive configuration
@@ -210,6 +210,16 @@ CREATE TABLE IF NOT EXISTS public.system_settings (
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
+-- Email settings
+CREATE TABLE IF NOT EXISTS public.email_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    setting_key TEXT UNIQUE NOT NULL,
+    setting_value TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
 -- Bank account details
 CREATE TABLE IF NOT EXISTS public.bank_account_details (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -219,6 +229,11 @@ CREATE TABLE IF NOT EXISTS public.bank_account_details (
     branch_name TEXT,
     iban TEXT,
     swift_code TEXT,
+    country_code TEXT REFERENCES public.country_settings(code),
+    is_fallback BOOLEAN DEFAULT false,
+    custom_fields JSONB DEFAULT '{}',
+    field_labels JSONB DEFAULT '{}',
+    display_order INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
@@ -354,6 +369,12 @@ CREATE TABLE IF NOT EXISTS public.quotes (
     rejection_details TEXT,
     internal_notes TEXT,
     order_display_id TEXT UNIQUE,
+    shipping_address JSONB,
+    address_locked BOOLEAN DEFAULT false,
+    address_updated_at TIMESTAMPTZ,
+    address_updated_by UUID REFERENCES public.profiles(id),
+    payment_reminder_sent_at TIMESTAMPTZ,
+    payment_reminder_count INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     approved_at TIMESTAMPTZ,
@@ -378,6 +399,75 @@ CREATE TABLE IF NOT EXISTS public.quote_items (
     options TEXT,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- Address history for tracking changes to quote addresses
+CREATE TABLE IF NOT EXISTS public.quote_address_history (
+    id SERIAL PRIMARY KEY,
+    quote_id UUID REFERENCES public.quotes(id) ON DELETE CASCADE NOT NULL,
+    old_address JSONB,
+    new_address JSONB NOT NULL,
+    changed_by UUID REFERENCES public.profiles(id),
+    changed_at TIMESTAMPTZ DEFAULT NOW(),
+    change_reason TEXT,
+    change_type TEXT DEFAULT 'update' CHECK (change_type IN ('create', 'update', 'lock', 'unlock'))
+);
+
+-- Status transitions for tracking quote status changes
+CREATE TABLE IF NOT EXISTS public.status_transitions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    quote_id UUID REFERENCES public.quotes(id) ON DELETE CASCADE NOT NULL,
+    from_status TEXT NOT NULL,
+    to_status TEXT NOT NULL,
+    trigger TEXT NOT NULL CHECK (trigger IN ('payment_received', 'quote_sent', 'order_shipped', 'quote_expired', 'manual', 'auto_calculation')),
+    metadata JSONB DEFAULT '{}',
+    changed_by UUID REFERENCES auth.users(id),
+    changed_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- Payment reminders tracking
+CREATE TABLE IF NOT EXISTS public.payment_reminders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    quote_id UUID REFERENCES public.quotes(id) ON DELETE CASCADE,
+    reminder_type TEXT NOT NULL CHECK (reminder_type IN ('bank_transfer_pending', 'cod_confirmation')),
+    sent_at TIMESTAMPTZ DEFAULT now(),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Rejection reasons
+CREATE TABLE IF NOT EXISTS public.rejection_reasons (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    reason TEXT NOT NULL,
+    category TEXT DEFAULT 'general',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Payment transactions
+CREATE TABLE IF NOT EXISTS public.payment_transactions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    quote_id UUID REFERENCES public.quotes(id) ON DELETE CASCADE,
+    amount DECIMAL(10,2) NOT NULL,
+    currency TEXT DEFAULT 'USD',
+    status TEXT DEFAULT 'pending',
+    payment_method TEXT,
+    gateway_response JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Manual analysis tasks
+CREATE TABLE IF NOT EXISTS public.manual_analysis_tasks (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    quote_id UUID REFERENCES public.quotes(id) ON DELETE CASCADE,
+    assigned_to UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    status TEXT DEFAULT 'pending',
+    priority TEXT DEFAULT 'medium',
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- User addresses for shipping
@@ -469,6 +559,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- User creation handler
+-- Updated to allow auto-set functionality by not defaulting to US/USD
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -477,8 +568,8 @@ BEGIN
     new.id, 
     new.raw_user_meta_data->>'full_name', 
     new.raw_user_meta_data->>'phone',
-    COALESCE(new.raw_user_meta_data->>'country', 'US'),
-    COALESCE(new.raw_user_meta_data->>'currency', 'USD')
+    new.raw_user_meta_data->>'country',  -- Only set if explicitly provided
+    new.raw_user_meta_data->>'currency'  -- Only set if explicitly provided
   );
   
   INSERT INTO public.user_roles (user_id, role, created_by)
@@ -645,6 +736,42 @@ CREATE POLICY "Users can manage own memberships" ON public.user_memberships
 CREATE POLICY "Users can manage own wishlist items" ON public.user_wishlist_items
   FOR ALL USING (auth.uid() = user_id);
 
+CREATE POLICY "Users can view their own quote address history" ON public.quote_address_history
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.quotes q
+      WHERE q.id = quote_address_history.quote_id 
+      AND q.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can view their own quote status transitions" ON public.status_transitions
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.quotes q
+      WHERE q.id = status_transitions.quote_id 
+      AND q.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can view bank accounts for their country" ON public.bank_account_details
+  FOR SELECT USING (
+    is_active = true AND (
+      country_code = (
+        SELECT country FROM public.profiles WHERE id = auth.uid()
+      ) OR is_fallback = true
+    )
+  );
+
+CREATE POLICY "Users can view their own transactions" ON public.payment_transactions 
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert their own transactions" ON public.payment_transactions 
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Public read access for rejection reasons" ON public.rejection_reasons 
+  FOR SELECT USING (is_active = true);
+
 -- Admin policies
 CREATE POLICY "Admins have full access" ON public.profiles
   FOR ALL USING (public.has_role(auth.uid(), 'admin'));
@@ -700,6 +827,27 @@ CREATE POLICY "Admins have full access" ON public.order_workflow_steps
 CREATE POLICY "Admins have full access" ON public.country_settings
   FOR ALL USING (public.has_role(auth.uid(), 'admin'));
 
+CREATE POLICY "Admins have full access" ON public.email_settings
+  FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Admins have full access" ON public.quote_address_history
+  FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Admins have full access" ON public.status_transitions
+  FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Admins have full access" ON public.payment_reminders
+  FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Admins have full access" ON public.rejection_reasons
+  FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Admins have full access" ON public.payment_transactions
+  FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Admins have full access" ON public.manual_analysis_tasks
+  FOR ALL USING (public.has_role(auth.uid(), 'admin'));
+
 -- Part 6: Performance Indexes
 -- =================================================================
 
@@ -707,6 +855,20 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON public.user_roles(user_id);
 CREATE INDEX IF NOT EXISTS idx_profiles_country ON public.profiles(country);
 CREATE INDEX IF NOT EXISTS idx_profiles_referral_code ON public.profiles(referral_code);
 CREATE INDEX IF NOT EXISTS idx_quotes_user_id ON public.quotes(user_id);
+CREATE INDEX IF NOT EXISTS idx_quote_address_history_quote_id ON public.quote_address_history(quote_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_address_locked ON public.quotes(address_locked);
+CREATE INDEX IF NOT EXISTS idx_quote_address_history_changed_at ON public.quote_address_history(changed_at);
+CREATE INDEX IF NOT EXISTS idx_status_transitions_quote_id ON public.status_transitions(quote_id);
+CREATE INDEX IF NOT EXISTS idx_status_transitions_changed_at ON public.status_transitions(changed_at);
+CREATE INDEX IF NOT EXISTS idx_status_transitions_trigger ON public.status_transitions(trigger);
+CREATE INDEX IF NOT EXISTS idx_bank_accounts_country ON public.bank_account_details(country_code);
+CREATE INDEX IF NOT EXISTS idx_bank_accounts_fallback ON public.bank_account_details(is_fallback);
+CREATE INDEX IF NOT EXISTS idx_payment_transactions_user_id ON public.payment_transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_payment_transactions_quote_id ON public.payment_transactions(quote_id);
+CREATE INDEX IF NOT EXISTS idx_payment_transactions_status ON public.payment_transactions(status);
+CREATE INDEX IF NOT EXISTS idx_manual_analysis_tasks_quote_id ON public.manual_analysis_tasks(quote_id);
+CREATE INDEX IF NOT EXISTS idx_manual_analysis_tasks_status ON public.manual_analysis_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_rejection_reasons_active ON public.rejection_reasons(is_active);
 CREATE INDEX IF NOT EXISTS idx_quotes_status ON public.quotes(status);
 CREATE INDEX IF NOT EXISTS idx_quotes_approval_status ON public.quotes(approval_status);
 CREATE INDEX IF NOT EXISTS idx_quotes_country_code ON public.quotes(country_code);
@@ -828,4 +990,125 @@ VALUES
 ('Basic', 'Standard membership with basic features', 0, 0, '{"basic_support": true}', 100, 0, false),
 ('Premium', 'Enhanced features and priority support', 9.99, 99.99, '{"priority_support": true, "advanced_analytics": true}', 50, 10, true),
 ('Enterprise', 'Full feature access with dedicated support', 29.99, 299.99, '{"dedicated_support": true, "custom_integrations": true, "white_label": true}', 0, 25, true)
-ON CONFLICT (name) DO NOTHING; 
+ON CONFLICT (name) DO NOTHING;
+
+-- =================================================================
+-- Part 8: Functions and Triggers
+-- =================================================================
+
+-- Function to log address changes
+CREATE OR REPLACE FUNCTION public.log_address_change()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Log the change in address history
+  INSERT INTO public.quote_address_history (
+    quote_id,
+    old_address,
+    new_address,
+    changed_by,
+    change_reason,
+    change_type
+  ) VALUES (
+    NEW.id,
+    CASE 
+      WHEN TG_OP = 'UPDATE' THEN OLD.shipping_address
+      ELSE NULL
+    END,
+    NEW.shipping_address,
+    NEW.address_updated_by,
+    'Address updated via ' || TG_OP,
+    CASE 
+      WHEN TG_OP = 'INSERT' THEN 'create'
+      WHEN TG_OP = 'UPDATE' AND NEW.address_locked AND NOT OLD.address_locked THEN 'lock'
+      WHEN TG_OP = 'UPDATE' AND NOT NEW.address_locked AND OLD.address_locked THEN 'unlock'
+      ELSE 'update'
+    END
+  );
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to automatically log status changes
+CREATE OR REPLACE FUNCTION public.log_quote_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Only log if status actually changed
+    IF OLD.status IS DISTINCT FROM NEW.status THEN
+        INSERT INTO public.status_transitions (
+            quote_id,
+            from_status,
+            to_status,
+            trigger,
+            changed_by,
+            changed_at
+        ) VALUES (
+            NEW.id,
+            COALESCE(OLD.status, 'unknown'),
+            NEW.status,
+            'manual',
+            auth.uid(),
+            now()
+        );
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to lock address after payment
+CREATE OR REPLACE FUNCTION public.lock_address_after_payment(quote_uuid UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  UPDATE public.quotes 
+  SET 
+    address_locked = true,
+    address_updated_at = NOW(),
+    address_updated_by = user_id
+  WHERE id = quote_uuid AND status IN ('paid', 'ordered', 'shipped', 'completed');
+  
+  RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get bank accounts for a user
+CREATE OR REPLACE FUNCTION public.get_user_bank_accounts(user_id UUID)
+RETURNS SETOF public.bank_account_details AS $$
+DECLARE
+  user_country TEXT;
+BEGIN
+  -- Get user's country
+  SELECT country INTO user_country FROM public.profiles WHERE id = user_id;
+  
+  -- Return bank accounts for user's country or fallback accounts
+  RETURN QUERY
+  SELECT * FROM public.bank_account_details
+  WHERE is_active = true AND (
+    country_code = user_country OR 
+    (is_fallback = true AND NOT EXISTS (
+      SELECT 1 FROM public.bank_account_details 
+      WHERE country_code = user_country AND is_active = true
+    ))
+  )
+  ORDER BY is_fallback ASC, display_order ASC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create triggers for address changes
+CREATE TRIGGER trigger_log_address_change_insert
+  AFTER INSERT ON public.quotes
+  FOR EACH ROW
+  WHEN (NEW.shipping_address IS NOT NULL)
+  EXECUTE FUNCTION public.log_address_change();
+
+CREATE TRIGGER trigger_log_address_change_update
+  AFTER UPDATE ON public.quotes
+  FOR EACH ROW
+  WHEN (OLD.shipping_address IS DISTINCT FROM NEW.shipping_address OR OLD.address_locked IS DISTINCT FROM NEW.address_locked)
+  EXECUTE FUNCTION public.log_address_change();
+
+-- Create trigger for status changes
+CREATE TRIGGER trigger_log_quote_status_change
+    AFTER UPDATE ON public.quotes
+    FOR EACH ROW
+    EXECUTE FUNCTION public.log_quote_status_change(); 

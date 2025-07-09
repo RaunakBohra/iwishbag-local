@@ -2,12 +2,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Package, User, Home, Ship } from "lucide-react";
+import { ArrowLeft, Package, User, Home, Ship, MessageSquare, CreditCard } from "lucide-react";
 import { useCustomerOrderDetail } from "@/hooks/useCustomerOrderDetail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OrderTimeline } from "@/components/dashboard/OrderTimeline";
 import { TrackingInfo } from "@/components/dashboard/TrackingInfo";
 import { OrderReceipt } from "@/components/dashboard/OrderReceipt";
+import { QuoteMessaging } from "@/components/messaging/QuoteMessaging";
+import { PaymentStatusTracker } from "@/components/payment/PaymentStatusTracker";
+import { PaymentProofButton } from "@/components/payment/PaymentProofButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -130,6 +133,72 @@ const CustomerOrderDetailPage = () => {
                         </CardContent>
                     </Card>
                     <TrackingInfo order={order} />
+                    
+                    {/* Payment Section */}
+                    {(order.payment_method === 'bank_transfer' || order.payment_method === 'cod') && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <CreditCard className="h-5 w-5" />
+                                    Payment Information
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium">Payment Method:</span>
+                                    <Badge variant="outline">
+                                        {order.payment_method === 'bank_transfer' ? 'Bank Transfer' : 'Cash on Delivery'}
+                                    </Badge>
+                                </div>
+                                
+                                {order.payment_status && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium">Payment Status:</span>
+                                        <Badge variant={
+                                            order.payment_status === 'paid' ? 'default' :
+                                            order.payment_status === 'partial' ? 'warning' :
+                                            order.payment_status === 'overpaid' ? 'secondary' :
+                                            'outline'
+                                        }>
+                                            {order.payment_status === 'partial' && order.amount_paid && order.final_total
+                                                ? `Partial: $${order.amount_paid} of $${order.final_total}`
+                                                : order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)
+                                            }
+                                        </Badge>
+                                    </div>
+                                )}
+                                
+                                {/* Payment Proof Upload for unpaid/partial payments */}
+                                {order.payment_method === 'bank_transfer' && 
+                                 (!order.payment_status || order.payment_status === 'unpaid' || order.payment_status === 'partial') && (
+                                    <div className="pt-2">
+                                        <PaymentProofButton 
+                                            quoteId={order.id}
+                                            orderId={order.id}
+                                            recipientId={null}
+                                        />
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+                    
+                    {/* Customer Communication */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <MessageSquare className="h-5 w-5" />
+                                Messages & Support
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <QuoteMessaging 
+                                quoteId={order.id}
+                                quoteUserId={order.user_id}
+                            />
+                        </CardContent>
+                    </Card>
+                    
                     <OrderReceipt order={order} />
                 </div>
 

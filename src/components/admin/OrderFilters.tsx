@@ -11,17 +11,21 @@ import { useStatusManagement } from "@/hooks/useStatusManagement";
 import { Badge } from "@/components/ui/badge";
 
 type OrderFiltersProps = {
-  searchTerm: string;
-  onSearchTermChange: (value: string) => void;
+  searchInput: string;
+  onSearchChange: (value: string) => void;
   statusFilter: string;
-  onStatusFilterChange: (value: string) => void;
+  onStatusChange: (value: string) => void;
+  paymentStatusFilter?: string;
+  onPaymentStatusChange?: (value: string) => void;
 };
 
 export const OrderFilters = ({
-  searchTerm,
-  onSearchTermChange,
+  searchInput,
+  onSearchChange,
   statusFilter,
-  onStatusFilterChange,
+  onStatusChange,
+  paymentStatusFilter,
+  onPaymentStatusChange,
 }: OrderFiltersProps) => {
   const { orderStatuses } = useStatusManagement();
 
@@ -36,12 +40,12 @@ export const OrderFilters = ({
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input
           placeholder="Search by Order ID, Product, Email..."
-          value={searchTerm}
-          onChange={(e) => onSearchTermChange(e.target.value)}
+          value={searchInput}
+          onChange={(e) => onSearchChange(e.target.value)}
           className="pl-10"
         />
       </div>
-      <Select onValueChange={onStatusFilterChange} value={statusFilter}>
+      <Select onValueChange={onStatusChange} value={statusFilter}>
         <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue placeholder="Filter by status" />
         </SelectTrigger>
@@ -58,6 +62,46 @@ export const OrderFilters = ({
           ))}
         </SelectContent>
       </Select>
+      
+      {/* Payment Status Filter */}
+      {onPaymentStatusChange && (
+        <Select onValueChange={onPaymentStatusChange} value={paymentStatusFilter || 'all'}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Payment status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Payments</SelectItem>
+            <SelectItem value="unpaid">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  Unpaid
+                </Badge>
+              </div>
+            </SelectItem>
+            <SelectItem value="partial">
+              <div className="flex items-center gap-2">
+                <Badge variant="warning" className="text-xs">
+                  Partial Payment
+                </Badge>
+              </div>
+            </SelectItem>
+            <SelectItem value="paid">
+              <div className="flex items-center gap-2">
+                <Badge variant="default" className="text-xs">
+                  Paid
+                </Badge>
+              </div>
+            </SelectItem>
+            <SelectItem value="overpaid">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  Overpaid
+                </Badge>
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      )}
     </div>
   );
 };

@@ -81,30 +81,88 @@ export const useOrderMutations = (id: string | undefined) => {
         }
     });
 
-    const confirmPaymentMutation = useMutation<void, Error, void>({
-        mutationFn: async () => {
+    const confirmPaymentMutation = useMutation<void, Error, { amount: number; notes?: string }>({
+        mutationFn: async ({ amount, notes } = { amount: 0 }) => {
             if (!id) throw new Error("Quote ID is required.");
 
             const { data: existingQuote, error: fetchError } = await supabase
                 .from('quotes')
-                .select('status, order_display_id')
+                .select('status, order_display_id, payment_method, final_total, amount_paid')
                 .eq('id', id)
                 .single();
 
             if (fetchError) throw new Error(fetchError.message);
-            if (existingQuote && existingQuote.status === 'paid') {
+            if (existingQuote && existingQuote.status === 'paid' && existingQuote.amount_paid >= existingQuote.final_total) {
                 return;
             }
             
-            const updateData: Partial<Tables<'quotes'>> = { 
-                status: 'paid',
-                paid_at: new Date().toISOString(),
-                payment_method: 'cod',
-                in_cart: false, // <<< ADD in_cart: false here
-            };
+            // Create payment record
+            const { error: paymentError } = await supabase
+                .from('payment_records')
+                .insert({
+                    quote_id: id,
+                    amount: amount,
+                    payment_method: existingQuote?.payment_method || 'bank_transfer',
+                    notes: notes,
+                    recorded_by: (await supabase.auth.getUser()).data.user?.id
+                });
+
+            if (paymentError) throw new Error(`Failed to create payment record: ${paymentError.message}`);
+
+            // Calculate new total paid
+            const currentPaid = existingQuote?.amount_paid || 0;
+            const newTotalPaid = currentPaid + amount;
+            const expectedAmount = existingQuote?.final_total || 0;
             
-            if (existingQuote && !existingQuote.order_display_id) {
+            // Determine payment status
+            let paymentStatus: string;
+            let status: string = existingQuote?.status || 'payment_pending';
+            
+            if (newTotalPaid === 0) {
+                paymentStatus = 'unpaid';
+            } else if (newTotalPaid < expectedAmount) {
+                paymentStatus = 'partial';
+                status = 'partial_payment';
+            } else if (newTotalPaid === expectedAmount) {
+                paymentStatus = 'paid';
+                status = 'paid';
+            } else {
+                paymentStatus = 'overpaid';
+                status = 'paid'; // Still mark as paid for overpayments
+            }
+            
+            const updateData: Partial<Tables<'quotes'>> = { 
+                amount_paid: newTotalPaid,
+                payment_status: paymentStatus,
+                status: status,
+                in_cart: false,
+            };
+
+            // Add overpayment amount if applicable
+            if (paymentStatus === 'overpaid') {
+                updateData.overpayment_amount = newTotalPaid - expectedAmount;
+            }
+
+            // Set paid_at only when fully paid
+            if (paymentStatus === 'paid' || paymentStatus === 'overpaid') {
+                updateData.paid_at = new Date().toISOString();
+            }
+            
+            // Keep the existing payment method (don't override with 'cod')
+            if (!existingQuote?.payment_method) {
+                updateData.payment_method = 'bank_transfer'; // Default to bank_transfer for payment_pending orders
+            }
+            
+            if (existingQuote && !existingQuote.order_display_id && (paymentStatus === 'paid' || paymentStatus === 'overpaid')) {
                 updateData.order_display_id = `ORD-${id.substring(0, 6).toUpperCase()}`;
+            }
+
+            // Add notes if provided
+            if (notes) {
+                const paymentInfo = `Payment Record: ${amount} received - ${paymentStatus}`;
+                updateData.internal_notes = existingQuote?.internal_notes 
+                    ? `${existingQuote.internal_notes}\n\n${paymentInfo}\n${notes}`
+                    : `${paymentInfo}\n${notes}`;
             }
 
             const { error } = await supabase

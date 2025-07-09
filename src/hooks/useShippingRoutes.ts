@@ -4,16 +4,13 @@ import {
   getShippingRoutes, 
   upsertShippingRoute, 
   deleteShippingRoute,
-  getAutoQuoteSettings,
   getShippingCost,
   calculateUnifiedQuote
 } from '../lib/unified-shipping-calculator';
 import type { 
   ShippingRoute, 
   ShippingRouteDB,
-  AutoQuoteSettings,
   ShippingRouteFormData,
-  AutoQuoteSettingsFormData,
   UnifiedQuoteInput,
   UnifiedQuoteResult
 } from '../types/shipping';

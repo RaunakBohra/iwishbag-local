@@ -1,8 +1,8 @@
-
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Message } from "./types";
+import { Receipt } from "lucide-react";
 
 interface MessageItemProps {
   message: Message;
@@ -14,7 +14,8 @@ export const MessageItem = ({ message, currentUserId, isAdmin }: MessageItemProp
   const navigate = useNavigate();
   const isUserSender = message.sender_id === currentUserId;
   const isUnread = !isUserSender && !message.is_read;
-
+  const isPaymentProof = (message as any).message_type === 'payment_proof';
+  
   const handleMessageClick = () => {
     if (message.quote_id) {
       if (isAdmin) {
@@ -31,36 +32,43 @@ export const MessageItem = ({ message, currentUserId, isAdmin }: MessageItemProp
       onClick={handleMessageClick}
       className={cn(
         "rounded-lg p-4 max-w-[80%] w-fit transition-colors",
-        isUserSender
-          ? "bg-primary/10"
-          : "bg-muted",
+        isUserSender ? "bg-primary/10" : "bg-muted",
         isUnread && "border-2 border-primary",
-        message.quote_id &&
-          "cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700"
+        message.quote_id && "cursor-pointer hover:bg-gray-200",
+        isPaymentProof && "border-green-500 bg-green-50"
       )}
     >
       <div className="flex items-center gap-2 justify-between w-full">
-        <p className="font-semibold text-sm">
-          {isUserSender ? "You" : "Support"}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="font-semibold text-sm">
+            {isUserSender ? "You" : "Support"}
+          </p>
+          {isPaymentProof && (
+            <Badge variant="default" className="bg-green-600 hover:bg-green-700 gap-1">
+              <Receipt className="h-3 w-3" />
+              Payment Proof
+            </Badge>
+          )}
+        </div>
         <span className="text-xs text-muted-foreground">
           {new Date(message.created_at).toLocaleString()}
         </span>
       </div>
+      
       <h3 className="font-semibold mt-2">{message.subject}</h3>
       <p className="text-sm text-foreground/80 whitespace-pre-wrap mt-1">
         {message.content}
       </p>
+      
       {message.quote_id && (
         <p className="text-xs text-primary mt-2">
           Related to Quote #{message.quote_id.substring(0, 8)}
         </p>
       )}
+      
       {isUserSender && (
         <div className="flex justify-end mt-2">
-          <Badge
-            variant={message.is_read ? "secondary" : "default"}
-          >
+          <Badge variant={message.is_read ? "secondary" : "default"}>
             {message.is_read ? "Read" : "Sent"}
           </Badge>
         </div>

@@ -20,9 +20,12 @@ import {
   DollarSign,
   AlertTriangle,
   Phone,
-  MapPin
+  MapPin,
+  CheckCircle,
+  MessageSquare
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -40,6 +43,7 @@ interface AdminOrderListItemProps {
     order: OrderWithItems;
     isSelected: boolean;
     onSelect: (id: string) => void;
+    onConfirmPayment?: (order: OrderWithItems) => void;
 }
 
 const getPriorityBadge = (priority: OrderWithItems['priority']) => {
@@ -59,10 +63,24 @@ const getPriorityBadge = (priority: OrderWithItems['priority']) => {
   );
 };
 
-export const AdminOrderListItem = ({ order, isSelected, onSelect }: AdminOrderListItemProps) => {
+export const AdminOrderListItem = ({ order, isSelected, onSelect, onConfirmPayment }: AdminOrderListItemProps) => {
     const navigate = useNavigate();
     const { formatMultiCurrency } = useAdminCurrencyDisplay();
     const { formatAmount } = useUserCurrency();
+    
+    // Get message count for this order
+    const { data: messageCount = 0 } = useQuery({
+        queryKey: ['quote-messages-count', order.id],
+        queryFn: async () => {
+            const { count, error } = await supabase
+                .from('messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('quote_id', order.id);
+            if (error) return 0;
+            return count || 0;
+        },
+        staleTime: 30000, // Cache for 30 seconds
+    });
     
     const firstItem = order.quote_items?.[0];
     const totalItems = order.quote_items?.length || 0;
@@ -88,12 +106,46 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect }: AdminOrderLi
                             aria-label="Select order"
                             className="mt-1"
                         />
+                        {/* Product Image */}
+                        {firstItem?.image_url && (
+                            <div className="flex-shrink-0">
+                                <img 
+                                    src={firstItem.image_url} 
+                                    alt="Product" 
+                                    className="w-12 h-12 object-cover rounded border"
+                                />
+                            </div>
+                        )}
                         <div className="flex-1 grid grid-cols-4 gap-4">
                             <div>
                                 <h3 className="font-semibold">{order.order_display_id || order.display_id || itemSummary}</h3>
                                 {order.order_display_id && <p className="text-sm text-muted-foreground">{itemSummary}</p>}
                                 <p className="text-sm text-muted-foreground">Total items: {totalItems || order.quantity || 0}</p>
                                 <p className="text-sm text-muted-foreground">{order.email}</p>
+                                {/* Payment Status Display */}
+                                {(order.payment_status && order.payment_status !== 'unpaid') && (
+                                    <div className="mt-1 flex items-center gap-2">
+                                        <Badge 
+                                            variant={
+                                                order.payment_status === 'paid' ? 'default' : 
+                                                order.payment_status === 'partial' ? 'warning' : 
+                                                order.payment_status === 'overpaid' ? 'secondary' : 
+                                                'outline'
+                                            }
+                                            className="text-xs"
+                                        >
+                                            {order.payment_status === 'partial' && (
+                                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                            )}
+                                            {order.payment_status === 'partial' 
+                                                ? `Partial: $${order.amount_paid || 0} of $${order.final_total || 0}`
+                                                : order.payment_status === 'overpaid'
+                                                ? `Overpaid: +$${order.overpayment_amount || 0}`
+                                                : 'Paid'
+                                            }
+                                        </Badge>
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <p className="text-sm">Country: {order.country_code || 'Not set'}</p>
@@ -140,6 +192,46 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect }: AdminOrderLi
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        {/* Message Indicator */}
+                        {messageCount > 0 && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button 
+                                        size="sm" 
+                                        variant="outline" 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate(`/admin/orders/${order.id}`);
+                                        }}
+                                        className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                                    >
+                                        <MessageSquare className="h-3 w-3 mr-1" />
+                                        {messageCount}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{messageCount} message{messageCount !== 1 ? 's' : ''} in this conversation</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
+                        
+                        {/* Payment Confirmation Button */}
+                        {(order.payment_method === 'bank_transfer' || order.payment_method === 'cod') && 
+                         (order.payment_status === 'unpaid' || !order.payment_status) && (
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onConfirmPayment?.(order);
+                                }}
+                                className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                            >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Confirm Payment
+                            </Button>
+                        )}
+                        
                         <Button size="sm" variant="destructive" onClick={() => navigate(`/admin/orders/${order.id}`)}>
                             View Details
                         </Button>

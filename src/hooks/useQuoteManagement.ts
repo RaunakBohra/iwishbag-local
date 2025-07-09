@@ -45,6 +45,7 @@ export const useQuoteManagement = (filters = {}) => {
             // Filter based on status management configuration
             // Only show quotes with statuses that are configured to show in quotes list
             const quoteStatusNames = getStatusesForQuotesList();
+            console.log('DEBUG: Quote statuses allowed in quotes list:', quoteStatusNames);
             if (quoteStatusNames.length > 0) {
                 query = query.in('status', quoteStatusNames);
             }

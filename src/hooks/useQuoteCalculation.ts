@@ -1,5 +1,4 @@
 import { useToast } from "@/components/ui/use-toast";
-import { calculateShippingQuotes, CountrySettings } from "@/lib/quote-calculator";
 import { getShippingCost } from "@/lib/unified-shipping-calculator";
 import { Tables } from "@/integrations/supabase/types";
 import { AdminQuoteFormValues } from "@/components/admin/admin-quote-form-validation";
@@ -275,57 +274,39 @@ export const useQuoteCalculation = () => {
                     subtotalBeforeGatewayFee
                 });
             } else {
-                console.log('[QuoteCalc Debug] Using fallback calculation with USD conversion');
-                // Fallback to old calculation method - convert to USD for legacy calculation
-                const total_item_price_in_usd = total_item_price_in_purchase_currency / purchaseCurrencyRate;
+                console.log('[QuoteCalc Debug] Using basic calculation without specific route');
+                // Basic calculation without route-specific shipping
+                internationalShippingCost = (countrySettings.min_shipping || 25) + 
+                    (total_item_weight * (countrySettings.additional_weight || 5));
                 
-                console.log('[QuoteCalc Debug] USD conversion:', {
-                    total_item_price_in_purchase_currency,
-                    purchaseCurrencyRate,
-                    total_item_price_in_usd
-                });
+                // Calculate customs directly in purchase currency
+                customsAndECS = ((total_item_price_in_purchase_currency + 
+                    cleanFormData.sales_tax_price + 
+                    cleanFormData.merchant_shipping_price + 
+                    internationalShippingCost) * (customsPercent / 100));
                 
-                const cleanFormDataInUSD = {
-                    sales_tax_price: cleanFormData.sales_tax_price / purchaseCurrencyRate,
-                    merchant_shipping_price: cleanFormData.merchant_shipping_price / purchaseCurrencyRate,
-                    domestic_shipping: cleanFormData.domestic_shipping / purchaseCurrencyRate,
-                    handling_charge: cleanFormData.handling_charge / purchaseCurrencyRate,
-                    discount: cleanFormData.discount / purchaseCurrencyRate,
-                    insurance_amount: cleanFormData.insurance_amount / purchaseCurrencyRate,
-                };
-
-                console.log('[QuoteCalc Debug] Form data in USD:', cleanFormDataInUSD);
-
-                const countrySettingsInUSD = {
-                    ...countrySettings,
-                    min_shipping: (countrySettings.min_shipping || 0) / purchaseCurrencyRate,
-                    additional_weight: (countrySettings.additional_weight || 0) / purchaseCurrencyRate,
-                    payment_gateway_fixed_fee: (countrySettings.payment_gateway_fixed_fee || 0) / purchaseCurrencyRate,
-                };
-
-                const fallbackQuote = calculateShippingQuotes(
-                    total_item_weight,
-                    total_item_price_in_usd,
-                    cleanFormDataInUSD.sales_tax_price,
-                    cleanFormDataInUSD.merchant_shipping_price,
-                    customsPercent,
-                    cleanFormDataInUSD.domestic_shipping,
-                    cleanFormDataInUSD.handling_charge,
-                    cleanFormDataInUSD.discount,
-                    cleanFormDataInUSD.insurance_amount,
-                    countrySettingsInUSD as CountrySettings
-                );
+                // Payment gateway fee calculation
+                const subtotalBeforeGatewayFee = 
+                    total_item_price_in_purchase_currency +
+                    cleanFormData.sales_tax_price +
+                    cleanFormData.merchant_shipping_price +
+                    internationalShippingCost +
+                    customsAndECS +
+                    cleanFormData.domestic_shipping +
+                    cleanFormData.handling_charge +
+                    cleanFormData.insurance_amount -
+                    cleanFormData.discount;
                 
-                console.log('[QuoteCalc Debug] Fallback quote (USD):', fallbackQuote);
+                const gatewayPercentFee = countrySettings.payment_gateway_percent_fee || 0;
+                const reasonablePercentFee = gatewayPercentFee > 100 ? gatewayPercentFee / 100 : gatewayPercentFee;
                 
-                // Convert back to purchase currency
-                internationalShippingCost = fallbackQuote.interNationalShipping * purchaseCurrencyRate;
-                customsAndECS = fallbackQuote.customsAndECS * purchaseCurrencyRate;
-                paymentGatewayFee = fallbackQuote.paymentGatewayFee * purchaseCurrencyRate;
+                paymentGatewayFee = (countrySettings.payment_gateway_fixed_fee || 0) + 
+                    (subtotalBeforeGatewayFee * reasonablePercentFee) / 100;
+                
                 shippingMethod = 'country_settings';
                 shippingRouteId = null;
                 
-                console.log('[QuoteCalc Debug] Converted back to purchase currency:', {
+                console.log('[QuoteCalc Debug] Basic calculation:', {
                     internationalShippingCost,
                     customsAndECS,
                     paymentGatewayFee
@@ -438,83 +419,12 @@ export const useQuoteCalculation = () => {
 
         } catch (error) {
             console.error('Error calculating shipping cost:', error);
-            
-            // Fallback to old calculation method if route lookup fails
-            const purchaseCurrencyRate = countrySettings.rate_from_usd || 1;
-            const total_item_price_in_usd = total_item_price_in_purchase_currency / purchaseCurrencyRate;
-            
-            const cleanFormDataInUSD = {
-                sales_tax_price: cleanFormData.sales_tax_price / purchaseCurrencyRate,
-                merchant_shipping_price: cleanFormData.merchant_shipping_price / purchaseCurrencyRate,
-                domestic_shipping: cleanFormData.domestic_shipping / purchaseCurrencyRate,
-                handling_charge: cleanFormData.handling_charge / purchaseCurrencyRate,
-                discount: cleanFormData.discount / purchaseCurrencyRate,
-                insurance_amount: cleanFormData.insurance_amount / purchaseCurrencyRate,
-            };
-
-            const countrySettingsInUSD = {
-                ...countrySettings,
-                min_shipping: (countrySettings.min_shipping || 0) / purchaseCurrencyRate,
-                additional_weight: (countrySettings.additional_weight || 0) / purchaseCurrencyRate,
-                payment_gateway_fixed_fee: (countrySettings.payment_gateway_fixed_fee || 0) / purchaseCurrencyRate,
-            };
-
-            const customsPercent = customs_percentage !== null && customs_percentage !== undefined 
-                ? customs_percentage 
-                : 0;
-
-            const calculatedQuote = calculateShippingQuotes(
-                total_item_weight,
-                total_item_price_in_usd,
-                cleanFormDataInUSD.sales_tax_price,
-                cleanFormDataInUSD.merchant_shipping_price,
-                customsPercent,
-                cleanFormDataInUSD.domestic_shipping,
-                cleanFormDataInUSD.handling_charge,
-                cleanFormDataInUSD.discount,
-                cleanFormDataInUSD.insurance_amount,
-                countrySettingsInUSD as CountrySettings
-            );
-
-            // Convert all USD values back to purchase currency
-            const finalTotal = calculatedQuote.finalTotal * purchaseCurrencyRate;
-            const subTotal = calculatedQuote.subTotal * purchaseCurrencyRate;
-            const vat = calculatedQuote.vat * purchaseCurrencyRate;
-            const internationalShippingCost = calculatedQuote.interNationalShipping * purchaseCurrencyRate;
-            const customsAndECS = calculatedQuote.customsAndECS * purchaseCurrencyRate;
-            const paymentGatewayFee = calculatedQuote.paymentGatewayFee * purchaseCurrencyRate;
-
-            const updatedQuote = {
-                ...restOfQuoteData,
-                id: quoteDataFromForm.id,
-                item_price: total_item_price_in_purchase_currency,
-                item_weight: total_item_weight,
-                final_total: finalTotal,
-                sub_total: subTotal,
-                vat: vat,
-                international_shipping: internationalShippingCost,
-                customs_and_ecs: customsAndECS,
-                payment_gateway_fee: paymentGatewayFee,
-                // Store the ORIGINAL input values (in purchase currency)
-                sales_tax_price: cleanFormData.sales_tax_price,
-                merchant_shipping_price: cleanFormData.merchant_shipping_price,
-                domestic_shipping: cleanFormData.domestic_shipping,
-                handling_charge: cleanFormData.handling_charge,
-                insurance_amount: cleanFormData.insurance_amount,
-                discount: cleanFormData.discount,
-                final_currency: purchaseCurrency || countrySettings.currency,
-                final_total_local: finalTotal,
-                // Store the purchase currency rate for fallback case
-                exchange_rate: purchaseCurrencyRate,
-                // Fallback fields
-                origin_country: 'US',
-                shipping_method: 'country_settings',
-                shipping_route_id: null,
-                // Preserve current status - don't change status on calculation
-                status: currentStatus as any
-            };
-            
-            return updatedQuote;
+            toast({ 
+                title: "Calculation Error", 
+                description: "Failed to calculate shipping cost. Please try again.", 
+                variant: "destructive" 
+            });
+            return null;
         }
     };
     

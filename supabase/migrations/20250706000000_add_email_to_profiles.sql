@@ -49,6 +49,7 @@ SELECT populate_profiles_email();
 DROP FUNCTION populate_profiles_email();
 
 -- Update the handle_new_user function to include email
+-- Updated to allow auto-set functionality by not defaulting to US/USD
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -57,8 +58,8 @@ BEGIN
     new.id, 
     COALESCE(new.raw_user_meta_data->>'name', new.raw_user_meta_data->>'full_name'), 
     new.raw_user_meta_data->>'phone',
-    COALESCE(new.raw_user_meta_data->>'country', 'US'),
-    COALESCE(new.raw_user_meta_data->>'currency', 'USD'),
+    new.raw_user_meta_data->>'country',  -- Only set if explicitly provided
+    new.raw_user_meta_data->>'currency', -- Only set if explicitly provided
     new.email
   );
   
@@ -77,6 +78,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Update the ensure_user_profile function to include email
+-- Updated to allow auto-set functionality by not defaulting to US/USD
 CREATE OR REPLACE FUNCTION public.ensure_user_profile(_user_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -87,14 +89,14 @@ BEGIN
     -- Get email from auth.users
     SELECT email INTO user_email FROM auth.users WHERE id = _user_id;
     
-    -- Create profile
+    -- Create profile with NULL country/currency to allow auto-set logic
     INSERT INTO public.profiles (id, full_name, phone, country, preferred_display_currency, referral_code, email)
     VALUES (
       _user_id, 
       'User', 
       NULL,
-      'US',
-      'USD',
+      NULL,  -- Let auto-set logic handle this
+      NULL,  -- Let auto-set logic handle this
       'REF' || substr(md5(random()::text), 1, 8),
       user_email
     );

@@ -257,10 +257,22 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
         const quoteSettings = data.find(s => s.setting_key === 'quote_statuses');
         const orderSettings = data.find(s => s.setting_key === 'order_statuses');
         if (quoteSettings?.setting_value) {
-          setQuoteStatuses(JSON.parse(quoteSettings.setting_value));
+          try {
+            setQuoteStatuses(JSON.parse(quoteSettings.setting_value));
+          } catch (e: any) {
+            console.error('Error parsing quote statuses JSON:', e.message);
+            console.error('Invalid JSON content:', quoteSettings.setting_value);
+            throw new Error(`Invalid JSON in quote_statuses: ${e.message}`);
+          }
         }
         if (orderSettings?.setting_value) {
-          setOrderStatuses(JSON.parse(orderSettings.setting_value));
+          try {
+            setOrderStatuses(JSON.parse(orderSettings.setting_value));
+          } catch (e: any) {
+            console.error('Error parsing order statuses JSON:', e.message);
+            console.error('Invalid JSON content:', orderSettings.setting_value);
+            throw new Error(`Invalid JSON in order_statuses: ${e.message}`);
+          }
         }
       }
     } catch (err: any) {

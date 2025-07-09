@@ -4,6 +4,7 @@ import { Upload, X, Image as ImageIcon, FileText, Camera, Paperclip } from 'luci
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import imageCompression from 'browser-image-compression';
 interface ImageUploadProps {
   onImageUpload: (url: string) => void;
   onImageRemove: () => void;
@@ -26,23 +27,47 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     const file = acceptedFiles[0];
     if (!file) return;
 
-    // Validate file size (5MB limit)
-    if (file.size > 5242880) {
-      toast({
-        title: "File too large",
-        description: "Please select an image smaller than 5MB.",
-        variant: "destructive"
-      });
-      return;
-    }
     setUploading(true);
     try {
+      let fileToUpload = file;
+      
+      // Only compress image files, not PDFs
+      if (file.type.startsWith('image/')) {
+        // Compression options
+        const options = {
+          maxSizeMB: 1.5, // Max file size in MB
+          maxWidthOrHeight: 2048, // Max width or height
+          useWebWorker: true,
+          fileType: file.type as 'image/jpeg' | 'image/png' | 'image/webp',
+          initialQuality: 0.85 // 85% quality
+        };
+        
+        try {
+          fileToUpload = await imageCompression(file, options);
+          console.log(`Original size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+          console.log(`Compressed size: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
+        } catch (compressionError) {
+          console.error('Image compression failed, using original:', compressionError);
+          // If compression fails, continue with original file
+        }
+      }
+
+      // Validate file size (10MB limit for consistency with messaging)
+      if (fileToUpload.size > 10485760) {
+        toast({
+          title: "File too large",
+          description: "Please select a file smaller than 10MB.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `product-images/${fileName}`;
+      const filePath = `${fileName}`; // Remove the duplicate path
       const {
         error: uploadError
-      } = await supabase.storage.from('product-images').upload(filePath, file);
+      } = await supabase.storage.from('product-images').upload(filePath, fileToUpload);
       if (uploadError) {
         throw uploadError;
       }

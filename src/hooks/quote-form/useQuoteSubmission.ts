@@ -60,7 +60,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
     if (user?.id) {
       const { data: existingProfile } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, country, preferred_display_currency')
         .eq('id', user.id)
         .single();
 
@@ -72,8 +72,8 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
             id: user.id,
             full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
             phone: user.phone || null,
-            country: countryCode || 'US',
-            preferred_display_currency: selectedCountryCurrency || 'USD',
+            country: countryCode || null,
+            preferred_display_currency: selectedCountryCurrency || null,
             referral_code: 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase(),
             email: user.email
           });
@@ -96,6 +96,60 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
             role: 'user',
             created_by: user.id
           });
+      } else {
+        // Check if this is user's first quote and country/currency not set
+        if (!existingProfile.country || !existingProfile.preferred_display_currency) {
+          // Check if user has any previous quotes
+          const { data: existingQuotes } = await supabase
+            .from('quotes')
+            .select('id')
+            .eq('user_id', user.id)
+            .limit(1);
+
+          // If no previous quotes, update profile with destination country/currency
+          if (!existingQuotes || existingQuotes.length === 0) {
+            // Get destination country from shipping address
+            const destinationCountry = shippingAddress?.country_code || shippingAddress?.country || countryCode;
+            
+            // Get currency for destination country
+            let destinationCurrency = 'USD';
+            if (destinationCountry) {
+              const { data: countrySettings } = await supabase
+                .from('country_settings')
+                .select('currency')
+                .eq('code', destinationCountry)
+                .single();
+              
+              if (countrySettings) {
+                destinationCurrency = countrySettings.currency;
+              }
+            }
+            
+            const updateData: any = {};
+            
+            if (!existingProfile.country) {
+              updateData.country = destinationCountry;
+            }
+            
+            if (!existingProfile.preferred_display_currency) {
+              updateData.preferred_display_currency = destinationCurrency;
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update(updateData)
+                .eq('id', user.id);
+
+              if (!updateError) {
+                toast({
+                  title: "Profile Updated",
+                  description: `We've set your default country to ${destinationCountry} and currency to ${destinationCurrency} based on your shipping destination.`,
+                });
+              }
+            }
+          }
+        }
       }
     }
 
@@ -199,7 +253,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
     if (user?.id) {
       const { data: existingProfile } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, country, preferred_display_currency')
         .eq('id', user.id)
         .single();
 
@@ -211,8 +265,8 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
             id: user.id,
             full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
             phone: user.phone || null,
-            country: countryCode || 'US',
-            preferred_display_currency: selectedCountryCurrency || 'USD',
+            country: countryCode || null,
+            preferred_display_currency: selectedCountryCurrency || null,
             referral_code: 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase(),
             email: user.email
           });
@@ -235,6 +289,60 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
             role: 'user',
             created_by: user.id
           });
+      } else {
+        // Check if this is user's first quote and country/currency not set
+        if (!existingProfile.country || !existingProfile.preferred_display_currency) {
+          // Check if user has any previous quotes
+          const { data: existingQuotes } = await supabase
+            .from('quotes')
+            .select('id')
+            .eq('user_id', user.id)
+            .limit(1);
+
+          // If no previous quotes, update profile with destination country/currency
+          if (!existingQuotes || existingQuotes.length === 0) {
+            // Get destination country from shipping address
+            const destinationCountry = shippingAddress?.country_code || shippingAddress?.country || countryCode;
+            
+            // Get currency for destination country
+            let destinationCurrency = 'USD';
+            if (destinationCountry) {
+              const { data: countrySettings } = await supabase
+                .from('country_settings')
+                .select('currency')
+                .eq('code', destinationCountry)
+                .single();
+              
+              if (countrySettings) {
+                destinationCurrency = countrySettings.currency;
+              }
+            }
+            
+            const updateData: any = {};
+            
+            if (!existingProfile.country) {
+              updateData.country = destinationCountry;
+            }
+            
+            if (!existingProfile.preferred_display_currency) {
+              updateData.preferred_display_currency = destinationCurrency;
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update(updateData)
+                .eq('id', user.id);
+
+              if (!updateError) {
+                toast({
+                  title: "Profile Updated",
+                  description: `We've set your default country to ${destinationCountry} and currency to ${destinationCurrency} based on your shipping destination.`,
+                });
+              }
+            }
+          }
+        }
       }
     }
 

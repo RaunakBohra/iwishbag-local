@@ -2,15 +2,19 @@
 import { useState } from "react";
 import { useBankAccountSettings, BankAccount } from "@/hooks/useBankAccountSettings";
 import { Button } from "@/components/ui/button";
-import { BankAccountForm } from "./BankAccountForm";
+import { FlexibleBankAccountForm } from "./FlexibleBankAccountForm";
 import { BankAccountListItem } from "./BankAccountListItem";
-import { Plus } from "lucide-react";
+import { Plus, Filter } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useShippingCountries } from "@/hooks/useShippingCountries";
 
 export const BankAccountSettings = () => {
   const { bankAccounts, isLoadingBankAccounts, createOrUpdateBankAccount, deleteBankAccount, isProcessing } = useBankAccountSettings();
+  const { data: countries, isLoading: countriesLoading } = useShippingCountries();
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [countryFilter, setCountryFilter] = useState<string>('all');
 
   const handleEdit = (account: BankAccount) => {
     setEditingAccount(account);
@@ -41,6 +45,13 @@ export const BankAccountSettings = () => {
     }
   };
 
+  // Filter bank accounts by country
+  const filteredAccounts = countryFilter === 'all' 
+    ? bankAccounts 
+    : countryFilter === 'fallback'
+    ? bankAccounts.filter(account => account.is_fallback)
+    : bankAccounts.filter(account => account.country_code === countryFilter);
+
   if (isLoadingBankAccounts) {
     return (
         <div className="space-y-4">
@@ -56,15 +67,31 @@ export const BankAccountSettings = () => {
       <div className="flex justify-between items-center">
         <h3 className="text-2xl font-bold">Bank Account Settings</h3>
         {!isFormOpen && (
-          <Button onClick={handleAddNew}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Account
-          </Button>
+          <div className="flex gap-2">
+            <Select value={countryFilter} onValueChange={setCountryFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filter by country" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Countries</SelectItem>
+                <SelectItem value="fallback">Fallback Accounts</SelectItem>
+                {countries?.map((country) => (
+                  <SelectItem key={country.code} value={country.code}>
+                    {country.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={handleAddNew}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Account
+            </Button>
+          </div>
         )}
       </div>
 
       {isFormOpen ? (
-        <BankAccountForm 
+        <FlexibleBankAccountForm 
           editingAccount={editingAccount}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
@@ -72,7 +99,7 @@ export const BankAccountSettings = () => {
         />
       ) : (
         <div className="space-y-4">
-          {bankAccounts.map((account) => (
+          {filteredAccounts.map((account) => (
             <BankAccountListItem 
               key={account.id}
               account={account}
@@ -80,7 +107,14 @@ export const BankAccountSettings = () => {
               onDelete={handleDelete}
             />
           ))}
-          {bankAccounts.length === 0 && <p>No bank accounts found. Add one to get started.</p>}
+          {filteredAccounts.length === 0 && (
+            <p>
+              {countryFilter === 'all' 
+                ? "No bank accounts found. Add one to get started."
+                : `No bank accounts found for ${countryFilter === 'fallback' ? 'fallback' : countries?.find(c => c.code === countryFilter)?.name || countryFilter}.`
+              }
+            </p>
+          )}
         </div>
       )}
     </div>

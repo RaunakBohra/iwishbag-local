@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Message, User, Conversation } from "@/components/messaging/types";
 import { useCustomerManagement } from "./useCustomerManagement";
+import imageCompression from 'browser-image-compression';
 
 export const useMessaging = (hasAdminRole: boolean | undefined) => {
   const { user } = useAuth();
@@ -43,8 +44,29 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
       let attachment_file_name: string | null = null;
 
       if (attachment) {
-        if (attachment.size > 5 * 1024 * 1024) { // 5MB limit
-          throw new Error("File is too large. Maximum size is 5MB.");
+        let fileToUpload = attachment;
+        
+        // Only compress image files
+        if (attachment.type.startsWith('image/')) {
+          const options = {
+            maxSizeMB: 1.5,
+            maxWidthOrHeight: 2048,
+            useWebWorker: true,
+            fileType: attachment.type as 'image/jpeg' | 'image/png' | 'image/webp',
+            initialQuality: 0.85
+          };
+          
+          try {
+            fileToUpload = await imageCompression(attachment, options);
+            console.log(`Message attachment - Original: ${(attachment.size / 1024 / 1024).toFixed(2)}MB, Compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
+          } catch (compressionError) {
+            console.error('Image compression failed, using original:', compressionError);
+          }
+        }
+
+        // Standardize to 10MB limit
+        if (fileToUpload.size > 10 * 1024 * 1024) {
+          throw new Error("File is too large. Maximum size is 10MB.");
         }
 
         const fileExt = attachment.name.split('.').pop();
@@ -53,7 +75,7 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
 
         const { error: uploadError } = await supabase.storage
           .from('message-attachments')
-          .upload(filePath, attachment);
+          .upload(filePath, fileToUpload);
 
         if (uploadError) {
           throw uploadError;

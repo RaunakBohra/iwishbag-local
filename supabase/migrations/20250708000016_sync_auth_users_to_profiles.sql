@@ -2,11 +2,14 @@
 -- This ensures all authenticated users have a profile entry with email
 
 -- First, insert any missing profiles from auth.users
-INSERT INTO public.profiles (id, email, full_name, created_at, updated_at)
+-- Updated to allow auto-set functionality by not defaulting to US/USD
+INSERT INTO public.profiles (id, email, full_name, country, preferred_display_currency, created_at, updated_at)
 SELECT 
   au.id,
   au.email,
   COALESCE(au.raw_user_meta_data->>'full_name', split_part(au.email, '@', 1)) as full_name,
+  au.raw_user_meta_data->>'country',  -- Only set if explicitly provided
+  au.raw_user_meta_data->>'currency', -- Only set if explicitly provided
   au.created_at,
   au.updated_at
 FROM auth.users au
@@ -23,15 +26,18 @@ WHERE p.id = au.id
   AND au.email IS NOT NULL;
 
 -- Create a trigger to automatically sync new auth users to profiles
+-- Updated to allow auto-set functionality by not defaulting to US/USD
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
   -- Insert new profile when user is created
-  INSERT INTO public.profiles (id, email, full_name, created_at, updated_at)
+  INSERT INTO public.profiles (id, email, full_name, country, preferred_display_currency, created_at, updated_at)
   VALUES (
     new.id,
     new.email,
     COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+    new.raw_user_meta_data->>'country',  -- Only set if explicitly provided
+    new.raw_user_meta_data->>'currency', -- Only set if explicitly provided
     new.created_at,
     new.updated_at
   )
@@ -40,6 +46,16 @@ BEGIN
     email = EXCLUDED.email,
     updated_at = EXCLUDED.updated_at
   WHERE profiles.email IS NULL;
+  
+  -- Add user role
+  INSERT INTO public.user_roles (user_id, role, created_by)
+  VALUES (new.id, 'user', new.id)
+  ON CONFLICT (user_id, role) DO NOTHING;
+  
+  -- Set referral code
+  UPDATE public.profiles 
+  SET referral_code = 'REF' || substr(md5(random()::text), 1, 8)
+  WHERE id = new.id AND referral_code IS NULL;
   
   RETURN new;
 END;

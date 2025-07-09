@@ -35,7 +35,7 @@ export const useCustomerOrderDetail = (orderId: string | undefined) => {
       // Ensure the user is the owner of the order, unless they are an admin
       if (quoteData.user_id !== user.id) {
           // A proper role check would be better, but this is a good security measure for now.
-          const { data: userRoles } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
+          const { data: userRoles } = await supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle();
           if (userRoles?.role !== 'admin') {
             throw new Error("You are not authorized to view this order.");
           }

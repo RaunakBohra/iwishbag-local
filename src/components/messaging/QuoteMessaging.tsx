@@ -12,6 +12,7 @@ import { useAdminRole } from "@/hooks/useAdminRole";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import imageCompression from 'browser-image-compression';
 
 type Message = Tables<'messages'> & {
   attachment_url?: string | null;
@@ -58,12 +59,32 @@ export const QuoteMessaging = ({
       let attachmentFileName: string | null = null;
 
       if (file) {
+        let fileToUpload = file;
+        
+        // Only compress image files
+        if (file.type.startsWith('image/')) {
+          const options = {
+            maxSizeMB: 1.5,
+            maxWidthOrHeight: 2048,
+            useWebWorker: true,
+            fileType: file.type as 'image/jpeg' | 'image/png' | 'image/webp',
+            initialQuality: 0.85
+          };
+          
+          try {
+            fileToUpload = await imageCompression(file, options);
+            console.log(`QuoteMessaging - Original: ${(file.size / 1024 / 1024).toFixed(2)}MB, Compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
+          } catch (compressionError) {
+            console.error('Image compression failed, using original:', compressionError);
+          }
+        }
+        
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}-${Date.now()}.${fileExt}`;
         const filePath = `${fileName}`;
         const { error: uploadError } = await supabase.storage
           .from('message-attachments')
-          .upload(filePath, file);
+          .upload(filePath, fileToUpload);
         if (uploadError) throw uploadError;
         const { data: urlData } = supabase.storage
           .from('message-attachments')

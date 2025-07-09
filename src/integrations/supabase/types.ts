@@ -17,9 +17,9 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
+          query?: string
           variables?: Json
           extensions?: Json
-          query?: string
           operationName?: string
         }
         Returns: Json
@@ -34,96 +34,21 @@ export type Database = {
   }
   public: {
     Tables: {
-      auto_quote_analytics: {
-        Row: {
-          created_at: string | null
-          id: string
-          processing_time: number | null
-          quote_id: string | null
-          rule_performance: Json
-          success_rate: number | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          processing_time?: number | null
-          quote_id?: string | null
-          rule_performance: Json
-          success_rate?: number | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          processing_time?: number | null
-          quote_id?: string | null
-          rule_performance?: Json
-          success_rate?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "auto_quote_analytics_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      auto_quote_settings: {
-        Row: {
-          auto_approval_limit: number | null
-          confidence_threshold: number | null
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          markup_percentage: number | null
-          name: string
-          price_validation: string | null
-          requires_admin_review: boolean | null
-          updated_at: string | null
-          website_domain: string
-          weight_estimation_method: string | null
-        }
-        Insert: {
-          auto_approval_limit?: number | null
-          confidence_threshold?: number | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          markup_percentage?: number | null
-          name: string
-          price_validation?: string | null
-          requires_admin_review?: boolean | null
-          updated_at?: string | null
-          website_domain: string
-          weight_estimation_method?: string | null
-        }
-        Update: {
-          auto_approval_limit?: number | null
-          confidence_threshold?: number | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          markup_percentage?: number | null
-          name?: string
-          price_validation?: string | null
-          requires_admin_review?: boolean | null
-          updated_at?: string | null
-          website_domain?: string
-          weight_estimation_method?: string | null
-        }
-        Relationships: []
-      }
       bank_account_details: {
         Row: {
           account_name: string
           account_number: string
           bank_name: string
           branch_name: string | null
+          country_code: string | null
           created_at: string
+          custom_fields: Json | null
+          display_order: number | null
+          field_labels: Json | null
           iban: string | null
           id: string
           is_active: boolean | null
+          is_fallback: boolean | null
           swift_code: string | null
           updated_at: string
         }
@@ -132,10 +57,15 @@ export type Database = {
           account_number: string
           bank_name: string
           branch_name?: string | null
+          country_code?: string | null
           created_at?: string
+          custom_fields?: Json | null
+          display_order?: number | null
+          field_labels?: Json | null
           iban?: string | null
           id?: string
           is_active?: boolean | null
+          is_fallback?: boolean | null
           swift_code?: string | null
           updated_at?: string
         }
@@ -144,14 +74,27 @@ export type Database = {
           account_number?: string
           bank_name?: string
           branch_name?: string | null
+          country_code?: string | null
           created_at?: string
+          custom_fields?: Json | null
+          display_order?: number | null
+          field_labels?: Json | null
           iban?: string | null
           id?: string
           is_active?: boolean | null
+          is_fallback?: boolean | null
           swift_code?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bank_account_details_country_code_fkey"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "country_settings"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       country_settings: {
         Row: {
@@ -287,28 +230,28 @@ export type Database = {
       }
       email_settings: {
         Row: {
-          created_at: string | null
+          created_at: string
           description: string | null
           id: string
           setting_key: string
-          setting_value: Json
-          updated_at: string | null
+          setting_value: string
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           description?: string | null
           id?: string
           setting_key: string
-          setting_value: Json
-          updated_at?: string | null
+          setting_value: string
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           description?: string | null
           id?: string
           setting_key?: string
-          setting_value?: Json
-          updated_at?: string | null
+          setting_value?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -345,93 +288,6 @@ export type Database = {
           template_type?: string
           updated_at?: string
           variables?: Json | null
-        }
-        Relationships: []
-      }
-      footer_settings: {
-        Row: {
-          business_hours: string | null
-          company_description: string | null
-          company_name: string | null
-          contact_email: string | null
-          created_at: string
-          hero_banner_url: string | null
-          hero_cta_link: string | null
-          hero_cta_text: string | null
-          hero_headline: string | null
-          hero_subheadline: string | null
-          how_it_works_steps: Json | null
-          id: string
-          primary_address: string | null
-          primary_email: string | null
-          primary_phone: string | null
-          secondary_address: string | null
-          secondary_phone: string | null
-          social_facebook: string | null
-          social_instagram: string | null
-          social_linkedin: string | null
-          social_links: Json | null
-          social_twitter: string | null
-          support_email: string | null
-          updated_at: string
-          value_props: Json | null
-          website_logo_url: string | null
-        }
-        Insert: {
-          business_hours?: string | null
-          company_description?: string | null
-          company_name?: string | null
-          contact_email?: string | null
-          created_at?: string
-          hero_banner_url?: string | null
-          hero_cta_link?: string | null
-          hero_cta_text?: string | null
-          hero_headline?: string | null
-          hero_subheadline?: string | null
-          how_it_works_steps?: Json | null
-          id?: string
-          primary_address?: string | null
-          primary_email?: string | null
-          primary_phone?: string | null
-          secondary_address?: string | null
-          secondary_phone?: string | null
-          social_facebook?: string | null
-          social_instagram?: string | null
-          social_linkedin?: string | null
-          social_links?: Json | null
-          social_twitter?: string | null
-          support_email?: string | null
-          updated_at?: string
-          value_props?: Json | null
-          website_logo_url?: string | null
-        }
-        Update: {
-          business_hours?: string | null
-          company_description?: string | null
-          company_name?: string | null
-          contact_email?: string | null
-          created_at?: string
-          hero_banner_url?: string | null
-          hero_cta_link?: string | null
-          hero_cta_text?: string | null
-          hero_headline?: string | null
-          hero_subheadline?: string | null
-          how_it_works_steps?: Json | null
-          id?: string
-          primary_address?: string | null
-          primary_email?: string | null
-          primary_phone?: string | null
-          secondary_address?: string | null
-          secondary_phone?: string | null
-          social_facebook?: string | null
-          social_instagram?: string | null
-          social_linkedin?: string | null
-          social_links?: Json | null
-          social_twitter?: string | null
-          support_email?: string | null
-          updated_at?: string
-          value_props?: Json | null
-          website_logo_url?: string | null
         }
         Relationships: []
       }
@@ -486,7 +342,7 @@ export type Database = {
           is_read: boolean | null
           message_type: string | null
           quote_id: string | null
-          recipient_id: string
+          recipient_id: string | null
           reply_to_message_id: string | null
           sender_email: string | null
           sender_id: string
@@ -503,7 +359,7 @@ export type Database = {
           is_read?: boolean | null
           message_type?: string | null
           quote_id?: string | null
-          recipient_id: string
+          recipient_id?: string | null
           reply_to_message_id?: string | null
           sender_email?: string | null
           sender_id: string
@@ -520,7 +376,7 @@ export type Database = {
           is_read?: boolean | null
           message_type?: string | null
           quote_id?: string | null
-          recipient_id?: string
+          recipient_id?: string | null
           reply_to_message_id?: string | null
           sender_email?: string | null
           sender_id?: string
@@ -600,6 +456,82 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_records: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          notes: string | null
+          payment_method: string | null
+          quote_id: string | null
+          recorded_by: string | null
+          reference_number: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          quote_id?: string | null
+          recorded_by?: string | null
+          reference_number?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          quote_id?: string | null
+          recorded_by?: string | null
+          reference_number?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_records_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_reminders: {
+        Row: {
+          created_at: string | null
+          id: string
+          quote_id: string | null
+          reminder_type: string
+          sent_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          quote_id?: string | null
+          reminder_type: string
+          sent_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          quote_id?: string | null
+          reminder_type?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_reminders_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_transactions: {
         Row: {
           amount: number
@@ -647,54 +579,18 @@ export type Database = {
           },
         ]
       }
-      pricing_rules: {
-        Row: {
-          actions: Json
-          advanced: Json | null
-          conditions: Json
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-          priority: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          actions: Json
-          advanced?: Json | null
-          conditions: Json
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          name: string
-          priority?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          actions?: Json
-          advanced?: Json | null
-          conditions?: Json
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          priority?: number | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           avatar_url: string | null
           cod_enabled: boolean | null
-          country: string
+          country: string | null
           created_at: string
           email: string | null
           full_name: string | null
           id: string
           internal_notes: string | null
           phone: string | null
-          preferred_display_currency: string
+          preferred_display_currency: string | null
           referral_code: string | null
           total_orders: number | null
           total_spent: number | null
@@ -703,14 +599,14 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           cod_enabled?: boolean | null
-          country?: string
+          country?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id: string
           internal_notes?: string | null
           phone?: string | null
-          preferred_display_currency?: string
+          preferred_display_currency?: string | null
           referral_code?: string | null
           total_orders?: number | null
           total_spent?: number | null
@@ -719,14 +615,14 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           cod_enabled?: boolean | null
-          country?: string
+          country?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
           internal_notes?: string | null
           phone?: string | null
-          preferred_display_currency?: string
+          preferred_display_currency?: string | null
           referral_code?: string | null
           total_orders?: number | null
           total_spent?: number | null
@@ -909,19 +805,25 @@ export type Database = {
           address_locked: boolean | null
           address_updated_at: string | null
           address_updated_by: string | null
-          applied_rules: Json | null
+          admin_notes: string | null
+          amount_paid: number | null
+          approval_status:
+            | Database["public"]["Enums"]["quote_approval_status"]
+            | null
           approved_at: string | null
           breakdown: Json | null
-          confidence_score: number | null
+          calculated_at: string | null
           country_code: string | null
           created_at: string
           currency: string
           current_location: string | null
           customer_name: string | null
+          customer_notes: string | null
           customer_phone: string | null
           customs_and_ecs: number | null
           customs_category_name: string | null
           customs_percentage: number | null
+          delivered_at: string | null
           discount: number | null
           display_id: string | null
           domestic_shipping: number | null
@@ -948,22 +850,26 @@ export type Database = {
           merchant_shipping_price: number | null
           options: string | null
           order_display_id: string | null
+          ordered_at: string | null
           origin_country: string | null
+          overpayment_amount: number | null
           paid_at: string | null
           payment_gateway_fee: number | null
           payment_method: string | null
+          payment_reminder_count: number | null
+          payment_reminder_sent_at: string | null
+          payment_status: string | null
           priority: Database["public"]["Enums"]["quote_priority"] | null
           priority_auto: boolean | null
           product_name: string | null
           product_url: string | null
           quantity: number | null
           quote_source: string | null
-          quote_type: string | null
           rejected_at: string | null
           rejection_details: string | null
           rejection_reason_id: string | null
           sales_tax_price: number | null
-          scraped_data: Json | null
+          sent_at: string | null
           share_token: string | null
           shipped_at: string | null
           shipping_address: Json | null
@@ -983,19 +889,25 @@ export type Database = {
           address_locked?: boolean | null
           address_updated_at?: string | null
           address_updated_by?: string | null
-          applied_rules?: Json | null
+          admin_notes?: string | null
+          amount_paid?: number | null
+          approval_status?:
+            | Database["public"]["Enums"]["quote_approval_status"]
+            | null
           approved_at?: string | null
           breakdown?: Json | null
-          confidence_score?: number | null
+          calculated_at?: string | null
           country_code?: string | null
           created_at?: string
           currency?: string
           current_location?: string | null
           customer_name?: string | null
+          customer_notes?: string | null
           customer_phone?: string | null
           customs_and_ecs?: number | null
           customs_category_name?: string | null
           customs_percentage?: number | null
+          delivered_at?: string | null
           discount?: number | null
           display_id?: string | null
           domestic_shipping?: number | null
@@ -1022,22 +934,26 @@ export type Database = {
           merchant_shipping_price?: number | null
           options?: string | null
           order_display_id?: string | null
+          ordered_at?: string | null
           origin_country?: string | null
+          overpayment_amount?: number | null
           paid_at?: string | null
           payment_gateway_fee?: number | null
           payment_method?: string | null
+          payment_reminder_count?: number | null
+          payment_reminder_sent_at?: string | null
+          payment_status?: string | null
           priority?: Database["public"]["Enums"]["quote_priority"] | null
           priority_auto?: boolean | null
           product_name?: string | null
           product_url?: string | null
           quantity?: number | null
           quote_source?: string | null
-          quote_type?: string | null
           rejected_at?: string | null
           rejection_details?: string | null
           rejection_reason_id?: string | null
           sales_tax_price?: number | null
-          scraped_data?: Json | null
+          sent_at?: string | null
           share_token?: string | null
           shipped_at?: string | null
           shipping_address?: Json | null
@@ -1057,19 +973,25 @@ export type Database = {
           address_locked?: boolean | null
           address_updated_at?: string | null
           address_updated_by?: string | null
-          applied_rules?: Json | null
+          admin_notes?: string | null
+          amount_paid?: number | null
+          approval_status?:
+            | Database["public"]["Enums"]["quote_approval_status"]
+            | null
           approved_at?: string | null
           breakdown?: Json | null
-          confidence_score?: number | null
+          calculated_at?: string | null
           country_code?: string | null
           created_at?: string
           currency?: string
           current_location?: string | null
           customer_name?: string | null
+          customer_notes?: string | null
           customer_phone?: string | null
           customs_and_ecs?: number | null
           customs_category_name?: string | null
           customs_percentage?: number | null
+          delivered_at?: string | null
           discount?: number | null
           display_id?: string | null
           domestic_shipping?: number | null
@@ -1096,22 +1018,26 @@ export type Database = {
           merchant_shipping_price?: number | null
           options?: string | null
           order_display_id?: string | null
+          ordered_at?: string | null
           origin_country?: string | null
+          overpayment_amount?: number | null
           paid_at?: string | null
           payment_gateway_fee?: number | null
           payment_method?: string | null
+          payment_reminder_count?: number | null
+          payment_reminder_sent_at?: string | null
+          payment_status?: string | null
           priority?: Database["public"]["Enums"]["quote_priority"] | null
           priority_auto?: boolean | null
           product_name?: string | null
           product_url?: string | null
           quantity?: number | null
           quote_source?: string | null
-          quote_type?: string | null
           rejected_at?: string | null
           rejection_details?: string | null
           rejection_reason_id?: string | null
           sales_tax_price?: number | null
-          scraped_data?: Json | null
+          sent_at?: string | null
           share_token?: string | null
           shipped_at?: string | null
           shipping_address?: Json | null
@@ -1128,13 +1054,6 @@ export type Database = {
           vat?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "quotes_address_updated_by_fkey"
-            columns: ["address_updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "quotes_country_code_fkey"
             columns: ["country_code"]
@@ -1157,33 +1076,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      rejection_reasons: {
-        Row: {
-          category: string | null
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          reason: string
-          updated_at: string | null
-        }
-        Insert: {
-          category?: string | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          reason: string
-          updated_at?: string | null
-        }
-        Update: {
-          category?: string | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          reason?: string
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       route_customs_tiers: {
         Row: {
@@ -1253,6 +1145,7 @@ export type Database = {
           customs_clearance_days: number | null
           delivery_options: Json | null
           destination_country: string
+          exchange_rate: number | null
           id: number
           is_active: boolean | null
           max_weight: number | null
@@ -1275,6 +1168,7 @@ export type Database = {
           customs_clearance_days?: number | null
           delivery_options?: Json | null
           destination_country: string
+          exchange_rate?: number | null
           id?: number
           is_active?: boolean | null
           max_weight?: number | null
@@ -1297,6 +1191,7 @@ export type Database = {
           customs_clearance_days?: number | null
           delivery_options?: Json | null
           destination_country?: string
+          exchange_rate?: number | null
           id?: number
           is_active?: boolean | null
           max_weight?: number | null
@@ -1462,75 +1357,6 @@ export type Database = {
         }
         Relationships: []
       }
-      website_scraping_rules: {
-        Row: {
-          created_at: string | null
-          id: string
-          price_extraction: Json
-          selectors: Json
-          updated_at: string | null
-          validation_rules: Json
-          website_domain: string
-          weight_extraction: Json
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          price_extraction: Json
-          selectors: Json
-          updated_at?: string | null
-          validation_rules: Json
-          website_domain: string
-          weight_extraction: Json
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          price_extraction?: Json
-          selectors?: Json
-          updated_at?: string | null
-          validation_rules?: Json
-          website_domain?: string
-          weight_extraction?: Json
-        }
-        Relationships: []
-      }
-      weight_rules: {
-        Row: {
-          actions: Json
-          advanced: Json | null
-          conditions: Json
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-          priority: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          actions: Json
-          advanced?: Json | null
-          conditions: Json
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          name: string
-          priority?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          actions?: Json
-          advanced?: Json | null
-          conditions?: Json
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          priority?: number | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
@@ -1540,29 +1366,74 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      expire_quotes: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       generate_share_token: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_all_user_emails: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          email: string
+          user_id: string
+          source: string
+          full_name: string
+        }[]
+      }
       get_shipping_cost: {
         Args: {
+          p_origin_country: string
           p_destination_country: string
           p_weight: number
           p_price?: number
-          p_origin_country: string
         }
         Returns: {
-          cost: number
-          method: string
           delivery_days: string
           carrier: string
+          cost: number
+          method: string
         }[]
+      }
+      get_user_bank_accounts: {
+        Args: { user_id: string }
+        Returns: {
+          account_name: string
+          account_number: string
+          bank_name: string
+          branch_name: string | null
+          country_code: string | null
+          created_at: string
+          custom_fields: Json | null
+          display_order: number | null
+          field_labels: Json | null
+          iban: string | null
+          id: string
+          is_active: boolean | null
+          is_fallback: boolean | null
+          swift_code: string | null
+          updated_at: string
+        }[]
+      }
+      has_any_role: {
+        Args: { roles: Database["public"]["Enums"]["app_role"][] }
+        Returns: boolean
       }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_authenticated: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
       lock_address_after_payment: {
@@ -1572,7 +1443,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "moderator"
-      quote_status: "pending" | "sent" | "approved" | "rejected" | "expired" | "calculated" | "paid" | "ordered" | "shipped" | "completed" | "cancelled"
+      quote_approval_status: "pending" | "approved" | "rejected"
       quote_priority: "low" | "normal" | "high" | "urgent"
     }
     CompositeTypes: {
@@ -1693,7 +1564,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "moderator"],
-      quote_status: ["pending", "sent", "approved", "rejected", "expired", "calculated", "paid", "ordered", "shipped", "completed", "cancelled"],
+      quote_approval_status: ["pending", "approved", "rejected"],
       quote_priority: ["low", "normal", "high", "urgent"],
     },
   },

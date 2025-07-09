@@ -1,7 +1,6 @@
 import React, { Suspense, useState } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AccessibilityProvider } from "@/components/ui/AccessibilityProvider";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
@@ -37,29 +36,23 @@ const QuoteDetailUnified = React.lazy(() => import("@/pages/dashboard/QuoteDetai
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import("@/pages/admin/Dashboard"));
-const CartAnalyticsPage = React.lazy(() => import("@/pages/admin/CartAnalytics"));
-const CartRecoveryPage = React.lazy(() => import("@/pages/admin/CartRecovery"));
 const EmailTemplatesPage = React.lazy(() => import("@/pages/admin/EmailTemplates"));
 const PaymentManagement = React.lazy(() => import("@/pages/admin/PaymentManagement"));
 const ShippingRoutesPage = React.lazy(() => import("@/pages/admin/ShippingRoutes"));
 const StatusManagementPage = React.lazy(() => import("@/pages/admin/StatusManagement"));
 const Address = React.lazy(() => import('@/pages/profile/Address'));
-const OptimizedCalculatorDemo = React.lazy(() => import('@/pages/demo/OptimizedCalculatorDemo'));
 
 // Admin components (lazy loaded for better performance)
 const AdminLayout = React.lazy(() => import("@/components/admin/AdminLayout").then(m => ({ default: m.AdminLayout })));
-const AdminAnalytics = React.lazy(() => import("@/components/admin/AdminAnalytics").then(m => ({ default: m.AdminAnalytics })));
 const QuoteManagementPage = React.lazy(() => import("@/components/admin/QuoteManagementPage").then(m => ({ default: m.QuoteManagementPage })));
+const OrderManagementPage = React.lazy(() => import("@/components/admin/OrderManagementPage").then(m => ({ default: m.OrderManagementPage })));
 const EnhancedCustomerManagementPage = React.lazy(() => import("@/components/admin/EnhancedCustomerManagementPage").then(m => ({ default: m.EnhancedCustomerManagementPage })));
 const CountrySettings = React.lazy(() => import("@/components/admin/CountrySettings").then(m => ({ default: m.CountrySettings })));
 const CustomsCategories = React.lazy(() => import("@/components/admin/CustomsCategories").then(m => ({ default: m.CustomsCategories })));
-const UserRoles = React.lazy(() => import("@/components/admin/UserRoles").then(m => ({ default: m.UserRoles })));
 const AdminQuoteDetailPage = React.lazy(() => import("@/components/admin/AdminQuoteDetailPage"));
-const RejectionAnalytics = React.lazy(() => import("@/components/admin/RejectionAnalytics").then(m => ({ default: m.RejectionAnalytics })));
 const QuoteTemplatesPage = React.lazy(() => import("@/components/admin/QuoteTemplatesPage").then(m => ({ default: m.QuoteTemplatesPage })));
 const BankAccountSettings = React.lazy(() => import("@/components/admin/BankAccountSettings").then(m => ({ default: m.BankAccountSettings })));
 const SystemSettings = React.lazy(() => import("@/components/admin/SystemSettings").then(m => ({ default: m.SystemSettings })));
-const HomePageSettings = React.lazy(() => import("@/components/admin/HomePageSettings").then(m => ({ default: m.HomePageSettings })));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 
@@ -73,13 +66,9 @@ const router = createBrowserRouter([
         element: <AdminLayout />,
         children: [
           { index: true, element: <AdminDashboard /> },
-          { path: "cart-analytics", element: <CartAnalyticsPage /> },
-          { path: "cart-recovery", element: <CartRecoveryPage /> },
           { path: "email-templates", element: <EmailTemplatesPage /> },
-          { path: "analytics", element: <AdminAnalytics /> },
-          { path: "rejection-analytics", element: <RejectionAnalytics /> },
           { path: "quotes", element: <QuoteManagementPage /> },
-          
+          { path: "orders", element: <OrderManagementPage /> },
           { path: "orders/:id", element: <AdminQuoteDetailPage /> },
           { path: "customers", element: <EnhancedCustomerManagementPage /> },
           { path: "templates", element: <QuoteTemplatesPage /> },
@@ -88,9 +77,6 @@ const router = createBrowserRouter([
           { path: "customs", element: <CustomsCategories /> },
           { path: "bank-accounts", element: <BankAccountSettings /> },
           { path: "system-settings", element: <SystemSettings /> },
-          { path: "users", element: <UserRoles /> },
-          { path: "footer", element: <HomePageSettings /> },
-          { path: "home-page-settings", element: <HomePageSettings /> },
           { path: "payment-management", element: <PaymentManagement /> },
           { path: "shipping-routes", element: <ShippingRoutesPage /> },
           { path: "status-management", element: <StatusManagementPage /> },
@@ -139,10 +125,6 @@ const router = createBrowserRouter([
       {
         path: "guest-checkout",
         element: <Checkout />,
-      },
-      {
-        path: "demo/calculator",
-        element: <OptimizedCalculatorDemo />,
       },
       {
         element: <ProtectedRoute />,
@@ -221,20 +203,18 @@ const router = createBrowserRouter([
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <QueryProvider>
-          <AuthProvider>
-            <AccessibilityProvider>
-              <StatusConfigProvider>
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
-                  <RouterProvider router={router} />
-                </Suspense>
-                <Toaster />
-              </StatusConfigProvider>
-            </AccessibilityProvider>
-          </AuthProvider>
-        </QueryProvider>
-      </ThemeProvider>
+      <QueryProvider>
+        <AuthProvider>
+          <AccessibilityProvider>
+            <StatusConfigProvider>
+              <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+                <RouterProvider router={router} />
+              </Suspense>
+              <Toaster />
+            </StatusConfigProvider>
+          </AccessibilityProvider>
+        </AuthProvider>
+      </QueryProvider>
     </ErrorBoundary>
   );
 }

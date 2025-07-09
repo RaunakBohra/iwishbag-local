@@ -1,14 +1,6 @@
 import React from "react";
 import { RecentActivity } from "@/components/admin/RecentActivity";
 import { DashboardSkeleton } from "@/components/admin/DashboardSkeleton";
-import { 
-  ConversionRate, 
-  RevenueTrend, 
-  VolumeTrend, 
-  TopCountries, 
-  AverageOrderValue,
-  ExportAnalytics
-} from "@/components/admin/analytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { ManualAnalysisTasks } from "@/components/admin/ManualAnalysisTasks";
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
+import { SimpleEnhancedAnalytics } from "@/components/admin/SimpleEnhancedAnalytics";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminBottomNav } from "@/components/admin/AdminBottomNav";
 
@@ -47,18 +40,39 @@ import { SystemSettings } from "@/components/admin/SystemSettings";
 import { PaymentGatewayManagement } from "@/components/admin/PaymentGatewayManagement";
 import { CountrySettings } from "@/components/admin/CountrySettings";
 import { BankAccountSettings } from "@/components/admin/BankAccountSettings";
-import { HomePageSettings } from "@/components/admin/HomePageSettings";
 import { EmailTemplateManager } from "@/components/admin/EmailTemplateManager";
-import { UserRoles } from "@/components/admin/UserRoles";
-import { CartAnalytics } from "@/components/admin/CartAnalytics";
-import { CartRecovery } from "@/components/admin/CartRecovery";
-import { AdminRoleRecovery } from "@/components/admin/AdminRoleRecovery";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Globe, RefreshCw, UserCheck } from "lucide-react";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+
+  // Fetch comprehensive data for analytics
+  const { data: allQuotes, isLoading: quotesLoading } = useQuery({
+    queryKey: ['admin-all-quotes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: allOrders, isLoading: ordersLoading } = useQuery({
+    queryKey: ['admin-all-orders'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .in('status', ['paid', 'processing', 'shipped', 'delivered', 'completed'])
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   // Fetch quick stats
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -108,47 +122,40 @@ const AdminDashboard = () => {
       description: "Manage customer quotes",
       icon: FileText,
       href: "/admin/quotes",
-      color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+      color: "bg-blue-500/10 text-blue-600",
     },
     {
       title: "Manage Orders",
       description: "Track and process orders",
       icon: Package,
       href: "/admin/orders",
-      color: "bg-green-500/10 text-green-600 dark:text-green-400",
+      color: "bg-green-500/10 text-green-600",
     },
     {
       title: "Customer Analytics",
       description: "View customer insights",
       icon: Users,
       href: "/admin/customers",
-      color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-    },
-    {
-      title: "Cart Analytics",
-      description: "Monitor cart performance",
-      icon: ShoppingCart,
-      href: "/admin/cart-analytics",
-      color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+      color: "bg-purple-500/10 text-purple-600",
     },
     {
       title: "Email Templates",
       description: "Manage email campaigns",
       icon: Mail,
       href: "/admin/email-templates",
-      color: "bg-red-500/10 text-red-600 dark:text-red-400",
+      color: "bg-red-500/10 text-red-600",
     },
     {
       title: "Payment Management",
       description: "Manage payment transactions",
       icon: CreditCard,
       href: "/admin/payment-management",
-      color: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
+      color: "bg-teal-500/10 text-teal-600",
     },
   ];
 
   // Show skeleton while loading
-  if (statsLoading) {
+  if (statsLoading || quotesLoading || ordersLoading) {
     return <DashboardSkeleton />;
   }
 
@@ -325,7 +332,15 @@ const AdminDashboard = () => {
             </Card>
           </div>
 
-          <AdminAnalytics />
+          {/* Enhanced Analytics */}
+          {!quotesLoading && !ordersLoading && allQuotes && allOrders ? (
+            <SimpleEnhancedAnalytics 
+              quotes={allQuotes} 
+              orders={allOrders} 
+            />
+          ) : (
+            <AdminAnalytics />
+          )}
         </TabsContent>
       </Tabs>
     </div>
