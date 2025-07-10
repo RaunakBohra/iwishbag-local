@@ -17,7 +17,7 @@ export async function updateQuoteAddress(
     // Get current quote data
     const { data: quote, error: quoteError } = await supabase
       .from('quotes')
-      .select('shipping_address, address_locked, user_id, country_code')
+      .select('shipping_address, address_locked, user_id, destination_country')
       .eq('id', quoteId)
       .single();
 
@@ -52,7 +52,7 @@ export async function updateQuoteAddress(
     const currentRole = userRole?.role || 'user';
 
     // Check country change permissions
-    const oldCountry = quote.shipping_address?.country || quote.country_code;
+    const oldCountry = quote.shipping_address?.country || quote.destination_country;
     const countryValidation = validateCountryChange(oldCountry, normalizedAddress.country, currentRole);
     
     if (!countryValidation.allowed) {

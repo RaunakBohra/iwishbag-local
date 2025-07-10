@@ -60,7 +60,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
         // 2. Fallback to origin/destination matching
         if (!currentRoute) {
           const originCountry = quote.origin_country || 'US';
-          const destinationCountry = quote.country_code;
+          const destinationCountry = quote.destination_country;
 
           console.log('[DeliveryTimeline] Fetching shipping route:', {
             originCountry,
@@ -186,7 +186,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
     };
 
     fetchShippingData();
-  }, [quote?.id, quote?.shipping_route_id, quote?.origin_country, quote?.country_code, selectedOptionId, quote?.enabled_delivery_options]);
+  }, [quote?.id, quote?.shipping_route_id, quote?.origin_country, quote?.destination_country, selectedOptionId, quote?.enabled_delivery_options]);
 
   // Early return if no quote data
   if (!quote) {

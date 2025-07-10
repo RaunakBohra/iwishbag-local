@@ -517,21 +517,40 @@ export const useCartStore = create<CartStore>()(
               const quantity = quote.quantity || firstItem?.quantity || 1;
               const itemWeight = firstItem?.item_weight || quote.item_weight || 0;
               
-              // Extract destination country from shipping address
-              let destinationCountry = quote.country_code || 'US'; // Default fallback
+              // Extract destination country from shipping address or quote
+              let destinationCountry = quote.destination_country || 'US'; // Default fallback
               if (quote.shipping_address) {
                 try {
                   const shippingAddr = typeof quote.shipping_address === 'string' 
                     ? JSON.parse(quote.shipping_address) 
                     : quote.shipping_address;
-                  if (shippingAddr?.country_code) {
-                    destinationCountry = shippingAddr.country_code;
+                  if (shippingAddr?.destination_country) {
+                    destinationCountry = shippingAddr.destination_country;
                   } else if (shippingAddr?.countryCode) {
                     destinationCountry = shippingAddr.countryCode;
+                  } else if (shippingAddr?.country) {
+                    // Also check for 'country' field in shipping address
+                    destinationCountry = shippingAddr.country;
                   }
                 } catch (e) {
                   console.warn('Failed to parse shipping address:', e);
                 }
+              }
+              
+              // Determine purchase country (where we buy from)
+              // origin_country is the merchant location (e.g., US for Amazon.com)
+              const purchaseCountry = quote.origin_country || quote.destination_country || 'US';
+              
+              // Log country data for debugging
+              if (!destinationCountry || destinationCountry === 'US') {
+                console.debug('Cart item country resolution:', {
+                  quoteId: quote.id,
+                  destinationCountry,
+                  purchaseCountry,
+                  quote_destination_country: quote.destination_country,
+                  quote_origin_country: quote.origin_country,
+                  shipping_address: quote.shipping_address
+                });
               }
               
               const cartItem = {
@@ -544,7 +563,7 @@ export const useCartStore = create<CartStore>()(
                 imageUrl: firstItem?.image_url || quote.image_url,
                 deliveryDate: quote.delivery_date,
                 countryCode: destinationCountry, // For backward compatibility
-                purchaseCountryCode: quote.country_code || quote.origin_country || 'US',
+                purchaseCountryCode: purchaseCountry,
                 destinationCountryCode: destinationCountry,
                 inCart: quote.in_cart || false,
                 isSelected: false,

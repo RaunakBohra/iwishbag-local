@@ -126,6 +126,12 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
 
   const checkPaymentStatus = async () => {
     if (paymentStatus !== 'pending') return;
+    
+    // Add null check for transactionId
+    if (!transactionId) {
+      console.error('No transaction ID provided');
+      return;
+    }
 
     setIsCheckingPayment(true);
     try {
@@ -138,6 +144,10 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
       }
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error('Supabase URL is not configured');
+      }
+      
       const functionUrl = `${supabaseUrl}/functions/v1/check-payment-status/${transactionId}`;
 
       const response = await fetch(functionUrl, {
@@ -154,16 +164,16 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
 
       const data = await response.json();
       
-      if (data.success) {
+      if (data && data.success) {
         if (data.status === 'completed') {
           setPaymentStatus('completed');
-          onPaymentComplete();
+          onPaymentComplete?.();
         } else if (data.status === 'failed') {
           setPaymentStatus('failed');
-          onPaymentFailed(data.error || 'Payment failed');
+          onPaymentFailed?.(data.error || 'Payment failed');
         }
       } else {
-        console.error('Payment status check failed:', data.error);
+        console.error('Payment status check failed:', data?.error || 'Unknown error');
       }
     } catch (error) {
       console.error('Error checking payment status:', error);
@@ -173,11 +183,29 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
   };
 
   const copyTransactionId = () => {
-    navigator.clipboard.writeText(transactionId);
-    toast({
-      title: 'Transaction ID copied',
-      description: 'Transaction ID has been copied to clipboard',
-    });
+    if (!transactionId) {
+      toast({
+        title: 'Error',
+        description: 'No transaction ID available',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    navigator.clipboard.writeText(transactionId)
+      .then(() => {
+        toast({
+          title: 'Transaction ID copied',
+          description: 'Transaction ID has been copied to clipboard',
+        });
+      })
+      .catch(() => {
+        toast({
+          title: 'Error',
+          description: 'Failed to copy transaction ID',
+          variant: 'destructive',
+        });
+      });
   };
 
   const downloadApp = () => {
@@ -220,7 +248,7 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-center">
-                {amount.toFixed(2)} {currency}
+                {amount != null && !isNaN(amount) ? amount.toFixed(2) : '0.00'} {currency || 'USD'}
               </div>
               <div className="text-sm text-muted-foreground text-center mt-1">
                 Transaction ID: {transactionId}

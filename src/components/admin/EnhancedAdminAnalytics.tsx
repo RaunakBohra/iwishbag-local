@@ -70,7 +70,7 @@ export const EnhancedAdminAnalytics = ({ quotes, orders }: EnhancedAdminAnalytic
 
     // Country filtering
     if (countryFilter !== 'all') {
-      filtered = filtered.filter(quote => quote.country_code === countryFilter);
+      filtered = filtered.filter(quote => quote.destination_country === countryFilter);
     }
 
     // Status filtering
@@ -105,7 +105,7 @@ export const EnhancedAdminAnalytics = ({ quotes, orders }: EnhancedAdminAnalytic
                       (dateFilter !== 'custom' || !customDateRange.end || orderDate <= new Date(customDateRange.end));
       }
 
-      const includeByCountry = countryFilter === 'all' || order.country_code === countryFilter;
+      const includeByCountry = countryFilter === 'all' || order.destination_country === countryFilter;
 
       return includeByDate && includeByCountry;
     });
@@ -117,7 +117,7 @@ export const EnhancedAdminAnalytics = ({ quotes, orders }: EnhancedAdminAnalytic
     const csvContent = "data:text/csv;charset=utf-8," 
       + "ID,Email,Status,Country,Total,Created At\n"
       + filteredData.quotes.map(quote => 
-          `${quote.display_id},${quote.email},${quote.status},${quote.country_code},${quote.final_total || 0},${quote.created_at}`
+          `${quote.display_id},${quote.email},${quote.status},${quote.destination_country},${quote.final_total || 0},${quote.created_at}`
         ).join("\n");
     
     const encodedUri = encodeURI(csvContent);

@@ -120,7 +120,7 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
             .single();
           return route;
         };
-        const result = await getQuoteRouteCountries(quote, shippingAddress, allCountries, fetchRouteById);
+        const result = await getQuoteRouteCountries(quote, shippingAddress, allCountries, fetchRouteById, null, null);
         if (isMounted) setRouteCountries(result);
       }
       fetchRouteCountries();

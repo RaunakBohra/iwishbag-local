@@ -141,8 +141,8 @@ export default function QuoteDetail() {
 
   // Get country name for display
   const countryName = useMemo(() => {
-    return countries?.find(c => c.code === quote?.country_code)?.name || quote?.country_code;
-  }, [countries, quote?.country_code]);
+    return countries?.find(c => c.code === quote?.destination_country)?.name || quote?.destination_country;
+  }, [countries, quote?.destination_country]);
 
   // Currency formatting is now handled by useQuoteDisplayCurrency hook
 

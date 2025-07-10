@@ -54,7 +54,7 @@ export default function Orders() {
       const quoteIdMatch = order.display_id?.toLowerCase().includes(searchLower);
       
       // Get country name for search
-      const countryName = countries?.find(c => c.code === order.country_code)?.name;
+      const countryName = countries?.find(c => c.code === order.destination_country)?.name;
       const countryMatch = countryName?.toLowerCase().includes(searchLower);
       
       if (!productMatch && !productUrlMatch && !orderIdMatch && !quoteIdMatch && !countryMatch) return false;
@@ -106,7 +106,7 @@ export default function Orders() {
       'Paid': order.amount_paid || 0,
       'Outstanding': (order.final_total || 0) - (order.amount_paid || 0),
       'Payment Method': order.payment_method || 'N/A',
-      'Country': countries?.find(c => c.code === order.country_code)?.name || order.country_code || 'N/A',
+      'Country': countries?.find(c => c.code === order.destination_country)?.name || order.destination_country || 'N/A',
       'Created': new Date(order.created_at).toLocaleDateString(),
     }));
 

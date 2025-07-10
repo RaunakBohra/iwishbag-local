@@ -44,7 +44,7 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
         quantity: 1, 
         product_name: 'Sample Product' 
       }],
-      country_code: 'US',
+      destination_country: 'US',
       currency: 'USD',
       final_currency: 'USD',
       sales_tax_price: 0,
@@ -84,14 +84,14 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
 
   // Prepare calculation parameters
   const calculationParams = useMemo((): QuoteCalculationParams | null => {
-    if (!allCountries || !watchedValues.country_code) return null;
+    if (!allCountries || !watchedValues.destination_country) return null;
 
-    const countrySettings = allCountries.find(c => c.code === watchedValues.country_code);
+    const countrySettings = allCountries.find(c => c.code === watchedValues.destination_country);
     if (!countrySettings) return null;
 
     return {
       items: watchedValues.items || [],
-      originCountry: watchedValues.country_code,
+      originCountry: watchedValues.destination_country,
       destinationCountry: 'IN', // Default for demo
       currency: watchedValues.currency || 'USD',
       sales_tax_price: watchedValues.sales_tax_price,
@@ -105,7 +105,7 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
     };
   }, [
     watchedValues.items,
-    watchedValues.country_code,
+    watchedValues.destination_country,
     watchedValues.currency,
     watchedValues.sales_tax_price,
     watchedValues.merchant_shipping_price,
@@ -193,10 +193,10 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="country_code">Origin Country</Label>
+                  <Label htmlFor="destination_country">Origin Country</Label>
                   <Select
-                    value={form.watch('country_code') || ''}
-                    onValueChange={(value) => form.setValue('country_code', value)}
+                    value={form.watch('destination_country') || ''}
+                    onValueChange={(value) => form.setValue('destination_country', value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select country" />

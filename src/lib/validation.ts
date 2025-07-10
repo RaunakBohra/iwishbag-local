@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { currencyService } from '@/services/CurrencyService';
 
 // Common validation patterns
 const emailSchema = z.string().email('Please enter a valid email address');
@@ -28,7 +29,7 @@ export const shippingAddressSchema = z.object({
   state: z.string().max(100, 'State name too long').optional(),
   postal_code: z.string().max(20, 'Postal code too long').optional(),
   country: nonEmptyStringSchema.max(100, 'Country name too long'),
-  country_code: countryCodeSchema.optional(),
+  destination_country: countryCodeSchema.optional(),
   phone: phoneSchema.optional(),
 });
 
@@ -44,7 +45,7 @@ export const quoteCreateSchema = z.object({
     width: positiveNumberSchema.max(500, 'Width too large'),
     height: positiveNumberSchema.max(500, 'Height too large'),
   }),
-  country_code: countryCodeSchema,
+  destination_country: countryCodeSchema,
   shipping_address: shippingAddressSchema.optional(),
 });
 
@@ -175,19 +176,8 @@ export const validatePhone = (phone: string, countryCode?: string): boolean => {
 
 // Amount validation for payments
 export const validatePaymentAmount = (amount: number, currency: string): boolean => {
-  // Minimum amounts by currency
-  const minimumAmounts: Record<string, number> = {
-    'USD': 0.50,
-    'EUR': 0.50,
-    'GBP': 0.30,
-    'INR': 1.00,
-    'NPR': 1.00,
-    'CAD': 0.50,
-    'AUD': 0.50,
-    'JPY': 50,
-  };
-  
-  const minimum = minimumAmounts[currency] || 0.01;
+  // Use CurrencyService for minimum payment amounts
+  const minimum = currencyService.getMinimumPaymentAmount(currency);
   return amount >= minimum && amount <= 1000000; // Max 1M in any currency
 };
 

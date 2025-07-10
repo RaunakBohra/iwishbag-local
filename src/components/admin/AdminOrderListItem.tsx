@@ -148,7 +148,7 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect, onConfirmPayme
                                 )}
                             </div>
                             <div>
-                                <p className="text-sm">Country: {order.country_code || 'Not set'}</p>
+                                <p className="text-sm">Country: {order.destination_country || 'Not set'}</p>
                                 {order.tracking_number && (
                                     <p className="text-sm">Tracking: {order.tracking_number}</p>
                                 )}

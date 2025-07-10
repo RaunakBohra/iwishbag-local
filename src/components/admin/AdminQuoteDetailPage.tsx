@@ -8,7 +8,6 @@ import { DocumentManager } from "@/components/documents/DocumentManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAdminQuoteDetail } from "@/hooks/useAdminQuoteDetail";
 import { QuoteCalculatedCosts } from "@/components/admin/QuoteCalculatedCosts";
-import { QuoteCurrencySummary } from "./QuoteCurrencySummary";
 import { ShareQuoteButton } from './ShareQuoteButton';
 import { Form, FormField, FormControl } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -106,9 +105,14 @@ const AdminQuoteDetailPage = () => {
     : (quote ? extractShippingAddressFromNotes(quote.internal_notes) : null);
   const hasAddress = !!shippingAddress;
 
-  const purchaseCountry = useWatch({ 
+  const originCountryWatch = useWatch({ 
     control: form?.control || {} as any, 
-    name: "country_code" 
+    name: "origin_country" 
+  });
+  
+  const destinationCountryWatch = useWatch({ 
+    control: form?.control || {} as any, 
+    name: "destination_country" 
   });
 
   // Determine if this is an order based on status configuration
@@ -122,12 +126,12 @@ const AdminQuoteDetailPage = () => {
     return !statusConfig?.isTerminal;
   })();
 
-  // Get country currency for item cards
+  // Get country currency for item cards (based on origin/purchase country)
   const countryCurrency = useMemo(() => {
-    if (!purchaseCountry || !allCountries) return 'USD';
-    const country = allCountries.find(c => c.code === purchaseCountry);
+    if (!originCountryWatch || !allCountries) return 'USD';
+    const country = allCountries.find(c => c.code === originCountryWatch);
     return country?.currency || 'USD';
-  }, [purchaseCountry, allCountries]);
+  }, [originCountryWatch, allCountries]);
 
   // Get currency symbol
   const getCurrencySymbol = (currency: string) => {
@@ -313,8 +317,8 @@ const AdminQuoteDetailPage = () => {
   // Determine smart weight unit based on countries and route
   useEffect(() => {
     if (quote) {
-      const originCountry = quote.origin_country || purchaseCountry;
-      const destCountry = shippingAddress?.country_code || shippingAddress?.country || quote.country_code;
+      const originCountry = quote.origin_country || originCountryWatch;
+      const destCountry = shippingAddress?.destination_country || shippingAddress?.country || quote.destination_country;
       
       const appropriateUnit = getAppropriateWeightUnit(
         originCountry,
@@ -324,7 +328,7 @@ const AdminQuoteDetailPage = () => {
       
       setSmartWeightUnit(appropriateUnit);
     }
-  }, [quote, routeWeightUnit, purchaseCountry, shippingAddress?.country_code, shippingAddress?.country]);
+  }, [quote, routeWeightUnit, originCountryWatch, shippingAddress?.destination_country, shippingAddress?.country]);
 
   // Customs Tier Detection Logic
   const [customsTiers, setCustomsTiers] = useState<any[]>([]);
@@ -333,8 +337,8 @@ const AdminQuoteDetailPage = () => {
   const [customsError, setCustomsError] = useState<string | null>(null);
 
   // Get origin/destination codes from form state (not just quote)
-  const originCountry = quote?.origin_country || purchaseCountry || 'US';
-  let destinationCountry = shippingAddress?.country_code || shippingAddress?.country || purchaseCountry || quote?.country_code;
+  const originCountry = originCountryWatch || quote?.origin_country || 'US';
+  let destinationCountry = destinationCountryWatch || shippingAddress?.destination_country || shippingAddress?.country || quote?.destination_country;
   if (destinationCountry && destinationCountry.length > 2) {
     const found = allCountries?.find(c => c.name === destinationCountry);
     if (found) destinationCountry = found.code;
@@ -368,7 +372,7 @@ const AdminQuoteDetailPage = () => {
       }
     };
     fetchCustomsTiers();
-  }, [originCountry, destinationCountry, formPrice, formWeight, allCountries, items, purchaseCountry, shippingAddress]);
+  }, [originCountry, destinationCountry, formPrice, formWeight, allCountries, items, originCountryWatch, shippingAddress]);
 
   // Function to determine which tier should be applied based on price/weight/logic only
   const determineAppliedTier = (
@@ -648,12 +652,12 @@ const AdminQuoteDetailPage = () => {
                         <MapPin className="h-3 w-3 text-green-600 flex-shrink-0 mt-0.5" />
                         <span className="text-green-800 truncate">
                           {(() => {
-                            // Check if this is a minimal address (only country_code)
-                            const isMinimalAddress = Object.keys(shippingAddress).length === 1 && shippingAddress.country_code;
+                            // Check if this is a minimal address (only destination_country)
+                            const isMinimalAddress = Object.keys(shippingAddress).length === 1 && shippingAddress.destination_country;
                             
                             if (isMinimalAddress) {
                               // Display just the country name for minimal addresses
-                              const countryName = allCountries?.find(c => c.code === shippingAddress.country_code)?.name || shippingAddress.country_code;
+                              const countryName = allCountries?.find(c => c.code === shippingAddress.destination_country)?.name || shippingAddress.destination_country;
                               return `Shipping to: ${countryName}`;
                             } else {
                               // Full address display
@@ -664,7 +668,7 @@ const AdminQuoteDetailPage = () => {
                                 shippingAddress.city,
                                 shippingAddress.state,
                                 shippingAddress.postalCode,
-                                shippingAddress.country || shippingAddress.country_code
+                                shippingAddress.country || shippingAddress.destination_country
                               ].filter(Boolean).join(', ');
                             }
                           })()}
@@ -693,10 +697,10 @@ const AdminQuoteDetailPage = () => {
                   </CardTitle>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-muted-foreground">Country:</span>
+                      <span className="text-sm font-medium text-muted-foreground">Purchase From:</span>
                       <FormField
                         control={form.control}
-                        name="country_code"
+                        name="origin_country"
                         render={({ field }) => (
                           <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
@@ -705,7 +709,7 @@ const AdminQuoteDetailPage = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {allCountries?.map((country) => (
+                              {countries?.map((country) => (
                                 <SelectItem key={country.code} value={country.code}>
                                   <div className="flex items-center gap-2">
                                     <span>{country.name}</span>
@@ -728,9 +732,9 @@ const AdminQuoteDetailPage = () => {
                         <span className="text-sm font-medium text-muted-foreground">Exchange Rate:</span>
                         <Badge variant="outline" className="text-sm">
                           {(() => {
-                            const originCurrency = purchaseCountry === 'US' ? 'USD' : 
-                                                 purchaseCountry === 'IN' ? 'INR' : 
-                                                 purchaseCountry === 'NP' ? 'NPR' : 'USD';
+                            const originCurrency = originCountryWatch === 'US' ? 'USD' : 
+                                                 originCountryWatch === 'IN' ? 'INR' : 
+                                                 originCountryWatch === 'NP' ? 'NPR' : 'USD';
                             const destCurrency = destinationCountry === 'US' ? 'USD' : 
                                                destinationCountry === 'IN' ? 'INR' : 
                                                destinationCountry === 'NP' ? 'NPR' : 'USD';
@@ -981,8 +985,15 @@ const AdminQuoteDetailPage = () => {
                       <div className="text-sm">
                         <span className="text-muted-foreground">Route: </span>
                         <ShippingRouteDisplay 
-                          origin={purchaseCountry || quote.origin_country || 'Not selected'} 
-                          destination={destinationCountry || quote.country_code || 'Not specified'}
+                          origin={quote.origin_country || 'US'} 
+                          destination={(() => {
+                            let dest = shippingAddress?.destination_country || shippingAddress?.country || quote.destination_country;
+                            if (dest && dest.length > 2) {
+                              const found = allCountries?.find(c => c.name === dest);
+                              if (found) dest = found.code;
+                            }
+                            return dest || 'Not specified';
+                          })()}
                           variant="detailed"
                           className="mt-2"
                           showIcon={true}
@@ -1006,9 +1017,9 @@ const AdminQuoteDetailPage = () => {
                           <span className="text-muted-foreground">Exchange Rate:</span>
                           <span className="font-medium">
                             {(() => {
-                              const originCurrency = purchaseCountry === 'US' ? 'USD' : 
-                                                   purchaseCountry === 'IN' ? 'INR' : 
-                                                   purchaseCountry === 'NP' ? 'NPR' : 'USD';
+                              const originCurrency = originCountryWatch === 'US' ? 'USD' : 
+                                                   originCountryWatch === 'IN' ? 'INR' : 
+                                                   originCountryWatch === 'NP' ? 'NPR' : 'USD';
                               const destCurrency = destinationCountry === 'US' ? 'USD' : 
                                                  destinationCountry === 'IN' ? 'INR' : 
                                                  destinationCountry === 'NP' ? 'NPR' : 'USD';

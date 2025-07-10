@@ -30,7 +30,7 @@ export interface QuoteWithAddress {
   addressUpdatedBy?: string;
   status: string;
   user_id: string;
-  country_code?: string;
+  destination_country?: string;
 }
 
 export interface AddressValidationResult {

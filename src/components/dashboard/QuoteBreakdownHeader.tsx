@@ -41,7 +41,7 @@ export const QuoteBreakdownHeader: React.FC<QuoteBreakdownHeaderProps> = ({
           <span className="hidden md:inline text-muted-foreground">•</span>
           <div className="flex items-center gap-1 bg-muted border border-border rounded-lg px-2 sm:px-3 py-1">
             <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span>Shipping from: {quote.country_code}</span>
+            <span>Shipping from: {quote.destination_country}</span>
           </div>
         </div>
       </div>

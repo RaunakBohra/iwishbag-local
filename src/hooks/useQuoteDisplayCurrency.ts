@@ -17,7 +17,7 @@ export function useQuoteDisplayCurrency({ quote, exchangeRate }: UseQuoteDisplay
   const { data: userProfile } = useUserProfile();
   const [customerExchangeRate, setCustomerExchangeRate] = useState<number>(1);
   
-  const originCountry = quote?.country_code || 'US';
+  const originCountry = quote?.destination_country || 'US';
   const destinationCountry = useMemo(() => {
     if (!quote) return 'US'; // Fallback when quote is not loaded yet
     return getDestinationCountryFromQuote(quote);

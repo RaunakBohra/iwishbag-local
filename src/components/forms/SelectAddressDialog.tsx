@@ -49,7 +49,7 @@ export const SelectAddressDialog: React.FC<SelectAddressDialogProps> = ({
         .from('user_addresses')
         .select('*')
         .eq('user_id', user.id)
-        .eq('country_code', shippingCountry)
+        .eq('destination_country', shippingCountry)
         .order('is_default', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -84,7 +84,7 @@ export const SelectAddressDialog: React.FC<SelectAddressDialogProps> = ({
         city: selected.city,
         state: selected.state_province_region,
         postalCode: selected.postal_code,
-        country: selected.country_code,
+        country: selected.destination_country,
         phone: selected.phone || undefined,
       };
       onSelectAddress(shippingAddress);

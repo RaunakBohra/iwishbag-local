@@ -3,6 +3,8 @@ import { Tables } from "@/integrations/supabase/types";
 import { DualCurrencyDisplay } from "./DualCurrencyDisplay";
 import { useQuoteCurrencyDisplay } from "@/hooks/useCurrencyConversion";
 import { Badge } from "@/components/ui/badge";
+import { getCurrencySymbolFromCountry } from "@/lib/currencyUtils";
+import { useQuoteRoute } from "@/hooks/useQuoteRoute";
 
 type Quote = Tables<'quotes'> & {
   profiles?: { preferred_display_currency?: string } | null;
@@ -14,47 +16,12 @@ interface QuoteCalculatedCostsProps {
 }
 
 export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
-  // Get origin and destination countries from quote
-  const originCountry = quote.country_code || 'US';
+  // Use unified route determination - same as customs tiers and shipping routes
+  const routeInfo = useQuoteRoute(quote);
   
-  // Try to get destination country from shipping address
-  let destinationCountry = 'US';
-  if ((quote as any).destination_country) {
-    destinationCountry = (quote as any).destination_country;
-  } else if (quote.shipping_address) {
-    try {
-      const shippingAddress = typeof quote.shipping_address === 'string' 
-        ? JSON.parse(quote.shipping_address) 
-        : quote.shipping_address;
-      
-      // Get country from shipping address
-      let country = shippingAddress?.country_code || shippingAddress?.country || 'US';
-      
-      // Convert country names to country codes
-      const countryNameToCode: { [key: string]: string } = {
-        'Nepal': 'NP',
-        'India': 'IN', 
-        'United States': 'US',
-        'USA': 'US',
-        'China': 'CN',
-        'Australia': 'AU',
-        'United Kingdom': 'GB',
-        'Canada': 'CA'
-      };
-      
-      // If it's a country name, convert to code
-      if (countryNameToCode[country]) {
-        destinationCountry = countryNameToCode[country];
-      } else if (country.length === 2) {
-        // Already a country code
-        destinationCountry = country.toUpperCase();
-      } else {
-        destinationCountry = 'US';
-      }
-    } catch (e) {
-      console.warn('Could not parse shipping address in QuoteCalculatedCosts:', e);
-    }
-  }
+  // Default to US if route info is not available yet
+  const originCountry = routeInfo?.origin || 'US';
+  const destinationCountry = routeInfo?.destination || 'US';
 
   // Use our new currency display hook
   const currencyDisplay = useQuoteCurrencyDisplay({
@@ -128,7 +95,9 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="font-medium">Description</span>
-            <span className="font-medium text-right">Amount ({originCountry}/{destinationCountry})</span>
+            <span className="font-medium text-right">
+              Amount ({getCurrencySymbolFromCountry(originCountry)}/{getCurrencySymbolFromCountry(destinationCountry)})
+            </span>
           </div>
           <div className="border-t my-1"></div>
           

@@ -172,8 +172,8 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
 
   // Computed values
   const countryName = useMemo(() => {
-    return countries?.find(c => c.code === quote?.country_code)?.name || quote?.country_code;
-  }, [countries, quote?.country_code]);
+    return countries?.find(c => c.code === quote?.destination_country)?.name || quote?.destination_country;
+  }, [countries, quote?.destination_country]);
 
   
   const isQuoteOwner = quote?.user_id === user?.id;
@@ -815,7 +815,7 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
                       <div className="grid grid-cols-2 gap-3 mt-4">
                         {/* Shipping Route in Info Grid */}
                         {(() => {
-                          const purchaseCountry = quote.country_code || quote.origin_country || 'US';
+                          const purchaseCountry = quote.destination_country || quote.origin_country || 'US';
                           let destinationCountry = null;
                           
                           // Extract destination country from shipping address
@@ -825,8 +825,8 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
                                 ? JSON.parse(quote.shipping_address) 
                                 : quote.shipping_address;
                               
-                              if (shippingAddr?.country_code) {
-                                destinationCountry = shippingAddr.country_code;
+                              if (shippingAddr?.destination_country) {
+                                destinationCountry = shippingAddr.destination_country;
                               } else if (shippingAddr?.countryCode) {
                                 destinationCountry = shippingAddr.countryCode;
                               }
@@ -882,7 +882,7 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
                       <div className="grid grid-cols-2 gap-4 mt-2">
                         {/* Shipping Route in Info Grid - Multiple Products */}
                         {(() => {
-                          const purchaseCountry = quote.country_code || quote.origin_country || 'US';
+                          const purchaseCountry = quote.destination_country || quote.origin_country || 'US';
                           let destinationCountry = null;
                           
                           // Extract destination country from shipping address
@@ -892,8 +892,8 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
                                 ? JSON.parse(quote.shipping_address) 
                                 : quote.shipping_address;
                               
-                              if (shippingAddr?.country_code) {
-                                destinationCountry = shippingAddr.country_code;
+                              if (shippingAddr?.destination_country) {
+                                destinationCountry = shippingAddr.destination_country;
                               } else if (shippingAddr?.countryCode) {
                                 destinationCountry = shippingAddr.countryCode;
                               }

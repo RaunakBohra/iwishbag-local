@@ -29,7 +29,7 @@ const addressSchema = z.object({
   city: z.string().min(1, "City is required"),
   state_province_region: z.string().min(1, "State/Province is required"),
   postal_code: z.string().min(1, "Postal code is required"),
-  country_code: z.string().min(1, "Country is required"),
+  destination_country: z.string().min(1, "Country is required"),
   phone: z.string().min(1, "Phone number is required"),
   is_default: z.boolean().default(false),
 });
@@ -38,7 +38,7 @@ type AddressFormValues = z.infer<typeof addressSchema>;
 
 interface AddressFormProps {
   address?: Tables<'user_addresses'>;
-  onSuccess?: () => void;
+  onSuccess?: (savedAddress?: Tables<'user_addresses'>) => void;
 }
 
 export function AddressForm({ address, onSuccess }: AddressFormProps) {
@@ -64,7 +64,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     resolver: zodResolver(addressSchema),
     defaultValues: address ? {
       ...address,
-      country_code: address.country_code || "",
+      destination_country: address.destination_country || "",
       address_line2: address.address_line2 || "",
       phone: address.phone || "",
       recipient_name: address.recipient_name || "",
@@ -75,7 +75,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
       city: "",
       state_province_region: "",
       postal_code: "",
-      country_code: "",
+      destination_country: "",
       phone: "",
       is_default: false,
     },
@@ -85,7 +85,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     mutationFn: async (values: AddressFormValues) => {
       if (!user) throw new Error("User not authenticated");
 
-      const countryName = countries?.find(c => c.code === values.country_code)?.name;
+      const countryName = countries?.find(c => c.code === values.destination_country)?.name;
 
       const payload = {
         recipient_name: values.recipient_name,
@@ -94,33 +94,41 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
         city: values.city,
         state_province_region: values.state_province_region,
         postal_code: values.postal_code,
-        country: countryName || values.country_code, // For backward compatibility
-        country_code: values.country_code, // The new standard
+        country: countryName || values.destination_country, // For backward compatibility
+        destination_country: values.destination_country, // The new standard
         phone: values.phone,
         is_default: values.is_default,
       };
 
       if (address) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("user_addresses")
           .update(payload)
-          .eq("id", address.id);
+          .eq("id", address.id)
+          .select()
+          .single();
         if (error) throw error;
+        return data;
       } else {
-        const { error } = await supabase.from("user_addresses").insert({
-          ...payload,
-          user_id: user.id,
-        });
+        const { data, error } = await supabase
+          .from("user_addresses")
+          .insert({
+            ...payload,
+            user_id: user.id,
+          })
+          .select()
+          .single();
         if (error) throw error;
+        return data;
       }
     },
-    onSuccess: () => {
+    onSuccess: (savedAddress) => {
       queryClient.invalidateQueries({ queryKey: ["user_addresses", user?.id] });
       toast({
         title: address ? "Address updated" : "Address added",
         description: `Your address has been successfully ${address ? 'updated' : 'added'}.`,
       });
-      onSuccess?.();
+      onSuccess?.(savedAddress);
     },
     onError: (error) => {
       toast({
@@ -183,7 +191,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     <FormMessage />
                 </FormItem>
             )} />
-            <FormField control={form.control} name="country_code" render={({ field }) => (
+            <FormField control={form.control} name="destination_country" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Country</FormLabel>
                      <Select onValueChange={field.onChange} value={field.value || ''} disabled={addressMutation.isPending || countriesLoading}>

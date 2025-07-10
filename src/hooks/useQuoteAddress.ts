@@ -43,7 +43,7 @@ export function useQuoteAddress({ quoteId, autoRefresh = true }: UseQuoteAddress
           address_updated_by,
           status,
           user_id,
-          country_code
+          destination_country
         `)
         .eq('id', quoteId)
         .single();

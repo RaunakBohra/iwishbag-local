@@ -120,7 +120,7 @@ export default function QuoteRequestPage() {
         state: shippingContact.state,
         postalCode: shippingContact.zip,
         country: shippingContact.country,  // Store country code for logic and DB
-        country_code: shippingContact.country, // Add country_code for calculation compatibility
+        destination_country: shippingContact.country, // Add destination_country for calculation compatibility
         phone: shippingContact.whatsapp || '',
         email: emailToUse
       };
@@ -142,7 +142,7 @@ export default function QuoteRequestPage() {
           .from("quotes")
           .insert({
             email: emailToUse,
-            country_code: products[0]?.country || '',
+            destination_country: products[0]?.country || '',
             origin_country: products[0]?.country || '',
             status: 'pending',
             currency: 'USD',
@@ -193,7 +193,7 @@ export default function QuoteRequestPage() {
             .from("quotes")
             .insert({
               email: emailToUse,
-              country_code: product.country || '',
+              destination_country: product.country || '',
               origin_country: product.country || '',
               status: 'pending',
               currency: 'USD',

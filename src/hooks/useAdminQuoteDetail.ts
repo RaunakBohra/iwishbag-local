@@ -27,7 +27,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
     useEffect(() => {
         if (quote) {
             // Determine the purchase country currency
-            const purchaseCountry = quote.country_code;
+            const purchaseCountry = quote.destination_country;
             const purchaseCurrency = allCountries?.find(c => c.code === purchaseCountry)?.currency || 'USD';
             
             // Always use the original input values from the quote (in purchase currency)
@@ -39,7 +39,8 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                 handling_charge: quote.handling_charge,
                 discount: quote.discount,
                 insurance_amount: quote.insurance_amount,
-                country_code: quote.country_code,
+                origin_country: quote.origin_country || quote.destination_country || 'US', // Use origin_country or fallback to destination_country for legacy quotes
+                destination_country: quote.destination_country,
                 customs_percentage: quote.customs_percentage ?? undefined,
                 currency: quote.currency || purchaseCurrency, // Use quote currency or determine from country
                 final_currency: quote.final_currency || 'USD',
@@ -126,7 +127,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                 finalQuoteData.internal_notes = data.internal_notes || '';
 
                 // --- Priority Logic ---
-                const country = allCountries?.find(c => c.code === quote.country_code);
+                const country = allCountries?.find(c => c.code === quote.destination_country);
                 const thresholds = (country?.priority_thresholds || { low: 0, normal: 500, urgent: 2000 }) as any;
                 const finalTotal = finalQuoteData.final_total || 0;
                 // Always recalculate priority on calculate
@@ -143,7 +144,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                 
                 // Debug logging
                 console.log('[Priority Calculation]', {
-                    countryCode: quote.country_code,
+                    countryCode: quote.destination_country,
                     countryName: country?.name,
                     thresholds,
                     finalTotal,

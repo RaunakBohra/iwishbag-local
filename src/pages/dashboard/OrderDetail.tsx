@@ -84,8 +84,8 @@ export default function OrderDetail() {
 
   // Get country name for display
   const countryName = useMemo(() => {
-    return countries?.find(c => c.code === order?.country_code)?.name || order?.country_code;
-  }, [countries, order?.country_code]);
+    return countries?.find(c => c.code === order?.destination_country)?.name || order?.destination_country;
+  }, [countries, order?.destination_country]);
 
   // Get exchange rate for user's currency
   const exchangeRate = useMemo(() => {

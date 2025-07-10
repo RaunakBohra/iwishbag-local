@@ -66,7 +66,7 @@ export const usePaginatedQuoteManagement = (filters = {}) => {
             }
 
             if (shippingCountryFilter && shippingCountryFilter !== 'all') {
-                query = query.eq('country_code', shippingCountryFilter);
+                query = query.eq('destination_country', shippingCountryFilter);
             }
 
             if (priorityFilter && priorityFilter !== 'all') {
@@ -168,7 +168,7 @@ export const usePaginatedQuoteManagement = (filters = {}) => {
             }
 
             if (shippingCountryFilter && shippingCountryFilter !== 'all') {
-                query = query.eq('country_code', shippingCountryFilter);
+                query = query.eq('destination_country', shippingCountryFilter);
             }
 
             if (priorityFilter && priorityFilter !== 'all') {

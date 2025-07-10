@@ -61,7 +61,7 @@ export const SimpleEnhancedAnalytics = ({ quotes, orders }: SimpleEnhancedAnalyt
 
     // Country filtering
     if (countryFilter !== 'all') {
-      filtered = filtered.filter(quote => quote.country_code === countryFilter);
+      filtered = filtered.filter(quote => quote.destination_country === countryFilter);
     }
 
     // Status filtering
@@ -91,7 +91,7 @@ export const SimpleEnhancedAnalytics = ({ quotes, orders }: SimpleEnhancedAnalyt
     }, {} as Record<string, number>);
 
     const countryCounts = filteredData.reduce((acc, quote) => {
-      const country = quote.country_code || 'Unknown';
+      const country = quote.destination_country || 'Unknown';
       acc[country] = (acc[country] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -114,7 +114,7 @@ export const SimpleEnhancedAnalytics = ({ quotes, orders }: SimpleEnhancedAnalyt
         id: quote.display_id || quote.id,
         email: quote.email,
         status: quote.status,
-        country: quote.country_code,
+        country: quote.destination_country,
         total: quote.final_total || 0,
         created_at: quote.created_at,
         product_name: quote.product_name,
@@ -177,7 +177,7 @@ export const SimpleEnhancedAnalytics = ({ quotes, orders }: SimpleEnhancedAnalyt
     }
   };
 
-  const uniqueCountries = [...new Set(quotes.map(q => q.country_code).filter(Boolean))];
+  const uniqueCountries = [...new Set(quotes.map(q => q.destination_country).filter(Boolean))];
 
   if (!quotes || quotes.length === 0) {
     return (

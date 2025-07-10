@@ -36,7 +36,7 @@ export interface Quote {
     width: number;
     height: number;
   };
-  country_code: string;
+  destination_country: string;
   status: QuoteStatus;
   final_total: number;
   final_total_local: number;
@@ -64,7 +64,6 @@ export interface Quote {
   quote_items?: QuoteItem[];
   // Currency and shipping fields
   exchange_rate?: number;
-  destination_country?: string;
   shipping_address?: ShippingAddress | string; // JSONB field - can be object or JSON string
 }
 
@@ -167,7 +166,7 @@ export const updateQuoteState = (
 
 export interface ShippingAddress {
   country: string;
-  country_code?: string;
+  destination_country?: string;
   state?: string;
   city?: string;
   postal_code?: string;

@@ -130,7 +130,7 @@ export interface PaymentResponse {
 
 // Country-specific payment methods
 export interface CountryPaymentMethods {
-  country_code: string;
+  destination_country: string;
   available_methods: PaymentGateway[];
   default_method: PaymentGateway;
   qr_enabled: boolean;

@@ -52,7 +52,7 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
           .from('shipping_routes')
           .select('processing_days, customs_clearance_days, delivery_options')
           .eq('origin_country', quote.origin_country || 'US')
-          .eq('destination_country', quote.country_code)
+          .eq('destination_country', quote.destination_country)
           .eq('is_active', true)
           .single();
 
@@ -94,10 +94,10 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
       }
     };
 
-    if (quote && quote.country_code) {
+    if (quote && quote.destination_country) {
       fetchDeliveryData();
     }
-  }, [quote.id, quote.status, quote.paid_at, quote.created_at, quote.country_code, quote.origin_country]);
+  }, [quote.id, quote.status, quote.paid_at, quote.created_at, quote.destination_country, quote.origin_country]);
 
   if (loading) {
     return (

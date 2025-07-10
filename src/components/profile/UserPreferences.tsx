@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +16,7 @@ import {
   Mail
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { currencyService } from '@/services/CurrencyService';
 
 interface UserPreferencesProps {
   showEditButton?: boolean;
@@ -53,19 +54,8 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
   };
 
   const getCurrencyName = (currencyCode: string) => {
-    const currencyNames: Record<string, string> = {
-      'USD': 'US Dollar',
-      'EUR': 'Euro',
-      'GBP': 'British Pound',
-      'INR': 'Indian Rupee',
-      'NPR': 'Nepalese Rupee',
-      'CAD': 'Canadian Dollar',
-      'AUD': 'Australian Dollar',
-      'JPY': 'Japanese Yen',
-      'CNY': 'Chinese Yuan',
-      'SGD': 'Singapore Dollar',
-    };
-    return currencyNames[currencyCode] || currencyCode;
+    // Use CurrencyService for consistent currency names
+    return currencyService.getCurrencyName(currencyCode);
   };
 
   const getAvailablePaymentMethods = (countryCode: string) => {

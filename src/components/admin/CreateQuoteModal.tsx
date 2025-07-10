@@ -108,7 +108,7 @@ export const CreateQuoteModal = ({ isOpen, onOpenChange, onQuoteCreated }: Creat
       .from("quotes")
       .insert({
         email: cleanEmail,
-        country_code: purchaseCountry, // Purchase country (for calculation system)
+        destination_country: purchaseCountry, // Purchase country (for calculation system)
         origin_country: purchaseCountry, // Also set origin_country for consistency
         currency: originCurrency, // Currency for calculations
         final_currency: customerCurrency, // Customer's preferred display currency
@@ -117,7 +117,7 @@ export const CreateQuoteModal = ({ isOpen, onOpenChange, onQuoteCreated }: Creat
         user_id: isRegisteredUser ? userId : null,
         is_anonymous: !isRegisteredUser, // Anonymous only for non-registered users
         shipping_address: {
-          country_code: shippingCountry // Minimal address with just shipping country for calculator
+          destination_country: shippingCountry // Minimal address with just shipping country for calculator
         }
       })
       .select('id')

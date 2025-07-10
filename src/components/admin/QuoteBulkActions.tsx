@@ -197,7 +197,7 @@ export const QuoteBulkActions = ({
                 <h4 className="text-sm font-medium mb-2">Quick Stats</h4>
                 <div className="space-y-1 text-xs text-muted-foreground">
                   <div>Average Value: ${totalValue > 0 ? (totalValue / selectedCount).toFixed(2) : '0'}</div>
-                  <div>Countries: {new Set(selectedQuotes.map(q => q.country_code)).size}</div>
+                  <div>Countries: {new Set(selectedQuotes.map(q => q.destination_country)).size}</div>
                   <div>Customers: {new Set(selectedQuotes.map(q => q.email)).size}</div>
                 </div>
               </div>

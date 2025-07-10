@@ -37,6 +37,18 @@ export const useDashboardBulkActions = ({
         // Convert quotes to cart items and add them
         const cartItems = idsToAdd.map(id => {
           const quote = quotes.find(q => q.id === id);
+          
+          // Determine purchase country from the product URL or default to US
+          let purchaseCountry = 'US'; // Default
+          const productUrl = quote!.product_url || '';
+          if (productUrl.includes('amazon.in') || productUrl.includes('flipkart.com')) {
+            purchaseCountry = 'IN';
+          } else if (productUrl.includes('amazon.jp')) {
+            purchaseCountry = 'JP';
+          } else if (productUrl.includes('amazon.co.uk')) {
+            purchaseCountry = 'GB';
+          }
+          
           return {
             id: quote!.id,
             quoteId: quote!.id,
@@ -44,7 +56,9 @@ export const useDashboardBulkActions = ({
             finalTotal: quote!.final_total || 0,
             quantity: 1,
             itemWeight: quote!.item_weight || 0,
-            countryCode: quote!.country_code || 'US',
+            countryCode: quote!.destination_country || 'US', // For backward compatibility
+            purchaseCountryCode: purchaseCountry, // Where we buy from
+            destinationCountryCode: quote!.destination_country || 'US', // Where we deliver to
             inCart: true,
             isSelected: false,
             createdAt: new Date(quote!.created_at),

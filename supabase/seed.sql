@@ -14,33 +14,16 @@ INSERT INTO country_settings (code, name, currency, rate_from_usd, sales_tax, va
 ('IN', 'India', 'INR', 83.0, 0, 0.18, 500, 0, 100, 'kg', 5000, 0, 2.5, true, true, 'payu', '{"low": 0, "normal": 41500, "urgent": 166000}'),
 ('NP', 'Nepal', 'NPR', 133.0, 0, 0.13, 1000, 0, 200, 'kg', 5000, 0, 1.5, true, true, 'esewa', '{"low": 0, "normal": 66500, "urgent": 266000}'),
 ('JP', 'Japan', 'JPY', 150.0, 0, 0.10, 1500, 0, 200, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 75000, "urgent": 300000}'),
-('SG', 'Singapore', 'SGD', 1.35, 0, 0.07, 20, 0, 2, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 675, "urgent": 2700}'),
-('MY', 'Malaysia', 'MYR', 4.7, 0, 0.06, 30, 0, 2, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 2350, "urgent": 9400}'),
-('TH', 'Thailand', 'THB', 36.0, 0, 0.07, 150, 0, 2, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 18000, "urgent": 72000}'),
-('PH', 'Philippines', 'PHP', 56.0, 0, 0.12, 300, 0, 2, 'kg', 5000, 0, 2.9, true, true, 'grabpay', '{"low": 0, "normal": 28000, "urgent": 112000}'),
-('ID', 'Indonesia', 'IDR', 15800.0, 0, 0.11, 50000, 0, 2, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 7900000, "urgent": 31600000}'),
-('VN', 'Vietnam', 'VND', 24000.0, 0, 0.10, 120000, 0, 2, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 12000000, "urgent": 48000000}'),
 ('GB', 'United Kingdom', 'GBP', 0.79, 0, 0.20, 12, 0, 2, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 395, "urgent": 1580}'),
-('AU', 'Australia', 'AUD', 1.5, 0, 0.10, 25, 0, 2, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 750, "urgent": 3000}'),
-('CA', 'Canada', 'CAD', 1.35, 0, 0.05, 15, 0, 2, 'lbs', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 675, "urgent": 2700}');
 
 -- Insert comprehensive payment gateways
 INSERT INTO payment_gateways (code, name, description, is_active, supported_countries, supported_currencies, fee_percent, fee_fixed, config, test_mode) VALUES
--- Stripe for US, Japan and other international markets
-('stripe', 'Stripe', 'International payment gateway supporting cards, wallets, and local payment methods', true, ARRAY['US', 'CA', 'GB', 'AU', 'SG', 'JP', 'KR', 'TH', 'MY', 'PH', 'ID', 'VN'], ARRAY['USD', 'CAD', 'GBP', 'AUD', 'SGD', 'JPY', 'KRW', 'THB', 'MYR', 'PHP', 'IDR', 'VND'], 2.9, 30, '{"publishable_key": "pk_test_stripe", "secret_key": "sk_test_stripe", "webhook_secret": "whsec_test"}', true),
-
 -- PayU for India
 ('payu', 'PayU', 'Leading payment gateway in India supporting cards, UPI, net banking, and wallets', true, ARRAY['IN'], ARRAY['INR'], 2.5, 0, '{"merchant_key": "test_payu_key", "salt_key": "test_payu_salt", "environment": "test"}', true),
-
 -- eSewa for Nepal
 ('esewa', 'eSewa', 'Nepal''s most popular digital wallet and payment service', true, ARRAY['NP'], ARRAY['NPR'], 1.5, 0, '{"merchant_id": "test_esewa_merchant", "secret_key": "test_esewa_secret", "environment": "test"}', true),
-
 -- Khalti for Nepal (alternative)
 ('khalti', 'Khalti', 'Nepal''s digital wallet service', true, ARRAY['NP'], ARRAY['NPR'], 2.0, 0, '{"public_key": "test_khalti_public", "secret_key": "test_khalti_secret", "environment": "test"}', true),
-
--- Razorpay for India (alternative)
-('razorpay', 'Razorpay', 'Indian payment gateway with extensive payment method support', true, ARRAY['IN'], ARRAY['INR'], 2.0, 0, '{"key_id": "rzp_test_key", "key_secret": "rzp_test_secret", "webhook_secret": "rzp_webhook_secret"}', true),
-
 -- PayPal for international
 ('paypal', 'PayPal', 'Global payment platform supporting multiple countries and currencies', true, ARRAY['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'SG', 'JP', 'IN'], ARRAY['USD', 'CAD', 'GBP', 'AUD', 'EUR', 'SGD', 'JPY', 'INR'], 3.4, 30, '{"client_id": "test_paypal_client", "client_secret": "test_paypal_secret", "environment": "sandbox"}', true),
 
@@ -50,17 +33,6 @@ INSERT INTO payment_gateways (code, name, description, is_active, supported_coun
 -- Cash on Delivery (for supported regions)
 ('cod', 'Cash on Delivery', 'Pay with cash upon delivery', true, ARRAY['IN', 'NP', 'MY', 'TH', 'PH', 'ID', 'VN'], ARRAY['INR', 'NPR', 'MYR', 'THB', 'PHP', 'IDR', 'VND'], 0, 50, '{"max_amount_inr": 50000, "max_amount_npr": 80000, "verification_required": true}', false),
 
--- UPI for India (direct UPI)
-('upi', 'UPI (Unified Payments Interface)', 'Direct UPI payments for Indian customers', true, ARRAY['IN'], ARRAY['INR'], 0, 0, '{"supported_apps": ["gpay", "phonepe", "paytm", "bhim"], "qr_enabled": true}', false),
-
--- Paytm for India (alternative)
-('paytm', 'Paytm', 'India''s leading digital payment platform', true, ARRAY['IN'], ARRAY['INR'], 2.0, 0, '{"merchant_id": "test_paytm_mid", "merchant_key": "test_paytm_key", "environment": "staging"}', true),
-
--- GrabPay for Southeast Asia
-('grabpay', 'GrabPay', 'Southeast Asia''s super app payment method', true, ARRAY['SG', 'MY', 'TH', 'PH', 'ID', 'VN'], ARRAY['SGD', 'MYR', 'THB', 'PHP', 'IDR', 'VND'], 2.5, 0, '{"partner_id": "test_grab_partner", "partner_secret": "test_grab_secret", "environment": "staging"}', true),
-
--- Alipay for international
-('alipay', 'Alipay', 'Chinese payment platform with global reach', true, ARRAY['CN', 'SG', 'MY', 'TH', 'US', 'GB', 'AU'], ARRAY['CNY', 'SGD', 'MYR', 'THB', 'USD', 'GBP', 'AUD'], 2.8, 0, '{"app_id": "test_alipay_app", "private_key": "test_alipay_private", "environment": "sandbox"}', true);
 
 -- Insert test email templates
 INSERT INTO email_templates (name, subject, html_content, template_type, variables) VALUES

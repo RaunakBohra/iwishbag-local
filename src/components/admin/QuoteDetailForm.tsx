@@ -27,7 +27,7 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
   // Watch form values
   const watchedValues = useWatch({
     control: form.control,
-    name: ["country_code", "items"]
+    name: ["destination_country", "items"]
   });
 
   const [countryCode, items] = watchedValues;

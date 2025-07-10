@@ -40,11 +40,20 @@ import { useQuoteDisplayCurrency } from "@/hooks/useQuoteDisplayCurrency";
 import { useCart } from "@/hooks/useCart";
 import { usePaymentGateways } from "@/hooks/usePaymentGateways";
 import { useAllCountries } from "@/hooks/useAllCountries";
+import { currencyService } from "@/services/CurrencyService";
 import { PaymentMethodSelector } from "@/components/payment/PaymentMethodSelector";
 import { QRPaymentModal } from "@/components/payment/QRPaymentModal";
 import { PaymentStatusTracker } from "@/components/payment/PaymentStatusTracker";
 import { PaymentGateway, PaymentRequest } from "@/types/payment";
 import { cn } from "@/lib/utils";
+import { 
+  quoteAddressToCheckoutForm, 
+  checkoutFormToQuoteAddress, 
+  createGuestAddress,
+  isAddressComplete,
+  extractQuoteShippingAddress 
+} from "@/lib/addressUtils";
+import { useAddressSynchronization } from "@/hooks/useAddressSynchronization";
 
 type QuoteType = Tables<'quotes'>;
 type ProfileType = Tables<'profiles'>;
@@ -56,10 +65,11 @@ interface AddressFormData {
   state_province_region: string;
   postal_code: string;
   country: string;
-  country_code?: string;
+  destination_country?: string;
   recipient_name?: string;
   phone?: string;
   is_default: boolean;
+  save_to_profile?: boolean;
 }
 
 // Component to display checkout item price with proper currency conversion
@@ -67,9 +77,9 @@ const CheckoutItemPrice = ({ item }: { item: any }) => {
   // Create a mock quote object for the cart item
   const mockQuote = {
     id: item.quoteId,
-    country_code: item.purchaseCountryCode || item.countryCode,
+    destination_country: item.purchaseCountryCode || item.countryCode,
     shipping_address: {
-      country_code: item.destinationCountryCode || item.countryCode
+      destination_country: item.destinationCountryCode || item.countryCode
     }
   };
   
@@ -87,9 +97,9 @@ const CheckoutTotal = ({ items }: { items: any[] }) => {
   
   const mockQuote = {
     id: firstItem.quoteId,
-    country_code: firstItem.purchaseCountryCode || firstItem.countryCode,
+    destination_country: firstItem.purchaseCountryCode || firstItem.countryCode,
     shipping_address: {
-      country_code: firstItem.destinationCountryCode || firstItem.countryCode
+      destination_country: firstItem.destinationCountryCode || firstItem.countryCode
     }
   };
   
@@ -121,19 +131,13 @@ export default function Checkout() {
     loadFromServer
   } = useCart();
   
-  // Payment gateway hook
-  const {
-    availableMethods,
-    methodsLoading,
-    getRecommendedPaymentMethod,
-    createPayment,
-    createPaymentAsync,
-    isCreatingPayment,
-    validatePaymentRequest,
-    isMobileOnlyPayment,
-    requiresQRCode
-  } = usePaymentGateways();
+  // Get selected quote IDs from URL params
+  const selectedQuoteIds = searchParams.get('quotes')?.split(',') || [];
   
+  // Check if this is a guest checkout
+  const guestQuoteId = searchParams.get('quote');
+  const isGuestCheckout = !!guestQuoteId;
+
   // State
   const [selectedAddress, setSelectedAddress] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -156,15 +160,9 @@ export default function Checkout() {
     country: '',
     recipient_name: '',
     phone: '',
-    is_default: false
+    is_default: false,
+    save_to_profile: true // Default to true for better UX
   });
-
-  // Get selected quote IDs from URL params
-  const selectedQuoteIds = searchParams.get('quotes')?.split(',') || [];
-  
-  // Check if this is a guest checkout
-  const guestQuoteId = searchParams.get('quote');
-  const isGuestCheckout = !!guestQuoteId;
 
   // Guest checkout mode: 'guest', 'signup', 'signin'
   const [checkoutMode, setCheckoutMode] = useState<'guest' | 'signup' | 'signin'>('guest');
@@ -183,9 +181,69 @@ export default function Checkout() {
     fullName: ''
   });
 
+  // Guest currency selection (defaults to destination country currency)
+  const [guestSelectedCurrency, setGuestSelectedCurrency] = useState<string>('');
+
   const { data: userProfile } = useUserProfile();
   const { formatAmount } = useUserCurrency();
   const { data: countries } = useAllCountries();
+
+  // Fetch available currencies for guest selection using CurrencyService
+  const { data: availableCurrencies } = useQuery({
+    queryKey: ['available-currencies-service'],
+    queryFn: async () => {
+      const currencies = await currencyService.getAllCurrencies();
+      return currencies.map(currency => ({
+        code: currency.code,
+        name: currency.name,
+        symbol: currency.symbol,
+        formatted: `${currency.name} (${currency.code})`
+      }));
+    },
+    enabled: isGuestCheckout
+  });
+
+  // Fetch guest quote if this is a guest checkout
+  const { data: guestQuote, isLoading: guestQuoteLoading } = useQuery({
+    queryKey: ['guest-quote', guestQuoteId],
+    queryFn: async () => {
+      if (!guestQuoteId) return null;
+      
+      const { data, error } = await supabase
+        .from('quotes')
+        .select(`
+          *,
+          quote_items (*)
+        `)
+        .eq('id', guestQuoteId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!guestQuoteId,
+  });
+
+  // Determine currency to use for payment methods
+  // For guest checkout, use guest selected currency or default to destination country currency
+  // For authenticated users, their preferred currency will be used automatically
+
+  const guestCurrency = isGuestCheckout 
+    ? (guestSelectedCurrency || defaultGuestCurrency)
+    : undefined;
+  
+  // Payment gateway hook with currency override for guests
+  const {
+    availableMethods,
+    methodsLoading,
+    getRecommendedPaymentMethod,
+    createPayment,
+    createPaymentAsync,
+    isCreatingPayment,
+    validatePaymentRequest,
+    isMobileOnlyPayment,
+    requiresQRCode
+  } = usePaymentGateways(guestCurrency);
 
   // Load cart data from server when component mounts (same as Cart component)
   useEffect(() => {
@@ -211,27 +269,6 @@ export default function Checkout() {
     }
   }, [availableMethods, getRecommendedPaymentMethod, paymentMethod]);
 
-  // Fetch guest quote if this is a guest checkout
-  const { data: guestQuote, isLoading: guestQuoteLoading } = useQuery({
-    queryKey: ['guest-quote', guestQuoteId],
-    queryFn: async () => {
-      if (!guestQuoteId) return null;
-      
-      const { data, error } = await supabase
-        .from('quotes')
-        .select(`
-          *,
-          quote_items (*)
-        `)
-        .eq('id', guestQuoteId)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!guestQuoteId,
-  });
-
   // Get selected cart items based on quote IDs
   // If no URL parameters, use all cart items (for direct navigation to /checkout)
   const selectedCartItems = isGuestCheckout 
@@ -240,8 +277,8 @@ export default function Checkout() {
         productName: guestQuote.quote_items?.[0]?.product_name || "Product",
         quantity: guestQuote.quote_items?.reduce((sum, item) => sum + item.quantity, 0) || 1,
         finalTotal: guestQuote.final_total || 0,
-        countryCode: guestQuote.country_code || "Unknown",
-        purchaseCountryCode: guestQuote.country_code || "Unknown",
+        countryCode: guestQuote.destination_country || "Unknown",
+        purchaseCountryCode: guestQuote.destination_country || "Unknown",
         destinationCountryCode: (() => {
           // Extract destination from shipping address for guest quotes
           if (guestQuote.shipping_address) {
@@ -249,12 +286,12 @@ export default function Checkout() {
               const addr = typeof guestQuote.shipping_address === 'string' 
                 ? JSON.parse(guestQuote.shipping_address) 
                 : guestQuote.shipping_address;
-              return addr?.country_code || addr?.countryCode || guestQuote.country_code || "Unknown";
+              return addr?.destination_country || addr?.countryCode || addr?.country || guestQuote.destination_country || "Unknown";
             } catch (e) {
-              return guestQuote.country_code || "Unknown";
+              return guestQuote.destination_country || "Unknown";
             }
           }
-          return guestQuote.country_code || "Unknown";
+          return guestQuote.destination_country || "Unknown";
         })()
       }] : [])
     : selectedQuoteIds.length > 0 
@@ -264,30 +301,57 @@ export default function Checkout() {
   // Get the shipping country from selected items
   // All quotes in checkout should have the same destination country
   const shippingCountry = selectedCartItems.length > 0 
-    ? (selectedCartItems[0].destinationCountryCode || selectedCartItems[0].countryCode) 
+    ? (selectedCartItems[0].destinationCountryCode || 
+       selectedCartItems[0].countryCode || 
+       selectedCartItems[0].purchaseCountryCode) 
     : null;
   
-  // Get purchase country for route display
+  
+  // Get purchase country for route display (where we buy from)
   const purchaseCountry = selectedCartItems.length > 0 
-    ? (selectedCartItems[0].purchaseCountryCode || selectedCartItems[0].countryCode) 
+    ? selectedCartItems[0].purchaseCountryCode 
     : null;
 
-  // Pre-fill guest contact info from quote if available
+  // Pre-fill guest contact info and address from quote if available
   useEffect(() => {
     if (guestQuote && isGuestCheckout) {
+      // Set guest contact info
       setGuestContact({
         email: guestQuote.email || '',
         fullName: guestQuote.customer_name || ''
       });
+
+      // Set default currency based on destination country if not already set
+      if (!guestSelectedCurrency && defaultGuestCurrency) {
+        setGuestSelectedCurrency(defaultGuestCurrency);
+      }
+
+      // Extract and set shipping address if available
+      const quoteAddress = extractQuoteShippingAddress(guestQuote.shipping_address);
+      const checkoutAddress = quoteAddressToCheckoutForm(quoteAddress);
+      
+      if (checkoutAddress && isAddressComplete(checkoutAddress)) {
+        // Set the address form data
+        setAddressFormData({
+          ...checkoutAddress,
+          country: shippingCountry || checkoutAddress.country,
+          destination_country: shippingCountry || checkoutAddress.destination_country || checkoutAddress.country
+        });
+        
+        // Mark as having a guest address
+        setSelectedAddress('guest-address-loaded');
+        setShowAddressForm(false); // Don't show the form if we have a complete address
+      }
     }
-  }, [guestQuote, isGuestCheckout]);
+  }, [guestQuote, isGuestCheckout, shippingCountry, defaultGuestCurrency, guestSelectedCurrency]);
 
   // Update address form country when shippingCountry changes
   useEffect(() => {
     if (shippingCountry) {
       setAddressFormData(prev => ({
         ...prev,
-        country: shippingCountry
+        country: shippingCountry,
+        destination_country: shippingCountry
       }));
     }
   }, [shippingCountry]);
@@ -297,13 +361,31 @@ export default function Checkout() {
     queryKey: ['user_addresses', user?.id, shippingCountry],
     queryFn: async () => {
       if (!user || !shippingCountry) return [];
-      const { data, error } = await supabase
+      
+      // Try filtering by destination_country first, fallback to country field
+      let { data, error } = await supabase
         .from('user_addresses')
         .select('*')
         .eq('user_id', user.id)
-        .eq('country_code', shippingCountry)
+        .eq('destination_country', shippingCountry)
         .order('is_default', { ascending: false })
         .order('created_at', { ascending: false });
+
+      // If no addresses found and destination_country exists, try fallback to country field
+      if ((!data || data.length === 0) && !error) {
+        const fallbackResult = await supabase
+          .from('user_addresses')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('country', shippingCountry)
+          .order('is_default', { ascending: false })
+          .order('created_at', { ascending: false });
+        
+        if (fallbackResult.data && fallbackResult.data.length > 0) {
+          data = fallbackResult.data;
+          error = fallbackResult.error;
+        }
+      }
 
       if (error) throw error;
       return data;
@@ -364,7 +446,7 @@ export default function Checkout() {
         .insert({
           user_id: user.id,
           ...addressData,
-          country_code: shippingCountry, // Ensure country_code is set
+          destination_country: shippingCountry, // Ensure destination_country is set
           country: countries?.find(c => c.code === shippingCountry)?.name || shippingCountry
         })
         .select()
@@ -384,9 +466,11 @@ export default function Checkout() {
         state_province_region: '',
         postal_code: '',
         country: shippingCountry || '',
+        destination_country: shippingCountry || '',
         recipient_name: '',
         phone: '',
-        is_default: false
+        is_default: false,
+        save_to_profile: true // Default to true for better UX
       });
       toast({ title: "Success", description: "Address added successfully." });
     },
@@ -401,13 +485,33 @@ export default function Checkout() {
 
   // Calculations
   const totalAmount = selectedCartItems.reduce((total, item) => {
+    // Add null checks for item properties
+    if (!item || typeof item.finalTotal !== 'number' || typeof item.quantity !== 'number') {
+      console.warn('Invalid cart item data:', item);
+      return total;
+    }
     return total + ((item.finalTotal || 0) * (item.quantity || 1));
   }, 0);
 
-  const cartQuoteIds = selectedCartItems.map(item => item.quoteId);
+  const cartQuoteIds = selectedCartItems
+    .filter(item => item && item.quoteId) // Filter out items without quoteId
+    .map(item => item.quoteId);
+
+  // Determine the currency for payment - defined here so it's available throughout the component
+  const paymentCurrency = isGuestCheckout 
+    ? (guestSelectedCurrency || defaultGuestCurrency || 'USD')
+    : (userProfile?.preferred_display_currency || 'USD');
 
   // Validation
-  const canPlaceOrder = selectedAddress && paymentMethod && selectedCartItems.length > 0 && 
+  const hasValidGuestAddress = isGuestCheckout && 
+    (selectedAddress === 'guest-address' || selectedAddress === 'guest-address-loaded') && 
+    isAddressComplete(addressFormData);
+  
+  const hasValidTempAddress = !isGuestCheckout && 
+    selectedAddress === 'temp-address' && 
+    isAddressComplete(addressFormData);
+  
+  const canPlaceOrder = (selectedAddress || hasValidGuestAddress || hasValidTempAddress) && paymentMethod && selectedCartItems.length > 0 && 
     (!isGuestCheckout || (
       checkoutMode === 'guest' 
         ? (guestContact.email && guestContact.fullName)
@@ -441,7 +545,18 @@ export default function Checkout() {
       return;
     }
 
-    await addAddressMutation.mutateAsync(addressFormData);
+    // For authenticated users, check if they want to save the address to profile
+    if (addressFormData.save_to_profile) {
+      await addAddressMutation.mutateAsync(addressFormData);
+    } else {
+      // Just use the address for this order without saving it
+      setShowAddressForm(false);
+      setSelectedAddress('temp-address'); // Use a temporary placeholder ID
+      toast({ 
+        title: "Address Added", 
+        description: "Address added for this order only." 
+      });
+    }
   };
 
   const handlePaymentMethodChange = (method: PaymentGateway) => {
@@ -518,6 +633,12 @@ export default function Checkout() {
           toast({ title: "Missing Information", description: "Please fill in your contact details.", variant: "destructive" });
           return;
         }
+        
+        // Validate shipping address
+        if (!isAddressComplete(addressFormData)) {
+          toast({ title: "Missing Shipping Address", description: "Please provide a complete shipping address.", variant: "destructive" });
+          return;
+        }
       } else if (checkoutMode === 'signin') {
         if (!accountData.email || !accountData.password) {
           toast({ title: "Missing Information", description: "Please fill in email and password.", variant: "destructive" });
@@ -536,10 +657,21 @@ export default function Checkout() {
       }
     }
 
+    // Validate total amount before creating payment request
+    if (!totalAmount || totalAmount <= 0 || isNaN(totalAmount) || !isFinite(totalAmount)) {
+      toast({ 
+        title: "Invalid Amount", 
+        description: "The total amount is invalid. Please check your cart items.", 
+        variant: "destructive" 
+      });
+      setIsProcessing(false);
+      return;
+    }
+
     const paymentRequest: PaymentRequest = {
       quoteIds: cartQuoteIds,
       amount: totalAmount,
-      currency: userProfile?.preferred_display_currency || 'USD',
+      currency: paymentCurrency,
       gateway: paymentMethod,
       success_url: `${window.location.origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${window.location.origin}/checkout?quotes=${cartQuoteIds.join(',')}`,
@@ -563,7 +695,12 @@ export default function Checkout() {
           if (checkoutMode === 'guest') {
             // Pure guest checkout - no account creation
             
-            // Update quote with guest contact info - set is_anonymous to false since we now have email
+            // Update quote with guest contact info and shipping address
+            const shippingAddressToSave = checkoutFormToQuoteAddress({
+              ...addressFormData,
+              recipient_name: addressFormData.recipient_name || guestContact.fullName
+            });
+
             const { error: quoteUpdateError } = await supabase
               .from('quotes')
               .update({
@@ -571,6 +708,9 @@ export default function Checkout() {
                 email: guestContact.email,
                 is_anonymous: false, // Set to false since we now have email (satisfies constraint)
                 user_id: null, // Keep user_id as null for guest checkout
+                shipping_address: shippingAddressToSave, // Update shipping address with complete data
+                address_updated_at: new Date().toISOString(),
+                address_updated_by: null // Guest user
               })
               .eq('id', guestQuoteId);
 
@@ -609,7 +749,43 @@ export default function Checkout() {
         }
       }
 
+      // Handle temporary address for authenticated users
+      if (!isGuestCheckout && selectedAddress === 'temp-address') {
+        // Update quotes with the temporary shipping address
+        const shippingAddressToSave = checkoutFormToQuoteAddress({
+          ...addressFormData,
+          recipient_name: addressFormData.recipient_name || userProfile?.full_name || ''
+        });
+
+        for (const quoteId of cartQuoteIds) {
+          const { error: quoteUpdateError } = await supabase
+            .from('quotes')
+            .update({
+              shipping_address: shippingAddressToSave,
+              address_updated_at: new Date().toISOString(),
+              address_updated_by: user?.id || null
+            })
+            .eq('id', quoteId);
+
+          if (quoteUpdateError) {
+            console.error('Quote update error:', quoteUpdateError);
+            toast({ 
+              title: "Error updating shipping address", 
+              description: quoteUpdateError.message, 
+              variant: "destructive" 
+            });
+            setIsProcessing(false);
+            return;
+          }
+        }
+      }
+
       const paymentResponse = await createPaymentAsync(paymentRequest);
+
+      // Add null check for payment response
+      if (!paymentResponse) {
+        throw new Error('No response received from payment gateway');
+      }
 
       if (paymentResponse.url) {
         // For redirect-based payments (Stripe, PayU Hosted Checkout)
@@ -773,6 +949,28 @@ export default function Checkout() {
                         Sign In
                       </Button>
                     </div>
+
+                    {/* Currency Selection for Guest Checkout */}
+                    {checkoutMode === 'guest' && availableCurrencies && (
+                      <div className="mb-4">
+                        <Label htmlFor="guest-currency">Payment Currency</Label>
+                        <select
+                          id="guest-currency"
+                          className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          value={guestSelectedCurrency}
+                          onChange={(e) => setGuestSelectedCurrency(e.target.value)}
+                        >
+                          {availableCurrencies?.map((currency) => (
+                            <option key={currency.code} value={currency.code}>
+                              {currency.symbol} {currency.formatted}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Choose your preferred payment currency. Payment methods will be filtered accordingly.
+                        </p>
+                      </div>
+                    )}
 
                     {/* Dynamic form based on checkout mode */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1054,7 +1252,85 @@ export default function Checkout() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {(!addresses || addresses.length === 0) || isGuestCheckout ? (
+                  {/* Guest checkout with loaded address */}
+                  {isGuestCheckout && (selectedAddress === 'guest-address-loaded' || selectedAddress === 'guest-address') && isAddressComplete(addressFormData) ? (
+                    <div className="space-y-4">
+                      <div className="p-4 border rounded-lg bg-gray-50">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{addressFormData.recipient_name || guestContact.fullName || 'Guest'}</span>
+                                <Badge variant="secondary">Guest Address</Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">{addressFormData.address_line1}</p>
+                              {addressFormData.address_line2 && (
+                                <p className="text-sm text-muted-foreground">{addressFormData.address_line2}</p>
+                              )}
+                              <p className="text-sm text-muted-foreground">
+                                {addressFormData.city}, {addressFormData.state_province_region} {addressFormData.postal_code}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {countries?.find(c => c.code === addressFormData.country)?.name || addressFormData.country}
+                              </p>
+                              {addressFormData.phone && (
+                                <p className="text-sm text-muted-foreground">
+                                  <Phone className="h-3 w-3 inline mr-1" />
+                                  {addressFormData.phone}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowAddressForm(true)}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : !isGuestCheckout && selectedAddress === 'temp-address' && isAddressComplete(addressFormData) ? (
+                    // Temporary address for authenticated users
+                    <div className="space-y-4">
+                      <div className="p-4 border rounded-lg bg-gray-50">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{addressFormData.recipient_name || userProfile?.full_name || 'User'}</span>
+                                <Badge variant="secondary">One-time Address</Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">{addressFormData.address_line1}</p>
+                              {addressFormData.address_line2 && (
+                                <p className="text-sm text-muted-foreground">{addressFormData.address_line2}</p>
+                              )}
+                              <p className="text-sm text-muted-foreground">
+                                {addressFormData.city}, {addressFormData.state_province_region} {addressFormData.postal_code}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {countries?.find(c => c.code === addressFormData.country)?.name || addressFormData.country}
+                              </p>
+                              {addressFormData.phone && (
+                                <p className="text-sm text-muted-foreground">
+                                  <Phone className="h-3 w-3 inline mr-1" />
+                                  {addressFormData.phone}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowAddressForm(true)}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (!addresses || addresses.length === 0) || isGuestCheckout ? (
                     <div className="text-center py-6">
                       <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-medium mb-2">
@@ -1209,6 +1485,18 @@ export default function Checkout() {
                         <Label htmlFor="is_default">Set as default address</Label>
                       </div>
                       
+                      {/* Show save to profile option only for authenticated users */}
+                      {!isGuestCheckout && (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="save_to_profile"
+                            checked={addressFormData.save_to_profile}
+                            onCheckedChange={(checked) => setAddressFormData({...addressFormData, save_to_profile: checked as boolean})}
+                          />
+                          <Label htmlFor="save_to_profile">Save this address to my profile</Label>
+                        </div>
+                      )}
+                      
                       <Button 
                         onClick={handleAddAddress}
                         disabled={addAddressMutation.isPending}
@@ -1241,7 +1529,7 @@ export default function Checkout() {
                     selectedMethod={paymentMethod}
                     onMethodChange={handlePaymentMethodChange}
                     amount={totalAmount}
-                    currency={userProfile?.preferred_display_currency || 'USD'}
+                    currency={paymentCurrency}
                     showRecommended={true}
                     disabled={isProcessing}
                   />
@@ -1306,7 +1594,7 @@ export default function Checkout() {
 
                   <Button 
                     onClick={handlePlaceOrder} 
-                    disabled={!canPlaceOrder || isProcessing || (!isGuestCheckout && (!addresses || addresses.length === 0)) || (isGuestCheckout && checkoutMode !== 'guest')}
+                    disabled={!canPlaceOrder || isProcessing || (!isGuestCheckout && (!addresses || addresses.length === 0)) || (isGuestCheckout && checkoutMode !== 'guest' && !user)}
                     className="w-full"
                     size="lg"
                   >
@@ -1347,7 +1635,7 @@ export default function Checkout() {
           gateway={qrPaymentData.gateway}
           qrCodeUrl={qrPaymentData.qrCodeUrl}
           amount={totalAmount}
-          currency={userProfile?.preferred_display_currency || 'USD'}
+          currency={paymentCurrency}
           transactionId={qrPaymentData.transactionId}
           onPaymentComplete={handleQRPaymentComplete}
           onPaymentFailed={handleQRPaymentFailed}

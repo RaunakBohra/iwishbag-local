@@ -61,9 +61,15 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
         setLoading(true);
         setError(null);
 
-        // --- Use getQuoteRouteCountries for consistent logic ---
+        // Use the same logic as CustomsTierDisplay for consistency
         const shippingAddress = quote.shipping_address ? (typeof quote.shipping_address === 'string' ? JSON.parse(quote.shipping_address) : quote.shipping_address) : null;
-        const { origin, destination } = await getQuoteRouteCountries(quote, shippingAddress, allCountries);
+        
+        const origin = quote.origin_country || 'US';
+        let destination = shippingAddress?.destination_country || shippingAddress?.country || quote.destination_country;
+        if (destination && destination.length > 2) {
+          const found = allCountries.find(c => c.name === destination);
+          if (found) destination = found.code;
+        }
 
         let currentRoute = null;
         // 1. Try to fetch by shipping_route_id if present
@@ -204,7 +210,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
     };
 
     fetchShippingData();
-  }, [quote.id, quote.shipping_route_id, allCountries]);
+  }, [quote.id, quote.shipping_route_id, quote.origin_country, quote.destination_country, allCountries]);
 
   const handleOptionToggle = async (optionId: string, enabled: boolean) => {
     try {
@@ -384,7 +390,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
                         {option.cost > 0 && (
                           <Badge variant="outline">
                             {(() => {
-                              const purchaseCountry = quote.country_code || 'US';
+                              const purchaseCountry = quote.destination_country || 'US';
                               const deliveryCountry = quote.destination_country || 'US';
                               const exchangeRate = quote.exchange_rate;
                               const dualCurrency = formatDualCurrency(option.cost, purchaseCountry, deliveryCountry, exchangeRate);

@@ -4,6 +4,7 @@ import { Tables } from "@/integrations/supabase/types";
 import { useQuoteCurrencyDisplay } from "@/hooks/useCurrencyConversion";
 import { formatCustomerCurrency, getCountryCurrency, formatAmountForDisplay, formatDualCurrency } from "@/lib/currencyUtils";
 import { Receipt, Percent, Package, Truck, Shield, CreditCard, Gift, Info, ChevronDown, ChevronUp, Download, Hash, Calendar, MapPin } from "lucide-react";
+import { useQuoteRoute } from "@/hooks/useQuoteRoute";
 import {
   Tooltip,
   TooltipContent,
@@ -67,51 +68,12 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
 }) => {
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
 
-  // Get origin and destination countries from quote
-  const originCountry = quote.country_code || 'US';
+  // Use unified route determination - same as customs tiers and shipping routes
+  const routeInfo = useQuoteRoute(quote);
   
-  // Try to get destination country from multiple sources
-  let destinationCountry = 'US';
-  if ((quote as any).destination_country) {
-    destinationCountry = (quote as any).destination_country;
-  } else if (quote.shipping_address) {
-    try {
-      const shippingAddress = typeof quote.shipping_address === 'string' 
-        ? JSON.parse(quote.shipping_address) 
-        : quote.shipping_address;
-      
-      // Get country from shipping address
-      let country = shippingAddress?.country_code || shippingAddress?.country || 'US';
-      
-      // Convert country names to country codes
-      const countryNameToCode: { [key: string]: string } = {
-        'Nepal': 'NP',
-        'India': 'IN', 
-        'United States': 'US',
-        'USA': 'US',
-        'China': 'CN',
-        'Australia': 'AU',
-        'United Kingdom': 'GB',
-        'Canada': 'CA'
-      };
-      
-      // If it's a country name, convert to code
-      if (countryNameToCode[country]) {
-        destinationCountry = countryNameToCode[country];
-      } else if (country.length === 2) {
-        // Already a country code
-        destinationCountry = country.toUpperCase();
-      } else {
-        // Unknown format, log for debugging
-        console.warn('Unknown country format in shipping address:', country);
-        destinationCountry = 'US';
-      }
-      
-      console.log('[Country Detection] Raw:', country, '→ Code:', destinationCountry);
-    } catch (e) {
-      console.warn('Could not parse shipping address:', e);
-    }
-  }
+  // Default to US if route info is not available yet
+  const originCountry = routeInfo?.origin || 'US';
+  const destinationCountry = routeInfo?.destination || 'US';
   
   const customerPreferredCurrency = quote.profiles?.preferred_display_currency || getCountryCurrency(destinationCountry);
 
@@ -340,7 +302,7 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
                         <div className="flex justify-between items-center font-semibold text-sm sm:text-base">
                           <span>Total Amount</span>
                           {(() => {
-                            const purchaseCountry = quote.country_code || 'US';
+                            const purchaseCountry = quote.destination_country || 'US';
                             
                             // Try to get destination country from various possible fields
                             let deliveryCountry = 'US';
@@ -350,7 +312,7 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
                               const shippingAddress = typeof quote.shipping_address === 'string' 
                                 ? JSON.parse(quote.shipping_address) 
                                 : quote.shipping_address;
-                              deliveryCountry = shippingAddress?.country_code || shippingAddress?.country || 'US';
+                              deliveryCountry = shippingAddress?.destination_country || shippingAddress?.country || 'US';
                             }
                             
                             const exchangeRate = quote.exchange_rate;
@@ -374,7 +336,7 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
               </Dialog>
             </div>
             {(() => {
-              const purchaseCountry = quote.country_code || 'US';
+              const purchaseCountry = quote.destination_country || 'US';
               
               // Try to get destination country from various possible fields
               let deliveryCountry = 'US';
@@ -384,7 +346,7 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
                 const shippingAddress = typeof quote.shipping_address === 'string' 
                   ? JSON.parse(quote.shipping_address) 
                   : quote.shipping_address;
-                deliveryCountry = shippingAddress?.country_code || shippingAddress?.country || 'US';
+                deliveryCountry = shippingAddress?.destination_country || shippingAddress?.country || 'US';
               }
               
               const exchangeRate = quote.exchange_rate;

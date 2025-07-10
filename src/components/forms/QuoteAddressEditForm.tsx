@@ -5,6 +5,8 @@ import { useToast } from '@/hooks/use-toast';
 import { AddressEditForm } from './AddressEditForm';
 import { ShippingAddress } from '@/types/address';
 import { Tables } from '@/integrations/supabase/types';
+import { updateQuoteAddress } from '@/lib/addressUpdates';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface QuoteAddressEditFormProps {
   quoteId: string;
@@ -21,23 +23,26 @@ export const QuoteAddressEditForm: React.FC<QuoteAddressEditFormProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   console.log('[QuoteAddressEditForm] Props:', {
     quoteId,
     hasCurrentAddress: !!currentAddress,
     currentAddress,
     quoteShippingAddress: quote?.shipping_address,
-    quoteCountryCode: quote?.country_code
+    quoteCountryCode: quote?.destination_country
   });
 
   const updateAddressMutation = useMutation({
     mutationFn: async (address: ShippingAddress) => {
-      const { error } = await supabase
-        .from('quotes')
-        .update({ shipping_address: address })
-        .eq('id', quoteId);
-
-      if (error) throw error;
+      const userId = user?.id || 'anonymous';
+      const result = await updateQuoteAddress(quoteId, address, userId, 'Address updated via form');
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update address');
+      }
+      
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quote', quoteId] });
@@ -91,11 +96,11 @@ function getQuoteDestinationCountry(quote: Tables<'quotes'>): string {
         ? JSON.parse(quote.shipping_address) 
         : quote.shipping_address;
       
-      // Check for country_code first (used in admin-created quotes)
-      if (shippingAddress?.country_code) {
+      // Check for destination_country first (used in admin-created quotes)
+      if (shippingAddress?.destination_country) {
         // Ensure it's a valid 2-letter code
-        if (/^[A-Z]{2}$/i.test(shippingAddress.country_code)) {
-          return shippingAddress.country_code.toUpperCase();
+        if (/^[A-Z]{2}$/i.test(shippingAddress.destination_country)) {
+          return shippingAddress.destination_country.toUpperCase();
         }
       }
       
@@ -124,5 +129,5 @@ function getQuoteDestinationCountry(quote: Tables<'quotes'>): string {
   }
   
   // Default to the quote's country code (purchase country) or US
-  return quote.country_code || 'US';
+  return quote.destination_country || 'US';
 }

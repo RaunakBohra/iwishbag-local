@@ -114,7 +114,7 @@ const QuoteForm = () => {
         state: selectedAddress.state_province_region,
         postalCode: selectedAddress.postal_code,
         country: selectedAddress.country,
-        countryCode: selectedAddress.country_code,
+        countryCode: selectedAddress.destination_country,
         phone: selectedAddress.phone,
       } : undefined,
     };

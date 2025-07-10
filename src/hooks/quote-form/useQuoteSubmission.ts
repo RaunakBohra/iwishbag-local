@@ -7,6 +7,7 @@ import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { useEmailNotifications } from "@/hooks/useEmailNotifications";
 import { Tables } from "@/integrations/supabase/types";
+import { getCountryCurrency } from "@/lib/currencyUtils";
 
 interface UseQuoteSubmissionProps {
   form: UseFormReturn<QuoteFormValues>;
@@ -109,7 +110,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
           // If no previous quotes, update profile with destination country/currency
           if (!existingQuotes || existingQuotes.length === 0) {
             // Get destination country from shipping address
-            const destinationCountry = shippingAddress?.country_code || shippingAddress?.country || countryCode;
+            const destinationCountry = shippingAddress?.destination_country || shippingAddress?.country || countryCode;
             
             // Get currency for destination country
             let destinationCurrency = 'USD';
@@ -157,12 +158,15 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       const item = items[i];
       
       // Prepare quote data
+      // Get the currency for the destination country
+      const destinationCurrency = getCountryCurrency(countryCode);
+      
       const quoteData: any = {
         email: finalEmail || null, // Allow null email for anonymous quotes
-        country_code: countryCode,
+        destination_country: countryCode,
         user_id: user?.id ?? null,
         currency: selectedCountryCurrency,
-        final_currency: 'NPR',
+        final_currency: destinationCurrency, // Use dynamic currency based on destination
         status: 'pending',
         in_cart: false
       };
@@ -181,9 +185,9 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
           countryCode: shippingAddress.countryCode,
           phone: shippingAddress.phone,
         };
-        // Temporarily comment out these fields to debug
-        // quoteData.address_updated_at = new Date().toISOString();
-        // quoteData.address_updated_by = user?.id;
+        // Track address creation
+        quoteData.address_updated_at = new Date().toISOString();
+        quoteData.address_updated_by = user?.id || null;
       }
       
       const { data: quote, error: quoteError } = await supabase
@@ -302,7 +306,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
           // If no previous quotes, update profile with destination country/currency
           if (!existingQuotes || existingQuotes.length === 0) {
             // Get destination country from shipping address
-            const destinationCountry = shippingAddress?.country_code || shippingAddress?.country || countryCode;
+            const destinationCountry = shippingAddress?.destination_country || shippingAddress?.country || countryCode;
             
             // Get currency for destination country
             let destinationCurrency = 'USD';
@@ -349,7 +353,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
     // Prepare quote data
     const quoteData: any = {
       email: finalEmail || null, // Allow null email for anonymous quotes
-      country_code: countryCode,
+      destination_country: countryCode,
       user_id: user?.id ?? null,
       currency: selectedCountryCurrency,
       final_currency: 'NPR',

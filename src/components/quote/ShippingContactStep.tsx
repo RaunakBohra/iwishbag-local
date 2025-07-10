@@ -4,7 +4,7 @@
 //
 // When setting the shipping address for a quote, ALWAYS set BOTH:
 //   - country:      the 2-letter country code (e.g., 'IN', 'US')
-//   - country_code: the 2-letter country code (same as above)
+//   - destination_country: the 2-letter country code (same as above)
 //
 // This is required because all admin, shipping route, and calculation logic expects
 // both fields to be present and to contain the 2-letter code. If either is missing
@@ -24,7 +24,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { ArrowRight, Package, MapPin, User, Mail, Phone } from 'lucide-react';
 import { AddressForm } from '@/components/profile/AddressForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useCountryUtils, formatShippingRoute } from '@/lib/countryUtils';
+import { useCountryUtils } from '@/lib/countryUtils';
+import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import ProductSummary from './ProductSummary';
 
 function validateEmail(email) {
@@ -106,7 +107,7 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
     if (!err) next();
   };
 
-  // NEW: Auto-populate shippingContact from address if not already set
+  // NEW: Auto-populate shippingContact from address on initial load
   useEffect(() => {
     if (
       user && addresses && addresses.length > 0 &&
@@ -119,13 +120,33 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
         whatsapp: address.phone || '',
         address: address.address_line1 || '',
         country: address.country || '',
-        country_code: address.country || '',
+        destination_country: address.destination_country || address.country || '',
         state: address.state_province_region || '',
         city: address.city || '',
         zip: address.postal_code || '',
       });
     }
   }, [user, addresses, address, profile, setShippingContact]);
+
+  // Update shippingContact when user selects a different address
+  useEffect(() => {
+    if (user && addresses && addresses.length > 0 && selectedAddressId) {
+      const selectedAddr = addresses.find(addr => addr.id === selectedAddressId);
+      if (selectedAddr) {
+        setShippingContact({
+          name: selectedAddr.recipient_name || '',
+          email: profile?.email || '',
+          whatsapp: selectedAddr.phone || '',
+          address: selectedAddr.address_line1 || '',
+          country: selectedAddr.country || '',
+          destination_country: selectedAddr.destination_country || selectedAddr.country || '',
+          state: selectedAddr.state_province_region || '',
+          city: selectedAddr.city || '',
+          zip: selectedAddr.postal_code || '',
+        });
+      }
+    }
+  }, [selectedAddressId, addresses, profile, setShippingContact]);
 
   // If logged in and has addresses, show summary card
   if (user && addresses && addresses.length > 0) {
@@ -216,7 +237,31 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
             <DialogHeader>
               <DialogTitle>{addressToEdit ? 'Edit Address' : 'Add New Address'}</DialogTitle>
             </DialogHeader>
-            <AddressForm address={addressToEdit} onSuccess={() => { setAddressModalOpen(false); refetch(); }} />
+            <AddressForm 
+              address={addressToEdit} 
+              onSuccess={(newAddress) => { 
+                setAddressModalOpen(false); 
+                refetch();
+                // Update shippingContact if this is a new address or editing current address
+                if (newAddress && (!addressToEdit || addressToEdit.id === address?.id)) {
+                  setShippingContact({
+                    name: newAddress.recipient_name || '',
+                    email: profile?.email || '',
+                    whatsapp: newAddress.phone || '',
+                    address: newAddress.address_line1 || '',
+                    country: newAddress.country || '',
+                    destination_country: newAddress.destination_country || newAddress.country || '',
+                    state: newAddress.state_province_region || '',
+                    city: newAddress.city || '',
+                    zip: newAddress.postal_code || '',
+                  });
+                  // Update selected address ID to the new address
+                  if (!addressToEdit) {
+                    setSelectedAddressId(newAddress.id);
+                  }
+                }
+              }} 
+            />
           </DialogContent>
         </Dialog>
         
@@ -240,7 +285,7 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
                   whatsapp: address.phone || '',
                   address: address.address_line1 || '',
                   country: address.country || '',
-                  country_code: address.country || '',
+                  destination_country: address.country || '',
                   state: address.state_province_region || '',
                   city: address.city || '',
                   zip: address.postal_code || '',
@@ -441,7 +486,11 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
               <div className="border-b border-gray-200 pb-3">
                 <div className="text-sm text-gray-600 mb-1">Shipping Route</div>
                 <div className="font-medium text-gray-900">
-                  {formatShippingRoute(purchaseCountry, shippingCountry, countries)}
+                  <ShippingRouteDisplay 
+                    origin={purchaseCountry} 
+                    destination={shippingCountry}
+                    showIcon={false}
+                  />
                 </div>
               </div>
               

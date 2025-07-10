@@ -93,12 +93,12 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   const { data: countrySettings } = useQuery({
-    queryKey: ['country-settings', quote.country_code],
+    queryKey: ['country-settings', quote.destination_country],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('country_settings')
         .select('*')
-        .eq('code', quote.country_code)
+        .eq('code', quote.destination_country)
         .single();
       if (error) throw error;
       return data;
@@ -185,7 +185,7 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
           onApprove={uiState.step === 'approve' || quote.status === 'pending' ? handleApproveClick : undefined}
           onReject={quote.status === 'pending' ? handleRejectSummary : undefined}
           isProcessing={isProcessing}
-          countryCode={quote.country_code}
+          countryCode={quote.destination_country}
           renderActions={() => (
             <>
               {quote.status !== 'rejected' && (

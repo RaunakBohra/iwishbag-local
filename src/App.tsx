@@ -3,7 +3,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AccessibilityProvider } from "@/components/ui/AccessibilityProvider";
-import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { ErrorBoundary, PaymentErrorFallback, QuoteFormErrorFallback, AdminErrorFallback } from "@/components/ui/ErrorBoundary";
 import { QueryProvider } from './providers/QueryProvider';
 import { Toaster } from "@/components/ui/toaster";
 import Layout from "@/components/layout/Layout";
@@ -67,17 +67,33 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <AdminDashboard /> },
           { path: "email-templates", element: <EmailTemplatesPage /> },
-          { path: "quotes", element: <QuoteManagementPage /> },
+          { path: "quotes", element: (
+            <ErrorBoundary fallback={AdminErrorFallback}>
+              <QuoteManagementPage />
+            </ErrorBoundary>
+          ) },
           { path: "orders", element: <OrderManagementPage /> },
-          { path: "orders/:id", element: <AdminQuoteDetailPage /> },
+          { path: "orders/:id", element: (
+            <ErrorBoundary fallback={AdminErrorFallback}>
+              <AdminQuoteDetailPage />
+            </ErrorBoundary>
+          ) },
           { path: "customers", element: <EnhancedCustomerManagementPage /> },
           { path: "templates", element: <QuoteTemplatesPage /> },
-          { path: "quotes/:id", element: <AdminQuoteDetailPage /> },
+          { path: "quotes/:id", element: (
+            <ErrorBoundary fallback={AdminErrorFallback}>
+              <AdminQuoteDetailPage />
+            </ErrorBoundary>
+          ) },
           { path: "countries", element: <CountrySettings /> },
           { path: "customs", element: <CustomsCategories /> },
           { path: "bank-accounts", element: <BankAccountSettings /> },
           { path: "system-settings", element: <SystemSettings /> },
-          { path: "payment-management", element: <PaymentManagement /> },
+          { path: "payment-management", element: (
+            <ErrorBoundary fallback={AdminErrorFallback}>
+              <PaymentManagement />
+            </ErrorBoundary>
+          ) },
           { path: "shipping-routes", element: <ShippingRoutesPage /> },
           { path: "status-management", element: <StatusManagementPage /> },
           
@@ -96,7 +112,11 @@ const router = createBrowserRouter([
       },
       {
         path: "quote",
-        element: <Quote />,
+        element: (
+          <ErrorBoundary fallback={QuoteFormErrorFallback}>
+            <Quote />
+          </ErrorBoundary>
+        ),
       },
       {
         path: "auth",
@@ -124,7 +144,11 @@ const router = createBrowserRouter([
       },
       {
         path: "guest-checkout",
-        element: <Checkout />,
+        element: (
+          <ErrorBoundary fallback={PaymentErrorFallback}>
+            <Checkout />
+          </ErrorBoundary>
+        ),
       },
       {
         element: <ProtectedRoute />,
@@ -163,7 +187,11 @@ const router = createBrowserRouter([
           },
           {
             path: "checkout",
-            element: <Checkout />,
+            element: (
+              <ErrorBoundary fallback={PaymentErrorFallback}>
+                <Checkout />
+              </ErrorBoundary>
+            ),
           },
           {
             path: "messages",
@@ -176,11 +204,19 @@ const router = createBrowserRouter([
           },
           {
             path: "payment-success", // PayU success redirect
-            element: <PaymentSuccess />,
+            element: (
+              <ErrorBoundary fallback={PaymentErrorFallback}>
+                <PaymentSuccess />
+              </ErrorBoundary>
+            ),
           },
           {
             path: "payment-failure", // PayU failure redirect
-            element: <PaymentFailure />,
+            element: (
+              <ErrorBoundary fallback={PaymentErrorFallback}>
+                <PaymentFailure />
+              </ErrorBoundary>
+            ),
           },
           {
             path: "profile",

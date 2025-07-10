@@ -59,7 +59,7 @@ export const useQuoteManagement = (filters = {}) => {
             }
 
             if (shippingCountryFilter && shippingCountryFilter !== 'all') {
-                query = query.eq('country_code', shippingCountryFilter);
+                query = query.eq('destination_country', shippingCountryFilter);
             }
 
             if (priorityFilter && priorityFilter !== 'all') {
@@ -123,7 +123,7 @@ export const useQuoteManagement = (filters = {}) => {
 
             if (searchTerm) {
                 const searchString = `%${searchTerm}%`;
-                query = query.or(`product_name.ilike.${searchString},email.ilike.${searchString},display_id.ilike.${searchString},country_code.ilike.${searchString}`);
+                query = query.or(`product_name.ilike.${searchString},email.ilike.${searchString},display_id.ilike.${searchString},destination_country.ilike.${searchString}`);
             }
         
             // Debug: print the query object

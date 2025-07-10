@@ -52,7 +52,7 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
     : null;
     
   // Get origin country name for fallback display
-  const originCountry = quote.origin_country || quote.country_code || 'US';
+  const originCountry = quote.origin_country || quote.destination_country || 'US';
   const originCountryName = countries?.find(c => c.code === originCountry)?.name || originCountry;
   const fallbackName = `${originCountryName} Quote`;
   
@@ -255,7 +255,7 @@ export default function Quotes() {
           if (!shippingRoute) {
             shippingRoute = {
               id: 'fallback',
-              origin_country: quote.country_code || 'US',
+              origin_country: quote.destination_country || 'US',
               destination_country: 'US',
               processing_days: 2,
               customs_clearance_days: 3,
@@ -307,7 +307,7 @@ export default function Quotes() {
             return data;
           };
           
-          const { origin, destination } = await getQuoteRouteCountries(quote, shippingAddress, countries, fetchRouteById);
+          const { origin, destination } = await getQuoteRouteCountries(quote, shippingAddress, countries, fetchRouteById, null, null);
           
           estimates[quote.id] = {
             label: `${formatDate(minDate)}-${formatDate(maxDate)}`,

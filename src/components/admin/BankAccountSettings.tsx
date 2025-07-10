@@ -50,7 +50,7 @@ export const BankAccountSettings = () => {
     ? bankAccounts 
     : countryFilter === 'fallback'
     ? bankAccounts.filter(account => account.is_fallback)
-    : bankAccounts.filter(account => account.country_code === countryFilter);
+    : bankAccounts.filter(account => account.destination_country === countryFilter);
 
   if (isLoadingBankAccounts) {
     return (

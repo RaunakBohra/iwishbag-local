@@ -50,6 +50,17 @@ export const useQuoteState = (quoteId: string) => {
     const quantity = quote.quantity || firstItem?.quantity || 1;
     const itemWeight = firstItem?.item_weight || quote.item_weight || 0;
     
+    // Determine purchase country from the product URL or default to US
+    let purchaseCountry = 'US'; // Default
+    const productUrl = firstItem?.product_url || quote.product_url || '';
+    if (productUrl.includes('amazon.in') || productUrl.includes('flipkart.com')) {
+      purchaseCountry = 'IN';
+    } else if (productUrl.includes('amazon.jp')) {
+      purchaseCountry = 'JP';
+    } else if (productUrl.includes('amazon.co.uk')) {
+      purchaseCountry = 'GB';
+    }
+    
     const cartItem = {
       id: quote.id,
       quoteId: quote.id,
@@ -59,7 +70,9 @@ export const useQuoteState = (quoteId: string) => {
       itemWeight: itemWeight,
       imageUrl: firstItem?.image_url || quote.image_url,
       deliveryDate: quote.delivery_date,
-      countryCode: quote.country_code || 'US',
+      countryCode: quote.destination_country || 'US', // For backward compatibility
+      purchaseCountryCode: purchaseCountry, // Where we buy from
+      destinationCountryCode: quote.destination_country || 'US', // Where we deliver to
       inCart: true,
       isSelected: false,
       createdAt: new Date(quote.created_at),
@@ -175,7 +188,11 @@ export const useQuoteState = (quoteId: string) => {
         .from('quotes')
         .select(`
           *,
-          quote_items (*)
+          quote_items (*),
+          shipping_routes!shipping_route_id (
+            origin_country,
+            destination_country
+          )
         `)
         .eq('id', quoteId)
         .single();

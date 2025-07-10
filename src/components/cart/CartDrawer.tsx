@@ -31,9 +31,9 @@ const CartItemPrice = ({ item, quantity }: { item: any; quantity: number }) => {
   // Create a mock quote object for the cart item
   const mockQuote = {
     id: item.quoteId,
-    country_code: item.purchaseCountryCode || item.countryCode,
+    destination_country: item.purchaseCountryCode || item.countryCode,
     shipping_address: {
-      country_code: item.destinationCountryCode || item.countryCode
+      destination_country: item.destinationCountryCode || item.countryCode
     }
   };
   
@@ -51,9 +51,9 @@ const CartTotal = ({ items }: { items: any[] }) => {
   
   const mockQuote = {
     id: firstItem.quoteId,
-    country_code: firstItem.purchaseCountryCode || firstItem.countryCode,
+    destination_country: firstItem.purchaseCountryCode || firstItem.countryCode,
     shipping_address: {
-      country_code: firstItem.destinationCountryCode || firstItem.countryCode
+      destination_country: firstItem.destinationCountryCode || firstItem.countryCode
     }
   };
   

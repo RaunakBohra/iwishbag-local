@@ -244,10 +244,12 @@ export async function getAvailableCustomsRoutes(): Promise<Array<{origin: string
  * @param {any} shippingAddress - The shipping address (optional)
  * @param {any[]} allCountries - List of all countries (optional, for name/code resolution)
  * @param {function} fetchRouteById - Async function to fetch route by id (must return {origin_country, destination_country})
+ * @param {string} formOriginCountry - Current form origin country value (optional, highest priority)
+ * @param {string} formDestinationCountry - Current form destination country value (optional, highest priority)
  * @returns {Promise<{origin: string, destination: string}>}
  */
-export async function getQuoteRouteCountries(quote, shippingAddress, allCountries, fetchRouteById) {
-  // 1. If shipping_route_id exists, always fetch from DB first
+export async function getQuoteRouteCountries(quote, shippingAddress, allCountries, fetchRouteById, formOriginCountry, formDestinationCountry) {
+  // 1. If shipping_route_id exists, use the route from DB - this is the source of truth
   if (quote.shipping_route_id && fetchRouteById) {
     try {
       const route = await fetchRouteById(quote.shipping_route_id);
@@ -259,28 +261,17 @@ export async function getQuoteRouteCountries(quote, shippingAddress, allCountrie
     }
   }
   
-  // 2. Use quote's origin_country and country_code as the standard
-  // origin_country = where the product is purchased from
-  // country_code = destination country for shipping
-  let origin = quote.origin_country || 'US';
-  let destination = quote.country_code || '';
+  // 2. Use form values first (highest priority for live form updates)
+  let origin = formOriginCountry || quote.origin_country || 'US';
+  let destination = formDestinationCountry || shippingAddress?.destination_country || shippingAddress?.country || quote.destination_country || '';
   
-  // 3. If destination is still empty, try to get from shipping address
-  if (!destination && shippingAddress) {
-    destination = shippingAddress.country_code || shippingAddress.countryCode || shippingAddress.country || '';
+  // Convert country names to codes if needed
+  if (destination && destination.length > 2 && allCountries) {
+    const found = allCountries.find(c => c.name === destination);
+    if (found) destination = found.code;
   }
   
-  // 4. Normalize country names to codes if needed
-  if (allCountries && allCountries.length > 0) {
-    const findCode = (val) => {
-      if (!val) return '';
-      if (val.length === 2) return val.toUpperCase();
-      const found = allCountries.find(c => c.name === val || c.code === val.toUpperCase());
-      return found ? found.code : val;
-    };
-    origin = findCode(origin);
-    destination = findCode(destination);
-  }
+  // Note: destination_country is the new field name, country_code is deprecated
   
-  return { origin: origin || '', destination: destination || '' };
+  return { origin, destination };
 } 

@@ -4,7 +4,8 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { ChevronDown, ChevronUp, Shield, Percent, Package, DollarSign } from 'lucide-react';
 import { supabase } from '../../integrations/supabase/client';
-import { useCountryUtils, formatShippingRoute } from '../../lib/countryUtils';
+import { useCountryUtils } from '../../lib/countryUtils';
+import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
 
 interface CustomsTierDisplayProps {
   quote: any;
@@ -46,7 +47,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
 
   // Get quote details
   const originCountry = quote.origin_country || 'US';
-  let destinationCountry = shippingAddress?.country_code || shippingAddress?.country || quote.country_code;
+  let destinationCountry = shippingAddress?.destination_country || shippingAddress?.country || quote.destination_country;
   if (destinationCountry && destinationCountry.length > 2) {
     const found = countries.find(c => c.name === destinationCountry);
     if (found) destinationCountry = found.code;
@@ -99,7 +100,11 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
             Customs Tiers
           </CardTitle>
           <CardDescription className="text-xs">
-            {formatShippingRoute(originCountry, destinationCountry, countries)}
+            <ShippingRouteDisplay 
+              origin={originCountry} 
+              destination={destinationCountry}
+              showIcon={false}
+            />
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
@@ -121,7 +126,11 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
               Customs Tiers
             </CardTitle>
             <CardDescription className="text-xs">
-              {formatShippingRoute(originCountry, destinationCountry, countries)}
+              <ShippingRouteDisplay 
+                origin={originCountry} 
+                destination={destinationCountry}
+                showIcon={false}
+              />
             </CardDescription>
           </div>
         </div>

@@ -198,7 +198,58 @@ export interface PaymentMethodDisplay {
   fees: string;
 }
 
-export const usePaymentGateways = () => {
+// Standalone function to get payment methods by currency
+export const getPaymentMethodsByCurrency = async (currency: string, codEnabled: boolean = false): Promise<PaymentGateway[]> => {
+  const { data: gateways, error } = await supabase
+    .from('payment_gateways')
+    .select('code, supported_currencies, is_active, test_mode, config')
+    .eq('is_active', true);
+
+  if (error || !gateways) {
+    console.error('Error fetching gateways:', error);
+    return ['bank_transfer']; // Return at least bank transfer as fallback
+  }
+
+  const filteredGateways = gateways
+    .filter(gateway => {
+      // Only filter by currency
+      const currencyMatch = gateway.supported_currencies.includes(currency);
+      
+      let hasKeys = true;
+      if (gateway.code === 'stripe') {
+        const pk = gateway.test_mode ? gateway.config?.test_publishable_key : gateway.config?.live_publishable_key;
+        hasKeys = !!pk;
+      } else if (gateway.code === 'payu') {
+        // Check for PayU configuration
+        const hasMerchantId = !!gateway.config?.merchant_id;
+        const hasMerchantKey = !!gateway.config?.merchant_key;
+        const hasSaltKey = !!gateway.config?.salt_key;
+        hasKeys = hasMerchantId && hasMerchantKey && hasSaltKey;
+        
+        // TEMPORARY: Allow PayU without configuration for testing
+        if (!hasKeys) {
+          hasKeys = true;
+        }
+      }
+      
+      return currencyMatch && hasKeys;
+    });
+
+  let finalMethods = filteredGateways.map(gateway => gateway.code as PaymentGateway);
+
+  // Always add Bank Transfer
+  finalMethods.push('bank_transfer');
+
+  // Add COD if enabled
+  if (codEnabled) {
+    finalMethods.push('cod');
+  }
+  
+  // Remove duplicates
+  return [...new Set(finalMethods)];
+};
+
+export const usePaymentGateways = (overrideCurrency?: string) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -235,20 +286,19 @@ export const usePaymentGateways = () => {
     enabled: !!user
   });
 
-  // Get available payment methods for current user
+  // Get available payment methods for current user or guest
   const { data: availableMethods, isLoading: methodsLoading } = useQuery({
-    queryKey: ['available-payment-methods', userProfile?.country, userProfile?.preferred_display_currency, userProfile?.cod_enabled],
+    queryKey: ['available-payment-methods', overrideCurrency || userProfile?.preferred_display_currency, userProfile?.cod_enabled],
     queryFn: async (): Promise<PaymentGateway[]> => {
-      if (!userProfile?.country || !userProfile?.preferred_display_currency) {
-        console.log('Payment methods not available: missing user profile data', {
-          country: userProfile?.country,
-          currency: userProfile?.preferred_display_currency
+      // Use override currency if provided (for guest checkout), otherwise use user's preferred currency
+      const currencyCode = overrideCurrency || userProfile?.preferred_display_currency;
+      
+      if (!currencyCode) {
+        console.log('Payment methods not available: missing currency data', {
+          currency: currencyCode
         });
         return [];
       }
-
-      const countryCode = userProfile.country;
-      const currencyCode = userProfile.preferred_display_currency;
 
       const { data: gateways, error } = await supabase
         .from('payment_gateways')
@@ -265,7 +315,7 @@ export const usePaymentGateways = () => {
 
       const filteredGateways = gateways
         .filter(gateway => {
-          const countryMatch = gateway.supported_countries.includes(countryCode);
+          // Only filter by currency, not by country
           const currencyMatch = gateway.supported_currencies.includes(currencyCode);
           
           let hasKeys = true;
@@ -286,7 +336,7 @@ export const usePaymentGateways = () => {
             }
           }
           
-          return countryMatch && currencyMatch && hasKeys;
+          return currencyMatch && hasKeys;
         });
 
       let finalMethods = filteredGateways.map(gateway => gateway.code as PaymentGateway);
@@ -302,12 +352,18 @@ export const usePaymentGateways = () => {
       // Remove duplicates
       return [...new Set(finalMethods)];
     },
-    enabled: !!userProfile
+    enabled: !!(overrideCurrency || userProfile?.preferred_display_currency) // Enable for both authenticated users with profile and guests with override currency
   });
 
   // Create payment mutation
   const createPaymentMutation = useMutation({
     mutationFn: async (paymentRequest: PaymentRequest): Promise<PaymentResponse> => {
+      // Validate payment request first
+      const { isValid, errors } = validatePaymentRequest(paymentRequest);
+      if (!isValid) {
+        throw new Error(`Invalid payment request: ${errors.join(', ')}`);
+      }
+
       // Correctly get the user's session and access token
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
@@ -318,6 +374,10 @@ export const usePaymentGateways = () => {
 
       // Use the local Supabase URL for Edge Functions
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error('Supabase URL is not configured');
+      }
+      
       const functionUrl = `${supabaseUrl}/functions/v1/create-payment`;
 
       const response = await fetch(
@@ -335,12 +395,21 @@ export const usePaymentGateways = () => {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create payment');
+        throw new Error(data?.error || 'Failed to create payment');
       }
 
       return data;
     },
     onSuccess: (data, variables) => {
+      if (!data) {
+        toast({
+          title: 'Payment Error',
+          description: 'No response received from payment gateway',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       if (data.success) {
         if (variables.gateway === 'stripe' && data.stripeCheckoutUrl) {
           window.location.href = data.stripeCheckoutUrl;
@@ -350,16 +419,21 @@ export const usePaymentGateways = () => {
             description: 'Please scan the QR code to complete payment.',
           });
           // Here you would typically open a modal with the QR code
-        } else {
+        } else if (data.transactionId) {
           toast({
             title: 'Payment Initiated',
             description: `Your payment was successfully created with ID: ${data.transactionId}`,
+          });
+        } else {
+          toast({
+            title: 'Payment Processing',
+            description: 'Your payment is being processed.',
           });
         }
       } else {
         toast({
           title: 'Payment Failed',
-          description: data.error || 'Unable to create payment',
+          description: data?.error || 'Unable to create payment',
           variant: 'destructive',
         });
       }
@@ -419,6 +493,12 @@ export const usePaymentGateways = () => {
   const validatePaymentRequest = (request: PaymentRequest): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
+    // Null check for request object
+    if (!request) {
+      errors.push('Payment request is required');
+      return { isValid: false, errors };
+    }
+
     if (!request.quoteIds || request.quoteIds.length === 0) {
       errors.push('No quotes selected for payment');
     }
@@ -427,7 +507,7 @@ export const usePaymentGateways = () => {
       errors.push('Currency is required');
     }
 
-    if (!request.amount || request.amount <= 0) {
+    if (!request.amount || request.amount <= 0 || isNaN(request.amount) || !isFinite(request.amount)) {
       errors.push('Valid amount is required');
     }
 

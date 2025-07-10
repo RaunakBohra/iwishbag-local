@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useCountryUtils, formatShippingRoute } from '../../lib/countryUtils';
+import { useCountryUtils } from '../../lib/countryUtils';
+import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -461,7 +462,12 @@ export function CustomsTiersManager() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center space-x-2">
-                    <span>{formatShippingRoute(tier.origin_country, tier.destination_country, countries, true)}</span>
+                    <ShippingRouteDisplay 
+                      origin={tier.origin_country} 
+                      destination={tier.destination_country}
+                      showCodes={true}
+                      showIcon={false}
+                    />
                     <Badge variant={tier.is_active ? 'default' : 'secondary'}>
                       {tier.is_active ? 'Active' : 'Inactive'}
                     </Badge>

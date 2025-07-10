@@ -40,9 +40,9 @@ export const useQuoteCalculation = () => {
 
         const total_item_weight = itemsToUpdate.reduce((sum, item) => sum + (item.item_weight || 0) * item.quantity, 0);
         
-        const { country_code, customs_percentage } = quoteDataFromForm;
+        const { destination_country, customs_percentage } = quoteDataFromForm;
 
-        if (!total_item_price_in_purchase_currency || !total_item_weight || !country_code) {
+        if (!total_item_price_in_purchase_currency || !total_item_weight || !destination_country) {
             toast({ title: "Missing required data", description: "Quote needs total item price, total weight, and country to calculate pricing. Make sure all items have a price and weight.", variant: "destructive" });
             return null;
         }
@@ -121,7 +121,7 @@ export const useQuoteCalculation = () => {
             return null;
         }
 
-        const countrySettings = allCountrySettings.find(c => c.code === country_code);
+        const countrySettings = allCountrySettings.find(c => c.code === destination_country);
         if (!countrySettings) {
             toast({ title: "Country settings not found", variant: "destructive" });
             return null;
@@ -133,24 +133,27 @@ export const useQuoteCalculation = () => {
             console.error('[QuoteCalc Validation] Invalid currency rate:', currencyRate);
             toast({ 
                 title: "Invalid Currency Rate", 
-                description: `Currency exchange rate for ${country_code} is invalid: ${currencyRate}. Please contact admin.`, 
+                description: `Currency exchange rate for ${destination_country} is invalid: ${currencyRate}. Please contact admin.`, 
                 variant: "destructive" 
             });
             return null;
         }
 
-        if (currencyRate > 1000) { // Sanity check for extremely high rates
-            console.warn('[QuoteCalc Validation] Very high currency rate:', currencyRate);
+        // Hard limit for currency rates to prevent calculation errors
+        const MAX_EXCHANGE_RATE = 1000;
+        if (currencyRate > MAX_EXCHANGE_RATE) {
+            console.error('[QuoteCalc Validation] Exchange rate exceeds maximum allowed:', currencyRate);
             toast({ 
-                title: "High Currency Rate Warning", 
-                description: `Currency rate for ${country_code} seems very high: ${currencyRate}. Please verify this is correct.`, 
+                title: "Invalid Exchange Rate", 
+                description: `Currency rate for ${destination_country} (${currencyRate}) exceeds maximum allowed rate of ${MAX_EXCHANGE_RATE}. Please contact support.`, 
                 variant: "destructive" 
             });
+            return null; // Prevent calculation with invalid rate
         }
 
-        // Use purchase country as origin, shipping address country_code or countryCode as destination
-        const originCountry = quoteDataFromForm.country_code;
-        let destinationCountry = shippingAddress?.country_code || shippingAddress?.countryCode;
+        // Use purchase country as origin, shipping address destination_country as destination
+        const originCountry = quoteDataFromForm.origin_country || 'US';
+        let destinationCountry = shippingAddress?.destination_country || shippingAddress?.country || quoteDataFromForm.destination_country;
 
         // Convert country name to country code if needed (similar to route-specific-customs.ts)
         if (destinationCountry && destinationCountry.length > 2) {

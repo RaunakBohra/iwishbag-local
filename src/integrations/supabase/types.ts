@@ -678,6 +678,66 @@ export type Database = {
           },
         ]
       }
+      quote_documents: {
+        Row: {
+          created_at: string
+          description: string | null
+          document_type: string
+          file_name: string
+          file_size: number
+          file_url: string
+          id: string
+          is_customer_visible: boolean
+          quote_id: string
+          updated_at: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          document_type: string
+          file_name: string
+          file_size: number
+          file_url: string
+          id?: string
+          is_customer_visible?: boolean
+          quote_id: string
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          document_type?: string
+          file_name?: string
+          file_size?: number
+          file_url?: string
+          id?: string
+          is_customer_visible?: boolean
+          quote_id?: string
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_documents_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_items: {
         Row: {
           category: string | null
@@ -813,7 +873,6 @@ export type Database = {
           approved_at: string | null
           breakdown: Json | null
           calculated_at: string | null
-          country_code: string | null
           created_at: string
           currency: string
           current_location: string | null
@@ -824,6 +883,7 @@ export type Database = {
           customs_category_name: string | null
           customs_percentage: number | null
           delivered_at: string | null
+          destination_country: string | null
           discount: number | null
           display_id: string | null
           domestic_shipping: number | null
@@ -897,7 +957,6 @@ export type Database = {
           approved_at?: string | null
           breakdown?: Json | null
           calculated_at?: string | null
-          country_code?: string | null
           created_at?: string
           currency?: string
           current_location?: string | null
@@ -908,6 +967,7 @@ export type Database = {
           customs_category_name?: string | null
           customs_percentage?: number | null
           delivered_at?: string | null
+          destination_country?: string | null
           discount?: number | null
           display_id?: string | null
           domestic_shipping?: number | null
@@ -981,7 +1041,6 @@ export type Database = {
           approved_at?: string | null
           breakdown?: Json | null
           calculated_at?: string | null
-          country_code?: string | null
           created_at?: string
           currency?: string
           current_location?: string | null
@@ -992,6 +1051,7 @@ export type Database = {
           customs_category_name?: string | null
           customs_percentage?: number | null
           delivered_at?: string | null
+          destination_country?: string | null
           discount?: number | null
           display_id?: string | null
           domestic_shipping?: number | null
@@ -1056,7 +1116,7 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "quotes_country_code_fkey"
-            columns: ["country_code"]
+            columns: ["destination_country"]
             isOneToOne: false
             referencedRelation: "country_settings"
             referencedColumns: ["code"]
@@ -1282,6 +1342,7 @@ export type Database = {
           country: string
           country_code: string | null
           created_at: string
+          destination_country: string | null
           id: string
           is_default: boolean | null
           phone: string | null
@@ -1298,6 +1359,7 @@ export type Database = {
           country: string
           country_code?: string | null
           created_at?: string
+          destination_country?: string | null
           id?: string
           is_default?: boolean | null
           phone?: string | null
@@ -1314,6 +1376,7 @@ export type Database = {
           country?: string
           country_code?: string | null
           created_at?: string
+          destination_country?: string | null
           id?: string
           is_default?: boolean | null
           phone?: string | null
@@ -1377,22 +1440,22 @@ export type Database = {
       get_all_user_emails: {
         Args: Record<PropertyKey, never>
         Returns: {
-          email: string
           user_id: string
           source: string
+          email: string
           full_name: string
         }[]
       }
       get_shipping_cost: {
         Args: {
-          p_origin_country: string
           p_destination_country: string
           p_weight: number
           p_price?: number
+          p_origin_country: string
         }
         Returns: {
-          delivery_days: string
           carrier: string
+          delivery_days: string
           cost: number
           method: string
         }[]

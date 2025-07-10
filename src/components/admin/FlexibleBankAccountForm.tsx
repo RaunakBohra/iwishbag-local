@@ -55,7 +55,7 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
     if (editingAccount) {
       setIsActive(editingAccount.is_active ?? true);
       setIsFallback(editingAccount.is_fallback ?? false);
-      setSelectedCountry(editingAccount.country_code || '');
+      setSelectedCountry(editingAccount.destination_country || '');
       setDisplayOrder(editingAccount.display_order || 0);
       
       // Load custom fields from the account
@@ -137,7 +137,7 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
       bank_name: customFields.find(f => f.id === 'bank_name')?.value || '',
       is_active: isActive,
       is_fallback: isFallback,
-      country_code: isFallback ? null : selectedCountry || null,
+      destination_country: isFallback ? null : selectedCountry || null,
       display_order: displayOrder,
     };
     

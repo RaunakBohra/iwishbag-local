@@ -1,6 +1,7 @@
 import { supabase } from '../integrations/supabase/client';
 import { logger } from './logger';
 import { Quote, ShippingAddress } from '@/types/quote';
+import { currencyService } from '@/services/CurrencyService';
 
 export const formatAmountForDisplay = (
   amount: number | null | undefined,
@@ -22,57 +23,73 @@ export const formatAmountForDisplay = (
   }).format(convertedAmount);
 };
 
-// Get currency symbol for a given currency code
-export const getCurrencySymbol = (currency: string): string => {
-  const symbols: { [key: string]: string } = {
-    'USD': '$',
-    'EUR': '€',
-    'GBP': '£',
-    'INR': '₹',
-    'NPR': '₨',
-    'CAD': 'C$',
-    'AUD': 'A$',
-    'JPY': '¥',
-    'CNY': '¥',
-    'SGD': 'S$',
-    'AED': 'د.إ',
-    'SAR': 'ر.س',
-  };
-  return symbols[currency] || currency;
+// Get currency symbol for a given currency code (async version with database lookup)
+export const getCurrencySymbolAsync = async (currency: string): Promise<string> => {
+  try {
+    const currencyInfo = await currencyService.getCurrency(currency);
+    if (currencyInfo?.symbol) {
+      return currencyInfo.symbol;
+    }
+  } catch (error) {
+    console.warn('Failed to get currency symbol from service, using fallback', error);
+  }
+  
+  // Fallback to CurrencyService
+  return currencyService.getCurrencySymbol(currency);
 };
 
-// Get currency for a given country code
+// Get currency symbol for a given currency code (synchronous version)
+export const getCurrencySymbol = (currency: string): string => {
+  return currencyService.getCurrencySymbol(currency);
+};
+
+// Get currency for a given country code (async version with database lookup)
+export const getCountryCurrencyAsync = async (countryCode: string): Promise<string> => {
+  try {
+    return await currencyService.getCurrencyForCountry(countryCode);
+  } catch (error) {
+    console.warn('Failed to get country currency from service, using fallback', error);
+    return 'USD';
+  }
+};
+
+// Get currency for a given country code (synchronous version)
+// Note: This is a temporary solution. In the future, we should use async version everywhere
 export const getCountryCurrency = (countryCode: string): string => {
-  const currencyMap: { [key: string]: string } = {
+  // For now, we use a minimal fallback mapping for critical countries
+  // The CurrencyService has the complete mapping from database
+  const criticalMapping: { [key: string]: string } = {
     'US': 'USD',
     'IN': 'INR',
     'NP': 'NPR',
-    'CA': 'CAD',
-    'AU': 'AUD',
-    'GB': 'GBP',
-    'JP': 'JPY',
-    'CN': 'CNY',
-    'SG': 'SGD',
-    'AE': 'AED',
-    'SA': 'SAR',
   };
-  return currencyMap[countryCode] || 'USD';
+  return criticalMapping[countryCode] || 'USD';
 };
 
-// Get the currency map for reverse lookup
+// Get the currency map for reverse lookup (async version with database lookup)
+export const getCountryCurrencyMapAsync = async (): Promise<{ [key: string]: string }> => {
+  try {
+    const map = await currencyService.getCountryCurrencyMap();
+    const result: { [key: string]: string } = {};
+    map.forEach((currency, country) => {
+      result[country] = currency;
+    });
+    return result;
+  } catch (error) {
+    console.warn('Failed to get country currency map from service, using fallback', error);
+    return { 'US': 'USD' }; // Minimal fallback
+  }
+};
+
+// Get the currency map for reverse lookup (synchronous version)
+// Note: This should be replaced with async version in the future
 export const getCountryCurrencyMap = (): { [key: string]: string } => {
+  // Return minimal mapping for backward compatibility
+  // The CurrencyService has the complete mapping from database
   return {
     'US': 'USD',
     'IN': 'INR',
     'NP': 'NPR',
-    'CA': 'CAD',
-    'AU': 'AUD',
-    'GB': 'GBP',
-    'JP': 'JPY',
-    'CN': 'CNY',
-    'SG': 'SGD',
-    'AE': 'AED',
-    'SA': 'SAR',
   };
 };
 
@@ -340,7 +357,7 @@ export function getDestinationCountryFromQuote(quote: Quote | null): string {
         : quote.shipping_address;
       
       // Get country from shipping address
-      let country = shippingAddress?.country_code || shippingAddress?.country || 'US';
+      let country = shippingAddress?.destination_country || shippingAddress?.country || 'US';
       
       // Convert country names to country codes
       const countryNameToCode: { [key: string]: string } = {

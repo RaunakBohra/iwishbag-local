@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -64,6 +64,7 @@ import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
 import { AddressList } from "@/components/profile/AddressList";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { currencyService, type Currency } from "@/services/CurrencyService";
 
 const profileFormSchema = z.object({
   full_name: z.string().min(1, "Full name is required"),
@@ -80,6 +81,8 @@ const Profile = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: allCountries } = useAllCountries();
+  const [availableCurrencies, setAvailableCurrencies] = useState<Currency[]>([]);
+  const [currencyLoading, setCurrencyLoading] = useState(true);
 
   const {
     data: profile,
@@ -197,6 +200,22 @@ const Profile = () => {
     },
   });
 
+  // Load available currencies
+  useEffect(() => {
+    const loadCurrencies = async () => {
+      try {
+        setCurrencyLoading(true);
+        const currencies = await currencyService.getAllCurrencies();
+        setAvailableCurrencies(currencies);
+      } catch (error) {
+        console.error('Error loading currencies:', error);
+      } finally {
+        setCurrencyLoading(false);
+      }
+    };
+    loadCurrencies();
+  }, []);
+
   useEffect(() => {
     if (profile) {
       // Get name from profile, or fallback to user metadata, or email prefix
@@ -222,15 +241,26 @@ const Profile = () => {
 
   // Get available currencies for selected country
   const getAvailableCurrencies = (countryCode: string) => {
-    if (!allCountries) return [];
+    let currencies = [];
     
-    const country = allCountries.find(c => c.code === countryCode);
-    if (country) {
-      return [country.currency].filter(Boolean);
+    // Return all available currencies from database instead of just the country's currency
+    if (availableCurrencies.length > 0) {
+      currencies = availableCurrencies.map(c => c.code);
+    } else if (allCountries) {
+      // Get unique currencies from all countries as fallback
+      currencies = [...new Set(allCountries.map(c => c.currency).filter(Boolean))];
+    } else {
+      // Final fallback
+      currencies = ['USD', 'EUR', 'GBP', 'INR', 'NPR'];
     }
     
-    // Fallback currencies
-    return ['USD', 'EUR', 'GBP', 'INR', 'NPR'];
+    // Always ensure the current profile currency is included
+    const currentCurrency = form.watch('preferred_display_currency');
+    if (currentCurrency && !currencies.includes(currentCurrency)) {
+      currencies.push(currentCurrency);
+    }
+    
+    return currencies;
   };
 
   // Get country name by code
@@ -242,6 +272,13 @@ const Profile = () => {
 
   // Get currency name by code
   const getCurrencyName = (currencyCode: string) => {
+    // Try to get from loaded currencies first
+    const currency = availableCurrencies.find(c => c.code === currencyCode);
+    if (currency) {
+      return currency.name;
+    }
+    
+    // Fallback to hardcoded names
     const currencyNames: Record<string, string> = {
       'USD': 'US Dollar',
       'EUR': 'Euro',
@@ -404,11 +441,13 @@ const Profile = () => {
             </Card>
           </AnimatedSection>
 
-          {/* Personal Information */}
+          {/* Profile Settings Form - Combined */}
           <AnimatedSection animation="fadeInUp" delay={200}>
-            <Card className="hover:shadow-lg transition-shadow">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                
+                {/* Personal Information */}
+                <Card className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white">
@@ -475,31 +514,10 @@ const Profile = () => {
                       )}
                     />
                   </CardContent>
-                  <CardFooter>
-                    <Button 
-                      type="submit" 
-                      disabled={updateProfileMutation.isPending}
-                      className="group"
-                    >
-                      <Save className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
-                      {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </CardFooter>
-                </form>
-              </Form>
-            </Card>
-          </AnimatedSection>
+                </Card>
 
-          {/* Shipping Addresses */}
-          <AnimatedSection animation="fadeInUp" delay={300}>
-            <AddressList />
-          </AnimatedSection>
-
-          {/* Regional & Currency Settings */}
-          <AnimatedSection animation="fadeInUp" delay={400}>
-            <Card className="hover:shadow-lg transition-shadow">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
+                {/* Regional & Currency Settings */}
+                <Card className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white">
@@ -610,19 +628,29 @@ const Profile = () => {
                       </div>
                     </div>
                   </CardContent>
+                </Card>
+
+                {/* Save Button */}
+                <Card>
                   <CardFooter>
                     <Button 
                       type="submit" 
-                      disabled={updateProfileMutation.isPending}
+                      disabled={updateProfileMutation.isPending || currencyLoading}
                       className="group"
                     >
                       <Save className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
-                      {updateProfileMutation.isPending ? "Saving..." : "Save Settings"}
+                      {updateProfileMutation.isPending ? "Saving..." : currencyLoading ? "Loading..." : "Save Profile"}
                     </Button>
                   </CardFooter>
-                </form>
-              </Form>
-            </Card>
+                </Card>
+
+              </form>
+            </Form>
+          </AnimatedSection>
+
+          {/* Shipping Addresses */}
+          <AnimatedSection animation="fadeInUp" delay={300}>
+            <AddressList />
           </AnimatedSection>
 
           {/* Payment Methods */}

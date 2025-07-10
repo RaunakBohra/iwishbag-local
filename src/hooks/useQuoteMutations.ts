@@ -105,7 +105,7 @@ export const useQuoteMutations = (id: string | undefined) => {
                             <h3 style="margin-top: 0;">Quote Details</h3>
                             <p><strong>Quote ID:</strong> ${quote.display_id || quote.id}</p>
                             <p><strong>Product:</strong> ${quote.product_name}</p>
-                            <p><strong>Destination:</strong> ${quote.country_code}</p>
+                            <p><strong>Destination:</strong> ${quote.destination_country}</p>
                             <p><strong>Total Amount:</strong> $${quote.final_total || quote.item_price}</p>
                         </div>
                         

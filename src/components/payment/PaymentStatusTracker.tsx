@@ -64,6 +64,12 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
   }, [autoRefresh, refreshInterval, status.status]);
 
   const checkPaymentStatus = async () => {
+    // Add null check for transactionId
+    if (!transactionId) {
+      console.error('No transaction ID provided for payment status check');
+      return;
+    }
+    
     setIsChecking(true);
     try {
       // In a real implementation, you would call your payment status API
@@ -72,8 +78,10 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
       
       if (response.ok) {
         const data = await response.json();
-        setStatus(data);
-        onStatusChange?.(data.status);
+        if (data) {
+          setStatus(data);
+          onStatusChange?.(data.status);
+        }
       } else {
         // Simulate status progression for demo
         const currentProgress = status.progress;
@@ -88,7 +96,7 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
 
         const updatedStatus: PaymentStatus = {
           status: newStatus,
-          progress: newProgress,
+          progress: Math.max(0, Math.min(100, newProgress)), // Ensure progress is between 0-100
           estimated_completion: newProgress < 100 ? 
             new Date(Date.now() + (100 - newProgress) * 1000).toISOString() : undefined,
           gateway_status: getGatewayStatus(gateway, newProgress),
@@ -106,6 +114,9 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
   };
 
   const getGatewayStatus = (gateway: PaymentGateway, progress: number): string => {
+    // Validate progress parameter
+    const validProgress = Math.max(0, Math.min(100, progress || 0));
+    
     const statuses = {
       stripe: ['Initializing...', 'Processing payment...', 'Confirming transaction...', 'Payment successful'],
       payu: ['Redirecting to PayU...', 'Payment in progress...', 'Verifying payment...', 'Payment confirmed'],
@@ -114,12 +125,18 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
       fonepay: ['Generating QR code...', 'Waiting for payment...', 'Verifying payment...', 'Payment received'],
       bank_transfer: ['Preparing transfer details...', 'Transfer initiated...', 'Processing transfer...', 'Transfer completed'],
       cod: ['Order confirmed...', 'Preparing for delivery...', 'Out for delivery...', 'Payment on delivery'],
-      airwallex: ['Initializing...', 'Processing payment...', 'Confirming transaction...', 'Payment successful']
+      airwallex: ['Initializing...', 'Processing payment...', 'Confirming transaction...', 'Payment successful'],
+      razorpay: ['Initializing...', 'Processing payment...', 'Confirming transaction...', 'Payment successful'],
+      paypal: ['Redirecting to PayPal...', 'Processing payment...', 'Confirming transaction...', 'Payment successful'],
+      upi: ['Generating UPI request...', 'Waiting for payment...', 'Verifying payment...', 'Payment received'],
+      paytm: ['Redirecting to Paytm...', 'Payment in progress...', 'Verifying payment...', 'Payment confirmed'],
+      grabpay: ['Generating QR code...', 'Waiting for payment...', 'Verifying payment...', 'Payment received'],
+      alipay: ['Generating QR code...', 'Waiting for payment...', 'Verifying payment...', 'Payment received']
     };
 
     const gatewayStatuses = statuses[gateway] || statuses.stripe;
-    const statusIndex = Math.floor((progress / 100) * (gatewayStatuses.length - 1));
-    return gatewayStatuses[statusIndex] || 'Processing...';
+    const statusIndex = Math.floor((validProgress / 100) * (gatewayStatuses.length - 1));
+    return gatewayStatuses[Math.min(statusIndex, gatewayStatuses.length - 1)] || 'Processing...';
   };
 
   const getStatusIcon = () => {
