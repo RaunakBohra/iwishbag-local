@@ -6,6 +6,7 @@ import { Quote } from '@/types/quote';
 interface UseQuoteDisplayCurrencyProps {
   quote: Quote | null; // Quote object with all necessary fields
   exchangeRate?: number; // Optional explicit exchange rate
+  guestCurrency?: string | null; // Override currency for guest users
 }
 
 /**
@@ -13,18 +14,18 @@ interface UseQuoteDisplayCurrencyProps {
  * Handles direct conversion from quote's origin currency to customer preference
  * (Not via USD like useUserCurrency)
  */
-export function useQuoteDisplayCurrency({ quote, exchangeRate }: UseQuoteDisplayCurrencyProps) {
+export function useQuoteDisplayCurrency({ quote, exchangeRate, guestCurrency }: UseQuoteDisplayCurrencyProps) {
   const { data: userProfile } = useUserProfile();
   const [customerExchangeRate, setCustomerExchangeRate] = useState<number>(1);
   
-  const originCountry = quote?.destination_country || 'US';
+  const originCountry = quote?.origin_country || 'US';
   const destinationCountry = useMemo(() => {
     if (!quote) return 'US'; // Fallback when quote is not loaded yet
     return getDestinationCountryFromQuote(quote);
   }, [quote]);
   
-  // Customer preferred currency (fallback to destination country currency)
-  const customerPreferredCurrency = userProfile?.preferred_display_currency || getCountryCurrency(destinationCountry);
+  // Customer preferred currency (guest override, user preference, or destination country currency)
+  const customerPreferredCurrency = guestCurrency || userProfile?.preferred_display_currency || getCountryCurrency(destinationCountry);
   
   // Use exchange rate from quote if available, or fallback to provided rate
   const effectiveExchangeRate = quote?.exchange_rate || exchangeRate;
@@ -61,7 +62,7 @@ export function useQuoteDisplayCurrency({ quote, exchangeRate }: UseQuoteDisplay
     };
     
     fetchCustomerExchangeRate();
-  }, [quote, originCountry, customerPreferredCurrency]);
+  }, [quote, originCountry, customerPreferredCurrency, guestCurrency]);
   
   const formatAmount = (amount: number | null | undefined): string => {
     if (!quote) {

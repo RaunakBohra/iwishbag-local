@@ -14,19 +14,32 @@ interface BankTransferDetailsProps {
   onConfirm?: () => void;
   onCancel?: () => void;
   isProcessing?: boolean;
+  paymentCurrency?: string; // Filter bank accounts by payment currency
 }
 
 export const BankTransferDetails: React.FC<BankTransferDetailsProps> = ({
   onConfirm,
   onCancel,
   isProcessing,
+  paymentCurrency,
 }) => {
   const { data: bankAccounts, isLoading, isError, error } = useQuery<BankAccountType[], Error>({ // Use BankAccountType
-    queryKey: ['bankAccounts'],
+    queryKey: ['bankAccounts', paymentCurrency],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('bank_account_details')
-        .select('*');
+        .select('*')
+        .eq('is_active', true);
+      
+      // Filter by payment currency if provided
+      if (paymentCurrency) {
+        query = query.eq('currency_code', paymentCurrency);
+      }
+      
+      // Order by fallback accounts last (show specific currency accounts first)
+      query = query.order('is_fallback', { ascending: true });
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -44,7 +57,15 @@ export const BankTransferDetails: React.FC<BankTransferDetailsProps> = ({
     return (
       <div className="text-center text-red-500 py-4">
         <AlertCircle className="h-6 w-6 mx-auto mb-2" />
-        <p>Error loading bank details or no active accounts found. {error?.message}</p>
+        <p>
+          {isError 
+            ? `Error loading bank details: ${error?.message}` 
+            : `No active bank accounts found${paymentCurrency ? ` for ${paymentCurrency} currency` : ''}.`
+          }
+        </p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Please contact support for assistance with bank transfer details.
+        </p>
       </div>
     );
   }
@@ -62,6 +83,7 @@ export const BankTransferDetails: React.FC<BankTransferDetailsProps> = ({
           <p><strong>Account Name:</strong> {defaultAccount.account_name}</p>
           <p><strong>Account Number:</strong> {defaultAccount.account_number}</p>
           {defaultAccount.swift_code && <p><strong>SWIFT Code:</strong> {defaultAccount.swift_code}</p>}
+          {defaultAccount.currency_code && <p><strong>Currency:</strong> {defaultAccount.currency_code}</p>}
         </div>
 
         {onConfirm && (

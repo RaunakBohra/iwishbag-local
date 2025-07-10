@@ -22,6 +22,7 @@ interface PaymentRequest {
   cancel_url: string;
   amount?: number;
   currency?: string;
+  metadata?: Record<string, any>;
   customerInfo?: {
     name?: string;
     email?: string;
@@ -58,7 +59,12 @@ async function generatePayUHash({
   amount,
   productinfo,
   firstname,
-  email
+  email,
+  udf1 = '',
+  udf2 = '',
+  udf3 = '',
+  udf4 = '',
+  udf5 = ''
 }: {
   merchantKey: string,
   salt: string,
@@ -66,7 +72,12 @@ async function generatePayUHash({
   amount: string,
   productinfo: string,
   firstname: string,
-  email: string
+  email: string,
+  udf1?: string,
+  udf2?: string,
+  udf3?: string,
+  udf4?: string,
+  udf5?: string
 }): Promise<{v1: string, v2: string}> {
   // PayU expects: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT
   // That's 5 UDF fields followed by 5 empty pipes, then SALT
@@ -77,7 +88,7 @@ async function generatePayUHash({
     productinfo,
     firstname,
     email,
-    '', '', '', '', '', // 5 UDF fields (empty)
+    udf1, udf2, udf3, udf4, udf5, // 5 UDF fields
     '', '', '', '', '', // 5 empty pipes
     salt
   ].join('|');
@@ -303,6 +314,9 @@ serve(async (req) => {
           const amountInPaise = Math.round(amountInINR * 100);
           const formattedAmount = amountInPaise.toString();
           
+          // Extract guest session token from metadata if available
+          const guestSessionToken = paymentRequest.metadata?.guest_session_token || '';
+          
           const hashResult = await generatePayUHash({
             merchantKey: payuConfig.merchant_key,
             salt: payuConfig.salt_key,
@@ -310,7 +324,8 @@ serve(async (req) => {
             amount: formattedAmount,
             productinfo,
             firstname: customerName,
-            email: customerEmail
+            email: customerEmail,
+            udf1: guestSessionToken // Store guest session token in UDF1
           });
           
           console.log('PayU hash generated for transaction:', txnid);
@@ -337,7 +352,7 @@ serve(async (req) => {
             furl: payuFailureUrl,
             hash: hashResult.v1,
             mode: 'CC',
-            udf1: '',
+            udf1: guestSessionToken, // Include guest session token
             udf2: '',
             udf3: '',
             udf4: '',

@@ -36,6 +36,7 @@ export interface Quote {
     width: number;
     height: number;
   };
+  origin_country?: string;
   destination_country: string;
   status: QuoteStatus;
   final_total: number;

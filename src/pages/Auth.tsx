@@ -1,14 +1,25 @@
 import AuthForm from "@/components/forms/AuthForm";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Lock, Shield, Users, Globe, Package, Zap, TrendingUp, ArrowRight } from "lucide-react";
 import { AnimatedSection } from "@/components/shared/AnimatedSection";
 import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
 import { ParallaxSection } from "@/components/shared/ParallaxSection";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useEffect } from "react";
 
 const Auth = () => {
   const { session } = useAuth();
+  const location = useLocation();
+  const message = location.state?.message;
+
+  useEffect(() => {
+    // Clear the message from location state after display
+    if (message) {
+      window.history.replaceState({}, document.title);
+    }
+  }, [message]);
 
   if (session) {
     return <Navigate to="/" replace />;
@@ -123,6 +134,17 @@ const Auth = () => {
                 </div>
                 <p className="text-gray-600 text-sm">Your gateway to global shopping</p>
               </div>
+
+              {/* Success Message */}
+              {message && (
+                <AnimatedSection animation="fadeInDown">
+                  <Alert className="mb-4 border-green-200 bg-green-50">
+                    <AlertDescription className="text-green-800">
+                      {message}
+                    </AlertDescription>
+                  </Alert>
+                </AnimatedSection>
+              )}
 
               {/* Auth Card */}
               <Card className="bg-white/80 backdrop-blur-sm border-gray-200 shadow-2xl hover:shadow-3xl transition-shadow duration-300">

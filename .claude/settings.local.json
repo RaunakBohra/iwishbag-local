@@ -22,7 +22,8 @@
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(cat:*)",
-      "Bash(./update_country_code_references.sh:*)"
+      "Bash(./update_country_code_references.sh:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }

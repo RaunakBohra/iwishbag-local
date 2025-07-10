@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEmailSettings } from "@/hooks/useEmailSettings";
 import { Quote } from "@/types/quote";
 
-type EmailTemplate = 'quote_sent' | 'quote_approved' | 'quote_rejected' | 'order_shipped' | 'order_delivered' | 'contact_form';
+type EmailTemplate = 'quote_sent' | 'quote_approved' | 'quote_rejected' | 'order_shipped' | 'order_delivered' | 'contact_form' | 'bank_transfer_details' | 'password_reset' | 'password_reset_success';
 
 interface EmailNotificationOptions {
   to: string;
@@ -46,11 +46,27 @@ export const useEmailNotifications = () => {
         throw new Error('User not authenticated - cannot send email');
       }
 
+      // Generate appropriate subject based on template
+      let subject = '';
+      switch (template) {
+        case 'password_reset':
+          subject = 'Reset Your Password - iwishBag';
+          break;
+        case 'password_reset_success':
+          subject = 'Password Reset Successful - iwishBag';
+          break;
+        case 'contact_form':
+          subject = `Contact Form: ${data.subject}`;
+          break;
+        default:
+          subject = `Quote ${data.quoteId} - ${template.replace('_', ' ').toUpperCase()}`;
+      }
+
       // Use Supabase Edge Function instead of /api/send-email
       const { data: result, error } = await supabase.functions.invoke('send-email', {
         body: {
           to,
-          subject: `Quote ${data.quoteId} - ${template.replace('_', ' ').toUpperCase()}`,
+          subject,
           html: generateEmailHtml(template, data),
           from: from || 'noreply@whyteclub.com'
         },
@@ -149,6 +165,71 @@ export const useEmailNotifications = () => {
           </div>
         `;
         break;
+      case 'bank_transfer_details':
+        content = `
+          <p>Thank you for your order! Please complete your payment using the bank details below:</p>
+          
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Order Details</h3>
+            <p><strong>Order ID:</strong> ${data.quoteId}</p>
+            <p><strong>Total Amount:</strong> ${data.totalAmount} ${data.currency}</p>
+          </div>
+          
+          <div style="background-color: #e0f2fe; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #0284c7;">
+            <h3 style="margin-top: 0; color: #0284c7;">Bank Account Details</h3>
+            ${data.bankDetails || '<p>Bank details will be provided by our support team.</p>'}
+          </div>
+          
+          <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #f59e0b;">
+            <h4 style="margin-top: 0; color: #d97706;">Important Instructions:</h4>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>Please use your Order ID (${data.quoteId}) as the payment reference</li>
+              <li>Send payment confirmation to support@iwishbag.com</li>
+              <li>Your order will be processed once payment is confirmed</li>
+            </ul>
+          </div>
+        `;
+        break;
+      case 'password_reset':
+        content = `
+          <p>We received a request to reset your password. Click the button below to create a new password:</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.resetLink}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Reset Password</a>
+          </div>
+          
+          <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+          <p style="color: #2563eb; font-size: 14px; word-break: break-all;">${data.resetLink}</p>
+          
+          <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #f59e0b;">
+            <p style="margin: 0; color: #d97706;"><strong>Security Notice:</strong></p>
+            <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #92400e;">
+              <li>This link will expire in 24 hours</li>
+              <li>If you didn't request a password reset, please ignore this email</li>
+              <li>Your password won't be changed until you create a new one</li>
+            </ul>
+          </div>
+        `;
+        break;
+      case 'password_reset_success':
+        content = `
+          <div style="background-color: #d1fae5; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #10b981;">
+            <h3 style="margin-top: 0; color: #065f46;">Password Reset Successful!</h3>
+            <p style="color: #047857;">Your password has been successfully reset. You can now log in with your new password.</p>
+          </div>
+          
+          <p>If you did not make this change, please contact our support team immediately at <a href="mailto:support@iwishbag.com">support@iwishbag.com</a>.</p>
+          
+          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #374151;"><strong>Security Tips:</strong></p>
+            <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #4b5563;">
+              <li>Use a strong, unique password</li>
+              <li>Enable two-factor authentication when available</li>
+              <li>Never share your password with anyone</li>
+            </ul>
+          </div>
+        `;
+        break;
       default:
         content = `<p>You have received an update regarding your quote.</p>`;
     }
@@ -232,6 +313,41 @@ export const useEmailNotifications = () => {
     });
   };
 
+  const sendBankTransferEmail = (quote: Quote, bankDetails: string) => {
+    return sendEmailMutation.mutate({
+      to: quote.email,
+      template: 'bank_transfer_details',
+      data: {
+        quoteId: quote.display_id || quote.id,
+        customerName: quote.customer_name,
+        totalAmount: quote.final_total?.toFixed(2) || '0.00',
+        currency: quote.currency || 'USD',
+        bankDetails: bankDetails
+      }
+    });
+  };
+
+  const sendPasswordResetEmail = (email: string, resetLink: string) => {
+    return sendEmailMutation.mutate({
+      to: email,
+      template: 'password_reset',
+      data: {
+        resetLink,
+        customerName: email.split('@')[0] // Use email prefix as fallback name
+      }
+    });
+  };
+
+  const sendPasswordResetSuccessEmail = (email: string) => {
+    return sendEmailMutation.mutate({
+      to: email,
+      template: 'password_reset_success',
+      data: {
+        customerName: email.split('@')[0] // Use email prefix as fallback name
+      }
+    });
+  };
+
   return {
     sendEmail: sendEmailMutation.mutate,
     isSending: sendEmailMutation.isPending,
@@ -240,6 +356,9 @@ export const useEmailNotifications = () => {
     sendQuoteRejectedEmail,
     sendOrderShippedEmail,
     sendOrderDeliveredEmail,
-    sendContactFormEmail
+    sendContactFormEmail,
+    sendBankTransferEmail,
+    sendPasswordResetEmail,
+    sendPasswordResetSuccessEmail
   };
 }; 

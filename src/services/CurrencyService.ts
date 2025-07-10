@@ -158,6 +158,20 @@ class CurrencyService {
   }
 
   /**
+   * Get currency for a specific country (synchronous version using cached data)
+   */
+  getCurrencyForCountrySync(countryCode: string): string {
+    // Use cached data if available
+    if (this.countryCurrencyMapCache.has(countryCode) && this.isCacheValid()) {
+      return this.countryCurrencyMapCache.get(countryCode) || 'USD';
+    }
+    
+    // Fall back to hardcoded mapping
+    const fallbackMap = this.getFallbackCountryCurrencyMap();
+    return fallbackMap.get(countryCode) || 'USD';
+  }
+
+  /**
    * Get all currencies available for a specific country
    * (For now, returns all currencies but highlights the country's default)
    */
@@ -429,6 +443,7 @@ export const currencyService = CurrencyService.getInstance();
 // Export convenience functions for backward compatibility
 export const getAllCurrencies = () => currencyService.getAllCurrencies();
 export const getCurrencyForCountry = (countryCode: string) => currencyService.getCurrencyForCountry(countryCode);
+export const getCurrencyForCountrySync = (countryCode: string) => currencyService.getCurrencyForCountrySync(countryCode);
 export const getAvailableCurrenciesForCountry = (countryCode: string) => currencyService.getAvailableCurrenciesForCountry(countryCode);
 export const isValidCurrency = (currencyCode: string) => currencyService.isValidCurrency(currencyCode);
 export const getCurrencyDisplayInfo = (currencyCode: string) => currencyService.getCurrencyDisplayInfo(currencyCode);

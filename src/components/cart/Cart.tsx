@@ -31,10 +31,11 @@ type SortOption = "date-desc" | "date-asc" | "price-desc" | "price-asc" | "name-
 
 // Component to display cart item price with proper currency conversion
 const CartItemPrice = ({ item, quantity }: { item: any; quantity: number }) => {
-  // Create a mock quote object for the cart item
+  // Create a mock quote object for the cart item with correct field mappings
   const mockQuote = {
     id: item.quoteId,
-    destination_country: item.purchaseCountryCode || item.countryCode,
+    origin_country: item.purchaseCountryCode || item.countryCode, // Where buying from
+    destination_country: item.destinationCountryCode || item.countryCode, // Where shipping to
     shipping_address: {
       destination_country: item.destinationCountryCode || item.countryCode
     }
@@ -54,7 +55,8 @@ const CartTotal = ({ items }: { items: any[] }) => {
   
   const mockQuote = {
     id: firstItem.quoteId,
-    destination_country: firstItem.purchaseCountryCode || firstItem.countryCode,
+    origin_country: firstItem.purchaseCountryCode || firstItem.countryCode, // Where buying from
+    destination_country: firstItem.destinationCountryCode || firstItem.countryCode, // Where shipping to
     shipping_address: {
       destination_country: firstItem.destinationCountryCode || firstItem.countryCode
     }

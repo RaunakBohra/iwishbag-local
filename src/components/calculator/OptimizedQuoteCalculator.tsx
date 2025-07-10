@@ -16,6 +16,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrendingUp, Clock, Zap, BarChart3, RefreshCw } from 'lucide-react';
+import { DualCurrencyDisplay } from '@/components/admin/DualCurrencyDisplay';
+import { getCurrencySymbolFromCountry } from '@/lib/currencyUtils';
+import { useQuoteCurrencyDisplay } from '@/hooks/useCurrencyConversion';
 
 interface OptimizedQuoteCalculatorProps {
   initialData?: Partial<AdminQuoteFormValues>;
@@ -44,9 +47,10 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
         quantity: 1, 
         product_name: 'Sample Product' 
       }],
-      destination_country: 'US',
-      currency: 'USD',
-      final_currency: 'USD',
+      origin_country: '',
+      destination_country: '',
+      currency: '',
+      final_currency: '',
       sales_tax_price: 0,
       merchant_shipping_price: 0,
       domestic_shipping: 0,
@@ -84,15 +88,15 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
 
   // Prepare calculation parameters
   const calculationParams = useMemo((): QuoteCalculationParams | null => {
-    if (!allCountries || !watchedValues.destination_country) return null;
+    if (!allCountries || !watchedValues.origin_country) return null;
 
-    const countrySettings = allCountries.find(c => c.code === watchedValues.destination_country);
+    const countrySettings = allCountries.find(c => c.code === watchedValues.origin_country);
     if (!countrySettings) return null;
 
     return {
       items: watchedValues.items || [],
-      originCountry: watchedValues.destination_country,
-      destinationCountry: 'IN', // Default for demo
+      originCountry: watchedValues.origin_country,
+      destinationCountry: watchedValues.destination_country,
       currency: watchedValues.currency || 'USD',
       sales_tax_price: watchedValues.sales_tax_price,
       merchant_shipping_price: watchedValues.merchant_shipping_price,
@@ -105,6 +109,7 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
     };
   }, [
     watchedValues.items,
+    watchedValues.origin_country,
     watchedValues.destination_country,
     watchedValues.currency,
     watchedValues.sales_tax_price,
@@ -135,6 +140,17 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
 
   // Use real-time result if available, otherwise use manual calculation result
   const displayResult = realTimeMode ? realTimeResult : calculationResult;
+
+  // Get origin and destination countries for dual currency display
+  const originCountry = watchedValues.origin_country || '';
+  const destinationCountry = watchedValues.destination_country || '';
+
+  // Use proper currency display hook like QuoteCalculatedCosts
+  const currencyDisplay = useQuoteCurrencyDisplay({
+    originCountry,
+    destinationCountry,
+    isAdminView: true
+  });
 
   // Manual calculation trigger
   const handleCalculate = useCallback(async () => {
@@ -193,13 +209,13 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="destination_country">Origin Country</Label>
+                  <Label htmlFor="origin_country">Origin Country</Label>
                   <Select
-                    value={form.watch('destination_country') || ''}
-                    onValueChange={(value) => form.setValue('destination_country', value)}
+                    value={form.watch('origin_country') || ''}
+                    onValueChange={(value) => form.setValue('origin_country', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select country" />
+                      <SelectValue placeholder="Select origin country" />
                     </SelectTrigger>
                     <SelectContent>
                       {allCountries?.map((country) => (
@@ -211,9 +227,36 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                   </Select>
                 </div>
                 <div>
+                  <Label htmlFor="destination_country">Destination Country</Label>
+                  <Select
+                    value={form.watch('destination_country') || ''}
+                    onValueChange={(value) => form.setValue('destination_country', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select destination country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allCountries?.map((country) => (
+                        <SelectItem key={country.code} value={country.code || ''}>
+                          {country.name} ({country.currency})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <Label htmlFor="currency">Currency</Label>
                   <Input
                     {...form.register('currency')}
+                    placeholder="USD"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="final_currency">Final Currency</Label>
+                  <Input
+                    {...form.register('final_currency')}
                     placeholder="USD"
                   />
                 </div>
@@ -380,13 +423,31 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                       <div className="p-4 bg-green-50 rounded-lg">
                         <div className="text-sm text-green-600">Final Total</div>
                         <div className="text-2xl font-bold text-green-700">
-                          {watchedValues.currency} {displayResult.breakdown.final_total.toLocaleString()}
+                          <DualCurrencyDisplay
+                            amount={displayResult.breakdown.final_total}
+                            originCountry={originCountry}
+                            destinationCountry={destinationCountry}
+                            exchangeRate={currencyDisplay.exchangeRate}
+                            exchangeRateSource={currencyDisplay.exchangeRateSource}
+                            warning={currencyDisplay.warning}
+                            showTooltip={true}
+                            className="text-2xl font-bold"
+                          />
                         </div>
                       </div>
                       <div className="p-4 bg-blue-50 rounded-lg">
                         <div className="text-sm text-blue-600">Items Total</div>
                         <div className="text-xl font-semibold text-blue-700">
-                          {watchedValues.currency} {displayResult.breakdown.total_item_price.toLocaleString()}
+                          <DualCurrencyDisplay
+                            amount={displayResult.breakdown.total_item_price}
+                            originCountry={originCountry}
+                            destinationCountry={destinationCountry}
+                            exchangeRate={currencyDisplay.exchangeRate}
+                            exchangeRateSource={currencyDisplay.exchangeRateSource}
+                            warning={currencyDisplay.warning}
+                            showTooltip={true}
+                            className="text-xl font-semibold"
+                          />
                         </div>
                       </div>
                     </div>
@@ -401,6 +462,12 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                   </TabsContent>
 
                   <TabsContent value="breakdown" className="space-y-2">
+                    <div className="flex justify-between py-1 border-b font-medium text-sm">
+                      <span>Description</span>
+                      <span className="text-right">
+                        Amount ({getCurrencySymbolFromCountry(originCountry)}/{getCurrencySymbolFromCountry(destinationCountry)})
+                      </span>
+                    </div>
                     {[
                       ['Items Total', displayResult.breakdown.total_item_price],
                       ['Sales Tax', displayResult.breakdown.sales_tax_price],
@@ -410,21 +477,46 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                       ['Domestic Shipping', displayResult.breakdown.domestic_shipping],
                       ['Handling Charge', displayResult.breakdown.handling_charge],
                       ['Insurance', displayResult.breakdown.insurance_amount],
-                      ['Discount', -displayResult.breakdown.discount],
+                      ['Discount', displayResult.breakdown.discount],
                       ['Payment Gateway Fee', displayResult.breakdown.payment_gateway_fee],
                       ['VAT', displayResult.breakdown.vat]
-                    ].map(([label, amount]) => (
-                      <div key={label} className="flex justify-between py-1 border-b">
-                        <span className="text-sm">{label}</span>
-                        <span className="font-mono text-sm">
-                          {watchedValues.currency} {Number(amount).toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
+                    ].map(([label, amount]) => {
+                      if (!amount || amount === 0) return null;
+                      const isDiscount = label === 'Discount';
+                      const displayAmount = isDiscount ? -Math.abs(amount) : amount;
+                      
+                      return (
+                        <div key={label} className="flex justify-between py-1 border-b">
+                          <span className="text-sm">{label}</span>
+                          <span className={`text-sm ${isDiscount ? 'text-red-600' : ''}`}>
+                            {isDiscount ? '-' : ''}
+                            <DualCurrencyDisplay
+                              amount={Math.abs(amount)}
+                              originCountry={originCountry}
+                              destinationCountry={destinationCountry}
+                              exchangeRate={currencyDisplay.exchangeRate}
+                              exchangeRateSource={currencyDisplay.exchangeRateSource}
+                              warning={currencyDisplay.warning}
+                              showTooltip={false}
+                              className="text-sm"
+                            />
+                          </span>
+                        </div>
+                      );
+                    })}
                     <div className="flex justify-between py-2 border-t-2 font-bold">
                       <span>Final Total</span>
                       <span className="font-mono">
-                        {watchedValues.currency} {displayResult.breakdown.final_total.toLocaleString()}
+                        <DualCurrencyDisplay
+                          amount={displayResult.breakdown.final_total}
+                          originCountry={originCountry}
+                          destinationCountry={destinationCountry}
+                          exchangeRate={currencyDisplay.exchangeRate}
+                          exchangeRateSource={currencyDisplay.exchangeRateSource}
+                          warning={currencyDisplay.warning}
+                          showTooltip={true}
+                          className="font-bold"
+                        />
                       </span>
                     </div>
                   </TabsContent>

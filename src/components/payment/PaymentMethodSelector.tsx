@@ -31,6 +31,9 @@ interface PaymentMethodSelectorProps {
   currency: string;
   showRecommended?: boolean;
   disabled?: boolean;
+  // Accept payment methods from parent to avoid duplicate hook calls
+  availableMethods?: PaymentGateway[];
+  methodsLoading?: boolean;
 }
 
 const getIcon = (iconName: string) => {
@@ -73,10 +76,25 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   amount,
   currency,
   showRecommended = true,
-  disabled = false
+  disabled = false,
+  availableMethods: propAvailableMethods,
+  methodsLoading: propMethodsLoading
 }) => {
   const [showMobileWarning, setShowMobileWarning] = useState(false);
-  const { availableMethods, methodsLoading: isLoading, getRecommendedPaymentMethod, isMobileOnlyPayment, getPaymentMethodDisplay, PAYMENT_METHOD_DISPLAYS } = usePaymentGateways();
+  
+  // Use payment methods from props if provided, otherwise call hook (for backward compatibility)
+  const { 
+    availableMethods: hookAvailableMethods, 
+    methodsLoading: hookIsLoading, 
+    getRecommendedPaymentMethod, 
+    isMobileOnlyPayment, 
+    getPaymentMethodDisplay, 
+    PAYMENT_METHOD_DISPLAYS 
+  } = usePaymentGateways();
+  
+  // Prefer props over hook data (for guest checkout)
+  const availableMethods = propAvailableMethods !== undefined ? propAvailableMethods : hookAvailableMethods;
+  const isLoading = propMethodsLoading !== undefined ? propMethodsLoading : hookIsLoading;
 
   // Ensure selectedMethod is always a valid available method
   const validSelectedMethod = availableMethods?.includes(selectedMethod) 

@@ -1,6 +1,7 @@
-simport React from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Price } from '@/components/ui/Price';
 import { Package, Globe, DollarSign, Weight, ExternalLink } from 'lucide-react';
 
 interface Product {
@@ -19,6 +20,7 @@ interface ProductSummaryProps {
   showEditButton?: boolean;
   onEdit?: () => void;
   className?: string;
+  destinationCountry?: string; // Add destination country for proper currency display
 }
 
 export default function ProductSummary({ 
@@ -26,7 +28,8 @@ export default function ProductSummary({
   title = "Products Summary", 
   showEditButton = false, 
   onEdit,
-  className = ""
+  className = "",
+  destinationCountry
 }: ProductSummaryProps) {
   const totalItems = products.reduce((sum, product) => sum + product.quantity, 0);
   const totalValue = products.reduce((sum, product) => {
@@ -59,7 +62,13 @@ export default function ProductSummary({
             </span>
             <span className="flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full">
               <DollarSign className="h-4 w-4 text-green-600" />
-              Total: ${totalValue.toFixed(2)}
+              Total: <Price 
+                amount={totalValue}
+                originCountry={products[0]?.country || 'US'}
+                destinationCountry={destinationCountry}
+                className="font-medium"
+                showSkeleton={false}
+              />
             </span>
             <span className="flex items-center gap-2 bg-purple-50 px-3 py-1 rounded-full">
               <Weight className="h-4 w-4 text-purple-600" />
@@ -102,7 +111,12 @@ export default function ProductSummary({
                   </Badge>
                   {product.price && (
                     <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200 border-0">
-                      ${parseFloat(product.price).toFixed(2)} each
+                      <Price 
+                        amount={parseFloat(product.price)}
+                        originCountry={product.country || 'US'}
+                        destinationCountry={destinationCountry}
+                        showSkeleton={false}
+                      /> each
                     </Badge>
                   )}
                   {product.weight && (
@@ -121,7 +135,13 @@ export default function ProductSummary({
               {product.price && (
                 <div className="text-right ml-4">
                   <div className="text-lg font-bold text-gray-900">
-                    ${(parseFloat(product.price) * product.quantity).toFixed(2)}
+                    <Price 
+                      amount={parseFloat(product.price) * product.quantity}
+                      originCountry={product.country || 'US'}
+                      destinationCountry={destinationCountry}
+                      className="text-lg font-bold"
+                      showSkeleton={false}
+                    />
                   </div>
                   <div className="text-sm text-gray-500">
                     Total for this item

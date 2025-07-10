@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -56,7 +57,77 @@ serve(async (req) => {
       )
     }
 
-    // Get Resend API key from environment
+    // Check if we're in development mode
+    const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development' || 
+                         Deno.env.get('IS_LOCAL') === 'true' ||
+                         !Deno.env.get('RESEND_API_KEY');
+    
+    console.log("🔵 Environment check:");
+    console.log("  - ENVIRONMENT:", Deno.env.get('ENVIRONMENT'));
+    console.log("  - IS_LOCAL:", Deno.env.get('IS_LOCAL'));
+    console.log("  - isDevelopment:", isDevelopment);
+
+    if (isDevelopment) {
+      // Use local Inbucket SMTP for development
+      console.log("📧 Using Inbucket for local email testing");
+      
+      try {
+        const client = new SmtpClient();
+        
+        await client.connectTLS({
+          hostname: "localhost",
+          port: 54325,
+          username: "inbucket",
+          password: "inbucket",
+        });
+        
+        await client.send({
+          from: from,
+          to: to,
+          subject: subject,
+          content: html,
+          html: html,
+        });
+        
+        await client.close();
+        
+        console.log("✅ Email sent to Inbucket successfully");
+        console.log("📬 View email at: http://localhost:54324");
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Email sent to local Inbucket',
+            inbucketUrl: 'http://localhost:54324'
+          }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      } catch (error) {
+        console.log("⚠️ Inbucket failed, falling back to console log");
+        console.log("📧 EMAIL CONTENT:");
+        console.log("To:", to);
+        console.log("From:", from);
+        console.log("Subject:", subject);
+        console.log("HTML:", html);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Email logged to console (Inbucket unavailable)',
+            emailData: { to, from, subject }
+          }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    }
+
+    // Production: Use Resend API
     console.log("🔵 Getting Resend API key from environment...");
     const resendApiKey = Deno.env.get('RESEND_API_KEY')
     console.log("🔵 API key exists:", !!resendApiKey);

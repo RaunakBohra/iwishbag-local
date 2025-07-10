@@ -52,7 +52,6 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
   const renderRow = (label: string, value: number | null, isDiscount = false) => {
     if (value === null || value === undefined || value === 0) return null;
     
-    const formattedAmount = currencyDisplay.formatAmount(value);
     const sign = isDiscount ? '-' : '';
     
     return (
@@ -60,20 +59,16 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
         <span>{label}</span>
         <span className={isDiscount ? 'text-red-600' : ''}>
           {sign}
-          {typeof formattedAmount === 'string' ? (
-            formattedAmount
-          ) : (
-            <DualCurrencyDisplay
-              amount={value}
-              originCountry={originCountry}
-              destinationCountry={destinationCountry}
-              exchangeRate={currencyDisplay.exchangeRate}
-              exchangeRateSource={currencyDisplay.exchangeRateSource}
-              warning={currencyDisplay.warning}
-              showTooltip={false}
-              className="text-sm"
-            />
-          )}
+          <DualCurrencyDisplay
+            amount={value}
+            originCountry={originCountry}
+            destinationCountry={destinationCountry}
+            exchangeRate={currencyDisplay.exchangeRate}
+            exchangeRateSource={currencyDisplay.exchangeRateSource}
+            warning={currencyDisplay.warning}
+            showTooltip={false}
+            className="text-sm"
+          />
         </span>
       </div>
     );

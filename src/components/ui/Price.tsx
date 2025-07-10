@@ -330,7 +330,7 @@ export const AdminPrice: React.FC<AdminPriceProps> = ({
 export const QuotePrice: React.FC<{ quote: any; className?: string }> = ({ quote, className }) => {
   if (!quote) return <span className={className}>N/A</span>;
 
-  const originCountry = quote.destination_country || 'US';
+  const originCountry = quote.origin_country || quote.purchase_country || 'US';
   const destinationCountry = quote.destination_country || 
     (quote.shipping_address?.destination_country || quote.shipping_address?.country || 'US');
 
@@ -355,8 +355,8 @@ export const CartItemPrice: React.FC<{
   return (
     <Price
       amount={amount}
-      originCountry={item.purchaseCountryCode || item.countryCode || item.destination_country || 'US'}
-      destinationCountry={item.destinationCountryCode || item.countryCode || 'US'}
+      originCountry={item.purchaseCountryCode || item.origin_country || item.country || 'US'}
+      destinationCountry={item.destinationCountryCode || item.destination_country || 'US'}
       className={className}
     />
   );
@@ -368,7 +368,7 @@ export const OrderPrice: React.FC<{ order: any; className?: string }> = ({ order
   return (
     <Price
       amount={order.final_total}
-      originCountry={order.destination_country || 'US'}
+      originCountry={order.origin_country || order.purchase_country || 'US'}
       destinationCountry={order.destination_country || 'US'}
       exchangeRate={order.exchange_rate}
       className={className}

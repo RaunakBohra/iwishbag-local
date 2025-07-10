@@ -83,6 +83,11 @@ interface PayUWebhookData {
   merchant_udf50: string;
   merchant_udf51: string;
   merchant_udf52: string;
+  udf1: string;
+  udf2: string;
+  udf3: string;
+  udf4: string;
+  udf5: string;
   merchant_udf53: string;
   merchant_udf54: string;
   merchant_udf55: string;
@@ -224,6 +229,10 @@ serve(async (req) => {
 
     console.log('Quote IDs extracted:', quoteIds);
 
+    // Extract guest session token from UDF1 if present
+    const guestSessionToken = webhookData.udf1 || '';
+    console.log('Guest session token:', guestSessionToken ? 'Present' : 'Not present');
+
     // Determine payment status
     let paymentStatus: 'success' | 'failed' | 'pending';
     let orderStatus: 'paid' | 'failed' | 'pending';
@@ -243,31 +252,104 @@ serve(async (req) => {
         orderStatus = 'pending';
     }
 
-    // Update quotes status
-    if (quoteIds.length > 0) {
+    // Handle guest checkout session if present
+    if (guestSessionToken) {
+      try {
+        if (paymentStatus === 'success') {
+          // Get guest session data
+          const { data: guestSession, error: sessionError } = await supabaseAdmin
+            .from('guest_checkout_sessions')
+            .select('*')
+            .eq('session_token', guestSessionToken)
+            .eq('status', 'active')
+            .single();
+
+          if (sessionError || !guestSession) {
+            console.error('Guest session not found:', sessionError);
+          } else {
+            console.log('✅ Guest session found, binding details to quote');
+            
+            // Bind guest details to quote now that payment is successful
+            const { error: quoteBindError } = await supabaseAdmin
+              .from('quotes')
+              .update({
+                customer_name: guestSession.guest_name,
+                email: guestSession.guest_email,
+                shipping_address: guestSession.shipping_address,
+                is_anonymous: true, // Keep as anonymous since no user account
+                user_id: null, // Keep null for guest checkout
+                address_updated_at: new Date().toISOString(),
+                address_updated_by: null
+              })
+              .eq('id', guestSession.quote_id);
+
+            if (quoteBindError) {
+              console.error('Error binding guest details to quote:', quoteBindError);
+            } else {
+              console.log('✅ Guest details bound to quote successfully');
+            }
+
+            // Mark session as completed
+            await supabaseAdmin
+              .from('guest_checkout_sessions')
+              .update({
+                status: 'completed',
+                updated_at: new Date().toISOString()
+              })
+              .eq('session_token', guestSessionToken);
+
+            console.log('✅ Guest session marked as completed');
+          }
+        } else if (paymentStatus === 'failed') {
+          // Payment failed - expire the session but leave quote untouched
+          await supabaseAdmin
+            .from('guest_checkout_sessions')
+            .update({
+              status: 'expired',
+              updated_at: new Date().toISOString()
+            })
+            .eq('session_token', guestSessionToken);
+
+          console.log('✅ Guest session expired due to payment failure, quote remains shareable');
+        }
+      } catch (error) {
+        console.error('Error handling guest checkout session:', error);
+      }
+    }
+
+    // Update quotes status (skip for failed guest payments - they're handled by session logic)
+    if (quoteIds.length > 0 && !(guestSessionToken && paymentStatus === 'failed')) {
+      // For guest checkout success: we already updated the quote in session logic above
+      // For guest checkout failure: we intentionally skip quote update to keep it shareable
+      // For authenticated users: always update the quote
+      
+      const updateData: any = {
+        status: orderStatus,
+        payment_method: 'payu',
+        payment_transaction_id: webhookData.mihpayid || webhookData.txnid,
+        paid_at: orderStatus === 'paid' ? new Date().toISOString() : null,
+        payment_details: {
+          gateway: 'payu',
+          transaction_id: webhookData.mihpayid || webhookData.txnid,
+          status: webhookData.status,
+          amount: webhookData.amount,
+          currency: 'INR',
+          payment_mode: webhookData.mode,
+          bank_code: webhookData.bankcode,
+          bank_ref_num: webhookData.bank_ref_num,
+          card_mask: webhookData.cardMask,
+          name_on_card: webhookData.name_on_card,
+          error_code: webhookData.error_code,
+          error_message: webhookData.error_Message,
+          webhook_received_at: new Date().toISOString()
+        }
+      };
+
+      // For guest checkout success, we don't need to update customer details again 
+      // (already done in session binding above)
       const { error: quotesError } = await supabaseAdmin
         .from('quotes')
-        .update({
-          status: orderStatus,
-          payment_method: 'payu',
-          payment_transaction_id: webhookData.mihpayid || webhookData.txnid,
-          paid_at: orderStatus === 'paid' ? new Date().toISOString() : null,
-          payment_details: {
-            gateway: 'payu',
-            transaction_id: webhookData.mihpayid || webhookData.txnid,
-            status: webhookData.status,
-            amount: webhookData.amount,
-            currency: 'INR',
-            payment_mode: webhookData.mode,
-            bank_code: webhookData.bankcode,
-            bank_ref_num: webhookData.bank_ref_num,
-            card_mask: webhookData.cardMask,
-            name_on_card: webhookData.name_on_card,
-            error_code: webhookData.error_code,
-            error_message: webhookData.error_Message,
-            webhook_received_at: new Date().toISOString()
-          }
-        })
+        .update(updateData)
         .in('id', quoteIds);
 
       if (quotesError) {
@@ -279,6 +361,8 @@ serve(async (req) => {
       }
 
       console.log(`✅ Updated ${quoteIds.length} quotes to status: ${orderStatus}`);
+    } else if (guestSessionToken && paymentStatus === 'failed') {
+      console.log('✅ Skipped quote update for failed guest payment - quote remains shareable');
     }
 
     // Create payment record

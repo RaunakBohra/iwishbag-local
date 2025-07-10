@@ -15,24 +15,49 @@ INSERT INTO country_settings (code, name, currency, rate_from_usd, sales_tax, va
 ('NP', 'Nepal', 'NPR', 133.0, 0, 0.13, 1000, 0, 200, 'kg', 5000, 0, 1.5, true, true, 'esewa', '{"low": 0, "normal": 66500, "urgent": 266000}'),
 ('JP', 'Japan', 'JPY', 150.0, 0, 0.10, 1500, 0, 200, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 75000, "urgent": 300000}'),
 ('GB', 'United Kingdom', 'GBP', 0.79, 0, 0.20, 12, 0, 2, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 395, "urgent": 1580}'),
+('AU', 'Australia', 'AUD', 1.52, 0, 0.10, 15, 0, 2, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 760, "urgent": 3040}');
 
 -- Insert comprehensive payment gateways
 INSERT INTO payment_gateways (code, name, description, is_active, supported_countries, supported_currencies, fee_percent, fee_fixed, config, test_mode) VALUES
+-- Stripe for international payments
+('stripe', 'Stripe', 'International payment gateway supporting cards and multiple currencies', true, ARRAY['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'SG', 'JP', 'IN'], ARRAY['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'SGD', 'AED', 'SAR', 'EGP', 'TRY'], 2.9, 0.30, '{"test_publishable_key": "pk_test_placeholder", "test_secret_key": "sk_test_placeholder", "environment": "test"}', true),
 -- PayU for India
 ('payu', 'PayU', 'Leading payment gateway in India supporting cards, UPI, net banking, and wallets', true, ARRAY['IN'], ARRAY['INR'], 2.5, 0, '{"merchant_key": "test_payu_key", "salt_key": "test_payu_salt", "environment": "test"}', true),
 -- eSewa for Nepal
 ('esewa', 'eSewa', 'Nepal''s most popular digital wallet and payment service', true, ARRAY['NP'], ARRAY['NPR'], 1.5, 0, '{"merchant_id": "test_esewa_merchant", "secret_key": "test_esewa_secret", "environment": "test"}', true),
 -- Khalti for Nepal (alternative)
 ('khalti', 'Khalti', 'Nepal''s digital wallet service', true, ARRAY['NP'], ARRAY['NPR'], 2.0, 0, '{"public_key": "test_khalti_public", "secret_key": "test_khalti_secret", "environment": "test"}', true),
+-- Fonepay for Nepal
+('fonepay', 'Fonepay', 'Nepal''s mobile payment network', true, ARRAY['NP'], ARRAY['NPR'], 1.5, 0, '{"merchant_code": "test_fonepay_merchant", "username": "test_user", "password": "test_pass", "environment": "test"}', true),
+-- Airwallex for international
+('airwallex', 'Airwallex', 'Global payments infrastructure for modern businesses', true, ARRAY['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'SG', 'JP', 'HK', 'CN'], ARRAY['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'SGD', 'AED', 'SAR', 'EGP', 'TRY'], 1.8, 0.30, '{"client_id": "test_airwallex_client", "api_key": "test_airwallex_key", "environment": "demo"}', true),
 -- PayPal for international
 ('paypal', 'PayPal', 'Global payment platform supporting multiple countries and currencies', true, ARRAY['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'SG', 'JP', 'IN'], ARRAY['USD', 'CAD', 'GBP', 'AUD', 'EUR', 'SGD', 'JPY', 'INR'], 3.4, 30, '{"client_id": "test_paypal_client", "client_secret": "test_paypal_secret", "environment": "sandbox"}', true),
-
+-- Razorpay for India
+('razorpay', 'Razorpay', 'Complete payments solution for Indian businesses', true, ARRAY['IN'], ARRAY['INR'], 2.0, 0, '{"key_id": "test_razorpay_key", "key_secret": "test_razorpay_secret", "environment": "test"}', true),
 -- Bank Transfer (Universal)
 ('bank_transfer', 'Bank Transfer', 'Direct bank transfer with manual verification', true, ARRAY['US', 'CA', 'GB', 'AU', 'IN', 'NP', 'SG', 'JP', 'MY', 'TH', 'PH', 'ID', 'VN', 'KR'], ARRAY['USD', 'CAD', 'GBP', 'AUD', 'INR', 'NPR', 'SGD', 'JPY', 'MYR', 'THB', 'PHP', 'IDR', 'VND', 'KRW'], 0, 0, '{"requires_manual_verification": true, "processing_time": "1-3 business days"}', false),
 
 -- Cash on Delivery (for supported regions)
 ('cod', 'Cash on Delivery', 'Pay with cash upon delivery', true, ARRAY['IN', 'NP', 'MY', 'TH', 'PH', 'ID', 'VN'], ARRAY['INR', 'NPR', 'MYR', 'THB', 'PHP', 'IDR', 'VND'], 0, 50, '{"max_amount_inr": 50000, "max_amount_npr": 80000, "verification_required": true}', false),
-
+-- UPI for India
+('upi', 'UPI', 'Unified Payments Interface for instant bank transfers', true, ARRAY['IN'], ARRAY['INR'], 0, 0, '{"vpa": "test@upi", "environment": "test"}', true),
+-- Paytm for India
+('paytm', 'Paytm', 'Leading mobile payments and financial services', true, ARRAY['IN'], ARRAY['INR'], 1.99, 0, '{"merchant_id": "test_paytm_merchant", "merchant_key": "test_paytm_key", "environment": "test"}', true),
+-- GrabPay for Southeast Asia
+('grabpay', 'GrabPay', 'Southeast Asia''s leading mobile wallet', true, ARRAY['SG', 'MY', 'TH', 'PH', 'VN', 'ID'], ARRAY['SGD', 'MYR', 'THB', 'PHP', 'VND', 'IDR'], 1.5, 0, '{"partner_id": "test_grab_partner", "partner_key": "test_grab_key", "environment": "test"}', true),
+-- Alipay for China
+('alipay', 'Alipay', 'China''s leading mobile and online payment platform', true, ARRAY['CN', 'HK', 'SG', 'MY', 'TH', 'PH', 'ID', 'IN'], ARRAY['CNY', 'HKD', 'SGD', 'MYR', 'THB', 'PHP', 'IDR', 'INR'], 1.8, 0, '{"partner_id": "test_alipay_partner", "private_key": "test_alipay_key", "environment": "test"}', true)
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  is_active = EXCLUDED.is_active,
+  supported_countries = EXCLUDED.supported_countries,
+  supported_currencies = EXCLUDED.supported_currencies,
+  fee_percent = EXCLUDED.fee_percent,
+  fee_fixed = EXCLUDED.fee_fixed,
+  config = EXCLUDED.config,
+  test_mode = EXCLUDED.test_mode;
 
 -- Insert test email templates
 INSERT INTO email_templates (name, subject, html_content, template_type, variables) VALUES
@@ -48,7 +73,6 @@ INSERT INTO email_templates (name, subject, html_content, template_type, variabl
 ('payment_reminder_1', 'Payment Reminder - Order {{order_id}}', 'Dear {{customer_name}},<br><br>This is a friendly reminder that we are still waiting for your payment.<br><br><strong>Order Details:</strong><br>Order ID: {{order_id}}<br>Total Amount: {{total_amount}} {{currency}}<br>Days Pending: 3 days<br><br>{{bank_details}}<br><br>Please complete your payment soon to avoid order cancellation.<br><br>If you have already made the payment, please send us the confirmation.<br><br>Best regards,<br>iWishBag Team', 'payment_reminder', '{"customer_name": "string", "order_id": "string", "total_amount": "string", "currency": "string", "bank_details": "string"}'),
 ('payment_reminder_2', 'Second Payment Reminder - Order {{order_id}}', 'Dear {{customer_name}},<br><br>We haven''t received your payment yet. Your order has been pending for 7 days.<br><br><strong>Order Details:</strong><br>Order ID: {{order_id}}<br>Total Amount: {{total_amount}} {{currency}}<br><br><strong>⚠️ Important:</strong> Your order will be cancelled in 7 days if payment is not received.<br><br>{{bank_details}}<br><br>Please complete your payment as soon as possible.<br><br>Need help? Contact us at {{support_email}}<br><br>Best regards,<br>iWishBag Team', 'payment_reminder', '{"customer_name": "string", "order_id": "string", "total_amount": "string", "currency": "string", "bank_details": "string", "support_email": "string"}'),
 ('payment_reminder_final', 'Final Payment Reminder - Order {{order_id}}', 'Dear {{customer_name}},<br><br><strong>⚠️ FINAL NOTICE: Your order will be cancelled tomorrow if payment is not received.</strong><br><br>Order ID: {{order_id}}<br>Total Amount: {{total_amount}} {{currency}}<br>Days Pending: 14 days<br><br>This is your final reminder. Please make the payment today to keep your order active.<br><br>{{bank_details}}<br><br>After tomorrow, you will need to place a new order.<br><br>If you no longer wish to proceed with this order, please let us know.<br><br>Best regards,<br>iWishBag Team', 'payment_reminder', '{"customer_name": "string", "order_id": "string", "total_amount": "string", "currency": "string", "bank_details": "string"}');
-
 
 -- Insert email settings (if not exists)
 INSERT INTO email_settings (setting_key, setting_value, description) VALUES
@@ -316,13 +340,13 @@ INSERT INTO system_settings (setting_key, setting_value, description) VALUES
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- Insert bank accounts for different countries
-INSERT INTO bank_account_details (country_code, bank_name, account_name, account_number, swift_code, custom_fields, is_active) VALUES
+INSERT INTO bank_account_details (country_code, currency_code, bank_name, account_name, account_number, swift_code, custom_fields, is_active) VALUES
 -- India (INR) - Axis Bank
-('IN', 'Axis Bank - Current', 'iWB Enterprises', '924020057946752', NULL, '{"ifsc": "UTIB0000056"}', true),
+('IN', 'INR', 'Axis Bank - Current', 'iWB Enterprises', '924020057946752', NULL, '{"ifsc": "UTIB0000056"}', true),
 -- Nepal (NPR) - Citizens Bank
-('NP', 'Citizens Bank - Teku', 'I WISH BAG', '1780100000613201', NULL, '{}', true),
+('NP', 'NPR', 'Citizens Bank - Teku', 'I WISH BAG', '1780100000613201', NULL, '{}', true),
 -- USA (USD) - Community Federal Savings Bank
-('US', 'Community Federal Savings Bank', 'IWISHBAG PTE. LTD.', '8456220037', NULL, '{"ach": "026073150", "bank_address": "89-16 Jamaica Ave, Woodhaven, NY, United States, 11421"}', true);
+('US', 'USD', 'Community Federal Savings Bank', 'IWISHBAG PTE. LTD.', '8456220037', NULL, '{"ach": "026073150", "bank_address": "89-16 Jamaica Ave, Woodhaven, NY, United States, 11421"}', true);
 
 -- Create storage buckets for file uploads
 DO $$

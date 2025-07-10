@@ -62,6 +62,15 @@ export const getCountryCurrency = (countryCode: string): string => {
     'US': 'USD',
     'IN': 'INR',
     'NP': 'NPR',
+    'JP': 'JPY',
+    'GB': 'GBP',
+    'AU': 'AUD', // Australia should use AUD, not USD
+    'CA': 'CAD',
+    'EU': 'EUR',
+    'DE': 'EUR',
+    'FR': 'EUR',
+    'CN': 'CNY',
+    'SG': 'SGD',
   };
   return criticalMapping[countryCode] || 'USD';
 };
@@ -90,6 +99,15 @@ export const getCountryCurrencyMap = (): { [key: string]: string } => {
     'US': 'USD',
     'IN': 'INR',
     'NP': 'NPR',
+    'JP': 'JPY',
+    'GB': 'GBP',
+    'AU': 'AUD',
+    'CA': 'CAD',
+    'EU': 'EUR',
+    'DE': 'EUR',
+    'FR': 'EUR',
+    'CN': 'CNY',
+    'SG': 'SGD',
   };
 };
 

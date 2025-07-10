@@ -58,12 +58,14 @@ import { StickyActionBar } from '@/components/dashboard/StickyActionBar';
 import { GuestApprovalDialog } from '@/components/share/GuestApprovalDialog';
 import { useToast } from '@/components/ui/use-toast';
 import { Tables } from '@/integrations/supabase/types';
+import { GuestCurrencyProvider, useGuestCurrency } from '@/contexts/GuestCurrencyContext';
+import { GuestCurrencySelector } from '@/components/guest/GuestCurrencySelector';
 
 interface UnifiedQuoteDetailProps {
   isShareToken?: boolean;
 }
 
-export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuoteDetailProps) {
+function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailProps) {
   const { id, shareToken } = useParams<{ id: string; shareToken: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -158,7 +160,14 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
   // Hooks and utilities
   const { data: countries } = useAllCountries();
   const { approveQuote, rejectQuote, addToCart, isUpdating } = useQuoteState(quote?.id || '');
-  const { formatAmount } = useQuoteDisplayCurrency({ quote });
+  
+  // Guest currency hook (only used if in guest mode)
+  const { guestCurrency } = isGuestMode ? useGuestCurrency() : { guestCurrency: null };
+  
+  const { formatAmount } = useQuoteDisplayCurrency({ 
+    quote, 
+    guestCurrency: isGuestMode ? guestCurrency : null 
+  });
   
   // Subscribe to cart store to make quote detail reactive to cart changes
   const cartItems = useCartStore((state) => state.items);
@@ -651,6 +660,13 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
               <StatusBadge status={quote.status} category="quote" />
               {quote.status === 'sent' && <QuoteExpirationTimer expiresAt={quote.expires_at} />}
               {isAdmin && <ShareQuoteButton quote={quote} variant="button" size="sm" />}
+              {/* Guest Currency Selector - Only for guest users */}
+              {isGuestMode && !user && (
+                <GuestCurrencySelector 
+                  defaultCurrency={quote?.destination_country || 'US'}
+                  className="border-l border-gray-200 pl-3"
+                />
+              )}
             </div>
           </div>
         </div>
@@ -1222,4 +1238,20 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
       </Dialog>
     </div>
   );
+}
+
+// Wrapper component to provide guest currency context
+export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuoteDetailProps) {
+  const { shareToken } = useParams<{ shareToken: string }>();
+  const isGuestMode = isShareToken || !!shareToken;
+
+  if (isGuestMode) {
+    return (
+      <GuestCurrencyProvider shareToken={shareToken}>
+        <QuoteDetailUnifiedContent isShareToken={isShareToken} />
+      </GuestCurrencyProvider>
+    );
+  }
+
+  return <QuoteDetailUnifiedContent isShareToken={isShareToken} />;
 }

@@ -69,9 +69,11 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
     address = selectedAddressId
       ? addresses.find(a => a.id === selectedAddressId)
       : addresses[0];
-    shippingCountry = address.country;
-    shippingCity = address.city;
-    shippingAddressSummary = `${address.address_line1}, ${address.city}`;
+    if (address) {
+      shippingCountry = address.country;
+      shippingCity = address.city;
+      shippingAddressSummary = `${address.address_line1}, ${address.city}`;
+    }
   } else if (shippingContact && shippingContact.country) {
     shippingCountry = shippingContact.country;
     shippingCity = shippingContact.city;
@@ -185,19 +187,25 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Shipping Address</h3>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="text-sm text-gray-700 space-y-1">
-                <div className="font-medium">{address.recipient_name}</div>
-                <div>{address.address_line1}</div>
-                {address.address_line2 && <div>{address.address_line2}</div>}
-                <div>{address.city}, {address.state_province_region} {address.postal_code}</div>
-                <div className="font-medium">{address.country}</div>
-                {address.phone && <div className="text-blue-600">📞 {address.phone}</div>}
+            {address ? (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-sm text-gray-700 space-y-1">
+                  <div className="font-medium">{address.recipient_name}</div>
+                  <div>{address.address_line1}</div>
+                  {address.address_line2 && <div>{address.address_line2}</div>}
+                  <div>{address.city}, {address.state_province_region} {address.postal_code}</div>
+                  <div className="font-medium">{address.country}</div>
+                  {address.phone && <div className="text-blue-600">📞 {address.phone}</div>}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="text-yellow-700 text-sm">Loading address...</div>
+              </div>
+            )}
           </div>
           
-          {addresses.length > 1 && (
+          {addresses.length > 1 && address && (
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Choose another address:</label>
               <select
@@ -219,6 +227,7 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
               type="button" 
               className="flex-1 py-2 px-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium" 
               onClick={() => { setAddressToEdit(address); setAddressModalOpen(true); }}
+              disabled={!address}
             >
               Edit Address
             </button>
@@ -342,7 +351,29 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
             <DialogHeader>
               <DialogTitle>Add New Address</DialogTitle>
             </DialogHeader>
-            <AddressForm address={addressToEdit} onSuccess={() => { setAddressModalOpen(false); refetch(); }} />
+            <AddressForm 
+              address={addressToEdit} 
+              onSuccess={(newAddress) => { 
+                setAddressModalOpen(false); 
+                refetch();
+                // Update shippingContact with the new address
+                if (newAddress) {
+                  setShippingContact({
+                    name: newAddress.recipient_name || '',
+                    email: profile?.email || '',
+                    whatsapp: newAddress.phone || '',
+                    address: newAddress.address_line1 || '',
+                    country: newAddress.country || '',
+                    destination_country: newAddress.destination_country || newAddress.country || '',
+                    state: newAddress.state_province_region || '',
+                    city: newAddress.city || '',
+                    zip: newAddress.postal_code || '',
+                  });
+                  // This will trigger the first useEffect to set selectedAddressId
+                  setSelectedAddressId(newAddress.id);
+                }
+              }} 
+            />
           </DialogContent>
         </Dialog>
       </div>

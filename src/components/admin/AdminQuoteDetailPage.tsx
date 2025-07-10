@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Send, MapPin, Calculator, CheckCircle, XCircle, Clock, AlertTriangle, FileText, DollarSign, ShoppingCart, Truck, Circle, User, Mail, Phone, Calendar, Package, Settings, TrendingUp, Eye, Edit3, MessageSquare, Globe, Flag, UserMinus, Plus } from "lucide-react";
@@ -34,6 +34,7 @@ import { useAllCountries } from '../../hooks/useAllCountries';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { Icon } from '@/components/ui/icon';
 import { StatusTransitionHistory } from './StatusTransitionHistory';
+import { getCurrencySymbolFromCountry } from '@/lib/currencyUtils';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -46,7 +47,11 @@ import { QuoteExpirationTimer } from '@/components/dashboard/QuoteExpirationTime
 const AdminQuoteDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  
+  // Determine if we're in order management context
+  const isOrderContext = location.pathname.includes('/admin/orders/');
   
   const {
     quote,
@@ -80,6 +85,8 @@ const AdminQuoteDetailPage = () => {
   const [routeWeightUnit, setRouteWeightUnit] = useState<string | null>(null);
   const [smartWeightUnit, setSmartWeightUnit] = useState<'kg' | 'lb'>('kg');
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [isCostBreakdownOpen, setIsCostBreakdownOpen] = useState(!isOrderContext); // Open by default in quote management, closed in order management
+  const [isCustomsTiersOpen, setIsCustomsTiersOpen] = useState(false);
   
   // Fetch customer profile data
   const { data: customerProfile } = useQuery({
@@ -687,14 +694,81 @@ const AdminQuoteDetailPage = () => {
               </CardContent>
             </Card>
 
-            {/* Unified Quote Builder - Side by Side Layout */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Package className="h-5 w-5" />
-                    Quote Builder
-                  </CardTitle>
+            {/* Customer Notes Summary */}
+            {(() => {
+              // Aggregate all customer notes from quote items
+              const customerNotes = fields?.map((item, index) => {
+                const options = form.watch(`items.${index}.options`);
+                if (!options) return null;
+                
+                // Handle both JSON and plain text formats (consistent with EditableAdminQuoteItemCard)
+                let noteText = '';
+                try {
+                  // Try to parse as JSON first
+                  const parsed = JSON.parse(options);
+                  noteText = parsed.notes || '';
+                } catch {
+                  // If parsing fails, treat as plain text (legacy format)
+                  noteText = options;
+                }
+                
+                if (!noteText?.trim()) return null;
+                
+                const productName = form.watch(`items.${index}.product_name`) || `Product ${index + 1}`;
+                return { productName, noteText };
+              }).filter(Boolean);
+
+              if (!customerNotes || customerNotes.length === 0) return null;
+
+              return (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <MessageSquare className="h-5 w-5 text-blue-600" />
+                      Customer Notes
+                    </CardTitle>
+                    <CardDescription>
+                      Special instructions and specifications from the customer
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {customerNotes.map((note, index) => (
+                        <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-start gap-3">
+                            <Package className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-blue-900 text-sm mb-1">
+                                {note.productName}
+                              </h4>
+                              <p className="text-sm text-blue-800 whitespace-pre-wrap break-words">
+                                {note.noteText}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
+            {/* Unified Quote Builder - Side by Side Layout - Conditional rendering */}
+            {isOrderContext ? (
+              // In Order context: Collapsible and hidden by default
+              <Collapsible open={isCostBreakdownOpen} onOpenChange={setIsCostBreakdownOpen}>
+                <Card>
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <Package className="h-5 w-5" />
+                          Quote Builder
+                          <div className={`transition-transform duration-200 ${isCostBreakdownOpen ? 'rotate-90' : ''}`}>
+                            <ChevronRight className="h-4 w-4" />
+                          </div>
+                        </CardTitle>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-muted-foreground">Purchase From:</span>
@@ -732,12 +806,8 @@ const AdminQuoteDetailPage = () => {
                         <span className="text-sm font-medium text-muted-foreground">Exchange Rate:</span>
                         <Badge variant="outline" className="text-sm">
                           {(() => {
-                            const originCurrency = originCountryWatch === 'US' ? 'USD' : 
-                                                 originCountryWatch === 'IN' ? 'INR' : 
-                                                 originCountryWatch === 'NP' ? 'NPR' : 'USD';
-                            const destCurrency = destinationCountry === 'US' ? 'USD' : 
-                                               destinationCountry === 'IN' ? 'INR' : 
-                                               destinationCountry === 'NP' ? 'NPR' : 'USD';
+                            const originCurrency = getCurrencySymbolFromCountry(originCountryWatch || 'US');
+                            const destCurrency = getCurrencySymbolFromCountry(destinationCountry || 'US');
                             return `${originCurrency} → ${destCurrency}: ${quote.exchange_rate}`;
                           })()}
                         </Badge>
@@ -912,24 +982,54 @@ const AdminQuoteDetailPage = () => {
           {/* Right Column - Results & Actions */}
           <div className="space-y-6">
             
-            {/* Cost Breakdown - Always Visible */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <DollarSign className="h-5 w-5" />
-                  Cost Breakdown
-                </CardTitle>
-                <CardDescription>
-                  Final calculated costs and pricing
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <QuoteCalculatedCosts quote={quote} />
-              </CardContent>
-            </Card>
+            {/* Cost Breakdown - Conditional rendering based on context */}
+            {isOrderContext ? (
+              // In Order context: Collapsible and hidden by default
+              <Collapsible open={isCostBreakdownOpen} onOpenChange={setIsCostBreakdownOpen}>
+                <Card>
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                      <CardTitle className="flex items-center justify-between text-lg">
+                        <div className="flex items-center gap-2">
+                          <Calculator className="h-5 w-5" />
+                          Quote Calculator & Cost Breakdown
+                        </div>
+                        <div className={`transition-transform duration-200 ${isCostBreakdownOpen ? 'rotate-90' : ''}`}>
+                          <ChevronRight className="h-4 w-4" />
+                        </div>
+                      </CardTitle>
+                      <CardDescription>
+                        Detailed cost calculations and pricing breakdown
+                      </CardDescription>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0">
+                      <QuoteCalculatedCosts quote={quote} />
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            ) : (
+              // In Quote context: Always visible, no collapsible
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <DollarSign className="h-5 w-5" />
+                    Cost Breakdown
+                  </CardTitle>
+                  <CardDescription>
+                    Final calculated costs and pricing
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <QuoteCalculatedCosts quote={quote} />
+                </CardContent>
+              </Card>
+            )}
 
             {/* Customs Tiers - Collapsible */}
-            <Collapsible>
+            <Collapsible open={isCustomsTiersOpen} onOpenChange={setIsCustomsTiersOpen}>
               <Card>
                 <CollapsibleTrigger asChild>
                   <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
@@ -938,7 +1038,9 @@ const AdminQuoteDetailPage = () => {
                         <Eye className="h-5 w-5" />
                         Customs Tiers
                       </div>
-                      <ChevronRight className="h-4 w-4" />
+                      <div className={`transition-transform duration-200 ${isCustomsTiersOpen ? 'rotate-90' : ''}`}>
+                        <ChevronRight className="h-4 w-4" />
+                      </div>
                     </CardTitle>
                     <CardDescription>
                       Tiered customs rules and logic for this quote
@@ -1017,12 +1119,8 @@ const AdminQuoteDetailPage = () => {
                           <span className="text-muted-foreground">Exchange Rate:</span>
                           <span className="font-medium">
                             {(() => {
-                              const originCurrency = originCountryWatch === 'US' ? 'USD' : 
-                                                   originCountryWatch === 'IN' ? 'INR' : 
-                                                   originCountryWatch === 'NP' ? 'NPR' : 'USD';
-                              const destCurrency = destinationCountry === 'US' ? 'USD' : 
-                                                 destinationCountry === 'IN' ? 'INR' : 
-                                                 destinationCountry === 'NP' ? 'NPR' : 'USD';
+                              const originCurrency = getCurrencySymbolFromCountry(originCountryWatch || 'US');
+                              const destCurrency = getCurrencySymbolFromCountry(destinationCountry || 'US');
                               return `${originCurrency} → ${destCurrency}: ${quote.exchange_rate}`;
                             })()}
                           </span>

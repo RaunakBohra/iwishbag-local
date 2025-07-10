@@ -53,7 +53,11 @@ import {
   isAddressComplete,
   extractQuoteShippingAddress 
 } from "@/lib/addressUtils";
+import { formatAmountForDisplay } from "@/lib/currencyUtils";
 import { useAddressSynchronization } from "@/hooks/useAddressSynchronization";
+import { checkoutSessionService } from "@/services/CheckoutSessionService";
+import { useEmailNotifications } from "@/hooks/useEmailNotifications";
+import { formatBankDetailsForEmail } from "@/lib/bankDetailsFormatter";
 
 type QuoteType = Tables<'quotes'>;
 type ProfileType = Tables<'profiles'>;
@@ -73,42 +77,59 @@ interface AddressFormData {
 }
 
 // Component to display checkout item price with proper currency conversion
-const CheckoutItemPrice = ({ item }: { item: any }) => {
-  // Create a mock quote object for the cart item
+const CheckoutItemPrice = ({ item, displayCurrency }: { item: any; displayCurrency?: string }) => {
+  // Create mock quote for hook with correct field mappings (always call hooks at the top)
   const mockQuote = {
     id: item.quoteId,
-    destination_country: item.purchaseCountryCode || item.countryCode,
+    origin_country: item.purchaseCountryCode || item.countryCode, // Where buying from
+    destination_country: item.destinationCountryCode || item.countryCode, // Where shipping to
     shipping_address: {
       destination_country: item.destinationCountryCode || item.countryCode
     }
   };
   
-  // Use the quote display currency hook
+  // Always call hooks at the top
+  const { data: userProfile } = useUserProfile();
   const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
   
+  // If displayCurrency is provided (for guest checkout), use that currency directly
+  if (displayCurrency) {
+    return <>{formatAmountForDisplay(item.finalTotal, displayCurrency, 1)}</>;
+  }
+  
+  // For authenticated users, use the existing quote display currency logic
   return <>{formatAmount(item.finalTotal)}</>;
 };
 
 // Component to display checkout total with proper currency conversion
-const CheckoutTotal = ({ items }: { items: any[] }) => {
+const CheckoutTotal = ({ items, displayCurrency }: { items: any[]; displayCurrency?: string }) => {
   // Use the first item to determine the quote format (all items should have same destination)
   const firstItem = items[0];
-  if (!firstItem) return <>$0.00</>;
   
-  const mockQuote = {
+  // Create mock quote for hook with correct field mappings (always call hooks at the top, even if firstItem might be null)
+  const mockQuote = firstItem ? {
     id: firstItem.quoteId,
-    destination_country: firstItem.purchaseCountryCode || firstItem.countryCode,
+    origin_country: firstItem.purchaseCountryCode || firstItem.countryCode, // Where buying from
+    destination_country: firstItem.destinationCountryCode || firstItem.countryCode, // Where shipping to
     shipping_address: {
       destination_country: firstItem.destinationCountryCode || firstItem.countryCode
     }
-  };
+  } : null;
+  
+  // Always call hooks at the top
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  
+  if (!firstItem) return <>$0.00</>;
   
   // Calculate total from all items
   const totalAmount = items.reduce((sum, item) => sum + item.finalTotal, 0);
   
-  // Use the quote display currency hook
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  // If displayCurrency is provided (for guest checkout), use that currency directly
+  if (displayCurrency) {
+    return <>{formatAmountForDisplay(totalAmount, displayCurrency, 1)}</>;
+  }
   
+  // For authenticated users, use the existing quote display currency logic
   return <>{formatAmount(totalAmount)}</>;
 };
 
@@ -183,10 +204,14 @@ export default function Checkout() {
 
   // Guest currency selection (defaults to destination country currency)
   const [guestSelectedCurrency, setGuestSelectedCurrency] = useState<string>('');
+  
+  // Guest checkout session token (for temporary data storage)
+  const [guestSessionToken, setGuestSessionToken] = useState<string>('');
 
   const { data: userProfile } = useUserProfile();
   const { formatAmount } = useUserCurrency();
   const { data: countries } = useAllCountries();
+  const { sendBankTransferEmail } = useEmailNotifications();
 
   // Fetch available currencies for guest selection using CurrencyService
   const { data: availableCurrencies } = useQuery({
@@ -228,23 +253,6 @@ export default function Checkout() {
   // For guest checkout, use guest selected currency or default to destination country currency
   // For authenticated users, their preferred currency will be used automatically
 
-  const guestCurrency = isGuestCheckout 
-    ? (guestSelectedCurrency || defaultGuestCurrency)
-    : undefined;
-  
-  // Payment gateway hook with currency override for guests
-  const {
-    availableMethods,
-    methodsLoading,
-    getRecommendedPaymentMethod,
-    createPayment,
-    createPaymentAsync,
-    isCreatingPayment,
-    validatePaymentRequest,
-    isMobileOnlyPayment,
-    requiresQRCode
-  } = usePaymentGateways(guestCurrency);
-
   // Load cart data from server when component mounts (same as Cart component)
   useEffect(() => {
     if (user && !cartLoading && !hasLoadedFromServer && !isGuestCheckout) {
@@ -252,22 +260,6 @@ export default function Checkout() {
       loadFromServer(user.id);
     }
   }, [user, loadFromServer, cartLoading, hasLoadedFromServer, isGuestCheckout]);
-
-  // Set recommended payment method when available methods load
-  useEffect(() => {
-    if (availableMethods && availableMethods.length > 0) {
-      const recommended = getRecommendedPaymentMethod();
-      
-      // Check if current payment method is still available
-      if (availableMethods.includes(paymentMethod)) {
-        // Current method is still available, keep it
-        return;
-      }
-      
-      // Current method is not available, set to recommended
-      setPaymentMethod(recommended);
-    }
-  }, [availableMethods, getRecommendedPaymentMethod, paymentMethod]);
 
   // Get selected cart items based on quote IDs
   // If no URL parameters, use all cart items (for direct navigation to /checkout)
@@ -306,6 +298,77 @@ export default function Checkout() {
        selectedCartItems[0].purchaseCountryCode) 
     : null;
   
+  // Get default currency for guest checkout using CurrencyService
+  const { data: defaultGuestCurrency } = useQuery({
+    queryKey: ['default-guest-currency', selectedCartItems[0]?.destinationCountryCode || selectedCartItems[0]?.countryCode],
+    queryFn: async () => {
+      if (!isGuestCheckout || !guestQuote || selectedCartItems.length === 0) {
+        return undefined;
+      }
+      
+      const countryCode = selectedCartItems[0].destinationCountryCode || selectedCartItems[0].countryCode || 'US';
+      return await currencyService.getCurrencyForCountry(countryCode);
+    },
+    enabled: isGuestCheckout && !!guestQuote && selectedCartItems.length > 0
+  });
+  
+  // Now that defaultGuestCurrency is available, define guestCurrency with fallback
+  // Always provide a valid currency for guest checkout to ensure payment methods load
+  const guestCurrency = isGuestCheckout 
+    ? (guestSelectedCurrency || defaultGuestCurrency || 'USD')
+    : undefined;
+  
+  // Payment gateway hook with currency override for guests
+  const {
+    availableMethods,
+    methodsLoading,
+    getRecommendedPaymentMethod,
+    createPayment,
+    createPaymentAsync,
+    isCreatingPayment,
+    validatePaymentRequest,
+    isMobileOnlyPayment,
+    requiresQRCode
+  } = usePaymentGateways(guestCurrency, shippingCountry);
+
+  // Debug logging for guest checkout payment state (development only)
+  useEffect(() => {
+    if (isGuestCheckout && import.meta.env.DEV) {
+      console.log('💳 Guest checkout payment state:', {
+        guestCurrency,
+        guestSelectedCurrency,
+        defaultGuestCurrency,
+        availableMethods,
+        methodsLoading,
+        shippingCountry,
+        selectedCartItems: selectedCartItems.length,
+        guestQuote: !!guestQuote,
+        destinationCountry: selectedCartItems[0]?.destinationCountryCode,
+        '🔍 Hook Result': { availableMethods, methodsLoading }
+      });
+    }
+  }, [isGuestCheckout, guestCurrency, guestSelectedCurrency, defaultGuestCurrency, availableMethods, methodsLoading, shippingCountry, selectedCartItems, guestQuote]);
+  
+  // Set recommended payment method when available methods load
+  useEffect(() => {
+    if (availableMethods && availableMethods.length > 0) {
+      const recommended = getRecommendedPaymentMethod();
+      
+      // Check if current payment method is still available
+      if (availableMethods.includes(paymentMethod)) {
+        // Current method is still available, keep it
+        return;
+      }
+      
+      // Current method is not available, set to recommended
+      setPaymentMethod(recommended);
+    }
+  }, [availableMethods, getRecommendedPaymentMethod, paymentMethod]);
+  
+  // Determine the currency for payment - defined here so it's available throughout the component
+  const paymentCurrency = isGuestCheckout 
+    ? (guestSelectedCurrency || defaultGuestCurrency || 'USD')
+    : (userProfile?.preferred_display_currency || 'USD');
   
   // Get purchase country for route display (where we buy from)
   const purchaseCountry = selectedCartItems.length > 0 
@@ -497,10 +560,6 @@ export default function Checkout() {
     .filter(item => item && item.quoteId) // Filter out items without quoteId
     .map(item => item.quoteId);
 
-  // Determine the currency for payment - defined here so it's available throughout the component
-  const paymentCurrency = isGuestCheckout 
-    ? (guestSelectedCurrency || defaultGuestCurrency || 'USD')
-    : (userProfile?.preferred_display_currency || 'USD');
 
   // Validation
   const hasValidGuestAddress = isGuestCheckout && 
@@ -675,6 +734,11 @@ export default function Checkout() {
       gateway: paymentMethod,
       success_url: `${window.location.origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${window.location.origin}/checkout?quotes=${cartQuoteIds.join(',')}`,
+      metadata: {
+        // Include guest session token for webhook processing
+        guest_session_token: isGuestCheckout ? guestSessionToken : undefined,
+        checkout_type: isGuestCheckout ? 'guest' : 'authenticated'
+      }
     };
 
     const { isValid, errors } = validatePaymentRequest(paymentRequest);
@@ -693,35 +757,58 @@ export default function Checkout() {
 
 
           if (checkoutMode === 'guest') {
-            // Pure guest checkout - no account creation
+            // Pure guest checkout - store details temporarily without updating quote
             
-            // Update quote with guest contact info and shipping address
-            const shippingAddressToSave = checkoutFormToQuoteAddress({
-              ...addressFormData,
-              recipient_name: addressFormData.recipient_name || guestContact.fullName
-            });
+            // Prepare shipping address for session storage
+            const shippingAddressForSession = {
+              streetAddress: addressFormData.address_line1,
+              city: addressFormData.city,
+              state: addressFormData.state_province_region,
+              postalCode: addressFormData.postal_code,
+              country: addressFormData.country,
+              destination_country: addressFormData.destination_country || addressFormData.country,
+              fullName: addressFormData.recipient_name || guestContact.fullName,
+              phone: addressFormData.phone
+            };
 
-            const { error: quoteUpdateError } = await supabase
-              .from('quotes')
-              .update({
-                customer_name: guestContact.fullName,
-                email: guestContact.email,
-                is_anonymous: false, // Set to false since we now have email (satisfies constraint)
-                user_id: null, // Keep user_id as null for guest checkout
-                shipping_address: shippingAddressToSave, // Update shipping address with complete data
-                address_updated_at: new Date().toISOString(),
-                address_updated_by: null // Guest user
-              })
-              .eq('id', guestQuoteId);
+            // Create or update guest checkout session instead of updating quote
+            let sessionResult;
+            if (guestSessionToken) {
+              // Update existing session
+              sessionResult = await checkoutSessionService.updateSession({
+                session_token: guestSessionToken,
+                guest_name: guestContact.fullName,
+                guest_email: guestContact.email,
+                shipping_address: shippingAddressForSession,
+                payment_currency: paymentCurrency,
+                payment_method: paymentMethod,
+                payment_amount: totalAmount
+              });
+            } else {
+              // Create new session
+              sessionResult = await checkoutSessionService.createSession({
+                quote_id: guestQuoteId!,
+                guest_name: guestContact.fullName,
+                guest_email: guestContact.email,
+                shipping_address: shippingAddressForSession,
+                payment_currency: paymentCurrency,
+                payment_method: paymentMethod,
+                payment_amount: totalAmount
+              });
+              
+              // Store session token for future updates
+              if (sessionResult.success && sessionResult.session) {
+                setGuestSessionToken(sessionResult.session.session_token);
+              }
+            }
 
-            if (quoteUpdateError) {
-              console.error('Quote update error:', quoteUpdateError);
-              throw new Error(`Failed to update quote: ${quoteUpdateError.message}`);
+            if (!sessionResult.success) {
+              throw new Error(sessionResult.error || 'Failed to create checkout session');
             }
 
             toast({ 
               title: "Processing Order", 
-              description: "Processing your order as a guest." 
+              description: "Processing your order as a guest. Your quote remains available to others until payment is confirmed." 
             });
 
           } else {
@@ -742,41 +829,79 @@ export default function Checkout() {
           console.error('Guest checkout failed:', error);
           toast({ 
             title: "Checkout Failed", 
-            description: error.message, 
+            description: error.message || 'An error occurred during checkout. Please try again.', 
             variant: "destructive" 
           });
+          setIsProcessing(false);
           return;
         }
       }
 
-      // Handle temporary address for authenticated users
-      if (!isGuestCheckout && selectedAddress === 'temp-address') {
-        // Update quotes with the temporary shipping address
-        const shippingAddressToSave = checkoutFormToQuoteAddress({
-          ...addressFormData,
-          recipient_name: addressFormData.recipient_name || userProfile?.full_name || ''
-        });
-
-        for (const quoteId of cartQuoteIds) {
-          const { error: quoteUpdateError } = await supabase
-            .from('quotes')
-            .update({
-              shipping_address: shippingAddressToSave,
-              address_updated_at: new Date().toISOString(),
-              address_updated_by: user?.id || null
-            })
-            .eq('id', quoteId);
-
-          if (quoteUpdateError) {
-            console.error('Quote update error:', quoteUpdateError);
-            toast({ 
-              title: "Error updating shipping address", 
-              description: quoteUpdateError.message, 
-              variant: "destructive" 
+      // Handle authenticated user checkout with session storage
+      if (!isGuestCheckout) {
+        try {
+          let authSessionToken = null;
+          
+          // If using temporary address, store it in session instead of updating quotes immediately
+          if (selectedAddress === 'temp-address') {
+            const temporaryShippingAddress = checkoutFormToQuoteAddress({
+              ...addressFormData,
+              recipient_name: addressFormData.recipient_name || userProfile?.full_name || ''
             });
-            setIsProcessing(false);
-            return;
+
+            // Create authenticated checkout session to store temporary data
+            const sessionResult = await checkoutSessionService.createAuthenticatedSession({
+              quote_ids: cartQuoteIds,
+              user_id: user!.id,
+              temporary_shipping_address: temporaryShippingAddress,
+              payment_currency: paymentCurrency,
+              payment_method: paymentMethod,
+              payment_amount: totalAmount
+            });
+
+            if (!sessionResult.success) {
+              throw new Error(sessionResult.error || 'Failed to create checkout session');
+            }
+
+            authSessionToken = sessionResult.session!.session_token;
+          } else {
+            // For saved addresses, create session without temporary address
+            const sessionResult = await checkoutSessionService.createAuthenticatedSession({
+              quote_ids: cartQuoteIds,
+              user_id: user!.id,
+              payment_currency: paymentCurrency,
+              payment_method: paymentMethod,
+              payment_amount: totalAmount
+            });
+
+            if (!sessionResult.success) {
+              throw new Error(sessionResult.error || 'Failed to create checkout session');
+            }
+
+            authSessionToken = sessionResult.session!.session_token;
           }
+
+          // Update payment request metadata to include session token
+          paymentRequest.metadata = {
+            ...paymentRequest.metadata,
+            auth_session_token: authSessionToken,
+            checkout_type: 'authenticated'
+          };
+
+          toast({ 
+            title: "Processing Order", 
+            description: "Processing your order. Your quotes will be updated upon payment confirmation." 
+          });
+
+        } catch (error: any) {
+          console.error('Authenticated checkout session failed:', error);
+          toast({ 
+            title: "Checkout Failed", 
+            description: error.message, 
+            variant: "destructive" 
+          });
+          setIsProcessing(false);
+          return;
         }
       }
 
@@ -811,11 +936,53 @@ export default function Checkout() {
         // This case would be for non-redirect flows like COD or Bank Transfer
         toast({ title: "Order Submitted", description: "Your order has been received." });
         
-        await updateQuotesMutation.mutateAsync({ 
+        const updateResult = await updateQuotesMutation.mutateAsync({ 
           ids: cartQuoteIds, 
           status: 'ordered', 
           method: paymentMethod 
         });
+        
+        // Send bank transfer email if payment method is bank_transfer
+        if (paymentMethod === 'bank_transfer' && updateResult) {
+          try {
+            // Get bank details for the destination country
+            const destinationCountry = selectedCartItems[0]?.destinationCountryCode || 
+                                    selectedCartItems[0]?.countryCode || 'US';
+            
+            const { data: countrySettings } = await supabase
+              .from('country_settings')
+              .select('bank_accounts')
+              .eq('code', destinationCountry)
+              .single();
+            
+            if (countrySettings?.bank_accounts) {
+              const formattedBankDetails = formatBankDetailsForEmail(
+                countrySettings.bank_accounts,
+                paymentCurrency
+              );
+              
+              // Create a quote object for the email
+              const quoteForEmail = {
+                id: updateResult.id,
+                display_id: updateResult.display_id,
+                email: isGuestCheckout ? guestContact.email : user?.email || '',
+                customer_name: isGuestCheckout ? guestContact.fullName : userProfile?.full_name || '',
+                final_total: totalAmount,
+                currency: paymentCurrency
+              };
+              
+              sendBankTransferEmail(quoteForEmail as any, formattedBankDetails);
+              
+              toast({ 
+                title: "Bank Transfer Details Sent", 
+                description: "We've sent bank transfer instructions to your email." 
+              });
+            }
+          } catch (error) {
+            console.warn('Failed to send bank transfer email:', error);
+            // Don't fail the order if email fails
+          }
+        }
       }
     } catch (error: any) {
       toast({ title: "An Error Occurred", description: error.message, variant: "destructive" });
@@ -1532,6 +1699,8 @@ export default function Checkout() {
                     currency={paymentCurrency}
                     showRecommended={true}
                     disabled={isProcessing}
+                    availableMethods={availableMethods}
+                    methodsLoading={methodsLoading}
                   />
                 </CardContent>
               </Card>
@@ -1574,7 +1743,7 @@ export default function Checkout() {
                         <Badge variant="outline">{item.countryCode}</Badge> 
                       </div>
                       <div className="text-right">
-                        <div className="font-bold"><CheckoutItemPrice item={item} /></div>
+                        <div className="font-bold"><CheckoutItemPrice item={item} displayCurrency={isGuestCheckout ? paymentCurrency : undefined} /></div>
                       </div>
                     </div>
                   ))}
@@ -1584,11 +1753,11 @@ export default function Checkout() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span><CheckoutTotal items={selectedCartItems} /></span>
+                      <span><CheckoutTotal items={selectedCartItems} displayCurrency={isGuestCheckout ? paymentCurrency : undefined} /></span>
                     </div>
                     <div className="flex justify-between font-bold text-lg">
                       <span>Total:</span>
-                      <span><CheckoutTotal items={selectedCartItems} /></span>
+                      <span><CheckoutTotal items={selectedCartItems} displayCurrency={isGuestCheckout ? paymentCurrency : undefined} /></span>
                     </div>
                   </div>
 
@@ -1609,7 +1778,7 @@ export default function Checkout() {
                         {isGuestCheckout && checkoutMode === 'signup' && "Please Create Account Above First"}
                         {(!isGuestCheckout || checkoutMode === 'guest') && (
                           <>
-                            Place Order - <CheckoutTotal items={selectedCartItems} />
+                            Place Order - <CheckoutTotal items={selectedCartItems} displayCurrency={isGuestCheckout ? paymentCurrency : undefined} />
                           </>
                         )}
                       </>

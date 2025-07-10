@@ -95,10 +95,14 @@ const QuoteForm = () => {
     setShowAddressDialog(false);
   };
 
-  const handleAddressFormSuccess = () => {
+  const handleAddressFormSuccess = (newAddress?: any) => {
     setShowAddressDialog(false);
     // Invalidate and refetch addresses
     queryClient.invalidateQueries({ queryKey: ['user_addresses', user?.id] });
+    // Auto-select the new address if one was created
+    if (newAddress) {
+      setSelectedAddressId(newAddress.id);
+    }
   };
 
   const handleSubmit = (data: any) => {

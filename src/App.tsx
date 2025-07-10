@@ -33,6 +33,7 @@ const OrderConfirmationPage = React.lazy(() => import("@/pages/OrderConfirmation
 const PaymentSuccess = React.lazy(() => import("@/pages/PaymentSuccess"));
 const PaymentFailure = React.lazy(() => import("@/pages/PaymentFailure"));
 const QuoteDetailUnified = React.lazy(() => import("@/pages/dashboard/QuoteDetailUnified"));
+const ResetPassword = React.lazy(() => import("@/pages/auth/ResetPassword"));
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import("@/pages/admin/Dashboard"));
@@ -53,6 +54,7 @@ const AdminQuoteDetailPage = React.lazy(() => import("@/components/admin/AdminQu
 const QuoteTemplatesPage = React.lazy(() => import("@/components/admin/QuoteTemplatesPage").then(m => ({ default: m.QuoteTemplatesPage })));
 const BankAccountSettings = React.lazy(() => import("@/components/admin/BankAccountSettings").then(m => ({ default: m.BankAccountSettings })));
 const SystemSettings = React.lazy(() => import("@/components/admin/SystemSettings").then(m => ({ default: m.SystemSettings })));
+const TestEmail = React.lazy(() => import("@/pages/TestEmail"));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 
@@ -89,6 +91,7 @@ const router = createBrowserRouter([
           { path: "customs", element: <CustomsCategories /> },
           { path: "bank-accounts", element: <BankAccountSettings /> },
           { path: "system-settings", element: <SystemSettings /> },
+          { path: "test-email", element: <TestEmail /> },
           { path: "payment-management", element: (
             <ErrorBoundary fallback={AdminErrorFallback}>
               <PaymentManagement />
@@ -123,6 +126,10 @@ const router = createBrowserRouter([
         element: <Auth />,
       },
       {
+        path: "auth/reset",
+        element: <ResetPassword />,
+      },
+      {
         path: "about",
         element: <About />,
       },
@@ -149,6 +156,10 @@ const router = createBrowserRouter([
             <Checkout />
           </ErrorBoundary>
         ),
+      },
+      {
+        path: "order-confirmation/:id",
+        element: <OrderConfirmationPage />,
       },
       {
         element: <ProtectedRoute />,
@@ -196,11 +207,6 @@ const router = createBrowserRouter([
           {
             path: "messages",
             element: <MessageCenter />,
-          },
-          
-          {
-            path: "order-confirmation/:id", // New route for order confirmation
-            element: <OrderConfirmationPage />,
           },
           {
             path: "payment-success", // PayU success redirect

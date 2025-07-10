@@ -215,6 +215,11 @@ export const getPaymentMethodsByCurrency = async (currency: string, codEnabled: 
       // Only filter by currency
       const currencyMatch = gateway.supported_currencies.includes(currency);
       
+      // Don't filter bank_transfer and cod here - they'll be handled separately
+      if (gateway.code === 'bank_transfer' || gateway.code === 'cod') {
+        return false;
+      }
+      
       let hasKeys = true;
       if (gateway.code === 'stripe') {
         const pk = gateway.test_mode ? gateway.config?.test_publishable_key : gateway.config?.live_publishable_key;
@@ -237,11 +242,15 @@ export const getPaymentMethodsByCurrency = async (currency: string, codEnabled: 
 
   let finalMethods = filteredGateways.map(gateway => gateway.code as PaymentGateway);
 
-  // Always add Bank Transfer
-  finalMethods.push('bank_transfer');
+  // Add Bank Transfer only if it supports the currency
+  const bankTransferGateway = gateways.find(g => g.code === 'bank_transfer');
+  if (bankTransferGateway && bankTransferGateway.supported_currencies.includes(currency)) {
+    finalMethods.push('bank_transfer');
+  }
 
-  // Add COD if enabled
-  if (codEnabled) {
+  // Add COD only if enabled AND supports the currency
+  const codGateway = gateways.find(g => g.code === 'cod');
+  if (codEnabled && codGateway && codGateway.supported_currencies.includes(currency)) {
     finalMethods.push('cod');
   }
   
@@ -249,7 +258,7 @@ export const getPaymentMethodsByCurrency = async (currency: string, codEnabled: 
   return [...new Set(finalMethods)];
 };
 
-export const usePaymentGateways = (overrideCurrency?: string) => {
+export const usePaymentGateways = (overrideCurrency?: string, guestShippingCountry?: string) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -288,16 +297,30 @@ export const usePaymentGateways = (overrideCurrency?: string) => {
 
   // Get available payment methods for current user or guest
   const { data: availableMethods, isLoading: methodsLoading } = useQuery({
-    queryKey: ['available-payment-methods', overrideCurrency || userProfile?.preferred_display_currency, userProfile?.cod_enabled],
+    queryKey: user 
+      ? ['available-payment-methods', 'authenticated', userProfile?.preferred_display_currency, userProfile?.cod_enabled, user.id]
+      : ['available-payment-methods', 'guest', overrideCurrency, guestShippingCountry],
     queryFn: async (): Promise<PaymentGateway[]> => {
       // Use override currency if provided (for guest checkout), otherwise use user's preferred currency
       const currencyCode = overrideCurrency || userProfile?.preferred_display_currency;
       
       if (!currencyCode) {
         console.log('Payment methods not available: missing currency data', {
-          currency: currencyCode
+          overrideCurrency,
+          userProfileCurrency: userProfile?.preferred_display_currency,
+          user: !!user
         });
         return [];
+      }
+
+      // Debug logging for development
+      if (import.meta.env.DEV) {
+        console.log('🚀 Payment gateway query starting:', { 
+          currencyCode, 
+          isGuest: !user,
+          overrideCurrency,
+          guestShippingCountry 
+        });
       }
 
       const { data: gateways, error } = await supabase
@@ -306,17 +329,29 @@ export const usePaymentGateways = (overrideCurrency?: string) => {
         .eq('is_active', true);
 
       if (error) {
-        console.error('Error fetching gateways:', error);
+        console.error('❌ Error fetching payment gateways:', error);
         return [];
       }
       if (!gateways) {
+        console.error('❌ No payment gateways returned from database');
         return [];
       }
+      
+      console.log('✅ Payment gateways fetched:', gateways.length, 'gateways');
+      
+      // Log bank_transfer specifically
+      const bankTransferInDb = gateways.find(g => g.code === 'bank_transfer');
+      console.log('🏦 Bank transfer in DB:', bankTransferInDb ? 'Found' : 'Not found', bankTransferInDb);
 
       const filteredGateways = gateways
         .filter(gateway => {
           // Only filter by currency, not by country
           const currencyMatch = gateway.supported_currencies.includes(currencyCode);
+          
+          // Don't filter bank_transfer and cod here - they'll be handled separately
+          if (gateway.code === 'bank_transfer' || gateway.code === 'cod') {
+            return false;
+          }
           
           let hasKeys = true;
           if (gateway.code === 'stripe') {
@@ -341,18 +376,53 @@ export const usePaymentGateways = (overrideCurrency?: string) => {
 
       let finalMethods = filteredGateways.map(gateway => gateway.code as PaymentGateway);
 
-      // Always add Bank Transfer
-      finalMethods.push('bank_transfer');
+      // Add Bank Transfer only if it supports the currency
+      const bankTransferGateway = gateways.find(g => g.code === 'bank_transfer');
+      if (bankTransferGateway && bankTransferGateway.supported_currencies.includes(currencyCode)) {
+        finalMethods.push('bank_transfer');
+      }
 
-      // Add COD if enabled for the user
-      if (userProfile?.cod_enabled) {
-        finalMethods.push('cod');
+      // Add COD based on user preference OR guest shipping country
+      const codGateway = gateways.find(g => g.code === 'cod');
+      if (codGateway && codGateway.supported_currencies.includes(currencyCode)) {
+        // For authenticated users: check user preference
+        if (user && userProfile?.cod_enabled) {
+          finalMethods.push('cod');
+        }
+        // For guests: check if shipping country supports COD
+        else if (!user && guestShippingCountry && codGateway.supported_countries.includes(guestShippingCountry)) {
+          finalMethods.push('cod');
+        }
       }
       
       // Remove duplicates
-      return [...new Set(finalMethods)];
+      const uniqueMethods = [...new Set(finalMethods)];
+      
+      // Debug logging for development
+      if (import.meta.env.DEV) {
+        console.log('🎯 Available payment methods for currency', currencyCode, ':', uniqueMethods);
+        console.log('🔧 Query context:', { 
+          isGuest: !user, 
+          overrideCurrency, 
+          guestShippingCountry,
+          userProfileCurrency: userProfile?.preferred_display_currency 
+        });
+        console.log('🏦 Payment gateways found:', {
+          totalGateways: gateways.length,
+          filteredGateways: filteredGateways.length,
+          bankTransferGateway: bankTransferGateway ? 'Found' : 'Not found',
+          codGateway: codGateway ? 'Found' : 'Not found',
+          bankTransferSupports: bankTransferGateway?.supported_currencies,
+          requestedCurrency: currencyCode
+        });
+      }
+      
+      return uniqueMethods;
     },
-    enabled: !!(overrideCurrency || userProfile?.preferred_display_currency) // Enable for both authenticated users with profile and guests with override currency
+    enabled: user ? !!userProfile : !!overrideCurrency, // For auth users: wait for profile, for guests: need override currency
+    staleTime: 1000 * 60 * 5, // 5 minutes - prevent excessive refetching
+    retry: 3,
+    retryDelay: 1000
   });
 
   // Create payment mutation
@@ -364,12 +434,23 @@ export const usePaymentGateways = (overrideCurrency?: string) => {
         throw new Error(`Invalid payment request: ${errors.join(', ')}`);
       }
 
-      // Correctly get the user's session and access token
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-
-      if (!accessToken) {
-        throw new Error('User is not authenticated.');
+      // For guest checkout, we'll use the anon key instead of user's access token
+      let authToken: string;
+      
+      if (paymentRequest.metadata?.checkout_type === 'guest') {
+        // For guest checkout, use the anon key
+        authToken = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        if (!authToken) {
+          throw new Error('Anonymous key not configured');
+        }
+      } else {
+        // For authenticated users, get the session token
+        const { data: { session } } = await supabase.auth.getSession();
+        authToken = session?.access_token || '';
+        
+        if (!authToken) {
+          throw new Error('User is not authenticated.');
+        }
       }
 
       // Use the local Supabase URL for Edge Functions
@@ -386,7 +467,7 @@ export const usePaymentGateways = (overrideCurrency?: string) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
+            'Authorization': `Bearer ${authToken}`,
           },
           body: JSON.stringify(paymentRequest),
         }

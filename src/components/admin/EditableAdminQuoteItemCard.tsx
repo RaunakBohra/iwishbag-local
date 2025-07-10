@@ -313,33 +313,32 @@ export const EditableAdminQuoteItemCard = ({
             control={control}
             name={`items.${index}.options`}
             render={({ field }) => {
-              // Parse the options JSON to get notes
+              // Handle both JSON and plain text formats for customer notes
               let notes = '';
               try {
                 if (field.value) {
+                  // Try to parse as JSON first
                   const options = JSON.parse(field.value);
                   notes = options.notes || '';
                 }
               } catch {
-                // If parsing fails, treat as plain text
+                // If parsing fails, treat as plain text (legacy format)
                 notes = field.value || '';
               }
+              
               return (
                 <FormItem className="m-0 w-full">
                   <FormLabel className="text-xs font-medium text-muted-foreground">Customer Notes</FormLabel>
                   <FormControl>
                     <Input
                       value={notes}
-                      placeholder="Customer notes..."
+                      placeholder="Customer specifications and notes..."
                       className="h-9 mt-1 w-full"
                       onChange={(e) => {
-                        // Update the field with JSON structure
+                        // Always store as plain text for simplicity
+                        // This ensures compatibility with customer form input
                         const newNotes = e.target.value;
-                        if (newNotes) {
-                          field.onChange(JSON.stringify({ notes: newNotes }));
-                        } else {
-                          field.onChange(null);
-                        }
+                        field.onChange(newNotes || null);
                       }}
                     />
                   </FormControl>
