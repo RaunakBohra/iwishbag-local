@@ -281,6 +281,28 @@ interface CartItem {
 - `ProtectedRoute.tsx` - Route-level protection
 - Database: `user_roles` table with role assignments
 
+### Password Reset Feature (As of July 2025)
+The password reset system uses Supabase Auth's built-in functionality:
+
+#### Components:
+- `src/pages/auth/ResetPassword.tsx` - Password reset form page
+- `src/components/forms/AuthForm.tsx` - Forgot password modal
+- `src/hooks/useEmailNotifications.ts` - Email templates for reset notifications
+
+#### Flow:
+1. **Request Reset**: User clicks "Forgot Password?" in AuthForm
+2. **Email Sent**: Supabase sends reset link to user's email
+3. **Reset Page**: User clicks link, redirected to `/auth/reset` with tokens
+4. **New Password**: User enters new password with validation
+5. **Confirmation**: Success message and redirect to login
+
+#### Password Requirements:
+- Minimum 8 characters
+- At least one uppercase letter
+- At least one lowercase letter  
+- At least one number
+- At least one special character
+
 ### Critical Auth Patterns
 ```typescript
 // Role checking pattern
@@ -302,6 +324,7 @@ has_role(role)     // Specific role check
 - ❌ Hardcode permissions in components
 - ❌ Bypass RLS policies for data access
 - ❌ Assume user roles exist (check first)
+- ❌ Modify password reset flow without testing email delivery
 
 ## Payment Integration - CORE DOCUMENTATION
 **NEVER modify payment system without understanding this section fully**
