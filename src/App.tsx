@@ -34,6 +34,7 @@ const PaymentSuccess = React.lazy(() => import("@/pages/PaymentSuccess"));
 const PaymentFailure = React.lazy(() => import("@/pages/PaymentFailure"));
 const QuoteDetailUnified = React.lazy(() => import("@/pages/dashboard/QuoteDetailUnified"));
 const ResetPassword = React.lazy(() => import("@/pages/auth/ResetPassword"));
+const EmailConfirmation = React.lazy(() => import("@/pages/auth/EmailConfirmation"));
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import("@/pages/admin/Dashboard"));
@@ -128,6 +129,10 @@ const router = createBrowserRouter([
       {
         path: "auth/reset",
         element: <ResetPassword />,
+      },
+      {
+        path: "auth/confirm",
+        element: <EmailConfirmation />,
       },
       {
         path: "about",

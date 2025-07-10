@@ -18,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { Loader2, Mail } from "lucide-react";
+import { Loader2, Mail, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useEmailNotifications } from "@/hooks/useEmailNotifications";
 
@@ -31,7 +31,12 @@ const signUpSchema = z.object({
   name: z.string().min(1, { message: "Name is required." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
   phone: z.string().min(8, { message: "Please enter a valid phone number (minimum 8 digits)." }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
   terms: z.literal(true, { errorMap: () => ({ message: "You must agree to the terms and conditions." }) }),
 });
 
@@ -46,6 +51,7 @@ const AuthForm = () => {
   const [showForgot, setShowForgot] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
@@ -67,6 +73,19 @@ const AuthForm = () => {
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { email: "" },
   });
+
+  const getPasswordStrength = (password: string) => {
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (password.match(/[a-z]/)) strength++;
+    if (password.match(/[A-Z]/)) strength++;
+    if (password.match(/[0-9]/)) strength++;
+    if (password.match(/[^A-Za-z0-9]/)) strength++;
+    
+    if (strength <= 2) return { text: 'Weak', color: 'text-red-500', bg: 'bg-red-500' };
+    if (strength <= 4) return { text: 'Medium', color: 'text-yellow-500', bg: 'bg-yellow-500' };
+    return { text: 'Strong', color: 'text-green-500', bg: 'bg-green-500' };
+  };
 
   const handleSignIn = async (values: z.infer<typeof signInSchema>) => {
     setLoading(true);
@@ -106,7 +125,7 @@ const AuthForm = () => {
       password: values.password,
       options: {
         data: { name: values.name, phone: values.phone },
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `https://whyteclub.com/auth/confirm`,
       },
     });
     if (error) {
@@ -119,9 +138,10 @@ const AuthForm = () => {
       toast({ title: "Error signing up", description: error.message, variant: "destructive" });
     } else {
       toast({ 
-        title: "Account created successfully!", 
-        description: "You can now sign in with your email and password.",
-        variant: "default"
+        title: "Welcome to iWishBag!", 
+        description: "Please check your email to confirm your account. You'll be able to sign in after email verification.",
+        variant: "default",
+        duration: 8000
       });
       setShowSignUp(false);
     }
@@ -228,11 +248,11 @@ const AuthForm = () => {
 
       {/* Sign Up Modal */}
       <Dialog open={showSignUp} onOpenChange={setShowSignUp}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="bg-gradient-to-br from-blue-50 to-indigo-50 border-border shadow-xl max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Sign Up</DialogTitle>
-            <DialogDescription>
-              Create a new account to start using our services.
+            <DialogTitle className="text-foreground text-xl font-semibold">Join iWishBag</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Create your account to start shopping internationally
             </DialogDescription>
           </DialogHeader>
           <Form {...signUpForm}>
@@ -296,20 +316,67 @@ const AuthForm = () => {
               <FormField
                 control={signUpForm.control}
                 name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-foreground">Password</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="password" 
-                        placeholder="••••••••" 
-                        {...field}
-                        className="border-border focus:border-foreground"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const password = field.value || '';
+                  const passwordStrength = getPasswordStrength(password);
+                  return (
+                    <FormItem>
+                      <FormLabel className="text-foreground">Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="••••••••" 
+                            {...field}
+                            className="border-border focus:border-foreground pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </FormControl>
+                      {password && (
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2 text-sm">
+                            <span>Password strength:</span>
+                            <span className={passwordStrength.color}>{passwordStrength.text}</span>
+                            <div className="flex-1 bg-gray-200 rounded-full h-2 ml-2">
+                              <div 
+                                className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.bg}`}
+                                style={{ width: `${Math.min((passwordStrength.text === 'Weak' ? 33 : passwordStrength.text === 'Medium' ? 66 : 100), 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="bg-blue-50 p-3 rounded-md border">
+                            <p className="text-sm text-blue-800 font-medium mb-2">Password Requirements:</p>
+                            <div className="space-y-1 text-xs text-blue-700">
+                              <div className={`flex items-center space-x-1 ${password.length >= 8 ? 'text-green-600' : ''}`}>
+                                <span>• At least 8 characters</span>
+                              </div>
+                              <div className={`flex items-center space-x-1 ${password.match(/[A-Z]/) ? 'text-green-600' : ''}`}>
+                                <span>• One uppercase letter</span>
+                              </div>
+                              <div className={`flex items-center space-x-1 ${password.match(/[a-z]/) ? 'text-green-600' : ''}`}>
+                                <span>• One lowercase letter</span>
+                              </div>
+                              <div className={`flex items-center space-x-1 ${password.match(/[0-9]/) ? 'text-green-600' : ''}`}>
+                                <span>• One number</span>
+                              </div>
+                              <div className={`flex items-center space-x-1 ${password.match(/[^A-Za-z0-9]/) ? 'text-green-600' : ''}`}>
+                                <span>• One special character</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={signUpForm.control}
@@ -343,16 +410,16 @@ const AuthForm = () => {
           forgotForm.reset();
         }
       }}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="bg-gradient-to-br from-slate-50 to-gray-50 border-border shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-foreground flex items-center gap-2">
+            <DialogTitle className="text-foreground flex items-center gap-2 text-xl font-semibold">
               <Mail className="h-5 w-5" />
-              {resetEmailSent ? "Email Sent!" : "Forgot Password"}
+              {resetEmailSent ? "Email Sent!" : "Reset Password"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-muted-foreground">
               {resetEmailSent 
-                ? "We've sent a password reset link to your email address." 
-                : "Enter your email address and we'll send you a password reset link."}
+                ? "We've sent a secure password reset link to your email address from iWishBag." 
+                : "Enter your email address and we'll send you a secure reset link."}
             </DialogDescription>
           </DialogHeader>
           
