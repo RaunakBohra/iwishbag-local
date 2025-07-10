@@ -816,6 +816,8 @@ const AdminQuoteDetailPage = () => {
                   </div>
                 </div>
               </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
               <CardContent className="p-0">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
                   
@@ -961,7 +963,210 @@ const AdminQuoteDetailPage = () => {
                   )}
                 </div>
               </CardContent>
-            </Card>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            ) : (
+              // In Quote context: Always visible
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Package className="h-5 w-5" />
+                      Quote Builder
+                    </CardTitle>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Purchase From:</span>
+                        <FormField
+                          control={form.control}
+                          name="origin_country"
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                              <FormControl>
+                                <SelectTrigger className="w-40 h-8">
+                                  <SelectValue placeholder="Select country" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {countries?.map((country) => (
+                                  <SelectItem key={country.code} value={country.code}>
+                                    <div className="flex items-center gap-2">
+                                      <span>{country.name}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Currency:</span>
+                        <Badge variant="outline" className="text-sm">
+                          {getCurrencySymbol(countryCurrency)} {countryCurrency}
+                        </Badge>
+                      </div>
+                      {quote.exchange_rate && quote.exchange_rate !== 1 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-muted-foreground">Exchange Rate:</span>
+                          <Badge variant="outline" className="text-sm">
+                            {(() => {
+                              const originCurrency = getCurrencySymbolFromCountry(originCountryWatch || 'US');
+                              const destCurrency = getCurrencySymbolFromCountry(destinationCountry || 'US');
+                              return `${originCurrency} → ${destCurrency}: ${quote.exchange_rate}`;
+                            })()}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+                    {/* Left Column - Products Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium text-muted-foreground">Products</h3>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => append({})}
+                          className="h-8"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Product
+                        </Button>
+                      </div>
+                      
+                      {fields && fields.length > 0 ? (
+                        <div className="space-y-3">
+                          {fields.map((item, index) => (
+                            <EditableAdminQuoteItemCard 
+                              key={item.id} 
+                              index={index}
+                              control={form.control}
+                              allCountries={allCountries}
+                              onDelete={() => remove(index)}
+                              routeWeightUnit={routeWeightUnit}
+                              smartWeightUnit={smartWeightUnit}
+                              countryCurrency={countryCurrency}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Package className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                          <p>No products added yet</p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => append({})}
+                            className="mt-2"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add First Product
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right Column - Settings Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-medium text-muted-foreground">Calculation Settings</h3>
+                      
+                      <div className="space-y-4">
+                        <QuoteDetailForm 
+                          form={form}
+                          shippingAddress={shippingAddress}
+                          detectedCustomsPercentage={appliedTier?.customs_percentage}
+                          detectedCustomsTier={appliedTier}
+                          isOrder={isOrder}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Section - Update Button and Status */}
+                  <div className="border-t bg-muted/30 p-6 space-y-4">
+                    {/* Calculate and Update Buttons */}
+                    <div className="flex gap-3">
+                      {/* Calculate Button */}
+                      <Button
+                        variant="outline"
+                        onClick={triggerCalculation}
+                        disabled={isCalculating || !canRecalculate}
+                        className="flex-1 h-12 text-lg"
+                      >
+                        {isCalculating ? (
+                          <>
+                            <Clock className="h-5 w-5 mr-2 animate-spin" />
+                            Calculating...
+                          </>
+                        ) : (
+                          <>
+                            <Calculator className="h-5 w-5 mr-2" />
+                            Calculate Now
+                          </>
+                        )}
+                      </Button>
+                      
+                      {/* Update Button */}
+                      <Button
+                        type="submit"
+                        disabled={!isDirty || isUpdating}
+                        className="flex-1 h-12 text-lg"
+                      >
+                        {isUpdating ? (
+                          <>
+                            <Clock className="h-5 w-5 mr-2 animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-5 w-5 mr-2" />
+                            Update Quote
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Calculation Status */}
+                    {isOrderContext && (
+                      <div className="flex items-center justify-center text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          {isCalculating ? (
+                            <>
+                              <Clock className="h-4 w-4 animate-spin" />
+                              <span>Calculating costs...</span>
+                            </>
+                          ) : calculationError ? (
+                            <>
+                              <AlertTriangle className="h-4 w-4 text-destructive" />
+                              <span className="text-destructive">Calculation failed: {calculationError}</span>
+                            </>
+                          ) : lastCalculationTime ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span>Last calculated: {lastCalculationTime.toLocaleTimeString()}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">
+                                Use 'Calculate Now' to update costs
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Customer Messages - Only the chat UI, no card or header */}
             <div className="mt-4">
