@@ -57,17 +57,17 @@ serve(async (req) => {
       )
     }
 
-    // Check if we're in development mode
-    const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development' || 
-                         Deno.env.get('IS_LOCAL') === 'true' ||
-                         !Deno.env.get('RESEND_API_KEY');
+    // Check if we should use local Inbucket (only if explicitly enabled)
+    const useInbucket = Deno.env.get('USE_INBUCKET') === 'true';
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
     
     console.log("🔵 Environment check:");
     console.log("  - ENVIRONMENT:", Deno.env.get('ENVIRONMENT'));
     console.log("  - IS_LOCAL:", Deno.env.get('IS_LOCAL'));
-    console.log("  - isDevelopment:", isDevelopment);
+    console.log("  - USE_INBUCKET:", useInbucket);
+    console.log("  - RESEND_API_KEY exists:", !!resendApiKey);
 
-    if (isDevelopment) {
+    if (useInbucket && !resendApiKey) {
       // Use local Inbucket SMTP for development
       console.log("📧 Using Inbucket for local email testing");
       
@@ -127,9 +127,8 @@ serve(async (req) => {
       }
     }
 
-    // Production: Use Resend API
-    console.log("🔵 Getting Resend API key from environment...");
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    // Use Resend API (works in both local and production)
+    console.log("🔵 Using Resend API...");
     console.log("🔵 API key exists:", !!resendApiKey);
     console.log("🔵 API key length:", resendApiKey?.length || 0);
     console.log("🔵 API key starts with:", resendApiKey?.substring(0, 5) + "...");
@@ -137,7 +136,7 @@ serve(async (req) => {
     if (!resendApiKey) {
       console.log("❌ Resend API key not configured");
       return new Response(
-        JSON.stringify({ error: 'Resend API key not configured' }),
+        JSON.stringify({ error: 'Resend API key not configured. Please set RESEND_API_KEY in your environment.' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

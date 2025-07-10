@@ -107,31 +107,46 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleSignUp = async (values: z.infer<typeof signUpSchema>) => {
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
-      options: {
-        data: { name: values.name, phone: values.phone },
-        emailRedirectTo: `https://whyteclub.com/auth/confirm`,
-      },
-    });
     
-    if (error) {
-      toast({ 
-        title: "Error signing up", 
-        description: error.message, 
-        variant: "destructive" 
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: { name: values.name, phone: values.phone },
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        },
       });
-    } else {
+      
+      if (error) {
+        toast({ 
+          title: "Error signing up", 
+          description: error.message, 
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      // Supabase will handle email confirmation automatically
       toast({ 
         title: "Welcome to iWishBag!", 
         description: "Please check your email to confirm your account. You'll be able to sign in after email verification.",
         duration: 8000
       });
+      
       // Switch to sign in mode after successful signup
       onSwitchMode?.('signin');
+      
+    } catch (err) {
+      console.error('Unexpected signup error:', err);
+      toast({ 
+        title: "Error signing up", 
+        description: "An unexpected error occurred. Please try again.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSignInWithGoogle = async () => {

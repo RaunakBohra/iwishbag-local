@@ -120,32 +120,118 @@ const AuthForm = () => {
 
   const handleSignUp = async (values: z.infer<typeof signUpSchema>) => {
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
-      options: {
-        data: { name: values.name, phone: values.phone },
-        emailRedirectTo: `https://whyteclub.com/auth/confirm`,
-      },
-    });
-    if (error) {
-      console.error('Sign up error details:', {
-        message: error.message,
-        status: error.status,
-        name: error.name,
-        stack: error.stack
+    
+    try {
+      // Sign up user with Supabase (email confirmation disabled)
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: { name: values.name, phone: values.phone },
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        },
       });
-      toast({ title: "Error signing up", description: error.message, variant: "destructive" });
-    } else {
-      toast({ 
-        title: "Welcome to iWishBag!", 
-        description: "Please check your email to confirm your account. You'll be able to sign in after email verification.",
-        variant: "default",
-        duration: 8000
-      });
+
+      if (error) {
+        console.error('Sign up error details:', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          stack: error.stack
+        });
+        toast({ title: "Error signing up", description: error.message, variant: "destructive" });
+        return;
+      }
+
+      // In local development, send welcome email manually (since confirmations are disabled)
+      // In production, Supabase handles this automatically
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      
+      if (isLocal && data.user) {
+        console.log("🔵 Sending welcome email for local development...");
+        
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-email', {
+            body: {
+              to: values.email,
+              subject: 'Welcome to iWishBag!',
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to iWishBag!</h1>
+                    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Shop The World, Delivered To You</p>
+                  </div>
+                  
+                  <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h2 style="color: #333; margin-bottom: 20px;">Hi ${values.name}! 🎉</h2>
+                    
+                    <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
+                      Thank you for joining iWishBag! Your account has been created and you can start shopping immediately.
+                    </p>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                      <a href="${window.location.origin}/dashboard" 
+                         style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 15px 30px; border-radius: 6px; font-weight: 600;">
+                        Start Shopping
+                      </a>
+                    </div>
+                    
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 6px; margin: 20px 0;">
+                      <h3 style="margin-top: 0; color: #333;">🌟 What you can do with iWishBag:</h3>
+                      <ul style="color: #666; padding-left: 20px;">
+                        <li>Shop from Amazon, eBay, Flipkart, Alibaba and more</li>
+                        <li>Get instant shipping quotes to India & Nepal</li>
+                        <li>Track your orders in real-time</li>
+                        <li>Secure international payment processing</li>
+                      </ul>
+                    </div>
+                    
+                    <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px;">
+                      Welcome to iWishBag - Happy Shopping!
+                    </p>
+                  </div>
+                </div>
+              `,
+              from: 'iWishBag <noreply@whyteclub.com>'
+            }
+          });
+
+          if (emailError) {
+            console.error('Welcome email sending error:', emailError);
+          } else {
+            console.log("✅ Welcome email sent successfully");
+          }
+        } catch (err) {
+          console.error('Welcome email error:', err);
+        }
+        
+        toast({ 
+          title: "Welcome to iWishBag!", 
+          description: "Your account has been created successfully! Check your email for a welcome message.",
+          variant: "default",
+          duration: 8000
+        });
+      } else {
+        toast({ 
+          title: "Welcome to iWishBag!", 
+          description: "Please check your email to confirm your account. You'll be able to sign in after email verification.",
+          variant: "default",
+          duration: 8000
+        });
+      }
+      
       setShowSignUp(false);
+      
+    } catch (err) {
+      console.error('Unexpected signup error:', err);
+      toast({ 
+        title: "Error signing up", 
+        description: "An unexpected error occurred. Please try again.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleForgotPassword = async (values: z.infer<typeof forgotPasswordSchema>) => {
@@ -154,7 +240,7 @@ const AuthForm = () => {
     
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(values.email, { 
-        redirectTo: `https://whyteclub.com/auth/reset` 
+        redirectTo: `${window.location.origin}/auth/reset` 
       });
       
       if (error) {
