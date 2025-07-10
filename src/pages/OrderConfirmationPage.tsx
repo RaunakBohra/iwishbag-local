@@ -530,7 +530,6 @@ const OrderConfirmationPage: React.FC = () => {
             </>
           )}
         </CardFooter>
-        </div>
       </Card>
     </div>
   );
