@@ -35,6 +35,7 @@ export default function ResetPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isValidSession, setIsValidSession] = useState(false);
 
   const {
     register,
@@ -48,13 +49,40 @@ export default function ResetPassword() {
   const password = watch('password', '');
 
   useEffect(() => {
-    // Check if we have the necessary tokens in the URL
+    // Enhanced session handling with PASSWORD_RECOVERY event detection
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event, session);
+      
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsValidSession(true);
+        setTokenError(null);
+      } else if (event === 'SIGNED_OUT') {
+        setIsValidSession(false);
+      }
+    });
+
+    // Fallback: Check URL parameters for tokens (backward compatibility)
     const accessToken = searchParams.get('access_token');
     const type = searchParams.get('type');
 
-    if (!accessToken || type !== 'recovery') {
+    if (accessToken && type === 'recovery') {
+      // Set the session manually if PASSWORD_RECOVERY event wasn't triggered
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: searchParams.get('refresh_token') || '',
+      }).then(({ error }) => {
+        if (!error) {
+          setIsValidSession(true);
+          setTokenError(null);
+        } else {
+          setTokenError('Invalid or expired reset token. Please request a new password reset link.');
+        }
+      });
+    } else if (!accessToken || type !== 'recovery') {
       setTokenError('Invalid or missing reset token. Please request a new password reset link.');
     }
+
+    return () => subscription.unsubscribe();
   }, [searchParams]);
 
   const getPasswordStrength = (password: string) => {
@@ -73,28 +101,15 @@ export default function ResetPassword() {
   const passwordStrength = getPasswordStrength(password);
 
   const onSubmit = async (data: ResetPasswordForm) => {
+    if (!isValidSession) {
+      toast.error('Invalid session. Please request a new password reset link.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Extract tokens from URL
-      const accessToken = searchParams.get('access_token');
-      const refreshToken = searchParams.get('refresh_token');
-
-      if (!accessToken) {
-        throw new Error('No access token found');
-      }
-
-      // Set the session with the tokens from the URL
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken || '',
-      });
-
-      if (sessionError) {
-        throw sessionError;
-      }
-
-      // Update the user's password
+      // Update the user's password (session is already established)
       const { error: updateError } = await supabase.auth.updateUser({
         password: data.password,
       });
@@ -126,24 +141,41 @@ export default function ResetPassword() {
     }
   };
 
-  if (tokenError) {
+  if (tokenError || (!isValidSession && !isLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-2xl text-center">Invalid Reset Link</CardTitle>
+            <CardTitle className="text-2xl text-center flex items-center gap-2 justify-center">
+              <Lock className="h-6 w-6" />
+              iWishBag - Invalid Reset Link
+            </CardTitle>
+            <CardDescription className="text-center">
+              Your password reset session has expired or is invalid
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{tokenError}</AlertDescription>
+              <AlertDescription>
+                {tokenError || 'Invalid or expired reset token. Please request a new password reset link.'}
+              </AlertDescription>
             </Alert>
-            <Button 
-              className="w-full" 
-              onClick={() => navigate('/auth')}
-            >
-              Back to Login
-            </Button>
+            <div className="space-y-2">
+              <Button 
+                className="w-full" 
+                onClick={() => navigate('/auth')}
+              >
+                Back to Login
+              </Button>
+              <Button 
+                variant="outline"
+                className="w-full" 
+                onClick={() => navigate('/auth', { state: { showForgot: true } })}
+              >
+                Request New Reset Link
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -152,18 +184,31 @@ export default function ResetPassword() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Card className="w-full max-w-md shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl text-center">Password Reset Successful</CardTitle>
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-green-100 rounded-full">
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl text-center text-green-800">
+              Password Reset Successful!
+            </CardTitle>
+            <CardDescription className="text-center">
+              Welcome back to iWishBag - Your password has been updated
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert className="border-green-200 bg-green-50">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
-                Your password has been reset successfully. Redirecting to login...
+                Your password has been reset successfully. You can now login with your new password.
               </AlertDescription>
             </Alert>
+            <div className="text-center text-sm text-muted-foreground">
+              Redirecting to login in 2 seconds...
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -171,8 +216,8 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <div className="p-3 bg-primary/10 rounded-full">
@@ -181,7 +226,7 @@ export default function ResetPassword() {
           </div>
           <CardTitle className="text-2xl text-center">Reset Your Password</CardTitle>
           <CardDescription className="text-center">
-            Enter your new password below
+            Create a new secure password for your iWishBag account
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -146,9 +146,9 @@ const AuthForm = () => {
       } else {
         setResetEmailSent(true);
         toast({ 
-          title: "Email sent!", 
-          description: "Please check your inbox for the password reset link.",
-          duration: 5000
+          title: "Password reset email sent!", 
+          description: "Please check your inbox for a secure reset link from iWishBag. The link will expire in 24 hours.",
+          duration: 6000
         });
         
         // Keep the modal open to show success message
