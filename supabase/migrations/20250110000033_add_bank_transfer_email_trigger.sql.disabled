@@ -149,34 +149,4 @@ CREATE TRIGGER send_bank_transfer_email_trigger
   FOR EACH ROW
   EXECUTE FUNCTION send_bank_transfer_email();
 
--- Create email queue table if it doesn't exist
-CREATE TABLE IF NOT EXISTS email_queue (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  recipient_email TEXT NOT NULL,
-  subject TEXT NOT NULL,
-  html_content TEXT NOT NULL,
-  template_id TEXT,
-  related_entity_type TEXT,
-  related_entity_id UUID,
-  status TEXT DEFAULT 'pending',
-  attempts INT DEFAULT 0,
-  last_attempt_at TIMESTAMPTZ,
-  sent_at TIMESTAMPTZ,
-  error_message TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create index for email queue processing
-CREATE INDEX IF NOT EXISTS idx_email_queue_status ON email_queue(status, created_at);
-
--- Add RLS policies for email queue
-ALTER TABLE email_queue ENABLE ROW LEVEL SECURITY;
-
--- Admin can view all emails
-CREATE POLICY "Admin can view all emails" ON email_queue
-  FOR SELECT USING (is_admin());
-
--- System can manage all emails (for background jobs)
-CREATE POLICY "System can manage emails" ON email_queue
-  FOR ALL USING (true);
+-- Email queue table is created in 20250110000032_create_email_queue_table.sql
