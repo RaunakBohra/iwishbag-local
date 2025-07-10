@@ -134,7 +134,7 @@ const AuthForm = () => {
     
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(values.email, { 
-        redirectTo: `${window.location.origin}/auth/reset` 
+        redirectTo: `https://whyteclub.com/auth/reset` 
       });
       
       if (error) {
