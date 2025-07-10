@@ -24,7 +24,8 @@
       "Bash(cat:*)",
       "Bash(./update_country_code_references.sh:*)",
       "Bash(ls:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(docker logs:*)"
     ],
     "deny": []
   }
