@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { supabase } from '@/integrations/supabase/client';
-import { formatShippingRoute } from '@/lib/countryUtils';
 import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
+import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 
 // AddToCartButton component
 const AddToCartButton = ({ quoteId, className = "" }: { quoteId: string; className?: string }) => {
@@ -90,7 +90,16 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
           </div>
           <div className="flex items-center gap-1 text-gray-600">
             <Globe className="h-3 w-3 text-gray-400" />
-            <span className="truncate">{deliveryEstimate?.routeDisplay || '—'}</span>
+            {deliveryEstimate?.origin && deliveryEstimate?.destination ? (
+              <ShippingRouteDisplay 
+                origin={deliveryEstimate.origin} 
+                destination={deliveryEstimate.destination}
+                className="truncate"
+                showIcon={false}
+              />
+            ) : (
+              <span className="truncate">—</span>
+            )}
           </div>
         </div>
 
@@ -157,7 +166,15 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
               </span>
               <span className="flex items-center gap-1">
                 <Globe className="h-3 w-3 text-gray-400" />
-                {deliveryEstimate?.routeDisplay || '—'}
+                {deliveryEstimate?.origin && deliveryEstimate?.destination ? (
+                  <ShippingRouteDisplay 
+                    origin={deliveryEstimate.origin} 
+                    destination={deliveryEstimate.destination}
+                    showIcon={false}
+                  />
+                ) : (
+                  <span>—</span>
+                )}
               </span>
             </div>
           </div>
@@ -291,12 +308,12 @@ export default function Quotes() {
           };
           
           const { origin, destination } = await getQuoteRouteCountries(quote, shippingAddress, countries, fetchRouteById);
-          const routeDisplay = formatShippingRoute(origin, destination, countries, false);
           
           estimates[quote.id] = {
             label: `${formatDate(minDate)}-${formatDate(maxDate)}`,
             days: `${minDays}-${maxDays}d`,
-            routeDisplay: routeDisplay
+            origin,
+            destination
           };
         } catch (error) {
           console.error('Error calculating delivery estimate for quote:', quote.id, error);

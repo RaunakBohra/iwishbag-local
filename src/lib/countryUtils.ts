@@ -82,8 +82,18 @@ export const formatShippingRoute = (
   countries: CountryInfo[] = [],
   showCodes: boolean = false
 ): string => {
+  // Handle empty or invalid inputs
+  if (!originCode || !destinationCode) {
+    return '—';
+  }
+  
   const originName = getCountryDisplayName(originCode, countries, showCodes);
   const destinationName = getCountryDisplayName(destinationCode, countries, showCodes);
+  
+  // If either country name is invalid, return a dash
+  if (originName === 'Unknown' || destinationName === 'Unknown') {
+    return '—';
+  }
   
   return `${originName} → ${destinationName}`;
 }; 

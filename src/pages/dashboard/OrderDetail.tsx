@@ -10,6 +10,9 @@ import { OrderTimeline } from '@/components/dashboard/OrderTimeline';
 import { TrackingInfo } from '@/components/dashboard/TrackingInfo';
 import { OrderReceipt } from '@/components/dashboard/OrderReceipt';
 import { AddressEditForm } from '@/components/forms/AddressEditForm';
+import { QuoteMessaging } from '@/components/messaging/QuoteMessaging';
+import { DocumentManager } from '@/components/documents/DocumentManager';
+import { PaymentProofButton } from '@/components/payment/PaymentProofButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +48,8 @@ import {
 } from 'lucide-react';
 import { formatAmountForDisplay } from '@/lib/currencyUtils';
 import { ShippingAddress } from '@/types/address';
+import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
+import { useQuoteRoute } from '@/hooks/useQuoteRoute';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 export default function OrderDetail() {
@@ -111,6 +116,9 @@ export default function OrderDetail() {
 
   // Parse shipping address from JSONB
   const shippingAddress = order?.shipping_address as unknown as ShippingAddress | null;
+  
+  // Get route information using unified hook
+  const route = useQuoteRoute(order);
 
   // Handler functions for order actions
   const handleTrackPackage = () => {
@@ -187,7 +195,15 @@ export default function OrderDetail() {
               <Download className="h-4 w-4 mr-2" />
               Download Invoice
             </Button>
-            <Button variant="outline" size="sm" className="hover:scale-105 transition-transform duration-200">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="hover:scale-105 transition-transform duration-200"
+              onClick={() => {
+                // Scroll to messaging section
+                document.getElementById('messaging-section')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
               <MessageCircle className="h-4 w-4 mr-2" />
               Contact Support
             </Button>
@@ -224,13 +240,19 @@ export default function OrderDetail() {
                   </h3>
                   
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                    <div className="hover:bg-gray-50 p-2 rounded transition-colors duration-200">
-                      <span className="text-gray-500">Purchase Country:</span>
-                      <div className="font-medium flex items-center gap-1">
-                        <Globe className="h-3 w-3" />
-                        {countryName}
+                    {route && (
+                      <div className="hover:bg-gray-50 p-2 rounded transition-colors duration-200 col-span-2">
+                        <span className="text-gray-500">Shipping Route:</span>
+                        <div className="font-medium flex items-center gap-1">
+                          <Globe className="h-3 w-3" />
+                          <ShippingRouteDisplay 
+                            origin={route.origin} 
+                            destination={route.destination}
+                            showIcon={false}
+                          />
+                        </div>
                       </div>
-                    </div>
+                    )}
                     <div className="hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                       <span className="text-gray-500">Weight:</span>
                       <div className="font-medium flex items-center gap-1">
@@ -277,6 +299,32 @@ export default function OrderDetail() {
           <div className="animate-in slide-in-from-left duration-700 delay-400">
             <OrderReceipt order={order} />
           </div>
+          
+          {/* Customer Communication */}
+          <Card id="messaging-section" className="animate-in slide-in-from-left duration-700 delay-500 hover:shadow-lg transition-shadow duration-300">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                Messages & Support
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <QuoteMessaging 
+                quoteId={order.id}
+                quoteUserId={order.user_id}
+              />
+            </CardContent>
+          </Card>
+          
+          {/* Documents & Downloads */}
+          <div className="animate-in slide-in-from-left duration-700 delay-600">
+            <DocumentManager 
+              quoteId={order.id}
+              orderId={order.order_display_id || order.display_id || order.id}
+              isAdmin={false}
+              canUpload={false}
+            />
+          </div>
         </div>
 
         {/* Sidebar */}
@@ -309,7 +357,13 @@ export default function OrderDetail() {
                   </Button>
                 )}
                 
-                <Button variant="outline" className="w-full hover:scale-105 transition-transform duration-200">
+                <Button 
+                  variant="outline" 
+                  className="w-full hover:scale-105 transition-transform duration-200"
+                  onClick={() => {
+                    document.getElementById('messaging-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Contact Support
                 </Button>
@@ -333,14 +387,64 @@ export default function OrderDetail() {
                   {paymentMethod.label}
                 </span>
               </div>
+              
+              {/* Payment Status */}
+              {order.payment_status && (
+                <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
+                  <span className="text-gray-500">Status:</span>
+                  <Badge variant={
+                    order.payment_status === 'paid' ? 'default' :
+                    order.payment_status === 'partial' ? 'warning' :
+                    order.payment_status === 'overpaid' ? 'secondary' :
+                    'outline'
+                  }>
+                    {order.payment_status === 'partial' && order.amount_paid && order.final_total
+                      ? `Partial: $${order.amount_paid} of $${order.final_total}`
+                      : order.payment_status === 'overpaid' && order.overpayment_amount
+                      ? `Overpaid: +$${order.overpayment_amount}`
+                      : order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)
+                    }
+                  </Badge>
+                </div>
+              )}
+              
               <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
-                <span className="text-gray-500">Amount:</span>
+                <span className="text-gray-500">Total Amount:</span>
                 <span className="font-medium">{formatUserCurrency(order.final_total)}</span>
               </div>
+              
+              {order.amount_paid && order.amount_paid > 0 && (
+                <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
+                  <span className="text-gray-500">Amount Paid:</span>
+                  <span className="font-medium text-green-600">{formatUserCurrency(order.amount_paid)}</span>
+                </div>
+              )}
+              
+              {order.payment_status === 'partial' && order.final_total && order.amount_paid && (
+                <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
+                  <span className="text-gray-500">Outstanding:</span>
+                  <span className="font-medium text-orange-600">
+                    {formatUserCurrency(order.final_total - order.amount_paid)}
+                  </span>
+                </div>
+              )}
+              
               {order.paid_at && (
                 <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                   <span className="text-gray-500">Paid:</span>
                   <span>{new Date(order.paid_at).toLocaleDateString()}</span>
+                </div>
+              )}
+              
+              {/* Payment Proof Upload for bank transfer */}
+              {order.payment_method === 'bank_transfer' && 
+               (!order.payment_status || order.payment_status === 'unpaid' || order.payment_status === 'partial') && (
+                <div className="pt-2">
+                  <PaymentProofButton 
+                    quoteId={order.id}
+                    orderId={order.order_display_id || order.display_id || order.id}
+                    recipientId={null}
+                  />
                 </div>
               )}
             </CardContent>

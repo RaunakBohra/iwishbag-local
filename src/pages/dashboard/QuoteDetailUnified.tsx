@@ -48,6 +48,7 @@ import { QuoteStepper } from '@/components/dashboard/QuoteStepper';
 import { RenewQuoteButton } from '@/components/RenewQuoteButton';
 import { CustomerRejectQuoteDialog } from '@/components/dashboard/CustomerRejectQuoteDialog';
 import { ShareQuoteButton } from '@/components/admin/ShareQuoteButton';
+import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { QuoteMessaging } from '@/components/messaging/QuoteMessaging';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -846,7 +847,11 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
                                   <span className="text-xs text-blue-600 dark:text-gray-300 font-medium">Shipping Route</span>
                                 </div>
                                 <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">
-                                  {fromCountryName} → {toCountryName}
+                                  <ShippingRouteDisplay 
+                                    origin={purchaseCountry} 
+                                    destination={destinationCountry}
+                                    showIcon={false}
+                                  />
                                 </div>
                               </div>
                             );
@@ -909,7 +914,11 @@ export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuot
                                   <span className="text-xs text-blue-600 dark:text-gray-300 font-medium">Shipping Route</span>
                                 </div>
                                 <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                                  {fromCountryName} → {toCountryName}
+                                  <ShippingRouteDisplay 
+                                    origin={purchaseCountry} 
+                                    destination={destinationCountry}
+                                    showIcon={false}
+                                  />
                                 </span>
                               </div>
                             );

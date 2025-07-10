@@ -92,6 +92,66 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     requires_qr: false,
     processing_time: 'Pay upon delivery',
     fees: 'No additional fees'
+  },
+  razorpay: {
+    code: 'razorpay',
+    name: 'Razorpay',
+    description: 'Pay using UPI, cards, net banking, or wallets.',
+    icon: 'credit-card',
+    is_mobile_only: false,
+    requires_qr: false,
+    processing_time: 'Instant',
+    fees: '2%'
+  },
+  paypal: {
+    code: 'paypal',
+    name: 'PayPal',
+    description: 'Secure international payments with PayPal.',
+    icon: 'globe',
+    is_mobile_only: false,
+    requires_qr: false,
+    processing_time: 'Instant',
+    fees: '3.9% + $0.30'
+  },
+  upi: {
+    code: 'upi',
+    name: 'UPI',
+    description: 'Pay directly from your bank using UPI.',
+    icon: 'smartphone',
+    is_mobile_only: false,
+    requires_qr: true,
+    processing_time: 'Instant',
+    fees: 'No additional fees'
+  },
+  paytm: {
+    code: 'paytm',
+    name: 'Paytm',
+    description: 'Pay using Paytm wallet or UPI.',
+    icon: 'smartphone',
+    is_mobile_only: false,
+    requires_qr: true,
+    processing_time: '5-15 minutes',
+    fees: '1.99%'
+  },
+  grabpay: {
+    code: 'grabpay',
+    name: 'GrabPay',
+    description: 'Pay using GrabPay wallet.',
+    icon: 'smartphone',
+    is_mobile_only: true,
+    requires_qr: true,
+    processing_time: '5-15 minutes',
+    fees: '1.5%'
+  },
+  alipay: {
+    code: 'alipay',
+    name: 'Alipay',
+    description: 'Pay using Alipay wallet.',
+    icon: 'smartphone',
+    is_mobile_only: false,
+    requires_qr: true,
+    processing_time: '5-15 minutes',
+    fees: '1.8%'
   }
 };
 
@@ -119,7 +179,13 @@ export type PaymentGateway =
   | 'fonepay' 
   | 'airwallex' 
   | 'bank_transfer' 
-  | 'cod';
+  | 'cod'
+  | 'razorpay'
+  | 'paypal'
+  | 'upi'
+  | 'paytm'
+  | 'grabpay'
+  | 'alipay';
 
 export interface PaymentMethodDisplay {
   code: PaymentGateway;
@@ -174,6 +240,10 @@ export const usePaymentGateways = () => {
     queryKey: ['available-payment-methods', userProfile?.country, userProfile?.preferred_display_currency, userProfile?.cod_enabled],
     queryFn: async (): Promise<PaymentGateway[]> => {
       if (!userProfile?.country || !userProfile?.preferred_display_currency) {
+        console.log('Payment methods not available: missing user profile data', {
+          country: userProfile?.country,
+          currency: userProfile?.preferred_display_currency
+        });
         return [];
       }
 
@@ -331,9 +401,9 @@ export const usePaymentGateways = () => {
       return 'bank_transfer';
     }
 
-    // Priority order: Stripe > Airwallex > PayU > eSewa > Khalti > Fonepay > Bank Transfer > COD
+    // Priority order: Stripe > PayPal > Razorpay > Airwallex > PayU > UPI > Paytm > eSewa > Khalti > Fonepay > GrabPay > Alipay > Bank Transfer > COD
     const priorityOrder: PaymentGateway[] = [
-      'stripe', 'airwallex', 'payu', 'esewa', 'khalti', 'fonepay', 'bank_transfer', 'cod'
+      'stripe', 'paypal', 'razorpay', 'airwallex', 'payu', 'upi', 'paytm', 'esewa', 'khalti', 'fonepay', 'grabpay', 'alipay', 'bank_transfer', 'cod'
     ];
 
     for (const method of priorityOrder) {

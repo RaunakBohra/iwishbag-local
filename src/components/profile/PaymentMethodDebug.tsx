@@ -14,12 +14,18 @@ const getGatewayIcon = (code: string) => {
   switch (code) {
     case 'stripe':
     case 'payu':
+    case 'razorpay':
       return <CreditCard className="h-4 w-4" />;
     case 'esewa':
     case 'khalti':
     case 'fonepay':
+    case 'upi':
+    case 'paytm':
+    case 'grabpay':
+    case 'alipay':
       return <Smartphone className="h-4 w-4" />;
     case 'airwallex':
+    case 'paypal':
       return <Globe className="h-4 w-4" />;
     case 'bank_transfer':
       return <Landmark className="h-4 w-4" />;
@@ -36,11 +42,23 @@ const getGatewayColor = (code: string) => {
       return 'bg-blue-100 text-blue-800';
     case 'payu':
       return 'bg-purple-100 text-purple-800';
+    case 'razorpay':
+      return 'bg-indigo-100 text-indigo-800';
+    case 'paypal':
+      return 'bg-blue-100 text-blue-800';
     case 'esewa':
       return 'bg-green-100 text-green-800';
     case 'khalti':
       return 'bg-purple-100 text-purple-800';
     case 'fonepay':
+      return 'bg-blue-100 text-blue-800';
+    case 'upi':
+      return 'bg-green-100 text-green-800';
+    case 'paytm':
+      return 'bg-cyan-100 text-cyan-800';
+    case 'grabpay':
+      return 'bg-green-100 text-green-800';
+    case 'alipay':
       return 'bg-blue-100 text-blue-800';
     case 'airwallex':
       return 'bg-orange-100 text-orange-800';

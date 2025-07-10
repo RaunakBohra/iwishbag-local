@@ -33,9 +33,10 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
-import { useCountryUtils, formatShippingRoute } from '@/lib/countryUtils';
+import { useCountryUtils } from '@/lib/countryUtils';
 import { extractShippingAddressFromNotes } from '@/lib/addressUpdates';
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 
 type QuoteWithItems = Tables<'quotes'> & { 
   quote_items: Tables<'quote_items'>[];
@@ -228,9 +229,12 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                                     {routeCountries && (
                                         <span className="flex items-center gap-1 flex-shrink-0 w-28">
                                             <MapPin className="h-3 w-3 flex-shrink-0" />
-                                            <span className="text-muted-foreground truncate">
-                                                {formatShippingRoute(routeCountries.origin, routeCountries.destination, allCountries)}
-                                            </span>
+                                            <ShippingRouteDisplay 
+                                                origin={routeCountries.origin} 
+                                                destination={routeCountries.destination}
+                                                className="text-muted-foreground truncate"
+                                                showIcon={false}
+                                            />
                                         </span>
                                     )}
                                     {/* Product Domain Link - Fixed width */}
@@ -340,7 +344,11 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                     {routeCountries && (
                         <div className="flex items-center gap-2 text-sm">
                             <MapPin className="h-4 w-4" />
-                            <span>{formatShippingRoute(routeCountries.origin, routeCountries.destination, allCountries)}</span>
+                            <ShippingRouteDisplay 
+                                origin={routeCountries.origin} 
+                                destination={routeCountries.destination}
+                                showIcon={false}
+                            />
                         </div>
                     )}
                     <div className="flex items-center gap-2 text-sm">

@@ -11,6 +11,7 @@ import { useAllCountries } from '../../hooks/useAllCountries';
 import { getCurrencySymbolFromCountry, getCountryCurrency, getExchangeRate } from '../../lib/currencyUtils';
 import { AlertCircle, CheckCircle, RefreshCw, TrendingUp, Globe, ArrowRightLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
 
 interface ExchangeRateData {
   id?: number;
@@ -301,13 +302,19 @@ export function ExchangeRateManager() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium">
-                        {rate.origin_country} → {rate.destination_country}
-                      </span>
+                      <ShippingRouteDisplay 
+                        origin={rate.origin_country} 
+                        destination={rate.destination_country}
+                        className="font-medium"
+                        showIcon={false}
+                      />
                       <ArrowRightLeft className="h-3 w-3 text-gray-400" />
-                      <span className="text-sm text-gray-600">
-                        {originCurrency} → {destinationCurrency}
-                      </span>
+                      <ShippingRouteDisplay 
+                        origin={originCurrency} 
+                        destination={destinationCurrency}
+                        className="text-sm text-gray-600"
+                        showIcon={false}
+                      />
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant={status.color === 'success' ? 'default' : status.color === 'warning' ? 'secondary' : 'destructive'}>
@@ -341,7 +348,8 @@ export function ExchangeRateManager() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const newRate = prompt(`Enter new exchange rate for ${rate.origin_country} → ${rate.destination_country}:`, rate.exchange_rate.toString());
+                          const routeText = `${rate.origin_country} → ${rate.destination_country}`;
+                          const newRate = prompt(`Enter new exchange rate for ${routeText}:`, rate.exchange_rate.toString());
                           if (newRate && !isNaN(parseFloat(newRate)) && rate.id) {
                             updateExchangeRate(rate.id, parseFloat(newRate));
                           }

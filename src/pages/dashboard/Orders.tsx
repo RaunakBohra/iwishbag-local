@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Search, ArrowLeft, Truck, CheckCircle, Clock, DollarSign, Package, Eye, Calendar } from 'lucide-react';
+import { ShoppingCart, Search, ArrowLeft, Truck, CheckCircle, Clock, DollarSign, Package, Eye, Calendar, Download, MessageSquare, AlertTriangle, TrendingUp } from 'lucide-react';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,11 @@ import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { formatDistanceToNow } from "date-fns";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
 import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { useToast } from "@/components/ui/use-toast";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Tables } from "@/integrations/supabase/types";
+import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
+import { useQuoteRoute } from '@/hooks/useQuoteRoute';
 
 export default function Orders() {
   const {
@@ -27,12 +32,18 @@ export default function Orders() {
 
   const { data: countries } = useAllCountries();
   const { orderStatuses } = useStatusManagement();
+  const { toast } = useToast();
+  const { formatAmount } = useUserCurrency();
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
 
   // Filter orders based on status and search
   const filteredOrders = orders?.filter(order => {
     // Status filter
     if (statusFilter !== 'all' && order.status !== statusFilter) return false;
+    
+    // Payment status filter
+    if (paymentStatusFilter !== 'all' && order.payment_status !== paymentStatusFilter) return false;
     
     // Search filter
     if (searchTerm) {
@@ -51,6 +62,79 @@ export default function Orders() {
     
     return true;
   }) || [];
+
+  // Calculate statistics
+  const statistics = useMemo(() => {
+    const totalOrders = filteredOrders.length;
+    const totalValue = filteredOrders.reduce((sum, order) => sum + (order.final_total || 0), 0);
+    const totalPaid = filteredOrders.reduce((sum, order) => sum + (order.amount_paid || 0), 0);
+    const totalOutstanding = totalValue - totalPaid;
+    
+    const paymentStatusCounts = {
+      unpaid: filteredOrders.filter(o => !o.payment_status || o.payment_status === 'unpaid').length,
+      partial: filteredOrders.filter(o => o.payment_status === 'partial').length,
+      paid: filteredOrders.filter(o => o.payment_status === 'paid').length,
+      overpaid: filteredOrders.filter(o => o.payment_status === 'overpaid').length,
+    };
+    
+    return {
+      totalOrders,
+      totalValue,
+      totalPaid,
+      totalOutstanding,
+      paymentStatusCounts,
+    };
+  }, [filteredOrders]);
+
+  // Export to CSV function
+  const exportToCSV = () => {
+    if (!filteredOrders || filteredOrders.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "There are no orders to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const csvData = filteredOrders.map(order => ({
+      'Order ID': order.order_display_id || order.display_id || order.id.slice(0, 8),
+      'Product': order.product_name || 'N/A',
+      'Status': order.status,
+      'Payment Status': order.payment_status || 'unpaid',
+      'Total': order.final_total || 0,
+      'Paid': order.amount_paid || 0,
+      'Outstanding': (order.final_total || 0) - (order.amount_paid || 0),
+      'Payment Method': order.payment_method || 'N/A',
+      'Country': countries?.find(c => c.code === order.country_code)?.name || order.country_code || 'N/A',
+      'Created': new Date(order.created_at).toLocaleDateString(),
+    }));
+
+    const headers = Object.keys(csvData[0]);
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => 
+        headers.map(header => {
+          const value = row[header as keyof typeof row];
+          return typeof value === 'string' && value.includes(',') 
+            ? `"${value}"` 
+            : value;
+        }).join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `orders-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+
+    toast({
+      title: "Export successful",
+      description: `${filteredOrders.length} orders exported to CSV`,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -81,7 +165,69 @@ export default function Orders() {
             <p className="text-gray-500 text-sm">Track your order status and delivery</p>
           </div>
         </div>
+        <Button 
+          onClick={exportToCSV} 
+          variant="outline"
+          size="sm"
+          className="gap-2"
+        >
+          <Download className="h-4 w-4" />
+          Export
+        </Button>
       </div>
+
+      {/* Financial Summary */}
+      {filteredOrders.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Orders</p>
+                  <p className="text-2xl font-bold">{statistics.totalOrders}</p>
+                </div>
+                <Package className="h-8 w-8 text-muted-foreground opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Value</p>
+                  <p className="text-2xl font-bold">{formatAmount(statistics.totalValue)}</p>
+                </div>
+                <DollarSign className="h-8 w-8 text-muted-foreground opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Amount Paid</p>
+                  <p className="text-2xl font-bold text-green-600">{formatAmount(statistics.totalPaid)}</p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-600 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Outstanding</p>
+                  <p className="text-2xl font-bold text-orange-600">{formatAmount(statistics.totalOutstanding)}</p>
+                </div>
+                <AlertTriangle className="h-8 w-8 text-orange-600 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Filters and Search */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
@@ -112,6 +258,20 @@ export default function Orders() {
               </SelectContent>
             </Select>
           </div>
+          <div className="sm:w-48">
+            <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Payment status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Payment Status</SelectItem>
+                <SelectItem value="unpaid">Unpaid</SelectItem>
+                <SelectItem value="partial">Partial Payment</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="overpaid">Overpaid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -135,69 +295,142 @@ export default function Orders() {
           </div>
         ) : (
           filteredOrders.map((order) => (
-            <div key={order.id} className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="font-semibold text-lg">
-                        {order.product_name || 'Product Order'}
-                      </h3>
-                      <p className="text-gray-500 text-sm">
-                        Order #{order.order_display_id || order.display_id || order.id.slice(0, 8)}
-                      </p>
-                    </div>
-                    <StatusBadge status={order.status} category="order" />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Total:</span>
-                      <span className="ml-1 font-medium">
-                        ${order.final_total?.toFixed(2) || '0.00'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Ordered:</span>
-                      <span className="ml-1">
-                        {new Date(order.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Country:</span>
-                      <span className="ml-1">{countries?.find(c => c.code === order.country_code)?.name || order.country_code || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Items:</span>
-                      <span className="ml-1">{order.quote_items?.length || 1}</span>
-                    </div>
-                  </div>
-
-                  {/* Payment Method */}
-                  {order.payment_method && (
-                    <div className="mt-2 text-sm">
-                      <span className="text-gray-500">Payment:</span>
-                      <span className="ml-1 capitalize">{order.payment_method.replace('_', ' ')}</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex gap-2">
-                  <Link to={`/dashboard/orders/${order.id}`}>
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
-                  </Link>
-                  {order.status === 'shipped' && (
-                    <Button size="sm" variant="outline">
-                      Track Package
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
+            <OrderItem key={order.id} order={order} countries={countries} formatAmount={formatAmount} />
           ))
         )}
+      </div>
+    </div>
+  );
+}
+
+// Separate component for order item to handle message count query
+function OrderItem({ order, countries, formatAmount }: { 
+  order: Tables<'quotes'> & { quote_items?: Tables<'quote_items'>[] }, 
+  countries: { code: string; name: string }[] | undefined, 
+  formatAmount: (amount: number) => string 
+}) {
+  // Get route information using unified hook
+  const route = useQuoteRoute(order);
+  
+  // Get message count for this order
+  const { data: messageCount = 0 } = useQuery({
+    queryKey: ['order-messages-count', order.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('quote_id', order.id);
+      if (error) return 0;
+      return count || 0;
+    },
+    staleTime: 30000, // Cache for 30 seconds
+  });
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex-1">
+          <div className="flex items-start justify-between mb-2">
+            <div>
+              <h3 className="font-semibold text-lg">
+                {order.product_name || 'Product Order'}
+              </h3>
+              <p className="text-gray-500 text-sm">
+                Order #{order.order_display_id || order.display_id || order.id.slice(0, 8)}
+              </p>
+            </div>
+            <StatusBadge status={order.status} category="order" />
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+            <div>
+              <span className="text-gray-500">Total:</span>
+              <span className="ml-1 font-medium">
+                {formatAmount(order.final_total || 0)}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-500">Ordered:</span>
+              <span className="ml-1">
+                {new Date(order.created_at).toLocaleDateString()}
+              </span>
+            </div>
+            {route && (
+              <div>
+                <span className="text-gray-500">Route:</span>
+                <ShippingRouteDisplay 
+                  origin={route.origin} 
+                  destination={route.destination}
+                  className="ml-1 inline-flex"
+                  showIcon={false}
+                />
+              </div>
+            )}
+            <div>
+              <span className="text-gray-500">Items:</span>
+              <span className="ml-1">{order.quote_items?.length || 1}</span>
+            </div>
+          </div>
+
+          {/* Payment Method & Status */}
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+            {order.payment_method && (
+              <div>
+                <span className="text-gray-500">Payment:</span>
+                <span className="ml-1 capitalize">{order.payment_method.replace('_', ' ')}</span>
+              </div>
+            )}
+            
+            {/* Payment Status Badge */}
+            {order.payment_status && (
+              <Badge variant={
+                order.payment_status === 'paid' ? 'default' :
+                order.payment_status === 'partial' ? 'warning' :
+                order.payment_status === 'overpaid' ? 'secondary' :
+                'outline'
+              } className="text-xs">
+                {order.payment_status === 'partial' && order.amount_paid && order.final_total
+                  ? `Partial: ${formatAmount(order.amount_paid)} of ${formatAmount(order.final_total)}`
+                  : order.payment_status === 'overpaid' && order.overpayment_amount
+                  ? `Overpaid: +${formatAmount(order.overpayment_amount)}`
+                  : order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)
+                }
+              </Badge>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex gap-2">
+          {/* Message Count Indicator */}
+          {messageCount > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to={`/dashboard/orders/${order.id}`}>
+                    <Button size="sm" variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
+                      <MessageSquare className="h-3 w-3 mr-1" />
+                      {messageCount}
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{messageCount} message{messageCount !== 1 ? 's' : ''}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
+          <Link to={`/dashboard/orders/${order.id}`}>
+            <Button variant="outline" size="sm">
+              View Details
+            </Button>
+          </Link>
+          {order.status === 'shipped' && (
+            <Button size="sm" variant="outline">
+              Track Package
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

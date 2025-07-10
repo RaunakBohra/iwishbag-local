@@ -23,8 +23,8 @@ import { Package, Truck, Clock, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
-import { formatShippingRoute } from '@/lib/countryUtils';
 import { formatDualCurrency, getCountryCurrency } from '@/lib/currencyUtils';
+import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 
 interface DeliveryOption {
   id: string;
@@ -51,7 +51,8 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
   const [shippingRoute, setShippingRoute] = useState<any>(null);
   const [allDeliveryOptions, setAllDeliveryOptions] = useState<DeliveryOption[]>([]);
   const [enabledOptions, setEnabledOptions] = useState<string[]>([]);
-  const [routeDisplay, setRouteDisplay] = useState<string>('');
+  const [routeOrigin, setRouteOrigin] = useState<string>('');
+  const [routeDestination, setRouteDestination] = useState<string>('');
 
   // Fetch shipping route and delivery options
   useEffect(() => {
@@ -155,9 +156,10 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
         setShippingRoute(currentRoute);
         console.log('DEBUG: shippingRoute used in DeliveryOptionsManager:', currentRoute);
 
-        // --- Uniform route display logic ---
-        setRouteDisplay(formatShippingRoute(origin, destination, allCountries, true));
-        // --- END NEW ---
+        // --- Store route origin and destination ---
+        setRouteOrigin(origin);
+        setRouteDestination(destination);
+        // --- END ---
 
         // Parse delivery options
         let options: DeliveryOption[] = [];
@@ -335,9 +337,15 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-center justify-between">
             <span className="text-sm text-blue-700">Shipping Route:</span>
-            <span className="font-medium text-blue-900">
-              {routeDisplay}
-            </span>
+            {routeOrigin && routeDestination && (
+              <ShippingRouteDisplay 
+                origin={routeOrigin} 
+                destination={routeDestination}
+                showCodes={true}
+                className="font-medium text-blue-900"
+                showIcon={false}
+              />
+            )}
           </div>
         </div>
 

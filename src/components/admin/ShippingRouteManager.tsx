@@ -10,12 +10,13 @@ import { Switch } from '../ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useToast } from '../../hooks/use-toast';
-import { useCountryUtils, formatShippingRoute } from '../../lib/countryUtils';
+import { useCountryUtils } from '../../lib/countryUtils';
 import { getCurrencySymbolFromCountry } from '../../lib/currencyUtils';
 import type { ShippingRouteFormData, DeliveryOption } from '../../types/shipping';
 import { CustomsTiersManager } from './CustomsTiersManager';
 import { CurrencyInputLabel } from './DualCurrencyDisplay';
 import { ExchangeRateManager } from './ExchangeRateManager';
+import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
 
 function ShippingRouteForm({ onSubmit, onCancel, initialData }: { onSubmit: (data: ShippingRouteFormData) => Promise<any>, onCancel: () => void, initialData?: Partial<ShippingRouteFormData> }) {
   const { data: countries = [] } = useAllCountries();
@@ -492,7 +493,12 @@ export function ShippingRouteManager() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center space-x-2">
-                        <span>{formatShippingRoute(route.origin_country, route.destination_country, countries, true)}</span>
+                        <ShippingRouteDisplay 
+                          origin={route.origin_country} 
+                          destination={route.destination_country}
+                          showCodes={true}
+                          showIcon={false}
+                        />
                         <Badge variant={route.is_active ? 'default' : 'secondary'}>
                           {route.is_active ? 'Active' : 'Inactive'}
                         </Badge>

@@ -7,7 +7,13 @@ export type PaymentGateway =
   | 'fonepay'
   | 'airwallex'
   | 'bank_transfer'
-  | 'cod';
+  | 'cod'
+  | 'razorpay'
+  | 'paypal'
+  | 'upi'
+  | 'paytm'
+  | 'grabpay'
+  | 'alipay';
 
 export type PaymentStatus = 
   | 'pending'

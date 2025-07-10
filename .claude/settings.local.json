@@ -18,7 +18,8 @@
       "Bash(docker exec:*)",
       "Bash(git add:*)",
       "Bash(find:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }

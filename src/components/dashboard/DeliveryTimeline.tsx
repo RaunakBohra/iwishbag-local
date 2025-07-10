@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Clock, Package, Truck, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 
 interface DeliveryOption {
   id: string;
@@ -333,9 +334,12 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
             
             <div className="flex items-center justify-between">
               <span className="text-sm text-blue-700">Based on route:</span>
-              <span className="font-medium text-blue-900">
-                {shippingRoute.origin_country} → {shippingRoute.destination_country}
-              </span>
+              <ShippingRouteDisplay 
+                origin={shippingRoute.origin_country} 
+                destination={shippingRoute.destination_country}
+                className="font-medium text-blue-900"
+                showIcon={false}
+              />
             </div>
           </div>
         </div>

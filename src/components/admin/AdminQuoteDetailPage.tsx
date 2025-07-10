@@ -28,6 +28,7 @@ import { DeliveryOptionsManager } from "./DeliveryOptionsManager";
 import { useToast } from "@/components/ui/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
+import { ShippingRouteDisplay } from "@/components/shared/ShippingRouteDisplay";
 import { CustomsTierDisplay } from "./CustomsTierDisplay";
 import { supabase } from '../../integrations/supabase/client';
 import { useAllCountries } from '../../hooks/useAllCountries';
@@ -977,21 +978,16 @@ const AdminQuoteDetailPage = () => {
                     {/* Shipping Route Information */}
                     <div className="space-y-3">
                       <h4 className="font-medium text-sm">Shipping Route Information</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Origin:</span>
-                          <div className="font-medium">
-                            {purchaseCountry
-                              ? allCountries?.find(c => c.code === purchaseCountry)?.name || purchaseCountry
-                              : quote.origin_country || 'Not selected'}
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Destination:</span>
-                          <div className="font-medium">
-                            {destinationCountry || quote.country_code || 'Not specified'}
-                          </div>
-                        </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Route: </span>
+                        <ShippingRouteDisplay 
+                          origin={purchaseCountry || quote.origin_country || 'Not selected'} 
+                          destination={destinationCountry || quote.country_code || 'Not specified'}
+                          variant="detailed"
+                          className="mt-2"
+                          showIcon={true}
+                          iconType="mapPin"
+                        />
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Method:</span>

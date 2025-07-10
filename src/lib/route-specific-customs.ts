@@ -247,7 +247,7 @@ export async function getAvailableCustomsRoutes(): Promise<Array<{origin: string
  * @returns {Promise<{origin: string, destination: string}>}
  */
 export async function getQuoteRouteCountries(quote, shippingAddress, allCountries, fetchRouteById) {
-  // 1. If shipping_route_id, fetch from DB
+  // 1. If shipping_route_id exists, always fetch from DB first
   if (quote.shipping_route_id && fetchRouteById) {
     try {
       const route = await fetchRouteById(quote.shipping_route_id);
@@ -255,24 +255,32 @@ export async function getQuoteRouteCountries(quote, shippingAddress, allCountrie
         return { origin: route.origin_country, destination: route.destination_country };
       }
     } catch (e) {
-      // fallback below
+      console.warn('Failed to fetch shipping route by ID:', e);
     }
   }
-  // 2. Fallback: use quote fields
-  let origin = quote.origin_country || quote.country_code || 'US';
-  let destination = (shippingAddress && (shippingAddress.country_code || shippingAddress.country)) || '';
-
-  // Optionally resolve to country codes if names are present
-  if (allCountries) {
-    // If origin/destination are names, convert to codes
+  
+  // 2. Use quote's origin_country and country_code as the standard
+  // origin_country = where the product is purchased from
+  // country_code = destination country for shipping
+  let origin = quote.origin_country || 'US';
+  let destination = quote.country_code || '';
+  
+  // 3. If destination is still empty, try to get from shipping address
+  if (!destination && shippingAddress) {
+    destination = shippingAddress.country_code || shippingAddress.countryCode || shippingAddress.country || '';
+  }
+  
+  // 4. Normalize country names to codes if needed
+  if (allCountries && allCountries.length > 0) {
     const findCode = (val) => {
-      if (!val) return val;
-      if (val.length === 2) return val;
-      const found = allCountries.find(c => c.name === val);
+      if (!val) return '';
+      if (val.length === 2) return val.toUpperCase();
+      const found = allCountries.find(c => c.name === val || c.code === val.toUpperCase());
       return found ? found.code : val;
     };
     origin = findCode(origin);
     destination = findCode(destination);
   }
-  return { origin, destination };
+  
+  return { origin: origin || '', destination: destination || '' };
 } 
