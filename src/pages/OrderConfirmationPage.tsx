@@ -531,6 +531,7 @@ const OrderConfirmationPage: React.FC = () => {
           )}
         </CardFooter>
       </Card>
+      </div>
     </div>
   );
 };
