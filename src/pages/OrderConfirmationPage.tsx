@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, AlertTriangle, Loader2, CreditCard, Truck, Banknote, UserPlus, Package, Clock, MapPin, History, Zap, Gift } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Loader2, CreditCard, Truck, Banknote, UserPlus, Package, Clock, MapPin, History, Zap, Gift, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { BankTransferDetails } from '@/components/dashboard/BankTransferDetails';
