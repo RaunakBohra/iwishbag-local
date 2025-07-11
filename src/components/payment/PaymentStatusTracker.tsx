@@ -47,6 +47,11 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
     return () => clearInterval(timer);
   }, []);
 
+  // Initial status check when component mounts
+  useEffect(() => {
+    checkPaymentStatus();
+  }, [transactionId]);
+
   // Auto-refresh payment status
   useEffect(() => {
     if (!autoRefresh) return;
@@ -72,9 +77,8 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
     
     setIsChecking(true);
     try {
-      // In a real implementation, you would call your payment status API
-      // For now, we'll simulate the status check
-      const response = await fetch(`/api/payment-status/${transactionId}`);
+      // Call the real payment status verification API
+      const response = await fetch(`/supabase/functions/verify-payment-status/${transactionId}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -83,31 +87,21 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
           onStatusChange?.(data.status);
         }
       } else {
-        // Simulate status progression for demo
-        const currentProgress = status.progress;
-        const newProgress = Math.min(currentProgress + Math.random() * 20, 100);
-        
-        let newStatus = status.status;
-        if (newProgress >= 100) {
-          newStatus = Math.random() > 0.1 ? 'completed' : 'failed'; // 90% success rate
-        } else if (newProgress > 50) {
-          newStatus = 'processing';
-        }
-
-        const updatedStatus: PaymentStatus = {
-          status: newStatus,
-          progress: Math.max(0, Math.min(100, newProgress)), // Ensure progress is between 0-100
-          estimated_completion: newProgress < 100 ? 
-            new Date(Date.now() + (100 - newProgress) * 1000).toISOString() : undefined,
-          gateway_status: getGatewayStatus(gateway, newProgress),
+        // If API call fails, set error status
+        const errorData = await response.json().catch(() => ({}));
+        setStatus(prev => ({
+          ...prev,
+          error_message: errorData.error || 'Failed to check payment status',
           last_update: new Date().toISOString()
-        };
-
-        setStatus(updatedStatus);
-        onStatusChange?.(updatedStatus.status);
+        }));
       }
     } catch (error) {
       console.error('Error checking payment status:', error);
+      setStatus(prev => ({
+        ...prev,
+        error_message: 'Network error while checking payment status',
+        last_update: new Date().toISOString()
+      }));
     } finally {
       setIsChecking(false);
     }

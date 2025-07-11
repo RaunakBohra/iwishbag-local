@@ -138,6 +138,25 @@ interface PayUWebhookData {
   merchant_udf100: string;
 }
 
+// Log webhook attempts for monitoring and debugging
+async function logWebhookAttempt(supabaseAdmin: any, requestId: string, status: string, userAgent: string, errorMessage?: string) {
+  try {
+    await supabaseAdmin
+      .from('webhook_logs')
+      .insert({
+        request_id: requestId,
+        webhook_type: 'payu',
+        status: status,
+        user_agent: userAgent,
+        error_message: errorMessage,
+        created_at: new Date().toISOString()
+      });
+  } catch (error) {
+    console.error('Failed to log webhook attempt:', error);
+    // Don't fail the webhook if logging fails
+  }
+}
+
 // Verify PayU webhook hash
 async function verifyPayUHash(data: PayUWebhookData, salt: string): Promise<boolean> {
   try {
@@ -175,22 +194,116 @@ async function verifyPayUHash(data: PayUWebhookData, salt: string): Promise<bool
   }
 }
 
+// Enhanced database operations with retry logic
+async function updateQuotesWithRetry(supabaseAdmin: any, quoteIds: string[], updateData: any, maxRetries = 3) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const { error } = await supabaseAdmin
+        .from('quotes')
+        .update(updateData)
+        .in('id', quoteIds);
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log(`✅ Updated ${quoteIds.length} quotes successfully (attempt ${attempt})`);
+      return { success: true };
+    } catch (error) {
+      lastError = error;
+      console.error(`❌ Attempt ${attempt} failed:`, error);
+      
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+        console.log(`⏳ Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  return { success: false, error: lastError };
+}
+
+// Enhanced payment record creation with retry logic
+async function createPaymentRecordWithRetry(supabaseAdmin: any, paymentData: any, maxRetries = 3) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const { error } = await supabaseAdmin
+        .from('payments')
+        .insert(paymentData);
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log(`✅ Payment record created successfully (attempt ${attempt})`);
+      return { success: true };
+    } catch (error) {
+      lastError = error;
+      console.error(`❌ Payment record creation attempt ${attempt} failed:`, error);
+      
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+        console.log(`⏳ Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  return { success: false, error: lastError };
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // Add comprehensive error handling and logging
+  const requestId = crypto.randomUUID();
+  const startTime = Date.now();
+  
   try {
-    console.log('🔔 PayU Webhook Received');
+    console.log(`🔔 PayU Webhook Received [${requestId}]`);
     
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Parse webhook data
-    const webhookData: PayUWebhookData = await req.json();
+    // Log webhook attempt
+    await logWebhookAttempt(supabaseAdmin, requestId, 'started', req.headers.get('user-agent') || '');
+
+    // Parse webhook data with error handling
+    let webhookData: PayUWebhookData;
+    try {
+      webhookData = await req.json();
+    } catch (parseError) {
+      console.error(`[${requestId}] JSON parsing error:`, parseError);
+      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'JSON parsing failed');
+      return new Response(JSON.stringify({ error: 'Invalid JSON data' }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    // Validate required fields
+    if (!webhookData.txnid || !webhookData.status || !webhookData.amount) {
+      console.error(`[${requestId}] Missing required fields:`, {
+        txnid: !!webhookData.txnid,
+        status: !!webhookData.status,
+        amount: !!webhookData.amount
+      });
+      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'Missing required fields');
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
     
     console.log('PayU Webhook Data:', {
       txnid: webhookData.txnid,
@@ -204,7 +317,8 @@ serve(async (req) => {
     // Verify webhook hash
     const salt = Deno.env.get('PAYU_SALT_KEY');
     if (!salt) {
-      console.error('PayU salt key not configured');
+      console.error(`[${requestId}] PayU salt key not configured`);
+      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'PayU salt key not configured');
       return new Response(JSON.stringify({ error: 'Configuration error' }), { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -213,14 +327,15 @@ serve(async (req) => {
 
     const isValidHash = await verifyPayUHash(webhookData, salt);
     if (!isValidHash) {
-      console.error('Invalid webhook hash');
+      console.error(`[${requestId}] Invalid webhook hash - possible security issue`);
+      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'Invalid webhook hash verification');
       return new Response(JSON.stringify({ error: 'Invalid hash' }), { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
     }
 
-    console.log('✅ Webhook hash verified');
+    console.log(`✅ Webhook hash verified [${requestId}]`);
 
     // Extract quote IDs from productinfo
     const productInfo = webhookData.productinfo || '';
@@ -347,13 +462,11 @@ serve(async (req) => {
 
       // For guest checkout success, we don't need to update customer details again 
       // (already done in session binding above)
-      const { error: quotesError } = await supabaseAdmin
-        .from('quotes')
-        .update(updateData)
-        .in('id', quoteIds);
+      const quotesResult = await updateQuotesWithRetry(supabaseAdmin, quoteIds, updateData);
 
-      if (quotesError) {
-        console.error('Error updating quotes:', quotesError);
+      if (!quotesResult.success) {
+        console.error(`[${requestId}] Failed to update quotes after retries:`, quotesResult.error);
+        await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'Failed to update quotes after retries');
         return new Response(JSON.stringify({ error: 'Failed to update quotes' }), { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -365,33 +478,34 @@ serve(async (req) => {
       console.log('✅ Skipped quote update for failed guest payment - quote remains shareable');
     }
 
-    // Create payment record
-    const { error: paymentError } = await supabaseAdmin
-      .from('payments')
-      .insert({
-        transaction_id: webhookData.mihpayid || webhookData.txnid,
-        gateway: 'payu',
-        status: paymentStatus,
-        amount: parseFloat(webhookData.amount),
-        currency: 'INR',
-        quote_ids: quoteIds,
-        customer_email: webhookData.email,
-        customer_name: webhookData.firstname,
-        customer_phone: webhookData.phone,
-        payment_mode: webhookData.mode,
-        bank_code: webhookData.bankcode,
-        bank_ref_num: webhookData.bank_ref_num,
-        card_mask: webhookData.cardMask,
-        name_on_card: webhookData.name_on_card,
-        error_code: webhookData.error_code,
-        error_message: webhookData.error_Message,
-        gateway_response: webhookData,
-        created_at: new Date().toISOString()
-      });
+    // Create payment record with retry logic
+    const paymentData = {
+      transaction_id: webhookData.mihpayid || webhookData.txnid,
+      gateway: 'payu',
+      status: paymentStatus,
+      amount: parseFloat(webhookData.amount),
+      currency: 'INR',
+      quote_ids: quoteIds,
+      customer_email: webhookData.email,
+      customer_name: webhookData.firstname,
+      customer_phone: webhookData.phone,
+      payment_mode: webhookData.mode,
+      bank_code: webhookData.bankcode,
+      bank_ref_num: webhookData.bank_ref_num,
+      card_mask: webhookData.cardMask,
+      name_on_card: webhookData.name_on_card,
+      error_code: webhookData.error_code,
+      error_message: webhookData.error_Message,
+      gateway_response: webhookData,
+      created_at: new Date().toISOString()
+    };
 
-    if (paymentError) {
-      console.error('Error creating payment record:', paymentError);
-      // Don't fail the webhook if payment record creation fails
+    const paymentResult = await createPaymentRecordWithRetry(supabaseAdmin, paymentData);
+    
+    if (!paymentResult.success) {
+      console.error(`[${requestId}] Failed to create payment record after retries:`, paymentResult.error);
+      await logWebhookAttempt(supabaseAdmin, requestId, 'warning', '', 'Failed to create payment record after retries');
+      // Don't fail the webhook if payment record creation fails - this is non-critical
     } else {
       console.log('✅ Payment record created');
     }
@@ -435,22 +549,41 @@ serve(async (req) => {
       }
     }
 
+    // Log successful webhook processing
+    const processingTime = Date.now() - startTime;
+    await logWebhookAttempt(supabaseAdmin, requestId, 'success', '', `Processed in ${processingTime}ms`);
+    
+    console.log(`✅ PayU webhook processed successfully [${requestId}] in ${processingTime}ms`);
+
     // Send success response
     return new Response(JSON.stringify({ 
       success: true, 
       message: `Payment ${paymentStatus}`,
       quoteIds,
-      transactionId: webhookData.mihpayid || webhookData.txnid
+      transactionId: webhookData.mihpayid || webhookData.txnid,
+      requestId,
+      processingTime: `${processingTime}ms`
     }), { 
       status: 200, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     });
 
   } catch (error) {
-    console.error('PayU webhook error:', error);
+    const processingTime = Date.now() - startTime;
+    console.error(`❌ PayU webhook error [${requestId}]:`, error);
+    
+    // Log the error
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', `Error after ${processingTime}ms: ${error.message}`);
+    
     return new Response(JSON.stringify({ 
       error: 'Webhook processing failed', 
-      details: error.message 
+      details: error.message,
+      requestId,
+      processingTime: `${processingTime}ms`
     }), { 
       status: 500, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

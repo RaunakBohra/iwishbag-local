@@ -101,6 +101,12 @@ interface PaymentProofData {
   customer_email: string;
   customer_name: string;
   amount_paid?: number;
+  // Payment type indicator
+  payment_type: 'bank_transfer_proof' | 'webhook_payment';
+  // Webhook payment specific fields
+  transaction_id?: string;
+  gateway_response?: any;
+  gateway_name?: string;
 }
 
 const PaymentProofsPage = () => {
@@ -111,6 +117,7 @@ const PaymentProofsPage = () => {
   const [selectedProofs, setSelectedProofs] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('pending');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<'all' | 'bank_transfer' | 'payu' | 'stripe' | 'esewa'>('all');
   const [dateRange, setDateRange] = useState({
     from: subDays(new Date(), 30),
     to: new Date(),
@@ -122,127 +129,238 @@ const PaymentProofsPage = () => {
 
   // Fetch payment proofs with pagination
   const { data: proofData, isLoading, refetch } = useQuery({
-    queryKey: ['payment-proofs', currentPage, pageSize, statusFilter, searchQuery, dateRange],
+    queryKey: ['payment-proofs', currentPage, pageSize, statusFilter, paymentMethodFilter, searchQuery, dateRange],
     queryFn: async () => {
-      // First get count
-      let countQuery = supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('message_type', 'payment_proof');
+      let allPaymentData: PaymentProofData[] = [];
 
-      if (statusFilter !== 'all') {
-        countQuery = countQuery.eq('verification_status', statusFilter);
+      // Fetch bank transfer payment proofs if needed
+      if (paymentMethodFilter === 'all' || paymentMethodFilter === 'bank_transfer') {
+        let messagesQuery = supabase
+          .from('messages')
+          .select('*')
+          .eq('message_type', 'payment_proof')
+          .order('created_at', { ascending: false });
+
+        if (statusFilter !== 'all') {
+          messagesQuery = messagesQuery.eq('verification_status', statusFilter);
+        }
+
+        if (dateRange.from && dateRange.to) {
+          messagesQuery = messagesQuery
+            .gte('created_at', dateRange.from.toISOString())
+            .lte('created_at', dateRange.to.toISOString());
+        }
+
+        const { data: messages, error: messagesError } = await messagesQuery;
+        if (messagesError) throw messagesError;
+
+        if (messages && messages.length > 0) {
+          // Get unique quote IDs and sender IDs
+          const quoteIds = [...new Set(messages.map(m => m.quote_id).filter(Boolean))];
+          const senderIds = [...new Set(messages.map(m => m.sender_id).filter(Boolean))];
+
+          // Fetch quotes data
+          let quotesData: any[] = [];
+          if (quoteIds.length > 0) {
+            const { data } = await supabase
+              .from('quotes')
+              .select('id, order_display_id, final_total, final_currency, payment_method, payment_status, email, amount_paid, user_id')
+              .in('id', quoteIds);
+            quotesData = data || [];
+          }
+
+          // Fetch profiles data
+          let profilesData: any[] = [];
+          if (senderIds.length > 0) {
+            const { data } = await supabase
+              .from('profiles')
+              .select('id, full_name')
+              .in('id', senderIds);
+            profilesData = data || [];
+          }
+
+          // Create lookup maps
+          const quotesMap = new Map(quotesData.map(q => [q.id, q]));
+          const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+
+          // Transform bank transfer data
+          const bankTransferData = messages.map(item => {
+            const quote = quotesMap.get(item.quote_id);
+            const profile = profilesMap.get(item.sender_id);
+            
+            return {
+              id: item.id,
+              quote_id: item.quote_id,
+              sender_id: item.sender_id,
+              attachment_url: item.attachment_url,
+              attachment_file_name: item.attachment_file_name,
+              created_at: item.created_at,
+              verification_status: item.verification_status,
+              admin_notes: item.admin_notes,
+              verified_at: item.verified_at,
+              verified_by: item.verified_by,
+              verified_amount: item.verified_amount,
+              // Joined data
+              order_display_id: quote?.order_display_id || 'N/A',
+              final_total: quote?.final_total || 0,
+              final_currency: quote?.final_currency || 'USD',
+              payment_method: quote?.payment_method || 'bank_transfer',
+              payment_status: quote?.payment_status || 'unpaid',
+              customer_email: quote?.email || 'N/A',
+              customer_name: profile?.full_name || 'Unknown Customer',
+              amount_paid: quote?.amount_paid || 0,
+              // Payment type indicator
+              payment_type: 'bank_transfer_proof' as const,
+            };
+          });
+
+          allPaymentData.push(...bankTransferData);
+        }
       }
 
-      // Note: For count, we can't search on joined data, so we'll only count based on attachment filename
-      if (searchQuery) {
-        countQuery = countQuery.or(`attachment_file_name.ilike.%${searchQuery}%`);
+      // Fetch webhook payments (PayU, Stripe, etc.) if needed
+      if (paymentMethodFilter === 'all' || ['payu', 'stripe', 'esewa'].includes(paymentMethodFilter)) {
+        let transactionsQuery = supabase
+          .from('payment_transactions')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        // Filter by specific gateway if not 'all'
+        if (paymentMethodFilter !== 'all') {
+          transactionsQuery = transactionsQuery.eq('payment_method', paymentMethodFilter);
+        }
+
+        // For webhook payments, we'll map status differently
+        if (statusFilter !== 'all') {
+          const webhookStatusMap = {
+            'pending': 'pending',
+            'verified': 'completed', // Webhook payments are auto-verified when completed
+            'rejected': 'failed'
+          };
+          const mappedStatus = webhookStatusMap[statusFilter as keyof typeof webhookStatusMap];
+          if (mappedStatus) {
+            transactionsQuery = transactionsQuery.eq('status', mappedStatus);
+          }
+        }
+
+        if (dateRange.from && dateRange.to) {
+          transactionsQuery = transactionsQuery
+            .gte('created_at', dateRange.from.toISOString())
+            .lte('created_at', dateRange.to.toISOString());
+        }
+
+        const { data: transactions, error: transactionsError } = await transactionsQuery;
+        if (transactionsError) throw transactionsError;
+
+        if (transactions && transactions.length > 0) {
+          // Get unique quote IDs and user IDs
+          const quoteIds = [...new Set(transactions.map(t => t.quote_id).filter(Boolean))];
+          const userIds = [...new Set(transactions.map(t => t.user_id).filter(Boolean))];
+
+          // Fetch quotes data
+          let quotesData: any[] = [];
+          if (quoteIds.length > 0) {
+            const { data } = await supabase
+              .from('quotes')
+              .select('id, order_display_id, final_total, final_currency, payment_method, payment_status, email, amount_paid, user_id')
+              .in('id', quoteIds);
+            quotesData = data || [];
+          }
+
+          // Fetch profiles data
+          let profilesData: any[] = [];
+          if (userIds.length > 0) {
+            const { data } = await supabase
+              .from('profiles')
+              .select('id, full_name')
+              .in('id', userIds);
+            profilesData = data || [];
+          }
+
+          // Create lookup maps
+          const quotesMap = new Map(quotesData.map(q => [q.id, q]));
+          const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+
+          // Transform webhook payment data
+          const webhookData = transactions.map(item => {
+            const quote = quotesMap.get(item.quote_id);
+            const profile = profilesMap.get(item.user_id);
+            
+            // Map webhook status to verification status
+            const getVerificationStatus = (status: string) => {
+              switch (status) {
+                case 'completed': return 'verified';
+                case 'failed': return 'rejected';
+                case 'pending': return 'pending';
+                default: return null;
+              }
+            };
+
+            const gatewayName = item.payment_method === 'payu' ? 'PayU' : 
+                              item.payment_method === 'stripe' ? 'Stripe' : 
+                              item.payment_method === 'esewa' ? 'eSewa' : 
+                              item.payment_method || 'Unknown';
+
+            return {
+              id: item.id,
+              quote_id: item.quote_id,
+              sender_id: item.user_id,
+              attachment_url: '', // No attachment for webhook payments
+              attachment_file_name: `${gatewayName} Transaction`,
+              created_at: item.created_at,
+              verification_status: getVerificationStatus(item.status || ''),
+              admin_notes: null,
+              verified_at: item.status === 'completed' ? item.updated_at : null,
+              verified_by: null, // Webhook auto-verification
+              verified_amount: item.amount,
+              // Joined data
+              order_display_id: quote?.order_display_id || 'N/A',
+              final_total: quote?.final_total || 0,
+              final_currency: quote?.final_currency || item.currency || 'USD',
+              payment_method: item.payment_method || 'unknown',
+              payment_status: quote?.payment_status || 'unpaid',
+              customer_email: quote?.email || 'N/A',
+              customer_name: profile?.full_name || 'Unknown Customer',
+              amount_paid: quote?.amount_paid || 0,
+              // Payment type indicator
+              payment_type: 'webhook_payment' as const,
+              // Webhook specific fields
+              transaction_id: item.id,
+              gateway_response: item.gateway_response,
+              gateway_name: gatewayName,
+            };
+          });
+
+          allPaymentData.push(...webhookData);
+        }
       }
 
-      if (dateRange.from && dateRange.to) {
-        countQuery = countQuery
-          .gte('created_at', dateRange.from.toISOString())
-          .lte('created_at', dateRange.to.toISOString());
-      }
-
-      const { count } = await countQuery;
-
-      // Then get paginated data - fetch messages first
-      let dataQuery = supabase
-        .from('messages')
-        .select('*')
-        .eq('message_type', 'payment_proof')
-        .order('created_at', { ascending: false })
-        .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
-
-      if (statusFilter !== 'all') {
-        dataQuery = dataQuery.eq('verification_status', statusFilter);
-      }
-
-      // Remove server-side search filter for messages query since we'll filter client-side
-
-      if (dateRange.from && dateRange.to) {
-        dataQuery = dataQuery
-          .gte('created_at', dateRange.from.toISOString())
-          .lte('created_at', dateRange.to.toISOString());
-      }
-
-      const { data: messages, error } = await dataQuery;
-
-      if (error) throw error;
-
-      // Get unique quote IDs and sender IDs
-      const quoteIds = [...new Set(messages?.map(m => m.quote_id).filter(Boolean) || [])];
-      const senderIds = [...new Set(messages?.map(m => m.sender_id).filter(Boolean) || [])];
-
-      // Fetch quotes data
-      let quotesData: any[] = [];
-      if (quoteIds.length > 0) {
-        const { data } = await supabase
-          .from('quotes')
-          .select('id, order_display_id, final_total, final_currency, payment_method, payment_status, email, amount_paid')
-          .in('id', quoteIds);
-        quotesData = data || [];
-      }
-
-      // Fetch profiles data
-      let profilesData: any[] = [];
-      if (senderIds.length > 0) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', senderIds);
-        profilesData = data || [];
-      }
-
-      // Create lookup maps
-      const quotesMap = new Map(quotesData.map(q => [q.id, q]));
-      const profilesMap = new Map(profilesData.map(p => [p.id, p]));
-
-      // Transform data
-      let transformedData = messages?.map(item => {
-        const quote = quotesMap.get(item.quote_id);
-        const profile = profilesMap.get(item.sender_id);
-        
-        return {
-          id: item.id,
-          quote_id: item.quote_id,
-          sender_id: item.sender_id,
-          attachment_url: item.attachment_url,
-          attachment_file_name: item.attachment_file_name,
-          created_at: item.created_at,
-          verification_status: item.verification_status,
-          admin_notes: item.admin_notes,
-          verified_at: item.verified_at,
-          verified_by: item.verified_by,
-          verified_amount: item.verified_amount,
-          // Joined data
-          order_display_id: quote?.order_display_id || 'N/A',
-          final_total: quote?.final_total || 0,
-          final_currency: quote?.final_currency || 'USD',
-          payment_method: quote?.payment_method || 'unknown',
-          payment_status: quote?.payment_status || 'unpaid',
-          customer_email: quote?.email || 'N/A',
-          customer_name: profile?.full_name || 'Unknown Customer',
-          amount_paid: quote?.amount_paid || 0,
-        };
-      }) as PaymentProofData[];
+      // Sort all data by creation date (newest first)
+      allPaymentData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       // Apply client-side search filter
-      if (searchQuery && transformedData) {
+      if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        transformedData = transformedData.filter(item => 
+        allPaymentData = allPaymentData.filter(item => 
           item.order_display_id.toLowerCase().includes(query) ||
           item.customer_email.toLowerCase().includes(query) ||
           item.customer_name.toLowerCase().includes(query) ||
-          item.attachment_file_name.toLowerCase().includes(query)
+          item.attachment_file_name.toLowerCase().includes(query) ||
+          (item.transaction_id && item.transaction_id.toLowerCase().includes(query)) ||
+          (item.gateway_name && item.gateway_name.toLowerCase().includes(query))
         );
       }
 
+      // Apply pagination
+      const totalCount = allPaymentData.length;
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const paginatedData = allPaymentData.slice(startIndex, endIndex);
+
       return {
-        data: transformedData || [],
-        totalCount: count || 0,
-        totalPages: Math.ceil((count || 0) / pageSize),
+        data: paginatedData,
+        totalCount,
+        totalPages: Math.ceil(totalCount / pageSize),
       };
     },
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -250,21 +368,54 @@ const PaymentProofsPage = () => {
 
   // Fetch overall statistics
   const { data: statistics } = useQuery({
-    queryKey: ['payment-proofs-stats'],
+    queryKey: ['payment-proofs-stats', paymentMethodFilter],
     queryFn: async () => {
-      const { data: allProofs, error } = await supabase
-        .from('messages')
-        .select('verification_status')
-        .eq('message_type', 'payment_proof');
+      let bankTransferStats = { total: 0, pending: 0, verified: 0, rejected: 0 };
+      let webhookStats = { total: 0, pending: 0, verified: 0, rejected: 0 };
 
-      if (error) throw error;
+      // Get bank transfer stats if needed
+      if (paymentMethodFilter === 'all' || paymentMethodFilter === 'bank_transfer') {
+        const { data: allProofs, error } = await supabase
+          .from('messages')
+          .select('verification_status')
+          .eq('message_type', 'payment_proof');
 
-      const total = allProofs?.length || 0;
-      const pending = allProofs?.filter(p => !p.verification_status || p.verification_status === 'pending').length || 0;
-      const verified = allProofs?.filter(p => p.verification_status === 'verified').length || 0;
-      const rejected = allProofs?.filter(p => p.verification_status === 'rejected').length || 0;
+        if (!error && allProofs) {
+          bankTransferStats.total = allProofs.length;
+          bankTransferStats.pending = allProofs.filter(p => !p.verification_status || p.verification_status === 'pending').length;
+          bankTransferStats.verified = allProofs.filter(p => p.verification_status === 'verified').length;
+          bankTransferStats.rejected = allProofs.filter(p => p.verification_status === 'rejected').length;
+        }
+      }
 
-      return { total, pending, verified, rejected };
+      // Get webhook payment stats if needed
+      if (paymentMethodFilter === 'all' || ['payu', 'stripe', 'esewa'].includes(paymentMethodFilter)) {
+        let transactionsQuery = supabase
+          .from('payment_transactions')
+          .select('status, payment_method');
+
+        // Filter by specific gateway if not 'all'
+        if (paymentMethodFilter !== 'all') {
+          transactionsQuery = transactionsQuery.eq('payment_method', paymentMethodFilter);
+        }
+
+        const { data: allTransactions, error } = await transactionsQuery;
+
+        if (!error && allTransactions) {
+          webhookStats.total = allTransactions.length;
+          webhookStats.pending = allTransactions.filter(t => t.status === 'pending').length;
+          webhookStats.verified = allTransactions.filter(t => t.status === 'completed').length;
+          webhookStats.rejected = allTransactions.filter(t => t.status === 'failed').length;
+        }
+      }
+
+      // Combine stats
+      return {
+        total: bankTransferStats.total + webhookStats.total,
+        pending: bankTransferStats.pending + webhookStats.pending,
+        verified: bankTransferStats.verified + webhookStats.verified,
+        rejected: bankTransferStats.rejected + webhookStats.rejected,
+      };
     },
     refetchInterval: 30000,
   });
@@ -394,13 +545,21 @@ const PaymentProofsPage = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked && proofData?.data) {
-      setSelectedProofs(new Set(proofData.data.map(p => p.id)));
+      // Only select bank transfer proofs for bulk operations
+      const bankTransferProofs = proofData.data.filter(p => p.payment_type === 'bank_transfer_proof');
+      setSelectedProofs(new Set(bankTransferProofs.map(p => p.id)));
     } else {
       setSelectedProofs(new Set());
     }
   };
 
   const handleSelectProof = (id: string, checked: boolean) => {
+    // Only allow selection of bank transfer proofs
+    const proof = proofData?.data.find(p => p.id === id);
+    if (proof && proof.payment_type !== 'bank_transfer_proof') {
+      return; // Don't allow selection of webhook payments
+    }
+
     const newSelected = new Set(selectedProofs);
     if (checked) {
       newSelected.add(id);
@@ -501,6 +660,7 @@ const PaymentProofsPage = () => {
       cod: <DollarSign className="h-4 w-4 text-green-600" />,
       stripe: <DollarSign className="h-4 w-4 text-purple-600" />,
       payu: <DollarSign className="h-4 w-4 text-orange-600" />,
+      esewa: <DollarSign className="h-4 w-4 text-green-600" />,
     };
     
     return (
@@ -694,6 +854,19 @@ const PaymentProofsPage = () => {
                 <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
+
+            <Select value={paymentMethodFilter} onValueChange={(value: any) => setPaymentMethodFilter(value)}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Payment Method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Methods</SelectItem>
+                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                <SelectItem value="payu">PayU</SelectItem>
+                <SelectItem value="stripe">Stripe</SelectItem>
+                <SelectItem value="esewa">eSewa</SelectItem>
+              </SelectContent>
+            </Select>
             
             <DateRangePicker
               value={dateRange}
@@ -709,7 +882,7 @@ const PaymentProofsPage = () => {
                 <TableRow>
                   <TableHead className="w-[50px]">
                     <Checkbox
-                      checked={proofData?.data && selectedProofs.size === proofData.data.length}
+                      checked={proofData?.data && selectedProofs.size === proofData.data.filter(p => p.payment_type === 'bank_transfer_proof').length && proofData.data.filter(p => p.payment_type === 'bank_transfer_proof').length > 0}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
@@ -766,6 +939,7 @@ const PaymentProofsPage = () => {
                         <Checkbox
                           checked={selectedProofs.has(proof.id)}
                           onCheckedChange={(checked) => handleSelectProof(proof.id, checked as boolean)}
+                          disabled={proof.payment_type === 'webhook_payment'}
                         />
                       </TableCell>
                       <TableCell>
@@ -775,13 +949,23 @@ const PaymentProofsPage = () => {
                               <TooltipTrigger asChild>
                                 <button
                                   onClick={() => {
-                                    setSelectedProof(proof);
-                                    setShowPreviewModal(true);
+                                    if (proof.payment_type === 'bank_transfer_proof') {
+                                      setSelectedProof(proof);
+                                      setShowPreviewModal(true);
+                                    }
                                   }}
-                                  className="flex items-center gap-2 hover:text-primary"
+                                  className={`flex items-center gap-2 ${proof.payment_type === 'bank_transfer_proof' ? 'hover:text-primary' : 'cursor-default'}`}
                                 >
                                   <div className="w-8 h-8 relative bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                                    {isImage(proof.attachment_file_name) ? (
+                                    {proof.payment_type === 'webhook_payment' ? (
+                                      // Webhook payment icon
+                                      <div className="flex items-center justify-center h-full">
+                                        {proof.gateway_name === 'PayU' && <DollarSign className="h-4 w-4 text-orange-600" />}
+                                        {proof.gateway_name === 'Stripe' && <DollarSign className="h-4 w-4 text-purple-600" />}
+                                        {proof.gateway_name === 'eSewa' && <DollarSign className="h-4 w-4 text-green-600" />}
+                                        {!['PayU', 'Stripe', 'eSewa'].includes(proof.gateway_name || '') && <DollarSign className="h-4 w-4 text-blue-600" />}
+                                      </div>
+                                    ) : isImage(proof.attachment_file_name) ? (
                                       <img
                                         src={proof.attachment_url}
                                         alt="Payment proof"
@@ -804,7 +988,11 @@ const PaymentProofsPage = () => {
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p className="text-xs">{proof.attachment_file_name}</p>
+                                <p className="text-xs">
+                                  {proof.payment_type === 'webhook_payment' 
+                                    ? `${proof.gateway_name} Transaction` 
+                                    : proof.attachment_file_name}
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -837,7 +1025,40 @@ const PaymentProofsPage = () => {
                         {getStatusBadge(proof.verification_status)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {(!proof.verification_status || proof.verification_status === 'pending') ? (
+                        {proof.payment_type === 'webhook_payment' ? (
+                          // Webhook payments - show status info
+                          <div className="flex items-center justify-end gap-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <span>Auto-verified</span>
+                                    {proof.transaction_id && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 px-2 text-xs"
+                                        onClick={() => {
+                                          // Show transaction details
+                                          toast({
+                                            title: `${proof.gateway_name} Transaction`,
+                                            description: `ID: ${proof.transaction_id}\nAmount: ${proof.final_currency} ${proof.verified_amount}\nStatus: ${proof.verification_status}`,
+                                          });
+                                        }}
+                                      >
+                                        View
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Automatically verified by {proof.gateway_name} webhook</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        ) : (!proof.verification_status || proof.verification_status === 'pending') ? (
+                          // Bank transfer proofs - show manual verification buttons
                           <div className="flex items-center justify-end gap-1">
                             <TooltipProvider>
                               <Tooltip>

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayU Integration Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .status-tracker {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 PayU Integration Test</h1>
+        <p>Test your PayU integration with a ₹1 payment</p>
+
+        <form id="paymentForm">
+            <div class="form-group">
+                <label for="amount">Amount (INR)</label>
+                <input type="number" id="amount" value="1" min="1" step="0.01" required>
+            </div>
+
+            <div class="form-group">
+                <label for="customerName">Customer Name</label>
+                <input type="text" id="customerName" value="Test Customer" required>
+            </div>
+
+            <div class="form-group">
+                <label for="customerEmail">Customer Email</label>
+                <input type="email" id="customerEmail" value="test@iwishbag.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="customerPhone">Customer Phone</label>
+                <input type="tel" id="customerPhone" value="9999999999" required>
+            </div>
+
+            <button type="submit" id="payButton">Create PayU Payment</button>
+        </form>
+
+        <div id="result" class="result" style="display: none;"></div>
+        
+        <div id="statusTracker" class="status-tracker">
+            <h3>Payment Status Tracker</h3>
+            <div id="statusContent"></div>
+            <button id="refreshStatus" style="margin-top: 10px; width: auto;">Refresh Status</button>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://grgvlrvywsfmnmkxrecd.supabase.co/functions/v1';
+        
+        // You'll need to get this from your Supabase dashboard
+        // For testing, you might need to temporarily make the function public
+        const ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with actual key
+        
+        let currentTransactionId = null;
+
+        document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const button = document.getElementById('payButton');
+            const result = document.getElementById('result');
+            
+            button.disabled = true;
+            button.textContent = 'Creating Payment...';
+            
+            const paymentData = {
+                quoteIds: [`test-quote-${Date.now()}`],
+                gateway: 'payu',
+                success_url: window.location.origin + '/payment-success',
+                cancel_url: window.location.origin + '/payment-failure',
+                amount: parseFloat(document.getElementById('amount').value),
+                currency: 'INR',
+                customerInfo: {
+                    name: document.getElementById('customerName').value,
+                    email: document.getElementById('customerEmail').value,
+                    phone: document.getElementById('customerPhone').value
+                }
+            };
+
+            try {
+                const response = await fetch(`${BASE_URL}/create-payment`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ANON_KEY}`
+                    },
+                    body: JSON.stringify(paymentData)
+                });
+
+                const data = await response.json();
+                
+                result.style.display = 'block';
+                
+                if (response.ok && data.success) {
+                    result.className = 'result success';
+                    result.textContent = `✅ Payment Created Successfully!
+
+Transaction ID: ${data.transactionId}
+Amount: ₹${data.amountInINR}
+Exchange Rate: ${data.exchangeRate}
+
+Payment URL: ${data.url}
+
+Next Steps:
+1. Click the payment URL to open PayU
+2. Complete the payment with test card details
+3. Return to check status below`;
+
+                    currentTransactionId = data.transactionId;
+                    
+                    // Show status tracker
+                    document.getElementById('statusTracker').style.display = 'block';
+                    
+                    // Create PayU form if form data is provided
+                    if (data.formData) {
+                        createPayUForm(data.url, data.formData);
+                    }
+                    
+                } else {
+                    result.className = 'result error';
+                    result.textContent = `❌ Payment Creation Failed:
+
+Error: ${data.error || 'Unknown error'}
+Details: ${data.details || 'No additional details'}
+
+Check the browser console for more information.`;
+                }
+                
+            } catch (error) {
+                result.style.display = 'block';
+                result.className = 'result error';
+                result.textContent = `❌ Network Error:
+
+${error.message}
+
+Make sure your Supabase functions are deployed and accessible.`;
+            }
+            
+            button.disabled = false;
+            button.textContent = 'Create PayU Payment';
+        });
+
+        function createPayUForm(actionUrl, formData) {
+            // Create a hidden form to submit to PayU
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = actionUrl;
+            form.style.display = 'none';
+            
+            // Add all form fields
+            Object.keys(formData).forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = formData[key];
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            
+            // Add a button to submit to PayU
+            const payButton = document.createElement('button');
+            payButton.textContent = '🚀 Proceed to PayU Payment';
+            payButton.style.marginTop = '15px';
+            payButton.style.background = '#28a745';
+            payButton.onclick = () => form.submit();
+            
+            document.getElementById('result').appendChild(payButton);
+        }
+
+        document.getElementById('refreshStatus').addEventListener('click', async () => {
+            if (!currentTransactionId) {
+                alert('No transaction ID available');
+                return;
+            }
+            
+            const statusContent = document.getElementById('statusContent');
+            statusContent.textContent = 'Checking status...';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/verify-payment-status/${currentTransactionId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${ANON_KEY}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusContent.innerHTML = `
+<strong>Payment Status:</strong> ${data.status}
+<strong>Progress:</strong> ${data.progress}%
+<strong>Gateway Status:</strong> ${data.gateway_status}
+<strong>Last Update:</strong> ${new Date(data.last_update).toLocaleString()}
+${data.error_message ? `<strong>Error:</strong> ${data.error_message}` : ''}
+                    `;
+                } else {
+                    statusContent.textContent = `Error checking status: ${data.error}`;
+                }
+                
+            } catch (error) {
+                statusContent.textContent = `Network error: ${error.message}`;
+            }
+        });
+
+        // Show info about getting the anon key
+        if (ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+            const info = document.createElement('div');
+            info.className = 'result info';
+            info.innerHTML = `
+<strong>⚠️ Setup Required:</strong>
+
+1. Go to your Supabase Dashboard
+2. Copy your project's anon key
+3. Replace 'YOUR_SUPABASE_ANON_KEY' in this HTML file
+4. Or test directly through your website instead
+
+<strong>Alternative:</strong> Use your website's payment flow instead of this test page.
+            `;
+            document.body.insertBefore(info, document.querySelector('.container'));
+        }
+    </script>
+</body>
+</html>
