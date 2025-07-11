@@ -11,14 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { PaymentProofButton } from "./PaymentProofButton";
 
-type BankAccountType = Tables<'bank_account_details'> & {
-  upi_id?: string;
-  upi_qr_string?: string;
-  payment_qr_url?: string;
-  instructions?: string;
-  custom_fields?: Record<string, any>;
-  field_labels?: Record<string, string>;
-};
+type BankAccountType = Tables<'bank_account_details'>;
 
 interface EnhancedBankTransferDetailsProps {
   orderId: string;
@@ -52,7 +45,6 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
       
       const { data, error } = await query;
       if (error) throw error;
-      console.log('Bank accounts fetched:', data);
       return data as BankAccountType[];
     },
   });
@@ -118,10 +110,6 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
   const defaultAccount = bankAccounts[0];
   const hasUPI = !!defaultAccount.upi_id || !!defaultAccount.upi_qr_string;
   const hasQR = !!defaultAccount.payment_qr_url;
-  
-  console.log('Default account:', defaultAccount);
-  console.log('Has UPI:', hasUPI, 'UPI ID:', defaultAccount.upi_id);
-  console.log('Has QR:', hasQR, 'QR URL:', defaultAccount.payment_qr_url);
 
   return (
     <div className="space-y-4">

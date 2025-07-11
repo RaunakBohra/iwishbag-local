@@ -4,13 +4,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type BankAccount = Tables<'bank_account_details'> & {
-    upi_id?: string;
-    upi_qr_string?: string;
-    payment_qr_url?: string;
-    instructions?: string;
-    destination_country?: string | null;
-};
+export type BankAccount = Tables<'bank_account_details'>;
 export type BankAccountFormData = Omit<BankAccount, 'id' | 'created_at' | 'updated_at'>;
 
 export const useBankAccountSettings = () => {

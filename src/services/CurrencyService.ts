@@ -16,6 +16,12 @@ export interface CountrySettings {
   name: string;
   currency: string;
   rate_from_usd?: number;
+  minimum_payment_amount?: number;
+  decimal_places?: number;
+  thousand_separator?: string;
+  decimal_separator?: string;
+  symbol_position?: string;
+  symbol_space?: boolean;
 }
 
 class CurrencyService {
@@ -63,7 +69,7 @@ class CurrencyService {
     try {
       const { data: countrySettings, error } = await supabase
         .from('country_settings')
-        .select('currency')
+        .select('currency, minimum_payment_amount, decimal_places, thousand_separator, decimal_separator')
         .not('currency', 'is', null)
         .order('currency');
 
@@ -72,17 +78,31 @@ class CurrencyService {
         return this.getFallbackCurrencies();
       }
 
-      // Get unique currencies
-      const uniqueCurrencies = [...new Set(countrySettings.map(cs => cs.currency))];
+      // Group by currency and get the most complete data for each
+      const currencyMap = new Map<string, Currency>();
       
-      // Convert to Currency objects with metadata
-      const currencies: Currency[] = uniqueCurrencies.map(code => ({
-        code,
-        name: this.getCurrencyNameSync(code),
-        symbol: this.getCurrencySymbolSync(code),
-        decimal_places: this.getCurrencyDecimalPlaces(code),
-        is_active: true
-      }));
+      countrySettings.forEach(cs => {
+        const existing = currencyMap.get(cs.currency);
+        const currency: Currency = {
+          code: cs.currency,
+          name: this.getCurrencyNameSync(cs.currency),
+          symbol: this.getCurrencySymbolSync(cs.currency),
+          decimal_places: cs.decimal_places ?? this.getCurrencyDecimalPlacesSync(cs.currency),
+          min_payment_amount: cs.minimum_payment_amount ?? undefined,
+          thousand_separator: cs.thousand_separator ?? ',',
+          decimal_separator: cs.decimal_separator ?? '.',
+          is_active: true
+        };
+        
+        // Keep the one with more complete data (prefer non-null values)
+        if (!existing || 
+            (cs.minimum_payment_amount && !existing.min_payment_amount) ||
+            (cs.decimal_places && !existing.decimal_places)) {
+          currencyMap.set(cs.currency, currency);
+        }
+      });
+
+      const currencies = Array.from(currencyMap.values());
 
       // Cache the results
       this.allCurrenciesCache = currencies;
@@ -264,7 +284,33 @@ class CurrencyService {
   /**
    * Get currency decimal places
    */
-  private getCurrencyDecimalPlaces(currencyCode: string): number {
+  /**
+   * Get decimal places for currency from database or fallback
+   */
+  async getCurrencyDecimalPlaces(currencyCode: string): Promise<number> {
+    try {
+      const { data: countrySettings, error } = await supabase
+        .from('country_settings')
+        .select('decimal_places')
+        .eq('currency', currencyCode)
+        .not('decimal_places', 'is', null)
+        .limit(1)
+        .single();
+
+      if (!error && countrySettings?.decimal_places !== null) {
+        return countrySettings.decimal_places;
+      }
+    } catch (error) {
+      console.error('Error fetching decimal places:', error);
+    }
+
+    return this.getCurrencyDecimalPlacesSync(currencyCode);
+  }
+
+  /**
+   * Synchronous fallback for decimal places
+   */
+  private getCurrencyDecimalPlacesSync(currencyCode: string): number {
     // Some currencies don't use decimal places
     const noDecimalCurrencies = ['JPY', 'KRW', 'VND', 'IDR'];
     return noDecimalCurrencies.includes(currencyCode) ? 0 : 2;
@@ -280,7 +326,7 @@ class CurrencyService {
       code,
       name: this.getCurrencyNameSync(code),
       symbol: this.getCurrencySymbolSync(code),
-      decimal_places: this.getCurrencyDecimalPlaces(code),
+      decimal_places: this.getCurrencyDecimalPlacesSync(code),
       is_active: true
     }));
   }
@@ -341,29 +387,54 @@ class CurrencyService {
   /**
    * Get minimum payment amount for a currency
    */
-  getMinimumPaymentAmount(currencyCode: string): number {
+  async getMinimumPaymentAmount(currencyCode: string): Promise<number> {
+    try {
+      const { data: countrySettings, error } = await supabase
+        .from('country_settings')
+        .select('minimum_payment_amount')
+        .eq('currency', currencyCode)
+        .not('minimum_payment_amount', 'is', null)
+        .limit(1)
+        .single();
+
+      if (!error && countrySettings?.minimum_payment_amount) {
+        return countrySettings.minimum_payment_amount;
+      }
+    } catch (error) {
+      console.error('Error fetching minimum payment amount:', error);
+    }
+
+    // Fallback to hardcoded values
+    return this.getMinimumPaymentAmountSync(currencyCode);
+  }
+
+  /**
+   * Synchronous fallback for minimum payment amount
+   */
+  getMinimumPaymentAmountSync(currencyCode: string): number {
     const minimumAmounts: Record<string, number> = {
-      'USD': 50,
-      'EUR': 50,
-      'GBP': 50,
-      'INR': 4000,
-      'NPR': 5000,
-      'CAD': 50,
-      'AUD': 50,
-      'JPY': 5000,
-      'CNY': 300,
-      'SGD': 50,
-      'AED': 200,
-      'SAR': 200,
-      'EGP': 1000,
-      'TRY': 500,
-      'IDR': 500000,
-      'MYR': 200,
-      'PHP': 2500,
-      'THB': 1500,
-      'VND': 1000000,
+      'USD': 10,
+      'EUR': 10,
+      'GBP': 8,
+      'INR': 750,
+      'NPR': 1200,
+      'CAD': 15,
+      'AUD': 15,
+      'JPY': 1100,
+      'CNY': 70,
+      'SGD': 15,
+      'AED': 40,
+      'SAR': 40,
+      'EGP': 200,
+      'TRY': 100,
+      'IDR': 150000,
+      'MYR': 45,
+      'PHP': 550,
+      'THB': 350,
+      'VND': 240000,
+      'KRW': 12000
     };
-    return minimumAmounts[currencyCode] || 50;
+    return minimumAmounts[currencyCode] || 10;
   }
 
   /**
@@ -416,8 +487,16 @@ class CurrencyService {
   /**
    * Check if amount meets minimum payment requirement
    */
-  isValidPaymentAmount(amount: number, currencyCode: string): boolean {
-    const minimum = this.getMinimumPaymentAmount(currencyCode);
+  async isValidPaymentAmount(amount: number, currencyCode: string): Promise<boolean> {
+    const minimum = await this.getMinimumPaymentAmount(currencyCode);
+    return amount >= minimum;
+  }
+
+  /**
+   * Check if amount meets minimum payment requirement (sync fallback)
+   */
+  isValidPaymentAmountSync(amount: number, currencyCode: string): boolean {
+    const minimum = this.getMinimumPaymentAmountSync(currencyCode);
     return amount >= minimum;
   }
 
