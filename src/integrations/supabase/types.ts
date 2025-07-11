@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
-          extensions?: Json
           operationName?: string
-          query?: string
           variables?: Json
+          query?: string
+          extensions?: Json
         }
         Returns: Json
       }
@@ -156,6 +156,51 @@ export type Database = {
           },
         ]
       }
+      country_payment_preferences: {
+        Row: {
+          country_code: string
+          created_at: string
+          gateway_code: string
+          id: string
+          is_active: boolean | null
+          priority: number
+          updated_at: string
+        }
+        Insert: {
+          country_code: string
+          created_at?: string
+          gateway_code: string
+          id?: string
+          is_active?: boolean | null
+          priority: number
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          gateway_code?: string
+          id?: string
+          is_active?: boolean | null
+          priority?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_country_payment_preferences_country"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "country_settings"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "fk_country_payment_preferences_gateway"
+            columns: ["gateway_code"]
+            isOneToOne: false
+            referencedRelation: "payment_gateways"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       country_settings: {
         Row: {
           additional_shipping: number | null
@@ -163,7 +208,10 @@ export type Database = {
           code: string
           created_at: string
           currency: string
+          decimal_places: number | null
+          decimal_separator: string | null
           min_shipping: number | null
+          minimum_payment_amount: number | null
           name: string
           payment_gateway: string | null
           payment_gateway_fixed_fee: number | null
@@ -173,6 +221,9 @@ export type Database = {
           rate_from_usd: number
           sales_tax: number | null
           shipping_allowed: boolean | null
+          symbol_position: string | null
+          symbol_space: boolean | null
+          thousand_separator: string | null
           updated_at: string
           vat: number | null
           volumetric_divisor: number | null
@@ -184,7 +235,10 @@ export type Database = {
           code: string
           created_at?: string
           currency: string
+          decimal_places?: number | null
+          decimal_separator?: string | null
           min_shipping?: number | null
+          minimum_payment_amount?: number | null
           name: string
           payment_gateway?: string | null
           payment_gateway_fixed_fee?: number | null
@@ -194,6 +248,9 @@ export type Database = {
           rate_from_usd: number
           sales_tax?: number | null
           shipping_allowed?: boolean | null
+          symbol_position?: string | null
+          symbol_space?: boolean | null
+          thousand_separator?: string | null
           updated_at?: string
           vat?: number | null
           volumetric_divisor?: number | null
@@ -205,7 +262,10 @@ export type Database = {
           code?: string
           created_at?: string
           currency?: string
+          decimal_places?: number | null
+          decimal_separator?: string | null
           min_shipping?: number | null
+          minimum_payment_amount?: number | null
           name?: string
           payment_gateway?: string | null
           payment_gateway_fixed_fee?: number | null
@@ -215,6 +275,9 @@ export type Database = {
           rate_from_usd?: number
           sales_tax?: number | null
           shipping_allowed?: boolean | null
+          symbol_position?: string | null
+          symbol_space?: boolean | null
+          thousand_separator?: string | null
           updated_at?: string
           vat?: number | null
           volumetric_divisor?: number | null
@@ -513,6 +576,7 @@ export type Database = {
       }
       messages: {
         Row: {
+          admin_notes: string | null
           attachment_file_name: string | null
           attachment_url: string | null
           content: string
@@ -528,8 +592,13 @@ export type Database = {
           sender_name: string | null
           subject: string
           updated_at: string
+          verification_status: string | null
+          verified_amount: number | null
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
+          admin_notes?: string | null
           attachment_file_name?: string | null
           attachment_url?: string | null
           content: string
@@ -545,8 +614,13 @@ export type Database = {
           sender_name?: string | null
           subject: string
           updated_at?: string
+          verification_status?: string | null
+          verified_amount?: number | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
+          admin_notes?: string | null
           attachment_file_name?: string | null
           attachment_url?: string | null
           content?: string
@@ -562,6 +636,10 @@ export type Database = {
           sender_name?: string | null
           subject?: string
           updated_at?: string
+          verification_status?: string | null
+          verified_amount?: number | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -579,8 +657,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "payment_proof_verification_summary"
+            referencedColumns: ["message_id"]
+          },
+          {
             foreignKeyName: "messages_sender_id_fkey"
             columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_verified_by_fkey"
+            columns: ["verified_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -598,6 +690,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          priority: number | null
           supported_countries: string[] | null
           supported_currencies: string[] | null
           test_mode: boolean | null
@@ -613,6 +706,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          priority?: number | null
           supported_countries?: string[] | null
           supported_currencies?: string[] | null
           test_mode?: boolean | null
@@ -628,6 +722,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          priority?: number | null
           supported_countries?: string[] | null
           supported_currencies?: string[] | null
           test_mode?: boolean | null
@@ -1628,7 +1723,44 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      payment_proof_verification_summary: {
+        Row: {
+          admin_notes: string | null
+          attachment_file_name: string | null
+          attachment_url: string | null
+          customer_email: string | null
+          final_currency: string | null
+          final_total: number | null
+          message_id: string | null
+          order_display_id: string | null
+          payment_method: string | null
+          payment_status: string | null
+          quote_id: string | null
+          sender_id: string | null
+          submitted_at: string | null
+          verification_status: string | null
+          verified_amount: number | null
+          verified_at: string | null
+          verified_by: string | null
+          verified_by_email: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       cleanup_expired_authenticated_checkout_sessions: {
@@ -1654,28 +1786,52 @@ export type Database = {
       get_all_user_emails: {
         Args: Record<PropertyKey, never>
         Returns: {
+          email: string
           full_name: string
           source: string
           user_id: string
-          email: string
         }[]
       }
       get_bank_details_for_email: {
         Args: { payment_currency: string }
         Returns: string
       }
+      get_orders_with_payment_proofs: {
+        Args: { limit_count?: number; status_filter?: string }
+        Returns: {
+          verification_status: string
+          message_id: string
+          customer_email: string
+          payment_method: string
+          payment_status: string
+          final_currency: string
+          final_total: number
+          order_display_id: string
+          order_id: string
+          submitted_at: string
+          attachment_url: string
+          attachment_file_name: string
+          verified_amount: number
+          admin_notes: string
+          verified_at: string
+        }[]
+      }
+      get_payment_proof_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_shipping_cost: {
         Args: {
-          p_price?: number
-          p_origin_country: string
           p_destination_country: string
           p_weight: number
+          p_price?: number
+          p_origin_country: string
         }
         Returns: {
-          method: string
           cost: number
-          delivery_days: string
+          method: string
           carrier: string
+          delivery_days: string
         }[]
       }
       get_user_bank_accounts: {
@@ -1709,8 +1865,8 @@ export type Database = {
       }
       has_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
       }

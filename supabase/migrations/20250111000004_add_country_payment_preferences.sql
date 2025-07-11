@@ -56,31 +56,10 @@ CREATE TRIGGER trigger_country_payment_preferences_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_country_payment_preferences_updated_at();
 
--- Insert some example country-specific preferences
--- India: Prioritize UPI, PayU, Razorpay over international options
-INSERT INTO public.country_payment_preferences (country_code, gateway_code, priority) VALUES
-('IN', 'upi', 1),
-('IN', 'payu', 2),
-('IN', 'razorpay', 3),
-('IN', 'stripe', 4),
-('IN', 'bank_transfer', 5)
-ON CONFLICT (country_code, gateway_code) DO NOTHING;
+-- Country preferences will be populated after payment gateways are configured
+-- This table is ready for use once gateways are added to the payment_gateways table
 
--- Nepal: Prioritize eSewa, Khalti, Fonepay
-INSERT INTO public.country_payment_preferences (country_code, gateway_code, priority) VALUES
-('NP', 'esewa', 1),
-('NP', 'khalti', 2),
-('NP', 'fonepay', 3),
-('NP', 'bank_transfer', 4),
-('NP', 'stripe', 5)
-ON CONFLICT (country_code, gateway_code) DO NOTHING;
-
--- US: Prioritize Stripe, PayPal
-INSERT INTO public.country_payment_preferences (country_code, gateway_code, priority) VALUES
-('US', 'stripe', 1),
-('US', 'paypal', 2),
-('US', 'bank_transfer', 3)
-ON CONFLICT (country_code, gateway_code) DO NOTHING;
+-- Additional countries can be added when their specific gateways are configured
 
 -- Add comment to document the table
 COMMENT ON TABLE public.country_payment_preferences IS 'Country-specific payment gateway preferences and priorities';
