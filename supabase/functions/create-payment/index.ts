@@ -140,7 +140,8 @@ serve(async (req) => {
     console.log('Stripe Key:', Deno.env.get('STRIPE_SECRET_KEY')?.substring(0, 10));
     console.log('Supabase URL:', Deno.env.get('SUPABASE_URL'));
 
-    const { quoteIds, gateway, success_url, cancel_url, amount, currency, customerInfo }: PaymentRequest = await req.json()
+    const paymentRequest: PaymentRequest = await req.json()
+    const { quoteIds, gateway, success_url, cancel_url, amount, currency, customerInfo } = paymentRequest
 
     if (!quoteIds || quoteIds.length === 0) {
       return new Response(JSON.stringify({ error: 'Missing quoteIds' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
@@ -258,9 +259,19 @@ serve(async (req) => {
             return new Response(JSON.stringify({ error: 'Failed to get exchange rate for INR conversion' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
           }
 
-          // Convert USD amount to INR for PayU
+          // Check if amount is already in INR or needs conversion from USD
           const exchangeRate = indiaSettings.rate_from_usd || 83.0; // Default to 83 if not found
-          const amountInINR = totalAmount * exchangeRate;
+          let amountInINR: number;
+          
+          if (totalCurrency === 'INR') {
+            // Amount is already in INR, no conversion needed
+            amountInINR = totalAmount;
+            console.log(`Amount is already in INR: ${amountInINR}`);
+          } else {
+            // Convert from USD (or other currency) to INR
+            amountInINR = totalAmount * exchangeRate;
+            console.log(`Converting ${totalAmount} ${totalCurrency} to ${amountInINR} INR (rate: ${exchangeRate})`);
+          }
           
           // Check minimum amount (PayU typically requires at least 1 INR)
           if (amountInINR < 1) {
@@ -268,8 +279,6 @@ serve(async (req) => {
               error: 'Amount too small for PayU. Minimum amount is ₹1 INR.' 
             }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
           }
-          
-          console.log(`Converting ${totalAmount} USD to ${amountInINR} INR (rate: ${exchangeRate})`);
 
           // Get customer information from request or fetch from database
           let customerName = 'Customer';
@@ -300,19 +309,19 @@ serve(async (req) => {
           console.log('PayU Payment Details:', {
             txnid,
             amountInINR,
-            amountInPaise: Math.round(amountInINR * 100),
-            formattedAmount: Math.round(amountInINR * 100).toString(),
+            formattedAmount: amountInINR.toFixed(2),
+            currency: 'INR',
+            originalCurrency: totalCurrency,
             customerName,
             customerEmail,
             customerPhone,
             productinfo,
-            exchangeRate
+            exchangeRate: totalCurrency === 'INR' ? 1 : exchangeRate
           });
           
-          // PayU expects amount in paise (smallest currency unit), not rupees with decimals
-          // Convert INR amount to paise (multiply by 100)
-          const amountInPaise = Math.round(amountInINR * 100);
-          const formattedAmount = amountInPaise.toString();
+          // PayU expects amount in rupees with 2 decimal places, NOT in paise
+          // Format the amount to 2 decimal places
+          const formattedAmount = amountInINR.toFixed(2);
           
           // Extract guest session token from metadata if available
           const guestSessionToken = paymentRequest.metadata?.guest_session_token || '';
@@ -333,7 +342,7 @@ serve(async (req) => {
           // Create proper success and failure URLs
           // For live mode, use a proper domain instead of localhost
           const baseUrl = success_url.includes('localhost') 
-            ? 'https://iwishbag.com' // Replace with your actual domain
+            ? 'http://localhost:8080' // Use local development URL
             : success_url.replace('/success', '').replace('/cancel', '');
           
           const payuSuccessUrl = `${baseUrl}/payment-success?gateway=payu`;
@@ -373,8 +382,7 @@ serve(async (req) => {
             formData: payuRequest,
             transactionId: txnid,
             amountInINR: amountInINR,
-            amountInPaise: amountInPaise,
-            exchangeRate: exchangeRate
+            exchangeRate: totalCurrency === 'INR' ? 1 : exchangeRate
           };
         } catch (error) {
           console.error('PayU payment creation error:', error);
