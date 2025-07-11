@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -40,6 +41,10 @@ const COMMON_BANK_FIELDS = [
   { value: 'branch_code', label: 'Branch Code' },
   { value: 'account_type', label: 'Account Type' },
   { value: 'currency', label: 'Currency' },
+  { value: 'upi_id', label: 'UPI ID' },
+  { value: 'upi_qr_string', label: 'UPI QR String' },
+  { value: 'payment_qr_url', label: 'Payment QR Code URL' },
+  { value: 'instructions', label: 'Payment Instructions' },
 ];
 
 export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, isProcessing }: FlexibleBankAccountFormProps) => {
@@ -90,6 +95,19 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
       }
       if (editingAccount.iban) {
         fields.push({ id: 'iban', label: 'IBAN', value: editingAccount.iban, required: false });
+      }
+      // Add new payment fields if they exist
+      if ((editingAccount as any).upi_id) {
+        fields.push({ id: 'upi_id', label: 'UPI ID', value: (editingAccount as any).upi_id, required: false });
+      }
+      if ((editingAccount as any).upi_qr_string) {
+        fields.push({ id: 'upi_qr_string', label: 'UPI QR String', value: (editingAccount as any).upi_qr_string, required: false });
+      }
+      if ((editingAccount as any).payment_qr_url) {
+        fields.push({ id: 'payment_qr_url', label: 'Payment QR Code URL', value: (editingAccount as any).payment_qr_url, required: false });
+      }
+      if ((editingAccount as any).instructions) {
+        fields.push({ id: 'instructions', label: 'Payment Instructions', value: (editingAccount as any).instructions, required: false });
       }
       
       setCustomFields(fields);
@@ -144,8 +162,8 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
     // Handle legacy fields and custom fields
     customFields.forEach(field => {
       if (!defaultFieldIds.includes(field.id) && field.value) {
-        // Check if it's a legacy field
-        if (['branch_name', 'swift_code', 'iban'].includes(field.id)) {
+        // Check if it's a legacy field or new payment field
+        if (['branch_name', 'swift_code', 'iban', 'upi_id', 'upi_qr_string', 'payment_qr_url', 'instructions'].includes(field.id)) {
           accountData[field.id] = field.value;
         } else {
           customFieldsData[field.id] = field.value;
@@ -245,13 +263,24 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
                 
                 <div className="flex-1">
                   <Label htmlFor={`value_${field.id}`}>Value</Label>
-                  <Input
-                    id={`value_${field.id}`}
-                    value={field.value}
-                    onChange={(e) => handleFieldChange(field.id, 'value', e.target.value)}
-                    placeholder="Enter value"
-                    required={field.required}
-                  />
+                  {field.id === 'instructions' ? (
+                    <Textarea
+                      id={`value_${field.id}`}
+                      value={field.value}
+                      onChange={(e) => handleFieldChange(field.id, 'value', e.target.value)}
+                      placeholder="Enter payment instructions"
+                      rows={3}
+                      required={field.required}
+                    />
+                  ) : (
+                    <Input
+                      id={`value_${field.id}`}
+                      value={field.value}
+                      onChange={(e) => handleFieldChange(field.id, 'value', e.target.value)}
+                      placeholder="Enter value"
+                      required={field.required}
+                    />
+                  )}
                 </div>
                 
                 {!DEFAULT_FIELDS.some(df => df.id === field.id) && (
@@ -268,26 +297,31 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
             ))}
             
             <div className="flex gap-2">
-              <Select onValueChange={(value) => {
-                const selectedField = COMMON_BANK_FIELDS.find(f => f.value === value);
-                if (selectedField) {
-                  handleAddField();
-                  const newField = customFields[customFields.length - 1];
-                  if (newField) {
-                    handleFieldChange(newField.id, 'id', selectedField.value);
-                    handleFieldChange(newField.id, 'label', selectedField.label);
+              <Select 
+                value=""
+                onValueChange={(value) => {
+                  const selectedField = COMMON_BANK_FIELDS.find(f => f.value === value);
+                  if (selectedField && !customFields.some(f => f.id === selectedField.value)) {
+                    const newField: CustomField = {
+                      id: selectedField.value,
+                      label: selectedField.label,
+                      value: '',
+                      required: false
+                    };
+                    setCustomFields([...customFields, newField]);
                   }
-                }
-              }}>
+                }}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Add common field" />
                 </SelectTrigger>
                 <SelectContent>
-                  {COMMON_BANK_FIELDS.map((field) => (
-                    <SelectItem key={field.value} value={field.value}>
-                      {field.label}
-                    </SelectItem>
-                  ))}
+                  {COMMON_BANK_FIELDS
+                    .filter(field => !customFields.some(f => f.id === field.value))
+                    .map((field) => (
+                      <SelectItem key={field.value} value={field.value}>
+                        {field.label}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               

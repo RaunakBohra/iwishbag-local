@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { Tables } from "@/integrations/supabase/types";
 import { useQuoteCurrencyDisplay } from "@/hooks/useCurrencyConversion";
-import { formatCustomerCurrency, getCountryCurrency, formatAmountForDisplay, formatDualCurrency } from "@/lib/currencyUtils";
+import { formatCustomerCurrency, getCountryCurrency, formatAmountForDisplay } from "@/lib/currencyUtils";
 import { Receipt, Percent, Package, Truck, Shield, CreditCard, Gift, Info, ChevronDown, ChevronUp, Download, Hash, Calendar, MapPin } from "lucide-react";
 import { useQuoteRoute } from "@/hooks/useQuoteRoute";
 import {
@@ -133,16 +133,6 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
 
   return (
     <div className="bg-card border border-border rounded-lg p-4 sm:p-6">
-      {/* Debug Currency Info */}
-      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
-        <strong>🔍 Currency Debug:</strong> {originCountry} → {destinationCountry} | 
-        Rate: {currencyDisplay.exchangeRate} ({currencyDisplay.exchangeRateSource}) | 
-        Test amount ₹1000 = {currencyDisplay.formatAmount(1000)}
-        {currencyDisplay.warning && <div className="text-orange-600 mt-1">⚠️ {currencyDisplay.warning}</div>}
-        <div className="mt-1 text-gray-600">
-          Raw shipping address country: {JSON.stringify(quote.shipping_address)}
-        </div>
-      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
         <div className="bg-muted border border-border rounded-lg p-4 sm:p-6">
           <div className="space-y-3 sm:space-y-4">
@@ -316,16 +306,9 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
                             }
                             
                             const exchangeRate = quote.exchange_rate;
-                            const dualCurrency = formatDualCurrency(quote.final_total, purchaseCountry, deliveryCountry, exchangeRate);
-                            const showDualCurrency = purchaseCountry !== deliveryCountry && exchangeRate && exchangeRate !== 1;
-
-                            return showDualCurrency ? (
-                              <div className="text-right">
-                                <div className="text-foreground">{dualCurrency.purchase}</div>
-                                <div className="text-sm text-muted-foreground">{dualCurrency.delivery}</div>
-                              </div>
-                            ) : (
-                              <span className="text-foreground">{formatAmountForDisplay(quote.final_total, getCountryCurrency(destinationCountry))}</span>
+                            // Use customer's preferred currency for display
+                            return (
+                              <span className="text-foreground">{currencyDisplay.formatAmount(quote.final_total || 0)}</span>
                             );
                           })()}
                         </div>
@@ -350,13 +333,10 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
               }
               
               const exchangeRate = quote.exchange_rate;
-              const dualCurrency = formatDualCurrency(quote.final_total, purchaseCountry, deliveryCountry, exchangeRate);
-              const showDualCurrency = purchaseCountry !== deliveryCountry && exchangeRate && exchangeRate !== 1;
-
-              return showDualCurrency ? (
+              // Use customer's preferred currency for display
+              return (
                 <div className="text-right">
-                  <div className="text-base sm:text-lg font-semibold text-foreground">{dualCurrency.purchase}</div>
-                  <div className="text-sm text-muted-foreground">{dualCurrency.delivery}</div>
+                  <div className="text-base sm:text-lg font-semibold text-foreground">{currencyDisplay.formatAmount(quote.final_total || 0)}</div>
                 </div>
               ) : (
                 <span className="text-base sm:text-lg font-semibold text-foreground">

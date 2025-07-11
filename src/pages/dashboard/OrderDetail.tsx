@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { useOrderMutations } from '@/hooks/useOrderMutations';
 import { OrderTimeline } from '@/components/dashboard/OrderTimeline';
@@ -46,7 +46,6 @@ import {
   CalendarDays,
   Navigation
 } from 'lucide-react';
-import { formatAmountForDisplay } from '@/lib/currencyUtils';
 import { ShippingAddress } from '@/types/address';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { useQuoteRoute } from '@/hooks/useQuoteRoute';
@@ -55,7 +54,6 @@ import { StatusBadge } from '@/components/dashboard/StatusBadge';
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { userCurrency, formatAmount } = useUserCurrency();
   const { data: countries } = useAllCountries();
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
@@ -82,23 +80,14 @@ export default function OrderDetail() {
     enabled: !!id && !!user,
   });
 
+  // Get currency display formatter for the order
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: order });
+  
   // Get country name for display
   const countryName = useMemo(() => {
     return countries?.find(c => c.code === order?.destination_country)?.name || order?.destination_country;
   }, [countries, order?.destination_country]);
 
-  // Get exchange rate for user's currency
-  const exchangeRate = useMemo(() => {
-    if (userCurrency === 'USD') return 1;
-    const country = countries?.find(c => c.currency === userCurrency);
-    return country?.rate_from_usd || 1;
-  }, [countries, userCurrency]);
-
-  // Format amounts in user's preferred currency
-  const formatUserCurrency = (amount: number | null | undefined) => {
-    if (!amount) return 'N/A';
-    return formatAmountForDisplay(amount, userCurrency, exchangeRate);
-  };
 
   // Get payment method display
   const getPaymentMethodDisplay = () => {
@@ -410,13 +399,13 @@ export default function OrderDetail() {
               
               <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                 <span className="text-gray-500">Total Amount:</span>
-                <span className="font-medium">{formatUserCurrency(order.final_total)}</span>
+                <span className="font-medium">{formatAmount(order.final_total)}</span>
               </div>
               
               {order.amount_paid && order.amount_paid > 0 && (
                 <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                   <span className="text-gray-500">Amount Paid:</span>
-                  <span className="font-medium text-green-600">{formatUserCurrency(order.amount_paid)}</span>
+                  <span className="font-medium text-green-600">{formatAmount(order.amount_paid)}</span>
                 </div>
               )}
               
@@ -424,7 +413,7 @@ export default function OrderDetail() {
                 <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                   <span className="text-gray-500">Outstanding:</span>
                   <span className="font-medium text-orange-600">
-                    {formatUserCurrency(order.final_total - order.amount_paid)}
+                    {formatAmount(order.final_total - order.amount_paid)}
                   </span>
                 </div>
               )}
@@ -522,7 +511,7 @@ export default function OrderDetail() {
               </div>
               <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                 <span className="text-gray-500">Currency:</span>
-                <span>{userCurrency}</span>
+                <span>{countries?.find(c => c.code === order.destination_country)?.currency || 'USD'}</span>
               </div>
               <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                 <span className="text-gray-500">Status:</span>

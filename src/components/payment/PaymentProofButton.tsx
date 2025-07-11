@@ -246,7 +246,7 @@ export const PaymentProofButton = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,application/pdf"
         onChange={handleFileSelect}
         className="hidden"
       />

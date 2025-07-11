@@ -295,6 +295,17 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
     enabled: !!user
   });
 
+  // Debug the enabled condition
+  const isQueryEnabled = user ? !!userProfile : !!overrideCurrency;
+  console.log('🔍 Payment methods query enabled check:', {
+    user: !!user,
+    userProfile: !!userProfile,
+    overrideCurrency,
+    isQueryEnabled,
+    userDetails: user ? { id: user.id, email: user.email } : null,
+    profileDetails: userProfile
+  });
+
   // Get available payment methods for current user or guest
   const { data: availableMethods, isLoading: methodsLoading } = useQuery({
     queryKey: user 
@@ -419,7 +430,13 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
       
       return uniqueMethods;
     },
-    enabled: user ? !!userProfile : !!overrideCurrency, // For auth users: wait for profile, for guests: need override currency
+    enabled: isQueryEnabled,
+    onError: (error) => {
+      console.error('❌ Payment methods query error:', error);
+    },
+    onSuccess: (data) => {
+      console.log('✅ Payment methods query success:', data);
+    },
     staleTime: 1000 * 60 * 5, // 5 minutes - prevent excessive refetching
     retry: 3,
     retryDelay: 1000

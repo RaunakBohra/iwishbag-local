@@ -4,7 +4,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type BankAccount = Tables<'bank_account_details'>;
+export type BankAccount = Tables<'bank_account_details'> & {
+    upi_id?: string;
+    upi_qr_string?: string;
+    payment_qr_url?: string;
+    instructions?: string;
+    destination_country?: string | null;
+};
 export type BankAccountFormData = Omit<BankAccount, 'id' | 'created_at' | 'updated_at'>;
 
 export const useBankAccountSettings = () => {
@@ -70,6 +76,7 @@ export const useBankAccountSettings = () => {
         },
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['bankAccounts'] }); // Also invalidate the query used in EnhancedBankTransferDetails
             toast({ title: `Bank account ${variables.id ? 'updated' : 'created'} successfully` });
         },
         onError: (error: Error, variables) => {
@@ -84,6 +91,7 @@ export const useBankAccountSettings = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['bankAccounts'] }); // Also invalidate the query used in EnhancedBankTransferDetails
             toast({ title: "Bank account deleted successfully" });
         },
         onError: (error: Error) => {

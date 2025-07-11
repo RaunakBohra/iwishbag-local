@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { formatDistanceToNow } from "date-fns";
-import { useUserCurrency } from "@/hooks/useUserCurrency";
+import { useQuoteDisplayCurrency } from "@/hooks/useQuoteDisplayCurrency";
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { useToast } from "@/components/ui/use-toast";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -33,9 +33,12 @@ export default function Orders() {
   const { data: countries } = useAllCountries();
   const { orderStatuses } = useStatusManagement();
   const { toast } = useToast();
-  const { formatAmount } = useUserCurrency();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
+  
+  // For summary statistics, use the first order's currency display
+  const firstOrder = orders?.[0];
+  const { formatAmount: formatSummaryAmount } = useQuoteDisplayCurrency({ quote: firstOrder });
 
   // Filter orders based on status and search
   const filteredOrders = orders?.filter(order => {
@@ -196,7 +199,7 @@ export default function Orders() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Value</p>
-                  <p className="text-2xl font-bold">{formatAmount(statistics.totalValue)}</p>
+                  <p className="text-2xl font-bold">{formatSummaryAmount(statistics.totalValue)}</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-muted-foreground opacity-50" />
               </div>
@@ -208,7 +211,7 @@ export default function Orders() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Amount Paid</p>
-                  <p className="text-2xl font-bold text-green-600">{formatAmount(statistics.totalPaid)}</p>
+                  <p className="text-2xl font-bold text-green-600">{formatSummaryAmount(statistics.totalPaid)}</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-600 opacity-50" />
               </div>
@@ -220,7 +223,7 @@ export default function Orders() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Outstanding</p>
-                  <p className="text-2xl font-bold text-orange-600">{formatAmount(statistics.totalOutstanding)}</p>
+                  <p className="text-2xl font-bold text-orange-600">{formatSummaryAmount(statistics.totalOutstanding)}</p>
                 </div>
                 <AlertTriangle className="h-8 w-8 text-orange-600 opacity-50" />
               </div>
@@ -295,7 +298,7 @@ export default function Orders() {
           </div>
         ) : (
           filteredOrders.map((order) => (
-            <OrderItem key={order.id} order={order} countries={countries} formatAmount={formatAmount} />
+            <OrderItem key={order.id} order={order} countries={countries} />
           ))
         )}
       </div>
@@ -304,11 +307,11 @@ export default function Orders() {
 }
 
 // Separate component for order item to handle message count query
-function OrderItem({ order, countries, formatAmount }: { 
+function OrderItem({ order, countries }: { 
   order: Tables<'quotes'> & { quote_items?: Tables<'quote_items'>[] }, 
-  countries: { code: string; name: string }[] | undefined, 
-  formatAmount: (amount: number) => string 
+  countries: { code: string; name: string }[] | undefined
 }) {
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: order });
   // Get route information using unified hook
   const route = useQuoteRoute(order);
   

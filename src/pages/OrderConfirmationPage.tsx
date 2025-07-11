@@ -7,6 +7,7 @@ import { CheckCircle, AlertTriangle, Loader2, CreditCard, Truck, Banknote, UserP
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { BankTransferDetails } from '@/components/dashboard/BankTransferDetails';
+import { EnhancedBankTransferDetails } from '@/components/payment/EnhancedBankTransferDetails';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,11 +22,14 @@ interface QuoteItem {
 
 interface OrderDetails {
   id: string;
+  displayId?: string;
   amount: number;
   currency: string;
   paymentMethod: string;
   email?: string;
   customerName?: string;
+  items?: QuoteItem[];
+  isAnonymous?: boolean;
   quotes: {
     display_id: string;
     quote_items: QuoteItem[];
@@ -232,7 +236,9 @@ const OrderConfirmationPage: React.FC = () => {
               </Badge>
             </div>
             <div className="flex justify-between items-center">
-              <span className="font-medium text-muted-foreground">Amount Paid:</span>
+              <span className="font-medium text-muted-foreground">
+                {orderDetails?.paymentMethod === 'bank_transfer' ? 'Amount to Pay:' : 'Amount Paid:'}
+              </span>
               <span className="font-bold text-lg">
                 {orderDetails?.amount?.toFixed(2)} {orderDetails?.currency}
               </span>
@@ -439,21 +445,12 @@ const OrderConfirmationPage: React.FC = () => {
 
           {/* Payment Method Specific Instructions */}
           {orderDetails?.paymentMethod === 'bank_transfer' && (
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
-                <Banknote className="h-5 w-5" />
-                Complete Your Bank Transfer
-              </h4>
-              <p className="text-sm text-blue-800 mb-4">
-                Please transfer the amount to the following bank account. Your order will be processed once we receive the payment.
-              </p>
-              <BankTransferDetails paymentCurrency={orderDetails?.currency} />
-              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-sm text-amber-800">
-                  <strong>Important:</strong> Please include your Order ID ({orderDetails?.displayId}) in the transfer reference/memo for faster processing.
-                </p>
-              </div>
-            </div>
+            <EnhancedBankTransferDetails
+              orderId={orderDetails.id}
+              orderDisplayId={orderDetails.displayId || 'N/A'}
+              amount={orderDetails.amount}
+              currency={orderDetails.currency}
+            />
           )}
 
           {orderDetails?.paymentMethod === 'cod' && (

@@ -2,9 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tables } from "@/integrations/supabase/types";
-import { useUserCurrency } from "@/hooks/useUserCurrency";
-import { MultiCurrencyDisplay } from "@/components/admin/MultiCurrencyDisplay";
-import { useAdminCurrencyDisplay } from "@/hooks/useAdminCurrencyDisplay";
+import { useQuoteDisplayCurrency } from "@/hooks/useQuoteDisplayCurrency";
 
 interface OrderReceiptProps {
     order: Tables<'quotes'> & {
@@ -13,28 +11,22 @@ interface OrderReceiptProps {
 }
 
 export const OrderReceipt = ({ order }: OrderReceiptProps) => {
-    const { formatAmount } = useUserCurrency();
-    const { formatMultiCurrency } = useAdminCurrencyDisplay();
+    const { formatAmount } = useQuoteDisplayCurrency({ quote: order });
     
     const costItems = [
-        { label: "Subtotal", value: order.sub_total },
-        { label: "Domestic Shipping", value: order.domestic_shipping },
+        { label: "Item Price", value: order.item_price },
         { label: "Sales Tax", value: order.sales_tax_price },
+        { label: "Merchant Shipping", value: order.merchant_shipping_price },
         { label: "International Shipping", value: order.international_shipping },
-        { label: "VAT", value: order.vat },
-        { label: "Customs & ECS", value: order.customs_and_ecs },
-        { label: "Handling Fee", value: order.handling_charge },
+        { label: "Customs & Duties", value: order.customs_and_ecs },
+        { label: "Domestic Shipping", value: order.domestic_shipping },
+        { label: "Handling Charge", value: order.handling_charge },
         { label: "Insurance", value: order.insurance_amount },
-        { label: "Gateway Fee", value: order.payment_gateway_fee },
+        { label: "Payment Gateway Fee", value: order.payment_gateway_fee },
+        { label: "VAT", value: order.vat },
         { label: "Discount", value: order.discount, isNegative: true },
-    ].filter(item => typeof item.value === 'number' && item.value > 0);
+    ].filter(item => typeof item.value === 'number' && item.value !== 0);
 
-    const totalPaidCurrencies = order.final_total ? formatMultiCurrency({
-        usdAmount: order.final_total,
-        quoteCurrency: order.final_currency,
-        customerPreferredCurrency: order.profiles?.preferred_display_currency,
-        showAllVariations: false // Changed to false to show only USD and user currency
-    }) : [];
 
     return (
         <Card>
@@ -55,17 +47,9 @@ export const OrderReceipt = ({ order }: OrderReceiptProps) => {
                     ))}
                 </div>
                 <Separator />
-                <div className="flex justify-between items-start text-lg font-bold">
-                    <p>Total Paid</p>
-                    <div className="text-right">
-                        <MultiCurrencyDisplay 
-                            currencies={totalPaidCurrencies}
-                            orientation="horizontal"
-                            showLabels={false}
-                            compact={false}
-                            cleanFormat={true}
-                        />
-                    </div>
+                <div className="flex justify-between items-center text-lg font-bold">
+                    <p>Total</p>
+                    <p>{formatAmount(order.final_total)}</p>
                 </div>
             </CardContent>
         </Card>

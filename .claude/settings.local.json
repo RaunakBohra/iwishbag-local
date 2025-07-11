@@ -25,7 +25,9 @@
       "Bash(./update_country_code_references.sh:*)",
       "Bash(ls:*)",
       "Bash(ls:*)",
-      "Bash(docker logs:*)"
+      "Bash(docker logs:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }
