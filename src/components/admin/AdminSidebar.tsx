@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { BarChart3, Users, FileText, Globe, Settings, Building, Package, FileCog, Landmark, UserCheck, LayoutDashboard, BookText, ChevronDown, Zap, Cog, Route } from "lucide-react";
+import { BarChart3, Users, FileText, Globe, Settings, Building, Package, FileCog, Landmark, UserCheck, LayoutDashboard, BookText, ChevronDown, Zap, Cog, Route, Receipt } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -45,6 +45,11 @@ const menuGroups = [
         title: "Customer Management",
         url: "/admin/customers",
         icon: UserCheck,
+      },
+      {
+        title: "Payment Proofs",
+        url: "/admin/payment-proofs",
+        icon: Receipt,
       },
     ]
   },

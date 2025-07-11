@@ -106,7 +106,8 @@ export const PaymentProofButton = ({
             content: `Payment proof uploaded for Order #${orderId}`,
             attachment_url: urlData.publicUrl,
             attachment_file_name: file.name,
-            message_type: 'payment_proof'
+            message_type: 'payment_proof',
+            verification_status: 'pending' // Ensure new submissions are marked as pending
           });
 
         if (messageError) {
@@ -238,7 +239,7 @@ export const PaymentProofButton = ({
         ) : (
           <>
             <Camera className="h-4 w-4" />
-            Upload Payment Proof
+            Upload New Payment Proof
           </>
         )}
       </Button>

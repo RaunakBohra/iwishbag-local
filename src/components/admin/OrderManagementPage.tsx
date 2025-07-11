@@ -10,6 +10,7 @@ import { useOrderMutations } from "@/hooks/useOrderMutations";
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { 
   Package, 
   Clock, 
@@ -33,6 +34,7 @@ import {
 
 export const OrderManagementPage = () => {
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
     const {
         orders,
         ordersLoading,
@@ -52,38 +54,127 @@ export const OrderManagementPage = () => {
     const { confirmPayment, isConfirmingPayment } = useOrderMutations(selectedOrderForPayment?.id);
 
     // Fetch orders with payment proofs for batch verification
-    const { data: ordersWithPaymentProofs } = useQuery({
+    const { data: ordersWithPaymentProofs, refetch: refetchPaymentProofs } = useQuery({
         queryKey: ['orders-with-payment-proofs'],
         queryFn: async () => {
-            const { data, error } = await supabase.rpc('get_orders_with_payment_proofs', {
+            // First try the RPC function
+            const { data: rpcData, error: rpcError } = await supabase.rpc('get_orders_with_payment_proofs', {
                 status_filter: 'pending',
                 limit_count: 100
             });
             
-            if (error) throw error;
+            if (!rpcError && rpcData) {
+                // Transform RPC data to match our interface
+                return rpcData.map(order => ({
+                    id: order.order_id,
+                    order_display_id: order.order_display_id,
+                    final_total: order.final_total,
+                    final_currency: order.final_currency,
+                    payment_status: order.payment_status,
+                    created_at: order.submitted_at,
+                    paymentProofMessage: {
+                        id: order.message_id,
+                        verification_status: order.verification_status,
+                        admin_notes: order.admin_notes,
+                        attachment_file_name: order.attachment_file_name,
+                        attachment_url: order.attachment_url,
+                        verified_at: order.verified_at,
+                        message_type: 'payment_proof' as const,
+                        sender_id: order.customer_id
+                    },
+                    isSelected: false
+                }));
+            }
             
-            // Transform data to match our interface
-            return data?.map(order => ({
-                id: order.order_id,
-                order_display_id: order.order_display_id,
-                final_total: order.final_total,
-                final_currency: order.final_currency,
-                payment_status: order.payment_status,
-                created_at: order.submitted_at,
-                paymentProofMessage: {
-                    id: order.message_id,
-                    verification_status: order.verification_status,
-                    admin_notes: order.admin_notes,
-                    attachment_file_name: order.attachment_file_name,
-                    attachment_url: order.attachment_url,
-                    verified_at: order.verified_at,
-                    message_type: 'payment_proof'
-                },
-                isSelected: false
-            })) || [];
+            // Fallback: Query directly from tables
+            console.log('RPC function not available, using fallback query');
+            
+            // First check all payment proof messages
+            const { data: allProofs, error: allProofsError } = await supabase
+                .from('messages')
+                .select('message_type, verification_status, quote_id')
+                .eq('message_type', 'payment_proof');
+            
+            console.log('All payment proofs:', allProofs);
+            
+            // Get latest payment proof messages per quote (including all statuses)
+            const { data: messages, error: messagesError } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('message_type', 'payment_proof')
+                .order('created_at', { ascending: false })
+                .limit(100);
+            
+            console.log('Payment proof messages query result:', { messages, error: messagesError });
+            
+            if (messagesError) {
+                console.error('Error fetching payment proof messages:', messagesError);
+                return [];
+            }
+            
+            // Get quote IDs from messages
+            const quoteIds = [...new Set(messages?.map(m => m.quote_id).filter(Boolean))];
+            
+            if (quoteIds.length === 0) {
+                console.log('No quote IDs found in messages');
+                return [];
+            }
+            
+            // Fetch quotes separately
+            const { data: quotes, error: quotesError } = await supabase
+                .from('quotes')
+                .select('id, order_display_id, final_total, final_currency, payment_status, user_id')
+                .in('id', quoteIds);
+            
+            console.log('Quotes query result:', { quotes, quotesError });
+            
+            if (quotesError) {
+                console.error('Error fetching quotes:', quotesError);
+                return [];
+            }
+            
+            // Create quotes map
+            const quotesMap = new Map(quotes?.map(q => [q.id, q]) || []);
+            
+            // Group by quote_id and take the latest message for each
+            const latestByQuote = new Map();
+            messages?.forEach(msg => {
+                if (!latestByQuote.has(msg.quote_id) || 
+                    new Date(msg.created_at) > new Date(latestByQuote.get(msg.quote_id).created_at)) {
+                    latestByQuote.set(msg.quote_id, msg);
+                }
+            });
+            
+            console.log('Grouped payment proofs by quote:', latestByQuote.size, 'unique quotes');
+            
+            // Transform to our interface (include all statuses)
+            return Array.from(latestByQuote.values())
+                .filter(msg => quotesMap.has(msg.quote_id)) // Only include if we have the quote data
+                .map(msg => {
+                    const quote = quotesMap.get(msg.quote_id)!;
+                    return {
+                        id: msg.quote_id,
+                        order_display_id: quote.order_display_id,
+                        final_total: quote.final_total,
+                        final_currency: quote.final_currency,
+                        payment_status: quote.payment_status,
+                        created_at: msg.created_at,
+                        paymentProofMessage: {
+                            id: msg.id,
+                            verification_status: msg.verification_status,
+                            admin_notes: msg.admin_notes,
+                            attachment_file_name: msg.attachment_file_name,
+                            attachment_url: msg.attachment_url,
+                            verified_at: msg.verified_at,
+                            message_type: 'payment_proof' as const,
+                            sender_id: quote.user_id
+                        },
+                        isSelected: false
+                    };
+                });
         },
         enabled: true,
-        refetchInterval: 30000 // Refresh every 30 seconds
+        refetchInterval: 10000 // Refresh every 10 seconds for better responsiveness
     });
 
     // Get payment proof statistics
@@ -91,10 +182,14 @@ export const OrderManagementPage = () => {
         queryKey: ['payment-proof-stats'],
         queryFn: async () => {
             const { data, error } = await supabase.rpc('get_payment_proof_stats');
-            if (error) throw error;
+            if (error) {
+                console.error('Error fetching payment proof stats:', error);
+                // Return default stats on error
+                return { total: 0, pending: 0, verified: 0, confirmed: 0, rejected: 0 };
+            }
             return data;
         },
-        refetchInterval: 60000 // Refresh every minute
+        refetchInterval: 10000 // Refresh every 10 seconds for consistency
     });
 
     const handleConfirmPayment = (order) => {
@@ -120,6 +215,12 @@ export const OrderManagementPage = () => {
         const partialPaymentOrders = orders.filter(o => o.payment_status === 'partial').length;
         const paidOrders = orders.filter(o => o.payment_status === 'paid').length;
         const overpaidOrders = orders.filter(o => o.payment_status === 'overpaid').length;
+        
+        // Count pending payment proofs
+        const pendingPaymentProofs = ordersWithPaymentProofs?.filter(o => 
+            !o.paymentProofMessage?.verification_status || 
+            o.paymentProofMessage?.verification_status === 'pending'
+        ).length || 0;
 
         // Payment Method Statistics
         const paymentMethods = {
@@ -184,11 +285,12 @@ export const OrderManagementPage = () => {
             currencyBreakdown,
             currencyOutstanding,
             actionRequiredOrders,
-            orderStatuses
+            orderStatuses,
+            pendingPaymentProofs
         };
-    }, [orders]);
+    }, [orders, ordersWithPaymentProofs]);
 
-    if (ordersLoading) {
+    if (ordersLoading || !statistics) {
         return (
             <div className="space-y-6">
                 <div className="flex items-center justify-center h-64">
@@ -200,8 +302,6 @@ export const OrderManagementPage = () => {
             </div>
         );
     }
-
-    if (!statistics) return null;
 
     const getPaymentMethodIcon = (method: string) => {
         switch (method) {
@@ -223,18 +323,16 @@ export const OrderManagementPage = () => {
                     <p className="text-muted-foreground">Payment tracking and order fulfillment</p>
                 </div>
                 <div className="flex gap-2">
-                    {/* Batch Payment Verification Button */}
-                    {ordersWithPaymentProofs && ordersWithPaymentProofs.length > 0 && (
-                        <Button 
-                            onClick={() => setShowBatchVerification(true)}
-                            variant="outline"
-                            size="sm"
-                            className="gap-2 border-blue-300 hover:bg-blue-50"
-                        >
-                            <Receipt className="h-4 w-4" />
-                            Verify Payments ({ordersWithPaymentProofs.length})
-                        </Button>
-                    )}
+                    {/* Payment Proofs Button */}
+                    <Button 
+                        onClick={() => navigate('/admin/payment-proofs')}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 border-blue-300 hover:bg-blue-50"
+                    >
+                        <Receipt className="h-4 w-4" />
+                        Payment Proofs
+                    </Button>
                     <Button 
                         onClick={downloadCSV} 
                         variant="outline"
@@ -250,30 +348,29 @@ export const OrderManagementPage = () => {
             {/* Payment Status Overview - Priority Cards */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {/* Payment Proof Verification Card */}
-                {paymentProofStats && (
-                    <Card className={`${paymentProofStats.pending > 0 ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'}`}>
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className={`text-3xl font-bold ${paymentProofStats.pending > 0 ? 'text-blue-600' : 'text-gray-600'}`}>
-                                        {paymentProofStats.pending}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">Payment Proofs</p>
-                                </div>
-                                <Receipt className={`h-6 w-6 ${paymentProofStats.pending > 0 ? 'text-blue-500' : 'text-gray-400'}`} />
+                <Card className={`${statistics.pendingPaymentProofs > 0 ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'}`}>
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className={`text-3xl font-bold ${statistics.pendingPaymentProofs > 0 ? 'text-blue-600' : 'text-gray-600'}`}>
+                                    {statistics.pendingPaymentProofs}
+                                </p>
+                                <p className="text-sm text-muted-foreground">Pending Proofs</p>
+                                {ordersWithPaymentProofs && ordersWithPaymentProofs.length > statistics.pendingPaymentProofs && (
+                                    <p className="text-xs text-gray-500">{ordersWithPaymentProofs.length} total</p>
+                                )}
                             </div>
-                            {paymentProofStats.pending > 0 && (
-                                <Button 
-                                    size="sm" 
-                                    className="w-full mt-2 bg-blue-600 hover:bg-blue-700"
-                                    onClick={() => setShowBatchVerification(true)}
-                                >
-                                    Review Now
-                                </Button>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
+                            <Receipt className={`h-6 w-6 ${statistics.pendingPaymentProofs > 0 ? 'text-blue-500' : 'text-gray-400'}`} />
+                        </div>
+                        <Button 
+                            size="sm" 
+                            className={`w-full mt-2 ${statistics.pendingPaymentProofs > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'}`}
+                            onClick={() => navigate('/admin/payment-proofs')}
+                        >
+                            {statistics.pendingPaymentProofs > 0 ? 'Review Now' : 'View All'}
+                        </Button>
+                    </CardContent>
+                </Card>
                 {/* Unpaid Orders - Highest Priority */}
                 <Card className={`${statistics.paymentStatus.unpaidOrders > 0 ? 'bg-red-50 border-red-200' : 'bg-gray-50'}`}>
                     <CardContent className="p-4">
@@ -532,19 +629,14 @@ export const OrderManagementPage = () => {
             )}
 
             {/* Batch Payment Verification Modal */}
-            {ordersWithPaymentProofs && (
-                <BatchPaymentVerification
-                    isOpen={showBatchVerification}
-                    onClose={() => setShowBatchVerification(false)}
-                    orders={ordersWithPaymentProofs}
-                    onOrdersUpdate={(updatedOrders) => {
-                        // Refresh the payment proof queries
-                        queryClient.invalidateQueries({ queryKey: ['orders-with-payment-proofs'] });
-                        queryClient.invalidateQueries({ queryKey: ['payment-proof-stats'] });
-                        queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-                    }}
-                />
-            )}
+            <BatchPaymentVerification
+                isOpen={showBatchVerification}
+                onClose={() => {
+                    setShowBatchVerification(false);
+                    refetchPaymentProofs();
+                }}
+                orders={ordersWithPaymentProofs || []}
+            />
         </div>
     );
 };

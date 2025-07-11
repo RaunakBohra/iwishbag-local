@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
-import { Loader2, AlertCircle, Copy, QrCode, Check, Smartphone, Building2 } from "lucide-react";
+import { Loader2, AlertCircle, Copy, QrCode, Check, Smartphone, Building2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
@@ -29,9 +29,39 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
   const { toast } = useToast();
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  const { data: bankAccounts, isLoading, isError, error } = useQuery<BankAccountType[], Error>({
-    queryKey: ['bankAccounts', currency],
+  // Get the destination country and payment status from the order
+  const { data: orderDetails } = useQuery({
+    queryKey: ['order-destination', orderId],
     queryFn: async () => {
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('destination_country, payment_status')
+        .eq('id', orderId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: bankAccounts, isLoading, isError, error } = useQuery<BankAccountType[], Error>({
+    queryKey: ['bankAccounts', currency, orderDetails?.destination_country],
+    queryFn: async () => {
+      // First, try to get country-specific bank accounts
+      if (orderDetails?.destination_country) {
+        const { data: countrySpecific, error: countryError } = await supabase
+          .from('bank_account_details')
+          .select('*')
+          .eq('is_active', true)
+          .eq('currency_code', currency)
+          .eq('destination_country', orderDetails.destination_country);
+        
+        if (!countryError && countrySpecific && countrySpecific.length > 0) {
+          return countrySpecific as BankAccountType[];
+        }
+      }
+      
+      // If no country-specific accounts, get fallback accounts
       let query = supabase
         .from('bank_account_details')
         .select('*')
@@ -41,29 +71,33 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
         query = query.eq('currency_code', currency);
       }
       
-      query = query.order('is_fallback', { ascending: true });
+      // Prioritize fallback accounts
+      query = query.or('is_fallback.eq.true,destination_country.is.null')
+        .order('is_fallback', { ascending: false })
+        .order('created_at', { ascending: false });
       
       const { data, error } = await query;
       if (error) throw error;
       return data as BankAccountType[];
     },
+    enabled: !!orderDetails,
   });
 
-  // Check if payment proof exists (via messages)
+  // Check if payment proof exists (via messages) - get latest one
   const { data: paymentProofMessages } = useQuery({
-    queryKey: ['messages', orderId],
+    queryKey: ['payment-proof-messages', orderId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('messages')
         .select('*')
         .eq('quote_id', orderId)
         .eq('message_type', 'payment_proof')
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data; // Return all, we'll use the first (latest) one
     },
+    refetchInterval: 5000, // Refetch every 5 seconds to get updates
   });
 
   const copyToClipboard = async (text: string, fieldName: string) => {
@@ -111,9 +145,13 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
   const hasUPI = !!defaultAccount.upi_id || !!defaultAccount.upi_qr_string;
   const hasQR = !!defaultAccount.payment_qr_url;
 
+  // Don't show payment instructions if payment is already confirmed
+  const isPaymentComplete = orderDetails?.payment_status === 'paid' || orderDetails?.payment_status === 'overpaid';
+
   return (
     <div className="space-y-4">
-      <Card className="shadow-sm">
+      {!isPaymentComplete && (
+        <Card className="shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">Payment Instructions</CardTitle>
@@ -317,20 +355,74 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
           </Tabs>
         </CardContent>
       </Card>
+      )}
 
-      {/* Payment Proof Upload */}
-      <Card className="shadow-sm">
+      {/* Payment Proof Upload - Only show if payment not complete */}
+      {!isPaymentComplete && (
+        <Card className="shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Upload Payment Proof</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {paymentProofMessages && paymentProofMessages.length > 0 ? (
-            <Alert>
-              <Check className="h-4 w-4" />
-              <AlertDescription>
-                Payment proof uploaded. We'll verify it soon.
-              </AlertDescription>
-            </Alert>
+            <>
+              {/* Show status based on verification */}
+              {paymentProofMessages[0].verification_status === 'pending' && (
+                <Alert className="border-yellow-200 bg-yellow-50">
+                  <Clock className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-800">
+                    Payment proof uploaded on {new Date(paymentProofMessages[0].created_at).toLocaleDateString()}. 
+                    Our team is reviewing it and will update you soon.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {paymentProofMessages[0].verification_status === 'verified' && (
+                <Alert className="border-blue-200 bg-blue-50">
+                  <Check className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    Payment proof verified! Waiting for final confirmation.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {paymentProofMessages[0].verification_status === 'confirmed' && (
+                <Alert className="border-green-200 bg-green-50">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800">
+                    Payment confirmed! Your order is being processed.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {paymentProofMessages[0].verification_status === 'rejected' && (
+                <>
+                  <Alert className="border-red-200 bg-red-50">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-red-800">
+                      Your payment proof could not be verified. 
+                      {paymentProofMessages[0].admin_notes && (
+                        <div className="mt-1 font-medium">
+                          Reason: {paymentProofMessages[0].admin_notes}
+                        </div>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <p className="text-sm text-gray-600">
+                    Please upload a new payment proof with clear transaction details.
+                  </p>
+                  
+                  <div className="flex justify-center">
+                    <PaymentProofButton
+                      quoteId={orderId}
+                      orderId={orderDisplayId}
+                      recipientId={null}
+                    />
+                  </div>
+                </>
+              )}
+            </>
           ) : (
             <>
               <p className="text-sm text-gray-600">
@@ -348,6 +440,27 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
           )}
         </CardContent>
       </Card>
+      )}
+
+      {/* Payment Complete Message */}
+      {isPaymentComplete && (
+        <Card className="shadow-sm border-green-200 bg-green-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Check className="h-6 w-6 text-green-600" />
+              <div>
+                <p className="font-semibold text-green-900">Payment Confirmed!</p>
+                <p className="text-sm text-green-700 mt-1">
+                  {orderDetails?.payment_status === 'overpaid' 
+                    ? 'Your payment has been received. We will contact you regarding the overpayment.'
+                    : 'Your payment has been successfully confirmed. We are processing your order.'
+                  }
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import Stripe from 'https://esm.sh/stripe@12.12.0?target=deno&deno-std=0.132.0';
 // REMOVED: PayU SDK import as it might be causing additional API calls
 // import PayU from 'https://esm.sh/payu@latest?target=deno';
 
@@ -9,15 +8,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') as string, {
-  httpClient: Stripe.createFetchHttpClient(),
-  apiVersion: '2023-10-16',
-});
 
 // This should match src/types/payment.ts PaymentRequest
 interface PaymentRequest {
   quoteIds: string[];
-  gateway: 'stripe' | 'bank_transfer' | 'cod' | 'payu' | 'esewa' | 'khalti' | 'fonepay' | 'airwallex';
+  gateway: 'bank_transfer' | 'cod' | 'payu' | 'esewa' | 'khalti' | 'fonepay' | 'airwallex';
   success_url: string;
   cancel_url: string;
   amount?: number;
@@ -196,31 +191,6 @@ serve(async (req) => {
     let responseData: PaymentResponse;
 
     switch (gateway) {
-      case 'stripe':
-        const line_items = quotesToUse.map(quote => ({
-          price_data: {
-            currency: quote.final_currency || 'usd',
-            product_data: {
-              name: quote.product_name || 'Unnamed Product',
-            },
-            unit_amount: Math.round(quote.final_total * 100), // Stripe expects amount in cents
-          },
-          quantity: quote.quantity,
-        }));
-        
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card'],
-          line_items,
-          mode: 'payment',
-          success_url,
-          cancel_url,
-          metadata: {
-            quoteIds: quoteIds.join(','),
-          },
-        });
-
-        responseData = { success: true, url: session.url };
-        break;
 
       case 'payu':
         try {

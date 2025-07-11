@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import imageCompression from 'browser-image-compression';
+import { MessageItem } from "./MessageItem";
 
 type Message = Tables<'messages'> & {
   attachment_url?: string | null;
@@ -197,60 +198,19 @@ export const QuoteMessaging = ({
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : messages && messages.length > 0 ? (
-                  messages.map((message: Message) => {
-                    const isUserSender = message.sender_id === user?.id;
-                    return (
-                      <div
-                        key={message.id}
-                        className={cn(
-                          "flex flex-col gap-0.5",
-                          isUserSender ? "items-end" : "items-start"
-                        )}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] text-muted-foreground">
-                            {isUserSender ? "You" : isAdmin ? "Customer" : "Support"}
-                          </span>
-                          <span className="text-[11px] text-muted-foreground">
-                            {new Date(message.created_at).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        <div
-                          className={cn(
-                            "rounded-lg p-2 max-w-[85%] shadow-sm",
-                            isUserSender
-                              ? "bg-blue-500 text-white"
-                              : "bg-muted"
-                          )}
-                        >
-                          {message.content && (
-                            <p className="whitespace-pre-wrap text-sm leading-tight">
-                              {message.content}
-                            </p>
-                          )}
-                          {message.attachment_url && (
-                            <a
-                              href={message.attachment_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              download={message.attachment_file_name || true}
-                              className={cn(
-                                "mt-1.5 flex items-center gap-1.5 text-xs p-1.5 rounded-md transition-colors",
-                                isUserSender
-                                  ? "bg-blue-600 hover:bg-blue-700"
-                                  : "bg-background/50 hover:bg-background/80"
-                              )}
-                            >
-                              <FileText className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate">
-                                {message.attachment_file_name || "View Attachment"}
-                              </span>
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
+                  messages.map((message: Message) => (
+                    <div key={message.id} id={`message-${message.id}`}>
+                      <MessageItem
+                        message={message}
+                        currentUserId={user?.id}
+                        isAdmin={isAdmin}
+                        onVerificationUpdate={() => {
+                          queryClient.invalidateQueries({ queryKey: ['messages', quoteId] });
+                          queryClient.invalidateQueries({ queryKey: ['payment-proof-info', quoteId] });
+                        }}
+                      />
+                    </div>
+                  ))
                 ) : (
                   <div className="flex flex-col items-center justify-center h-20 text-muted-foreground">
                     <MessageSquare className="w-6 h-6 mb-1" />

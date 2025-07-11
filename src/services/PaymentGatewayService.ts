@@ -34,7 +34,7 @@ class PaymentGatewayService {
 
   // Fallback gateway codes for when database is unavailable
   private readonly FALLBACK_GATEWAY_CODES = [
-    'stripe', 'payu', 'esewa', 'khalti', 'fonepay', 'airwallex', 
+    'payu', 'esewa', 'khalti', 'fonepay', 'airwallex', 
     'bank_transfer', 'cod', 'razorpay', 'paypal', 'upi', 'paytm', 
     'grabpay', 'alipay'
   ] as const;
