@@ -112,16 +112,8 @@ export class PriceFormatter {
       const destinationCountry = options.destinationCountry || options.originCountry;
       
       // Find the country code for the display currency
-      // This is a simplified reverse lookup - ideally should use CurrencyService
-      const currencyToCountryMap: Record<string, string> = {
-        'USD': 'US', 'INR': 'IN', 'NPR': 'NP', 'CAD': 'CA',
-        'AUD': 'AU', 'GBP': 'GB', 'JPY': 'JP', 'CNY': 'CN',
-        'SGD': 'SG', 'AED': 'AE', 'SAR': 'SA', 'EUR': 'EU',
-        'IDR': 'ID', 'MYR': 'MY', 'PHP': 'PH', 'THB': 'TH',
-        'VND': 'VN', 'KRW': 'KR'
-      };
-      
-      const displayCountry = currencyToCountryMap[displayCurrency] || destinationCountry;
+      // Use CurrencyService for reverse lookup (currency to country mapping)
+      const displayCountry = await currencyService.getCountryForCurrency(displayCurrency) || destinationCountry;
 
       const rateResult = await this.getCachedExchangeRate(options.originCountry, displayCountry);
       exchangeRate = rateResult.rate;

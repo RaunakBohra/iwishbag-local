@@ -54,25 +54,9 @@ export const getCountryCurrencyAsync = async (countryCode: string): Promise<stri
 };
 
 // Get currency for a given country code (synchronous version)
-// Note: This is a temporary solution. In the future, we should use async version everywhere
+// Note: This uses CurrencyService which has fallbacks for critical countries
 export const getCountryCurrency = (countryCode: string): string => {
-  // For now, we use a minimal fallback mapping for critical countries
-  // The CurrencyService has the complete mapping from database
-  const criticalMapping: { [key: string]: string } = {
-    'US': 'USD',
-    'IN': 'INR',
-    'NP': 'NPR',
-    'JP': 'JPY',
-    'GB': 'GBP',
-    'AU': 'AUD', // Australia should use AUD, not USD
-    'CA': 'CAD',
-    'EU': 'EUR',
-    'DE': 'EUR',
-    'FR': 'EUR',
-    'CN': 'CNY',
-    'SG': 'SGD',
-  };
-  return criticalMapping[countryCode] || 'USD';
+  return currencyService.getCurrencyForCountrySync(countryCode);
 };
 
 // Get the currency map for reverse lookup (async version with database lookup)
@@ -91,24 +75,15 @@ export const getCountryCurrencyMapAsync = async (): Promise<{ [key: string]: str
 };
 
 // Get the currency map for reverse lookup (synchronous version)
-// Note: This should be replaced with async version in the future
+// Note: This uses CurrencyService fallbacks for critical countries
 export const getCountryCurrencyMap = (): { [key: string]: string } => {
-  // Return minimal mapping for backward compatibility
-  // The CurrencyService has the complete mapping from database
-  return {
-    'US': 'USD',
-    'IN': 'INR',
-    'NP': 'NPR',
-    'JP': 'JPY',
-    'GB': 'GBP',
-    'AU': 'AUD',
-    'CA': 'CAD',
-    'EU': 'EUR',
-    'DE': 'EUR',
-    'FR': 'EUR',
-    'CN': 'CNY',
-    'SG': 'SGD',
-  };
+  // Use CurrencyService's fallback mapping which has the most up-to-date critical mappings
+  const fallbackMap = currencyService.getFallbackCountryCurrencyMapSync();
+  const result: { [key: string]: string } = {};
+  fallbackMap.forEach((currency, country) => {
+    result[country] = currency;
+  });
+  return result;
 };
 
 // Format amount in dual currencies (purchase and delivery)

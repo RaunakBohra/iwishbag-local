@@ -358,6 +358,49 @@ class CurrencyService {
   }
 
   /**
+   * Get fallback country-currency mapping (public access)
+   */
+  getFallbackCountryCurrencyMapSync(): Map<string, string> {
+    return this.getFallbackCountryCurrencyMap();
+  }
+
+  /**
+   * Get country code for a given currency (reverse lookup)
+   */
+  async getCountryForCurrency(currencyCode: string): Promise<string | null> {
+    try {
+      const { data: countrySettings, error } = await supabase
+        .from('country_settings')
+        .select('code')
+        .eq('currency', currencyCode)
+        .limit(1)
+        .single();
+
+      if (!error && countrySettings?.code) {
+        return countrySettings.code;
+      }
+    } catch (error) {
+      console.error('Error fetching country for currency:', error);
+    }
+
+    // Fallback to hardcoded mapping
+    return this.getCountryForCurrencySync(currencyCode);
+  }
+
+  /**
+   * Get country code for a given currency (sync fallback)
+   */
+  getCountryForCurrencySync(currencyCode: string): string | null {
+    const fallbackMap = this.getFallbackCountryCurrencyMap();
+    for (const [country, currency] of fallbackMap.entries()) {
+      if (currency === currencyCode) {
+        return country;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Check if a currency code is valid
    */
   async isValidCurrency(currencyCode: string): Promise<boolean> {
