@@ -6,10 +6,12 @@ import {
   PaymentRequest, 
   PaymentResponse,
   CountryPaymentMethods,
-  PaymentMethodDisplay 
+  PaymentMethodDisplay,
+  FALLBACK_GATEWAY_CODES 
 } from '@/types/payment';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { paymentGatewayService } from '@/services/PaymentGatewayService';
 
 // Payment method display configurations
 const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
@@ -189,21 +191,7 @@ export interface PaymentGatewayConfig {
   updated_at: string;
 }
 
-export type PaymentGateway = 
-  | 'stripe' 
-  | 'payu' 
-  | 'esewa' 
-  | 'khalti' 
-  | 'fonepay' 
-  | 'airwallex' 
-  | 'bank_transfer' 
-  | 'cod'
-  | 'razorpay'
-  | 'paypal'
-  | 'upi'
-  | 'paytm'
-  | 'grabpay'
-  | 'alipay';
+// Remove duplicate PaymentGateway type definition - it's now imported from types/payment.ts
 
 export interface PaymentMethodDisplay {
   code: PaymentGateway;
@@ -599,18 +587,71 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
     return PAYMENT_METHOD_DISPLAYS[gateway].requires_qr;
   };
 
-  // Get recommended payment method for user
-  const getRecommendedPaymentMethod = (): PaymentGateway => {
+  // Get recommended payment method for user with country-specific priorities (async)
+  const getRecommendedPaymentMethod = async (countryCode?: string): Promise<PaymentGateway> => {
     if (!availableMethods || availableMethods.length === 0) {
       return 'bank_transfer';
     }
 
-    // Priority order: Stripe > PayPal > Razorpay > Airwallex > PayU > UPI > Paytm > eSewa > Khalti > Fonepay > GrabPay > Alipay > Bank Transfer > COD
-    const priorityOrder: PaymentGateway[] = [
-      'stripe', 'paypal', 'razorpay', 'airwallex', 'payu', 'upi', 'paytm', 'esewa', 'khalti', 'fonepay', 'grabpay', 'alipay', 'bank_transfer', 'cod'
+    try {
+      // Use country-specific recommendation if country is provided
+      if (countryCode) {
+        const recommended = await paymentGatewayService.getRecommendedGateway(countryCode);
+        if (availableMethods.includes(recommended)) {
+          return recommended;
+        }
+      }
+
+      // Fall back to first available method from database priority
+      const gateways = await paymentGatewayService.getGatewaysByPriority();
+      for (const gateway of gateways) {
+        if (availableMethods.includes(gateway.code)) {
+          return gateway.code;
+        }
+      }
+
+      // Final fallback to hardcoded priority
+      const fallbackOrder: PaymentGateway[] = [
+        'stripe', 'paypal', 'razorpay', 'airwallex', 'payu', 'upi', 'paytm', 
+        'esewa', 'khalti', 'fonepay', 'grabpay', 'alipay', 'bank_transfer', 'cod'
+      ];
+
+      for (const method of fallbackOrder) {
+        if (availableMethods.includes(method)) {
+          return method;
+        }
+      }
+
+      return 'bank_transfer';
+    } catch (error) {
+      console.error('Error getting recommended payment method:', error);
+      return availableMethods[0] || 'bank_transfer';
+    }
+  };
+
+  // Get recommended payment method (synchronous version for backward compatibility)
+  const getRecommendedPaymentMethodSync = (): PaymentGateway => {
+    if (!availableMethods || availableMethods.length === 0) {
+      return 'bank_transfer';
+    }
+
+    // Use cache-based gateway codes for synchronous operation
+    const gatewayCodesFromCache = paymentGatewayService.getActiveGatewayCodesSync();
+    
+    // Find first available method from cached priority order
+    for (const code of gatewayCodesFromCache) {
+      if (availableMethods.includes(code)) {
+        return code;
+      }
+    }
+
+    // Final fallback to hardcoded priority
+    const fallbackOrder: PaymentGateway[] = [
+      'stripe', 'paypal', 'razorpay', 'airwallex', 'payu', 'upi', 'paytm', 
+      'esewa', 'khalti', 'fonepay', 'grabpay', 'alipay', 'bank_transfer', 'cod'
     ];
 
-    for (const method of priorityOrder) {
+    for (const method of fallbackOrder) {
       if (availableMethods.includes(method)) {
         return method;
       }
@@ -692,6 +733,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
     isMobileOnlyPayment,
     requiresQRCode,
     getRecommendedPaymentMethod,
+    getRecommendedPaymentMethodSync,
     validatePaymentRequest,
     getFallbackMethods,
     
