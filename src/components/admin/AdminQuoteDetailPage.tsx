@@ -1,7 +1,7 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Send, MapPin, Calculator, CheckCircle, XCircle, Clock, AlertTriangle, FileText, DollarSign, ShoppingCart, Truck, Circle, User, Mail, Phone, Calendar, Package, Settings, TrendingUp, Eye, Edit3, MessageSquare, Globe, Flag, UserMinus, Plus } from "lucide-react";
+import { ArrowLeft, Send, MapPin, Calculator, CheckCircle, XCircle, Clock, AlertTriangle, FileText, DollarSign, ShoppingCart, Truck, Circle, User, Mail, Phone, Calendar, Package, Settings, TrendingUp, Eye, Edit3, MessageSquare, Globe, Flag, UserMinus, Plus, Save } from "lucide-react";
 import { QuoteDetailForm } from "@/components/admin/QuoteDetailForm";
 import { QuoteMessaging } from "@/components/messaging/QuoteMessaging";
 import { DocumentManager } from "@/components/documents/DocumentManager";
@@ -70,6 +70,9 @@ const AdminQuoteDetailPage = () => {
     onSubmit,
     updateQuote,
   } = useAdminQuoteDetail(id);
+  
+  // Extract formState properties
+  const { formState: { isDirty } } = form;
 
   // Use the new status management hook
   const { 
@@ -1116,8 +1119,9 @@ const AdminQuoteDetailPage = () => {
                       {/* Update Button */}
                       <Button
                         type="submit"
-                        disabled={!isDirty || isUpdating}
+                        disabled={isUpdating || !canRecalculate}
                         className="flex-1 h-12 text-lg"
+                        onClick={form.handleSubmit(handleUpdate)}
                       >
                         {isUpdating ? (
                           <>
