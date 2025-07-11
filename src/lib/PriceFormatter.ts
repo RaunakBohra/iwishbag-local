@@ -1,4 +1,5 @@
 import { getCountryCurrency, getCurrencySymbol, convertCurrency, getExchangeRate, ExchangeRateResult } from './currencyUtils';
+import { currencyService } from '@/services/CurrencyService';
 
 export interface PriceOptions {
   originCountry: string;

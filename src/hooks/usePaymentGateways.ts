@@ -155,6 +155,24 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
   }
 };
 
+// Helper function to format fees from database values
+const formatFeeFromGatewayConfig = (gateway: PaymentGatewayConfig): string => {
+  if (gateway.code === 'bank_transfer' || gateway.code === 'cod' || gateway.code === 'upi') {
+    return 'No additional fees';
+  }
+  
+  let feeString = '';
+  if (gateway.fee_percent > 0) {
+    feeString = `${gateway.fee_percent}%`;
+  }
+  if (gateway.fee_fixed > 0) {
+    if (feeString) feeString += ' + ';
+    feeString += `$${gateway.fee_fixed}`;
+  }
+  
+  return feeString || 'No additional fees';
+};
+
 // Payment gateway configuration types
 export interface PaymentGatewayConfig {
   id: string;
@@ -545,9 +563,23 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
     }
   });
 
-  // Get payment method display info
+  // Get payment method display info with dynamic fees
   const getPaymentMethodDisplay = (gateway: PaymentGateway): PaymentMethodDisplay => {
-    return PAYMENT_METHOD_DISPLAYS[gateway];
+    const baseDisplay = PAYMENT_METHOD_DISPLAYS[gateway];
+    
+    // Try to get dynamic fees from database gateways
+    if (allGateways) {
+      const gatewayConfig = allGateways.find(g => g.code === gateway);
+      if (gatewayConfig) {
+        return {
+          ...baseDisplay,
+          fees: formatFeeFromGatewayConfig(gatewayConfig)
+        };
+      }
+    }
+    
+    // Fallback to hardcoded display
+    return baseDisplay;
   };
 
   // Get all payment method displays for available methods

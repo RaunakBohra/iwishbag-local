@@ -1,19 +1,14 @@
-// Payment Gateway Types
-export type PaymentGateway = 
-  | 'stripe'
-  | 'payu'
-  | 'esewa'
-  | 'khalti'
-  | 'fonepay'
-  | 'airwallex'
-  | 'bank_transfer'
-  | 'cod'
-  | 'razorpay'
-  | 'paypal'
-  | 'upi'
-  | 'paytm'
-  | 'grabpay'
-  | 'alipay';
+// Payment Gateway Types - Dynamic from database with fallback
+export type PaymentGateway = string; // Dynamic type from database gateway codes
+
+// Fallback gateway codes for TypeScript and development
+export const FALLBACK_GATEWAY_CODES = [
+  'stripe', 'payu', 'esewa', 'khalti', 'fonepay', 'airwallex',
+  'bank_transfer', 'cod', 'razorpay', 'paypal', 'upi', 'paytm',
+  'grabpay', 'alipay'
+] as const;
+
+export type FallbackPaymentGateway = typeof FALLBACK_GATEWAY_CODES[number];
 
 export type PaymentStatus = 
   | 'pending'

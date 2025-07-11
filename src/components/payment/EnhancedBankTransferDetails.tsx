@@ -123,22 +123,22 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="bank" className="w-full">
+          <Tabs defaultValue={hasQR ? "qr" : (hasUPI ? "upi" : "bank")} className="w-full">
             <TabsList className={`grid w-full ${hasUPI && hasQR ? 'grid-cols-3' : (hasUPI || hasQR ? 'grid-cols-2' : 'grid-cols-1')}`}>
+              {hasQR && (
+                <TabsTrigger value="qr" className="flex items-center gap-2">
+                  <QrCode className="h-4 w-4" />
+                  QR Code
+                </TabsTrigger>
+              )}
               <TabsTrigger value="bank" className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
-                Bank Transfer
+                Bank Details
               </TabsTrigger>
               {hasUPI && (
                 <TabsTrigger value="upi" className="flex items-center gap-2">
                   <Smartphone className="h-4 w-4" />
                   UPI
-                </TabsTrigger>
-              )}
-              {hasQR && (
-                <TabsTrigger value="qr" className="flex items-center gap-2">
-                  <QrCode className="h-4 w-4" />
-                  QR Code
                 </TabsTrigger>
               )}
             </TabsList>

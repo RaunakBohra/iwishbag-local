@@ -39,17 +39,45 @@ export async function getBankDetailsForCurrency(currency: string): Promise<strin
  */
 export function formatBankDetailsForEmail(account: BankAccountType): string {
   const details = [
-    `Bank Name: ${account.bank_name}`,
-    `Account Name: ${account.account_name}`,
-    `Account Number: ${account.account_number}`,
+    `<strong>Bank Name:</strong> ${account.bank_name}`,
+    `<strong>Account Name:</strong> ${account.account_name}`,
+    `<strong>Account Number:</strong> ${account.account_number}`,
   ];
 
   if (account.swift_code) {
-    details.push(`SWIFT Code: ${account.swift_code}`);
+    details.push(`<strong>SWIFT Code:</strong> ${account.swift_code}`);
   }
 
   if (account.currency_code) {
-    details.push(`Currency: ${account.currency_code}`);
+    details.push(`<strong>Currency:</strong> ${account.currency_code}`);
+  }
+
+  // Add new payment fields
+  if (account.upi_id) {
+    details.push(`<strong>UPI ID:</strong> ${account.upi_id}`);
+  }
+
+  // Add QR code image if available
+  if (account.payment_qr_url) {
+    details.push(`<br><div style="margin: 15px 0;"><strong>Payment QR Code:</strong><br><img src="${account.payment_qr_url}" alt="Payment QR Code" style="max-width: 200px; height: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"></div>`);
+  }
+
+  // Add custom fields if available
+  if (account.custom_fields && typeof account.custom_fields === 'object') {
+    const customFieldsData = account.custom_fields as Record<string, any>;
+    const fieldLabels = (account.field_labels || {}) as Record<string, string>;
+    
+    Object.entries(customFieldsData).forEach(([key, value]) => {
+      if (value) {
+        const label = fieldLabels[key] || key;
+        details.push(`<strong>${label}:</strong> ${value}`);
+      }
+    });
+  }
+
+  // Add instructions at the end if available
+  if (account.instructions) {
+    details.push(`<br><div style="background: #f8f9fa; padding: 10px; border-radius: 5px; border-left: 4px solid #007bff;"><strong>Payment Instructions:</strong><br>${account.instructions}</div>`);
   }
 
   return details.join('<br>');
@@ -71,6 +99,33 @@ export function formatBankDetailsForText(account: BankAccountType): string {
 
   if (account.currency_code) {
     details.push(`Currency: ${account.currency_code}`);
+  }
+
+  // Add new payment fields
+  if (account.upi_id) {
+    details.push(`UPI ID: ${account.upi_id}`);
+  }
+
+  if (account.payment_qr_url) {
+    details.push(`Payment QR Code: ${account.payment_qr_url}`);
+  }
+
+  // Add custom fields if available
+  if (account.custom_fields && typeof account.custom_fields === 'object') {
+    const customFieldsData = account.custom_fields as Record<string, any>;
+    const fieldLabels = (account.field_labels || {}) as Record<string, string>;
+    
+    Object.entries(customFieldsData).forEach(([key, value]) => {
+      if (value) {
+        const label = fieldLabels[key] || key;
+        details.push(`${label}: ${value}`);
+      }
+    });
+  }
+
+  // Add instructions at the end if available
+  if (account.instructions) {
+    details.push(`\nPayment Instructions:\n${account.instructions}`);
   }
 
   return details.join('\n');

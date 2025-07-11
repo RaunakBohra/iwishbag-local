@@ -13,6 +13,7 @@ import { AddressEditForm } from '@/components/forms/AddressEditForm';
 import { QuoteMessaging } from '@/components/messaging/QuoteMessaging';
 import { DocumentManager } from '@/components/documents/DocumentManager';
 import { PaymentProofButton } from '@/components/payment/PaymentProofButton';
+import { EnhancedBankTransferDetails } from '@/components/payment/EnhancedBankTransferDetails';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -318,8 +319,28 @@ export default function OrderDetail() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Actions Card */}
-          {isOwner && (
+          {/* Payment Instructions for Bank Transfer */}
+          {isOwner && order.payment_method === 'bank_transfer' && (
+            <Card className="animate-in slide-in-from-right duration-700 delay-100 hover:shadow-lg transition-shadow duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Payment Instructions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <EnhancedBankTransferDetails
+                  orderId={order.id}
+                  orderDisplayId={order.order_display_id || order.display_id || order.id}
+                  amount={order.final_total || 0}
+                  currency={order.final_currency || order.currency || 'USD'}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Actions Card for non-bank transfer orders */}
+          {isOwner && order.payment_method !== 'bank_transfer' && (
             <Card className="animate-in slide-in-from-right duration-700 delay-100 hover:shadow-lg transition-shadow duration-300">
               <CardHeader>
                 <CardTitle>Actions</CardTitle>
