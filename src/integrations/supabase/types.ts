@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
-          operationName?: string
+          extensions?: Json
           variables?: Json
           query?: string
-          extensions?: Json
+          operationName?: string
         }
         Returns: Json
       }
@@ -89,6 +89,7 @@ export type Database = {
           created_at: string
           currency_code: string | null
           custom_fields: Json | null
+          destination_country: string | null
           display_order: number | null
           field_labels: Json | null
           iban: string | null
@@ -111,6 +112,7 @@ export type Database = {
           created_at?: string
           currency_code?: string | null
           custom_fields?: Json | null
+          destination_country?: string | null
           display_order?: number | null
           field_labels?: Json | null
           iban?: string | null
@@ -133,6 +135,7 @@ export type Database = {
           created_at?: string
           currency_code?: string | null
           custom_fields?: Json | null
+          destination_country?: string | null
           display_order?: number | null
           field_labels?: Json | null
           iban?: string | null
@@ -1799,21 +1802,21 @@ export type Database = {
       get_orders_with_payment_proofs: {
         Args: { limit_count?: number; status_filter?: string }
         Returns: {
-          verification_status: string
-          message_id: string
-          customer_email: string
-          payment_method: string
-          payment_status: string
-          final_currency: string
-          final_total: number
           order_display_id: string
-          order_id: string
-          submitted_at: string
-          attachment_url: string
-          attachment_file_name: string
-          verified_amount: number
+          final_total: number
+          final_currency: string
+          payment_status: string
+          payment_method: string
+          customer_email: string
+          message_id: string
+          verification_status: string
           admin_notes: string
+          verified_amount: number
+          attachment_file_name: string
+          attachment_url: string
+          submitted_at: string
           verified_at: string
+          order_id: string
         }[]
       }
       get_payment_proof_stats: {
@@ -1822,16 +1825,16 @@ export type Database = {
       }
       get_shipping_cost: {
         Args: {
-          p_destination_country: string
+          p_origin_country: string
           p_weight: number
           p_price?: number
-          p_origin_country: string
+          p_destination_country: string
         }
         Returns: {
           cost: number
           method: string
-          carrier: string
           delivery_days: string
+          carrier: string
         }[]
       }
       get_user_bank_accounts: {
@@ -1845,6 +1848,7 @@ export type Database = {
           created_at: string
           currency_code: string | null
           custom_fields: Json | null
+          destination_country: string | null
           display_order: number | null
           field_labels: Json | null
           iban: string | null
@@ -1865,8 +1869,8 @@ export type Database = {
       }
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
       }
