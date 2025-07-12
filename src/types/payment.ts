@@ -111,6 +111,12 @@ export interface PaymentRequest {
   gateway: PaymentGateway;
   success_url: string;
   cancel_url: string;
+  customerInfo?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
   metadata?: Record<string, any>;
 }
 

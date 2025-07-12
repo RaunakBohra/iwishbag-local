@@ -20,6 +20,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { AnimatedSection } from '@/components/shared/AnimatedSection';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
+import { supabase } from '@/integrations/supabase/client';
+import { useCartStore } from '@/stores/cartStore';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface PaymentSuccessData {
   transactionId: string;
@@ -29,6 +32,9 @@ interface PaymentSuccessData {
   orderId?: string;
   customerName?: string;
   customerEmail?: string;
+  customerPhone?: string;
+  productInfo?: string;
+  payuId?: string;
 }
 
 const PaymentSuccess: React.FC = () => {
@@ -36,6 +42,7 @@ const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [paymentData, setPaymentData] = useState<PaymentSuccessData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -62,19 +69,33 @@ const PaymentSuccess: React.FC = () => {
             currency: 'INR', // PayU always returns INR
             gateway: gateway,
             customerName: firstname || undefined,
-            customerEmail: email || undefined
+            customerEmail: email || undefined,
+            customerPhone: phone || undefined,
+            productInfo: productinfo || undefined,
+            payuId: mihpayid || undefined
           };
 
           setPaymentData(paymentInfo);
 
-          // Show success toast
-          toast({
-            title: "Payment Successful!",
-            description: `Your payment of ₹${paymentInfo.amount} has been processed successfully.`,
-          });
-
           // Update order status in database
-          await updateOrderStatus(txnid, 'completed');
+          try {
+            const udf1 = searchParams.get('udf1'); // Guest session token
+            await updateOrderStatus(paymentInfo, udf1);
+            
+            // Show success toast after database update
+            toast({
+              title: "Payment Successful!",
+              description: `Your payment of ₹${paymentInfo.amount} has been processed successfully.`,
+            });
+          } catch (updateError) {
+            console.error('Failed to update order status:', updateError);
+            // Still show payment success to user as payment was processed
+            toast({
+              title: "Payment Processed",
+              description: "Your payment was successful but there was an issue updating your order. Please contact support with your transaction ID.",
+              variant: "default"
+            });
+          }
         } else {
           // Payment failed or cancelled
           toast({
@@ -99,13 +120,108 @@ const PaymentSuccess: React.FC = () => {
     processPaymentSuccess();
   }, [searchParams, navigate, toast]);
 
-  const updateOrderStatus = async (transactionId: string, status: string) => {
+  const updateOrderStatus = async (paymentData: PaymentSuccessData, guestSessionToken?: string | null) => {
     try {
-      // Update the order status in your database
-      // This would typically be done via a webhook, but we can also do it here
-      console.log('Updating order status:', { transactionId, status });
+      // Extract quote IDs from productinfo
+      // Format: "Order: Product Name (quote_id1,quote_id2)"
+      const productInfo = paymentData.productInfo || '';
+      const quoteIdsMatch = productInfo.match(/\(([^)]+)\)$/);
+      const quoteIds = quoteIdsMatch ? quoteIdsMatch[1].split(',') : [];
+
+      if (quoteIds.length === 0) {
+        console.error('No quote IDs found in productinfo:', productInfo);
+        return;
+      }
+
+      console.log('Updating order status for quotes:', quoteIds);
+
+      // Update quotes to paid status
+      const { data: updatedQuotes, error: updateError } = await supabase
+        .from('quotes')
+        .update({
+          status: 'paid',
+          payment_status: 'paid',
+          payment_method: paymentData.gateway,
+          payment_transaction_id: paymentData.payuId || paymentData.transactionId,
+          paid_at: new Date().toISOString(),
+          amount_paid: paymentData.amount,
+          in_cart: false,
+          payment_details: {
+            gateway: paymentData.gateway,
+            transaction_id: paymentData.transactionId,
+            payu_id: paymentData.payuId,
+            amount: paymentData.amount,
+            currency: paymentData.currency,
+            customer_name: paymentData.customerName,
+            customer_email: paymentData.customerEmail,
+            customer_phone: paymentData.customerPhone,
+            payment_confirmed_at: new Date().toISOString()
+          }
+        })
+        .in('id', quoteIds)
+        .select();
+
+      if (updateError) {
+        console.error('Error updating quotes:', updateError);
+        throw updateError;
+      }
+
+      console.log('Successfully updated quotes:', updatedQuotes);
+
+      // Create payment transaction record
+      const { error: transactionError } = await supabase
+        .from('payment_transactions')
+        .insert({
+          quote_id: quoteIds[0], // Primary quote ID
+          amount: paymentData.amount,
+          currency: paymentData.currency,
+          status: 'completed',
+          payment_method: paymentData.gateway,
+          gateway_response: {
+            transaction_id: paymentData.transactionId,
+            payu_id: paymentData.payuId,
+            customer_info: {
+              name: paymentData.customerName,
+              email: paymentData.customerEmail,
+              phone: paymentData.customerPhone
+            },
+            product_info: paymentData.productInfo,
+            all_quote_ids: quoteIds
+          }
+        });
+
+      if (transactionError) {
+        console.error('Error creating payment transaction:', transactionError);
+        // Don't throw - this is not critical for the user experience
+      }
+
+      // Clear cart items for paid quotes
+      const { bulkDelete } = useCartStore.getState();
+      bulkDelete(quoteIds);
+
+      // Invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+
+      // Handle guest checkout session if present
+      if (guestSessionToken) {
+        const { error: sessionError } = await supabase
+          .from('guest_checkout_sessions')
+          .update({
+            status: 'completed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('session_token', guestSessionToken);
+
+        if (sessionError) {
+          console.error('Error updating guest session:', sessionError);
+        }
+      }
+
     } catch (error) {
       console.error('Error updating order status:', error);
+      throw error;
     }
   };
 
@@ -251,6 +367,15 @@ const PaymentSuccess: React.FC = () => {
                     </Badge>
                   </div>
                   
+                  {paymentData.payuId && (
+                    <div className="flex justify-between items-center px-4">
+                      <span className="font-medium text-gray-600">PayU ID:</span>
+                      <Badge variant="secondary" className="text-sm font-mono bg-gradient-to-r from-blue-100 to-purple-100">
+                        {paymentData.payuId}
+                      </Badge>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between items-center px-4">
                     <span className="font-medium text-gray-600">Payment Method:</span>
                     <div className="flex items-center gap-2">
@@ -270,19 +395,38 @@ const PaymentSuccess: React.FC = () => {
                 </div>
               </AnimatedSection>
 
-              {paymentData.customerName && (
+              {(paymentData.customerName || paymentData.productInfo) && (
                 <AnimatedSection animation="fadeInUp" delay={600}>
-                  <div className="space-y-2 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                    <div className="flex items-center justify-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <p className="font-medium text-gray-700">
-                        Thank you, <span className="text-green-600">{paymentData.customerName}</span>!
-                      </p>
-                    </div>
+                  <div className="space-y-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                    {paymentData.customerName && (
+                      <div className="flex items-center justify-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <p className="font-medium text-gray-700">
+                          Thank you, <span className="text-green-600">{paymentData.customerName}</span>!
+                        </p>
+                      </div>
+                    )}
+                    
                     {paymentData.customerEmail && (
                       <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                         <Mail className="w-4 h-4" />
                         <p>Confirmation sent to {paymentData.customerEmail}</p>
+                      </div>
+                    )}
+                    
+                    {paymentData.customerPhone && (
+                      <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                        <Smartphone className="w-4 h-4" />
+                        <p>SMS updates to {paymentData.customerPhone}</p>
+                      </div>
+                    )}
+                    
+                    {paymentData.productInfo && (
+                      <div className="mt-3 pt-3 border-t border-green-100">
+                        <div className="flex items-start justify-center gap-2 text-sm text-gray-600">
+                          <Package className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <p className="text-center">{paymentData.productInfo}</p>
+                        </div>
                       </div>
                     )}
                   </div>

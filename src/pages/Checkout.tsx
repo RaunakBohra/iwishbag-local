@@ -734,6 +734,14 @@ export default function Checkout() {
       gateway: paymentMethod,
       success_url: `${window.location.origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${window.location.origin}/checkout?quotes=${cartQuoteIds.join(',')}`,
+      customerInfo: {
+        name: isGuestCheckout 
+          ? (addressFormData.recipient_name || guestContact.fullName)
+          : (addressFormData.recipient_name || userProfile?.full_name || ''),
+        email: isGuestCheckout ? guestContact.email : (user?.email || ''),
+        phone: addressFormData.phone || '',
+        address: addressFormData.address_line1
+      },
       metadata: {
         // Include guest session token for webhook processing
         guest_session_token: isGuestCheckout ? guestSessionToken : undefined,

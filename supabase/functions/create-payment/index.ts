@@ -251,20 +251,28 @@ serve(async (req) => {
           }
 
           // Get customer information from request or fetch from database
-          let customerName = 'Customer';
-          let customerEmail = 'customer@example.com';
-          let customerPhone = '9999999999';
+          let customerName = customerInfo?.name || 'Customer';
+          let customerEmail = customerInfo?.email || 'customer@example.com';
+          let customerPhone = customerInfo?.phone || '9999999999';
 
-          if (customerInfo) {
-            customerName = customerInfo.name || customerName;
-            customerEmail = customerInfo.email || customerEmail;
-            customerPhone = customerInfo.phone || customerPhone;
-          } else {
-            // Try to get customer info from quotes if available
-            if (quotesToUse && quotesToUse.length > 0) {
-              const firstQuote = quotesToUse[0];
-              if (firstQuote.email) {
-                customerEmail = firstQuote.email;
+          // If customerInfo not provided, try to get from quotes
+          if (!customerInfo && quotesToUse && quotesToUse.length > 0 && !quoteIds.some(id => id.startsWith('test-'))) {
+            // Fetch full quote details including shipping address
+            const { data: fullQuotes } = await supabaseAdmin
+              .from('quotes')
+              .select('email, customer_name, shipping_address')
+              .in('id', quoteIds)
+              .limit(1);
+
+            if (fullQuotes && fullQuotes.length > 0) {
+              const firstQuote = fullQuotes[0];
+              customerEmail = firstQuote.email || customerEmail;
+              customerName = firstQuote.customer_name || customerName;
+              
+              // Extract phone from shipping address if available
+              if (firstQuote.shipping_address && typeof firstQuote.shipping_address === 'object') {
+                const shippingAddress = firstQuote.shipping_address as any;
+                customerPhone = shippingAddress.phone || customerPhone;
               }
             }
           }
