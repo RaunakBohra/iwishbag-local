@@ -160,6 +160,15 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                 </span>
               </div>
             )}
+            
+            {outstandingAmount < 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Overpaid Amount</span>
+                <span className="font-semibold text-blue-600">
+                  {quote.final_currency} {Math.abs(outstandingAmount).toFixed(2)}
+                </span>
+              </div>
+            )}
 
             <Separator />
 
@@ -173,6 +182,16 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                 </span>
               </div>
             </div>
+
+            {/* Payment Date - Show for all completed payments */}
+            {quote.paid_at && quote.payment_status === 'paid' && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Payment Date</span>
+                <span className="text-sm">
+                  {format(new Date(quote.paid_at), 'MMM dd, yyyy HH:mm')}
+                </span>
+              </div>
+            )}
 
             {/* Transaction Details for Online Payments */}
             {(paymentTransaction || quote.payment_transaction_id) && (
@@ -189,15 +208,6 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                     <ExternalLink className="ml-1 h-3 w-3" />
                   </Button>
                 </div>
-
-                {quote.paid_at && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Payment Date</span>
-                    <span className="text-sm">
-                      {format(new Date(quote.paid_at), 'MMM dd, yyyy HH:mm')}
-                    </span>
-                  </div>
-                )}
               </>
             )}
 
@@ -209,31 +219,46 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                   <Badge variant="outline">{paymentProofs.length} submitted</Badge>
                 </div>
                 {paymentProofs.slice(0, 3).map((proof, index) => (
-                  <div key={proof.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Receipt className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">
-                        {proof.attachment_file_name || `Proof ${index + 1}`}
-                      </span>
+                  <div key={proof.id} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Receipt className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm">
+                          {proof.attachment_file_name || `Proof ${index + 1}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {proof.verification_status && (
+                          <Badge variant={
+                            proof.verification_status === 'verified' ? 'success' :
+                            proof.verification_status === 'rejected' ? 'destructive' :
+                            'secondary'
+                          } className="text-xs">
+                            {proof.verification_status}
+                          </Badge>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewProof(proof.attachment_url)}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {proof.verification_status && (
-                        <Badge variant={
-                          proof.verification_status === 'verified' ? 'success' :
-                          proof.verification_status === 'rejected' ? 'destructive' :
-                          'secondary'
-                        } className="text-xs">
-                          {proof.verification_status}
-                        </Badge>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewProof(proof.attachment_url)}
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
-                    </div>
+                    {proof.verified_amount && proof.verification_status === 'verified' && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Verified Amount</span>
+                        <span className="font-medium text-green-600">
+                          {quote.final_currency} {proof.verified_amount.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    {proof.verified_at && (
+                      <div className="text-xs text-muted-foreground">
+                        Verified on {format(new Date(proof.verified_at), 'MMM dd, yyyy')}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

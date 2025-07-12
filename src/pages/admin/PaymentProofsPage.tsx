@@ -116,7 +116,7 @@ const PaymentProofsPage = () => {
   // State
   const [selectedProofs, setSelectedProofs] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('pending');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<'all' | 'bank_transfer' | 'payu' | 'stripe' | 'esewa'>('all');
   const [dateRange, setDateRange] = useState({
     from: subDays(new Date(), 30),
@@ -448,17 +448,34 @@ const PaymentProofsPage = () => {
         quotes = quotesData || [];
       }
 
-      // Update the verification status
-      const { error: updateError } = await supabase
-        .from('messages')
-        .update({
-          verification_status: status,
-          admin_notes: notes,
-          verified_by: user?.id,
-          verified_at: new Date().toISOString(),
-        })
-        .in('id', ids);
+      // For each message, calculate and set the verified amount
+      const updatePromises = messages.map(async (message) => {
+        const quote = quotes.find(q => q.id === message.quote_id);
+        const orderTotal = quote?.final_total || 0;
+        const existingPaid = quote?.amount_paid || 0;
+        const remainingBalance = orderTotal - existingPaid;
+        
+        // Set verified_amount to the remaining balance if verifying
+        // But only if it hasn't been set already
+        const verified_amount = status === 'verified' ? 
+          (message.verified_amount || remainingBalance) : 
+          null;
+        
+        return supabase
+          .from('messages')
+          .update({
+            verification_status: status,
+            admin_notes: notes,
+            verified_by: user?.id,
+            verified_at: new Date().toISOString(),
+            verified_amount: verified_amount
+          })
+          .eq('id', message.id);
+      });
 
+      // Execute all updates
+      const updateResults = await Promise.all(updatePromises);
+      const updateError = updateResults.find(result => result.error)?.error;
       if (updateError) throw updateError;
 
       // For verified payments, automatically confirm payment
@@ -473,8 +490,9 @@ const PaymentProofsPage = () => {
           const orderTotal = quote.final_total || 0;
           const existingPaid = quote.amount_paid || 0;
           
-          // Use the order total as the verified amount if not specified
-          const amountReceived = orderTotal;
+          // Use the verified amount from the message if available, otherwise use the remaining balance
+          const remainingBalance = orderTotal - existingPaid;
+          const amountReceived = message.verified_amount || remainingBalance;
           const totalPaid = existingPaid + amountReceived;
           
           // Determine payment status
@@ -486,6 +504,14 @@ const PaymentProofsPage = () => {
           }
 
           // Update quote with payment confirmation
+          console.log(`Updating payment for quote ${message.quote_id}:`, {
+            payment_status: paymentStatus,
+            paid_at: new Date().toISOString(),
+            amount_paid: totalPaid,
+            orderTotal,
+            existingPaid
+          });
+          
           const { error: paymentError } = await supabase
             .from('quotes')
             .update({
@@ -497,7 +523,12 @@ const PaymentProofsPage = () => {
 
           if (paymentError) {
             console.error('Error updating payment:', paymentError);
-            // Don't fail the whole operation, just log the error
+            // Show a warning toast about the payment update failure
+            toast({
+              title: 'Warning',
+              description: `Payment proof verified but payment status update failed for order ${quote.order_display_id}. Error: ${paymentError.message}`,
+              variant: 'destructive',
+            });
           }
         }
       }
@@ -505,6 +536,19 @@ const PaymentProofsPage = () => {
       // Send notifications to customers
       for (const message of messages || []) {
         if (!message.quote_id || !user?.id) continue;
+
+        // Find the quote to get the customer's user_id
+        const quote = quotes.find(q => q.id === message.quote_id);
+        if (!quote || !quote.user_id) {
+          console.log('Skipping notification - no quote or user_id found');
+          continue;
+        }
+
+        // Skip if trying to send message to self
+        if (user.id === quote.user_id) {
+          console.log('Skipping notification - cannot send message to self');
+          continue;
+        }
 
         let messageContent = '';
         let subject = '';
@@ -518,39 +562,46 @@ const PaymentProofsPage = () => {
         }
 
         if (messageContent) {
-          await supabase
+          const messageData = {
+            sender_id: user.id,
+            recipient_id: quote.user_id,  // Use the quote's user_id as recipient
+            quote_id: message.quote_id,
+            subject,
+            content: messageContent,
+            message_type: 'payment_verification_result',
+            is_read: false
+          };
+          
+          console.log('Attempting to send notification message:', messageData);
+          
+          const { error: msgError } = await supabase
             .from('messages')
-            .insert({
-              sender_id: user.id,
-              recipient_id: message.sender_id,
-              quote_id: message.quote_id,
-              subject,
-              content: messageContent,
-              message_type: 'payment_verification_result'
-            });
+            .insert(messageData);
+          
+          if (msgError) {
+            console.error('Failed to send notification message:', msgError);
+            console.error('Message data that failed:', messageData);
+            // Don't fail the whole operation, just log the error
+          } else {
+            console.log('Notification message sent successfully');
+          }
         }
       }
+      
+      // Return the messages and quote IDs for use in onSuccess
+      return { messages, quoteIds };
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       toast({
         title: 'Payment Confirmed!',
         description: `${selectedProofs.size} payment(s) verified and confirmed successfully. Amount paid has been updated.`,
       });
       setSelectedProofs(new Set());
-      refetch();
-      // Invalidate all admin-orders queries (regardless of filters)
-      queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0] === 'admin-orders' 
-      });
-      queryClient.invalidateQueries({ queryKey: ['payment-proof-stats'] });
       
-      // Invalidate specific quote queries for each message
-      for (const message of messages || []) {
-        if (message.quote_id) {
-          queryClient.invalidateQueries({ queryKey: ['admin-quote', message.quote_id] });
-          queryClient.invalidateQueries({ queryKey: ['quotes', message.quote_id] });
-        }
-      }
+      // Simple solution: just reload the page after a short delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     },
     onError: (error) => {
       toast({

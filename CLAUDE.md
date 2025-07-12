@@ -19,6 +19,7 @@ user side pages and admin side pages are different, be careful while making chan
 - Use React Query for all API calls
 - Follow the existing file naming conventions
 - Maintain TypeScript type safety throughout
+VERY IMPORTANT - Dont overcomplicate things to find the solution, aim for simplest solution to the problems 
 
 ## Currency System - CRITICAL DOCUMENTATION
 **NEVER modify the currency system without understanding this section fully**

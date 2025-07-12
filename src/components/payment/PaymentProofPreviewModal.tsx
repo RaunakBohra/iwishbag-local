@@ -253,12 +253,18 @@ export const PaymentProofPreviewModal: React.FC<PaymentProofPreviewModalProps> =
       // Refresh queries
       queryClient.invalidateQueries({ queryKey: ['messages'] });
       queryClient.invalidateQueries({ queryKey: ['payment-proof-message'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-proof-message', orderId] });
       queryClient.invalidateQueries({ queryKey: ['quotes', orderId] });
       // Invalidate all admin-orders queries (regardless of filters)
       queryClient.invalidateQueries({ 
         predicate: (query) => query.queryKey[0] === 'admin-orders' 
       });
       queryClient.invalidateQueries({ queryKey: ['admin-quote', orderId] });
+      queryClient.invalidateQueries({ queryKey: ['quote-messages-count', orderId] });
+      queryClient.invalidateQueries({ queryKey: ['payment-proofs'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-proof-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['order-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['orders-with-payment-proofs'] });
 
       onStatusUpdate?.();
       onClose();

@@ -28,7 +28,8 @@
       "Bash(npm run:*)",
       "Bash(supabase projects:*)",
       "Bash(supabase functions logs:*)",
-      "Bash(supabase functions serve:*)"
+      "Bash(supabase functions serve:*)",
+      "WebFetch(domain:docs.payu.com)"
     ],
     "deny": []
   }
