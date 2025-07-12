@@ -169,6 +169,22 @@ const router = createBrowserRouter([
         element: <OrderConfirmationPage />,
       },
       {
+        path: "payment-success", // PayU success redirect (public access)
+        element: (
+          <ErrorBoundary fallback={PaymentErrorFallback}>
+            <PaymentSuccess />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "payment-failure", // PayU failure redirect (public access)
+        element: (
+          <ErrorBoundary fallback={PaymentErrorFallback}>
+            <PaymentFailure />
+          </ErrorBoundary>
+        ),
+      },
+      {
         element: <ProtectedRoute />,
         children: [
           {
@@ -214,22 +230,6 @@ const router = createBrowserRouter([
           {
             path: "messages",
             element: <MessageCenter />,
-          },
-          {
-            path: "payment-success", // PayU success redirect
-            element: (
-              <ErrorBoundary fallback={PaymentErrorFallback}>
-                <PaymentSuccess />
-              </ErrorBoundary>
-            ),
-          },
-          {
-            path: "payment-failure", // PayU failure redirect
-            element: (
-              <ErrorBoundary fallback={PaymentErrorFallback}>
-                <PaymentFailure />
-              </ErrorBoundary>
-            ),
           },
           {
             path: "profile",
