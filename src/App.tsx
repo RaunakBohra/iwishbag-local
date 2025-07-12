@@ -32,6 +32,7 @@ const CustomerOrderDetailPage = React.lazy(() => import("@/pages/CustomerOrderDe
 const OrderConfirmationPage = React.lazy(() => import("@/pages/OrderConfirmationPage"));
 const PaymentSuccess = React.lazy(() => import("@/pages/PaymentSuccess"));
 const PaymentFailure = React.lazy(() => import("@/pages/PaymentFailure"));
+const PaymentTest = React.lazy(() => import("@/pages/PaymentTest"));
 const QuoteDetailUnified = React.lazy(() => import("@/pages/dashboard/QuoteDetailUnified"));
 const ResetPassword = React.lazy(() => import("@/pages/auth/ResetPassword"));
 const EmailConfirmation = React.lazy(() => import("@/pages/auth/EmailConfirmation"));
@@ -183,6 +184,10 @@ const router = createBrowserRouter([
             <PaymentFailure />
           </ErrorBoundary>
         ),
+      },
+      {
+        path: "payment-test", // Test page for debugging PayU callbacks
+        element: <PaymentTest />,
       },
       {
         element: <ProtectedRoute />,

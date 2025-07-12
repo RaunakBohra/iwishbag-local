@@ -93,28 +93,66 @@ serve(async (req) => {
 
     console.log('🔄 Redirecting to failure page:', redirectUrl.toString());
 
-    // Redirect to the React frontend with payment failure data
-    return new Response(null, {
-      status: 302,
+    // Use HTML redirect for better compatibility with PayU
+    const htmlRedirect = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Payment Failed - Redirecting...</title>
+          <meta http-equiv="refresh" content="0;url=${redirectUrl.toString()}">
+        </head>
+        <body>
+          <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+            <h2>Payment Failed</h2>
+            <p>Redirecting you to the payment page...</p>
+            <p>If you are not redirected automatically, <a href="${redirectUrl.toString()}">click here</a>.</p>
+          </div>
+          <script>
+            window.location.href = "${redirectUrl.toString()}";
+          </script>
+        </body>
+      </html>
+    `;
+
+    return new Response(htmlRedirect, {
+      status: 200,
       headers: {
-        ...corsHeaders,
-        'Location': redirectUrl.toString()
+        'Content-Type': 'text/html',
+        ...corsHeaders
       }
     });
 
   } catch (error) {
     console.error('❌ PayU Failure Handler Error:', error);
     
-    // Fallback redirect to payment failure page
-    const failureUrl = new URL('/payment-failure', 'https://whyteclub.com');
-    failureUrl.searchParams.set('error', 'handler_failed');
-    failureUrl.searchParams.set('message', 'Failed to process payment failure callback');
+    // Return HTML error page with redirect
+    const errorHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Payment Processing Error</title>
+          <meta http-equiv="refresh" content="3;url=https://whyteclub.com/payment-failure?error=handler_error">
+        </head>
+        <body>
+          <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+            <h2>Processing Error</h2>
+            <p>There was an issue processing your payment callback.</p>
+            <p>Redirecting to payment page...</p>
+          </div>
+          <script>
+            setTimeout(() => {
+              window.location.href = "https://whyteclub.com/payment-failure?error=handler_error&message=${encodeURIComponent(error.message)}";
+            }, 3000);
+          </script>
+        </body>
+      </html>
+    `;
 
-    return new Response(null, {
-      status: 302,
+    return new Response(errorHtml, {
+      status: 200, // Return 200 to avoid PayU retries
       headers: {
-        ...corsHeaders,
-        'Location': failureUrl.toString()
+        'Content-Type': 'text/html',
+        ...corsHeaders
       }
     });
   }

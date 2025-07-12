@@ -54,8 +54,8 @@ const PaymentSuccess: React.FC = () => {
         const hash = searchParams.get('hash');
         const gateway = searchParams.get('gateway') || 'payu';
 
-        // Validate payment success
-        if (status === 'success' && txnid) {
+        // Validate payment success (handle both 'success' and 'Success' status)
+        if ((status === 'success' || status === 'Success') && txnid) {
           const paymentInfo: PaymentSuccessData = {
             transactionId: txnid,
             amount: parseFloat(amount || '0'),

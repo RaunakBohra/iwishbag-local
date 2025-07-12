@@ -30,13 +30,57 @@ serve(async (req) => {
   }
 
   console.log(`🔔 PayU Success Handler - Method: ${req.method}, URL: ${req.url}`);
+  console.log('🔔 Request Headers:', Object.fromEntries(req.headers.entries()));
 
   try {
     let payuData: PayUSuccessData;
 
     if (req.method === 'POST') {
       // Handle POST request from PayU (form data)
-      const formData = await req.formData();
+      console.log('📝 Processing POST request from PayU');
+      
+      const contentType = req.headers.get('content-type');
+      console.log('📝 Content-Type:', contentType);
+      
+      let formData: FormData;
+      
+      try {
+        if (contentType?.includes('application/x-www-form-urlencoded')) {
+          // Handle URL-encoded form data
+          const body = await req.text();
+          console.log('📝 Raw body:', body);
+          
+          formData = new FormData();
+          const params = new URLSearchParams(body);
+          for (const [key, value] of params) {
+            formData.append(key, value);
+          }
+        } else {
+          // Handle regular form data
+          formData = await req.formData();
+        }
+      } catch (parseError) {
+        console.error('❌ Error parsing form data:', parseError);
+        // Return a basic HTML response for debugging
+        return new Response(`
+          <html>
+            <body>
+              <h1>PayU Callback Received</h1>
+              <p>Error parsing form data: ${parseError.message}</p>
+              <p>Content-Type: ${contentType}</p>
+              <script>
+                // Auto-redirect to success page after 3 seconds
+                setTimeout(() => {
+                  window.location.href = 'https://whyteclub.com/payment-success?status=error&message=parse_error';
+                }, 3000);
+              </script>
+            </body>
+          </html>
+        `, {
+          status: 200,
+          headers: { 'Content-Type': 'text/html' }
+        });
+      }
       
       payuData = {
         txnid: formData.get('txnid')?.toString() || '',
@@ -61,11 +105,12 @@ serve(async (req) => {
         status: payuData.status,
         amount: payuData.amount,
         firstname: payuData.firstname,
-        email: payuData.email
+        email: payuData.email?.substring(0, 3) + '***'
       });
 
     } else if (req.method === 'GET') {
       // Handle GET request (from browser navigation or direct access)
+      console.log('📝 Processing GET request');
       const url = new URL(req.url);
       const searchParams = url.searchParams;
 
@@ -88,16 +133,8 @@ serve(async (req) => {
       };
 
     } else {
+      console.log('❌ Method not allowed:', req.method);
       return new Response('Method not allowed', { status: 405, headers: corsHeaders });
-    }
-
-    // Validate required fields
-    if (!payuData.txnid || !payuData.status) {
-      console.error('❌ Missing required fields:', { txnid: payuData.txnid, status: payuData.status });
-      return new Response('Missing required payment data', { 
-        status: 400, 
-        headers: corsHeaders 
-      });
     }
 
     // Build redirect URL with all payment data
@@ -112,28 +149,66 @@ serve(async (req) => {
 
     console.log('🔄 Redirecting to:', redirectUrl.toString());
 
-    // Redirect to the React frontend with payment data
-    return new Response(null, {
-      status: 302,
+    // Use HTML redirect for better compatibility with PayU
+    const htmlRedirect = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Payment Successful - Redirecting...</title>
+          <meta http-equiv="refresh" content="0;url=${redirectUrl.toString()}">
+        </head>
+        <body>
+          <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+            <h2>Payment Successful!</h2>
+            <p>Redirecting you to the success page...</p>
+            <p>If you are not redirected automatically, <a href="${redirectUrl.toString()}">click here</a>.</p>
+          </div>
+          <script>
+            window.location.href = "${redirectUrl.toString()}";
+          </script>
+        </body>
+      </html>
+    `;
+
+    return new Response(htmlRedirect, {
+      status: 200,
       headers: {
-        ...corsHeaders,
-        'Location': redirectUrl.toString()
+        'Content-Type': 'text/html',
+        ...corsHeaders
       }
     });
 
   } catch (error) {
     console.error('❌ PayU Success Handler Error:', error);
     
-    // Redirect to payment failure page on error
-    const failureUrl = new URL('/payment-failure', 'https://whyteclub.com');
-    failureUrl.searchParams.set('error', 'processing_failed');
-    failureUrl.searchParams.set('message', 'Failed to process payment callback');
+    // Return HTML error page with redirect
+    const errorHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Payment Processing Error</title>
+          <meta http-equiv="refresh" content="3;url=https://whyteclub.com/payment-failure?error=handler_error">
+        </head>
+        <body>
+          <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+            <h2>Processing Error</h2>
+            <p>There was an issue processing your payment callback.</p>
+            <p>Redirecting to payment page...</p>
+          </div>
+          <script>
+            setTimeout(() => {
+              window.location.href = "https://whyteclub.com/payment-failure?error=handler_error&message=${encodeURIComponent(error.message)}";
+            }, 3000);
+          </script>
+        </body>
+      </html>
+    `;
 
-    return new Response(null, {
-      status: 302,
+    return new Response(errorHtml, {
+      status: 200, // Return 200 to avoid PayU retries
       headers: {
-        ...corsHeaders,
-        'Location': failureUrl.toString()
+        'Content-Type': 'text/html',
+        ...corsHeaders
       }
     });
   }
