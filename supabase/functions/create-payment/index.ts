@@ -309,14 +309,14 @@ serve(async (req) => {
           
           console.log('PayU hash generated for transaction:', txnid);
           
-          // Create proper success and failure URLs (simple approach)
-          // PayU can redirect to client-side URLs with GET parameters
+          // Create proper success and failure URLs using Vercel API routes
+          // PayU sends POST requests, so we use API routes that can handle POST
           const baseUrl = success_url.includes('localhost') 
             ? 'http://localhost:8080' // Use local development URL
             : 'https://whyteclub.com'; // Use production URL
           
-          const payuSuccessUrl = `${baseUrl}/payment-success?gateway=payu`;
-          const payuFailureUrl = `${baseUrl}/payment-failure?gateway=payu`;
+          const payuSuccessUrl = `${baseUrl}/api/payu-success`;
+          const payuFailureUrl = `${baseUrl}/api/payu-failure`;
           
           // Prepare PayU POST form data
           const payuRequest = {
