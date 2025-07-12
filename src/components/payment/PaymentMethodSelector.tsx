@@ -138,13 +138,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     );
   }
 
-  // Debug logging
-  console.log('PaymentMethodSelector debug:', {
-    availableMethods,
-    isLoading,
-    currency,
-    availableMethodsLength: availableMethods?.length
-  });
+  // Debug logging removed to prevent console spam
   
   const availablePaymentMethods = availableMethods?.map(code => getPaymentMethodDisplay(code)).filter(Boolean) || [];
   const recommendedMethod = getRecommendedPaymentMethod();

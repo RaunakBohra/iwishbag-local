@@ -303,14 +303,6 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
   // Debug the enabled condition
   const isQueryEnabled = user ? !!userProfile : !!overrideCurrency;
-  console.log('🔍 Payment methods query enabled check:', {
-    user: !!user,
-    userProfile: !!userProfile,
-    overrideCurrency,
-    isQueryEnabled,
-    userDetails: user ? { id: user.id, email: user.email } : null,
-    profileDetails: userProfile
-  });
 
   // Get available payment methods for current user or guest
   const { data: availableMethods, isLoading: methodsLoading } = useQuery({
