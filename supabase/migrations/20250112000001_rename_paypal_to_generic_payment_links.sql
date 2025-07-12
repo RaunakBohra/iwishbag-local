@@ -97,7 +97,7 @@ CREATE INDEX IF NOT EXISTS idx_payment_links_expires_at ON payment_links(expires
 -- Step 10: Update the table comment
 COMMENT ON TABLE payment_links IS 'Multi-gateway payment links for quotes and custom payments';
 
--- Step 10: Add column comments
+-- Step 11: Add column comments
 COMMENT ON COLUMN payment_links.gateway IS 'Payment gateway identifier (paypal, payu, stripe, etc.)';
 COMMENT ON COLUMN payment_links.gateway_link_id IS 'Gateway-specific payment link ID';
 COMMENT ON COLUMN payment_links.payment_url IS 'The actual payment URL to redirect users to';
@@ -106,7 +106,7 @@ COMMENT ON COLUMN payment_links.gateway_response IS 'Response data received from
 COMMENT ON COLUMN payment_links.original_amount IS 'Original amount in the source currency before conversion';
 COMMENT ON COLUMN payment_links.original_currency IS 'Original currency code before conversion';
 
--- Step 11: Update RLS policies to be more generic
+-- Step 12: Update RLS policies to be more generic
 DROP POLICY IF EXISTS "Users can view their PayPal payment links" ON payment_links;
 DROP POLICY IF EXISTS "Admins can manage PayPal payment links" ON payment_links;
 DROP POLICY IF EXISTS "Service role has full access to PayPal payment links" ON payment_links;
@@ -129,7 +129,7 @@ CREATE POLICY "Users can use public payment links" ON payment_links
   FOR UPDATE USING (is_public = true)
   WITH CHECK (is_public = true);
 
--- Step 12: Update any views that reference the old table name
+-- Step 13: Update any views that reference the old table name
 DROP VIEW IF EXISTS paypal_payment_links_summary;
 
 CREATE OR REPLACE VIEW payment_links_summary AS
@@ -155,10 +155,10 @@ SELECT
   quote_id
 FROM payment_links;
 
--- Step 13: Grant permissions
+-- Step 14: Grant permissions
 GRANT SELECT ON payment_links_summary TO authenticated;
 
--- Step 14: Create a function to generate unique link codes
+-- Step 15: Create a function to generate unique link codes
 CREATE OR REPLACE FUNCTION generate_payment_link_code()
 RETURNS TEXT AS $$
 DECLARE
@@ -181,11 +181,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Step 15: Set default for link_code if not already set
+-- Step 16: Set default for link_code if not already set
 ALTER TABLE payment_links 
   ALTER COLUMN link_code SET DEFAULT generate_payment_link_code();
 
--- Step 16: Add trigger to update the updated_at timestamp
+-- Step 17: Add trigger to update the updated_at timestamp
 CREATE OR REPLACE FUNCTION update_payment_links_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN

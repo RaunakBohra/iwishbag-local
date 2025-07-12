@@ -1,6 +1,9 @@
 -- Fix the get_orders_with_payment_proofs function to include customer_id field
 -- This fixes the 400 error in OrderManagementPage.tsx
 
+-- Drop the existing function first
+DROP FUNCTION IF EXISTS get_orders_with_payment_proofs(TEXT, INTEGER);
+
 CREATE OR REPLACE FUNCTION get_orders_with_payment_proofs(
   status_filter TEXT DEFAULT NULL,
   limit_count INTEGER DEFAULT 50
