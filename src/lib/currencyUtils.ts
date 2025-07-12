@@ -125,12 +125,23 @@ export interface ExchangeRateResult {
 }
 
 // Get exchange rate with fallback chain
+// Simple cache to prevent excessive API calls
+const exchangeRateCache = new Map<string, { result: ExchangeRateResult; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export async function getExchangeRate(
   fromCountry: string,
   toCountry: string,
   fromCurrency?: string,
   toCurrency?: string
 ): Promise<ExchangeRateResult> {
+  // Check cache first
+  const cacheKey = `${fromCountry}-${toCountry}-${fromCurrency}-${toCurrency}`;
+  const cached = exchangeRateCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.result;
+  }
+
   const fromCurr = fromCurrency || getCountryCurrency(fromCountry);
   const toCurr = toCurrency || getCountryCurrency(toCountry);
   
@@ -143,6 +154,8 @@ export async function getExchangeRate(
     };
   }
 
+  let result: ExchangeRateResult;
+
   try {
     // 1. Try shipping route exchange rate (direct)
     const { data: route } = await supabase
@@ -154,11 +167,14 @@ export async function getExchangeRate(
       .maybeSingle();
 
     if (route?.exchange_rate && route.exchange_rate > 0) {
-      return {
+      result = {
         rate: route.exchange_rate,
         source: 'shipping_route',
         confidence: 'high'
       };
+      // Cache and return
+      exchangeRateCache.set(cacheKey, { result, timestamp: Date.now() });
+      return result;
     }
 
     // 2. Try country settings via USD
@@ -174,12 +190,15 @@ export async function getExchangeRate(
       // Convert via USD: fromCurrency -> USD -> toCurrency
       const rate = toRate / fromRate;
       logger.currency(`USD-based conversion: ${fromCurr} (${fromRate}) → USD → ${toCurr} (${toRate}) = ${rate}`);
-      return {
+      result = {
         rate,
         source: 'country_settings',
         confidence: 'medium',
         warning: `Using USD-based conversion: ${fromCurr} → USD → ${toCurr} (rate: ${rate.toFixed(4)})`
       };
+      // Cache and return
+      exchangeRateCache.set(cacheKey, { result, timestamp: Date.now() });
+      return result;
     }
 
     // Debug missing rates
@@ -197,21 +216,27 @@ export async function getExchangeRate(
     if (!fromRate || fromRate <= 0) missingCountries.push(`${fromCountry} (${fromCurr})`);
     if (!toRate || toRate <= 0) missingCountries.push(`${toCountry} (${toCurr})`);
     
-    return {
+    result = {
       rate: 1,
       source: 'fallback',
       confidence: 'low',
       warning: `⚠️ No exchange rate configured for ${fromCurr} → ${toCurr}. Missing rates for: ${missingCountries.join(', ')}. Please ask admin to configure exchange rates. Using 1:1 ratio.`
     };
+    // Cache and return
+    exchangeRateCache.set(cacheKey, { result, timestamp: Date.now() });
+    return result;
 
   } catch (error) {
     logger.error('Error getting exchange rate', error, 'Currency');
-    return {
+    result = {
       rate: 1,
       source: 'fallback',
       confidence: 'low',
       warning: `❌ Database error fetching exchange rate for ${fromCurr} → ${toCurr}. Using 1:1 ratio. Please try again.`
     };
+    // Cache and return
+    exchangeRateCache.set(cacheKey, { result, timestamp: Date.now() });
+    return result;
   }
 }
 
