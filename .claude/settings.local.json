@@ -12,23 +12,23 @@
       "Bash(psql:*)",
       "Bash(npm run dev:*)",
       "Bash(git restore:*)",
-      "Bash(npm run build:*)",
       "Bash(node:*)",
       "Bash(supabase db:*)",
       "Bash(docker exec:*)",
       "Bash(git add:*)",
       "Bash(find:*)",
-      "Bash(rm:*)",
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(cat:*)",
       "Bash(./update_country_code_references.sh:*)",
       "Bash(ls:*)",
-      "Bash(ls:*)",
       "Bash(docker logs:*)",
       "Bash(npm run lint:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(supabase projects:*)",
+      "Bash(supabase functions logs:*)",
+      "Bash(supabase functions serve:*)"
     ],
     "deny": []
   }

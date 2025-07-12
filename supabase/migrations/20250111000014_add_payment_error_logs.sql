@@ -89,8 +89,8 @@ GROUP BY DATE_TRUNC('day', created_at), gateway, error_code, severity
 ORDER BY error_date DESC, error_count DESC;
 
 -- Grant select permission on analytics view to admins
-CREATE POLICY "Admin can view payment error analytics" ON public.payment_error_analytics
-    FOR SELECT USING (is_admin());
+-- Note: RLS policies cannot be applied to views, only tables
+-- Access control for this view is handled through the underlying table's RLS policies
 
 -- Create a scheduled job to cleanup old error logs (if pg_cron is available)
 -- This will run monthly on the 1st at 4 AM
