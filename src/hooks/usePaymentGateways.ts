@@ -547,6 +547,20 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
   const getPaymentMethodDisplay = (gateway: PaymentGateway): PaymentMethodDisplay => {
     const baseDisplay = PAYMENT_METHOD_DISPLAYS[gateway];
     
+    // If no display definition exists, create a default one
+    if (!baseDisplay) {
+      console.warn(`No display definition found for payment gateway: ${gateway}`);
+      return {
+        name: gateway.toUpperCase(),
+        description: `Payment via ${gateway}`,
+        icon: 'credit-card',
+        is_mobile_only: false,
+        requires_qr: false,
+        processing_time: 'Processing time varies',
+        fees: 'Fees may apply'
+      };
+    }
+    
     // Try to get dynamic fees from database gateways
     if (allGateways) {
       const gatewayConfig = allGateways.find(g => g.code === gateway);
@@ -571,12 +585,14 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
   // Check if payment method requires mobile app
   const isMobileOnlyPayment = (gateway: PaymentGateway): boolean => {
-    return PAYMENT_METHOD_DISPLAYS[gateway].is_mobile_only;
+    const display = PAYMENT_METHOD_DISPLAYS[gateway];
+    return display ? display.is_mobile_only : false;
   };
 
   // Check if payment method requires QR code
   const requiresQRCode = (gateway: PaymentGateway): boolean => {
-    return PAYMENT_METHOD_DISPLAYS[gateway].requires_qr;
+    const display = PAYMENT_METHOD_DISPLAYS[gateway];
+    return display ? display.requires_qr : false;
   };
 
   // Get recommended payment method for user with country-specific priorities (async)
