@@ -170,82 +170,27 @@ export const PayPalRefundManagement: React.FC = () => {
   // Process refund mutation
   const processRefundMutation = useMutation({
     mutationFn: async (refundData: RefundFormData) => {
-      // TEMPORARY MOCK FUNCTION - Replace with real Edge Function when deployed
-      console.log('Processing mock refund:', refundData);
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/paypal-refund`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify(refundData),
+      });
+
+      const data = await response.json();
       
-      // Find the transaction in our data
-      const transaction = transactions?.find(t => t.paypal_capture_id === refundData.paypal_capture_id);
-      if (!transaction) {
-        throw new Error('Transaction not found');
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to process refund');
       }
 
-      // Calculate refund amount
-      const maxRefundable = transaction.amount - (transaction.total_refunded || 0);
-      const refundAmount = refundData.refund_amount || maxRefundable;
-      
-      if (refundAmount <= 0 || refundAmount > maxRefundable) {
-        throw new Error(`Invalid refund amount. Max refundable: ${maxRefundable}`);
-      }
-
-      // Mock PayPal refund ID
-      const mockRefundId = `MOCK_REFUND_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Insert refund record directly into database
-      const { data: refundRecord, error: refundError } = await supabase
-        .from('paypal_refunds')
-        .insert({
-          refund_id: mockRefundId,
-          original_transaction_id: refundData.paypal_capture_id,
-          payment_transaction_id: transaction.id,
-          quote_id: transaction.quote_id,
-          user_id: transaction.user_id,
-          refund_amount: refundAmount,
-          original_amount: transaction.amount,
-          currency: refundData.currency,
-          refund_type: refundAmount >= transaction.amount ? 'FULL' : 'PARTIAL',
-          reason_code: refundData.reason_code,
-          reason_description: refundData.reason_description,
-          admin_notes: refundData.admin_notes,
-          customer_note: refundData.customer_note,
-          status: 'COMPLETED', // Mock as immediately completed
-          paypal_status: 'COMPLETED',
-          paypal_response: {
-            id: mockRefundId,
-            status: 'COMPLETED',
-            amount: { value: refundAmount.toFixed(2), currency_code: refundData.currency },
-            create_time: new Date().toISOString(),
-            update_time: new Date().toISOString(),
-            mock: true
-          },
-          refund_date: new Date().toISOString(),
-          completed_at: new Date().toISOString(),
-          processed_by: transaction.user_id // In real implementation, this would be the admin user ID
-        })
-        .select()
-        .single();
-
-      if (refundError) {
-        console.error('Failed to create refund record:', refundError);
-        throw new Error('Failed to create refund record');
-      }
-
-      // Mock successful response
-      return {
-        success: true,
-        refund_id: mockRefundId,
-        refund_amount: refundAmount,
-        currency: refundData.currency,
-        status: 'COMPLETED',
-        mock: true,
-        message: 'MOCK REFUND - No actual PayPal API call made'
-      };
+      return data;
     },
     onSuccess: (data) => {
       toast({
-        title: data.mock ? 'Mock Refund Processed' : 'Refund Processed',
-        description: data.mock 
-          ? `🧪 MOCK: Refund of ${formatCurrency(data.refund_amount, refundFormData.currency)} simulated successfully (no actual PayPal call made)`
-          : `Refund of ${formatCurrency(data.refund_amount, refundFormData.currency)} has been initiated.`,
+        title: 'Refund Processed',
+        description: `Refund of ${formatCurrency(data.refund_amount, refundFormData.currency)} has been initiated.`,
       });
       queryClient.invalidateQueries({ queryKey: ['paypal-transactions-refund'] });
       queryClient.invalidateQueries({ queryKey: ['paypal-refunds'] });
@@ -365,11 +310,7 @@ export const PayPalRefundManagement: React.FC = () => {
           <p className="text-muted-foreground">
             Process refunds and track refund history for PayPal transactions
           </p>
-          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p className="text-sm text-yellow-800">
-              🧪 <strong>Mock Mode:</strong> Refunds are simulated without actual PayPal API calls. Deploy the Edge Function to enable real refunds.
-            </p>
-          </div>
+          
         </div>
         <Button 
           variant="outline" 
