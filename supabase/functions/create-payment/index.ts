@@ -309,14 +309,14 @@ serve(async (req) => {
           
           console.log('PayU hash generated for transaction:', txnid);
           
-          // Create proper success and failure URLs
-          // For live mode, use a proper domain instead of localhost
+          // Create proper success and failure URLs pointing to Edge Functions
+          // PayU sends POST requests, so we need server-side handlers (Edge Functions)
           const baseUrl = success_url.includes('localhost') 
-            ? 'http://localhost:8080' // Use local development URL
-            : success_url.replace('/success', '').replace('/cancel', '');
+            ? 'http://127.0.0.1:54321' // Use local Supabase URL for development
+            : 'https://grgvlrvywsfmnmkxrecd.supabase.co'; // Use cloud Supabase URL for production
           
-          const payuSuccessUrl = `${baseUrl}/payment-success?gateway=payu`;
-          const payuFailureUrl = `${baseUrl}/payment-failure?gateway=payu`;
+          const payuSuccessUrl = `${baseUrl}/functions/v1/payu-success`;
+          const payuFailureUrl = `${baseUrl}/functions/v1/payu-failure`;
           
           // Prepare PayU POST form data
           const payuRequest = {
