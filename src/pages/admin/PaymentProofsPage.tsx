@@ -425,13 +425,28 @@ const PaymentProofsPage = () => {
     mutationFn: async ({ ids, status, notes }: { ids: string[], status: 'verified' | 'rejected', notes: string }) => {
       const user = (await supabase.auth.getUser()).data.user;
       
-      // Get message details first to access quote information
+      // Get message details first
       const { data: messages, error: fetchError } = await supabase
         .from('messages')
-        .select('*, quotes!inner(*)')
+        .select('*')
         .in('id', ids);
 
       if (fetchError) throw fetchError;
+      
+      // Get quote IDs from messages
+      const quoteIds = messages?.map(m => m.quote_id).filter(Boolean) || [];
+      
+      // Fetch quote details separately
+      let quotes: any[] = [];
+      if (quoteIds.length > 0) {
+        const { data: quotesData, error: quotesError } = await supabase
+          .from('quotes')
+          .select('*')
+          .in('id', quoteIds);
+          
+        if (quotesError) throw quotesError;
+        quotes = quotesData || [];
+      }
 
       // Update the verification status
       const { error: updateError } = await supabase
@@ -449,9 +464,12 @@ const PaymentProofsPage = () => {
       // For verified payments, automatically confirm payment
       if (status === 'verified') {
         for (const message of messages || []) {
-          if (!message.quote_id || !message.quotes) continue;
+          if (!message.quote_id) continue;
           
-          const quote = message.quotes;
+          // Find the corresponding quote from our fetched quotes
+          const quote = quotes.find(q => q.id === message.quote_id);
+          if (!quote) continue;
+          
           const orderTotal = quote.final_total || 0;
           const existingPaid = quote.amount_paid || 0;
           
