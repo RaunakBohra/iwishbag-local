@@ -4,7 +4,7 @@ import { useStatusManagement } from "@/hooks/useStatusManagement";
 import { Tables } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useState } from "react";
-import { PaymentConfirmationModal } from "./PaymentConfirmationModal";
+import { UnifiedPaymentModal } from "./UnifiedPaymentModal";
 import { CheckCircle2 } from "lucide-react";
 
 interface OrderActionsProps {
@@ -15,17 +15,15 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
   const { updateOrderStatus, isUpdatingStatus, confirmPayment, isConfirmingPayment } = useOrderMutations(quote.id);
   const { getStatusConfig, getAllowedTransitions } = useStatusManagement();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'record' | 'verify' | 'history' | 'refund'>('record');
 
   const handleStatusChange = (newStatus: string) => {
     updateOrderStatus(newStatus);
   };
 
-  const handlePaymentConfirmation = (amount: number, notes: string) => {
-    confirmPayment({ amount, notes }, {
-      onSuccess: () => {
-        setShowPaymentModal(false);
-      }
-    });
+  const handleOpenPaymentModal = (tab: 'overview' | 'record' | 'verify' | 'history' | 'refund') => {
+    setActiveTab(tab);
+    setShowPaymentModal(true);
   };
   
   const renderActions = () => {
@@ -59,7 +57,7 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
         {quote.payment_status === 'unpaid' && quote.payment_method && quote.payment_method !== 'bank_transfer' && (
           <Button
             type="button"
-            onClick={() => setShowPaymentModal(true)}
+            onClick={() => handleOpenPaymentModal('record')}
             disabled={isConfirmingPayment}
             variant="default"
             className="bg-green-600 hover:bg-green-700"
@@ -73,7 +71,7 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
         {quote.payment_status === 'unpaid' && quote.payment_method === 'bank_transfer' && (
           <Button
             type="button"
-            onClick={() => setShowPaymentModal(true)}
+            onClick={() => handleOpenPaymentModal('verify')}
             variant="default"
             className="bg-green-600 hover:bg-green-700"
           >
@@ -86,7 +84,7 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
         {!quote.payment_status && quote.status === 'payment_pending' && (
           <Button
             type="button"
-            onClick={() => setShowPaymentModal(true)}
+            onClick={() => handleOpenPaymentModal(quote.payment_method === 'bank_transfer' ? 'verify' : 'record')}
             disabled={isConfirmingPayment}
             variant="default"
             className="bg-green-600 hover:bg-green-700"
@@ -134,12 +132,11 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
         </CardContent>
       </Card>
 
-      <PaymentConfirmationModal
+      <UnifiedPaymentModal
+        quote={quote}
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        onConfirm={handlePaymentConfirmation}
-        quote={quote}
-        isConfirming={isConfirmingPayment}
+        initialTab={activeTab}
       />
     </>
   );
