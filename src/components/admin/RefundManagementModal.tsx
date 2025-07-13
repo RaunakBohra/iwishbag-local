@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import { RefreshCcw, AlertCircle, CreditCard, Building, FileText, Loader2 } from 'lucide-react';
+import { RefreshCcw, AlertCircle, CreditCard, Building, FileText, Loader2, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -121,6 +121,57 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
         throw new Error('Not authenticated');
+      }
+
+      // Check if this is a PayU refund and handle it automatically
+      if (refundMethod === 'original' && breakdown.length === 1 && breakdown[0].gateway === 'payu') {
+        const payuPayment = payments.find(p => p.id === breakdown[0].paymentId);
+        if (payuPayment?.reference) {
+          try {
+            // Call PayU refund Edge Function
+            const { data: refundResult, error: refundError } = await supabase.functions.invoke('payu-refund', {
+              body: {
+                paymentId: payuPayment.reference, // PayU transaction ID (mihpayid)
+                amount: amount,
+                refundType: refundType === 'full' ? 'full' : 'partial',
+                reason: reason,
+                notes: internalNotes,
+                quoteId: quote.id,
+                notifyCustomer: true
+              }
+            });
+
+            if (refundError) {
+              throw refundError;
+            }
+
+            if (refundResult?.success) {
+              // Invalidate queries to refresh UI
+              queryClient.invalidateQueries({ queryKey: ['payment-history', quote.id] });
+              queryClient.invalidateQueries({ queryKey: ['all-payments', quote.id] });
+              queryClient.invalidateQueries({ queryKey: ['payment-transaction', quote.id] });
+              queryClient.invalidateQueries({ queryKey: ['payment-ledger', quote.id] });
+
+              toast({
+                title: "PayU Refund Initiated",
+                description: `Successfully initiated PayU refund of ${quote.currency} ${amount.toFixed(2)}. Refund ID: ${refundResult.refundId}`,
+              });
+
+              onClose();
+              return;
+            } else {
+              throw new Error(refundResult?.error || 'PayU refund failed');
+            }
+          } catch (payuError: any) {
+            console.error('PayU refund error:', payuError);
+            // Fall back to manual refund processing
+            toast({
+              title: "PayU Refund Failed",
+              description: "Falling back to manual refund processing. " + (payuError.message || ''),
+              variant: "destructive"
+            });
+          }
+        }
       }
 
       // Create refund record in payment_ledger
@@ -359,6 +410,11 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
                         <div>
                           <p className="text-sm font-medium">
                             {payment.gateway} - {quote.currency} {payment.amount.toFixed(2)}
+                            {payment.gateway === 'payu' && payment.canRefund && (
+                              <Badge variant="success" className="ml-2 text-xs">
+                                Auto-refund available
+                              </Badge>
+                            )}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             Ref: {payment.reference} • {payment.date.toLocaleDateString()}
@@ -426,6 +482,29 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
               className="mt-2"
             />
           </div>
+
+          {/* PayU Auto-Refund Notice */}
+          {(() => {
+            const breakdown = refundAmount && selectedPayments.length > 0 
+              ? calculateRefundBreakdown() 
+              : [];
+            const isPayUAutoRefund = refundMethod === 'original' && 
+              breakdown.length === 1 && 
+              breakdown[0]?.gateway === 'payu';
+            
+            if (isPayUAutoRefund) {
+              return (
+                <Alert className="border-green-200 bg-green-50">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800">
+                    <strong>Automatic PayU Refund Available!</strong> This refund will be automatically processed through PayU's API. 
+                    The customer will receive the refund to their original payment method within 5-7 business days.
+                  </AlertDescription>
+                </Alert>
+              );
+            }
+            return null;
+          })()}
 
           {/* Refund Breakdown Preview */}
           {refundAmount && selectedPayments.length > 0 && (
