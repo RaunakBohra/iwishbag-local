@@ -32,7 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { PaymentProofPreviewModal } from '@/components/payment/PaymentProofPreviewModal';
+// PaymentProofPreviewModal removed - using UnifiedPaymentModal instead
 import {
   Tooltip,
   TooltipContent,
@@ -1158,51 +1158,7 @@ const PaymentManagementPage = () => {
         </CardContent>
       </Card>
 
-      {/* Payment Proof Preview Modal */}
-      {selectedProof && (
-        <PaymentProofPreviewModal
-          isOpen={showPreviewModal}
-          onClose={() => {
-            setShowPreviewModal(false);
-            setSelectedProof(null);
-            refetch();
-          }}
-          message={{
-            id: selectedProof.id,
-            quote_id: selectedProof.quote_id,
-            sender_id: selectedProof.sender_id,
-            attachment_url: selectedProof.attachment_url,
-            attachment_file_name: selectedProof.attachment_file_name,
-            created_at: selectedProof.created_at,
-            verification_status: selectedProof.verification_status,
-            admin_notes: selectedProof.admin_notes,
-            verified_at: selectedProof.verified_at,
-            verified_by: selectedProof.verified_by,
-            message_type: 'payment_proof',
-            subject: '',
-            content: '',
-            is_read: true,
-            recipient_id: '',
-            reply_to_message_id: null,
-            sender_email: selectedProof.customer_email,
-            sender_name: selectedProof.customer_name,
-            updated_at: selectedProof.created_at,
-          }}
-          orderId={selectedProof.quote_id}
-          onStatusUpdate={() => {
-            refetch();
-            // Invalidate all admin-orders queries (regardless of filters)
-            queryClient.invalidateQueries({ 
-              predicate: (query) => query.queryKey[0] === 'admin-orders' 
-            });
-            queryClient.invalidateQueries({ queryKey: ['payment-proof-stats'] });
-            if (selectedProof?.quote_id) {
-              queryClient.invalidateQueries({ queryKey: ['admin-quote', selectedProof.quote_id] });
-              queryClient.invalidateQueries({ queryKey: ['quotes', selectedProof.quote_id] });
-            }
-          }}
-        />
-      )}
+      {/* Payment proof verification now handled in UnifiedPaymentModal on order detail pages */}
     </div>
   );
 };

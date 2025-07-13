@@ -39,7 +39,8 @@ import {
   Download,
   Shield,
   Smartphone,
-  Hash
+  Hash,
+  Info
 } from "lucide-react";
 import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
 import { getCurrencySymbol, getCountryCurrency, getDestinationCountryFromQuote, formatAmountForDisplay } from '@/lib/currencyUtils';
@@ -183,7 +184,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         verified_at: msg.verified_at,
         verified_by: msg.verified_by,
         verified_amount: msg.verified_amount,
-        verification_notes: msg.verification_notes,
+        verification_notes: msg.admin_notes,
         verification_status: msg.verification_status
       })) || [];
     },
@@ -266,8 +267,8 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
   // Calculate payment balance for verification
   const calculatePaymentBalance = () => {
-    const currentPaid = paymentSummary.totalPaid;
-    const orderTotal = paymentSummary.orderTotal;
+    const currentPaid = paymentSummary?.totalPaid || 0;
+    const orderTotal = paymentSummary?.finalTotal || 0;
     const newAmount = parseFloat(verifyAmount) || 0;
     const newTotal = currentPaid + newAmount;
     
@@ -279,10 +280,10 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     }
 
     return {
-      currentPaid,
-      orderTotal,
-      newAmount,
-      newTotal,
+      currentPaid: currentPaid || 0,
+      orderTotal: orderTotal || 0,
+      newAmount: newAmount || 0,
+      newTotal: newTotal || 0,
       newStatus,
       overpayment: newTotal > orderTotal ? newTotal - orderTotal : 0
     };
