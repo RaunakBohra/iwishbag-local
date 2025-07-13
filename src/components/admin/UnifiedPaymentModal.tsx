@@ -37,7 +37,9 @@ import {
   FileText,
   Loader2,
   Download,
-  Shield
+  Shield,
+  Smartphone,
+  Hash
 } from "lucide-react";
 import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
 import { getCurrencySymbol, getCountryCurrency, getDestinationCountryFromQuote, formatAmountForDisplay } from '@/lib/currencyUtils';
@@ -77,14 +79,67 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const { data: paymentLedger, isLoading: ledgerLoading } = useQuery({
     queryKey: ['payment-ledger', quote.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log('Fetching payment ledger for quote:', quote.id);
+      
+      // First try to fetch from payment_ledger table
+      const { data: ledgerData, error: ledgerError } = await supabase
         .from('payment_ledger')
+        .select(`
+          *,
+          created_by:profiles!payment_ledger_created_by_fkey(
+            id,
+            full_name,
+            email
+          )
+        `)
+        .eq('quote_id', quote.id)
+        .order('created_at', { ascending: false });
+      
+      if (ledgerError) {
+        console.error('Error fetching payment ledger:', ledgerError);
+      }
+      
+      // Also fetch from payment_transactions as fallback
+      const { data: transactionData, error: transactionError } = await supabase
+        .from('payment_transactions')
         .select('*')
         .eq('quote_id', quote.id)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data || [];
+      if (transactionError) {
+        console.error('Error fetching payment transactions:', transactionError);
+      }
+      
+      console.log('Payment ledger data:', ledgerData);
+      console.log('Payment transaction data:', transactionData);
+      
+      // If we have ledger data, use it
+      if (ledgerData && ledgerData.length > 0) {
+        return ledgerData;
+      }
+      
+      // Otherwise, transform transaction data to match ledger format
+      if (transactionData && transactionData.length > 0) {
+        return transactionData.map(tx => ({
+          id: tx.id,
+          quote_id: tx.quote_id,
+          payment_type: 'customer_payment',
+          transaction_type: 'customer_payment',
+          amount: tx.amount,
+          currency: tx.currency || 'USD',
+          payment_method: tx.payment_method || 'unknown',
+          reference_number: tx.transaction_id,
+          status: tx.status,
+          created_at: tx.created_at,
+          updated_at: tx.updated_at,
+          notes: tx.gateway_response?.notes || '',
+          balance_after: 0, // Will be calculated in the component
+          gateway_code: tx.payment_method,
+          created_by: null
+        }));
+      }
+      
+      return [];
     },
     enabled: isOpen && !!quote.id,
   });
@@ -123,12 +178,20 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const paymentSummary = useMemo(() => {
     const totalPaid = paymentLedger?.reduce((sum, entry) => {
       const type = entry.transaction_type || entry.payment_type;
-      if (type === 'payment' || type === 'customer_payment') return sum + (entry.amount || 0);
-      if (type === 'refund' || type === 'partial_refund') return sum - (entry.amount || 0);
+      const amount = parseFloat(entry.amount) || 0;
+      
+      // Handle different payment types
+      if (type === 'payment' || type === 'customer_payment' || 
+          (entry.status === 'completed' && !type)) {
+        return sum + amount;
+      }
+      if (type === 'refund' || type === 'partial_refund') {
+        return sum - amount;
+      }
       return sum;
     }, 0) || 0;
 
-    const finalTotal = quote.final_total || 0;
+    const finalTotal = parseFloat(quote.final_total) || 0;
     const remaining = finalTotal - totalPaid;
     const status = remaining <= 0 ? 'paid' : totalPaid > 0 ? 'partial' : 'unpaid';
     const isOverpaid = totalPaid > finalTotal;
@@ -851,6 +914,28 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                     <div className="text-center py-8 text-muted-foreground">
                       <History className="w-12 h-12 mx-auto mb-3 opacity-50" />
                       <p>No payment history found</p>
+                      <p className="text-xs mt-2">Quote ID: {quote.id}</p>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="mt-4"
+                        onClick={async () => {
+                          console.log('Manually checking payment data...');
+                          const { data: ledger, error: ledgerErr } = await supabase
+                            .from('payment_ledger')
+                            .select('*')
+                            .eq('quote_id', quote.id);
+                          console.log('Direct ledger query:', { data: ledger, error: ledgerErr });
+                          
+                          const { data: transactions, error: txErr } = await supabase
+                            .from('payment_transactions')
+                            .select('*')
+                            .eq('quote_id', quote.id);
+                          console.log('Direct transactions query:', { data: transactions, error: txErr });
+                        }}
+                      >
+                        Debug: Check Payment Data
+                      </Button>
                     </div>
                   ) : (
                     <div className="relative">
@@ -861,10 +946,12 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       <div className="space-y-6">
                         {paymentLedger.map((entry, index) => {
                           const type = entry.transaction_type || entry.payment_type;
-                          const isPayment = type === 'payment' || type === 'customer_payment';
+                          const isPayment = type === 'payment' || type === 'customer_payment' || 
+                                           (entry.status === 'completed' && !type);
                           const isRefund = type === 'refund' || type === 'partial_refund';
                           const isFirst = index === 0;
                           const isLast = index === paymentLedger.length - 1;
+                          const entryAmount = parseFloat(entry.amount) || 0;
                           
                           return (
                             <div key={entry.id} className="relative flex items-start gap-4">
@@ -902,11 +989,13 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                         isRefund ? "text-red-600" :
                                         "text-gray-600"
                                       )}>
-                                        {isPayment ? '+' : isRefund ? '-' : ''}{currencySymbol}{entry.amount?.toFixed(2)}
+                                        {isPayment ? '+' : isRefund ? '-' : ''}{currencySymbol}{entryAmount.toFixed(2)}
                                       </p>
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        Balance: {currencySymbol}{entry.balance_after?.toFixed(2)}
-                                      </p>
+                                      {entry.balance_after !== undefined && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          Balance: {currencySymbol}{(parseFloat(entry.balance_after) || 0).toFixed(2)}
+                                        </p>
+                                      )}
                                     </div>
                                   </div>
                                   
@@ -928,10 +1017,10 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                       <Calendar className="h-3 w-3" />
                                       <span>{format(new Date(entry.created_at), 'MMM dd, yyyy HH:mm')}</span>
                                     </div>
-                                    {entry.created_by_profile && (
+                                    {entry.created_by && (
                                       <div className="flex items-center gap-2">
                                         <User className="h-3 w-3" />
-                                        <span>by {entry.created_by_profile.full_name || entry.created_by_profile.email || 'System'}</span>
+                                        <span>by {entry.created_by.full_name || entry.created_by.email || 'System'}</span>
                                       </div>
                                     )}
                                   </div>
@@ -974,9 +1063,10 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                             {currencySymbol}{paymentLedger
                               .filter(e => {
                                 const type = e.transaction_type || e.payment_type;
-                                return type === 'payment' || type === 'customer_payment';
+                                return type === 'payment' || type === 'customer_payment' || 
+                                       (e.status === 'completed' && !type);
                               })
-                              .reduce((sum, e) => sum + (e.amount || 0), 0)
+                              .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
                               .toFixed(2)}
                           </p>
                         </div>
@@ -988,7 +1078,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                 const type = e.transaction_type || e.payment_type;
                                 return type === 'refund' || type === 'partial_refund';
                               })
-                              .reduce((sum, e) => sum + (e.amount || 0), 0)
+                              .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
                               .toFixed(2)}
                           </p>
                         </div>
