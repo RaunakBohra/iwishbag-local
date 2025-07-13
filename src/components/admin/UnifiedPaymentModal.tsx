@@ -84,14 +84,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       // First try to fetch from payment_ledger table
       const { data: ledgerData, error: ledgerError } = await supabase
         .from('payment_ledger')
-        .select(`
-          *,
-          created_by:profiles!payment_ledger_created_by_fkey(
-            id,
-            full_name,
-            email
-          )
-        `)
+        .select('*')
         .eq('quote_id', quote.id)
         .order('created_at', { ascending: false });
       
@@ -113,9 +106,32 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       console.log('Payment ledger data:', ledgerData);
       console.log('Payment transaction data:', transactionData);
       
-      // If we have ledger data, use it
+      // If we have ledger data, fetch profile info and use it
       if (ledgerData && ledgerData.length > 0) {
-        return ledgerData;
+        // Get unique user IDs
+        const userIds = [...new Set(ledgerData.map(entry => entry.created_by).filter(Boolean))];
+        
+        // Fetch profiles for these users
+        let profiles = {};
+        if (userIds.length > 0) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', userIds);
+          
+          if (profileData) {
+            profiles = profileData.reduce((acc, profile) => {
+              acc[profile.id] = profile;
+              return acc;
+            }, {});
+          }
+        }
+        
+        // Attach profile data to entries
+        return ledgerData.map(entry => ({
+          ...entry,
+          created_by: entry.created_by ? profiles[entry.created_by] || { id: entry.created_by } : null
+        }));
       }
       
       // Otherwise, transform transaction data to match ledger format
