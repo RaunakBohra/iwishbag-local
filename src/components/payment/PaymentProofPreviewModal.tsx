@@ -241,6 +241,9 @@ export const PaymentProofPreviewModal: React.FC<PaymentProofPreviewModalProps> =
         p_quote_id: orderId,
         new_amount_paid: totalPaid,
         new_payment_status: paymentStatus,
+        payment_method: 'bank_transfer',
+        reference_number: 'Manual verification',
+        notes: adminNotes.trim() || `Payment verified: ${orderDetails.final_currency} ${amountReceived.toFixed(2)} received`,
         payment_currency: orderDetails.final_currency  // Pass the actual payment currency
       });
 
