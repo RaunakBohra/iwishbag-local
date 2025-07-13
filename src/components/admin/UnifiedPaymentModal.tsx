@@ -876,10 +876,11 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           quoteId={quote.id}
                           amount={paymentSummary.remaining}
                           currency="USD"
+                          quote={quote}
                           customerInfo={{
-                            name: quote.shipping_address?.name || quote.user?.full_name || '',
-                            email: quote.shipping_address?.email || quote.user?.email || '',
-                            phone: quote.shipping_address?.phone || quote.user?.phone || ''
+                            name: quote.shipping_address?.fullName || quote.shipping_address?.name || quote.profiles?.full_name || quote.customer_name || '',
+                            email: quote.shipping_address?.email || quote.profiles?.email || quote.email || '',
+                            phone: quote.shipping_address?.phone || quote.profiles?.phone || quote.customer_phone || ''
                           }}
                           onLinkCreated={(link) => {
                             toast({

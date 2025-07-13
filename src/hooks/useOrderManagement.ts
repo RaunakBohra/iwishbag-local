@@ -7,7 +7,12 @@ import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 type Order = Tables<'quotes'> & { 
   quote_items: Tables<'quote_items'>[];
-  profiles?: { preferred_display_currency?: string } | null;
+  profiles?: { 
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    preferred_display_currency?: string;
+  } | null;
 };
 
 export const useOrderManagement = () => {
@@ -23,7 +28,7 @@ export const useOrderManagement = () => {
         queryFn: async () => {
             let query = supabase
                 .from('quotes')
-                .select('*, quote_items(*), profiles!quotes_user_id_fkey(preferred_display_currency)')
+                .select('*, quote_items(*), profiles!quotes_user_id_fkey(full_name, email, phone, preferred_display_currency)')
                 .order('created_at', { ascending: false });
             
             // Filter based on status management configuration

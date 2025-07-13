@@ -57,6 +57,7 @@ interface EnhancedPaymentLinkGeneratorProps {
     email: string;
     phone: string;
   };
+  quote?: any; // Full quote object for intelligent prefilling
   onLinkCreated?: (link: any) => void;
 }
 
@@ -65,6 +66,7 @@ export function EnhancedPaymentLinkGenerator({
   amount,
   currency,
   customerInfo,
+  quote,
   onLinkCreated,
 }: EnhancedPaymentLinkGeneratorProps) {
   const { toast } = useToast();
@@ -72,13 +74,130 @@ export function EnhancedPaymentLinkGenerator({
   const [isCreating, setIsCreating] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
   
-  // Form state
+  // Helper function to get customer info with fallbacks
+  const getCustomerInfo = () => {
+    if (customerInfo) return customerInfo;
+    
+    // Try to extract from quote data
+    const shipping = quote?.shipping_address;
+    const user = quote?.user;
+    const profiles = quote?.profiles; // From the profile join
+    
+    // Debug: Log the quote structure to understand the data better
+    console.log('🔍 [EnhancedPaymentLinkGenerator] Quote structure for customer info extraction:', {
+      hasShippingAddress: !!shipping,
+      shippingFields: shipping ? Object.keys(shipping) : [],
+      hasUser: !!user,
+      userFields: user ? Object.keys(user) : [],
+      hasProfiles: !!profiles,
+      profileFields: profiles ? Object.keys(profiles) : [],
+      customerName: quote?.customer_name,
+      customerPhone: quote?.customer_phone,
+      email: quote?.email
+    });
+    
+    return {
+      name: shipping?.fullName || shipping?.name || profiles?.full_name || user?.full_name || quote?.customer_name || '',
+      email: shipping?.email || profiles?.email || user?.email || quote?.email || '',
+      phone: shipping?.phone || profiles?.phone || user?.phone || quote?.customer_phone || ''
+    };
+  };
+
+  // Helper function to generate smart description
+  const generateDescription = () => {
+    if (!quote) return `Payment for Order ${quoteId}`;
+    
+    const orderId = quote.order_display_id || quote.display_id || quoteId;
+    const productName = quote.product_name;
+    const dueAmount = quote.final_total - (quote.amount_paid || 0);
+    const isPartialPayment = dueAmount < quote.final_total && dueAmount > 0;
+    
+    if (productName) {
+      if (isPartialPayment) {
+        return `Outstanding payment for ${productName} - Order ${orderId}`;
+      }
+      return `Payment for ${productName} - Order ${orderId}`;
+    }
+    
+    if (isPartialPayment) {
+      return `Outstanding balance for Order ${orderId}`;
+    }
+    
+    return `Payment for Order ${orderId}`;
+  };
+
+  // Helper function to determine smart expiry
+  const getSmartExpiryDays = () => {
+    if (!quote) return '7';
+    
+    // If quote is approved recently, give shorter expiry
+    const approvedAt = quote.approved_at;
+    if (approvedAt) {
+      const daysSinceApproval = Math.floor((Date.now() - new Date(approvedAt).getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceApproval <= 1) return '3'; // Recently approved, urgent
+      if (daysSinceApproval <= 7) return '7'; // Normal timeframe
+      return '14'; // Older quotes get more time
+    }
+    
+    // For high priority quotes, shorter expiry
+    if (quote.priority === 'high') return '3';
+    if (quote.priority === 'urgent') return '1';
+    
+    return '7';
+  };
+
+  // Helper function to suggest custom fields based on quote
+  const getSuggestedCustomFields = () => {
+    if (!quote) return [];
+    
+    const suggestions: CustomField[] = [];
+    
+    // If international shipping, suggest delivery preferences
+    if (quote.destination_country !== quote.origin_country) {
+      suggestions.push({
+        name: 'delivery_preference',
+        type: 'dropdown',
+        label: 'Delivery Preference',
+        required: false,
+        options: ['Standard Delivery', 'Express Delivery', 'Hold at Customs'],
+        placeholder: 'Select preference'
+      });
+    }
+    
+    // If high value order, suggest ID verification
+    if (quote.final_total > 500) {
+      suggestions.push({
+        name: 'id_verification',
+        type: 'text',
+        label: 'ID Number (for high-value orders)',
+        required: false,
+        placeholder: 'Enter ID number for verification'
+      });
+    }
+    
+    // For certain destinations, suggest alternative contact
+    if (['NP', 'BD', 'LK'].includes(quote.destination_country)) {
+      suggestions.push({
+        name: 'alternative_contact',
+        type: 'phone',
+        label: 'Alternative Contact Number',
+        required: false,
+        placeholder: 'Backup contact number'
+      });
+    }
+    
+    return suggestions;
+  };
+
+  const customer = getCustomerInfo();
+  
+  // Form state with intelligent defaults
   const [formData, setFormData] = useState({
-    name: customerInfo?.name || '',
-    email: customerInfo?.email || '',
-    phone: customerInfo?.phone || '',
-    description: '',
-    expiryDays: '7',
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    description: generateDescription(),
+    expiryDays: getSmartExpiryDays(),
     template: 'default' as 'default' | 'minimal' | 'branded',
     partialPaymentAllowed: false,
     apiMethod: 'rest' as 'rest' | 'legacy',
@@ -86,6 +205,38 @@ export function EnhancedPaymentLinkGenerator({
 
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [createdLink, setCreatedLink] = useState<any>(null);
+  const [showSuggestedFields, setShowSuggestedFields] = useState(false);
+  
+  // Get suggested custom fields
+  const suggestedFields = getSuggestedCustomFields();
+  
+  // Smart amount analysis
+  const getAmountInfo = () => {
+    if (!quote) {
+      return {
+        isDueAmount: false,
+        totalAmount: amount,
+        paidAmount: 0,
+        dueAmount: amount,
+        paymentStatus: 'unknown'
+      };
+    }
+    
+    const totalAmount = quote.final_total || 0;
+    const paidAmount = quote.amount_paid || 0;
+    const dueAmount = totalAmount - paidAmount;
+    const isDueAmount = paidAmount > 0 && dueAmount > 0;
+    
+    return {
+      isDueAmount,
+      totalAmount,
+      paidAmount,
+      dueAmount,
+      paymentStatus: quote.payment_status || 'pending'
+    };
+  };
+  
+  const amountInfo = getAmountInfo();
 
   // Add custom field
   const addCustomField = () => {
@@ -97,6 +248,25 @@ export function EnhancedPaymentLinkGenerator({
       placeholder: 'Enter value...'
     };
     setCustomFields([...customFields, newField]);
+  };
+
+  // Add suggested field
+  const addSuggestedField = (field: CustomField) => {
+    // Check if field already exists
+    if (customFields.some(f => f.name === field.name)) {
+      toast({
+        title: 'Field already added',
+        description: 'This field is already in your custom fields list.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setCustomFields([...customFields, { ...field }]);
+    toast({
+      title: 'Field added',
+      description: `${field.label} has been added to your custom fields.`,
+    });
   };
 
   // Remove custom field
@@ -184,17 +354,19 @@ export function EnhancedPaymentLinkGenerator({
   const resetForm = () => {
     setCreatedLink(null);
     setCustomFields([]);
+    const customer = getCustomerInfo();
     setFormData({
-      name: customerInfo?.name || '',
-      email: customerInfo?.email || '',
-      phone: customerInfo?.phone || '',
-      description: '',
-      expiryDays: '7',
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      description: generateDescription(),
+      expiryDays: getSmartExpiryDays(),
       template: 'default',
       partialPaymentAllowed: false,
       apiMethod: 'rest',
     });
     setActiveTab('basic');
+    setShowSuggestedFields(false);
   };
 
   const getApiMethodBadge = (method: string) => {
@@ -224,8 +396,32 @@ export function EnhancedPaymentLinkGenerator({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Create Enhanced Payment Link</DialogTitle>
-          <DialogDescription>
-            Generate a payment link for {currency} {amount.toFixed(2)} with advanced features
+          <DialogDescription className="space-y-2">
+            <div>
+              Generate a payment link for {currency} {amount.toFixed(2)} with advanced features
+            </div>
+            {quote && (
+              <div className="flex flex-wrap gap-2 text-xs">
+                <Badge variant="outline" className="text-xs">
+                  {quote.display_id || quote.order_display_id || `Quote ${quoteId.slice(0, 8)}`}
+                </Badge>
+                {amountInfo.isDueAmount && (
+                  <Badge variant="secondary" className="text-xs">
+                    Outstanding: {currency} {amountInfo.dueAmount.toFixed(2)} of {amountInfo.totalAmount.toFixed(2)}
+                  </Badge>
+                )}
+                {quote.product_name && (
+                  <Badge variant="outline" className="text-xs">
+                    {quote.product_name.length > 30 ? `${quote.product_name.slice(0, 30)}...` : quote.product_name}
+                  </Badge>
+                )}
+                {quote.destination_country && quote.destination_country !== quote.origin_country && (
+                  <Badge variant="outline" className="text-xs">
+                    Ship to: {quote.destination_country}
+                  </Badge>
+                )}
+              </div>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -242,6 +438,30 @@ export function EnhancedPaymentLinkGenerator({
               <div className="max-h-[50vh] overflow-y-auto">
                 {/* Basic Information Tab */}
                 <TabsContent value="basic" className="space-y-4">
+                  {/* Smart Prefill Info */}
+                  {quote && (
+                    <Card className="bg-green-50 border-green-200">
+                      <CardContent className="pt-4">
+                        <div className="flex items-start gap-2">
+                          <Shield className="w-4 h-4 text-green-600 mt-0.5" />
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-green-900">
+                              Information Auto-filled from Order
+                            </p>
+                            <div className="text-xs text-green-700 space-y-1">
+                              <p>✓ Customer details from {quote.shipping_address ? 'shipping address' : 'user profile'}</p>
+                              <p>✓ Smart description based on product: {quote.product_name || 'order details'}</p>
+                              <p>✓ Expiry optimized for {quote.priority || 'normal'} priority order</p>
+                              {amountInfo.isDueAmount && (
+                                <p>✓ Amount set to outstanding balance (${currency} {amount.toFixed(2)} of ${amountInfo.totalAmount.toFixed(2)})</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <div className="grid gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="api-method">API Method</Label>
@@ -402,17 +622,67 @@ export function EnhancedPaymentLinkGenerator({
                           Add custom fields to collect additional information
                         </p>
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={addCustomField}
-                        disabled={formData.apiMethod === 'legacy'}
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Add Field
-                      </Button>
+                      <div className="flex gap-2">
+                        {suggestedFields.length > 0 && formData.apiMethod === 'rest' && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setShowSuggestedFields(!showSuggestedFields)}
+                          >
+                            <Settings className="w-4 h-4 mr-1" />
+                            Suggestions ({suggestedFields.length})
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addCustomField}
+                          disabled={formData.apiMethod === 'legacy'}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          Add Field
+                        </Button>
+                      </div>
                     </div>
+
+                    {/* Suggested Fields */}
+                    {showSuggestedFields && suggestedFields.length > 0 && formData.apiMethod === 'rest' && (
+                      <Card className="bg-blue-50 border-blue-200">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Settings className="w-4 h-4" />
+                            Suggested Fields for This Order
+                          </CardTitle>
+                          <CardDescription className="text-xs">
+                            Based on order details, we suggest these fields to improve customer experience
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          {suggestedFields.map((field, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                              <div className="space-y-1">
+                                <div className="text-sm font-medium">{field.label}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {field.type} field • {field.required ? 'Required' : 'Optional'}
+                                  {field.options && ` • ${field.options.length} options`}
+                                </div>
+                              </div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => addSuggestedField(field)}
+                                disabled={customFields.some(f => f.name === field.name)}
+                              >
+                                {customFields.some(f => f.name === field.name) ? 'Added' : 'Add'}
+                              </Button>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {formData.apiMethod === 'legacy' && (
                       <Card className="bg-amber-50 border-amber-200">

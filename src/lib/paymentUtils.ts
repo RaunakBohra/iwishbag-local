@@ -167,15 +167,20 @@ function getCurrencySymbol(currency: string): string {
  */
 export function extractCustomerInfo(quote: any) {
   return {
-    name: quote.shipping_address?.name || 
+    name: quote.shipping_address?.fullName || 
+          quote.shipping_address?.name || 
+          quote.profiles?.full_name ||
           quote.user?.full_name || 
           quote.customer_name || 
           '',
     email: quote.shipping_address?.email || 
+           quote.profiles?.email ||
            quote.user?.email || 
+           quote.email ||
            quote.customer_email || 
            '',
     phone: quote.shipping_address?.phone || 
+           quote.profiles?.phone ||
            quote.user?.phone || 
            quote.customer_phone || 
            ''
