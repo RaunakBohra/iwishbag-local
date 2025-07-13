@@ -20,7 +20,8 @@ import {
   Phone,
   Hash,
   History,
-  RefreshCcw
+  RefreshCcw,
+  Plus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Tables } from '@/integrations/supabase/types';
@@ -31,6 +32,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { cn } from '@/lib/utils';
 import { TransactionHistoryWidget } from './TransactionHistoryWidget';
 import { RefundManagementModal } from './RefundManagementModal';
+import { RecordPaymentModal } from './RecordPaymentModal';
 
 interface PaymentManagementWidgetProps {
   quote: Tables<'quotes'>;
@@ -41,6 +43,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
   const [showTransactionDetails, setShowTransactionDetails] = useState(false);
   const [showTransactionHistory, setShowTransactionHistory] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
+  const [showRecordPaymentModal, setShowRecordPaymentModal] = useState(false);
 
   // Fetch payment transaction details
   const { data: paymentTransaction } = useQuery({
@@ -320,6 +323,18 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-2">
+            {/* Record Payment Button - Show for unpaid or partially paid quotes */}
+            {(quote.payment_status === 'unpaid' || quote.payment_status === 'partial') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRecordPaymentModal(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Record Payment
+              </Button>
+            )}
+            
             {quote.payment_method === 'bank_transfer' && quote.payment_status !== 'paid' && (
               <Button
                 variant="outline"
@@ -494,6 +509,14 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
           payments={allPayments}
         />
       )}
+
+      {/* Record Payment Modal */}
+      <RecordPaymentModal
+        isOpen={showRecordPaymentModal}
+        onClose={() => setShowRecordPaymentModal(false)}
+        quote={quote}
+        existingPayments={allPayments}
+      />
     </>
   );
 };
