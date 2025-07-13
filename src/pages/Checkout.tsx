@@ -935,6 +935,21 @@ export default function Checkout() {
 
       if (paymentResponse.url) {
         // For redirect-based payments (Stripe, PayU Hosted Checkout)
+        // First update quote status to processing for payment gateways
+        if (paymentMethod === 'payu' || paymentMethod === 'stripe') {
+          const statusConfig = findStatusForPaymentMethod(paymentMethod);
+          const processingStatus = statusConfig?.name || 'processing';
+          
+          console.log(`Setting ${paymentMethod} quotes to ${processingStatus} status before redirect`);
+          
+          await updateQuotesMutation.mutateAsync({ 
+            ids: cartQuoteIds, 
+            status: processingStatus, 
+            method: paymentMethod,
+            paymentStatus: 'unpaid' // Will be updated to 'paid' by webhook/success page
+          });
+        }
+        
         if (paymentMethod === 'payu' && paymentResponse.formData) {
           // Handle PayU Hosted Checkout - submit form with data
           console.log('🎯 PayU payment detected with form data');

@@ -255,8 +255,8 @@ export const useStatusManagement = () => {
         return findCODProcessingStatus();
       case 'payu':
       case 'stripe':
-        // PayU and Stripe payments should go directly to paid status after successful payment
-        return orderStatuses.find(s => s.name === 'paid' || s.id === 'paid') || findDefaultOrderStatus();
+        // For payment gateway redirects, use processing status until payment is confirmed
+        return orderStatuses.find(s => s.name === 'processing' || s.id === 'processing') || findDefaultOrderStatus();
       default:
         return findDefaultOrderStatus();
     }
