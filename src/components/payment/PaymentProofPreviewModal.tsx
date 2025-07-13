@@ -238,7 +238,7 @@ export const PaymentProofPreviewModal: React.FC<PaymentProofPreviewModalProps> =
 
       // Then, confirm the payment using our RPC function
       const { error: paymentError } = await supabase.rpc('force_update_payment', {
-        quote_id: orderId,
+        p_quote_id: orderId,
         new_amount_paid: totalPaid,
         new_payment_status: paymentStatus
       });
