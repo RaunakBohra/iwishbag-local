@@ -9,7 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import { RefreshCcw, AlertCircle, CreditCard, Building, FileText } from 'lucide-react';
+import { RefreshCcw, AlertCircle, CreditCard, Building, FileText, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface RefundManagementModalProps {
   isOpen: boolean;
@@ -38,6 +41,9 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
   quote,
   payments
 }) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isProcessing, setIsProcessing] = useState(false);
   const [refundType, setRefundType] = useState<'full' | 'partial' | 'credit_note'>('partial');
   const [refundAmount, setRefundAmount] = useState('');
   const [selectedPayments, setSelectedPayments] = useState<string[]>([]);
@@ -94,6 +100,150 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
     }
     
     return breakdown;
+  };
+
+  const processRefund = async () => {
+    if (!refundAmount || !selectedPayments.length || !reason) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const amount = parseFloat(refundAmount);
+      const breakdown = calculateRefundBreakdown();
+
+      // Get current user
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error('Not authenticated');
+      }
+
+      // Create refund record in payment_ledger
+      let refundRecord: any = null;
+      const { data: ledgerData, error: refundError } = await supabase
+        .from('payment_ledger')
+        .insert({
+          quote_id: quote.id,
+          payment_type: refundType === 'credit_note' ? 'credit_applied' : 'refund',
+          payment_method: refundMethod === 'original' ? 'original_method' : refundMethod,
+          gateway_code: refundMethod === 'original' ? 'original' : 'manual',
+          amount: -amount, // Negative for refunds
+          currency: quote.currency,
+          base_amount: -amount, // Assuming same currency for now
+          status: 'completed',
+          payment_date: new Date().toISOString(),
+          reference_number: `REF-${Date.now()}`,
+          notes: `${reason} - ${internalNotes}`.trim(),
+          balance_before: quote.amount_paid,
+          balance_after: quote.amount_paid - amount,
+          created_by: userData.user.id
+        })
+        .select()
+        .single();
+
+      if (refundError) {
+        // Fallback to payment_records if payment_ledger doesn't exist
+        console.warn('payment_ledger table not available, using payment_records fallback');
+        const { data: recordData, error: recordError } = await supabase
+          .from('payment_records')
+          .insert({
+            quote_id: quote.id,
+            payment_method: refundMethod === 'original' ? 'original_method' : refundMethod,
+            amount: -amount, // Negative for refunds
+            reference_number: `REF-${Date.now()}`,
+            notes: `REFUND: ${reason} - ${internalNotes}`.trim(),
+            recorded_by: userData.user.id
+          })
+          .select()
+          .single();
+        
+        if (recordError) throw recordError;
+        refundRecord = recordData;
+      } else {
+        refundRecord = ledgerData;
+      }
+
+      // Create financial transaction records for double-entry bookkeeping (optional)
+      try {
+        for (const item of breakdown) {
+          await supabase
+            .from('financial_transactions')
+            .insert({
+              quote_id: quote.id,
+              transaction_type: refundType === 'credit_note' ? 'credit_note' : 'refund',
+              debit_account: 'accounts_receivable',
+              credit_account: refundMethod === 'bank_transfer' ? 'bank_account' : 'payment_gateway',
+              amount: item.amount,
+              currency: quote.currency,
+              base_amount: item.amount, // Assuming same currency for now
+              transaction_date: new Date().toISOString(),
+              reference_number: refundRecord.reference_number,
+              description: `${reason} - Refund via ${item.gateway}`,
+              created_by: userData.user.id
+            });
+        }
+      } catch (financialError) {
+        console.warn('financial_transactions table not available, skipping double-entry records:', financialError);
+      }
+
+      // Update quote's amount_paid
+      const { error: quoteUpdateError } = await supabase
+        .from('quotes')
+        .update({
+          amount_paid: quote.amount_paid - amount,
+          payment_status: quote.amount_paid - amount <= 0 ? 'unpaid' : 
+                         quote.amount_paid - amount < quote.final_total ? 'partial' : 'paid'
+        })
+        .eq('id', quote.id);
+
+      if (quoteUpdateError) throw quoteUpdateError;
+
+      // If credit note, create credit note record (optional)
+      if (refundType === 'credit_note') {
+        try {
+          await supabase
+            .from('credit_notes')
+            .insert({
+              quote_id: quote.id,
+              credit_amount: amount,
+              currency: quote.currency,
+              reason: reason,
+              notes: internalNotes,
+              status: 'active',
+              created_by: userData.user.id
+            });
+        } catch (creditError) {
+          console.warn('credit_notes table not available, skipping credit note record:', creditError);
+        }
+      }
+
+      // Invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['payment-history', quote.id] });
+      queryClient.invalidateQueries({ queryKey: ['all-payments', quote.id] });
+      queryClient.invalidateQueries({ queryKey: ['payment-transaction', quote.id] });
+
+      toast({
+        title: "Refund Processed",
+        description: `Successfully processed ${refundType} refund of ${quote.currency} ${amount.toFixed(2)}`,
+      });
+
+      onClose();
+
+    } catch (error: any) {
+      console.error('Error processing refund:', error);
+      toast({
+        title: "Refund Failed",
+        description: error.message || "Failed to process refund. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -297,31 +447,31 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isProcessing}>
             Cancel
           </Button>
           <Button
-            onClick={() => {
-              // Process refund
-              console.log({
-                refundType,
-                refundAmount,
-                selectedPayments,
-                refundMethod,
-                reason,
-                internalNotes,
-                breakdown: calculateRefundBreakdown()
-              });
-              onClose();
-            }}
+            onClick={processRefund}
             disabled={
+              isProcessing ||
               !refundAmount || 
               !selectedPayments.length || 
               !reason ||
-              parseFloat(refundAmount) > maxRefundable
+              parseFloat(refundAmount) > maxRefundable ||
+              parseFloat(refundAmount) <= 0
             }
           >
-            Process Refund
+            {isProcessing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <RefreshCcw className="h-4 w-4 mr-2" />
+                Process Refund
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
