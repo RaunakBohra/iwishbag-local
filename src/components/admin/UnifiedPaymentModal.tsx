@@ -879,22 +879,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         </Button>
                       )}
                       {paymentSummary.remaining > 0 && (
-                        <>
-                          {/* Debug: Log quote structure for payment link generation */}
-                          {console.log('🔍 [UnifiedPaymentModal] Quote data for payment link generation:', {
-                            quoteId: quote.id,
-                            hasShippingAddress: !!quote.shipping_address,
-                            shippingAddress: quote.shipping_address,
-                            hasProfiles: !!quote.profiles,
-                            profiles: quote.profiles,
-                            customerName: quote.customer_name,
-                            customerPhone: quote.customer_phone,
-                            email: quote.email,
-                            productName: quote.product_name,
-                            displayId: quote.display_id,
-                            orderDisplayId: quote.order_display_id
-                          })}
-                          <EnhancedPaymentLinkGenerator
+                        <EnhancedPaymentLinkGenerator
                           quoteId={quote.id}
                           amount={paymentSummary.remaining}
                           currency="USD"
@@ -916,7 +901,6 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                             queryClient.refetchQueries({ queryKey: ['payment-links', quote.id] });
                           }}
                         />
-                        </>
                       )}
                       {quote.payment_method === 'bank_transfer' && (
                         <PaymentProofButton

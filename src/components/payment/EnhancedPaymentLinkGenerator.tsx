@@ -84,17 +84,19 @@ export function EnhancedPaymentLinkGenerator({
     const profiles = quote?.profiles; // From the profile join
     
     // Debug: Log the quote structure to understand the data better
-    console.log('🔍 [EnhancedPaymentLinkGenerator] Quote structure for customer info extraction:', {
-      hasShippingAddress: !!shipping,
-      shippingFields: shipping ? Object.keys(shipping) : [],
-      hasUser: !!user,
-      userFields: user ? Object.keys(user) : [],
-      hasProfiles: !!profiles,
-      profileFields: profiles ? Object.keys(profiles) : [],
-      customerName: quote?.customer_name,
-      customerPhone: quote?.customer_phone,
-      email: quote?.email
-    });
+    console.log('🔍 [EnhancedPaymentLinkGenerator] Quote structure for customer info extraction:');
+    console.log('  - Has shipping address:', !!shipping);
+    console.log('  - Shipping fields:', shipping ? Object.keys(shipping) : []);
+    console.log('  - Shipping address data:', shipping);
+    console.log('  - Has user:', !!user);
+    console.log('  - User fields:', user ? Object.keys(user) : []);
+    console.log('  - User data:', user);
+    console.log('  - Has profiles:', !!profiles);
+    console.log('  - Profile fields:', profiles ? Object.keys(profiles) : []);
+    console.log('  - Profiles data:', profiles);
+    console.log('  - Customer name (direct):', quote?.customer_name);
+    console.log('  - Customer phone (direct):', quote?.customer_phone);
+    console.log('  - Email (direct):', quote?.email);
     
     return {
       name: shipping?.fullName || shipping?.name || profiles?.full_name || user?.full_name || quote?.customer_name || '',
@@ -204,10 +206,23 @@ export function EnhancedPaymentLinkGenerator({
   // Update form data when component opens or quote changes
   useEffect(() => {
     if (open) {
+      // Debug: Log quote data first
+      console.log('🔍 [EnhancedPaymentLinkGenerator] useEffect triggered with open =', open);
+      console.log('  - Quote ID:', quote?.id);
+      console.log('  - Quote shipping_address:', quote?.shipping_address);
+      console.log('  - Quote profiles:', quote?.profiles);
+      console.log('  - Quote customer_name:', quote?.customer_name);
+      console.log('  - Quote customer_phone:', quote?.customer_phone);
+      console.log('  - Quote email:', quote?.email);
+      console.log('  - CustomerInfo prop:', customerInfo);
+      
       const customer = getCustomerInfo();
       
       // Log the final customer info for debugging
-      console.log('🎯 [EnhancedPaymentLinkGenerator] Final customer info extracted:', customer);
+      console.log('🎯 [EnhancedPaymentLinkGenerator] Final customer info extracted:');
+      console.log('  - Name:', customer.name);
+      console.log('  - Email:', customer.email); 
+      console.log('  - Phone:', customer.phone);
       
       setFormData({
         name: customer.name,
@@ -219,6 +234,8 @@ export function EnhancedPaymentLinkGenerator({
         partialPaymentAllowed: false,
         apiMethod: 'rest',
       });
+      
+      console.log('✅ [EnhancedPaymentLinkGenerator] Form data updated');
     }
   }, [open, quote, customerInfo]);
 
@@ -471,6 +488,7 @@ export function EnhancedPaymentLinkGenerator({
                               <p>✓ Customer details from {quote.shipping_address ? 'shipping address' : 'user profile'}</p>
                               <p>✓ Smart description based on product: {quote.product_name || 'order details'}</p>
                               <p>✓ Expiry optimized for {quote.priority || 'normal'} priority order</p>
+                              <p>✓ Form data: Name="{formData.name}", Email="{formData.email}", Phone="{formData.phone}"</p>
                               {amountInfo.isDueAmount && (
                                 <p>✓ Amount set to outstanding balance (${currency} {amount.toFixed(2)} of ${amountInfo.totalAmount.toFixed(2)})</p>
                               )}
