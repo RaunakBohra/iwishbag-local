@@ -240,7 +240,8 @@ export const PaymentProofPreviewModal: React.FC<PaymentProofPreviewModalProps> =
       const { error: paymentError } = await supabase.rpc('force_update_payment', {
         p_quote_id: orderId,
         new_amount_paid: totalPaid,
-        new_payment_status: paymentStatus
+        new_payment_status: paymentStatus,
+        payment_currency: orderDetails.final_currency  // Pass the actual payment currency
       });
 
       if (paymentError) throw paymentError;
