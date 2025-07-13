@@ -149,29 +149,9 @@ const PaymentManagementPage = () => {
         throw error;
       }
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 60000, // Refresh every minute
   });
 
-  // Payment statistics
-  const { data: stats } = useQuery({
-    queryKey: ['payment-stats'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('verification_status')
-        .eq('message_type', 'payment_proof');
-
-      if (error) throw error;
-
-      const total = data?.length || 0;
-      const pending = data?.filter(p => !p.verification_status || p.verification_status === 'pending').length || 0;
-      const verified = data?.filter(p => p.verification_status === 'verified').length || 0;
-      const rejected = data?.filter(p => p.verification_status === 'rejected').length || 0;
-
-      return { total, pending, verified, rejected };
-    },
-    refetchInterval: 30000,
-  });
 
   // Verify payment mutation
   const verifyPaymentMutation = useMutation({
@@ -330,7 +310,6 @@ const PaymentManagementPage = () => {
       console.log('Payment verification successful, invalidating caches...');
       
       // Immediate cache invalidation
-      queryClient.invalidateQueries({ queryKey: ['payment-stats'] });
       queryClient.invalidateQueries({ queryKey: ['payment-proof-stats'] });
       queryClient.invalidateQueries({ queryKey: ['pending-payment-proofs-count'] });
       
@@ -405,81 +384,18 @@ const PaymentManagementPage = () => {
     }
   };
 
-  const pendingProofs = paymentProofs?.filter(p => !p.verification_status || p.verification_status === 'pending') || [];
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Payment Management</h1>
-          <p className="text-muted-foreground">Review and verify payment proofs</p>
+          <h1 className="text-3xl font-bold">Payment Verification</h1>
+          <p className="text-muted-foreground">Review and verify customer payments</p>
         </div>
         <Button onClick={() => refetch()} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
       </div>
-
-      {/* Statistics */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                </div>
-                <DollarSign className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                  <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-                </div>
-                <Clock className="h-8 w-8 text-yellow-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Verified</p>
-                  <p className="text-2xl font-bold text-green-600">{stats.verified}</p>
-                </div>
-                <CheckCircle className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Rejected</p>
-                  <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
-                </div>
-                <XCircle className="h-8 w-8 text-red-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Alert for pending items */}
-      {pendingProofs.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 text-yellow-600" />
-          <div>
-            <p className="font-medium text-yellow-800">Action Required</p>
-            <p className="text-sm text-yellow-700">{pendingProofs.length} payment proof(s) waiting for verification</p>
-          </div>
-        </div>
-      )}
 
       {/* Search */}
       <div className="flex items-center gap-4">
@@ -498,7 +414,7 @@ const PaymentManagementPage = () => {
       <Card>
         <CardHeader>
           <CardTitle>Payment Proofs</CardTitle>
-          <CardDescription>Review submitted payment proofs and verify payments</CardDescription>
+          <CardDescription>Review and verify customer payments</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -510,151 +426,109 @@ const PaymentManagementPage = () => {
               {paymentProofs.map((proof) => (
                 <div
                   key={proof.id}
-                  className={`border rounded-lg p-4 hover:bg-gray-50 ${
+                  className={`border rounded-lg p-6 hover:bg-gray-50 transition-colors ${
                     (!proof.verification_status || proof.verification_status === 'pending') 
-                      ? 'border-l-4 border-l-yellow-400' 
-                      : ''
+                      ? 'border-l-4 border-l-orange-400 bg-orange-50' 
+                      : proof.verification_status === 'verified'
+                      ? 'border-l-4 border-l-green-400'
+                      : 'border-l-4 border-l-red-400'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-2">
-                        <h3 className="font-semibold">Order #{proof.order_display_id}</h3>
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-semibold">Order #{proof.order_display_id}</h3>
                         {getStatusBadge(proof.verification_status)}
-                        <span className="text-sm text-muted-foreground">
-                          {format(new Date(proof.created_at), 'MMM dd, yyyy HH:mm')}
-                        </span>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Customer</p>
-                          <p className="font-medium">{proof.customer_name}</p>
-                          <p className="text-xs text-muted-foreground">{proof.customer_email}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Order Total</p>
-                          <p className="font-medium">{proof.final_currency} {proof.final_total.toFixed(2)}</p>
-                          <div className="mt-1 space-y-1">
-                            <p className="text-xs text-muted-foreground">
-                              Paid: {proof.final_currency} {proof.amount_paid.toFixed(2)}
-                            </p>
-                            {proof.amount_paid > 0 && (
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-                                  <div 
-                                    className={cn(
-                                      "h-1.5 rounded-full transition-all",
-                                      proof.amount_paid >= proof.final_total ? "bg-green-500" : "bg-blue-500"
-                                    )}
-                                    style={{ width: `${Math.min(100, (proof.amount_paid / proof.final_total) * 100)}%` }}
-                                  />
-                                </div>
-                                <span className="text-xs font-medium">
-                                  {((proof.amount_paid / proof.final_total) * 100).toFixed(0)}%
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">File</p>
-                          <p className="font-medium">{proof.attachment_file_name}</p>
-                          {/* Payment Status Badge */}
-                          <div className="mt-1">
-                            {proof.amount_paid >= proof.final_total ? (
-                              <Badge variant="success" className="text-xs">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Payment Complete
-                              </Badge>
-                            ) : proof.amount_paid > 0 ? (
-                              <Badge variant="secondary" className="text-xs">
-                                <Clock className="h-3 w-3 mr-1" />
-                                Partial Payment
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">
-                                <AlertCircle className="h-3 w-3 mr-1" />
-                                Awaiting Payment
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(proof.attachment_url, '_blank')}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            console.log('Opening verification modal for proof:', proof);
-                            setSelectedProof(proof);
-                            // Pre-fill with current amount paid if already verified, otherwise use full order total
-                            const prefillAmount = proof.amount_paid > 0 ? proof.amount_paid : proof.final_total;
-                            console.log('Pre-filling with amount:', prefillAmount);
-                            setVerificationAmount(prefillAmount.toString());
-                            // Pre-fill admin notes if they exist
-                            if (proof.admin_notes) {
-                              setVerificationNotes(proof.admin_notes);
-                            }
-                          }}
-                          className={
-                            (!proof.verification_status || proof.verification_status === 'pending')
-                              ? "bg-orange-600 hover:bg-orange-700"
-                              : proof.verification_status === 'verified'
-                              ? "bg-blue-600 hover:bg-blue-700"
-                              : "bg-gray-600 hover:bg-gray-700"
-                          }
-                        >
-                          {(!proof.verification_status || proof.verification_status === 'pending') ? (
-                            <>
-                              <Clock className="h-4 w-4 mr-1" />
-                              Process
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="h-4 w-4 mr-1" />
-                              Edit
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                      <p className={`text-xs font-medium ${
-                        (!proof.verification_status || proof.verification_status === 'pending')
-                          ? "text-orange-600"
-                          : proof.verification_status === 'verified'
-                          ? "text-blue-600"
-                          : "text-gray-600"
-                      }`}>
-                        {(!proof.verification_status || proof.verification_status === 'pending')
-                          ? "Action Required"
-                          : proof.verification_status === 'verified'
-                          ? "Can Edit"
-                          : "Can Edit"
-                        }
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(proof.created_at), 'MMM dd, yyyy HH:mm')}
                       </p>
                     </div>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => window.open(proof.attachment_url, '_blank')}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Proof
+                      </Button>
+                      <Button
+                        size="lg"
+                        onClick={() => {
+                          setSelectedProof(proof);
+                          const prefillAmount = proof.amount_paid > 0 ? proof.amount_paid : proof.final_total;
+                          setVerificationAmount(prefillAmount.toString());
+                          if (proof.admin_notes) {
+                            setVerificationNotes(proof.admin_notes);
+                          }
+                        }}
+                        className={
+                          (!proof.verification_status || proof.verification_status === 'pending')
+                            ? "bg-orange-600 hover:bg-orange-700"
+                            : proof.verification_status === 'verified'
+                            ? "bg-blue-600 hover:bg-blue-700"
+                            : "bg-gray-600 hover:bg-gray-700"
+                        }
+                      >
+                        {(!proof.verification_status || proof.verification_status === 'pending') ? (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Process Payment
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Edit Payment
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Customer</p>
+                      <p className="font-semibold text-lg">{proof.customer_name}</p>
+                      <p className="text-sm text-muted-foreground">{proof.customer_email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Amount Due</p>
+                      <p className="font-bold text-xl">{proof.final_currency} {proof.final_total.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Amount Paid</p>
+                      <p className={`font-bold text-xl ${
+                        proof.amount_paid >= proof.final_total 
+                          ? 'text-green-600' 
+                          : proof.amount_paid > 0 
+                          ? 'text-orange-600' 
+                          : 'text-gray-500'
+                      }`}>
+                        {proof.final_currency} {proof.amount_paid.toFixed(2)}
+                      </p>
+                      {proof.amount_paid > 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {proof.amount_paid >= proof.final_total ? 'Fully Paid' : 'Partial Payment'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   {proof.admin_notes && (
-                    <div className="mt-3 p-3 bg-gray-100 rounded text-sm">
-                      <p className="font-medium text-gray-700">Admin Notes:</p>
-                      <p className="text-gray-600">{proof.admin_notes}</p>
+                    <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+                      <p className="font-medium text-gray-700 text-sm mb-1">Admin Notes:</p>
+                      <p className="text-gray-600 text-sm">{proof.admin_notes}</p>
                     </div>
                   )}
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No payment proofs found</p>
+            <div className="text-center py-12">
+              <DollarSign className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <p className="text-lg text-muted-foreground">No payment proofs found</p>
+              <p className="text-sm text-muted-foreground mt-2">Payment proofs will appear here when customers submit them</p>
             </div>
           )}
         </CardContent>
@@ -663,115 +537,51 @@ const PaymentManagementPage = () => {
       {/* Verification Modal */}
       {selectedProof && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">
-              Verify Payment - Order #{selectedProof.order_display_id}
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-semibold mb-6 text-center">
+              Verify Payment
             </h3>
             
-            <div className="space-y-4">
-              {/* Payment Summary Card */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                <h4 className="font-medium text-blue-900">Order Information</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-700">Order Total:</span>
-                    <span className="font-semibold">{selectedProof.final_currency} {selectedProof.final_total.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-700">Current Payment Status:</span>
-                    <span className="font-semibold">
-                      {selectedProof.amount_paid === 0 ? 'Unpaid' : 
-                       selectedProof.amount_paid >= selectedProof.final_total ? 'Paid' : 
-                       'Partial Payment'}
-                    </span>
-                  </div>
-                </div>
+            <div className="space-y-6">
+              {/* Order Summary */}
+              <div className="text-center border-b pb-4">
+                <p className="text-lg font-semibold">Order #{selectedProof.order_display_id}</p>
+                <p className="text-sm text-muted-foreground">{selectedProof.customer_name}</p>
+                <p className="text-2xl font-bold mt-2">{selectedProof.final_currency} {selectedProof.final_total.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground">Total Amount Due</p>
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Payment Amount Received</label>
+                <label className="block text-sm font-medium mb-2">Payment Amount Received</label>
                 <Input
                   type="number"
                   step="0.01"
                   value={verificationAmount}
                   onChange={(e) => setVerificationAmount(e.target.value)}
-                  placeholder="Enter amount shown in proof"
-                  className={cn(
-                    verificationAmount && parseFloat(verificationAmount) > selectedProof.final_total * 1.5
-                      ? "border-orange-500 focus:ring-orange-500"
-                      : ""
-                  )}
+                  placeholder="Enter amount from payment proof"
+                  className="text-lg p-3"
                 />
-                {verificationAmount && parseFloat(verificationAmount) > selectedProof.final_total * 1.5 && (
-                  <p className="text-xs text-orange-600 mt-1">
-                    ⚠️ This amount is significantly higher than the order total. Please double-check.
+                {verificationAmount && parseFloat(verificationAmount) > selectedProof.final_total * 1.2 && (
+                  <p className="text-xs text-orange-600 mt-2">
+                    ⚠️ Amount seems high - please double-check
                   </p>
                 )}
               </div>
               
-              {/* Real-time Calculation Display */}
-              {verificationAmount && parseFloat(verificationAmount) > 0 && (
-                <div className="bg-gray-50 border rounded-lg p-3 space-y-2">
-                  <h5 className="text-sm font-medium text-gray-700">Payment Verification:</h5>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between font-semibold">
-                      <span>Payment Amount:</span>
-                      <span className="text-green-700">
-                        {selectedProof.final_currency} {parseFloat(verificationAmount).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Status Indicator */}
-                  <div className={cn(
-                    "text-sm font-medium p-2 rounded text-center mt-2",
-                    parseFloat(verificationAmount) >= selectedProof.final_total
-                      ? "bg-green-100 text-green-800"
-                      : "bg-orange-100 text-orange-800"
-                  )}>
-                    {parseFloat(verificationAmount) >= selectedProof.final_total
-                      ? parseFloat(verificationAmount) > selectedProof.final_total
-                        ? `⚠️ Overpayment of ${selectedProof.final_currency} ${(parseFloat(verificationAmount) - selectedProof.final_total).toFixed(2)}`
-                        : "✅ Full Payment Received"
-                      : `📊 Partial Payment - ${selectedProof.final_currency} ${(selectedProof.final_total - parseFloat(verificationAmount)).toFixed(2)} will remain outstanding`
-                    }
-                  </div>
-                  
-                  {/* Progress Bar */}
-                  <div className="mt-2">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={cn(
-                          "h-2 rounded-full transition-all",
-                          (parseFloat(verificationAmount) / selectedProof.final_total) >= 1
-                            ? "bg-green-600"
-                            : "bg-blue-600"
-                        )}
-                        style={{ 
-                          width: `${Math.min(100, (parseFloat(verificationAmount) / selectedProof.final_total) * 100)}%` 
-                        }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-600 text-right mt-1">
-                      {((parseFloat(verificationAmount) / selectedProof.final_total) * 100).toFixed(0)}% of order total
-                    </p>
-                  </div>
-                </div>
-              )}
-              
               <div>
-                <label className="block text-sm font-medium mb-1">Notes (Optional)</label>
+                <label className="block text-sm font-medium mb-2">Verification Notes</label>
                 <Textarea
                   value={verificationNotes}
                   onChange={(e) => setVerificationNotes(e.target.value)}
-                  placeholder="Add verification notes..."
+                  placeholder="Add any notes about the verification..."
                   rows={3}
                 />
               </div>
               
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="flex gap-3 pt-4">
                 <Button
                   variant="outline"
+                  className="flex-1"
                   onClick={() => {
                     setSelectedProof(null);
                     setVerificationNotes('');
@@ -782,7 +592,7 @@ const PaymentManagementPage = () => {
                 </Button>
                 <Button
                   variant="outline"
-                  className="border-red-300 hover:bg-red-50"
+                  className="flex-1 border-red-300 hover:bg-red-50 text-red-600"
                   onClick={handleRejectPayment}
                   disabled={verifyPaymentMutation.isPending}
                 >
@@ -790,12 +600,12 @@ const PaymentManagementPage = () => {
                   Reject
                 </Button>
                 <Button
-                  className="bg-green-600 hover:bg-green-700"
+                  className="flex-1 bg-green-600 hover:bg-green-700"
                   onClick={handleVerifyPayment}
                   disabled={verifyPaymentMutation.isPending}
                 >
                   <CheckCircle className="h-4 w-4 mr-1" />
-                  Verify & Confirm Payment
+                  Verify
                 </Button>
               </div>
             </div>
