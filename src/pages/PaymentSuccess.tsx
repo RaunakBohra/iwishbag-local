@@ -208,7 +208,7 @@ const PaymentSuccess: React.FC = () => {
           status: 'paid',
           // payment_status: 'paid',  // Let trigger calculate this
           payment_method: paymentData.gateway,
-          payment_transaction_id: paymentData.payuId || paymentData.transactionId,
+          // payment_transaction_id removed - this column doesn't exist
           paid_at: new Date().toISOString(),
           // amount_paid: paymentData.amount,  // Let trigger calculate this
           in_cart: false,

@@ -543,7 +543,7 @@ serve(async (req) => {
       const updateData: any = {
         status: orderStatus,
         payment_method: 'payu',
-        payment_transaction_id: webhookData.mihpayid || webhookData.txnid,
+        // payment_transaction_id column doesn't exist - store in payment_details instead
         paid_at: orderStatus === 'paid' ? new Date().toISOString() : null,
         in_cart: false, // Remove from cart on successful payment
         payment_details: {
@@ -639,7 +639,7 @@ serve(async (req) => {
               currency: 'INR',
               status: 'confirmed',
               payment_method: 'payu',
-              payment_transaction_id: webhookData.mihpayid || webhookData.txnid,
+              // payment_transaction_id column doesn't exist - store in payment_details instead
               customer_email: webhookData.email,
               customer_name: webhookData.firstname,
               customer_phone: webhookData.phone,
