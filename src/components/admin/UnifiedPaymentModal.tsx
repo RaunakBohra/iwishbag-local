@@ -243,6 +243,50 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const [verifyAmount, setVerifyAmount] = useState<string>('');
   const [verifyNotes, setVerifyNotes] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [previewImageLoading, setPreviewImageLoading] = useState(false);
+  const [previewImageError, setPreviewImageError] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+
+  // Utility functions for verification
+  const isImage = (filename: string) => {
+    return /\.(jpg|jpeg|png|gif|webp)$/i.test(filename);
+  };
+
+  const downloadFile = (url: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || 'payment-proof';
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Calculate payment balance for verification
+  const calculatePaymentBalance = () => {
+    const currentPaid = paymentSummary.totalPaid;
+    const orderTotal = paymentSummary.orderTotal;
+    const newAmount = parseFloat(verifyAmount) || 0;
+    const newTotal = currentPaid + newAmount;
+    
+    let newStatus = 'unpaid';
+    if (newTotal >= orderTotal) {
+      newStatus = newTotal > orderTotal ? 'overpaid' : 'paid';
+    } else if (newTotal > 0) {
+      newStatus = 'partial';
+    }
+
+    return {
+      currentPaid,
+      orderTotal,
+      newAmount,
+      newTotal,
+      newStatus,
+      overpayment: newTotal > orderTotal ? newTotal - orderTotal : 0
+    };
+  };
 
   // Handle payment recording
   const handleRecordPayment = async () => {
@@ -382,6 +426,75 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     }
   };
 
+  // Handle proof rejection
+  const handleRejectProof = async () => {
+    if (!verifyProofId || !rejectionReason) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a proof and provide a rejection reason.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsRejecting(true);
+
+    try {
+      // Update proof status to rejected
+      const { error: proofError } = await supabase
+        .from('messages')
+        .update({
+          verified_at: new Date().toISOString(),
+          verified_by: (await supabase.auth.getUser()).data.user?.id,
+          verification_status: 'rejected',
+          admin_notes: rejectionReason
+        })
+        .eq('id', verifyProofId);
+
+      if (proofError) throw proofError;
+
+      // Send rejection notification to customer
+      const { data: user } = await supabase.auth.getUser();
+      const proofMessage = paymentProofs?.find(p => p.id === verifyProofId);
+      
+      if (proofMessage && user.user) {
+        await supabase
+          .from('messages')
+          .insert({
+            sender_id: user.user.id,
+            recipient_id: proofMessage.sender_id,
+            quote_id: quote.id,
+            subject: 'Payment Proof Rejected',
+            content: `Your payment proof has been rejected. Reason: ${rejectionReason}\n\nPlease submit a new payment proof or contact support for assistance.`,
+            message_type: 'payment_verification_result'
+          });
+      }
+
+      toast({
+        title: "Proof Rejected",
+        description: "Payment proof has been rejected and customer notified.",
+      });
+
+      // Reset form
+      setVerifyProofId(null);
+      setRejectionReason('');
+      setVerifyNotes('');
+      
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ['payment-proofs', quote.id] });
+      
+    } catch (error: any) {
+      console.error('Error rejecting proof:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reject proof.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
   // Export payment history to CSV
   const handleExportPaymentHistory = () => {
     if (!paymentLedger || paymentLedger.length === 0) {
@@ -509,6 +622,31 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       default: return 'text-gray-600 bg-gray-50';
     }
   };
+
+  // Keyboard shortcuts for verification
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts when verify tab is active and a proof is selected
+      if (activeTab !== 'verify' || !verifyProofId) return;
+
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (verifyAmount && parseFloat(verifyAmount) > 0 && !isVerifying) {
+            handleVerifyProof();
+          }
+        } else if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          if (rejectionReason && !isRejecting) {
+            handleRejectProof();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab, verifyProofId, verifyAmount, rejectionReason, isVerifying, isRejecting]);
 
   return (
     <>
@@ -841,62 +979,211 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         ))}
                       </div>
 
-                      {/* Verification Form */}
-                      {verifyProofId && (
-                        <>
-                          <Separator />
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="verify-amount">Verified Amount ({currencySymbol})</Label>
-                              <div className="relative">
-                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  id="verify-amount"
-                                  type="text"
-                                  placeholder="0.00"
-                                  value={verifyAmount}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    if (/^\d*\.?\d*$/.test(value) || value === '') {
-                                      setVerifyAmount(value);
-                                    }
-                                  }}
-                                  className="pl-10"
-                                />
+                      {/* Enhanced Verification Form */}
+                      {verifyProofId && (() => {
+                        const selectedProof = paymentProofs?.find(p => p.id === verifyProofId);
+                        const balance = calculatePaymentBalance();
+                        
+                        return (
+                          <>
+                            <Separator />
+                            
+                            {/* Image Preview Section */}
+                            {selectedProof && (
+                              <div className="bg-gray-50 rounded-lg p-4 relative">
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="font-medium text-sm">Payment Proof Preview</h4>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => downloadFile(selectedProof.attachment_url, selectedProof.file_name || 'payment-proof')}
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => window.open(selectedProof.attachment_url, '_blank')}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                
+                                <div className="min-h-[200px] max-h-[300px] flex items-center justify-center bg-white rounded border">
+                                  {selectedProof.file_name && isImage(selectedProof.file_name) ? (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      {previewImageLoading && <Loader2 className="h-8 w-8 animate-spin text-gray-400" />}
+                                      {previewImageError ? (
+                                        <div className="text-center text-gray-500">
+                                          <AlertCircle className="h-10 w-10 mx-auto mb-2" />
+                                          <p className="text-sm">Unable to load preview</p>
+                                        </div>
+                                      ) : (
+                                        <img
+                                          src={selectedProof.attachment_url}
+                                          alt="Payment proof"
+                                          className="max-w-full max-h-full object-contain rounded"
+                                          onLoad={() => setPreviewImageLoading(false)}
+                                          onError={() => {
+                                            setPreviewImageLoading(false);
+                                            setPreviewImageError(true);
+                                          }}
+                                          style={{ display: previewImageLoading ? 'none' : 'block' }}
+                                        />
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="text-center text-gray-500">
+                                      <FileText className="h-10 w-10 mx-auto mb-2" />
+                                      <p className="text-sm">{selectedProof.file_name}</p>
+                                      <p className="text-xs text-muted-foreground">Click eye icon to view</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Payment Balance Calculation */}
+                            <Alert className="border-blue-200 bg-blue-50">
+                              <Info className="h-4 w-4" />
+                              <AlertDescription>
+                                <div className="space-y-1 text-sm">
+                                  <div className="flex justify-between">
+                                    <span>Order Total:</span>
+                                    <span className="font-medium">{currencySymbol}{balance.orderTotal.toFixed(2)}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Already Paid:</span>
+                                    <span className="font-medium">{currencySymbol}{balance.currentPaid.toFixed(2)}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>New Amount:</span>
+                                    <span className="font-medium">{currencySymbol}{balance.newAmount.toFixed(2)}</span>
+                                  </div>
+                                  <Separator className="my-1" />
+                                  <div className="flex justify-between font-semibold">
+                                    <span>Total After:</span>
+                                    <span className={cn(
+                                      balance.newTotal > balance.orderTotal ? 'text-purple-600' :
+                                      balance.newTotal === balance.orderTotal ? 'text-green-600' :
+                                      'text-orange-600'
+                                    )}>
+                                      {currencySymbol}{balance.newTotal.toFixed(2)} ({balance.newStatus})
+                                    </span>
+                                  </div>
+                                  {balance.overpayment > 0 && (
+                                    <div className="text-purple-600 text-xs">
+                                      Overpayment: {currencySymbol}{balance.overpayment.toFixed(2)}
+                                    </div>
+                                  )}
+                                </div>
+                              </AlertDescription>
+                            </Alert>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="verify-amount">Verified Amount ({currencySymbol})</Label>
+                                <div className="relative">
+                                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    id="verify-amount"
+                                    type="text"
+                                    placeholder="0.00"
+                                    value={verifyAmount}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      if (/^\d*\.?\d*$/.test(value) || value === '') {
+                                        setVerifyAmount(value);
+                                      }
+                                    }}
+                                    className="pl-10"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="rejection-reason">Rejection Reason</Label>
+                                <Select value={rejectionReason} onValueChange={setRejectionReason}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select if rejecting..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="invalid_amount">Amount doesn't match</SelectItem>
+                                    <SelectItem value="unclear_proof">Proof unclear/unreadable</SelectItem>
+                                    <SelectItem value="wrong_account">Wrong bank account</SelectItem>
+                                    <SelectItem value="duplicate">Duplicate submission</SelectItem>
+                                    <SelectItem value="insufficient_details">Missing transaction details</SelectItem>
+                                    <SelectItem value="other">Other reason</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="verify-notes">Verification Notes (Optional)</Label>
+                              <Label htmlFor="verify-notes">Admin Notes</Label>
                               <Textarea
                                 id="verify-notes"
-                                placeholder="Add any notes about this verification..."
+                                placeholder="Add verification notes or detailed rejection reason..."
                                 value={verifyNotes}
                                 onChange={(e) => setVerifyNotes(e.target.value)}
                                 rows={2}
                               />
                             </div>
 
-                            <Button 
-                              onClick={handleVerifyProof}
-                              disabled={isVerifying || !verifyAmount || parseFloat(verifyAmount) <= 0}
-                              className="w-full"
-                            >
-                              {isVerifying ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Verifying...
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="w-4 h-4 mr-2" />
-                                  Verify & Record Payment
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </>
-                      )}
+                            {/* Keyboard shortcuts reminder */}
+                            <Alert className="border-gray-200">
+                              <Info className="h-4 w-4" />
+                              <AlertDescription className="text-xs">
+                                <kbd className="font-mono bg-gray-100 px-1 rounded mr-2">Ctrl+Enter</kbd>
+                                to approve • 
+                                <kbd className="font-mono bg-gray-100 px-1 rounded mx-2">Ctrl+R</kbd>
+                                to reject
+                              </AlertDescription>
+                            </Alert>
+
+                            <div className="flex gap-2">
+                              <Button 
+                                onClick={handleVerifyProof}
+                                disabled={isVerifying || !verifyAmount || parseFloat(verifyAmount) <= 0}
+                                className="flex-1 bg-green-600 hover:bg-green-700"
+                              >
+                                {isVerifying ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Verifying...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                    Verify & Record Payment
+                                  </>
+                                )}
+                              </Button>
+
+                              <Button 
+                                onClick={handleRejectProof}
+                                disabled={isRejecting || !rejectionReason}
+                                variant="outline"
+                                className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                              >
+                                {isRejecting ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Rejecting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <X className="w-4 h-4 mr-2" />
+                                    Reject Proof
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
