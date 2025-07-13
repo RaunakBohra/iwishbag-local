@@ -89,20 +89,20 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const { data: paymentLedger, isLoading: ledgerLoading } = useQuery({
     queryKey: ['payment-ledger', quote.id],
     queryFn: async () => {
-      console.log('Fetching payment ledger for quote:', quote.id);
+      console.log('Fetching payment data for quote:', quote.id);
       
-      // First try to fetch from payment_ledger table
-      const { data: ledgerData, error: ledgerError } = await supabase
-        .from('payment_ledger')
+      // Fetch from payment_records table
+      const { data: recordsData, error: recordsError } = await supabase
+        .from('payment_records')
         .select('*')
         .eq('quote_id', quote.id)
         .order('created_at', { ascending: false });
       
-      if (ledgerError) {
-        console.error('Error fetching payment ledger:', ledgerError);
+      if (recordsError) {
+        console.error('Error fetching payment records:', recordsError);
       }
       
-      // Also fetch from payment_transactions as fallback
+      // Also fetch from payment_transactions as additional source
       const { data: transactionData, error: transactionError } = await supabase
         .from('payment_transactions')
         .select('*')
@@ -113,35 +113,32 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         console.error('Error fetching payment transactions:', transactionError);
       }
       
-      console.log('Payment ledger data:', ledgerData);
+      console.log('Payment records data:', recordsData);
       console.log('Payment transaction data:', transactionData);
       
-      // If we have ledger data, fetch profile info and use it
-      if (ledgerData && ledgerData.length > 0) {
-        // Get unique user IDs
-        const userIds = [...new Set(ledgerData.map(entry => entry.created_by).filter(Boolean))];
-        
-        // Fetch profiles for these users
-        let profiles = {};
-        if (userIds.length > 0) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('id, full_name, email')
-            .in('id', userIds);
-          
-          if (profileData) {
-            profiles = profileData.reduce((acc, profile) => {
-              acc[profile.id] = profile;
-              return acc;
-            }, {});
-          }
-        }
-        
-        // Attach profile data to entries
-        return ledgerData.map(entry => ({
-          ...entry,
-          created_by: entry.created_by ? profiles[entry.created_by] || { id: entry.created_by } : null
-        }));
+      // Combine payment records and transactions
+      const allPayments = [];
+      
+      // Process payment records
+      if (recordsData && recordsData.length > 0) {
+        recordsData.forEach(record => {
+          allPayments.push({
+            id: record.id,
+            quote_id: record.quote_id,
+            amount: record.amount,
+            payment_method: record.payment_method,
+            reference_number: record.reference_number,
+            payment_date: record.created_at,
+            created_at: record.created_at,
+            status: record.amount > 0 ? 'completed' : 'refunded',
+            transaction_type: record.amount > 0 ? 'payment' : 'refund',
+            payment_type: record.amount > 0 ? 'payment' : 'refund',
+            gateway_code: record.payment_method === 'payu' ? 'payu' : null,
+            gateway_reference: record.reference_number,
+            notes: record.notes,
+            recorded_by: record.recorded_by
+          });
+        });
       }
       
       // Otherwise, transform transaction data to match ledger format

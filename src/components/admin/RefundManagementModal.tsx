@@ -174,72 +174,81 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
         }
       }
 
-      // Create refund record in payment_ledger
-      let refundRecord: any = null;
-      const { data: ledgerData, error: refundError } = await supabase
+      // Create refund record in payment_ledger for proper accounting
+      const refundReference = `REF-${Date.now()}`;
+      
+      // First check if payment_ledger table exists
+      const { error: tableCheckError } = await supabase
+        .from('payment_ledger')
+        .select('id')
+        .limit(1);
+      
+      if (tableCheckError && tableCheckError.code === '42P01') {
+        // Table doesn't exist - this is a critical issue
+        toast({
+          title: "Database Configuration Error",
+          description: "The payment_ledger table is missing. Please contact support to fix this issue.",
+          variant: "destructive"
+        });
+        throw new Error('payment_ledger table is required for proper accounting');
+      }
+      
+      // Create payment ledger entry
+      const { data: refundRecord, error: ledgerError } = await supabase
         .from('payment_ledger')
         .insert({
           quote_id: quote.id,
-          payment_type: refundType === 'credit_note' ? 'credit_applied' : 'refund',
-          payment_method: refundMethod === 'original' ? 'original_method' : refundMethod,
-          gateway_code: refundMethod === 'original' ? 'original' : 'manual',
+          transaction_type: 'refund',
+          payment_type: refundType === 'credit_note' ? 'credit_note' : 'refund',
+          payment_method: refundMethod === 'original' ? breakdown[0]?.method || 'manual' : refundMethod,
+          gateway_code: refundMethod === 'original' ? breakdown[0]?.gateway || 'manual' : 'manual',
           amount: -amount, // Negative for refunds
           currency: quote.currency,
-          base_amount: -amount, // Assuming same currency for now
+          base_amount: -amount, // TODO: Calculate with exchange rate
+          exchange_rate: 1, // TODO: Get actual exchange rate
           status: 'completed',
           payment_date: new Date().toISOString(),
-          reference_number: `REF-${Date.now()}`,
+          reference_number: refundReference,
+          gateway_reference: refundMethod === 'original' ? breakdown[0]?.reference : null,
           notes: `${reason} - ${internalNotes}`.trim(),
-          balance_before: quote.amount_paid,
-          balance_after: quote.amount_paid - amount,
           created_by: userData.user.id
         })
         .select()
         .single();
-
-      if (refundError) {
-        // Fallback to payment_records if payment_ledger doesn't exist
-        console.warn('payment_ledger table not available, using payment_records fallback');
-        const { data: recordData, error: recordError } = await supabase
-          .from('payment_records')
-          .insert({
-            quote_id: quote.id,
-            payment_method: refundMethod === 'original' ? 'original_method' : refundMethod,
-            amount: -amount, // Negative for refunds
-            reference_number: `REF-${Date.now()}`,
-            notes: `REFUND: ${reason} - ${internalNotes}`.trim(),
-            recorded_by: userData.user.id
-          })
-          .select()
-          .single();
-        
-        if (recordError) throw recordError;
-        refundRecord = recordData;
-      } else {
-        refundRecord = ledgerData;
+      
+      if (ledgerError) {
+        console.error('Failed to create payment ledger entry:', ledgerError);
+        throw ledgerError;
       }
 
-      // Create financial transaction records for double-entry bookkeeping (optional)
-      try {
-        for (const item of breakdown) {
+      // Skip financial transactions as table doesn't exist
+
+      // Create entry in gateway_refunds table for tracking
+      if (refundMethod === 'original' && breakdown.length > 0) {
+        try {
           await supabase
-            .from('financial_transactions')
+            .from('gateway_refunds')
             .insert({
+              gateway_refund_id: refundReference,
+              gateway_transaction_id: breakdown[0].reference || refundReference,
+              gateway_code: breakdown[0].gateway || 'manual',
               quote_id: quote.id,
-              transaction_type: refundType === 'credit_note' ? 'credit_note' : 'refund',
-              debit_account: 'accounts_receivable',
-              credit_account: refundMethod === 'bank_transfer' ? 'bank_account' : 'payment_gateway',
-              amount: item.amount,
+              refund_amount: amount,
+              original_amount: breakdown[0].amount,
               currency: quote.currency,
-              base_amount: item.amount, // Assuming same currency for now
-              transaction_date: new Date().toISOString(),
-              reference_number: refundRecord.reference_number,
-              description: `${reason} - Refund via ${item.gateway}`,
-              created_by: userData.user.id
+              refund_type: refundType === 'full' ? 'FULL' : 'PARTIAL',
+              reason_code: 'CUSTOMER_REQUEST',
+              reason_description: reason,
+              admin_notes: internalNotes,
+              status: 'completed',
+              gateway_status: 'COMPLETED',
+              gateway_response: { manual: true, breakdown: breakdown },
+              refund_date: new Date().toISOString(),
+              processed_by: userData.user.id
             });
+        } catch (gwError) {
+          console.warn('Could not create gateway_refunds entry:', gwError);
         }
-      } catch (financialError) {
-        console.warn('financial_transactions table not available, skipping double-entry records:', financialError);
       }
 
       // Update quote's amount_paid
