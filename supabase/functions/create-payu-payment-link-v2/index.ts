@@ -329,7 +329,6 @@ async function createPaymentLinkREST(params: {
         gateway_link_id: invoiceNumber,
         link_code: linkCode,
         title: description || `Payment for Order ${quoteId}`,
-        description: description,
         amount: amount,
         currency: 'INR',
         original_amount: originalAmount,
@@ -341,18 +340,7 @@ async function createPaymentLinkREST(params: {
         gateway_response: payuResult,
         customer_email: customerInfo.email,
         customer_name: customerInfo.name,
-        customer_phone: customerInfo.phone,
-        metadata: {
-          quote_id: quoteId,
-          exchange_rate: currency !== 'INR' ? (amount / originalAmount) : 1,
-          custom_fields: customFields,
-          template: template,
-          partial_payment_allowed: partialPaymentAllowed,
-          api_method: 'rest',
-          success_url: successUrl,
-          failure_url: failureUrl,
-          original_invoice_number: invoiceNumber
-        }
+        customer_phone: customerInfo.phone
       })
       .select()
       .single();
@@ -558,7 +546,6 @@ async function createPaymentLinkLegacy(params: {
         gateway_link_id: invoiceId,
         link_code: linkCode,
         title: description || `Payment for Quote ${quoteId}`,
-        description: description,
         amount: amount,
         currency: 'INR',
         original_amount: originalAmount,
@@ -570,12 +557,7 @@ async function createPaymentLinkLegacy(params: {
         gateway_response: payuResult,
         customer_email: customerInfo.email,
         customer_name: customerInfo.name,
-        customer_phone: customerInfo.phone,
-        metadata: {
-          quote_id: quoteId,
-          exchange_rate: currency !== 'INR' ? (amount / originalAmount) : 1,
-          api_method: 'legacy'
-        }
+        customer_phone: customerInfo.phone
       })
       .select()
       .single();
