@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Clock, Package, Truck, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 interface DeliveryOption {
   id: string;
@@ -27,6 +28,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
   selectedOptionId,
   className = ''
 }) => {
+  const { getStatusConfig } = useStatusManagement();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shippingRoute, setShippingRoute] = useState<any>(null);
@@ -208,7 +210,11 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
   const calculateTimeline = (option: DeliveryOption) => {
     if (!shippingRoute) return null;
 
-    const startDate = quote.status === 'paid' && quote.payment_date 
+    // DYNAMIC: Check if quote status indicates payment received
+    const statusConfig = getStatusConfig(quote.status, quote.status.includes('paid') || quote.status.includes('ordered') ? 'order' : 'quote');
+    const isPaymentReceived = statusConfig?.isSuccessful && (quote.status.includes('paid') || quote.status === 'ordered');
+    
+    const startDate = isPaymentReceived && quote.payment_date 
       ? new Date(quote.payment_date) 
       : new Date(quote.created_at);
 

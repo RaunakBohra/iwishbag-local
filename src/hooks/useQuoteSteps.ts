@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Quote } from '@/types/quote';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 export type QuoteStep = {
   id: string;
@@ -11,132 +12,96 @@ export type QuoteStep = {
 };
 
 export const useQuoteSteps = (quote: Quote | null) => {
+  const { quoteStatuses, orderStatuses, getStatusConfig } = useStatusManagement();
+
   return useMemo(() => {
     if (!quote) return [];
 
-    const steps: QuoteStep[] = [
-      {
-        id: 'requested',
-        label: 'Requested',
-        description: 'Quote request submitted',
-        date: quote.created_at,
-        status: 'upcoming',
-        icon: 'shopping-cart'
-      },
-      {
-        id: 'calculated',
-        label: 'Calculated',
-        description: 'Quote has been calculated',
-        date: quote.calculated_at,
-        status: 'upcoming',
-        icon: 'calculator'
-      },
-      {
-        id: 'sent',
-        label: 'Sent',
-        description: 'Quote has been sent to customer',
-        date: quote.sent_at,
-        status: 'upcoming',
-        icon: 'send'
-      }
-    ];
+    // Combine and sort all statuses by order
+    const allStatuses = [...quoteStatuses, ...orderStatuses]
+      .filter(status => status.isActive)
+      .sort((a, b) => a.order - b.order);
 
-    if (quote.status !== 'calculated' && quote.status !== 'cancelled') {
-      steps.push({
-        id: 'approved',
-        label: 'Approved',
-        description: 'Quote has been approved by customer',
-        date: quote.approved_at,
-        status: 'upcoming',
-        icon: 'check-circle'
-      });
-    }
-    if (quote.status === 'approved' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered') {
-      steps.push({
-        id: 'paid',
-        label: 'Paid',
-        description: 'Payment has been received',
-        date: quote.paid_at,
-        status: 'upcoming',
-        icon: 'credit-card'
-      });
-    }
-    if (quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered') {
-      steps.push({
-        id: 'ordered',
-        label: 'Ordered',
-        description: 'Order has been placed with seller',
-        date: quote.ordered_at,
-        status: 'upcoming',
-        icon: 'package'
-      });
-    }
-    if (quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered') {
-      steps.push({
-        id: 'shipped',
-        label: 'Shipped',
-        description: 'Order has been shipped',
-        date: quote.shipped_at,
-        status: 'upcoming',
-        icon: 'truck'
-      });
-    }
-    if (quote.status === 'shipped' || quote.status === 'delivered') {
-      steps.push({
-        id: 'delivered',
-        label: 'Delivered',
-        description: 'Order has been delivered',
-        date: quote.delivered_at,
-        status: 'upcoming',
-        icon: 'home'
-      });
-    }
+    // Map statuses to steps
+    const steps: QuoteStep[] = allStatuses.map(statusConfig => ({
+      id: statusConfig.name,
+      label: statusConfig.label,
+      description: statusConfig.description,
+      date: getDateForStatus(quote, statusConfig.name),
+      status: 'upcoming' as const,
+      icon: getIconForStatus(statusConfig.icon)
+    }));
 
-    // Find the last reached step
-    let lastReached = -1;
+    // Determine current step based on quote status
+    const currentStatusIndex = allStatuses.findIndex(s => s.name === quote.status);
+    
+    // Set step statuses based on progression
     for (let i = 0; i < steps.length; i++) {
-      const step = steps[i];
-      if (
-        (step.id === 'requested' && quote.status !== 'pending') ||
-        (step.id === 'calculated' && (quote.status === 'calculated' || quote.status === 'sent' || quote.status === 'approved' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
-        (step.id === 'sent' && (quote.status === 'sent' || quote.status === 'approved' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
-        (step.id === 'approved' && (quote.status === 'approved' || quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
-        (step.id === 'paid' && (quote.status === 'paid' || quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
-        (step.id === 'ordered' && (quote.status === 'ordered' || quote.status === 'shipped' || quote.status === 'delivered')) ||
-        (step.id === 'shipped' && (quote.status === 'shipped' || quote.status === 'delivered')) ||
-        (step.id === 'delivered' && quote.status === 'delivered')
-      ) {
-        lastReached = i;
-      }
-    }
-
-    // Set statuses
-    for (let i = 0; i < steps.length; i++) {
-      if (i < lastReached) {
+      if (i < currentStatusIndex) {
         steps[i].status = 'completed';
-      } else if (i === lastReached) {
+      } else if (i === currentStatusIndex) {
         steps[i].status = 'current';
       } else {
         steps[i].status = 'upcoming';
       }
     }
 
-    // Handle error/cancelled
-    if (quote.status === 'cancelled' && steps.length > 0) {
-      if (steps[lastReached + 1]) {
-        steps[lastReached + 1].status = 'error';
+    // Handle error states (rejected, cancelled, expired)
+    const currentStatusConfig = getStatusConfig(quote.status || '', 'quote') || 
+                               getStatusConfig(quote.status || '', 'order');
+    
+    if (currentStatusConfig?.isTerminal && !isSuccessStatus(quote.status || '', getStatusConfig)) {
+      const currentStep = steps.find(s => s.id === quote.status);
+      if (currentStep) {
+        currentStep.status = 'error';
       }
-    }
-
-    // Special case: if quote.status is 'pending', highlight 'requested' as current
-    if (quote.status === 'pending' && steps.length > 0) {
-      steps[0].status = 'current';
-      for (let i = 1; i < steps.length; i++) {
-        steps[i].status = 'upcoming';
-      }
-      return steps;
     }
 
     return steps;
-  }, [quote]);
-}; 
+  }, [quote, quoteStatuses, orderStatuses, getStatusConfig]);
+};
+
+// Helper function to get date for a specific status
+function getDateForStatus(quote: Quote, statusName: string): string | null {
+  const dateMap: Record<string, string | null> = {
+    'pending': quote.created_at,
+    'calculated': quote.calculated_at || null,
+    'sent': quote.sent_at || null,
+    'approved': quote.approved_at || null,
+    'paid': quote.paid_at || null,
+    'ordered': quote.ordered_at || null,
+    'shipped': quote.shipped_at || null,
+    'completed': quote.delivered_at || quote.completed_at || null,
+    'delivered': quote.delivered_at || null,
+    'rejected': quote.rejected_at || null,
+    'cancelled': quote.cancelled_at || null,
+    'expired': quote.expired_at || null,
+  };
+
+  return dateMap[statusName] || null;
+}
+
+// Helper function to map status icon names to icon strings
+function getIconForStatus(iconName: string): string {
+  const iconMap: Record<string, string> = {
+    'Clock': 'clock',
+    'FileText': 'file-text',
+    'CheckCircle': 'check-circle',
+    'DollarSign': 'credit-card',
+    'ShoppingCart': 'package',
+    'Truck': 'truck',
+    'Package': 'package',
+    'XCircle': 'x-circle',
+    'AlertTriangle': 'alert-triangle',
+    'Calculator': 'calculator',
+    'RefreshCw': 'refresh-cw',
+  };
+
+  return iconMap[iconName] || 'circle';
+}
+
+// DYNAMIC: Helper function to determine if a status represents success using status config
+function isSuccessStatus(status: string, getStatusConfig: Function): boolean {
+  const statusConfig = getStatusConfig(status, 'quote') || getStatusConfig(status, 'order');
+  return statusConfig?.isSuccessful ?? ['completed', 'delivered', 'paid', 'approved'].includes(status); // fallback
+}

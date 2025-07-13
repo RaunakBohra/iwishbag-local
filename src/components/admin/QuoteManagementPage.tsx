@@ -3,6 +3,8 @@ import { CreateQuoteModal } from "./CreateQuoteModal";
 import { RejectQuoteDialog } from "./RejectQuoteDialog";
 import { QuoteFilters } from "./QuoteFilters";
 import { useQuoteManagement } from "@/hooks/useQuoteManagement";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
+import { StatusDebugger } from "../debug/StatusDebugger";
 
 import { QuoteListHeader } from "./QuoteListHeader";
 import { useState } from "react";
@@ -30,6 +32,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const QuoteManagementPage = () => {
+    const { getStatusConfig } = useStatusManagement();
+    
     // Filter states managed in the page
     const [statusFilter, setStatusFilter] = useState('all');
     const [searchInput, setSearchInput] = useState('');
@@ -84,12 +88,24 @@ export const QuoteManagementPage = () => {
         );
     }
 
-    // Calculate statistics
+    // Calculate statistics using dynamic status configuration
     const totalQuotes = quotes?.length || 0;
-    const pendingQuotes = quotes?.filter(q => q.status === 'pending').length || 0;
-    const approvedQuotes = quotes?.filter(q => q.status === 'approved').length || 0;
-    const paidQuotes = quotes?.filter(q => q.status === 'paid').length || 0;
-    const cancelledQuotes = quotes?.filter(q => q.status === 'cancelled').length || 0;
+    const pendingQuotes = quotes?.filter(q => {
+      const config = getStatusConfig(q.status, 'quote');
+      return config?.allowApproval ?? (q.status === 'pending'); // fallback
+    }).length || 0;
+    const approvedQuotes = quotes?.filter(q => {
+      const config = getStatusConfig(q.status, 'quote');
+      return config?.allowCartActions ?? (q.status === 'approved'); // fallback
+    }).length || 0;
+    const paidQuotes = quotes?.filter(q => {
+      const config = getStatusConfig(q.status, 'quote');
+      return config?.showInOrdersList ?? (['paid', 'ordered', 'shipped', 'completed'].includes(q.status)); // fallback
+    }).length || 0;
+    const cancelledQuotes = quotes?.filter(q => {
+      const config = getStatusConfig(q.status, 'quote');
+      return (config?.isTerminal && !config?.isSuccessful) ?? (q.status === 'cancelled'); // fallback
+    }).length || 0;
     const totalValue = quotes?.reduce((sum, q) => sum + (q.final_total || 0), 0) || 0;
     const averageValue = totalQuotes > 0 ? totalValue / totalQuotes : 0;
 
@@ -251,6 +267,9 @@ export const QuoteManagementPage = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            
+            {/* Debug Component - Remove in production */}
+            <StatusDebugger />
         </div>
     );
 };

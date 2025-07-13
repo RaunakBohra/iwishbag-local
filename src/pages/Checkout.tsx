@@ -42,6 +42,7 @@ import { usePaymentGateways } from "@/hooks/usePaymentGateways";
 import { useAllCountries } from "@/hooks/useAllCountries";
 import { currencyService } from "@/services/CurrencyService";
 import { PaymentMethodSelector } from "@/components/payment/PaymentMethodSelector";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
 import { QRPaymentModal } from "@/components/payment/QRPaymentModal";
 import { PaymentStatusTracker } from "@/components/payment/PaymentStatusTracker";
 import { PaymentGateway, PaymentRequest } from "@/types/payment";
@@ -212,6 +213,7 @@ export default function Checkout() {
   const { formatAmount } = useUserCurrency();
   const { data: countries } = useAllCountries();
   const { sendBankTransferEmail } = useEmailNotifications();
+  const { findStatusForPaymentMethod } = useStatusManagement();
 
   // Fetch available currencies for guest selection using CurrencyService
   const { data: availableCurrencies } = useQuery({
@@ -472,10 +474,21 @@ export default function Checkout() {
 
   // Mutations
   const updateQuotesMutation = useMutation({
-    mutationFn: async ({ ids, status, method }: { ids: string[], status: string, method: string }) => {
+    mutationFn: async ({ ids, status, method, paymentStatus }: { ids: string[], status: string, method: string, paymentStatus?: string }) => {
+      const updateData: any = { 
+        status, 
+        payment_method: method, 
+        in_cart: false 
+      };
+      
+      // Set payment status for non-redirect payment methods
+      if (paymentStatus) {
+        updateData.payment_status = paymentStatus;
+      }
+      
       const { data, error } = await supabase
         .from('quotes')
-        .update({ status, payment_method: method, in_cart: false })
+        .update(updateData)
         .in('id', ids)
         .select()
         .single();
@@ -944,10 +957,29 @@ export default function Checkout() {
         // This case would be for non-redirect flows like COD or Bank Transfer
         toast({ title: "Order Submitted", description: "Your order has been received." });
         
+        // DYNAMIC: Set appropriate status based on payment method using configuration
+        const statusConfig = findStatusForPaymentMethod(paymentMethod);
+        const orderStatus = statusConfig?.name || 'ordered'; // Fallback to 'ordered' if not found
+        
+        // Set payment status based on payment method
+        let paymentStatus = 'unpaid'; // Default for all orders
+        if (paymentMethod === 'cod') {
+          // COD orders are considered "paid" upon delivery
+          paymentStatus = 'unpaid'; // Will be updated to 'paid' after delivery
+        }
+        
+        console.log(`Payment method: ${paymentMethod} → Order Status: ${orderStatus} (${statusConfig?.label || 'Default'}), Payment Status: ${paymentStatus}`);
+        
+        // Log status resolution for debugging
+        if (!statusConfig) {
+          console.warn(`No specific status configuration found for payment method: ${paymentMethod}, using default 'ordered'`);
+        }
+        
         const updateResult = await updateQuotesMutation.mutateAsync({ 
           ids: cartQuoteIds, 
-          status: 'ordered', 
-          method: paymentMethod 
+          status: orderStatus, 
+          method: paymentMethod,
+          paymentStatus: paymentStatus 
         });
         
         // Send bank transfer email if payment method is bank_transfer
@@ -1540,7 +1572,7 @@ export default function Checkout() {
                                   <p className="text-sm text-muted-foreground">
                                     {address.city}, {address.state_province_region} {address.postal_code}
                                   </p>
-                                  <p className="text-sm text-muted-foreground">{address.country}</p>
+                                  <p className="text-sm text-muted-foreground">{address.destination_country}</p>
                                 </div>
                               </Label>
                             </div>

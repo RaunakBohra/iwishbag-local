@@ -44,9 +44,9 @@ import { QuoteExpirationTimer } from '@/components/dashboard/QuoteExpirationTime
 
 // Import new admin components
 import { CustomerCommHub } from './CustomerCommHub';
-import { PaymentManagementWidget } from './PaymentManagementWidget';
 import { ShippingTrackingManager } from './ShippingTrackingManager';
 import { AddressContactManager } from './AddressContactManager';
+import { SimplePaymentInfo } from './SimplePaymentInfo';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -157,8 +157,11 @@ const AdminOrderDetailPage = () => {
 
   const quickActions = getQuickActions();
 
-  // Determine if this is an order based on status
-  const isOrder = quote && ['paid', 'ordered', 'shipped', 'completed'].includes(quote.status);
+  // DYNAMIC: Determine if this is an order based on status configuration
+  const isOrder = quote && (() => {
+    const statusConfig = getStatusConfig(quote.status, 'quote') || getStatusConfig(quote.status, 'order');
+    return statusConfig?.countsAsOrder ?? ['paid', 'ordered', 'shipped', 'completed'].includes(quote.status); // fallback
+  })();
 
   const originCountry = useWatch({
     control: form.control,
@@ -180,8 +183,11 @@ const AdminOrderDetailPage = () => {
   // Extracted address from notes
   const extractedAddress = quote?.notes ? extractShippingAddressFromNotes(quote.notes) : null;
 
-  // Modified to check if address should be editable
-  const isAddressEditable = quote && !['paid', 'ordered', 'shipped', 'completed'].includes(quote.status);
+  // DYNAMIC: Check if address should be editable based on status configuration
+  const isAddressEditable = quote && (() => {
+    const statusConfig = getStatusConfig(quote.status, 'quote') || getStatusConfig(quote.status, 'order');
+    return statusConfig?.allowAddressEdit ?? !['paid', 'ordered', 'shipped', 'completed'].includes(quote.status); // fallback
+  })();
 
   const handleStatusUpdate = async (newStatus: string) => {
     if (!quote) return;
@@ -417,22 +423,7 @@ const AdminOrderDetailPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Final Total</span>
-                  <span className="font-medium">${quote.final_total}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Payment Method</span>
-                  <Badge variant="outline">{quote.payment_method || 'Not specified'}</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span>Payment Status</span>
-                  <Badge variant={quote.payment_status === 'paid' ? 'success' : 'secondary'}>
-                    {quote.payment_status || 'Pending'}
-                  </Badge>
-                </div>
-              </div>
+              <SimplePaymentInfo quote={quote} />
             </CardContent>
           </Card>
 
@@ -527,7 +518,14 @@ const AdminOrderDetailPage = () => {
         {/* Payment & Shipping Tab */}
         <TabsContent value="payment-shipping" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
-            <PaymentManagementWidget quote={quote} />
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SimplePaymentInfo quote={quote} />
+              </CardContent>
+            </Card>
             <ShippingTrackingManager quote={quote} />
           </div>
           <AddressContactManager quote={quote} />

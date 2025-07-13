@@ -27,6 +27,7 @@ import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
 import { SimpleEnhancedAnalytics } from "@/components/admin/SimpleEnhancedAnalytics";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminBottomNav } from "@/components/admin/AdminBottomNav";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,6 +48,7 @@ import { AlertTriangle, Globe, RefreshCw, UserCheck } from "lucide-react";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { getStatusesForOrdersList, getStatusesForQuotesList } = useStatusManagement();
 
   // Fetch comprehensive data for analytics with optimized queries
   const { data: allQuotes, isLoading: quotesLoading } = useQuery({
@@ -99,7 +101,7 @@ const AdminDashboard = () => {
           payment_status,
           user_id
         `)
-        .in('status', ['paid', 'processing', 'shipped', 'delivered', 'completed'])
+        .in('status', getStatusesForOrdersList())
         .order('created_at', { ascending: false })
         .limit(500); // Limit orders
       if (error) throw error;
@@ -115,9 +117,9 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const [quotesResult, ordersResult, customersResult, pendingQuotesResult] = await Promise.all([
         supabase.from('quotes').select('*', { count: 'exact', head: true }),
-        supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['paid', 'ordered', 'shipped', 'completed']),
+        supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', getStatusesForOrdersList()),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending', 'approved']),
+        supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', getStatusesForQuotesList()),
       ]);
 
       // Try to get payment data, but handle gracefully if table doesn't exist

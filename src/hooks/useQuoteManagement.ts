@@ -46,12 +46,23 @@ export const useQuoteManagement = (filters = {}) => {
             // Only show quotes with statuses that are configured to show in quotes list
             const quoteStatusNames = getStatusesForQuotesList();
             console.log('DEBUG: Quote statuses allowed in quotes list:', quoteStatusNames);
-            if (quoteStatusNames.length > 0) {
-                query = query.in('status', quoteStatusNames);
-            }
-        
+            
             if (statusFilter !== 'all') {
-                query = query.eq('status', statusFilter);
+                // Check if the selected status is allowed in quotes list
+                if (quoteStatusNames.includes(statusFilter)) {
+                    query = query.eq('status', statusFilter);
+                } else {
+                    // If selected status is not allowed, show all allowed statuses
+                    console.log(`DEBUG: Status '${statusFilter}' is not allowed in quotes list, showing all allowed statuses`);
+                    if (quoteStatusNames.length > 0) {
+                        query = query.in('status', quoteStatusNames);
+                    }
+                }
+            } else {
+                // No specific status selected, show all allowed statuses
+                if (quoteStatusNames.length > 0) {
+                    query = query.in('status', quoteStatusNames);
+                }
             }
 
             if (purchaseCountryFilter && purchaseCountryFilter !== 'all') {
@@ -141,7 +152,9 @@ export const useQuoteManagement = (filters = {}) => {
         mutationFn: async ({ ids, status }: { ids: string[], status: string }) => {
             const updateObject: Partial<Tables<'quotes'>> = { status };
 
-            if (status === 'paid') {
+            // DYNAMIC: Check if this status represents a paid state
+            const statusConfig = useStatusManagement().getStatusConfig(status, 'order');
+            if (statusConfig?.isSuccessful && statusConfig?.countsAsOrder) {
                 updateObject.paid_at = new Date().toISOString();
 
                 for (const quoteId of ids) {
@@ -161,9 +174,10 @@ export const useQuoteManagement = (filters = {}) => {
                         if (!currentQuote.order_display_id) {
                             singleUpdate.order_display_id = `ORD-${quoteId.substring(0, 6).toUpperCase()}`;
                         }
-                        if (currentQuote.status === 'cod_pending') {
+                        // DYNAMIC: Check for payment pending statuses
+                        if (currentQuote.status.includes('cod_pending') || currentQuote.status.includes('cod')) {
                             singleUpdate.payment_method = 'cod';
-                        } else if (currentQuote.status === 'bank_transfer_pending') {
+                        } else if (currentQuote.status.includes('bank_transfer') || currentQuote.status.includes('transfer')) {
                             singleUpdate.payment_method = 'bank_transfer';
                         }
                     }
@@ -199,10 +213,14 @@ export const useQuoteManagement = (filters = {}) => {
 
     const updateMultipleQuotesRejectionMutation = useMutation({
         mutationFn: async ({ ids, reasonId, details }: { ids: string[], reasonId: string, details: string }) => {
+            // DYNAMIC: Use rejected status from configuration or fallback
+            const rejectedStatusConfig = useStatusManagement().quoteStatuses.find(s => s.name === 'rejected' || s.id === 'rejected');
+            const rejectedStatus = rejectedStatusConfig?.name || 'rejected';
+            
             const { error } = await supabase
                 .from('quotes')
                 .update({ 
-                    status: 'rejected',
+                    status: rejectedStatus,
                     rejection_reason_id: reasonId,
                     rejection_details: details,
                     rejected_at: new Date().toISOString()

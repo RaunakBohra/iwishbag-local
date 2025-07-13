@@ -384,7 +384,7 @@ export const CustomerTable = ({
                                         <div key={address.id} className="flex items-center space-x-2">
                                           <MapPin className="h-4 w-4 text-muted-foreground" />
                                           <span className="text-sm">
-                                            {`${address.address_line1}${address.address_line2 ? `, ${address.address_line2}` : ''}, ${address.city}, ${address.country}`}
+                                            {`${address.address_line1}${address.address_line2 ? `, ${address.address_line2}` : ''}, ${address.city}, ${address.destination_country || ''}`}
                                           </span>
                                           {address.is_default && (
                                             <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">

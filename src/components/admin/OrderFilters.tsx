@@ -27,11 +27,12 @@ export const OrderFilters = ({
   paymentStatusFilter,
   onPaymentStatusChange,
 }: OrderFiltersProps) => {
-  const { orderStatuses } = useStatusManagement();
+  const { orderStatuses, getStatusesForOrdersList } = useStatusManagement();
 
-  // Get only order statuses for filtering
+  // Get only order statuses that should show in orders list
+  const allowedStatusNames = getStatusesForOrdersList();
   const availableOrderStatuses = (orderStatuses || [])
-    .filter(status => status.isActive)
+    .filter(status => status.isActive && allowedStatusNames.includes(status.name))
     .sort((a, b) => a.order - b.order);
 
   return (

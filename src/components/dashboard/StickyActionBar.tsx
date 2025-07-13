@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, ShoppingCart, Clock } from 'lucide-react';
 import { QuoteExpirationTimer } from './QuoteExpirationTimer';
 import { useCartStore } from '@/stores/cartStore';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 interface StickyActionBarProps {
   quote: any;
@@ -28,96 +29,104 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
 
   // Subscribe to cart store to make sticky bar reactive to cart changes
   const cartItems = useCartStore((state) => state.items);
+  const { getStatusConfig } = useStatusManagement();
   
   // Helper function to check if this quote is in cart
   const isQuoteInCart = (quoteId: string) => {
     return cartItems.some(item => item.quoteId === quoteId);
   };
 
-  const renderActions = () => {
-    // Show appropriate action buttons based on status
-    switch (quote.status) {
-      case 'sent':
-        return (
-          <div className="flex gap-2">
-            <Button 
-              className="flex-1 hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
-              onClick={onApprove}
-              disabled={isUpdating}
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Approve
-            </Button>
-            <Button 
-              variant="outline"
-              className="flex-1 hover:scale-105 transition-all duration-200 border-red-200 text-red-600 hover:bg-red-50"
-              onClick={onReject}
-              disabled={isUpdating}
-            >
-              <XCircle className="h-4 w-4 mr-2" />
-              Reject
-            </Button>
-          </div>
-        );
+  // Get dynamic status configuration
+  const statusConfig = getStatusConfig(quote.status, 'quote');
 
-      case 'rejected':
-      case 'cancelled':
-        return (
+  const renderActions = () => {
+    // DYNAMIC: Use status configuration instead of hardcoded switch
+    if (!statusConfig) return null;
+
+    // Show approval/rejection buttons for statuses that allow these actions
+    if (statusConfig.allowApproval && statusConfig.allowRejection) {
+      return (
+        <div className="flex gap-2">
           <Button 
-            className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
+            className="flex-1 hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
             onClick={onApprove}
             disabled={isUpdating}
           >
             <CheckCircle className="h-4 w-4 mr-2" />
-            Re-Approve
+            Approve
+          </Button>
+          <Button 
+            variant="outline"
+            className="flex-1 hover:scale-105 transition-all duration-200 border-red-200 text-red-600 hover:bg-red-50"
+            onClick={onReject}
+            disabled={isUpdating}
+          >
+            <XCircle className="h-4 w-4 mr-2" />
+            Reject
+          </Button>
+        </div>
+      );
+    }
+
+    // Show re-approval button for rejected/cancelled statuses
+    if (statusConfig.allowApproval && !statusConfig.allowRejection) {
+      return (
+        <Button 
+          className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
+          onClick={onApprove}
+          disabled={isUpdating}
+        >
+          <CheckCircle className="h-4 w-4 mr-2" />
+          Re-Approve
+        </Button>
+      );
+    }
+
+    // Show cart actions for approved quotes
+    if (statusConfig.allowCartActions) {
+      if (!isQuoteInCart(quote.id)) {
+        return (
+          <Button 
+            className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
+            onClick={onAddToCart}
+            disabled={isUpdating}
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Add to Cart
           </Button>
         );
-
-      case 'approved':
-        if (!isQuoteInCart(quote.id)) {
-          return (
-            <Button 
-              className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
-              onClick={onAddToCart}
-              disabled={isUpdating}
-            >
+      } else {
+        return (
+          <Link to="/cart" className="w-full">
+            <Button className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl">
               <ShoppingCart className="h-4 w-4 mr-2" />
-              Add to Cart
+              View in Cart
             </Button>
-          );
-        } else {
-          return (
-            <Link to="/cart" className="w-full">
-              <Button className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl">
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                View in Cart
-              </Button>
-            </Link>
-          );
-        }
-
-      case 'expired':
-        if (quote.renewal_count < 1) {
-          return (
-            <Button 
-              className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl"
-              onClick={onRenewed}
-              disabled={isUpdating}
-            >
-              <Clock className="h-4 w-4 mr-2" />
-              Renew Quote
-            </Button>
-          );
-        }
-        break;
-
-      default:
-        return null;
+          </Link>
+        );
+      }
     }
+
+    // Show renewal button for expired quotes
+    if (statusConfig.allowRenewal && quote.renewal_count < 1) {
+      return (
+        <Button 
+          className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl"
+          onClick={onRenewed}
+          disabled={isUpdating}
+        >
+          <Clock className="h-4 w-4 mr-2" />
+          Renew Quote
+        </Button>
+      );
+    }
+
+    return null;
   };
 
   const renderExpirationTimer = () => {
-    if ((quote.status === 'sent' || quote.status === 'approved') && quote.expires_at) {
+    // DYNAMIC: Show expiration timer based on status config
+    if (statusConfig?.showExpiration && quote.expires_at) {
       return (
         <div className="flex items-center justify-center p-2 mb-2 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg">
           <QuoteExpirationTimer 

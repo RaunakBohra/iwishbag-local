@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Message } from "./types";
 import { Receipt, CheckCircle, XCircle, Eye, MessageSquare } from "lucide-react";
 import { useState } from "react";
-import { PaymentProofPreviewModal } from "@/components/payment/PaymentProofPreviewModal";
+// PaymentProofPreviewModal removed - using new simplified payment management
 
 interface MessageItemProps {
   message: Message;
@@ -146,19 +146,7 @@ export const MessageItem = ({ message, currentUserId, isAdmin, onVerificationUpd
         </div>
       )}
 
-      {/* Payment Proof Preview Modal */}
-      {isPaymentProof && showPreviewModal && (
-        <PaymentProofPreviewModal
-          isOpen={showPreviewModal}
-          onClose={() => setShowPreviewModal(false)}
-          message={message as Message & { message_type: 'payment_proof' }}
-          orderId={message.quote_id}
-          onStatusUpdate={() => {
-            onVerificationUpdate?.();
-            setShowPreviewModal(false);
-          }}
-        />
-      )}
+      {/* Payment proof preview now handled in dedicated payment management page */}
     </div>
   );
 };

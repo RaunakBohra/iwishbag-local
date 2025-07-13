@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 interface QuoteSummaryProps {
-  status: 'pending' | 'approved' | 'rejected' | 'in_cart';
+  status: string; // DYNAMIC: Allow any status instead of hardcoded union
   total: number;
   itemCount: number;
   onApprove?: () => void;
@@ -30,18 +30,18 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
   countryCode
 }) => {
   const { formatAmount } = useUserCurrency();
-  const { quoteStatuses } = useStatusManagement();
+  const { getStatusConfig } = useStatusManagement();
 
-  // Get status configuration from the management system
-  const statusConfig = (quoteStatuses || []).find(s => s.name === status);
+  // DYNAMIC: Get status configuration from the management system
+  const statusConfig = getStatusConfig(status, 'quote');
 
   // Fallback status info if not found in management system
   const statusInfo = statusConfig ? {
     label: statusConfig.label,
-    color: statusConfig.color || 'bg-gray-100 text-gray-800'
+    color: statusConfig.badgeVariant || 'secondary'
   } : {
     label: status ? status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ') : 'Unknown',
-    color: 'bg-gray-100 text-gray-800'
+    color: 'secondary'
   };
 
   const formattedTotal = formatAmount(total);
@@ -71,8 +71,8 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2">
-          {/* Approve Button */}
-          {onApprove && status === 'pending' && (
+          {/* DYNAMIC: Approve Button */}
+          {onApprove && statusConfig?.allowApproval && (
             <Button
               onClick={onApprove}
               disabled={isProcessing}
@@ -98,8 +98,8 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
             </Button>
           )}
 
-          {/* Reject Button */}
-          {onReject && status === 'pending' && (
+          {/* DYNAMIC: Reject Button */}
+          {onReject && statusConfig?.allowRejection && (
             <Button
               onClick={onReject}
               disabled={isProcessing}
@@ -121,19 +121,23 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
         </div>
       </div>
       
-      {/* Status-specific messages */}
-      {status === 'approved' && (
-        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-800">
-            ✓ Quote approved! You can now add this to your cart.
-          </p>
-        </div>
-      )}
-      
-      {status === 'rejected' && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-800">
-            ✗ This quote has been rejected.
+      {/* DYNAMIC: Status-specific messages */}
+      {statusConfig?.customerMessage && (
+        <div className={`mt-4 p-3 rounded-lg ${
+          statusConfig.isSuccessful 
+            ? 'bg-green-50 border border-green-200' 
+            : statusConfig.isTerminal 
+              ? 'bg-red-50 border border-red-200'
+              : 'bg-blue-50 border border-blue-200'
+        }`}>
+          <p className={`text-sm ${
+            statusConfig.isSuccessful 
+              ? 'text-green-800' 
+              : statusConfig.isTerminal 
+                ? 'text-red-800'
+                : 'text-blue-800'
+          }`}>
+            {statusConfig.customerMessage}
           </p>
         </div>
       )}

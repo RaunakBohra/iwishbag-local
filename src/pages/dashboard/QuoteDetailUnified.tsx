@@ -8,6 +8,7 @@ import { useAllCountries } from '@/hooks/useAllCountries';
 import { useQuoteState } from '@/hooks/useQuoteState';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useCartStore } from '@/stores/cartStore';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +50,6 @@ import { RenewQuoteButton } from '@/components/RenewQuoteButton';
 import { CustomerRejectQuoteDialog } from '@/components/dashboard/CustomerRejectQuoteDialog';
 import { ShareQuoteButton } from '@/components/admin/ShareQuoteButton';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
-import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { QuoteMessaging } from '@/components/messaging/QuoteMessaging';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -73,6 +73,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
+  const { getStatusConfig } = useStatusManagement();
   const isMobile = useIsMobile();
   
   // Determine if we're in share token mode
@@ -573,9 +574,12 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
 
   const renderActionButtons = () => {
     const isInCart = isQuoteInCart(quote.id);
-    const canApprove = quote.status === 'sent' || quote.status === 'calculated';
-    const canAddToCart = quote.status === 'approved' && !isInCart;
-    const canCheckout = quote.status === 'approved' && isInCart;
+    const statusConfig = getStatusConfig(quote.status, 'quote');
+    
+    // Use dynamic status configuration with fallbacks
+    const canApprove = statusConfig?.allowApproval ?? (quote.status === 'sent' || quote.status === 'calculated');
+    const canAddToCart = (statusConfig?.allowCartActions ?? (quote.status === 'approved')) && !isInCart;
+    const canCheckout = (statusConfig?.allowCartActions ?? (quote.status === 'approved')) && isInCart;
 
     if (!canTakeActions && !isAdmin) return null;
 
@@ -1134,8 +1138,8 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
         <CustomerRejectQuoteDialog
           isOpen={isRejectDialogOpen}
           onOpenChange={setIsRejectDialogOpen}
-          onReject={handleReject}
-          isUpdating={isUpdating}
+          onConfirm={handleReject}
+          isPending={isUpdating}
         />
       )}
 

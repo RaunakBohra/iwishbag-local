@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tables } from '@/integrations/supabase/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 import { QuoteBreakdownHeader } from './QuoteBreakdownHeader';
 import { QuoteBreakdownDetails } from './QuoteBreakdownDetails';
@@ -45,41 +46,70 @@ interface QuoteBreakdownProps {
   addToCartText?: string;
 }
 
-const getQuoteUIState = (quote: any) => {
-  const { status, in_cart } = quote;
-  
-  let step: 'review' | 'approve' | 'cart' | 'checkout' | 'rejected' = 'review';
-  let summaryStatus: 'pending' | 'approved' | 'rejected' | 'in_cart' = 'pending';
-  
-  if (status === 'pending') {
-    step = 'review';
-    summaryStatus = 'pending';
-  } else if (status === 'sent') {
-    step = 'approve';
-    summaryStatus = 'pending';
-  } else if (status === 'approved' && !in_cart) {
-    step = 'approve';
-    summaryStatus = 'approved';
-  } else if (status === 'approved' && in_cart) {
-    step = 'cart';
-    summaryStatus = 'in_cart';
-  } else if (status === 'rejected') {
-    step = 'rejected';
-    summaryStatus = 'rejected';
-  } else if (status === 'paid' || status === 'ordered' || status === 'shipped' || status === 'completed') {
-    step = 'checkout';
-    summaryStatus = 'approved';
-  } else {
-    // Default case for any unexpected status values
-    step = 'review';
-    summaryStatus = 'pending';
-  }
-  
-  return { step, summaryStatus, rejected: step === 'rejected' };
-};
+// DEPRECATED: Legacy function moved inside component for dynamic access
 
 export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onRecalculate, onSave, onCancel, onAddToCart, addToCartText }: QuoteBreakdownProps) {
+  const { getStatusConfig } = useStatusManagement();
   const [isItemsExpanded, setIsItemsExpanded] = useState(true);
+
+  // DYNAMIC: Quote UI state mapping using status management configuration
+  const getQuoteUIState = useMemo(() => {
+    const { status, in_cart } = quote;
+    const statusConfig = getStatusConfig(status, 'quote');
+    
+    let step: 'review' | 'approve' | 'cart' | 'checkout' | 'rejected' = 'review';
+    let summaryStatus: 'pending' | 'approved' | 'rejected' | 'in_cart' = 'pending';
+    
+    // Use dynamic configuration or fallback to hardcoded logic
+    if (statusConfig) {
+      // Determine step based on status configuration
+      if (statusConfig.isTerminal && !statusConfig.isSuccessful) {
+        step = 'rejected';
+        summaryStatus = 'rejected';
+      } else if (statusConfig.allowCartActions && !in_cart) {
+        step = 'approve';
+        summaryStatus = 'approved';
+      } else if (statusConfig.allowCartActions && in_cart) {
+        step = 'cart';
+        summaryStatus = 'in_cart';
+      } else if (statusConfig.allowApproval) {
+        step = 'approve';
+        summaryStatus = 'pending';
+      } else if (statusConfig.showInOrdersList) {
+        step = 'checkout';
+        summaryStatus = 'approved';
+      } else {
+        step = 'review';
+        summaryStatus = 'pending';
+      }
+    } else {
+      // FALLBACK: Legacy hardcoded logic
+      if (status === 'pending') {
+        step = 'review';
+        summaryStatus = 'pending';
+      } else if (status === 'sent') {
+        step = 'approve';
+        summaryStatus = 'pending';
+      } else if (status === 'approved' && !in_cart) {
+        step = 'approve';
+        summaryStatus = 'approved';
+      } else if (status === 'approved' && in_cart) {
+        step = 'cart';
+        summaryStatus = 'in_cart';
+      } else if (status === 'rejected') {
+        step = 'rejected';
+        summaryStatus = 'rejected';
+      } else if (statusConfig && statusConfig.countsAsOrder) {
+        step = 'checkout';
+        summaryStatus = 'approved';
+      } else {
+        step = 'review';
+        summaryStatus = 'pending';
+      }
+    }
+    
+    return { step, summaryStatus, rejected: step === 'rejected' };
+  }, [quote, getStatusConfig]);
   const [isEditing, setIsEditing] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -172,7 +202,7 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
     handleRejectSummary();
   };
 
-  const uiState = getQuoteUIState(quote);
+  const uiState = getQuoteUIState;
 
   return (
     <Card className="w-full overflow-hidden bg-card border border-border">
@@ -182,8 +212,8 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
           status={uiState.summaryStatus}
           total={quoteTotal}
           itemCount={quote.quote_items?.length || 0}
-          onApprove={uiState.step === 'approve' || quote.status === 'pending' ? handleApproveClick : undefined}
-          onReject={quote.status === 'pending' ? handleRejectSummary : undefined}
+          onApprove={uiState.step === 'approve' || (statusConfig?.allowApproval ?? false) ? handleApproveClick : undefined}
+          onReject={statusConfig?.allowRejection ?? false ? handleRejectSummary : undefined}
           isProcessing={isProcessing}
           countryCode={quote.destination_country}
           renderActions={() => (

@@ -414,6 +414,14 @@ CREATE POLICY "Users can access own quotes" ON quotes
 - **Iterative Refinement**: Start with core functionality, then enhance based on feedback
 - if error is shared by me, explain whats causing it and then tell me ways to fix it. ask me which solution i'd want
 
+## Data Flow Optimization Principles
+- **Fix Data Flow First**: Before adding new API calls or features, check if the issue is just improper data synchronization
+- **Use React Query Properly**: Ensure correct query invalidation patterns instead of adding redundant data fetches
+- **Single Source of Truth**: Avoid duplicate data entry points - components should share the same database values
+- **Query Key Consistency**: Components displaying the same data should use consistent query keys for proper cache management
+- **Minimize API Calls**: Focus on proper cache invalidation rather than making extra database queries
+- **Component Communication**: Use React Query's cache as the communication layer between components displaying the same data
+
 ## Before Starting Any Task
 1. **Clarify Requirements**
    - What is the exact goal?

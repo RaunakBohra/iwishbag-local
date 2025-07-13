@@ -80,26 +80,41 @@ export interface QuoteState {
   cancelled_at?: string;
 }
 
-// Status transition validation
-export const isValidStatusTransition = (currentState: QuoteState, newState: Partial<QuoteState>): boolean => {
+// Dynamic status transition validation using status management configuration
+// For React components: use the hook version (useStatusTransitionValidation)
+// For utility functions: use this version with explicit transition rules
+export const isValidStatusTransition = (
+  currentState: QuoteState, 
+  newState: Partial<QuoteState>,
+  allowedTransitions?: Record<string, string[]>
+): boolean => {
   // If status is changing
   if (newState.status && newState.status !== currentState.status) {
-    // Validate status transitions
+    // Use provided transition rules (from status management) or fallback to hardcoded
+    if (allowedTransitions) {
+      return allowedTransitions[currentState.status]?.includes(newState.status) ?? false;
+    }
+    
+    // FALLBACK: Legacy hardcoded transitions (will be deprecated)
     switch (currentState.status) {
       case 'pending':
         return ['sent', 'rejected'].includes(newState.status);
       case 'sent':
         return ['approved', 'rejected', 'expired'].includes(newState.status);
       case 'approved':
-        return ['rejected'].includes(newState.status);
+        return ['rejected', 'payment_pending', 'paid'].includes(newState.status);
       case 'rejected':
         return ['approved'].includes(newState.status);
       case 'expired':
         return ['approved'].includes(newState.status);
+      case 'payment_pending':
+        return ['paid', 'cancelled'].includes(newState.status);
       case 'paid':
-        return ['ordered', 'cancelled'].includes(newState.status);
+        return ['ordered', 'processing', 'cancelled'].includes(newState.status);
+      case 'processing':
+        return ['ordered', 'shipped', 'cancelled'].includes(newState.status);
       case 'ordered':
-        return ['shipped', 'cancelled'].includes(newState.status);
+        return ['shipped', 'processing', 'cancelled'].includes(newState.status);
       case 'shipped':
         return ['completed', 'cancelled'].includes(newState.status);
       case 'completed':
@@ -112,8 +127,11 @@ export const isValidStatusTransition = (currentState: QuoteState, newState: Part
 
   // If cart status is changing
   if (newState.in_cart !== undefined && newState.in_cart !== currentState.in_cart) {
-    // Can only add to cart if quote is approved
-    if (newState.in_cart && currentState.status !== 'approved') return false;
+    // Can only add to cart if quote status allows cart actions (dynamic check)
+    if (newState.in_cart) {
+      // Fallback to 'approved' if no dynamic config available
+      return ['approved'].includes(currentState.status);
+    }
     // Can only remove from cart if quote is in cart
     if (!newState.in_cart && !currentState.in_cart) return false;
     return true;
@@ -122,34 +140,80 @@ export const isValidStatusTransition = (currentState: QuoteState, newState: Part
   return true;
 };
 
-// Helper functions for common status checks
-export const isQuoteEditable = (state: QuoteState): boolean => {
-  return ['pending', 'calculated'].includes(state.status);
+// DEPRECATED: Legacy helper functions - Use useStatusManagement() hook instead
+// These functions are kept for backward compatibility but should not be used in new code
+
+export const isQuoteEditable = (state: QuoteState, editableStatuses?: string[]): boolean => {
+  if (!editableStatuses) {
+    console.warn('isQuoteEditable: No status configuration provided. Use useStatusManagement() hook instead.');
+    return ['pending', 'calculated'].includes(state.status); // legacy fallback
+  }
+  return editableStatuses.includes(state.status);
 };
 
-export const isQuoteApproved = (state: QuoteState): boolean => {
-  return state.status === 'approved';
+export const isQuoteApproved = (state: QuoteState, approvedStatuses?: string[]): boolean => {
+  if (!approvedStatuses) {
+    console.warn('isQuoteApproved: No status configuration provided. Use useStatusManagement() hook instead.');
+    return state.status === 'approved'; // legacy fallback
+  }
+  return approvedStatuses.includes(state.status);
 };
 
 export const isQuoteInCart = (state: QuoteState): boolean => {
   return state.in_cart;
 };
 
-export const isQuotePaid = (state: QuoteState): boolean => {
-  return ['paid', 'ordered', 'shipped', 'completed'].includes(state.status);
+export const isQuotePaid = (state: QuoteState, paidStatuses?: string[]): boolean => {
+  if (!paidStatuses) {
+    console.warn('isQuotePaid: No status configuration provided. Use useStatusManagement() hook instead.');
+    return ['paid', 'ordered', 'shipped', 'completed'].includes(state.status); // legacy fallback
+  }
+  return paidStatuses.includes(state.status);
 };
 
-export const isQuoteCompleted = (state: QuoteState): boolean => {
-  return state.status === 'completed';
+export const isQuoteCompleted = (state: QuoteState, completedStatuses?: string[]): boolean => {
+  if (!completedStatuses) {
+    console.warn('isQuoteCompleted: No status configuration provided. Use useStatusManagement() hook instead.');
+    return state.status === 'completed'; // legacy fallback
+  }
+  return completedStatuses.includes(state.status);
 };
 
-export const isQuoteCancelled = (state: QuoteState): boolean => {
-  return state.status === 'cancelled';
+export const isQuoteCancelled = (state: QuoteState, cancelledStatuses?: string[]): boolean => {
+  if (!cancelledStatuses) {
+    console.warn('isQuoteCancelled: No status configuration provided. Use useStatusManagement() hook instead.');
+    return state.status === 'cancelled'; // legacy fallback
+  }
+  return cancelledStatuses.includes(state.status);
 };
 
-export const canAddToCart = (state: QuoteState): boolean => {
-  return state.status === 'approved' && !state.in_cart;
+export const canAddToCart = (state: QuoteState, cartEligibleStatuses?: string[]): boolean => {
+  if (!cartEligibleStatuses) {
+    console.warn('canAddToCart: No status configuration provided. Use useStatusManagement() hook instead.');
+    return state.status === 'approved' && !state.in_cart; // legacy fallback
+  }
+  return cartEligibleStatuses.includes(state.status) && !state.in_cart;
 };
+
+// RECOMMENDED: Type-safe dynamic status checking
+export interface StatusCheckConfig {
+  editableStatuses?: string[];
+  approvedStatuses?: string[];
+  paidStatuses?: string[];
+  completedStatuses?: string[];
+  cancelledStatuses?: string[];
+  cartEligibleStatuses?: string[];
+}
+
+// Dynamic status checker that accepts configuration
+export const createStatusChecker = (config: StatusCheckConfig) => ({
+  isEditable: (state: QuoteState) => isQuoteEditable(state, config.editableStatuses),
+  isApproved: (state: QuoteState) => isQuoteApproved(state, config.approvedStatuses),
+  isPaid: (state: QuoteState) => isQuotePaid(state, config.paidStatuses),
+  isCompleted: (state: QuoteState) => isQuoteCompleted(state, config.completedStatuses),
+  isCancelled: (state: QuoteState) => isQuoteCancelled(state, config.cancelledStatuses),
+  canAddToCart: (state: QuoteState) => canAddToCart(state, config.cartEligibleStatuses),
+});
 
 // Status update function
 export const updateQuoteState = (

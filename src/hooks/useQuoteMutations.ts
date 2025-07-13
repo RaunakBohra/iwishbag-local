@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Tables } from "@/integrations/supabase/types";
 import { useStatusTransitions } from "./useStatusTransitions";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 type Quote = Tables<'quotes'>;
 type QuoteItem = Tables<'quote_items'>;
@@ -25,6 +26,7 @@ export const useQuoteMutations = (id: string | undefined) => {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { handleQuoteSent, handleAutoCalculation } = useStatusTransitions();
+    const { getStatusConfig, getDefaultQuoteStatus } = useStatusManagement();
 
     const updateQuoteMutation = useMutation({
         mutationFn: async (quoteData: Partial<Quote> & { id: string }) => {
@@ -55,11 +57,15 @@ export const useQuoteMutations = (id: string | undefined) => {
                 
             if (error) throw new Error(error.message);
 
-            // Handle automatic status transitions
+            // DYNAMIC: Handle automatic status transitions
             const newStatus = cleanQuoteData.status;
             if (newStatus && currentQuote?.status !== newStatus) {
-                // If status changed to 'calculated' from 'pending', trigger auto-calculation transition
-                if (newStatus === 'calculated' && currentQuote?.status === 'pending') {
+                // Check if this is a valid transition using status configuration
+                const currentStatusConfig = getStatusConfig(currentQuote.status, 'quote');
+                const newStatusConfig = getStatusConfig(newStatus, 'quote');
+                
+                // If transitioning to a status marked as requiring auto-calculation, trigger it
+                if (newStatusConfig?.id === 'calculated' && currentStatusConfig?.isDefaultQuoteStatus) {
                     await handleAutoCalculation(quoteData.id, currentQuote.status);
                 }
             }

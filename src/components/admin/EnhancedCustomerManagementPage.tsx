@@ -172,7 +172,7 @@ export const EnhancedCustomerManagementPage = () => {
     const countries = new Set<string>();
     customers.forEach(customer => {
       customer.user_addresses.forEach(address => {
-        if (address.country) countries.add(address.country);
+        if (address.destination_country) countries.add(address.destination_country);
       });
     });
     return Array.from(countries).sort();

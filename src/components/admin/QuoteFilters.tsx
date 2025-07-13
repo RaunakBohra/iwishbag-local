@@ -60,13 +60,14 @@ export const QuoteFilters = ({
     shippingCountryFilter,
     onShippingCountryFilterChange
 }: QuoteFiltersProps) => {
-    const { quoteStatuses } = useStatusManagement();
+    const { quoteStatuses, getStatusesForQuotesList } = useStatusManagement();
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
     const { data: allCountries, isLoading: countriesLoading } = useAllCountries();
 
-    // Get only quote statuses for filtering
+    // Get only quote statuses that should show in quotes list
+    const allowedStatusNames = getStatusesForQuotesList();
     const availableQuoteStatuses = (quoteStatuses || [])
-        .filter(status => status.isActive)
+        .filter(status => status.isActive && allowedStatusNames.includes(status.name))
         .sort((a, b) => a.order - b.order);
 
     const hasActiveFilters = statusFilter !== 'all' || 

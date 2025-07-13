@@ -64,7 +64,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     resolver: zodResolver(addressSchema),
     defaultValues: address ? {
       ...address,
-      destination_country: address.destination_country || "",
+      destination_country: address.destination_country || address.country_code || address.country || "",
       address_line2: address.address_line2 || "",
       phone: address.phone || "",
       recipient_name: address.recipient_name || "",
@@ -85,8 +85,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     mutationFn: async (values: AddressFormValues) => {
       if (!user) throw new Error("User not authenticated");
 
-      const countryName = countries?.find(c => c.code === values.destination_country)?.name;
-
       const payload = {
         recipient_name: values.recipient_name,
         address_line1: values.address_line1,
@@ -94,8 +92,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
         city: values.city,
         state_province_region: values.state_province_region,
         postal_code: values.postal_code,
-        country: countryName || values.destination_country, // For backward compatibility
-        destination_country: values.destination_country, // The new standard
+        destination_country: values.destination_country, // Store country code
         phone: values.phone,
         is_default: values.is_default,
       };

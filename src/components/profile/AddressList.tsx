@@ -31,7 +31,7 @@ const AddressCard = ({ address, onEdit, onDelete }: { address: Tables<'user_addr
                 <p className="font-medium">{address.address_line1}</p>
                 {address.address_line2 && <p className="text-sm text-muted-foreground">{address.address_line2}</p>}
                 <p className="text-sm text-muted-foreground">{address.city}, {address.state_province_region} {address.postal_code}</p>
-                <p className="text-sm text-muted-foreground">{address.country}</p>
+                <p className="text-sm text-muted-foreground">{address.destination_country}</p>
                 {address.phone && <p className="text-sm text-muted-foreground">📞 {address.phone}</p>}
             </div>
              <div className="flex items-center gap-2">

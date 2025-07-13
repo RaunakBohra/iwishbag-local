@@ -70,7 +70,7 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
       ? addresses.find(a => a.id === selectedAddressId)
       : addresses[0];
     if (address) {
-      shippingCountry = address.country;
+      shippingCountry = address.destination_country || '';
       shippingCity = address.city;
       shippingAddressSummary = `${address.address_line1}, ${address.city}`;
     }
@@ -121,8 +121,8 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
         email: profile?.email || '',
         whatsapp: address.phone || '',
         address: address.address_line1 || '',
-        country: address.country || '',
-        destination_country: address.destination_country || address.country || '',
+        country: address.destination_country || '',
+        destination_country: address.destination_country || '',
         state: address.state_province_region || '',
         city: address.city || '',
         zip: address.postal_code || '',
@@ -194,7 +194,7 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
                   <div>{address.address_line1}</div>
                   {address.address_line2 && <div>{address.address_line2}</div>}
                   <div>{address.city}, {address.state_province_region} {address.postal_code}</div>
-                  <div className="font-medium">{address.country}</div>
+                  <div className="font-medium">{address.destination_country}</div>
                   {address.phone && <div className="text-blue-600">📞 {address.phone}</div>}
                 </div>
               </div>
@@ -293,8 +293,8 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
                   email: profile?.email || user?.email || '',
                   whatsapp: address.phone || '',
                   address: address.address_line1 || '',
-                  country: address.country || '',
-                  destination_country: address.country || '',
+                  country: address.destination_country || '',
+                  destination_country: address.destination_country || '',
                   state: address.state_province_region || '',
                   city: address.city || '',
                   zip: address.postal_code || '',

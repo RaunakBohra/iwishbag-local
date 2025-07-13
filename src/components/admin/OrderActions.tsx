@@ -54,8 +54,9 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
 
     return (
       <div className="flex flex-wrap gap-2">
-        {/* Special case for payment_pending - show confirm payment button */}
-        {quote.status === 'payment_pending' && (
+        {/* DYNAMIC: Show payment actions based on payment status and method */}
+        {/* Check if payment is unpaid and show appropriate action */}
+        {quote.payment_status === 'unpaid' && quote.payment_method && quote.payment_method !== 'bank_transfer' && (
           <Button
             type="button"
             onClick={() => setShowPaymentModal(true)}
@@ -65,6 +66,33 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
           >
             <CheckCircle2 className="h-4 w-4 mr-2" />
             Confirm Payment
+          </Button>
+        )}
+        
+        {/* For unpaid bank transfers, show verification button */}
+        {quote.payment_status === 'unpaid' && quote.payment_method === 'bank_transfer' && (
+          <Button
+            type="button"
+            onClick={() => setShowPaymentModal(true)}
+            variant="default"
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Verify Bank Transfer
+          </Button>
+        )}
+        
+        {/* FALLBACK: Support legacy orders with payment_pending status */}
+        {!quote.payment_status && quote.status === 'payment_pending' && (
+          <Button
+            type="button"
+            onClick={() => setShowPaymentModal(true)}
+            disabled={isConfirmingPayment}
+            variant="default"
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            {quote.payment_method === 'bank_transfer' ? 'Verify Bank Transfer' : 'Confirm Payment'}
           </Button>
         )}
         

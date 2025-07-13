@@ -1,11 +1,12 @@
 import { AdminOrderListItem } from "./AdminOrderListItem";
 import { OrderFilters } from "./OrderFilters";
 import { useOrderManagement } from "@/hooks/useOrderManagement";
+import { PaymentSyncDebugger } from "../debug/PaymentSyncDebugger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PaymentConfirmationModal } from "./PaymentConfirmationModal";
-import { BatchPaymentVerification } from "./BatchPaymentVerification";
+// BatchPaymentVerification removed - using new simplified payment management
 import { useOrderMutations } from "@/hooks/useOrderMutations";
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -49,147 +50,55 @@ export const OrderManagementPage = () => {
 
     const [selectedOrderForPayment, setSelectedOrderForPayment] = useState(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [showBatchVerification, setShowBatchVerification] = useState(false);
+    // Batch verification state removed - using new payment management page
     
     const { confirmPayment, isConfirmingPayment } = useOrderMutations(selectedOrderForPayment?.id);
 
-    // Fetch orders with payment proofs for batch verification
-    const { data: ordersWithPaymentProofs, refetch: refetchPaymentProofs } = useQuery({
-        queryKey: ['orders-with-payment-proofs'],
+    // Simplified payment proof count query - much lighter than full data fetch
+    const { data: pendingPaymentProofsCount = 0 } = useQuery({
+        queryKey: ['pending-payment-proofs-count'],
         queryFn: async () => {
-            // First try the RPC function
-            const { data: rpcData, error: rpcError } = await supabase.rpc('get_orders_with_payment_proofs', {
-                status_filter: 'pending',
-                limit_count: 100
-            });
-            
-            if (!rpcError && rpcData) {
-                // Transform RPC data to match our interface
-                return rpcData.map(order => ({
-                    id: order.order_id,
-                    order_display_id: order.order_display_id,
-                    final_total: order.final_total,
-                    final_currency: order.final_currency,
-                    payment_status: order.payment_status,
-                    created_at: order.submitted_at,
-                    paymentProofMessage: {
-                        id: order.message_id,
-                        verification_status: order.verification_status,
-                        admin_notes: order.admin_notes,
-                        attachment_file_name: order.attachment_file_name,
-                        attachment_url: order.attachment_url,
-                        verified_at: order.verified_at,
-                        message_type: 'payment_proof' as const,
-                        sender_id: order.customer_id
-                    },
-                    isSelected: false
-                }));
-            }
-            
-            // Fallback: Query directly from tables
-            console.log('RPC function not available, using fallback query');
-            
-            // First check all payment proof messages
-            const { data: allProofs, error: allProofsError } = await supabase
+            const { count, error } = await supabase
                 .from('messages')
-                .select('message_type, verification_status, quote_id')
-                .eq('message_type', 'payment_proof');
-            
-            console.log('All payment proofs:', allProofs);
-            
-            // Get latest payment proof messages per quote (including all statuses)
-            const { data: messages, error: messagesError } = await supabase
-                .from('messages')
-                .select('*')
+                .select('*', { count: 'exact', head: true })
                 .eq('message_type', 'payment_proof')
-                .order('created_at', { ascending: false })
-                .limit(100);
+                .or('verification_status.is.null,verification_status.eq.pending');
             
-            console.log('Payment proof messages query result:', { messages, error: messagesError });
-            
-            if (messagesError) {
-                console.error('Error fetching payment proof messages:', messagesError);
-                return [];
+            if (error) {
+                console.error('Error fetching pending payment proofs count:', error);
+                return 0;
             }
-            
-            // Get quote IDs from messages
-            const quoteIds = [...new Set(messages?.map(m => m.quote_id).filter(Boolean))];
-            
-            if (quoteIds.length === 0) {
-                console.log('No quote IDs found in messages');
-                return [];
-            }
-            
-            // Fetch quotes separately
-            const { data: quotes, error: quotesError } = await supabase
-                .from('quotes')
-                .select('id, order_display_id, final_total, final_currency, payment_status, user_id')
-                .in('id', quoteIds);
-            
-            console.log('Quotes query result:', { quotes, quotesError });
-            
-            if (quotesError) {
-                console.error('Error fetching quotes:', quotesError);
-                return [];
-            }
-            
-            // Create quotes map
-            const quotesMap = new Map(quotes?.map(q => [q.id, q]) || []);
-            
-            // Group by quote_id and take the latest message for each
-            const latestByQuote = new Map();
-            messages?.forEach(msg => {
-                if (!latestByQuote.has(msg.quote_id) || 
-                    new Date(msg.created_at) > new Date(latestByQuote.get(msg.quote_id).created_at)) {
-                    latestByQuote.set(msg.quote_id, msg);
-                }
-            });
-            
-            console.log('Grouped payment proofs by quote:', latestByQuote.size, 'unique quotes');
-            
-            // Transform to our interface (include all statuses)
-            return Array.from(latestByQuote.values())
-                .filter(msg => quotesMap.has(msg.quote_id)) // Only include if we have the quote data
-                .map(msg => {
-                    const quote = quotesMap.get(msg.quote_id)!;
-                    return {
-                        id: msg.quote_id,
-                        order_display_id: quote.order_display_id,
-                        final_total: quote.final_total,
-                        final_currency: quote.final_currency,
-                        payment_status: quote.payment_status,
-                        created_at: msg.created_at,
-                        paymentProofMessage: {
-                            id: msg.id,
-                            verification_status: msg.verification_status,
-                            admin_notes: msg.admin_notes,
-                            attachment_file_name: msg.attachment_file_name,
-                            attachment_url: msg.attachment_url,
-                            verified_at: msg.verified_at,
-                            message_type: 'payment_proof' as const,
-                            sender_id: quote.user_id
-                        },
-                        isSelected: false
-                    };
-                });
+            return count || 0;
         },
-        enabled: true,
-        refetchInterval: 10000 // Refresh every 10 seconds for better responsiveness
+        refetchInterval: 30000, // Reduced frequency - every 30 seconds
+        staleTime: 20000 // Cache for 20 seconds
     });
 
-    // Get payment proof statistics
+    // Simplified payment proof statistics - reduced frequency
     const { data: paymentProofStats } = useQuery({
         queryKey: ['payment-proof-stats'],
         queryFn: async () => {
-            const { data, error } = await supabase.rpc('get_payment_proof_stats');
+            // Simplified stats query instead of RPC
+            const { data, error } = await supabase
+                .from('messages')
+                .select('verification_status')
+                .eq('message_type', 'payment_proof');
+            
             if (error) {
                 console.error('Error fetching payment proof stats:', error);
-                // Return default stats on error
                 return { total: 0, pending: 0, verified: 0, confirmed: 0, rejected: 0 };
             }
-            return data;
+            
+            const total = data?.length || 0;
+            const pending = data?.filter(p => !p.verification_status || p.verification_status === 'pending').length || 0;
+            const verified = data?.filter(p => p.verification_status === 'verified').length || 0;
+            const confirmed = data?.filter(p => p.verification_status === 'confirmed').length || 0;
+            const rejected = data?.filter(p => p.verification_status === 'rejected').length || 0;
+            
+            return { total, pending, verified, confirmed, rejected };
         },
-        refetchInterval: 10000 // Refresh every 10 seconds for consistency
+        refetchInterval: 60000, // Reduced to every 60 seconds
+        staleTime: 45000 // Cache for 45 seconds
     });
 
     const handleConfirmPayment = (order) => {
@@ -206,89 +115,70 @@ export const OrderManagementPage = () => {
         });
     };
 
-    // Calculate payment-focused statistics
+    // Optimized statistics calculation with better performance
     const statistics = useMemo(() => {
-        if (!orders) return null;
+        if (!orders || orders.length === 0) return null;
 
-        // Payment Status Statistics
-        const unpaidOrders = orders.filter(o => !o.payment_status || o.payment_status === 'unpaid').length;
-        const partialPaymentOrders = orders.filter(o => o.payment_status === 'partial').length;
-        const paidOrders = orders.filter(o => o.payment_status === 'paid').length;
-        const overpaidOrders = orders.filter(o => o.payment_status === 'overpaid').length;
-        
-        // Count pending payment proofs
-        const pendingPaymentProofs = ordersWithPaymentProofs?.filter(o => 
-            !o.paymentProofMessage?.verification_status || 
-            o.paymentProofMessage?.verification_status === 'pending'
-        ).length || 0;
-
-        // Payment Method Statistics
-        const paymentMethods = {
-            bank_transfer: orders.filter(o => o.payment_method === 'bank_transfer').length,
-            cod: orders.filter(o => o.payment_method === 'cod').length,
-            stripe: orders.filter(o => o.payment_method === 'stripe').length,
-            payu: orders.filter(o => o.payment_method === 'payu').length,
-            paypal: orders.filter(o => o.payment_method === 'paypal').length,
-        };
-
-        // Financial Statistics
-        const totalValue = orders.reduce((sum, o) => sum + (o.final_total || 0), 0);
-        const totalPaid = orders.reduce((sum, o) => sum + (o.amount_paid || 0), 0);
-        const totalOutstanding = totalValue - totalPaid;
-
-        // Currency Statistics - Payments Received
-        const currencyBreakdown = orders.reduce((acc, order) => {
-            if (order.amount_paid && order.amount_paid > 0) {
-                const currency = order.final_currency || 'USD';
-                acc[currency] = (acc[currency] || 0) + order.amount_paid;
-            }
-            return acc;
-        }, {} as Record<string, number>);
-
-        // Currency Statistics - Outstanding Amounts
-        const currencyOutstanding = orders.reduce((acc, order) => {
-            if (order.final_total && order.final_total > 0) {
-                const currency = order.final_currency || 'USD';
-                const amountPaid = order.amount_paid || 0;
-                const outstanding = order.final_total - amountPaid;
-                
-                if (outstanding > 0) {
-                    acc[currency] = (acc[currency] || 0) + outstanding;
-                }
-            }
-            return acc;
-        }, {} as Record<string, number>);
-
-        // Orders requiring immediate attention
-        const actionRequiredOrders = orders.filter(o => 
-            !o.payment_status || 
-            o.payment_status === 'unpaid' || 
-            o.payment_status === 'partial' || 
-            o.payment_status === 'overpaid'
-        );
-
-        // Order Status Statistics (for tracking)
-        const orderStatuses = {
-            pending: orders.filter(o => o.status === 'pending').length,
-            approved: orders.filter(o => o.status === 'approved').length,
-            paid: orders.filter(o => o.status === 'paid').length,
-            ordered: orders.filter(o => o.status === 'ordered').length,
-            shipped: orders.filter(o => o.status === 'shipped').length,
-            completed: orders.filter(o => o.status === 'completed').length,
-        };
-
-        return {
+        // Initialize counters
+        const stats = {
             totalOrders: orders.length,
-            paymentStatus: { unpaidOrders, partialPaymentOrders, paidOrders, overpaidOrders },
-            paymentMethods,
-            financial: { totalValue, totalPaid, totalOutstanding },
-            currencyBreakdown,
-            currencyOutstanding,
-            actionRequiredOrders,
-            orderStatuses,
-            pendingPaymentProofs
+            paymentStatus: { unpaidOrders: 0, partialPaymentOrders: 0, paidOrders: 0, overpaidOrders: 0 },
+            paymentMethods: { bank_transfer: 0, cod: 0, stripe: 0, payu: 0, paypal: 0 },
+            financial: { totalValue: 0, totalPaid: 0, totalOutstanding: 0 },
+            currencyBreakdown: {} as Record<string, number>,
+            currencyOutstanding: {} as Record<string, number>,
+            actionRequiredOrders: [] as any[],
+            orderStatuses: { pending: 0, approved: 0, paid: 0, ordered: 0, shipped: 0, completed: 0 },
+            pendingPaymentProofs: pendingPaymentProofsCount
         };
-    }, [orders, ordersWithPaymentProofs]);
+
+        // Single pass through orders for all calculations
+        orders.forEach(order => {
+            // Payment Status
+            const paymentStatus = order.payment_status || 'unpaid';
+            if (paymentStatus === 'unpaid') stats.paymentStatus.unpaidOrders++;
+            else if (paymentStatus === 'partial') stats.paymentStatus.partialPaymentOrders++;
+            else if (paymentStatus === 'paid') stats.paymentStatus.paidOrders++;
+            else if (paymentStatus === 'overpaid') stats.paymentStatus.overpaidOrders++;
+
+            // Payment Methods
+            const method = order.payment_method;
+            if (method && stats.paymentMethods.hasOwnProperty(method)) {
+                stats.paymentMethods[method as keyof typeof stats.paymentMethods]++;
+            }
+
+            // Financial calculations
+            const finalTotal = order.final_total || 0;
+            const amountPaid = order.amount_paid || 0;
+            stats.financial.totalValue += finalTotal;
+            stats.financial.totalPaid += amountPaid;
+
+            // Currency breakdowns
+            const currency = order.final_currency || 'USD';
+            if (amountPaid > 0) {
+                stats.currencyBreakdown[currency] = (stats.currencyBreakdown[currency] || 0) + amountPaid;
+            }
+            
+            const outstanding = finalTotal - amountPaid;
+            if (outstanding > 0) {
+                stats.currencyOutstanding[currency] = (stats.currencyOutstanding[currency] || 0) + outstanding;
+            }
+
+            // Orders requiring attention
+            if (!paymentStatus || ['unpaid', 'partial', 'overpaid'].includes(paymentStatus)) {
+                stats.actionRequiredOrders.push(order);
+            }
+
+            // Order Status
+            const status = order.status;
+            if (status && stats.orderStatuses.hasOwnProperty(status)) {
+                stats.orderStatuses[status as keyof typeof stats.orderStatuses]++;
+            }
+        });
+
+        stats.financial.totalOutstanding = stats.financial.totalValue - stats.financial.totalPaid;
+        return stats;
+    }, [orders, pendingPaymentProofsCount]);
 
     if (ordersLoading || !statistics) {
         return (
@@ -356,9 +246,6 @@ export const OrderManagementPage = () => {
                                     {statistics.pendingPaymentProofs}
                                 </p>
                                 <p className="text-sm text-muted-foreground">Pending Proofs</p>
-                                {ordersWithPaymentProofs && ordersWithPaymentProofs.length > statistics.pendingPaymentProofs && (
-                                    <p className="text-xs text-gray-500">{ordersWithPaymentProofs.length} total</p>
-                                )}
                             </div>
                             <Receipt className={`h-6 w-6 ${statistics.pendingPaymentProofs > 0 ? 'text-blue-500' : 'text-gray-400'}`} />
                         </div>
@@ -628,15 +515,10 @@ export const OrderManagementPage = () => {
                 />
             )}
 
-            {/* Batch Payment Verification Modal */}
-            <BatchPaymentVerification
-                isOpen={showBatchVerification}
-                onClose={() => {
-                    setShowBatchVerification(false);
-                    refetchPaymentProofs();
-                }}
-                orders={ordersWithPaymentProofs || []}
-            />
+            {/* Debug Component - Remove in production */}
+            <PaymentSyncDebugger />
+
+            {/* Batch payment verification removed - now handled in dedicated payment management page */}
         </div>
     );
 };

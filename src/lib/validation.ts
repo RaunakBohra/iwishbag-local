@@ -78,8 +78,9 @@ export const userProfileUpdateSchema = z.object({
 });
 
 // Admin validation schemas
+// Note: Status validation is now dynamic - use createAdminQuoteUpdateSchema() function instead
 export const adminQuoteUpdateSchema = z.object({
-  status: z.enum(['pending', 'sent', 'approved', 'rejected', 'expired', 'paid', 'ordered', 'shipped', 'completed', 'cancelled']).optional(),
+  status: z.string().optional(), // Simplified to string - validation happens elsewhere
   final_total: positiveNumberSchema.optional(),
   final_total_local: positiveNumberSchema.optional(),
   payment_method: z.enum(['stripe', 'cod', 'bank_transfer']).optional(),
@@ -87,6 +88,31 @@ export const adminQuoteUpdateSchema = z.object({
   rejection_details: z.string().max(1000, 'Rejection details too long').optional(),
   customer_notes: z.string().max(1000, 'Notes too long').optional(),
 });
+
+// Dynamic validation schema creator for status-dependent validation
+export const createAdminQuoteUpdateSchema = (validStatuses: string[]) => {
+  return z.object({
+    status: validStatuses.length > 0 
+      ? z.enum(validStatuses as [string, ...string[]]).optional()
+      : z.string().optional(),
+    final_total: positiveNumberSchema.optional(),
+    final_total_local: positiveNumberSchema.optional(),
+    payment_method: z.enum(['stripe', 'cod', 'bank_transfer']).optional(),
+    rejection_reason_id: z.string().uuid().optional(),
+    rejection_details: z.string().max(1000, 'Rejection details too long').optional(),
+    customer_notes: z.string().max(1000, 'Notes too long').optional(),
+  });
+};
+
+// Helper function to validate status transitions
+export const validateStatusTransition = (
+  currentStatus: string,
+  newStatus: string,
+  allowedTransitions: Record<string, string[]>
+): boolean => {
+  if (!currentStatus || !newStatus) return true; // Allow if status is not set
+  return allowedTransitions[currentStatus]?.includes(newStatus) ?? false;
+};
 
 // Exchange rate validation
 export const exchangeRateSchema = z.object({

@@ -6,11 +6,17 @@ import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 export const useDashboardState = () => {
   const { user } = useAuth();
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'sent' | 'approved' | 'rejected'>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all'); // Dynamic - can be any status
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQuoteIds, setSelectedQuoteIds] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const { orderStatuses } = useStatusManagement();
+  const { 
+    orderStatuses, 
+    quoteStatuses, 
+    getStatusesForOrdersList, 
+    getStatusesForQuotesList,
+    getStatusConfig 
+  } = useStatusManagement();
 
   const { data: allQuotes, isLoading, isError } = useQuery({
     queryKey: ['user-quotes-and-orders', user?.id],
@@ -33,23 +39,41 @@ export const useDashboardState = () => {
     enabled: !!user,
   });
 
-  const orderStatusNames = useMemo(() => 
-    orderStatuses ? orderStatuses.map(status => status.name).filter(name => !['cancelled', 'rejected'].includes(name)) : [], 
-    [orderStatuses]
-  );
+  // Use dynamic status configuration to separate quotes from orders
+  const orderStatusNames = useMemo(() => {
+    const dynamicStatuses = getStatusesForOrdersList();
+    // FALLBACK: If dynamic statuses aren't loaded yet, use legacy logic
+    if (dynamicStatuses.length === 0) {
+      return ['paid', 'ordered', 'shipped', 'completed', 'payment_pending', 'processing'];
+    }
+    return dynamicStatuses;
+  }, [getStatusesForOrdersList]);
+  
+  const quoteStatusNames = useMemo(() => {
+    const dynamicStatuses = getStatusesForQuotesList();
+    // FALLBACK: If dynamic statuses aren't loaded yet, use legacy logic
+    if (dynamicStatuses.length === 0) {
+      return ['pending', 'sent', 'approved', 'rejected', 'expired', 'calculated'];
+    }
+    return dynamicStatuses;
+  }, [getStatusesForQuotesList]);
 
-  const quotes = useMemo(() => allQuotes?.filter(q => !orderStatusNames.includes(q.status)) || [], [allQuotes, orderStatusNames]);
-  const orders = useMemo(() => allQuotes?.filter(q => orderStatusNames.includes(q.status)) || [], [allQuotes, orderStatusNames]);
+  const quotes = useMemo(() => 
+    allQuotes?.filter(q => quoteStatusNames.includes(q.status)) || [], 
+    [allQuotes, quoteStatusNames]
+  );
+  
+  const orders = useMemo(() => 
+    allQuotes?.filter(q => orderStatusNames.includes(q.status)) || [], 
+    [allQuotes, orderStatusNames]
+  );
 
   const filteredQuotes = useMemo(() => {
     return quotes
       .filter(quote => {
+        // DYNAMIC: Filter by any status instead of hardcoded list
         if (statusFilter === 'all') return true;
-        if (statusFilter === 'pending') return quote.status === 'pending';
-        if (statusFilter === 'sent') return quote.status === 'sent';
-        if (statusFilter === 'approved') return quote.status === 'approved';
-        if (statusFilter === 'rejected') return quote.status === 'rejected';
-        return true;
+        return quote.status === statusFilter;
       })
       .filter(quote => {
         if (!searchTerm) return true;
@@ -60,9 +84,13 @@ export const useDashboardState = () => {
       });
   }, [quotes, statusFilter, searchTerm]);
 
+  // DYNAMIC: Get quotes that allow cart actions based on status configuration
   const selectableQuotes = useMemo(() => {
-    return filteredQuotes.filter(q => q.status === 'approved');
-  }, [filteredQuotes]);
+    return filteredQuotes.filter(q => {
+      const statusConfig = getStatusConfig(q.status, 'quote');
+      return statusConfig?.allowCartActions ?? (q.status === 'approved'); // fallback
+    });
+  }, [filteredQuotes, getStatusConfig]);
 
   const handleSearchChange = (newSearchTerm: string) => {
     if (newSearchTerm !== searchTerm) {
@@ -114,17 +142,27 @@ export const useDashboardState = () => {
     setSelectedQuoteIds([]);
   };
 
-  const filterQuotes = (quote: QuoteWithItems) => {
-    if (statusFilter === 'all') return true;
-    if (statusFilter === 'pending') return quote.status === 'pending';
-    if (statusFilter === 'sent') return quote.status === 'sent';
-    if (statusFilter === 'approved') return quote.status === 'approved';
-    if (statusFilter === 'rejected') return quote.status === 'rejected';
-    return true;
-  };
-
-  const getApprovedQuotes = () => {
-    return filteredQuotes.filter(q => q.status === 'approved');
+  // DYNAMIC: Get quotes that allow specific actions based on configuration
+  const getSelectableQuotes = () => selectableQuotes;
+  
+  const getQuotesByAction = (action: 'edit' | 'approve' | 'cart' | 'reject' | 'cancel') => {
+    return filteredQuotes.filter(q => {
+      const statusConfig = getStatusConfig(q.status, 'quote');
+      switch (action) {
+        case 'edit':
+          return statusConfig?.allowEdit ?? false;
+        case 'approve':
+          return statusConfig?.allowApproval ?? false;
+        case 'cart':
+          return statusConfig?.allowCartActions ?? false;
+        case 'reject':
+          return statusConfig?.allowRejection ?? false;
+        case 'cancel':
+          return statusConfig?.allowCancellation ?? false;
+        default:
+          return false;
+      }
+    });
   };
 
   return {
@@ -149,5 +187,12 @@ export const useDashboardState = () => {
     handleToggleSelectQuote,
     handleToggleSelectAll,
     handleClearSelection,
+    // New dynamic functions
+    getSelectableQuotes,
+    getQuotesByAction,
+    // Status management integration
+    quoteStatuses,
+    orderStatuses,
+    getStatusConfig,
   };
 };

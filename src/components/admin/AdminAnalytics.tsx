@@ -2,8 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Package, Clock, CheckCircle, Users } from "lucide-react";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 export const AdminAnalytics = () => {
+  const { getStatusesForOrdersList, getStatusesForQuotesList } = useStatusManagement();
+  
   const { data: analytics, isLoading } = useQuery({
     queryKey: ['admin-analytics-basic'],
     queryFn: async () => {
@@ -16,11 +19,11 @@ export const AdminAnalytics = () => {
       ] = await Promise.all([
         supabase.from('quotes').select('*', { count: 'exact', head: true }),
         supabase.from('quotes').select('*', { count: 'exact', head: true })
-          .in('status', ['pending', 'calculated']),
+          .in('status', getStatusesForQuotesList()),
         supabase.from('quotes').select('*', { count: 'exact', head: true })
-          .in('status', ['paid', 'ordered', 'shipped']),
+          .in('status', getStatusesForOrdersList()),
         supabase.from('quotes').select('*', { count: 'exact', head: true })
-          .eq('status', 'completed')
+          .in('status', getStatusesForOrdersList().filter(status => status === 'completed'))
       ]);
 
       return {

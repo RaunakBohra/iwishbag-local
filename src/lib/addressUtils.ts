@@ -171,7 +171,7 @@ export function userAddressToUnified(address: UserAddress): UnifiedAddress {
     city: address.city,
     stateProvinceRegion: address.state_province_region,
     postalCode: address.postal_code,
-    countryCode: address.destination_country || address.country, // Prefer destination_country
+    countryCode: address.destination_country || '', // Use destination_country
     isDefault: address.is_default
   };
 }
@@ -191,7 +191,6 @@ export function unifiedToUserAddress(
     city: address.city,
     state_province_region: address.stateProvinceRegion,
     postal_code: address.postalCode,
-    country: address.countryCode, // For backward compatibility
     destination_country: address.countryCode, // Always use country code
     phone: address.phone || null,
     is_default: address.isDefault || false
@@ -244,7 +243,7 @@ export function quoteShippingToUnified(address: QuoteShippingAddress): UnifiedAd
     city: address.city || '',
     stateProvinceRegion: address.state || '',
     postalCode: address.postalCode || '',
-    countryCode: address.destination_country || address.country || ''
+    countryCode: address.destination_country || ''
   };
 }
 

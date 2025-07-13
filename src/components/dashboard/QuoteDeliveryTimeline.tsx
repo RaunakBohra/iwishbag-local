@@ -12,6 +12,7 @@ import {
   calculateDeliveryEstimate
 } from '@/lib/delivery-estimates';
 import { format, parseISO, addBusinessDays } from 'date-fns';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 interface QuoteDeliveryTimelineProps {
   quote: Tables<'quotes'>;
@@ -22,14 +23,18 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
   quote,
   className = ''
 }) => {
+  const { getStatusConfig } = useStatusManagement();
   const [deliveryTimeline, setDeliveryTimeline] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Determine the start date based on quote status
+  // DYNAMIC: Determine the start date based on quote status configuration
   const getStartDate = () => {
-    // If quote is paid, use payment date
-    if (quote.status === 'paid' && quote.paid_at) {
+    const statusConfig = getStatusConfig(quote.status, quote.status.includes('paid') || quote.status.includes('ordered') ? 'order' : 'quote');
+    const isPaymentReceived = statusConfig?.isSuccessful && statusConfig?.countsAsOrder;
+    
+    // If payment received and paid_at exists, use payment date
+    if (isPaymentReceived && quote.paid_at) {
       return parseISO(quote.paid_at);
     }
     
@@ -37,8 +42,9 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
     return parseISO(quote.created_at);
   };
 
-  // Determine if this is a payment-phase timeline
-  const isPaymentPhase = quote.status === 'paid' && quote.paid_at;
+  // DYNAMIC: Determine if this is a payment-phase timeline
+  const statusConfig = getStatusConfig(quote.status, quote.status.includes('paid') || quote.status.includes('ordered') ? 'order' : 'quote');
+  const isPaymentPhase = statusConfig?.isSuccessful && statusConfig?.countsAsOrder && quote.paid_at;
 
   // Fetch shipping route and delivery options
   useEffect(() => {

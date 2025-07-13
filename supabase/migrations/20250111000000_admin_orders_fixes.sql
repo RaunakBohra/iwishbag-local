@@ -1,0 +1,2 @@
+-- This migration already exists on remote database
+-- Created as placeholder to fix migration sync issues

@@ -50,11 +50,6 @@ const QuoteRow = React.memo<QuoteRowProps>(({ quote, isSelected, onSelect }) => 
       <TableCell>
         <div className="flex gap-2">
           <StatusBadge status={quote.status} category="quote" />
-          {quote.status !== 'pending' && (
-            <Badge variant={quote.status === 'approved' ? 'default' : 'destructive'}>
-              {quote.status}
-            </Badge>
-          )}
         </div>
       </TableCell>
       <TableCell>

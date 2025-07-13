@@ -6,6 +6,7 @@ import { useAllCountries } from '@/hooks/useAllCountries';
 import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
 import { useQuoteState } from '@/hooks/useQuoteState';
 import { useCartStore } from '@/stores/cartStore';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -43,6 +44,7 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
   isQuoteInCart: (quoteId: string) => boolean;
 }) => {
   const { formatAmount } = useQuoteDisplayCurrency({ quote });
+  const { getStatusConfig } = useStatusManagement();
   
   const numberOfItems = Array.isArray(quote.quote_items) 
     ? quote.quote_items.length 
@@ -55,6 +57,10 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
   const originCountry = quote.origin_country || quote.destination_country || 'US';
   const originCountryName = countries?.find(c => c.code === originCountry)?.name || originCountry;
   const fallbackName = `${originCountryName} Quote`;
+  
+  // Check if quote can be added to cart based on status configuration
+  const statusConfig = getStatusConfig(quote.status, 'quote');
+  const canAddToCart = statusConfig?.allowCartActions ?? (quote.status === 'approved'); // fallback to hardcoded
   
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md hover:border-gray-200 transition-all duration-200">
@@ -133,7 +139,7 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
               View Details
             </Button>
           </Link>
-          {quote.status === 'approved' && !isQuoteInCart(quote.id) && (
+          {canAddToCart && !isQuoteInCart(quote.id) && (
             <AddToCartButton quoteId={quote.id} className="flex-1" />
           )}
         </div>
@@ -193,7 +199,7 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
                 View
               </Button>
             </Link>
-            {quote.status === 'approved' && !isQuoteInCart(quote.id) && (
+            {canAddToCart && !isQuoteInCart(quote.id) && (
               <AddToCartButton quoteId={quote.id} />
             )}
           </div>
@@ -215,6 +221,7 @@ export default function Quotes() {
   } = useDashboardState();
 
   const { data: countries } = useAllCountries();
+  const { quoteStatuses } = useStatusManagement();
   // formatAmount will be handled per quote with useQuoteDisplayCurrency
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deliveryEstimates, setDeliveryEstimates] = useState<Record<string, any>>({});
@@ -382,9 +389,15 @@ export default function Quotes() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
+              {(quoteStatuses || [])
+                .filter(status => status.isActive && status.showInCustomerView)
+                .sort((a, b) => a.order - b.order)
+                .map((status) => (
+                  <SelectItem key={status.name} value={status.name}>
+                    {status.label}
+                  </SelectItem>
+                ))
+              }
             </SelectContent>
           </Select>
           <Link to="/quote">

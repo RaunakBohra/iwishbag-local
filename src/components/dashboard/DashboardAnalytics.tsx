@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tables } from "@/integrations/supabase/types";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Clock, ShoppingCart, Truck, DollarSign } from "lucide-react";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
 
 type Quote = Tables<'quotes'>;
 
@@ -13,10 +14,13 @@ interface DashboardAnalyticsProps {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 export const DashboardAnalytics = ({ quotes, orders }: DashboardAnalyticsProps) => {
-  // Status distribution for charts
+  const { getStatusConfig, getStatusesForQuotesList, getStatusesForOrdersList } = useStatusManagement();
+
+  // Status distribution for charts - use status label for better display
   const statusCounts = quotes.reduce((acc, quote) => {
-    const status = quote.status;
-    acc[status] = (acc[status] || 0) + 1;
+    const statusConfig = getStatusConfig(quote.status, 'quote');
+    const displayName = statusConfig?.label || quote.status;
+    acc[displayName] = (acc[displayName] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
@@ -25,12 +29,27 @@ export const DashboardAnalytics = ({ quotes, orders }: DashboardAnalyticsProps) 
     value: count
   }));
 
-  // Calculate quick stats
-  const pendingQuotes = quotes.filter(q => q.status === 'pending').length;
-  const itemsInCart = quotes.filter(q => q.in_cart === true).length;
-  const activeOrders = orders.filter(q => !['completed', 'cancelled', 'rejected'].includes(q.status)).length;
+  // DYNAMIC: Calculate quick stats using status configuration
+  const pendingQuotes = quotes.filter(q => {
+    const statusConfig = getStatusConfig(q.status, 'quote');
+    return statusConfig?.requiresAction || q.status === 'pending'; // fallback
+  }).length;
+  
+  const itemsInCart = quotes.filter(q => {
+    const statusConfig = getStatusConfig(q.status, 'quote');
+    return q.in_cart === true && (statusConfig?.allowCartActions || q.status === 'approved'); // fallback
+  }).length;
+  
+  const activeOrders = orders.filter(q => {
+    const statusConfig = getStatusConfig(q.status, 'order');
+    return !statusConfig?.isTerminal; // Use dynamic terminal check
+  }).length;
+  
   const cartValue = quotes
-    .filter(q => q.in_cart && q.final_total)
+    .filter(q => {
+      const statusConfig = getStatusConfig(q.status, 'quote');
+      return q.in_cart && q.final_total && (statusConfig?.allowCartActions || q.status === 'approved'); // fallback
+    })
     .reduce((sum, q) => sum + Number(q.final_total), 0);
 
   return (

@@ -57,7 +57,7 @@ const QuoteTemplatesPage = React.lazy(() => import("@/components/admin/QuoteTemp
 const BankAccountSettings = React.lazy(() => import("@/components/admin/BankAccountSettings").then(m => ({ default: m.BankAccountSettings })));
 const SystemSettings = React.lazy(() => import("@/components/admin/SystemSettings").then(m => ({ default: m.SystemSettings })));
 const TestEmail = React.lazy(() => import("@/pages/TestEmail"));
-const PaymentProofsPage = React.lazy(() => import("@/pages/admin/PaymentProofsPage").then(m => ({ default: m.PaymentProofsPage })));
+const PaymentManagementPageNew = React.lazy(() => import("@/pages/admin/PaymentManagementPage"));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 
@@ -102,7 +102,7 @@ const router = createBrowserRouter([
           ) },
           { path: "shipping-routes", element: <ShippingRoutesPage /> },
           { path: "status-management", element: <StatusManagementPage /> },
-          { path: "payment-proofs", element: <PaymentProofsPage /> },
+          { path: "payment-proofs", element: <PaymentManagementPageNew /> },
           
           { path: "*", element: <NotFound /> },
         ],

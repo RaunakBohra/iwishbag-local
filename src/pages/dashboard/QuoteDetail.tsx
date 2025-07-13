@@ -8,6 +8,7 @@ import { useAllCountries } from '@/hooks/useAllCountries';
 import { useQuoteState } from '@/hooks/useQuoteState';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useCartStore } from '@/stores/cartStore';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { QuoteBreakdown } from '@/components/dashboard/QuoteBreakdown';
 import { DeliveryTimeline } from '@/components/dashboard/DeliveryTimeline';
 import { AddressEditForm } from '@/components/forms/AddressEditForm';
@@ -77,6 +78,7 @@ export default function QuoteDetail() {
   // Will get formatAmount from useQuoteDisplayCurrency when quote is loaded
   const { data: countries } = useAllCountries();
   const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
+  const { getStatusConfig } = useStatusManagement();
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
   const [isHelpOpen, setHelpOpen] = useState(false);
@@ -165,6 +167,48 @@ export default function QuoteDetail() {
 
   // Parse shipping address from JSONB
   const shippingAddress = quote?.shipping_address as unknown as ShippingAddress | null;
+
+  // DYNAMIC: Get status configuration for current quote status
+  const statusConfig = useMemo(() => {
+    if (!quote?.status) return null;
+    return getStatusConfig(quote.status, 'quote');
+  }, [quote?.status, getStatusConfig]);
+
+  // DYNAMIC: Status check helpers using configuration
+  const canShowExpiration = useMemo(() => {
+    if (!statusConfig) return ['sent', 'approved'].includes(quote?.status || ''); // fallback
+    return statusConfig.showExpiration ?? false;
+  }, [statusConfig, quote?.status]);
+
+  const canApprove = useMemo(() => {
+    if (!statusConfig) return quote?.status === 'sent'; // fallback
+    return statusConfig.allowApproval ?? false;
+  }, [statusConfig, quote?.status]);
+
+  const canAddToCart = useMemo(() => {
+    if (!statusConfig) return quote?.status === 'approved'; // fallback
+    return statusConfig.allowCartActions ?? false;
+  }, [statusConfig, quote?.status]);
+
+  const canReject = useMemo(() => {
+    if (!statusConfig) return ['sent', 'approved'].includes(quote?.status || ''); // fallback
+    return statusConfig.allowRejection ?? false;
+  }, [statusConfig, quote?.status]);
+
+  const isRejectedOrCancelled = useMemo(() => {
+    if (!statusConfig) return ['rejected', 'cancelled'].includes(quote?.status || ''); // fallback
+    return statusConfig.isTerminal && !statusConfig.isSuccessful;
+  }, [statusConfig, quote?.status]);
+
+  const canRenew = useMemo(() => {
+    if (!statusConfig) return quote?.status === 'expired'; // fallback
+    return statusConfig.allowRenewal ?? false;
+  }, [statusConfig, quote?.status]);
+
+  const canCancel = useMemo(() => {
+    if (!statusConfig) return quote?.status !== 'rejected'; // fallback
+    return statusConfig.allowCancellation ?? false;
+  }, [statusConfig, quote?.status]);
 
   // Mapping function for quote state (inlined from QuoteBreakdown)
   const getQuoteUIState = (quote: any) => {
@@ -680,7 +724,7 @@ export default function QuoteDetail() {
                         </div>
                         Message Support
                       </button>
-                      {quote.status !== 'rejected' && (
+                      {canCancel && (
                         <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105" onClick={handleCancelQuote}>
                           <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
                             <XCircle className="w-4 h-4 text-red-600" />
@@ -724,7 +768,7 @@ export default function QuoteDetail() {
                         </div>
                         Message Support
                       </button>
-                      {quote.status !== 'rejected' && (
+                      {canCancel && (
                         <button 
                           className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105" 
                           onClick={handleCancelQuote}
@@ -895,7 +939,7 @@ export default function QuoteDetail() {
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
                   {/* Expiration Timer */}
-                  {(quote.status === 'sent' || quote.status === 'approved') && quote.expires_at && (
+                  {canShowExpiration && quote.expires_at && (
                     <div className="flex items-center justify-center p-3 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg">
                       <QuoteExpirationTimer 
                         expiresAt={quote.expires_at}
@@ -905,7 +949,7 @@ export default function QuoteDetail() {
                     </div>
                   )}
                   
-                  {quote.status === 'sent' && (
+                  {canApprove && (
                     <>
                       <Button 
                         className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
@@ -927,7 +971,7 @@ export default function QuoteDetail() {
                     </>
                   )}
                   
-                  {(quote.status === 'rejected' || quote.status === 'cancelled') && (
+                  {isRejectedOrCancelled && (
                     <Button 
                       className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
                       onClick={handleApprove}
@@ -938,7 +982,7 @@ export default function QuoteDetail() {
                     </Button>
                   )}
                   
-                  {quote.status === 'approved' && !isQuoteInCart(quote.id) && (
+                  {canAddToCart && !isQuoteInCart(quote.id) && (
                     <Button 
                       className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
                       onClick={handleAddToCart}
@@ -958,7 +1002,7 @@ export default function QuoteDetail() {
                     </Link>
                   )}
                   
-                  {quote.status === 'expired' && quote.renewal_count < 1 && (
+                  {canRenew && quote.renewal_count < 1 && (
                     <RenewQuoteButton 
                       quoteId={quote.id}
                       onRenewed={() => {

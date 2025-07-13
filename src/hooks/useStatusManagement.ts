@@ -16,7 +16,7 @@ export interface StatusConfig {
   isTerminal: boolean;
   category: 'quote' | 'order';
   
-  // NEW: Flow-specific properties
+  // Flow-specific properties
   triggersEmail?: boolean;           // Should send email when this status is set?
   emailTemplate?: string;            // Which email template to use
   requiresAction?: boolean;          // Does this status require admin action?
@@ -24,6 +24,32 @@ export interface StatusConfig {
   showsInOrdersList?: boolean;      // Show in orders page?
   canBePaid?: boolean;              // Can quotes with this status be paid?
   isDefaultQuoteStatus?: boolean;    // Is this the default status for new quotes?
+  
+  // Action permissions (for dynamic behavior)
+  allowEdit?: boolean;              // Can edit quote/order details?
+  allowApproval?: boolean;          // Can approve quote?
+  allowRejection?: boolean;         // Can reject quote?
+  allowCartActions?: boolean;       // Can add to cart/checkout?
+  allowCancellation?: boolean;      // Can cancel quote/order?
+  allowRenewal?: boolean;           // Can renew expired quote?
+  allowShipping?: boolean;          // Can be shipped?
+  allowAddressEdit?: boolean;       // Can edit shipping address?
+  
+  // Display and UI properties
+  showInCustomerView?: boolean;     // Show to customers?
+  showInAdminView?: boolean;        // Show to admins?
+  showExpiration?: boolean;         // Show expiration timer?
+  isSuccessful?: boolean;           // Represents successful completion?
+  countsAsOrder?: boolean;          // Count in order statistics?
+  progressPercentage?: number;      // Progress bar percentage (0-100)
+  
+  // Customer messaging
+  customerMessage?: string;         // Message shown to customers
+  customerActionText?: string;      // Text for customer action buttons
+  
+  // CSS and styling
+  cssClass?: string;                // CSS class for styling
+  badgeVariant?: string;            // Badge variant for UI
 }
 
 export interface StatusWorkflow {
@@ -42,232 +68,7 @@ export const useStatusManagement = () => {
   const { quoteStatuses, orderStatuses, isLoading, error, refreshData } = useStatusConfig();
   const { toast } = useToast();
 
-  // Default statuses as fallback
-  const defaultQuoteStatuses: StatusConfig[] = [
-    {
-      id: 'pending',
-      name: 'pending',
-      label: 'Pending',
-      description: 'Quote request is awaiting review',
-      color: 'secondary',
-      icon: 'Clock',
-      isActive: true,
-      order: 1,
-      allowedTransitions: ['sent', 'rejected'],
-      isTerminal: false,
-      category: 'quote',
-      // Flow properties
-      triggersEmail: false,
-      requiresAction: true,
-      showsInQuotesList: true,
-      showsInOrdersList: false,
-      canBePaid: false,
-      isDefaultQuoteStatus: true
-    },
-    {
-      id: 'sent',
-      name: 'sent',
-      label: 'Sent',
-      description: 'Quote has been sent to customer',
-      color: 'outline',
-      icon: 'FileText',
-      isActive: true,
-      order: 2,
-      allowedTransitions: ['approved', 'rejected', 'expired'],
-      autoExpireHours: 168, // 7 days
-      isTerminal: false,
-      category: 'quote',
-      // Flow properties
-      triggersEmail: true,
-      emailTemplate: 'quote_sent',
-      requiresAction: false,
-      showsInQuotesList: true,
-      showsInOrdersList: false,
-      canBePaid: false
-    },
-    {
-      id: 'approved',
-      name: 'approved',
-      label: 'Approved',
-      description: 'Customer has approved the quote',
-      color: 'default',
-      icon: 'CheckCircle',
-      isActive: true,
-      order: 3,
-      allowedTransitions: ['rejected', 'paid'],
-      isTerminal: false,
-      category: 'quote',
-      // Flow properties
-      triggersEmail: true,
-      emailTemplate: 'quote_approved',
-      requiresAction: false,
-      showsInQuotesList: true,
-      showsInOrdersList: false,
-      canBePaid: true
-    },
-    {
-      id: 'rejected',
-      name: 'rejected',
-      label: 'Rejected',
-      description: 'Quote has been rejected',
-      color: 'destructive',
-      icon: 'XCircle',
-      isActive: true,
-      order: 4,
-      allowedTransitions: ['approved'],
-      isTerminal: true,
-      category: 'quote',
-      // Flow properties
-      triggersEmail: true,
-      emailTemplate: 'quote_rejected',
-      requiresAction: false,
-      showsInQuotesList: true,
-      showsInOrdersList: false,
-      canBePaid: false
-    },
-    {
-      id: 'expired',
-      name: 'expired',
-      label: 'Expired',
-      description: 'Quote has expired',
-      color: 'destructive',
-      icon: 'AlertTriangle',
-      isActive: true,
-      order: 5,
-      allowedTransitions: ['approved'],
-      isTerminal: true,
-      category: 'quote',
-      // Flow properties
-      triggersEmail: true,
-      emailTemplate: 'quote_expired',
-      requiresAction: false,
-      showsInQuotesList: true,
-      showsInOrdersList: false,
-      canBePaid: false
-    },
-    {
-      id: 'calculated',
-      name: 'calculated',
-      label: 'Calculated',
-      description: 'Quote has been calculated and is ready for review',
-      color: 'secondary',
-      icon: 'Calculator',
-      isActive: true,
-      order: 6,
-      allowedTransitions: ['sent', 'approved', 'rejected'],
-      isTerminal: false,
-      category: 'quote',
-      // Flow properties
-      triggersEmail: false,
-      requiresAction: true,
-      showsInQuotesList: true,
-      showsInOrdersList: false,
-      canBePaid: false
-    }
-  ];
-
-  const defaultOrderStatuses: StatusConfig[] = [
-    {
-      id: 'paid',
-      name: 'paid',
-      label: 'Paid',
-      description: 'Payment has been received',
-      color: 'default',
-      icon: 'DollarSign',
-      isActive: true,
-      order: 1,
-      allowedTransitions: ['ordered', 'cancelled'],
-      isTerminal: false,
-      category: 'order',
-      // Flow properties
-      triggersEmail: true,
-      emailTemplate: 'payment_received',
-      requiresAction: true,
-      showsInQuotesList: false,
-      showsInOrdersList: true,
-      canBePaid: false
-    },
-    {
-      id: 'ordered',
-      name: 'ordered',
-      label: 'Ordered',
-      description: 'Order has been placed with merchant',
-      color: 'default',
-      icon: 'ShoppingCart',
-      isActive: true,
-      order: 2,
-      allowedTransitions: ['shipped', 'cancelled'],
-      isTerminal: false,
-      category: 'order',
-      // Flow properties
-      triggersEmail: true,
-      emailTemplate: 'order_placed',
-      requiresAction: false,
-      showsInQuotesList: false,
-      showsInOrdersList: true,
-      canBePaid: false
-    },
-    {
-      id: 'shipped',
-      name: 'shipped',
-      label: 'Shipped',
-      description: 'Order has been shipped',
-      color: 'secondary',
-      icon: 'Truck',
-      isActive: true,
-      order: 3,
-      allowedTransitions: ['completed', 'cancelled'],
-      isTerminal: false,
-      category: 'order',
-      // Flow properties
-      triggersEmail: true,
-      emailTemplate: 'order_shipped',
-      requiresAction: false,
-      showsInQuotesList: false,
-      showsInOrdersList: true,
-      canBePaid: false
-    },
-    {
-      id: 'completed',
-      name: 'completed',
-      label: 'Completed',
-      description: 'Order has been delivered',
-      color: 'outline',
-      icon: 'CheckCircle',
-      isActive: true,
-      order: 4,
-      allowedTransitions: [],
-      isTerminal: true,
-      category: 'order',
-      // Flow properties
-      triggersEmail: true,
-      emailTemplate: 'order_completed',
-      requiresAction: false,
-      showsInQuotesList: false,
-      showsInOrdersList: true,
-      canBePaid: false
-    },
-    {
-      id: 'cancelled',
-      name: 'cancelled',
-      label: 'Cancelled',
-      description: 'Quote or order has been cancelled',
-      color: 'destructive',
-      icon: 'XCircle',
-      isActive: true,
-      order: 5,
-      allowedTransitions: [],
-      isTerminal: true,
-      category: 'order',
-      // Flow properties
-      triggersEmail: true,
-      emailTemplate: 'order_cancelled',
-      requiresAction: false,
-      showsInQuotesList: true,
-      showsInOrdersList: true,
-      canBePaid: false
-    }
-  ];
+  // Hook now uses dynamic statuses from StatusConfigProvider - no more hardcoded defaults here!
 
   const loadStatusSettings = async () => {
     // This function is no longer needed as the statuses are loaded from the provider
@@ -413,6 +214,50 @@ export const useStatusManagement = () => {
     console.log('Status change requested:', newStatus);
   };
 
+  // DYNAMIC: Find status for pending bank transfers
+  const findBankTransferPendingStatus = () => {
+    // Look for statuses that indicate awaiting payment
+    return orderStatuses.find(s => 
+      s.name.includes('payment') && s.name.includes('pending') ||
+      s.id === 'payment_pending' ||
+      s.label.toLowerCase().includes('awaiting payment') ||
+      s.customerActionText?.toLowerCase().includes('pay')
+    ) || orderStatuses.find(s => s.name === 'payment_pending');
+  };
+
+  // DYNAMIC: Find status for COD processing
+  const findCODProcessingStatus = () => {
+    // Look for processing status
+    return orderStatuses.find(s => 
+      s.name === 'processing' ||
+      s.id === 'processing' ||
+      s.label === 'Processing' ||
+      s.description?.toLowerCase().includes('processing')
+    ) || orderStatuses.find(s => s.name === 'processing');
+  };
+
+  // DYNAMIC: Find default order status
+  const findDefaultOrderStatus = () => {
+    // Look for 'ordered' or similar status
+    return orderStatuses.find(s => 
+      s.name === 'ordered' ||
+      s.id === 'ordered' ||
+      s.countsAsOrder && !s.requiresAction
+    ) || orderStatuses.find(s => s.name === 'ordered');
+  };
+  
+  // DYNAMIC: Find status by payment method
+  const findStatusForPaymentMethod = (paymentMethod: string): StatusConfig | undefined => {
+    switch (paymentMethod) {
+      case 'bank_transfer':
+        return findBankTransferPendingStatus();
+      case 'cod':
+        return findCODProcessingStatus();
+      default:
+        return findDefaultOrderStatus();
+    }
+  };
+
   return {
     statuses,
     quoteStatuses,
@@ -432,6 +277,11 @@ export const useStatusManagement = () => {
     shouldTriggerEmail,
     getEmailTemplate,
     requiresAdminAction,
-    refreshData
+    refreshData,
+    // DYNAMIC: Payment method status finders
+    findBankTransferPendingStatus,
+    findCODProcessingStatus,
+    findDefaultOrderStatus,
+    findStatusForPaymentMethod
   };
 }; 

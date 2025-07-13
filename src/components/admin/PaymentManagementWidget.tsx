@@ -218,6 +218,16 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                   <span className="text-sm font-medium">Payment Proofs</span>
                   <Badge variant="outline">{paymentProofs.length} submitted</Badge>
                 </div>
+                {/* Info message about bank transfer payments */}
+                {quote.payment_status !== 'paid' && (
+                  <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+                    <p className="text-xs text-blue-700">
+                      Bank transfer payments are verified through the payment proof system. 
+                      Click "Verify Payment Proofs" below to review and confirm payments.
+                    </p>
+                  </div>
+                )}
                 {paymentProofs.slice(0, 3).map((proof, index) => (
                   <div key={proof.id} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center justify-between">
@@ -246,14 +256,6 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                         </Button>
                       </div>
                     </div>
-                    {proof.verified_amount && proof.verification_status === 'verified' && (
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Verified Amount</span>
-                        <span className="font-medium text-green-600">
-                          {quote.final_currency} {proof.verified_amount.toFixed(2)}
-                        </span>
-                      </div>
-                    )}
                     {proof.verified_at && (
                       <div className="text-xs text-muted-foreground">
                         Verified on {format(new Date(proof.verified_at), 'MMM dd, yyyy')}
@@ -274,7 +276,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                 onClick={() => window.open(`/admin/payment-proofs?quote=${quote.id}`, '_blank')}
               >
                 <Receipt className="mr-2 h-4 w-4" />
-                View Proofs
+                Verify Payment Proofs
               </Button>
             )}
             

@@ -39,7 +39,7 @@ import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
 import { useCountryUtils, formatShippingRoute } from '@/lib/countryUtils';
 import { extractShippingAddressFromNotes } from '@/lib/addressUpdates';
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { PaymentProofPreviewModal } from "@/components/payment/PaymentProofPreviewModal";
+// PaymentProofPreviewModal removed - using new simplified payment management
 
 type OrderWithItems = Tables<'quotes'> & { 
   quote_items: Tables<'quote_items'>[];
@@ -75,7 +75,7 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect, onConfirmPayme
     const queryClient = useQueryClient();
     const { formatMultiCurrency } = useAdminCurrencyDisplay();
     const { formatAmount } = useUserCurrency();
-    const [showPaymentProofModal, setShowPaymentProofModal] = useState(false);
+    // Payment proof modal removed - now handled in dedicated payment management page
     
     // Get message count for this order
     const { data: messageCount = 0 } = useQuery({
@@ -91,30 +91,7 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect, onConfirmPayme
         staleTime: 30000, // Cache for 30 seconds
     });
 
-    // Get payment proof information for this order
-    const { data: paymentProofMessage } = useQuery({
-        queryKey: ['payment-proof-message', order.id],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('messages')
-                .select('*')
-                .eq('quote_id', order.id)
-                .eq('message_type', 'payment_proof')
-                .order('created_at', { ascending: false })
-                .limit(1);
-            
-            if (error) return null;
-            return data?.[0] || null;
-        },
-        staleTime: 30000, // Cache for 30 seconds
-    });
-    
-    const paymentProofInfo = paymentProofMessage ? {
-        id: paymentProofMessage.id,
-        verification_status: paymentProofMessage.verification_status,
-        attachment_file_name: paymentProofMessage.attachment_file_name,
-        created_at: paymentProofMessage.created_at
-    } : null;
+    // Payment proof queries simplified - detailed verification now in payment management page
     
     const firstItem = order.quote_items?.[0];
     const totalItems = order.quote_items?.length || 0;
@@ -169,7 +146,7 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect, onConfirmPayme
         }
     };
 
-    const verificationInfo = paymentProofInfo ? getVerificationStatusInfo(paymentProofInfo.verification_status) : null;
+    // Payment proof verification info moved to dedicated payment management page
 
     return (
         <>
@@ -210,91 +187,63 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect, onConfirmPayme
                         </div>
                     </div>
 
-                    {/* Payment Section */}
-                    <div className="border rounded-lg p-4 bg-blue-50/30">
-                        <div className="flex items-center gap-2 mb-3">
-                            <DollarSign className="h-4 w-4 text-blue-600" />
-                            <span className="font-semibold text-blue-900">Payment Information</span>
+                    {/* Simplified Payment Section */}
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <PaymentIcon className={`h-4 w-4 ${paymentMethodInfo.color}`} />
+                                <span className="text-sm font-medium">{paymentMethodInfo.label}</span>
+                            </div>
+                            
+                            {/* Payment Progress */}
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium">{currency} {amountPaid.toFixed(2)}</span>
+                                <span className="text-sm text-muted-foreground">/</span>
+                                <span className="text-sm">{currency} {finalTotal.toFixed(2)}</span>
+                                
+                                {/* Progress indicator */}
+                                <div className="w-20 bg-gray-200 rounded-full h-1.5">
+                                    <div 
+                                        className={cn(
+                                            "h-1.5 rounded-full transition-all",
+                                            (amountPaid / finalTotal) >= 1 ? "bg-green-500" : 
+                                            (amountPaid / finalTotal) > 0 ? "bg-orange-500" : 
+                                            "bg-gray-300"
+                                        )}
+                                        style={{ width: `${Math.min((amountPaid / finalTotal) * 100, 100)}%` }}
+                                    />
+                                </div>
+                            </div>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            {/* Payment Method */}
-                            <div>
-                                <p className="text-xs text-muted-foreground mb-1">Payment Method</p>
-                                <div className="flex items-center gap-2">
-                                    <PaymentIcon className={`h-4 w-4 ${paymentMethodInfo.color}`} />
-                                    <span className="font-medium">{paymentMethodInfo.label}</span>
-                                </div>
-                            </div>
-
-                            {/* Amount Paid */}
-                            <div>
-                                <p className="text-xs text-muted-foreground mb-1">Amount Paid</p>
-                                <p className="font-bold text-green-600">{currency} {amountPaid.toFixed(2)}</p>
-                            </div>
-
-                            {/* Due Amount */}
-                            <div>
-                                <p className="text-xs text-muted-foreground mb-1">Due Amount</p>
-                                <p className={`font-bold ${dueAmount > 0 ? 'text-red-600' : dueAmount < 0 ? 'text-purple-600' : 'text-green-600'}`}>
-                                    {currency} {Math.abs(dueAmount).toFixed(2)}
-                                    {dueAmount < 0 && ' (Overpaid)'}
-                                </p>
-                            </div>
-
-                            {/* Payment Status */}
-                            <div>
-                                <p className="text-xs text-muted-foreground mb-1">Payment Status</p>
+                        <div className="flex items-center gap-2">
+                            {/* Payment Status Badge */}
+                            <Badge 
+                                variant={
+                                    order.payment_status === 'paid' ? 'success' : 
+                                    order.payment_status === 'partial' ? 'warning' : 
+                                    order.payment_status === 'overpaid' ? 'secondary' : 
+                                    'destructive'
+                                }
+                                className="text-xs"
+                            >
+                                {order.payment_status === 'paid' && <CheckCircle className="h-3 w-3 mr-1" />}
+                                {order.payment_status === 'partial' && <Clock className="h-3 w-3 mr-1" />}
+                                {order.payment_status === 'unpaid' && <AlertTriangle className="h-3 w-3 mr-1" />}
+                                {order.payment_status?.charAt(0).toUpperCase() + (order.payment_status?.slice(1) || 'Unpaid')}
+                            </Badge>
+                            
+                            {/* Bank Transfer Proof Badge - simplified */}
+                            {order.payment_method === 'bank_transfer' && (
                                 <Badge 
-                                    variant={
-                                        order.payment_status === 'paid' ? 'default' : 
-                                        order.payment_status === 'partial' ? 'secondary' : 
-                                        order.payment_status === 'overpaid' ? 'outline' : 
-                                        'destructive'
-                                    }
-                                    className="text-xs"
+                                    variant="outline" 
+                                    className="text-xs border-blue-300 bg-blue-50"
                                 >
-                                    {order.payment_status === 'partial' && <AlertTriangle className="h-3 w-3 mr-1" />}
-                                    {order.payment_status?.charAt(0).toUpperCase() + (order.payment_status?.slice(1) || 'Unpaid')}
+                                    <Receipt className="h-3 w-3 mr-1" />
+                                    Bank Transfer
                                 </Badge>
-                            </div>
+                            )}
                         </div>
-
-                        {/* Payment Proof Section for Bank Transfer Orders */}
-                        {order.payment_method === 'bank_transfer' && (
-                            <div className="mt-4 p-3 bg-white border border-blue-200 rounded-lg">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Receipt className="h-4 w-4 text-blue-600" />
-                                        <span className="font-medium text-blue-900">Payment Proof</span>
-                                    </div>
-                                    
-                                    {paymentProofInfo ? (
-                                        <div className="flex items-center gap-2">
-                                            {verificationInfo && (
-                                                <Badge className={`text-xs ${verificationInfo.color}`}>
-                                                    {verificationInfo.icon && <verificationInfo.icon className="h-3 w-3 mr-1" />}
-                                                    {verificationInfo.label}
-                                                </Badge>
-                                            )}
-                                            <Badge variant="outline" className="text-xs">
-                                                {paymentProofInfo.attachment_file_name}
-                                            </Badge>
-                                        </div>
-                                    ) : (
-                                        <Badge variant="outline" className="text-xs text-gray-500">
-                                            No proof submitted
-                                        </Badge>
-                                    )}
-                                </div>
-                                
-                                {paymentProofInfo && (
-                                    <div className="mt-2 text-xs text-gray-600">
-                                        Submitted: {new Date(paymentProofInfo.created_at).toLocaleDateString()}
-                                    </div>
-                                )}
-                            </div>
-                        )}
                     </div>
 
                     {/* Tracking Section */}
@@ -364,29 +313,38 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect, onConfirmPayme
                                 </Tooltip>
                             )}
                             
-                            {/* Review Payment Proof Button */}
-                            {paymentProofInfo && (
+                            {/* Single action button for payment */}
+                            {order.payment_method === 'bank_transfer' && order.payment_status !== 'paid' && (
                                 <Button 
                                     size="sm" 
-                                    variant="outline" 
+                                    variant="outline"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setShowPaymentProofModal(true);
+                                        navigate(`/admin/payment-proofs?search=${order.order_display_id}`);
                                     }}
-                                    className={paymentProofInfo.verification_status === 'pending' 
-                                        ? "bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
-                                        : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
-                                    }
                                 >
                                     <Receipt className="h-3 w-3 mr-1" />
-                                    {paymentProofInfo.verification_status === 'pending' ? 'Review Proof' : 'View Proof'}
+                                    Manage Payment
                                 </Button>
                             )}
                             
-                            {/* Payment Confirmation Button */}
-                            {(order.payment_method === 'bank_transfer' || order.payment_method === 'cod') && 
-                             (order.payment_status === 'unpaid' || !order.payment_status || order.payment_status === 'partial') && 
-                             (!paymentProofInfo || paymentProofInfo.verification_status !== 'pending') && (
+                            {order.payment_method !== 'bank_transfer' && order.payment_status !== 'paid' && (
+                                <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/admin/payment-proofs?search=${order.order_display_id}`);
+                                    }}
+                                >
+                                    <Receipt className="h-3 w-3 mr-1" />
+                                    Payment Details
+                                </Button>
+                            )}
+                            
+                            {/* For non-bank transfer methods, show confirm payment if needed */}
+                            {order.payment_method !== 'bank_transfer' && 
+                             (order.payment_status === 'unpaid' || order.payment_status === 'partial') && (
                                 <Button 
                                     size="sm" 
                                     variant="outline" 
@@ -417,25 +375,7 @@ export const AdminOrderListItem = ({ order, isSelected, onSelect, onConfirmPayme
             </CardContent>
         </Card>
 
-        {/* Payment Proof Preview Modal */}
-        {paymentProofMessage && (
-            <PaymentProofPreviewModal
-                isOpen={showPaymentProofModal}
-                onClose={() => setShowPaymentProofModal(false)}
-                message={paymentProofMessage}
-                orderId={order.id}
-                onStatusUpdate={() => {
-                    queryClient.invalidateQueries({ queryKey: ['payment-proof-message', order.id] });
-                    // Invalidate all admin-orders queries (regardless of filters)
-                    queryClient.invalidateQueries({ 
-                      predicate: (query) => query.queryKey[0] === 'admin-orders' 
-                    });
-                    queryClient.invalidateQueries({ queryKey: ['payment-proof-stats'] });
-                    queryClient.invalidateQueries({ queryKey: ['admin-quote', order.id] });
-                    setShowPaymentProofModal(false);
-                }}
-            />
-        )}
+        {/* Payment proof modal removed - now handled in dedicated payment management page */}
         </>
     );
 };

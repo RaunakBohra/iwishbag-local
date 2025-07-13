@@ -30,12 +30,23 @@ export const useOrderManagement = () => {
             // Only show quotes with statuses that are configured to show in orders list
             const orderStatusNames = getStatusesForOrdersList();
             console.log('DEBUG: Order statuses allowed in orders list:', orderStatusNames);
-            if (orderStatusNames.length > 0) {
-                query = query.in('status', orderStatusNames);
-            }
-        
+            
             if (statusFilter !== 'all') {
-                query = query.eq('status', statusFilter);
+                // Check if the selected status is allowed in orders list
+                if (orderStatusNames.includes(statusFilter)) {
+                    query = query.eq('status', statusFilter);
+                } else {
+                    // If selected status is not allowed, show all allowed statuses
+                    console.log(`DEBUG: Status '${statusFilter}' is not allowed in orders list, showing all allowed statuses`);
+                    if (orderStatusNames.length > 0) {
+                        query = query.in('status', orderStatusNames);
+                    }
+                }
+            } else {
+                // No specific status selected, show all allowed statuses
+                if (orderStatusNames.length > 0) {
+                    query = query.in('status', orderStatusNames);
+                }
             }
 
             if (paymentStatusFilter !== 'all') {

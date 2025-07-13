@@ -2,6 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Tables } from "@/integrations/supabase/types";
+import { useStatusManagement } from "@/hooks/useStatusManagement";
+import { usePaymentStatusManagement } from "@/hooks/usePaymentStatusManagement";
 
 export type ShippingData = {
     shipping_carrier: string;
@@ -11,15 +13,22 @@ export type ShippingData = {
 export const useOrderMutations = (id: string | undefined) => {
     const queryClient = useQueryClient();
     const { toast } = useToast();
+    const { getStatusConfig, orderStatuses } = useStatusManagement();
+    const { getPaymentStatusConfig } = usePaymentStatusManagement();
 
     const updateShippingInfoMutation = useMutation<void, Error, ShippingData>({
         mutationFn: async (shippingData) => {
             if (!id) throw new Error("Order ID is required.");
+            
+            // DYNAMIC: Find the shipped status from configuration
+            const shippedStatusConfig = orderStatuses.find(s => s.name === 'shipped' || s.allowShipping);
+            const shippedStatus = shippedStatusConfig?.name || 'shipped';
+            
             const { error } = await supabase
                 .from('quotes')
                 .update({
                     ...shippingData,
-                    status: 'shipped',
+                    status: shippedStatus,
                     shipped_at: new Date().toISOString(),
                 })
                 .eq('id', id);
@@ -41,7 +50,9 @@ export const useOrderMutations = (id: string | undefined) => {
 
             const updateData: Partial<Tables<'quotes'>> = { status };
 
-            if (status === 'paid') {
+            // DYNAMIC: Check if this status represents payment received
+            const statusConfig = getStatusConfig(status, 'order');
+            if (statusConfig?.isSuccessful && statusConfig?.countsAsOrder) {
                 updateData.paid_at = new Date().toISOString();
                 const { data: currentQuote, error: fetchError } = await supabase
                     .from('quotes')
@@ -57,9 +68,10 @@ export const useOrderMutations = (id: string | undefined) => {
                     if (!currentQuote.order_display_id) {
                         updateData.order_display_id = `ORD-${id.substring(0, 6).toUpperCase()}`;
                     }
-                    if (currentQuote.status === 'cod_pending') {
+                    // DYNAMIC: Check for payment method based on status name patterns
+                    if (currentQuote.status.includes('cod')) {
                         updateData.payment_method = 'cod';
-                    } else if (currentQuote.status === 'bank_transfer_pending') {
+                    } else if (currentQuote.status.includes('bank_transfer') || currentQuote.status.includes('transfer')) {
                         updateData.payment_method = 'bank_transfer';
                     }
                 }
@@ -114,21 +126,31 @@ export const useOrderMutations = (id: string | undefined) => {
             const newTotalPaid = currentPaid + amount;
             const expectedAmount = existingQuote?.final_total || 0;
             
-            // Determine payment status
+            // DYNAMIC: Determine payment status using configuration
             let paymentStatus: string;
             let status: string = existingQuote?.status || 'payment_pending';
             
             if (newTotalPaid === 0) {
-                paymentStatus = 'unpaid';
+                const unpaidConfig = getPaymentStatusConfig('unpaid');
+                paymentStatus = unpaidConfig?.name || 'unpaid';
             } else if (newTotalPaid < expectedAmount) {
-                paymentStatus = 'partial';
-                status = 'partial_payment';
+                const partialConfig = getPaymentStatusConfig('partial');
+                paymentStatus = partialConfig?.name || 'partial';
+                // DYNAMIC: Find partial payment status from order configuration
+                const partialStatusConfig = orderStatuses.find(s => s.name.includes('partial') || s.name.includes('partial_payment'));
+                status = partialStatusConfig?.name || 'partial_payment';
             } else if (newTotalPaid === expectedAmount) {
-                paymentStatus = 'paid';
-                status = 'paid';
+                const paidConfig = getPaymentStatusConfig('paid');
+                paymentStatus = paidConfig?.name || 'paid';
+                // DYNAMIC: Find paid status from order configuration
+                const paidStatusConfig = orderStatuses.find(s => s.name === 'paid' || (s.isSuccessful && s.countsAsOrder));
+                status = paidStatusConfig?.name || 'paid';
             } else {
-                paymentStatus = 'overpaid';
-                status = 'paid'; // Still mark as paid for overpayments
+                const overpaidConfig = getPaymentStatusConfig('overpaid');
+                paymentStatus = overpaidConfig?.name || 'overpaid';
+                // Still mark as paid for overpayments
+                const paidStatusConfig = orderStatuses.find(s => s.name === 'paid' || (s.isSuccessful && s.countsAsOrder));
+                status = paidStatusConfig?.name || 'paid';
             }
             
             const updateData: Partial<Tables<'quotes'>> = { 
@@ -143,8 +165,9 @@ export const useOrderMutations = (id: string | undefined) => {
                 updateData.overpayment_amount = newTotalPaid - expectedAmount;
             }
 
-            // Set paid_at only when fully paid
-            if (paymentStatus === 'paid' || paymentStatus === 'overpaid') {
+            // DYNAMIC: Set paid_at when payment status is considered successful
+            const currentPaymentConfig = getPaymentStatusConfig(paymentStatus);
+            if (currentPaymentConfig?.isComplete || paymentStatus.includes('paid')) {
                 updateData.paid_at = new Date().toISOString();
             }
             
@@ -153,7 +176,9 @@ export const useOrderMutations = (id: string | undefined) => {
                 updateData.payment_method = 'bank_transfer'; // Default to bank_transfer for payment_pending orders
             }
             
-            if (existingQuote && !existingQuote.order_display_id && (paymentStatus === 'paid' || paymentStatus === 'overpaid')) {
+            // DYNAMIC: Generate order ID when payment is considered complete
+            const shouldGenerateOrderId = currentPaymentConfig?.isComplete || paymentStatus.includes('paid');
+            if (existingQuote && !existingQuote.order_display_id && shouldGenerateOrderId) {
                 updateData.order_display_id = `ORD-${id.substring(0, 6).toUpperCase()}`;
             }
 
