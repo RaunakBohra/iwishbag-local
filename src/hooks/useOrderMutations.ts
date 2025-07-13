@@ -154,16 +154,17 @@ export const useOrderMutations = (id: string | undefined) => {
             }
             
             const updateData: Partial<Tables<'quotes'>> = { 
-                amount_paid: newTotalPaid,
-                payment_status: paymentStatus,
+                // Remove amount_paid and payment_status - let the trigger calculate these
+                // amount_paid: newTotalPaid,  // Trigger will calculate this from payment_records
+                // payment_status: paymentStatus,  // Trigger will calculate this based on amount_paid
                 status: status,
                 in_cart: false,
             };
 
-            // Add overpayment amount if applicable
-            if (paymentStatus === 'overpaid') {
-                updateData.overpayment_amount = newTotalPaid - expectedAmount;
-            }
+            // Add overpayment amount if applicable - but let trigger calculate exact amount
+            // if (paymentStatus === 'overpaid') {
+            //     updateData.overpayment_amount = newTotalPaid - expectedAmount;
+            // }
 
             // DYNAMIC: Set paid_at when payment status is considered successful
             const currentPaymentConfig = getPaymentStatusConfig(paymentStatus);
