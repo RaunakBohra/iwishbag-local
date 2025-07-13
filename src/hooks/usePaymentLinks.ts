@@ -14,6 +14,11 @@ interface CreatePaymentLinkParams {
   description?: string;
   expiryDays?: number;
   gateway?: 'payu' | 'stripe' | 'paypal';
+  // Enhanced v2 options
+  customFields?: any[];
+  template?: 'default' | 'minimal' | 'branded';
+  partialPaymentAllowed?: boolean;
+  apiMethod?: 'rest' | 'legacy';
 }
 
 interface PaymentLinkResponse {
@@ -28,6 +33,14 @@ interface PaymentLinkResponse {
   originalCurrency?: string;
   exchangeRate?: number;
   error?: string;
+  // Enhanced v2 response
+  apiVersion?: string;
+  fallbackUsed?: boolean;
+  features?: {
+    customFields?: boolean;
+    partialPayment?: boolean;
+    template?: string;
+  };
 }
 
 export function usePaymentLinks() {
@@ -48,7 +61,13 @@ export function usePaymentLinks() {
         return null;
       }
 
-      const { data, error } = await supabase.functions.invoke('create-payment-link', {
+      // Use enhanced v2 function if advanced features are requested
+      const useV2 = params.customFields?.length || params.partialPaymentAllowed || 
+                    params.template !== 'default' || params.apiMethod === 'rest';
+      
+      const functionName = useV2 ? 'create-payu-payment-link-v2' : 'create-payment-link';
+      
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: params,
       });
 

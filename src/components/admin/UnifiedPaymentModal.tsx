@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   DollarSign, 
   Plus, 
@@ -40,7 +41,9 @@ import {
   Shield,
   Smartphone,
   Hash,
-  Info
+  Info,
+  Copy,
+  ExternalLink
 } from "lucide-react";
 import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
 import { getCurrencySymbol, getCountryCurrency, getDestinationCountryFromQuote, formatAmountForDisplay } from '@/lib/currencyUtils';
@@ -51,6 +54,12 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RefundManagementModal } from './RefundManagementModal';
 import { PaymentProofButton } from '../payment/PaymentProofButton';
+import { PaymentLinkGenerator } from '../payment/PaymentLinkGenerator';
+import { EnhancedPaymentLinkGenerator } from '../payment/EnhancedPaymentLinkGenerator';
+import { DueAmountNotification } from '../payment/DueAmountNotification';
+import { useDueAmountManager } from '@/hooks/useDueAmountManager';
+import { usePaymentStatusSync } from '@/hooks/usePaymentStatusSync';
+import { DueAmountInfo } from '@/lib/paymentUtils';
 
 interface UnifiedPaymentModalProps {
   isOpen: boolean;
@@ -191,6 +200,26 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     enabled: isOpen && !!quote.id && quote.payment_method === 'bank_transfer',
   });
 
+  // Fetch payment links for this quote
+  const { data: paymentLinks, isLoading: linksLoading } = useQuery({
+    queryKey: ['payment-links', quote.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('payment_links')
+        .select('*')
+        .eq('quote_id', quote.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching payment links:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    enabled: isOpen && !!quote.id,
+  });
+
   // Calculate payment summary
   const paymentSummary = useMemo(() => {
     const totalPaid = paymentLedger?.reduce((sum, entry) => {
@@ -249,6 +278,51 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const [rejectionReason, setRejectionReason] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [dueAmountInfo, setDueAmountInfo] = useState<DueAmountInfo | null>(null);
+
+  // Due amount management
+  const { handleOrderValueChange, isProcessing: isDueProcessing } = useDueAmountManager({
+    quoteId: quote.id,
+    currency,
+    autoGenerateLinks: false, // Manual generation for admin
+    onDueAmountDetected: (dueInfo) => {
+      setDueAmountInfo(dueInfo);
+    },
+    onPaymentLinkCreated: (link) => {
+      toast({
+        title: "Payment Link Created",
+        description: "Payment link has been generated and sent to customer.",
+      });
+    }
+  });
+
+  // Real-time payment status synchronization
+  const { isMonitoring, checkPaymentStatus } = usePaymentStatusSync({
+    quoteId: quote.id,
+    enabled: isOpen,
+    onPaymentConfirmed: (transaction) => {
+      toast({
+        title: "Payment Confirmed",
+        description: `Payment confirmed for ${formatAmountForDisplay(transaction.amount, currency)}`,
+      });
+      // Switch to history tab to show the updated payment
+      setActiveTab('history');
+    },
+    onPaymentFailed: (transaction) => {
+      toast({
+        title: "Payment Failed",
+        description: "Payment attempt failed. Customer may need to try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Monitor quote changes for due amount detection
+  useEffect(() => {
+    if (quote?.final_total) {
+      handleOrderValueChange(parseFloat(quote.final_total), quote);
+    }
+  }, [quote?.final_total, handleOrderValueChange]);
 
   // Utility functions for verification
   const isImage = (filename: string) => {
@@ -697,6 +771,25 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
             <ScrollArea className="h-[60vh] mt-4">
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-4">
+                {/* Due Amount Notification */}
+                {dueAmountInfo && (dueAmountInfo.hasDueAmount || dueAmountInfo.changeType !== 'none') && (
+                  <DueAmountNotification
+                    dueInfo={dueAmountInfo}
+                    currency={currency}
+                    currencySymbol={currencySymbol}
+                    quote={quote}
+                    onPaymentLinkCreated={(link) => {
+                      toast({
+                        title: "Payment Link Created",
+                        description: "Payment link has been generated and copied to clipboard.",
+                      });
+                      // Refresh payment data
+                      queryClient.invalidateQueries({ queryKey: ['payment-ledger', quote.id] });
+                    }}
+                    showActions={true}
+                  />
+                )}
+
                 {/* Payment Summary Card */}
                 <div className="rounded-lg border bg-card p-6">
                   <h3 className="text-lg font-semibold mb-4">Payment Summary</h3>
@@ -759,6 +852,15 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                        paymentSummary.status === 'partial' ? 'Partially Paid' : 'Unpaid'}
                     </Badge>
                     
+                    <div className="flex items-center gap-2">
+                      {isMonitoring && (
+                        <Badge variant="outline" className="text-xs">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse" />
+                          Live Updates
+                        </Badge>
+                      )}
+                    </div>
+                    
                     <div className="flex gap-2">
                       {paymentSummary.status !== 'paid' && (
                         <Button 
@@ -768,6 +870,27 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           <Plus className="w-4 h-4 mr-1" />
                           Record Payment
                         </Button>
+                      )}
+                      {paymentSummary.remaining > 0 && (
+                        <EnhancedPaymentLinkGenerator
+                          quoteId={quote.id}
+                          amount={paymentSummary.remaining}
+                          currency="USD"
+                          customerInfo={{
+                            name: quote.shipping_address?.name || quote.user?.full_name || '',
+                            email: quote.shipping_address?.email || quote.user?.email || '',
+                            phone: quote.shipping_address?.phone || quote.user?.phone || ''
+                          }}
+                          onLinkCreated={(link) => {
+                            toast({
+                              title: "Enhanced Payment Link Created",
+                              description: `${link.apiVersion?.includes('rest') ? 'Advanced' : 'Legacy'} payment link for ${formatAmountForDisplay(paymentSummary.remaining, currency)} has been created.`,
+                            });
+                            // Refresh payment data after link creation
+                            queryClient.invalidateQueries({ queryKey: ['payment-ledger', quote.id] });
+                            queryClient.invalidateQueries({ queryKey: ['payment-links', quote.id] });
+                          }}
+                        />
                       )}
                       {quote.payment_method === 'bank_transfer' && (
                         <PaymentProofButton
@@ -1200,14 +1323,29 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                 <div className="rounded-lg border bg-card p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold">Payment Timeline</h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleExportPaymentHistory()}
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Export CSV
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={checkPaymentStatus}
+                        disabled={isDueProcessing}
+                      >
+                        {isDueProcessing ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                        )}
+                        Refresh
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleExportPaymentHistory()}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export CSV
+                      </Button>
+                    </div>
                   </div>
                   
                   {ledgerLoading ? (
@@ -1393,6 +1531,113 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           </p>
                         </div>
                       </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Payment Links Section */}
+                <div className="rounded-lg border bg-card p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">Payment Links</h3>
+                    <Badge variant="outline" className="text-xs">
+                      {paymentLinks?.length || 0} Links
+                    </Badge>
+                  </div>
+                  
+                  {linksLoading ? (
+                    <div className="space-y-3">
+                      {Array.from({ length: 2 }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <Skeleton className="h-4 w-4 rounded" />
+                          <Skeleton className="h-4 flex-1" />
+                          <Skeleton className="h-4 w-20" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : paymentLinks && paymentLinks.length > 0 ? (
+                    <div className="space-y-3">
+                      {paymentLinks.map((link) => (
+                        <div key={link.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-2 h-2 rounded-full",
+                              link.status === 'active' ? "bg-green-500" : 
+                              link.status === 'completed' ? "bg-blue-500" : 
+                              link.status === 'expired' ? "bg-orange-500" :
+                              "bg-gray-400"
+                            )} />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium">
+                                  {formatAmountForDisplay(link.amount, link.currency)} 
+                                </p>
+                                {link.api_version === 'v2_rest' && (
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                    Enhanced
+                                  </Badge>
+                                )}
+                                {link.api_version === 'v1_legacy' && (
+                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                    Legacy
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {link.description || 'Payment Link'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Created {format(new Date(link.created_at), 'MMM dd, yyyy HH:mm')}
+                                {link.expires_at && (
+                                  <span> • Expires {format(new Date(link.expires_at), 'MMM dd, yyyy')}</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Badge variant={
+                              link.status === 'active' ? 'default' : 
+                              link.status === 'completed' ? 'outline' : 
+                              link.status === 'expired' ? 'secondary' :
+                              'secondary'
+                            } className="text-xs">
+                              {link.status}
+                            </Badge>
+                            
+                            {link.payment_url && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(link.payment_url);
+                                  toast({
+                                    title: "Link Copied!",
+                                    description: "Payment link has been copied to clipboard",
+                                  });
+                                }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            )}
+                            
+                            {link.payment_url && (
+                              <Button
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => window.open(link.payment_url, '_blank')}
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No payment links generated yet</p>
+                      <p className="text-xs">Payment links will appear here when created</p>
                     </div>
                   )}
                 </div>

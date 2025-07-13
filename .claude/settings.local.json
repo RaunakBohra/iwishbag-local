@@ -33,7 +33,18 @@
       "Bash(mv:*)",
       "Bash(supabase migration repair:*)",
       "Bash(pkill:*)",
-      "Bash(PGPASSWORD=aZenjDCQxwMifCEY psql:*)"
+      "Bash(PGPASSWORD=aZenjDCQxwMifCEY psql:*)",
+      "Bash(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c \"\\d payment_ledger\")",
+      "Bash(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c \"\\df record_payment_with_ledger_and_triggers\")",
+      "Bash(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c \"\\dt\")",
+      "Bash(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c \"\n-- Test the complete payment workflow\n-- 1. Check if we can call the RPC function\nSELECT record_payment_with_ledger_and_triggers(\n    ''c0a80121-1234-4abc-8000-000000000001''::uuid,\n    100.50,\n    ''USD'',\n    ''bank_transfer'',\n    ''TEST-123'',\n    ''Test payment from local database check'',\n    ''00000000-0000-4000-8000-000000000001''::uuid\n);\n\")",
+      "Bash(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c \"\n-- Check what functions are available for the UnifiedPaymentModal\nSELECT routine_name, routine_definition \nFROM information_schema.routines \nWHERE routine_name LIKE ''%payment%'' \nAND routine_type = ''FUNCTION''\nAND routine_schema = ''public''\nORDER BY routine_name;\n\")",
+      "Bash(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c \"\n-- Check if the key functions that UnifiedPaymentModal depends on exist\nSELECT \n    routine_name,\n    array_agg(parameter_name || '' '' || data_type ORDER BY ordinal_position) as parameters\nFROM information_schema.routines r\nLEFT JOIN information_schema.parameters p ON r.specific_name = p.specific_name\nWHERE r.routine_name IN (\n    ''record_payment_with_ledger_and_triggers'',\n    ''confirm_payment_from_proof'', \n    ''get_orders_with_payment_proofs''\n)\nAND r.routine_schema = ''public''\nGROUP BY routine_name\nORDER BY routine_name;\n\")",
+      "Bash(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c \"\\dt financial_transactions\")",
+      "Bash(supabase functions deploy:*)",
+      "WebFetch(domain:docs.payu.in)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }

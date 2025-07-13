@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEmailSettings } from "@/hooks/useEmailSettings";
 import { Quote } from "@/types/quote";
 
-type EmailTemplate = 'quote_sent' | 'quote_approved' | 'quote_rejected' | 'order_shipped' | 'order_delivered' | 'contact_form' | 'bank_transfer_details' | 'password_reset' | 'password_reset_success';
+type EmailTemplate = 'quote_sent' | 'quote_approved' | 'quote_rejected' | 'order_shipped' | 'order_delivered' | 'contact_form' | 'bank_transfer_details' | 'password_reset' | 'password_reset_success' | 'payment_link';
 
 interface EmailNotificationOptions {
   to: string;
@@ -348,6 +348,48 @@ export const useEmailNotifications = () => {
     });
   };
 
+  const sendPaymentLinkEmail = async (options: {
+    to: string;
+    customerName: string;
+    orderNumber: string;
+    amount: number;
+    currency: string;
+    paymentUrl: string;
+    expiryDate: string;
+  }) => {
+    try {
+      const accessToken = await getAccessToken();
+      
+      if (!accessToken) {
+        throw new Error('User not authenticated - cannot send payment link email');
+      }
+
+      // Use the dedicated payment link email function
+      const { data: result, error } = await supabase.functions.invoke('send-payment-link-email', {
+        body: options,
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to send payment link email');
+      }
+
+      toast({
+        title: "Payment link sent",
+        description: `Payment link has been emailed to ${options.to}`,
+      });
+
+      return result;
+    } catch (error: any) {
+      toast({
+        title: "Failed to send payment link",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   return {
     sendEmail: sendEmailMutation.mutate,
     isSending: sendEmailMutation.isPending,
@@ -359,6 +401,7 @@ export const useEmailNotifications = () => {
     sendContactFormEmail,
     sendBankTransferEmail,
     sendPasswordResetEmail,
-    sendPasswordResetSuccessEmail
+    sendPasswordResetSuccessEmail,
+    sendPaymentLinkEmail
   };
 }; 
