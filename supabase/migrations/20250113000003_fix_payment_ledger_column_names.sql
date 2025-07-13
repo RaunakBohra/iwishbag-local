@@ -1,4 +1,4 @@
--- Create function to record manual payments with ledger integration
+-- Fix column name mismatches in record_payment_with_ledger_and_triggers function
 CREATE OR REPLACE FUNCTION record_payment_with_ledger_and_triggers(
   p_quote_id UUID,
   p_amount DECIMAL,
@@ -10,9 +10,9 @@ CREATE OR REPLACE FUNCTION record_payment_with_ledger_and_triggers(
   p_payment_date DATE DEFAULT CURRENT_DATE
 ) RETURNS JSONB AS $$
 DECLARE
+  v_quote RECORD;
   v_ledger_entry_id UUID;
   v_payment_id UUID;
-  v_quote RECORD;
   v_result JSONB;
 BEGIN
   -- Get quote details
@@ -22,27 +22,40 @@ BEGIN
     RAISE EXCEPTION 'Quote not found: %', p_quote_id;
   END IF;
 
-  -- Create payment ledger entry
+  -- Create payment ledger entry with correct column names
   INSERT INTO payment_ledger (
     quote_id,
-    payment_type,
+    payment_type,        -- Fixed: was transaction_type
     amount,
     currency,
     payment_method,
-    reference_number,
+    reference_number,    -- Fixed: was transaction_reference
     notes,
     created_by,
-    payment_date
+    payment_date,        -- Fixed: was transaction_date
+    status,
+    exchange_rate,
+    base_amount,
+    gateway_code
   ) VALUES (
     p_quote_id,
-    'customer_payment',
+    'customer_payment',  -- Fixed: was 'payment'
     p_amount,
     p_currency,
     p_payment_method,
     p_transaction_reference,
     p_notes,
     p_recorded_by,
-    p_payment_date
+    p_payment_date,
+    'completed',
+    1.0,  -- Default exchange rate
+    p_amount,  -- Will be converted by trigger if needed
+    CASE 
+      WHEN p_payment_method = 'payu' THEN 'payu'
+      WHEN p_payment_method = 'stripe' THEN 'stripe'
+      WHEN p_payment_method = 'esewa' THEN 'esewa'
+      ELSE NULL
+    END
   ) RETURNING id INTO v_ledger_entry_id;
 
   -- Create payment transaction record
@@ -96,8 +109,7 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Grant execute permission to authenticated users
-GRANT EXECUTE ON FUNCTION record_payment_with_ledger_and_triggers TO authenticated;
-
--- Add comment
-COMMENT ON FUNCTION record_payment_with_ledger_and_triggers IS 'Records manual payment with full ledger integration and triggers payment status recalculation';
+-- Also fix the frontend query to use correct column names
+-- We'll add a computed column for backward compatibility
+ALTER TABLE payment_ledger 
+ADD COLUMN IF NOT EXISTS transaction_type TEXT GENERATED ALWAYS AS (payment_type) STORED;

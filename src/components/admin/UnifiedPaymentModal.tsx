@@ -122,8 +122,9 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   // Calculate payment summary
   const paymentSummary = useMemo(() => {
     const totalPaid = paymentLedger?.reduce((sum, entry) => {
-      if (entry.transaction_type === 'payment') return sum + (entry.amount || 0);
-      if (entry.transaction_type === 'refund') return sum - (entry.amount || 0);
+      const type = entry.transaction_type || entry.payment_type;
+      if (type === 'payment' || type === 'customer_payment') return sum + (entry.amount || 0);
+      if (type === 'refund' || type === 'partial_refund') return sum - (entry.amount || 0);
       return sum;
     }, 0) || 0;
 
@@ -330,8 +331,8 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
       // Prepare CSV rows
       const rows = paymentLedger.map(entry => [
-        format(new Date(entry.created_at), 'yyyy-MM-dd HH:mm:ss'),
-        entry.transaction_type || 'payment',
+        format(new Date(entry.created_at || entry.payment_date), 'yyyy-MM-dd HH:mm:ss'),
+        entry.transaction_type || entry.payment_type || 'payment',
         entry.payment_method || '-',
         entry.gateway_code || '-',
         entry.amount?.toFixed(2) || '0.00',
@@ -859,8 +860,9 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       {/* Timeline Items */}
                       <div className="space-y-6">
                         {paymentLedger.map((entry, index) => {
-                          const isPayment = entry.transaction_type === 'payment';
-                          const isRefund = entry.transaction_type === 'refund';
+                          const type = entry.transaction_type || entry.payment_type;
+                          const isPayment = type === 'payment' || type === 'customer_payment';
+                          const isRefund = type === 'refund' || type === 'partial_refund';
                           const isFirst = index === 0;
                           const isLast = index === paymentLedger.length - 1;
                           
@@ -970,7 +972,10 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           <p className="text-sm text-muted-foreground">Total Payments</p>
                           <p className="text-lg font-semibold text-green-600">
                             {currencySymbol}{paymentLedger
-                              .filter(e => e.transaction_type === 'payment')
+                              .filter(e => {
+                                const type = e.transaction_type || e.payment_type;
+                                return type === 'payment' || type === 'customer_payment';
+                              })
                               .reduce((sum, e) => sum + (e.amount || 0), 0)
                               .toFixed(2)}
                           </p>
@@ -979,7 +984,10 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           <p className="text-sm text-muted-foreground">Total Refunds</p>
                           <p className="text-lg font-semibold text-red-600">
                             {currencySymbol}{paymentLedger
-                              .filter(e => e.transaction_type === 'refund')
+                              .filter(e => {
+                                const type = e.transaction_type || e.payment_type;
+                                return type === 'refund' || type === 'partial_refund';
+                              })
                               .reduce((sum, e) => sum + (e.amount || 0), 0)
                               .toFixed(2)}
                           </p>
