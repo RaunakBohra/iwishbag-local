@@ -35,7 +35,7 @@ import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { Icon } from '@/components/ui/icon';
 import { StatusTransitionHistory } from './StatusTransitionHistory';
 import { getCurrencySymbolFromCountry } from '@/lib/currencyUtils';
-import { SimplePaymentInfo } from './SimplePaymentInfo';
+import { PaymentManagementWidget } from './PaymentManagementWidget';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -699,17 +699,7 @@ const AdminQuoteDetailPage = () => {
             </Card>
 
             {/* Payment Information */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <DollarSign className="h-5 w-5 text-green-600" />
-                  Payment Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SimplePaymentInfo quote={quote} />
-              </CardContent>
-            </Card>
+            <PaymentManagementWidget quote={quote} />
 
             {/* Customer Notes Summary */}
             {(() => {

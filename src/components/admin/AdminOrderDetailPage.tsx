@@ -46,7 +46,7 @@ import { QuoteExpirationTimer } from '@/components/dashboard/QuoteExpirationTime
 import { CustomerCommHub } from './CustomerCommHub';
 import { ShippingTrackingManager } from './ShippingTrackingManager';
 import { AddressContactManager } from './AddressContactManager';
-import { SimplePaymentInfo } from './SimplePaymentInfo';
+import { PaymentManagementWidget } from './PaymentManagementWidget';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -415,17 +415,7 @@ const AdminOrderDetailPage = () => {
           </Card>
 
           {/* Payment Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Payment Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SimplePaymentInfo quote={quote} />
-            </CardContent>
-          </Card>
+          <PaymentManagementWidget quote={quote} />
 
           {/* Shipping Address */}
           {quote.shipping_address && (
@@ -518,14 +508,7 @@ const AdminOrderDetailPage = () => {
         {/* Payment & Shipping Tab */}
         <TabsContent value="payment-shipping" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SimplePaymentInfo quote={quote} />
-              </CardContent>
-            </Card>
+            <PaymentManagementWidget quote={quote} />
             <ShippingTrackingManager quote={quote} />
           </div>
           <AddressContactManager quote={quote} />

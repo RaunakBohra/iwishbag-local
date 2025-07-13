@@ -32,53 +32,76 @@ export const TransactionHistoryWidget: React.FC<TransactionHistoryWidgetProps> =
 }) => {
   const [activeTab, setActiveTab] = useState('all');
 
-  // Mock data for demonstration - replace with actual query
-  const transactions = [
-    {
-      id: '1',
-      type: 'payment',
-      method: 'bank_transfer',
-      amount: 5000,
-      date: new Date('2025-01-10'),
-      status: 'completed',
-      reference: 'BT-12345',
-      description: 'Bank transfer payment',
-      gateway: 'Bank Transfer'
+  // Fetch real payment history from database
+  const { data: paymentHistory, isLoading } = useQuery({
+    queryKey: ['payment-history', quoteId],
+    queryFn: async () => {
+      // First try to fetch from payment_ledger
+      const { data: ledgerData, error: ledgerError } = await supabase
+        .from('payment_ledger')
+        .select('*')
+        .eq('quote_id', quoteId)
+        .order('payment_date', { ascending: false });
+
+      if (ledgerError) {
+        console.error('Error fetching payment ledger:', ledgerError);
+      }
+
+      // If no ledger data, fetch from payment_records (backward compatibility)
+      if (!ledgerData || ledgerData.length === 0) {
+        const { data: recordsData, error: recordsError } = await supabase
+          .from('payment_records')
+          .select('*')
+          .eq('quote_id', quoteId)
+          .order('created_at', { ascending: false });
+
+        if (recordsError) {
+          console.error('Error fetching payment records:', recordsError);
+          return [];
+        }
+
+        // Transform payment_records to match ledger format
+        return recordsData?.map(record => ({
+          id: record.id,
+          type: 'payment',
+          method: record.payment_method || 'unknown',
+          amount: record.amount,
+          date: new Date(record.created_at),
+          status: 'completed',
+          reference: record.reference_number || record.id,
+          description: record.notes || 'Payment recorded',
+          gateway: record.payment_method?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Manual',
+          created_by_name: record.recorded_by_profile?.full_name || record.recorded_by_profile?.email || 'System'
+        })) || [];
+      }
+
+      // Transform ledger data to UI format
+      return ledgerData.map(item => ({
+        id: item.id,
+        type: item.payment_type === 'customer_payment' ? 'payment' : 
+              item.payment_type === 'credit_applied' ? 'credit' :
+              item.payment_type.includes('refund') ? 'refund' : 'adjustment',
+        method: item.payment_method,
+        amount: item.payment_type.includes('refund') || item.payment_type.includes('adjustment') 
+          ? -Math.abs(item.amount) : item.amount,
+        date: new Date(item.payment_date),
+        status: item.status || 'completed',
+        reference: item.reference_number || item.gateway_transaction_id || item.id,
+        description: item.notes || `${item.payment_type.replace(/_/g, ' ')} via ${item.payment_method}`,
+        gateway: item.gateway_code ? 
+          (item.gateway_code === 'payu' ? 'PayU' :
+           item.gateway_code === 'stripe' ? 'Stripe' :
+           item.gateway_code === 'esewa' ? 'eSewa' :
+           'Bank Transfer') : 
+          item.payment_method?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Manual',
+        created_by_name: item.created_by_profile?.full_name || item.created_by_profile?.email || 'System',
+        running_balance: item.balance_after
+      }));
     },
-    {
-      id: '2',
-      type: 'payment',
-      method: 'payu',
-      amount: 3000,
-      date: new Date('2025-01-11'),
-      status: 'completed',
-      reference: 'PU-67890',
-      description: 'PayU payment',
-      gateway: 'PayU'
-    },
-    {
-      id: '3',
-      type: 'refund',
-      method: 'payu',
-      amount: -500,
-      date: new Date('2025-01-12'),
-      status: 'completed',
-      reference: 'RF-11111',
-      description: 'Partial refund - overpayment',
-      gateway: 'PayU'
-    },
-    {
-      id: '4',
-      type: 'adjustment',
-      method: 'manual',
-      amount: -200,
-      date: new Date('2025-01-13'),
-      status: 'completed',
-      reference: 'ADJ-22222',
-      description: 'Price adjustment - shipping discount',
-      gateway: 'Manual'
-    }
-  ];
+    refetchInterval: 30000 // Refresh every 30 seconds
+  });
+
+  const transactions = paymentHistory || [];
 
   const totalPaid = transactions
     .filter(t => t.status === 'completed')
@@ -122,6 +145,17 @@ export const TransactionHistoryWidget: React.FC<TransactionHistoryWidgetProps> =
         </div>
       </CardHeader>
       <CardContent>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Receipt className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p>No payment transactions found</p>
+          </div>
+        ) : (
+          <>
         {/* Financial Summary */}
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
           <div className="grid grid-cols-4 gap-4 text-sm">
@@ -236,6 +270,8 @@ export const TransactionHistoryWidget: React.FC<TransactionHistoryWidgetProps> =
               </div>
             </div>
           </div>
+        )}
+        </>
         )}
       </CardContent>
     </Card>
