@@ -47,7 +47,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RefundManagementModal } from './RefundManagementModal';
-import { PaymentProofUploadDialog } from '../payment/PaymentProofUploadDialog';
+import { PaymentProofButton } from '../payment/PaymentProofButton';
 
 interface UnifiedPaymentModalProps {
   isOpen: boolean;
@@ -64,7 +64,6 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabValue>('overview');
   const [showRefundModal, setShowRefundModal] = useState(false);
-  const [showProofUpload, setShowProofUpload] = useState(false);
   const { formatAmount } = useQuoteDisplayCurrency({ quote });
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -552,14 +551,11 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         </Button>
                       )}
                       {quote.payment_method === 'bank_transfer' && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => setShowProofUpload(true)}
-                        >
-                          <Upload className="w-4 h-4 mr-1" />
-                          Upload Proof
-                        </Button>
+                        <PaymentProofButton
+                          quoteId={quote.id}
+                          orderId={quote.display_id || quote.id}
+                          recipientId={quote.user_id}
+                        />
                       )}
                     </div>
                   </div>
@@ -1056,18 +1052,6 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         />
       )}
 
-      {showProofUpload && (
-        <PaymentProofUploadDialog
-          isOpen={showProofUpload}
-          onClose={() => setShowProofUpload(false)}
-          quoteId={quote.id}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['payment-proofs', quote.id] });
-            setShowProofUpload(false);
-            setActiveTab('verify');
-          }}
-        />
-      )}
     </>
   );
 };
