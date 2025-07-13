@@ -1694,20 +1694,48 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       </Dialog>
 
       {/* Child Modals */}
-      {showRefundModal && paymentLedger && (
-        <RefundManagementModal
-          isOpen={showRefundModal}
-          onClose={() => setShowRefundModal(false)}
-          quote={{
-            id: quote.id,
-            final_total: quote.final_total || 0,
-            amount_paid: paymentSummary.totalPaid,
-            currency: currency,
-            payment_method: quote.payment_method || ''
-          }}
-          payments={paymentLedger.filter(p => p.transaction_type === 'payment')}
-        />
-      )}
+      {showRefundModal && paymentLedger && (() => {
+        const eligiblePayments = paymentLedger
+          .filter(p => {
+            const type = p.transaction_type || p.payment_type;
+            const isPayment = type === 'payment' || type === 'customer_payment' || 
+                            (p.status === 'completed' && p.amount > 0);
+            console.log('Payment eligibility check:', {
+              id: p.id,
+              type: type,
+              status: p.status,
+              amount: p.amount,
+              isPayment: isPayment
+            });
+            return isPayment;
+          })
+          .map(p => ({
+            id: p.id,
+            amount: Math.abs(p.amount || 0),
+            method: p.payment_method || '',
+            gateway: p.gateway_code || p.payment_method || '',
+            reference: p.gateway_reference || p.reference_number || '',
+            date: new Date(p.payment_date || p.created_at),
+            canRefund: p.gateway_code === 'payu' || p.payment_method === 'payu'
+          }));
+        
+        console.log('Eligible payments for refund:', eligiblePayments);
+        
+        return (
+          <RefundManagementModal
+            isOpen={showRefundModal}
+            onClose={() => setShowRefundModal(false)}
+            quote={{
+              id: quote.id,
+              final_total: quote.final_total || 0,
+              amount_paid: paymentSummary.totalPaid,
+              currency: currency,
+              payment_method: quote.payment_method || ''
+            }}
+            payments={eligiblePayments}
+          />
+        );
+      })()}
 
     </>
   );
