@@ -338,7 +338,7 @@ serve(async (req) => {
             surl: payuSuccessUrl,
             furl: payuFailureUrl,
             hash: hashResult.v1,
-            mode: 'CC',
+            // Removed mode parameter to show all payment options (CC, UPI, Net Banking, Wallets)
             udf1: guestSessionToken, // Include guest session token
             udf2: '',
             udf3: '',

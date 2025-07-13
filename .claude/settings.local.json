@@ -32,7 +32,8 @@
       "WebFetch(domain:docs.payu.com)",
       "Bash(mv:*)",
       "Bash(supabase migration repair:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(PGPASSWORD=aZenjDCQxwMifCEY psql:*)"
     ],
     "deny": []
   }

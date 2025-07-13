@@ -232,19 +232,48 @@ async function createPaymentRecordWithRetry(supabaseAdmin: any, paymentData: any
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      // Create payment transaction record with PayU-specific fields
       const { error } = await supabaseAdmin
-        .from('payments')
-        .insert(paymentData);
+        .from('payment_transactions')
+        .insert({
+          user_id: paymentData.user_id || null,
+          quote_id: paymentData.quote_ids[0], // Primary quote ID
+          amount: paymentData.amount,
+          currency: paymentData.currency,
+          status: paymentData.status === 'success' ? 'completed' : 'failed',
+          payment_method: paymentData.gateway,
+          transaction_id: paymentData.transaction_id,
+          gateway_response: {
+            // Store comprehensive PayU response for debugging and reconciliation
+            mihpayid: paymentData.gateway_response.mihpayid,
+            txnid: paymentData.gateway_response.txnid,
+            status: paymentData.gateway_response.status,
+            amount: paymentData.gateway_response.amount,
+            productinfo: paymentData.gateway_response.productinfo,
+            firstname: paymentData.gateway_response.firstname,
+            email: paymentData.gateway_response.email,
+            phone: paymentData.gateway_response.phone,
+            mode: paymentData.payment_mode,
+            bankcode: paymentData.bank_code,
+            bank_ref_num: paymentData.bank_ref_num,
+            cardMask: paymentData.card_mask,
+            name_on_card: paymentData.name_on_card,
+            error_code: paymentData.error_code,
+            error_message: paymentData.error_message,
+            webhook_received_at: paymentData.created_at
+          },
+          created_at: paymentData.created_at
+        });
       
       if (error) {
         throw error;
       }
       
-      console.log(`✅ Payment record created successfully (attempt ${attempt})`);
+      console.log(`✅ Payment transaction record created successfully (attempt ${attempt})`);
       return { success: true };
     } catch (error) {
       lastError = error;
-      console.error(`❌ Payment record creation attempt ${attempt} failed:`, error);
+      console.error(`❌ Payment transaction creation attempt ${attempt} failed:`, error);
       
       if (attempt < maxRetries) {
         const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
@@ -337,12 +366,53 @@ serve(async (req) => {
 
     console.log(`✅ Webhook hash verified [${requestId}]`);
 
-    // Extract quote IDs from productinfo
+    // Extract quote IDs from productinfo with multiple fallback methods
+    let quoteIds: string[] = [];
     const productInfo = webhookData.productinfo || '';
-    const quoteIdsMatch = productInfo.match(/\(([^)]+)\)/);
-    const quoteIds = quoteIdsMatch ? quoteIdsMatch[1].split(',') : [];
+    
+    console.log(`[${requestId}] 🔍 Extracting quote IDs from productinfo:`, productInfo);
+    
+    // Method 1: Extract from productinfo - Format: "Order: Product Name (quote_id1,quote_id2)"
+    if (productInfo) {
+      const quoteIdsMatch = productInfo.match(/\(([^)]+)\)$/);
+      if (quoteIdsMatch) {
+        quoteIds = quoteIdsMatch[1].split(',').map(id => id.trim()).filter(id => id);
+        console.log(`[${requestId}] ✅ Found quote IDs in productinfo with parentheses:`, quoteIds);
+      }
+    }
+    
+    // Method 2: Primary fallback - Extract UUID-like strings directly from productinfo
+    if (quoteIds.length === 0 && productInfo) {
+      const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+      const uuidMatches = productInfo.match(uuidRegex);
+      if (uuidMatches) {
+        quoteIds = uuidMatches;
+        console.log(`[${requestId}] ✅ Found quote IDs via UUID regex in productinfo:`, quoteIds);
+      }
+    }
+    
+    // Method 3: Extract from transaction ID if it contains quote ID
+    if (quoteIds.length === 0 && webhookData.txnid) {
+      const txnUuidMatch = webhookData.txnid.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+      if (txnUuidMatch) {
+        quoteIds = [txnUuidMatch[0]];
+        console.log(`[${requestId}] ✅ Found quote ID in transaction ID:`, quoteIds);
+      }
+    }
 
-    console.log('Quote IDs extracted:', quoteIds);
+    if (quoteIds.length === 0) {
+      console.error(`[${requestId}] ❌ No quote IDs found in any location. PayU data:`, {
+        productinfo: productInfo,
+        txnid: webhookData.txnid
+      });
+      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'No quote IDs found');
+      return new Response(JSON.stringify({ error: 'Quote IDs not found' }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    console.log(`[${requestId}] 📋 Final quote IDs extracted:`, quoteIds);
 
     // Extract guest session token from UDF1 if present
     const guestSessionToken = webhookData.udf1 || '';
@@ -432,6 +502,38 @@ serve(async (req) => {
       }
     }
 
+    // First, verify the quotes exist and check their current status
+    console.log(`[${requestId}] 🔍 Verifying quotes exist before update...`);
+    const { data: existingQuotes, error: fetchError } = await supabaseAdmin
+      .from('quotes')
+      .select('id, status, display_id, final_total, user_id')
+      .in('id', quoteIds);
+      
+    if (fetchError) {
+      console.error(`[${requestId}] ❌ Error fetching quotes for verification:`, fetchError);
+      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'Error fetching quotes for verification');
+      return new Response(JSON.stringify({ error: 'Error verifying quotes' }), { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+    
+    if (!existingQuotes || existingQuotes.length === 0) {
+      console.error(`[${requestId}] ❌ No quotes found with IDs:`, quoteIds);
+      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'No quotes found with provided IDs');
+      return new Response(JSON.stringify({ error: 'Quotes not found' }), { 
+        status: 404, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+    
+    console.log(`[${requestId}] 📋 Found quotes to update:`, existingQuotes.map(q => ({ 
+      id: q.id, 
+      display_id: q.display_id, 
+      status: q.status,
+      final_total: q.final_total 
+    })));
+
     // Update quotes status (skip for failed guest payments - they're handled by session logic)
     if (quoteIds.length > 0 && !(guestSessionToken && paymentStatus === 'failed')) {
       // For guest checkout success: we already updated the quote in session logic above
@@ -443,9 +545,11 @@ serve(async (req) => {
         payment_method: 'payu',
         payment_transaction_id: webhookData.mihpayid || webhookData.txnid,
         paid_at: orderStatus === 'paid' ? new Date().toISOString() : null,
+        in_cart: false, // Remove from cart on successful payment
         payment_details: {
           gateway: 'payu',
           transaction_id: webhookData.mihpayid || webhookData.txnid,
+          payu_id: webhookData.mihpayid,
           status: webhookData.status,
           amount: webhookData.amount,
           currency: 'INR',
@@ -456,6 +560,9 @@ serve(async (req) => {
           name_on_card: webhookData.name_on_card,
           error_code: webhookData.error_code,
           error_message: webhookData.error_Message,
+          customer_name: webhookData.firstname,
+          customer_email: webhookData.email,
+          customer_phone: webhookData.phone,
           webhook_received_at: new Date().toISOString()
         }
       };
@@ -478,8 +585,9 @@ serve(async (req) => {
       console.log('✅ Skipped quote update for failed guest payment - quote remains shareable');
     }
 
-    // Create payment record with retry logic
+    // Create payment record with retry logic - extract user_id from first quote
     const paymentData = {
+      user_id: existingQuotes[0]?.user_id || null, // Extract user_id from verified quotes
       transaction_id: webhookData.mihpayid || webhookData.txnid,
       gateway: 'payu',
       status: paymentStatus,
