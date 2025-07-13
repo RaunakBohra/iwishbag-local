@@ -31,6 +31,7 @@ import { useStatusManagement, StatusConfig } from '@/hooks/useStatusManagement';
 import { supabase } from '@/integrations/supabase/client';
 import { FixStatusJSON } from '@/components/admin/FixStatusJSON';
 import { TestStatusFiltering } from '@/components/admin/TestStatusFiltering';
+import { StatusConfigFixer } from '@/components/debug/StatusConfigFixer';
 
 const colorOptions = [
   { value: 'default', label: 'Default', className: 'bg-blue-100 text-blue-800' },
@@ -711,7 +712,7 @@ export default function StatusManagement() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="quotes" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Quote Statuses
@@ -719,6 +720,10 @@ export default function StatusManagement() {
             <TabsTrigger value="orders" className="flex items-center gap-2">
               <ShoppingCart className="h-4 w-4" />
               Order Statuses
+            </TabsTrigger>
+            <TabsTrigger value="debug" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Debug & Fix
             </TabsTrigger>
           </TabsList>
 
@@ -763,10 +768,24 @@ export default function StatusManagement() {
                 .map(status => renderStatusCard(status, 'order'))}
             </div>
           </TabsContent>
-        </Tabs>
 
-        {/* Test Status Filtering Component */}
-        <TestStatusFiltering />
+          <TabsContent value="debug" className="space-y-6">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold">Debug & Fix Status Issues</h2>
+                <p className="text-muted-foreground">
+                  Diagnose and fix issues with status filtering and configuration
+                </p>
+              </div>
+              
+              {/* Status Configuration Fixer */}
+              <StatusConfigFixer />
+              
+              {/* Test Status Filtering Component */}
+              <TestStatusFiltering />
+            </div>
+          </TabsContent>
+        </Tabs>
 
         <div className="flex gap-2 justify-end pt-6">
           <div className="flex-1 text-sm text-muted-foreground">
