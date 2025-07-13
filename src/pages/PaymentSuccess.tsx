@@ -122,18 +122,84 @@ const PaymentSuccess: React.FC = () => {
 
   const updateOrderStatus = async (paymentData: PaymentSuccessData, guestSessionToken?: string | null) => {
     try {
-      // Extract quote IDs from productinfo
-      // Format: "Order: Product Name (quote_id1,quote_id2)"
+      // Extract quote IDs from multiple possible sources
+      let quoteIds: string[] = [];
+      
+      console.log('🔍 Extracting quote IDs from PayU callback data:', paymentData);
+      
+      // Method 1: Extract from productinfo - Format: "Order: Product Name (quote_id1,quote_id2)"
       const productInfo = paymentData.productInfo || '';
-      const quoteIdsMatch = productInfo.match(/\(([^)]+)\)$/);
-      const quoteIds = quoteIdsMatch ? quoteIdsMatch[1].split(',') : [];
+      if (productInfo) {
+        const quoteIdsMatch = productInfo.match(/\(([^)]+)\)$/);
+        if (quoteIdsMatch) {
+          quoteIds = quoteIdsMatch[1].split(',').map(id => id.trim()).filter(id => id);
+          console.log('✅ Found quote IDs in productinfo with parentheses:', quoteIds);
+        }
+      }
+      
+      // Method 2: Primary fallback - Extract UUID-like strings directly from productinfo
+      if (quoteIds.length === 0 && productInfo) {
+        const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+        const uuidMatches = productInfo.match(uuidRegex);
+        if (uuidMatches) {
+          quoteIds = uuidMatches;
+          console.log('✅ Found quote IDs via UUID regex in productinfo:', quoteIds);
+        }
+      }
+      
+      // Method 3: Fallback - Extract from transaction ID if it contains quote ID
+      if (quoteIds.length === 0 && paymentData.transactionId) {
+        const txnUuidMatch = paymentData.transactionId.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+        if (txnUuidMatch) {
+          quoteIds = [txnUuidMatch[0]];
+          console.log('✅ Found quote ID in transaction ID:', quoteIds);
+        }
+      }
+      
+      // Method 4: Final fallback - Check URL params for quote IDs
+      if (quoteIds.length === 0) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const quotesParam = urlParams.get('quotes');
+        if (quotesParam) {
+          quoteIds = quotesParam.split(',').map(id => id.trim()).filter(id => id);
+          console.log('✅ Found quote IDs in URL params:', quoteIds);
+        }
+      }
 
       if (quoteIds.length === 0) {
-        console.error('No quote IDs found in productinfo:', productInfo);
+        console.error('❌ No quote IDs found in any location. PayU data:', paymentData);
+        console.error('ProductInfo:', productInfo);
+        console.error('TransactionId:', paymentData.transactionId);
+        console.error('URL:', window.location.href);
+        
+        // Show user-friendly error
+        toast({
+          title: "Payment Processing Issue",
+          description: "Payment was successful but we couldn't link it to your order. Please contact support with transaction ID: " + (paymentData.transactionId || paymentData.payuId),
+          variant: "destructive"
+        });
         return;
       }
 
-      console.log('Updating order status for quotes:', quoteIds);
+      console.log('🔄 Updating order status for quotes:', quoteIds);
+      
+      // First, verify the quotes exist and check their current status
+      const { data: existingQuotes, error: fetchError } = await supabase
+        .from('quotes')
+        .select('id, status, display_id, final_total')
+        .in('id', quoteIds);
+        
+      if (fetchError) {
+        console.error('❌ Error fetching quotes for verification:', fetchError);
+        throw fetchError;
+      }
+      
+      if (!existingQuotes || existingQuotes.length === 0) {
+        console.error('❌ No quotes found with IDs:', quoteIds);
+        throw new Error('No quotes found with the provided IDs');
+      }
+      
+      console.log('📋 Found quotes to update:', existingQuotes.map(q => ({ id: q.id, display_id: q.display_id, status: q.status })));
 
       // Update quotes to paid status - let trigger calculate payment_status and amount_paid
       const { data: updatedQuotes, error: updateError } = await supabase
@@ -162,11 +228,21 @@ const PaymentSuccess: React.FC = () => {
         .select();
 
       if (updateError) {
-        console.error('Error updating quotes:', updateError);
+        console.error('❌ Error updating quotes:', updateError);
         throw updateError;
       }
 
-      console.log('Successfully updated quotes:', updatedQuotes);
+      if (!updatedQuotes || updatedQuotes.length === 0) {
+        console.error('❌ No quotes were updated');
+        throw new Error('Failed to update quotes - no rows affected');
+      }
+
+      console.log('✅ Successfully updated quotes:', updatedQuotes.map(q => ({ 
+        id: q.id, 
+        display_id: q.display_id, 
+        status: q.status,
+        payment_method: q.payment_method 
+      })));
 
       // Create payment transaction record
       const { error: transactionError } = await supabase

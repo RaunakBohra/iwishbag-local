@@ -253,6 +253,10 @@ export const useStatusManagement = () => {
         return findBankTransferPendingStatus();
       case 'cod':
         return findCODProcessingStatus();
+      case 'payu':
+      case 'stripe':
+        // PayU and Stripe payments should go directly to paid status after successful payment
+        return orderStatuses.find(s => s.name === 'paid' || s.id === 'paid') || findDefaultOrderStatus();
       default:
         return findDefaultOrderStatus();
     }

@@ -490,18 +490,18 @@ export default function Checkout() {
         .from('quotes')
         .update(updateData)
         .in('id', ids)
-        .select()
-        .single();
+        .select();
       
       if (error) throw new Error(error.message);
       return data;
     },
     onSuccess: (data) => {
-      if (data) {
+      if (data && data.length > 0) {
         queryClient.invalidateQueries({ queryKey: ['quotes'] });
         queryClient.invalidateQueries({ queryKey: ['admin-quotes']});
         queryClient.invalidateQueries({ queryKey: ['admin-orders']});
-        navigate(`/order-confirmation/${data.id}`);
+        // Use the first quote ID for order confirmation page
+        navigate(`/order-confirmation/${data[0].id}`);
       }
     },
     onError: (error: Error) => {
