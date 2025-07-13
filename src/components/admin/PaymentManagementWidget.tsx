@@ -21,7 +21,8 @@ import {
   Hash,
   History,
   RefreshCcw,
-  Plus
+  Plus,
+  Settings
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Tables } from '@/integrations/supabase/types';
@@ -30,9 +31,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { TransactionHistoryWidget } from './TransactionHistoryWidget';
-import { RefundManagementModal } from './RefundManagementModal';
-import { RecordPaymentModal } from './RecordPaymentModal';
+import { UnifiedPaymentModal } from './UnifiedPaymentModal';
 
 interface PaymentManagementWidgetProps {
   quote: Tables<'quotes'>;
@@ -41,9 +40,7 @@ interface PaymentManagementWidgetProps {
 export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = ({ quote }) => {
   const { toast } = useToast();
   const [showTransactionDetails, setShowTransactionDetails] = useState(false);
-  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
-  const [showRefundModal, setShowRefundModal] = useState(false);
-  const [showRecordPaymentModal, setShowRecordPaymentModal] = useState(false);
+  const [showUnifiedPaymentModal, setShowUnifiedPaymentModal] = useState(false);
 
   // Fetch payment transaction details
   const { data: paymentTransaction } = useQuery({
@@ -80,50 +77,6 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
     enabled: quote.payment_method === 'bank_transfer'
   });
 
-  // Fetch all payments for refund modal
-  const { data: allPayments } = useQuery({
-    queryKey: ['all-payments', quote.id],
-    queryFn: async () => {
-      // First try payment_ledger (new system)
-      const { data: ledgerData, error: ledgerError } = await supabase
-        .from('payment_ledger')
-        .select('*')
-        .eq('quote_id', quote.id)
-        .eq('payment_type', 'customer_payment')
-        .eq('status', 'completed')
-        .order('payment_date', { ascending: false });
-
-      if (!ledgerError && ledgerData && ledgerData.length > 0) {
-        return ledgerData.map(payment => ({
-          id: payment.id,
-          amount: payment.amount,
-          method: payment.payment_method,
-          gateway: payment.gateway_code || payment.payment_method,
-          reference: payment.reference_number || payment.gateway_transaction_id || payment.id,
-          date: new Date(payment.payment_date),
-          canRefund: ['payu', 'stripe'].includes(payment.gateway_code || '') || payment.payment_method === 'bank_transfer'
-        }));
-      }
-      
-      // Fallback to payment_records (existing system)
-      const { data: recordsData } = await supabase
-        .from('payment_records')
-        .select('*')
-        .eq('quote_id', quote.id)
-        .order('created_at', { ascending: false });
-        
-      return recordsData?.map(record => ({
-        id: record.id,
-        amount: record.amount,
-        method: record.payment_method || 'unknown',
-        gateway: record.payment_method || 'Manual',
-        reference: record.reference_number || record.id,
-        date: new Date(record.created_at),
-        canRefund: true
-      })) || [];
-    },
-    enabled: quote.payment_status === 'paid' || quote.payment_status === 'partial' || quote.payment_status === 'overpaid'
-  });
 
   const getPaymentMethodIcon = (method: string) => {
     switch (method?.toLowerCase()) {
@@ -323,28 +276,14 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-2">
-            {/* Record Payment Button - Show for unpaid or partially paid quotes */}
-            {(quote.payment_status === 'unpaid' || quote.payment_status === 'partial') && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowRecordPaymentModal(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Record Payment
-              </Button>
-            )}
-            
-            {quote.payment_method === 'bank_transfer' && quote.payment_status !== 'paid' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open(`/admin/payment-proofs?quote=${quote.id}`, '_blank')}
-              >
-                <Receipt className="mr-2 h-4 w-4" />
-                Verify Payment Proofs
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowUnifiedPaymentModal(true)}
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Manage Payments
+            </Button>
             
             {(paymentTransaction || quote.payment_transaction_id) && (
               <Button
@@ -356,38 +295,10 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                 Transaction Details
               </Button>
             )}
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowTransactionHistory(true)}
-            >
-              <History className="mr-2 h-4 w-4" />
-              Transaction History
-            </Button>
-            
-            {(quote.payment_status === 'paid' || quote.payment_status === 'partial' || quote.payment_status === 'overpaid') && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowRefundModal(true)}
-              >
-                <RefreshCcw className="mr-2 h-4 w-4" />
-                Process Refund
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Transaction History Section - Show below main card when toggled */}
-      {showTransactionHistory && (
-        <TransactionHistoryWidget 
-          quoteId={quote.id}
-          finalTotal={quote.final_total || 0}
-          currency={quote.final_currency || 'USD'}
-        />
-      )}
 
       {/* Transaction Details Dialog */}
       <Dialog open={showTransactionDetails} onOpenChange={setShowTransactionDetails}>
@@ -494,28 +405,11 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
         </DialogContent>
       </Dialog>
 
-      {/* Refund Management Modal */}
-      {showRefundModal && allPayments && (
-        <RefundManagementModal
-          isOpen={showRefundModal}
-          onClose={() => setShowRefundModal(false)}
-          quote={{
-            id: quote.id,
-            final_total: quote.final_total || 0,
-            amount_paid: amountPaid,
-            currency: quote.final_currency || 'USD',
-            payment_method: quote.payment_method || ''
-          }}
-          payments={allPayments}
-        />
-      )}
-
-      {/* Record Payment Modal */}
-      <RecordPaymentModal
-        isOpen={showRecordPaymentModal}
-        onClose={() => setShowRecordPaymentModal(false)}
+      {/* Unified Payment Management Modal */}
+      <UnifiedPaymentModal
+        isOpen={showUnifiedPaymentModal}
+        onClose={() => setShowUnifiedPaymentModal(false)}
         quote={quote}
-        existingPayments={allPayments}
       />
     </>
   );
