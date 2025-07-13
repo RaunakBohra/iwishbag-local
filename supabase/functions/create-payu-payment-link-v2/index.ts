@@ -359,7 +359,18 @@ async function createPaymentLinkREST(params: {
 
     if (insertError) {
       console.error('❌ Error storing payment link:', insertError);
+      return new Response(JSON.stringify({
+        error: 'Failed to store payment link in database',
+        details: insertError.message,
+        payuLinkCreated: true,
+        payuLinkId: invoiceNumber
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
+    
+    console.log('✅ Payment link stored in database successfully:', paymentLink);
 
     const shortUrl = `${publicUrl}/pay/${linkCode}`;
 
@@ -571,7 +582,18 @@ async function createPaymentLinkLegacy(params: {
 
     if (insertError) {
       console.error('❌ Error storing payment link:', insertError);
+      return new Response(JSON.stringify({
+        error: 'Failed to store payment link in database',
+        details: insertError.message,
+        payuLinkCreated: true,
+        payuLinkId: invoiceId
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
+    
+    console.log('✅ Payment link stored in database successfully (legacy):', paymentLink);
 
     const publicUrl = Deno.env.get('PUBLIC_URL') || 'https://iwishbag.com';
     const shortUrl = `${publicUrl}/pay/${linkCode}`;

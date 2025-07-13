@@ -99,11 +99,11 @@ export function EnhancedPaymentLinkGenerator({
     console.log('  - Email (direct):', quote?.email);
     
     // Build customer info with comprehensive fallbacks
-    // Priority: shipping address -> profiles -> user -> quote direct fields -> customerInfo prop
+    // Priority: profiles (most complete) -> shipping address -> user -> quote direct fields -> customerInfo prop
     const extractedInfo = {
-      name: shipping?.fullName || shipping?.name || profiles?.full_name || user?.full_name || quote?.customer_name || customerInfo?.name || '',
-      email: shipping?.email || profiles?.email || user?.email || quote?.email || customerInfo?.email || '',
-      phone: shipping?.phone || profiles?.phone || user?.phone || quote?.customer_phone || customerInfo?.phone || ''
+      name: profiles?.full_name || shipping?.fullName || shipping?.name || user?.full_name || quote?.customer_name || customerInfo?.name || '',
+      email: profiles?.email || shipping?.email || user?.email || quote?.email || customerInfo?.email || '',
+      phone: profiles?.phone || shipping?.phone || user?.phone || quote?.customer_phone || customerInfo?.phone || ''
     };
     
     console.log('🎯 [EnhancedPaymentLinkGenerator] Extracted info before fallback to customerInfo:', extractedInfo);
