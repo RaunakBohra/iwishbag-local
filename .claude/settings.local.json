@@ -31,7 +31,8 @@
       "Bash(supabase functions serve:*)",
       "WebFetch(domain:docs.payu.com)",
       "Bash(mv:*)",
-      "Bash(supabase migration repair:*)"
+      "Bash(supabase migration repair:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

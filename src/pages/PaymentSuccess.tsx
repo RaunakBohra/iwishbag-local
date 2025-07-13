@@ -135,16 +135,16 @@ const PaymentSuccess: React.FC = () => {
 
       console.log('Updating order status for quotes:', quoteIds);
 
-      // Update quotes to paid status
+      // Update quotes to paid status - let trigger calculate payment_status and amount_paid
       const { data: updatedQuotes, error: updateError } = await supabase
         .from('quotes')
         .update({
           status: 'paid',
-          payment_status: 'paid',
+          // payment_status: 'paid',  // Let trigger calculate this
           payment_method: paymentData.gateway,
           payment_transaction_id: paymentData.payuId || paymentData.transactionId,
           paid_at: new Date().toISOString(),
-          amount_paid: paymentData.amount,
+          // amount_paid: paymentData.amount,  // Let trigger calculate this
           in_cart: false,
           payment_details: {
             gateway: paymentData.gateway,
