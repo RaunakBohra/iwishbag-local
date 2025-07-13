@@ -76,9 +76,7 @@ export function EnhancedPaymentLinkGenerator({
   
   // Helper function to get customer info with fallbacks
   const getCustomerInfo = () => {
-    if (customerInfo) return customerInfo;
-    
-    // Try to extract from quote data
+    // Try to extract from quote data first (for most complete information)
     const shipping = quote?.shipping_address;
     const user = quote?.user;
     const profiles = quote?.profiles; // From the profile join
@@ -88,6 +86,8 @@ export function EnhancedPaymentLinkGenerator({
     console.log('  - Has shipping address:', !!shipping);
     console.log('  - Shipping fields:', shipping ? Object.keys(shipping) : []);
     console.log('  - Shipping address data:', shipping);
+    console.log('  - Shipping fullName:', shipping?.fullName);
+    console.log('  - Shipping name:', shipping?.name);
     console.log('  - Has user:', !!user);
     console.log('  - User fields:', user ? Object.keys(user) : []);
     console.log('  - User data:', user);
@@ -98,10 +98,21 @@ export function EnhancedPaymentLinkGenerator({
     console.log('  - Customer phone (direct):', quote?.customer_phone);
     console.log('  - Email (direct):', quote?.email);
     
+    // Build customer info with comprehensive fallbacks
+    // Priority: shipping address -> profiles -> user -> quote direct fields -> customerInfo prop
+    const extractedInfo = {
+      name: shipping?.fullName || shipping?.name || profiles?.full_name || user?.full_name || quote?.customer_name || customerInfo?.name || '',
+      email: shipping?.email || profiles?.email || user?.email || quote?.email || customerInfo?.email || '',
+      phone: shipping?.phone || profiles?.phone || user?.phone || quote?.customer_phone || customerInfo?.phone || ''
+    };
+    
+    console.log('🎯 [EnhancedPaymentLinkGenerator] Extracted info before fallback to customerInfo:', extractedInfo);
+    
+    // Use customerInfo as final fallback only if extracted info is incomplete
     return {
-      name: shipping?.fullName || shipping?.name || profiles?.full_name || user?.full_name || quote?.customer_name || '',
-      email: shipping?.email || profiles?.email || user?.email || quote?.email || '',
-      phone: shipping?.phone || profiles?.phone || user?.phone || quote?.customer_phone || ''
+      name: extractedInfo.name || customerInfo?.name || '',
+      email: extractedInfo.email || customerInfo?.email || '',
+      phone: extractedInfo.phone || customerInfo?.phone || ''
     };
   };
 
@@ -323,31 +334,39 @@ export function EnhancedPaymentLinkGenerator({
     e.preventDefault();
     setIsCreating(true);
 
+    const requestBody = {
+      quoteId,
+      amount,
+      currency,
+      customerInfo: {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+      },
+      description: formData.description,
+      expiryDays: parseInt(formData.expiryDays),
+      customFields,
+      template: formData.template,
+      partialPaymentAllowed: formData.partialPaymentAllowed,
+      apiMethod: formData.apiMethod
+    };
+
+    console.log('🚀 [EnhancedPaymentLinkGenerator] Creating payment link with data:', requestBody);
+
     try {
       const { data, error } = await supabase.functions.invoke('create-payu-payment-link-v2', {
-        body: {
-          quoteId,
-          amount,
-          currency,
-          customerInfo: {
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-          },
-          description: formData.description,
-          expiryDays: parseInt(formData.expiryDays),
-          customFields,
-          template: formData.template,
-          partialPaymentAllowed: formData.partialPaymentAllowed,
-          apiMethod: formData.apiMethod
-        }
+        body: requestBody
       });
 
+      console.log('📡 [EnhancedPaymentLinkGenerator] Payment link API response:', { data, error });
+
       if (error) {
+        console.error('❌ [EnhancedPaymentLinkGenerator] Payment link API error:', error);
         throw error;
       }
 
       if (data?.success) {
+        console.log('✅ [EnhancedPaymentLinkGenerator] Payment link created successfully:', data);
         setCreatedLink(data);
         onLinkCreated?.(data);
         toast({
@@ -355,10 +374,11 @@ export function EnhancedPaymentLinkGenerator({
           description: `${data.apiVersion === 'v2_rest' ? 'Enhanced' : 'Legacy'} payment link generated successfully.`,
         });
       } else {
+        console.error('❌ [EnhancedPaymentLinkGenerator] Payment link creation failed:', data);
         throw new Error(data?.error || 'Failed to create payment link');
       }
     } catch (error: any) {
-      console.error('Payment link creation error:', error);
+      console.error('💥 [EnhancedPaymentLinkGenerator] Payment link creation error:', error);
       toast({
         title: "Failed to create payment link",
         description: error.message || 'Unknown error occurred',
