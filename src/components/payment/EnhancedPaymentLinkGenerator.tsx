@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -189,19 +189,38 @@ export function EnhancedPaymentLinkGenerator({
     return suggestions;
   };
 
-  const customer = getCustomerInfo();
-  
   // Form state with intelligent defaults
   const [formData, setFormData] = useState({
-    name: customer.name,
-    email: customer.email,
-    phone: customer.phone,
-    description: generateDescription(),
-    expiryDays: getSmartExpiryDays(),
+    name: '',
+    email: '',
+    phone: '',
+    description: '',
+    expiryDays: '7',
     template: 'default' as 'default' | 'minimal' | 'branded',
     partialPaymentAllowed: false,
     apiMethod: 'rest' as 'rest' | 'legacy',
   });
+
+  // Update form data when component opens or quote changes
+  useEffect(() => {
+    if (open) {
+      const customer = getCustomerInfo();
+      
+      // Log the final customer info for debugging
+      console.log('🎯 [EnhancedPaymentLinkGenerator] Final customer info extracted:', customer);
+      
+      setFormData({
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        description: generateDescription(),
+        expiryDays: getSmartExpiryDays(),
+        template: 'default',
+        partialPaymentAllowed: false,
+        apiMethod: 'rest',
+      });
+    }
+  }, [open, quote, customerInfo]);
 
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [createdLink, setCreatedLink] = useState<any>(null);

@@ -204,6 +204,8 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const { data: paymentLinks, isLoading: linksLoading } = useQuery({
     queryKey: ['payment-links', quote.id],
     queryFn: async () => {
+      console.log('🔍 [UnifiedPaymentModal] Fetching payment links for quote:', quote.id);
+      
       const { data, error } = await supabase
         .from('payment_links')
         .select('*')
@@ -211,13 +213,18 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Error fetching payment links:', error);
+        console.error('❌ Error fetching payment links:', error);
         return [];
       }
+      
+      console.log('✅ Payment links fetched:', data?.length || 0, 'links found');
+      console.log('📋 Payment links data:', data);
       
       return data || [];
     },
     enabled: isOpen && !!quote.id,
+    refetchOnWindowFocus: false,
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   // Calculate payment summary
@@ -872,7 +879,22 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         </Button>
                       )}
                       {paymentSummary.remaining > 0 && (
-                        <EnhancedPaymentLinkGenerator
+                        <>
+                          {/* Debug: Log quote structure for payment link generation */}
+                          {console.log('🔍 [UnifiedPaymentModal] Quote data for payment link generation:', {
+                            quoteId: quote.id,
+                            hasShippingAddress: !!quote.shipping_address,
+                            shippingAddress: quote.shipping_address,
+                            hasProfiles: !!quote.profiles,
+                            profiles: quote.profiles,
+                            customerName: quote.customer_name,
+                            customerPhone: quote.customer_phone,
+                            email: quote.email,
+                            productName: quote.product_name,
+                            displayId: quote.display_id,
+                            orderDisplayId: quote.order_display_id
+                          })}
+                          <EnhancedPaymentLinkGenerator
                           quoteId={quote.id}
                           amount={paymentSummary.remaining}
                           currency="USD"
@@ -890,8 +912,11 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                             // Refresh payment data after link creation
                             queryClient.invalidateQueries({ queryKey: ['payment-ledger', quote.id] });
                             queryClient.invalidateQueries({ queryKey: ['payment-links', quote.id] });
+                            // Force immediate refetch
+                            queryClient.refetchQueries({ queryKey: ['payment-links', quote.id] });
                           }}
                         />
+                        </>
                       )}
                       {quote.payment_method === 'bank_transfer' && (
                         <PaymentProofButton
