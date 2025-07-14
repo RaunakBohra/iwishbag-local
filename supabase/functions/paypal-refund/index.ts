@@ -136,7 +136,7 @@ serve(async (req) => {
     }
 
     // Get the original payment transaction details
-    // The paymentTransactionId could be either the payment_transactions.id or the gateway_transaction_id
+    // The paymentTransactionId could be either the payment_transactions.id or the paypal_order_id
     let transaction = null
     let transactionError = null
     
@@ -150,18 +150,17 @@ serve(async (req) => {
     if (txById) {
       transaction = txById
     } else {
-      // If not found by ID, try to find by gateway_transaction_id
-      const { data: txByGatewayId, error: errorByGatewayId } = await supabaseAdmin
+      // If not found by ID, try to find by paypal_order_id or paypal_capture_id
+      const { data: txByPayPalId, error: errorByPayPalId } = await supabaseAdmin
         .from('payment_transactions')
         .select('*')
-        .eq('gateway_transaction_id', refundRequest.paymentTransactionId)
-        .eq('gateway_code', 'paypal')
+        .or(`paypal_order_id.eq.${refundRequest.paymentTransactionId},paypal_capture_id.eq.${refundRequest.paymentTransactionId}`)
         .single()
       
-      if (txByGatewayId) {
-        transaction = txByGatewayId
+      if (txByPayPalId) {
+        transaction = txByPayPalId
       } else {
-        transactionError = errorById || errorByGatewayId
+        transactionError = errorById || errorByPayPalId
       }
     }
 
@@ -178,16 +177,16 @@ serve(async (req) => {
 
     console.log('✅ Found transaction:', {
       id: transaction.id,
-      gateway: transaction.gateway_code,
-      gatewayTransactionId: transaction.gateway_transaction_id,
+      paypal_order_id: transaction.paypal_order_id,
+      paypal_capture_id: transaction.paypal_capture_id,
       amount: transaction.amount
     })
 
-    // Validate it's a PayPal transaction
-    if (transaction.gateway_code !== 'paypal') {
+    // Validate it's a PayPal transaction (check if it has PayPal order/capture ID)
+    if (!transaction.paypal_order_id && !transaction.paypal_capture_id) {
       return new Response(JSON.stringify({
         success: false,
-        error: `Transaction is not a PayPal payment (gateway: ${transaction.gateway_code})`
+        error: 'Transaction is not a PayPal payment (no PayPal order or capture ID found)'
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -195,7 +194,7 @@ serve(async (req) => {
     }
 
     // Validate refund amount doesn't exceed original amount
-    const totalRefunded = transaction.refund_amount || 0
+    const totalRefunded = transaction.total_refunded || 0
     if (totalRefunded + refundRequest.refundAmount > transaction.amount) {
       return new Response(JSON.stringify({
         success: false,
@@ -228,9 +227,9 @@ serve(async (req) => {
     const config = paypalGateway.config || {}
     const isTestMode = paypalGateway.test_mode
     
-    // Get appropriate credentials based on test mode
-    const clientId = isTestMode ? config.client_id_sandbox : config.client_id_live
-    const clientSecret = isTestMode ? config.client_secret_sandbox : config.client_secret_live
+    // Get appropriate credentials based on test mode - support both old and new config formats
+    const clientId = config.client_id || (isTestMode ? config.client_id_sandbox : config.client_id_live)
+    const clientSecret = config.client_secret || (isTestMode ? config.client_secret_sandbox : config.client_secret_live)
     
     if (!clientId || !clientSecret) {
       console.error('❌ PayPal credentials missing')
@@ -243,19 +242,19 @@ serve(async (req) => {
       })
     }
 
-    // Extract capture ID from the gateway response
+    // Extract capture ID from the transaction
     // PayPal transaction could have order ID or capture ID
     let captureId = null
     const gatewayResponse = transaction.gateway_response || {}
     
     // Try to find capture ID in various places
-    if (gatewayResponse.id) {
-      captureId = gatewayResponse.id
+    if (transaction.paypal_capture_id) {
+      captureId = transaction.paypal_capture_id
     } else if (gatewayResponse.purchase_units?.[0]?.payments?.captures?.[0]?.id) {
       captureId = gatewayResponse.purchase_units[0].payments.captures[0].id
-    } else if (transaction.gateway_transaction_id) {
-      // Might be the capture ID directly
-      captureId = transaction.gateway_transaction_id
+    } else if (gatewayResponse.id && gatewayResponse.status === 'COMPLETED') {
+      // This might be a capture ID if the response shows completed status
+      captureId = gatewayResponse.id
     }
 
     if (!captureId) {
@@ -295,7 +294,7 @@ serve(async (req) => {
       .insert({
         gateway_refund_id: refundResponse.id,
         gateway_code: 'paypal',
-        payment_transaction_id: refundRequest.paymentTransactionId,
+        payment_transaction_id: transaction.id,
         refund_amount: refundRequest.refundAmount,
         original_amount: transaction.amount,
         currency: refundRequest.currency,
@@ -316,15 +315,17 @@ serve(async (req) => {
     }
 
     // Update payment transaction with refund info
+    const newTotalRefunded = (transaction.total_refunded || 0) + refundRequest.refundAmount;
     const { error: updateError } = await supabaseAdmin
       .from('payment_transactions')
       .update({
-        refund_amount: (transaction.refund_amount || 0) + refundRequest.refundAmount,
+        total_refunded: newTotalRefunded,
         refund_count: (transaction.refund_count || 0) + 1,
+        is_fully_refunded: newTotalRefunded >= transaction.amount,
         last_refund_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('id', refundRequest.paymentTransactionId)
+      .eq('id', transaction.id)
 
     if (updateError) {
       console.error('⚠️ Failed to update transaction:', updateError)
