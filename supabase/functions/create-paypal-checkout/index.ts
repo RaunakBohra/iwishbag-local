@@ -282,11 +282,24 @@ serve(async (req) => {
     // Store PayPal order info for later verification
     console.log('✅ PayPal order created successfully');
     
+    // Get user ID from auth header if available
+    let userId = null;
+    try {
+      const authHeader = req.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+        userId = user?.id || null;
+      }
+    } catch (error) {
+      console.log('No authenticated user found, proceeding as guest');
+    }
+
     // Create a pending payment transaction (similar to PayU pattern)
     const { data: paymentTx, error: txError } = await supabaseAdmin
       .from('payment_transactions')
       .insert({
-        user_id: user?.id || null,
+        user_id: userId,
         quote_id: quoteIds[0], // Primary quote ID
         amount: amount,
         currency: currency,
