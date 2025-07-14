@@ -13,7 +13,8 @@ import {
   Sparkles,
   ShoppingBag,
   Home,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -183,7 +184,12 @@ const PaypalSuccess: React.FC = () => {
             const captureData = await captureResponse.json();
             console.log('PayPal capture result:', captureData);
             
-            // Update transaction with capture details
+            // Check if capture was successful
+            if (!captureResponse.ok || !captureData.success || !captureData.captureID) {
+              throw new Error(captureData.error || 'PayPal capture failed - no capture ID received');
+            }
+            
+            // Update transaction with capture details - only if capture succeeded
             const { data: updatedTx } = await supabase
               .from('payment_transactions')
               .update({
@@ -202,12 +208,14 @@ const PaypalSuccess: React.FC = () => {
             }
           } catch (captureError) {
             console.error('❌ PayPal capture failed:', captureError);
-            // Still update status but without capture details
+            
+            // Mark payment as failed if capture failed
             const { data: updatedTx } = await supabase
               .from('payment_transactions')
               .update({
-                status: 'completed',
+                status: 'failed',
                 paypal_payer_id: payerId,
+                error_message: captureError instanceof Error ? captureError.message : 'PayPal capture failed',
                 updated_at: new Date().toISOString()
               })
               .eq('id', paymentLink.id)
@@ -217,6 +225,9 @@ const PaypalSuccess: React.FC = () => {
             if (updatedTx) {
               paymentLink = updatedTx;
             }
+            
+            // Show error to user instead of false success
+            throw new Error('PayPal payment capture failed. Your order has been created but payment was not captured. Please contact support with your order ID: ' + token);
           }
           
           // Update related quotes
@@ -267,15 +278,36 @@ const PaypalSuccess: React.FC = () => {
         if (paymentLink.status === 'completed') {
           console.log('✅ Payment completed');
           
-          setPaymentData({
-            transactionId: paymentLink.paypal_capture_id || token,
-            orderId: token,
-            amount: paymentLink.amount,
-            currency: paymentLink.currency,
-            customerEmail: paymentLink.paypal_payer_email || 'Payment Confirmed',
-            payerId: payerId || paymentLink.paypal_payer_id || 'N/A',
-            status: 'completed'
-          });
+          // Check if payment is completed but has no capture ID (uncaptured order)
+          if (!paymentLink.paypal_capture_id) {
+            console.warn('⚠️ Payment marked as completed but no capture ID - this is an uncaptured order');
+            
+            setPaymentData({
+              transactionId: 'Uncaptured Order',
+              orderId: token,
+              amount: paymentLink.amount,
+              currency: paymentLink.currency,
+              customerEmail: paymentLink.paypal_payer_email || 'Payment Approved',
+              payerId: payerId || paymentLink.paypal_payer_id || 'N/A',
+              status: 'uncaptured'
+            });
+            
+            toast({
+              title: "Payment Approved - Processing Required",
+              description: "Your PayPal payment has been approved but requires manual processing. Our team will complete the transaction shortly.",
+              variant: "destructive"
+            });
+          } else {
+            setPaymentData({
+              transactionId: paymentLink.paypal_capture_id,
+              orderId: token,
+              amount: paymentLink.amount,
+              currency: paymentLink.currency,
+              customerEmail: paymentLink.paypal_payer_email || 'Payment Confirmed',
+              payerId: payerId || paymentLink.paypal_payer_id || 'N/A',
+              status: 'completed'
+            });
+          }
         } else {
           // Payment not yet completed - might still be processing
           console.log('⏳ Payment pending completion');
@@ -374,15 +406,24 @@ const PaypalSuccess: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <AnimatedSection animation="fadeIn">
           <Card className="max-w-2xl mx-auto overflow-hidden">
-            <div className="bg-gradient-to-r from-green-500 to-blue-600 p-6 text-white">
+            <div className={`${paymentData?.status === 'uncaptured' ? 'bg-gradient-to-r from-yellow-500 to-orange-600' : 'bg-gradient-to-r from-green-500 to-blue-600'} p-6 text-white`}>
               <div className="flex items-center justify-center mb-4">
                 <div className="bg-white rounded-full p-3">
-                  <CheckCircle className="h-12 w-12 text-green-600" />
+                  {paymentData?.status === 'uncaptured' ? (
+                    <AlertCircle className="h-12 w-12 text-yellow-600" />
+                  ) : (
+                    <CheckCircle className="h-12 w-12 text-green-600" />
+                  )}
                 </div>
               </div>
-              <CardTitle className="text-3xl text-center">Payment Successful!</CardTitle>
+              <CardTitle className="text-3xl text-center">
+                {paymentData?.status === 'uncaptured' ? 'Payment Approved - Processing Required' : 'Payment Successful!'}
+              </CardTitle>
               <p className="text-center mt-2 text-green-50">
-                Thank you for your purchase via PayPal
+                {paymentData?.status === 'uncaptured' 
+                  ? 'Your PayPal payment has been approved but needs manual processing'
+                  : 'Thank you for your purchase via PayPal'
+                }
               </p>
             </div>
             

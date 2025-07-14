@@ -136,11 +136,11 @@ serve(async (req) => {
     }
 
     // Get the original payment transaction details
-    // The paymentTransactionId could be either the payment_transactions.id or the paypal_order_id
+    // The paymentTransactionId could be either the payment_transactions.id, payment_ledger.id, or the paypal_order_id
     let transaction = null
     let transactionError = null
     
-    // First try to find by ID
+    // First try to find by payment_transactions.id
     const { data: txById, error: errorById } = await supabaseAdmin
       .from('payment_transactions')
       .select('*')
@@ -150,17 +150,38 @@ serve(async (req) => {
     if (txById) {
       transaction = txById
     } else {
-      // If not found by ID, try to find by paypal_order_id or paypal_capture_id
-      const { data: txByPayPalId, error: errorByPayPalId } = await supabaseAdmin
-        .from('payment_transactions')
-        .select('*')
-        .or(`paypal_order_id.eq.${refundRequest.paymentTransactionId},paypal_capture_id.eq.${refundRequest.paymentTransactionId}`)
+      // Try to find by payment_ledger.id (which references payment_transaction_id)
+      const { data: ledgerEntry, error: ledgerError } = await supabaseAdmin
+        .from('payment_ledger')
+        .select('payment_transaction_id')
+        .eq('id', refundRequest.paymentTransactionId)
         .single()
       
-      if (txByPayPalId) {
-        transaction = txByPayPalId
+      if (ledgerEntry?.payment_transaction_id) {
+        const { data: txByLedger, error: errorByLedger } = await supabaseAdmin
+          .from('payment_transactions')
+          .select('*')
+          .eq('id', ledgerEntry.payment_transaction_id)
+          .single()
+        
+        if (txByLedger) {
+          transaction = txByLedger
+        } else {
+          transactionError = errorByLedger
+        }
       } else {
-        transactionError = errorById || errorByPayPalId
+        // If not found by ledger, try to find by paypal_order_id or paypal_capture_id
+        const { data: txByPayPalId, error: errorByPayPalId } = await supabaseAdmin
+          .from('payment_transactions')
+          .select('*')
+          .or(`paypal_order_id.eq.${refundRequest.paymentTransactionId},paypal_capture_id.eq.${refundRequest.paymentTransactionId}`)
+          .single()
+        
+        if (txByPayPalId) {
+          transaction = txByPayPalId
+        } else {
+          transactionError = errorById || ledgerError || errorByPayPalId
+        }
       }
     }
 
@@ -259,9 +280,33 @@ serve(async (req) => {
 
     if (!captureId) {
       console.error('❌ No capture ID found in transaction')
+      console.error('Transaction details:', {
+        paypal_order_id: transaction.paypal_order_id,
+        paypal_capture_id: transaction.paypal_capture_id,
+        gateway_response_status: gatewayResponse.status,
+        transaction_status: transaction.status
+      })
+      
+      // Check if this is an uncaptured PayPal order
+      if (transaction.paypal_order_id && !transaction.paypal_capture_id && gatewayResponse.status === 'CREATED') {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'This PayPal payment cannot be refunded because it was never captured. The PayPal order is in CREATED status but no capture ID exists. This means no money was actually charged to the customer.',
+          details: {
+            paypal_order_id: transaction.paypal_order_id,
+            paypal_status: gatewayResponse.status,
+            issue: 'ORDER_NOT_CAPTURED',
+            resolution: 'PayPal orders must be captured before they can be refunded. This order was created but never captured, so no money was charged.'
+          }
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      
       return new Response(JSON.stringify({
         success: false,
-        error: 'Could not find PayPal capture ID in transaction data'
+        error: 'Could not find PayPal capture ID in transaction data. Refunds require a valid capture ID from a completed payment.'
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

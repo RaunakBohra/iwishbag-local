@@ -214,18 +214,22 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
         } else if (gateway === 'paypal') {
           // Handle PayPal refund
           try {
-            console.log('Calling PayPal refund with:', {
-              paymentTransactionId: gatewayPayment.reference,
+            // For PayPal refunds, we need to pass the actual payment transaction ID, not the PayPal order ID
+            // The gatewayPayment.id is the payment ledger ID, we need to find the actual payment_transaction
+            
+            console.log('Finding PayPal payment transaction for refund:', {
+              ledgerPaymentId: gatewayPayment.id,
+              reference: gatewayPayment.reference,
               amount: amount,
-              currency: quote.currency
+              currency: 'USD' // PayPal transactions are in USD
             });
             
-            // Call PayPal refund Edge Function
+            // Call PayPal refund Edge Function - use the payment ledger ID which will be looked up
             const { data: refundResult, error: refundError } = await supabase.functions.invoke('paypal-refund', {
               body: {
-                paymentTransactionId: gatewayPayment.reference, // Payment transaction ID
+                paymentTransactionId: gatewayPayment.id, // Use payment ledger ID - function will look up the transaction
                 refundAmount: amount,
-                currency: quote.currency,
+                currency: 'USD', // PayPal transactions are always in USD
                 reason: reason,
                 note: internalNotes,
                 quoteId: quote.id,
@@ -647,7 +651,25 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
             Cancel
           </Button>
           <Button
-            onClick={processRefund}
+            onClick={() => {
+              console.log('Refund button debug:', {
+                isProcessing,
+                refundAmount,
+                selectedPayments,
+                reason,
+                maxRefundable,
+                parsedAmount: parseFloat(refundAmount),
+                amountExceedsMax: parseFloat(refundAmount) > maxRefundable,
+                amountIsZeroOrNegative: parseFloat(refundAmount) <= 0,
+                isDisabled: isProcessing ||
+                  !refundAmount || 
+                  !selectedPayments.length || 
+                  !reason ||
+                  parseFloat(refundAmount) > maxRefundable ||
+                  parseFloat(refundAmount) <= 0
+              });
+              processRefund();
+            }}
             disabled={
               isProcessing ||
               !refundAmount || 

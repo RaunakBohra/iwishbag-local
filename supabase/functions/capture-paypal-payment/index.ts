@@ -59,9 +59,9 @@ serve(async (req) => {
     const config = paypalGateway.config || {};
     const testMode = paypalGateway.test_mode;
     
-    // Get PayPal credentials
-    const clientId = testMode ? config.client_id_sandbox : config.client_id_live;
-    const clientSecret = testMode ? config.client_secret_sandbox : config.client_secret_live;
+    // Get PayPal credentials - support both old and new config formats
+    const clientId = config.client_id || (testMode ? config.client_id_sandbox : config.client_id_live);
+    const clientSecret = config.client_secret || (testMode ? config.client_secret_sandbox : config.client_secret_live);
     const paypalApiUrl = testMode 
       ? 'https://api-m.sandbox.paypal.com' 
       : 'https://api-m.paypal.com';

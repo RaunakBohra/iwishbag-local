@@ -1784,6 +1784,12 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           p.payment_method === 'payu' || 
                           p.payment_method?.toLowerCase() === 'payu' ||
                           (p.gateway_response && typeof p.gateway_response === 'object' && p.gateway_response.key?.includes('JP'));
+            
+            // Check if this is a PayPal payment
+            const isPayPal = p.gateway_code === 'paypal' || 
+                            p.payment_method === 'paypal' || 
+                            p.payment_method?.toLowerCase() === 'paypal' ||
+                            (p.gateway_response && typeof p.gateway_response === 'object' && p.gateway_response.id && p.gateway_response.status);
                           
             const payment = {
               id: p.id,
@@ -1795,7 +1801,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         (p.gateway_response?.mihpayid) || // PayU fallback
                         (p.gateway_response?.gateway_transaction_id) || '',
               date: new Date(p.payment_date || p.created_at),
-              canRefund: isPayU || p.payment_method === 'bank_transfer' // PayU and bank transfers can be refunded
+              canRefund: isPayU || isPayPal || p.payment_method === 'bank_transfer' // PayU, PayPal and bank transfers can be refunded
             };
             console.log('Mapped payment for refund:', {
               ...payment,
@@ -1805,7 +1811,8 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
               original_gateway_transaction_id: p.gateway_transaction_id,
               original_transaction_id: p.transaction_id,
               gateway_response: p.gateway_response,
-              isPayU: isPayU
+              isPayU: isPayU,
+              isPayPal: isPayPal
             });
             return payment;
           });
