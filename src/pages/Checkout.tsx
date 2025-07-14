@@ -452,8 +452,11 @@ export default function Checkout() {
         }
       }
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Address query error:', error);
+        throw error;
+      }
+      return data || [];
     },
     enabled: !!user && !isGuestCheckout && !!shippingCountry, // Don't load for guest checkout
   });
