@@ -222,7 +222,7 @@ serve(async (req) => {
         custom_id: linkCode
       }],
       application_context: {
-        return_url: success_url || `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.app')}/paypal-success`,
+        return_url: success_url?.replace('{CHECKOUT_SESSION_ID}', linkCode) || `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.app')}/paypal-success`,
         cancel_url: cancel_url || `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.app')}/paypal-failure`,
         brand_name: 'iwishBag',
         landing_page: 'LOGIN',
