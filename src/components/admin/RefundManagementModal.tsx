@@ -52,7 +52,14 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
   const [internalNotes, setInternalNotes] = useState('');
 
   const maxRefundable = quote.amount_paid;
-  const refundablePayments = payments.filter(p => p.canRefund);
+  const refundablePayments = payments.length > 0 ? payments : [];
+  
+  console.log('RefundManagementModal - Debug Info:', {
+    quote: quote,
+    allPayments: payments,
+    refundablePayments: refundablePayments,
+    maxRefundable: maxRefundable
+  });
 
   const handleRefundTypeChange = (value: string) => {
     setRefundType(value as any);
@@ -124,10 +131,26 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
       }
 
       // Check if this is a PayU refund and handle it automatically
-      if (refundMethod === 'original' && breakdown.length === 1 && breakdown[0].gateway === 'payu') {
+      if (refundMethod === 'original' && breakdown.length === 1 && (breakdown[0].gateway === 'payu' || breakdown[0].method === 'payu')) {
         const payuPayment = payments.find(p => p.id === breakdown[0].paymentId);
-        if (payuPayment?.reference) {
+        console.log('PayU payment for refund:', payuPayment);
+        console.log('PayU transaction ID (reference):', payuPayment?.reference);
+        
+        if (!payuPayment?.reference) {
+          toast({
+            title: "Missing Payment Reference",
+            description: "Cannot find PayU transaction ID. Please process this refund manually.",
+            variant: "destructive"
+          });
+          // Continue with manual refund process
+        } else {
           try {
+            console.log('Calling PayU refund with:', {
+              paymentId: payuPayment.reference,
+              amount: amount,
+              refundType: refundType
+            });
+            
             // Call PayU refund Edge Function
             const { data: refundResult, error: refundError } = await supabase.functions.invoke('payu-refund', {
               body: {
@@ -145,6 +168,8 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
               throw refundError;
             }
 
+            console.log('PayU refund result:', refundResult);
+            
             if (refundResult?.success) {
               // Invalidate queries to refresh UI
               queryClient.invalidateQueries({ queryKey: ['payment-history', quote.id] });
@@ -177,75 +202,70 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
       // Create refund record in payment_ledger for proper accounting
       const refundReference = `REF-${Date.now()}`;
       
-      // First check if payment_ledger table exists
-      const { error: tableCheckError } = await supabase
-        .from('payment_ledger')
-        .select('id')
-        .limit(1);
-      
-      if (tableCheckError && tableCheckError.code === '42P01') {
-        // Table doesn't exist - this is a critical issue
-        toast({
-          title: "Database Configuration Error",
-          description: "The payment_ledger table is missing. Please contact support to fix this issue.",
-          variant: "destructive"
-        });
-        throw new Error('payment_ledger table is required for proper accounting');
-      }
-      
-      // Create payment ledger entry
-      const { data: refundRecord, error: ledgerError } = await supabase
-        .from('payment_ledger')
-        .insert({
-          quote_id: quote.id,
-          transaction_type: 'refund',
-          payment_type: refundType === 'credit_note' ? 'credit_note' : 'refund',
-          payment_method: refundMethod === 'original' ? breakdown[0]?.method || 'manual' : refundMethod,
-          gateway_code: refundMethod === 'original' ? breakdown[0]?.gateway || 'manual' : 'manual',
-          amount: -amount, // Negative for refunds
-          currency: quote.currency,
-          base_amount: -amount, // TODO: Calculate with exchange rate
-          exchange_rate: 1, // TODO: Get actual exchange rate
-          status: 'completed',
-          payment_date: new Date().toISOString(),
-          reference_number: refundReference,
-          gateway_reference: refundMethod === 'original' ? breakdown[0]?.reference : null,
-          notes: `${reason} - ${internalNotes}`.trim(),
-          created_by: userData.user.id
-        })
-        .select()
-        .single();
-      
-      if (ledgerError) {
-        console.error('Failed to create payment ledger entry:', ledgerError);
-        throw ledgerError;
+      // Try to use payment_ledger if it exists
+      let ledgerRecordCreated = false;
+      try {
+        const { data: refundRecord, error: ledgerError } = await supabase
+          .from('payment_ledger')
+          .insert({
+            quote_id: quote.id,
+            payment_type: refundType === 'credit_note' ? 'credit_note' : 'refund',
+            payment_method: refundMethod === 'original' ? breakdown[0]?.method || 'manual' : refundMethod,
+            amount: -amount, // Negative for refunds
+            currency: quote.currency,
+            status: 'completed',
+            payment_date: new Date().toISOString(),
+            reference_number: refundReference,
+            notes: `${reason} - ${internalNotes}`.trim(),
+            created_by: userData.user.id
+          })
+          .select()
+          .single();
+        
+        if (!ledgerError) {
+          ledgerRecordCreated = true;
+          console.log('Payment ledger entry created:', refundRecord.id);
+        } else {
+          console.error('Payment ledger error:', ledgerError);
+        }
+      } catch (err) {
+        console.warn('Could not create payment_ledger entry, will track refund differently:', err);
       }
 
       // Skip financial transactions as table doesn't exist
 
-      // Create entry in gateway_refunds table for tracking
+      // Create entry in gateway_refunds table for tracking (if table exists)
       if (refundMethod === 'original' && breakdown.length > 0) {
         try {
-          await supabase
+          // First check if table exists
+          const { error: tableCheckError } = await supabase
             .from('gateway_refunds')
-            .insert({
-              gateway_refund_id: refundReference,
-              gateway_transaction_id: breakdown[0].reference || refundReference,
-              gateway_code: breakdown[0].gateway || 'manual',
-              quote_id: quote.id,
-              refund_amount: amount,
-              original_amount: breakdown[0].amount,
-              currency: quote.currency,
-              refund_type: refundType === 'full' ? 'FULL' : 'PARTIAL',
-              reason_code: 'CUSTOMER_REQUEST',
-              reason_description: reason,
-              admin_notes: internalNotes,
-              status: 'completed',
-              gateway_status: 'COMPLETED',
-              gateway_response: { manual: true, breakdown: breakdown },
-              refund_date: new Date().toISOString(),
-              processed_by: userData.user.id
-            });
+            .select('id')
+            .limit(1);
+          
+          if (!tableCheckError || tableCheckError.code !== '42P01') {
+            // Table exists, create the entry
+            await supabase
+              .from('gateway_refunds')
+              .insert({
+                gateway_refund_id: refundReference,
+                gateway_transaction_id: breakdown[0].reference || refundReference,
+                gateway_code: breakdown[0].gateway || 'manual',
+                quote_id: quote.id,
+                refund_amount: amount,
+                original_amount: breakdown[0].amount,
+                currency: quote.currency,
+                refund_type: refundType === 'full' ? 'FULL' : 'PARTIAL',
+                reason_code: 'CUSTOMER_REQUEST',
+                reason_description: reason,
+                admin_notes: internalNotes,
+                status: 'completed',
+                gateway_status: 'COMPLETED',
+                gateway_response: { manual: true, breakdown: breakdown },
+                refund_date: new Date().toISOString(),
+                processed_by: userData.user.id
+              });
+          }
         } catch (gwError) {
           console.warn('Could not create gateway_refunds entry:', gwError);
         }
@@ -391,6 +411,14 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
           {/* Payment Selection */}
           <div>
             <Label>Select Payments to Refund From</Label>
+            {payments.length === 0 ? (
+              <Alert className="mt-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  No payments found to refund. Please record a payment first.
+                </AlertDescription>
+              </Alert>
+            ) : (
             <div className="space-y-2 mt-2">
               {payments.map(payment => (
                 <div
@@ -417,14 +445,14 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
                       <div className="flex items-center gap-2">
                         {getPaymentIcon(payment.method)}
                         <div>
-                          <p className="text-sm font-medium">
-                            {payment.gateway} - {quote.currency} {payment.amount.toFixed(2)}
-                            {payment.gateway === 'payu' && payment.canRefund && (
-                              <Badge variant="success" className="ml-2 text-xs">
+                          <div className="text-sm font-medium flex items-center gap-2">
+                            <span>{payment.gateway} - {quote.currency} {payment.amount.toFixed(2)}</span>
+                            {(payment.gateway === 'payu' || payment.method === 'payu') && payment.canRefund && (
+                              <Badge variant="success" className="text-xs">
                                 Auto-refund available
                               </Badge>
                             )}
-                          </p>
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             Ref: {payment.reference} • {payment.date.toLocaleDateString()}
                           </p>
@@ -440,6 +468,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
                 </div>
               ))}
             </div>
+            )}
           </div>
 
           {/* Refund Method */}

@@ -133,15 +133,15 @@ serve(async (req) => {
       refund_type: refundType
     };
 
-    // Generate hash for refund_transaction command
-    const command = 'refund_transaction';
+    // Generate hash for cancel_refund_transaction command
+    const command = 'cancel_refund_transaction';
     const var1 = paymentId; // PayU transaction ID (mihpayid)
     const var2 = refundRequestId; // Unique token for this refund
     const var3 = amount.toFixed(2); // Refund amount
     
-    // Hash formula: sha512(key|command|var1|salt)
-    // For refund_transaction: sha512(key|refund_transaction|mihpayid|refundRequestId|refundAmount|salt)
-    const hashString = `${payuConfig.merchant_key}|${command}|${var1}|${var2}|${var3}|${payuConfig.salt_key}`;
+    // Hash formula for General APIs: sha512(key|command|var1|var2|var3|var4|var5|var6|var7|var8|salt)
+    // For cancel_refund_transaction: all vars after var3 are empty
+    const hashString = `${payuConfig.merchant_key}|${command}|${var1}|${var2}|${var3}|||||${payuConfig.salt_key}`;
     
     const encoder = new TextEncoder();
     const data = encoder.encode(hashString);
@@ -186,7 +186,8 @@ serve(async (req) => {
     console.log("=5 PayU API response:", JSON.stringify(payuResult, null, 2));
     
     // PayU returns status: 1 for success
-    if (payuResult.status !== 1) {
+    // Important: error_code value 102 should be treated as success
+    if (payuResult.status !== 1 && payuResult.error_code !== '102') {
       console.error("L PayU refund error:", payuResult);
       
       // Store failed refund attempt
@@ -242,7 +243,7 @@ serve(async (req) => {
         admin_notes: notes,
         customer_note: notifyCustomer ? `Refund of INR ${amount} has been initiated for your order.` : null,
         status: 'processing',
-        gateway_status: 'PENDING',
+        gateway_status: payuResult.msg || 'PENDING', // Usually "Refund Request Queued"
         gateway_response: payuResult,
         refund_date: new Date().toISOString(),
         processed_by: (await supabaseAdmin.auth.getUser()).data.user?.id
@@ -256,29 +257,27 @@ serve(async (req) => {
 
     // Create payment ledger entry for the refund
     if (quoteId) {
+      // Get user ID once
+      const userId = (await supabaseAdmin.auth.getUser()).data.user?.id;
+      
       const { error: ledgerError } = await supabaseAdmin
         .from('payment_ledger')
         .insert({
           quote_id: quoteId,
-          transaction_type: 'refund',
           payment_type: 'refund',
           payment_method: 'payu',
-          gateway_code: 'payu',
           amount: -amount, // Negative for refunds
           currency: originalTransaction?.currency || 'INR',
-          base_amount: -amount,
           status: 'processing',
           payment_date: new Date().toISOString(),
           reference_number: payuResult.request_id || refundRequestId,
-          gateway_reference: paymentId,
           notes: `PayU Refund: ${reason}`,
-          balance_before: 0, // Will be calculated by trigger
-          balance_after: 0, // Will be calculated by trigger
-          created_by: (await supabaseAdmin.auth.getUser()).data.user?.id
+          created_by: userId
         });
 
       if (ledgerError) {
         console.error("L Error creating ledger entry:", ledgerError);
+        console.error("Ledger error details:", ledgerError.message, ledgerError.details);
       }
 
       // Update the original payment transaction if found

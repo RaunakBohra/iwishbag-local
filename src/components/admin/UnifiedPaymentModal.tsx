@@ -91,15 +91,16 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     queryFn: async () => {
       console.log('Fetching payment data for quote:', quote.id);
       
-      // Fetch from payment_records table
-      const { data: recordsData, error: recordsError } = await supabase
-        .from('payment_records')
+      // Try to fetch from payment_ledger table first
+      const { data: ledgerData, error: ledgerError } = await supabase
+        .from('payment_ledger')
         .select('*')
         .eq('quote_id', quote.id)
         .order('created_at', { ascending: false });
       
-      if (recordsError) {
-        console.error('Error fetching payment records:', recordsError);
+      if (ledgerError) {
+        console.error('Error fetching payment ledger:', ledgerError);
+        // Table might not exist or have different structure
       }
       
       // Also fetch from payment_transactions as additional source
@@ -107,62 +108,65 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         .from('payment_transactions')
         .select('*')
         .eq('quote_id', quote.id)
+        .in('status', ['completed', 'success']) // Only fetch successful payments
         .order('created_at', { ascending: false });
       
       if (transactionError) {
         console.error('Error fetching payment transactions:', transactionError);
       }
       
-      console.log('Payment records data:', recordsData);
+      console.log('Payment ledger data:', ledgerData);
       console.log('Payment transaction data:', transactionData);
       
-      // Combine payment records and transactions
-      const allPayments = [];
+      // Combine both sources to get complete payment history
+      const combinedData = [];
       
-      // Process payment records
-      if (recordsData && recordsData.length > 0) {
-        recordsData.forEach(record => {
-          allPayments.push({
-            id: record.id,
-            quote_id: record.quote_id,
-            amount: record.amount,
-            payment_method: record.payment_method,
-            reference_number: record.reference_number,
-            payment_date: record.created_at,
-            created_at: record.created_at,
-            status: record.amount > 0 ? 'completed' : 'refunded',
-            transaction_type: record.amount > 0 ? 'payment' : 'refund',
-            payment_type: record.amount > 0 ? 'payment' : 'refund',
-            gateway_code: record.payment_method === 'payu' ? 'payu' : null,
-            gateway_reference: record.reference_number,
-            notes: record.notes,
-            recorded_by: record.recorded_by
-          });
+      // Add payment transactions (original payments)
+      if (transactionData && transactionData.length > 0) {
+        transactionData.forEach(tx => {
+          // Check if this payment is already in ledger
+          const existsInLedger = ledgerData?.some(l => 
+            l.reference_number === tx.transaction_id || 
+            (l.payment_type === 'customer_payment' && Math.abs(l.amount - tx.amount) < 0.01)
+          );
+          
+          if (!existsInLedger) {
+            combinedData.push({
+              id: tx.id,
+              quote_id: tx.quote_id,
+              payment_type: 'customer_payment',
+              transaction_type: 'customer_payment',
+              amount: tx.amount,
+              currency: tx.currency || 'USD',
+              payment_method: tx.payment_method || 'unknown',
+              reference_number: tx.transaction_id,
+              gateway_transaction_id: tx.transaction_id,
+              status: tx.status,
+              created_at: tx.created_at,
+              payment_date: tx.created_at,
+              updated_at: tx.updated_at,
+              notes: tx.gateway_response?.notes || '',
+              balance_after: 0,
+              gateway_code: tx.payment_method,
+              created_by: null,
+              gateway_response: tx.gateway_response
+            });
+          }
         });
       }
       
-      // Otherwise, transform transaction data to match ledger format
-      if (transactionData && transactionData.length > 0) {
-        return transactionData.map(tx => ({
-          id: tx.id,
-          quote_id: tx.quote_id,
-          payment_type: 'customer_payment',
-          transaction_type: 'customer_payment',
-          amount: tx.amount,
-          currency: tx.currency || 'USD',
-          payment_method: tx.payment_method || 'unknown',
-          reference_number: tx.transaction_id,
-          status: tx.status,
-          created_at: tx.created_at,
-          updated_at: tx.updated_at,
-          notes: tx.gateway_response?.notes || '',
-          balance_after: 0, // Will be calculated in the component
-          gateway_code: tx.payment_method,
-          created_by: null
-        }));
+      // Add all ledger entries (including refunds)
+      if (ledgerData && ledgerData.length > 0) {
+        combinedData.push(...ledgerData);
       }
       
-      return [];
+      // Sort by date (oldest first)
+      combinedData.sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      
+      console.log('Combined payment data:', combinedData);
+      return combinedData;
     },
     enabled: isOpen && !!quote.id,
   });
@@ -226,20 +230,24 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
   // Calculate payment summary
   const paymentSummary = useMemo(() => {
-    const totalPaid = paymentLedger?.reduce((sum, entry) => {
+    let totalPayments = 0;
+    let totalRefunds = 0;
+    
+    paymentLedger?.forEach(entry => {
       const type = entry.transaction_type || entry.payment_type;
       const amount = parseFloat(entry.amount) || 0;
       
       // Handle different payment types
       if (type === 'payment' || type === 'customer_payment' || 
-          (entry.status === 'completed' && !type)) {
-        return sum + amount;
+          (entry.status === 'completed' && !type && amount > 0)) {
+        totalPayments += Math.abs(amount);
+      } else if (type === 'refund' || type === 'partial_refund' || 
+                 type === 'credit_note' || amount < 0) {
+        totalRefunds += Math.abs(amount);
       }
-      if (type === 'refund' || type === 'partial_refund') {
-        return sum - amount;
-      }
-      return sum;
-    }, 0) || 0;
+    });
+    
+    const totalPaid = totalPayments - totalRefunds;
 
     const finalTotal = parseFloat(quote.final_total) || 0;
     const remaining = finalTotal - totalPaid;
@@ -249,6 +257,8 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     return {
       finalTotal,
       totalPaid,
+      totalPayments,
+      totalRefunds,
       remaining: Math.max(0, remaining),
       overpaidAmount: isOverpaid ? totalPaid - finalTotal : 0,
       status,
@@ -1438,7 +1448,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                         isRefund ? "text-red-600" :
                                         "text-gray-600"
                                       )}>
-                                        {isPayment ? '+' : isRefund ? '-' : ''}{currencySymbol}{entryAmount.toFixed(2)}
+                                        {isPayment ? '+' : isRefund ? '-' : ''}{currencySymbol}{Math.abs(entryAmount).toFixed(2)}
                                       </p>
                                       {entry.balance_after !== undefined && (
                                         <p className="text-xs text-muted-foreground mt-1">
@@ -1509,26 +1519,13 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         <div>
                           <p className="text-sm text-muted-foreground">Total Payments</p>
                           <p className="text-lg font-semibold text-green-600">
-                            {currencySymbol}{paymentLedger
-                              .filter(e => {
-                                const type = e.transaction_type || e.payment_type;
-                                return type === 'payment' || type === 'customer_payment' || 
-                                       (e.status === 'completed' && !type);
-                              })
-                              .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
-                              .toFixed(2)}
+                            {formatAmountForDisplay(paymentSummary.totalPayments, currency)}
                           </p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Total Refunds</p>
                           <p className="text-lg font-semibold text-red-600">
-                            {currencySymbol}{paymentLedger
-                              .filter(e => {
-                                const type = e.transaction_type || e.payment_type;
-                                return type === 'refund' || type === 'partial_refund';
-                              })
-                              .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
-                              .toFixed(2)}
+                            {formatAmountForDisplay(paymentSummary.totalRefunds, currency)}
                           </p>
                         </div>
                         <div>
@@ -1691,11 +1688,35 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       </Dialog>
 
       {/* Child Modals */}
-      {showRefundModal && paymentLedger && (() => {
+      {showRefundModal && (() => {
+        console.log('Refund Modal Debug:', {
+          showRefundModal: showRefundModal,
+          paymentLedger: paymentLedger,
+          paymentLedgerLength: paymentLedger?.length || 0
+        });
+        
+        if (!paymentLedger || paymentLedger.length === 0) {
+          return (
+            <RefundManagementModal
+              isOpen={showRefundModal}
+              onClose={() => setShowRefundModal(false)}
+              quote={{
+                id: quote.id,
+                final_total: quote.final_total || 0,
+                amount_paid: paymentSummary.totalPaid,
+                currency: currency,
+                payment_method: quote.payment_method || ''
+              }}
+              payments={[]}
+            />
+          );
+        }
+        
         const eligiblePayments = paymentLedger
           .filter(p => {
             const type = p.transaction_type || p.payment_type;
             const isPayment = type === 'payment' || type === 'customer_payment' || 
+                            type === 'manual_payment' ||
                             (p.status === 'completed' && p.amount > 0);
             console.log('Payment eligibility check:', {
               id: p.id,
@@ -1706,15 +1727,36 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
             });
             return isPayment;
           })
-          .map(p => ({
-            id: p.id,
-            amount: Math.abs(p.amount || 0),
-            method: p.payment_method || '',
-            gateway: p.gateway_code || p.payment_method || '',
-            reference: p.gateway_reference || p.reference_number || '',
-            date: new Date(p.payment_date || p.created_at),
-            canRefund: p.gateway_code === 'payu' || p.payment_method === 'payu'
-          }));
+          .map(p => {
+            // Check if this is a PayU payment by multiple methods
+            const isPayU = p.gateway_code === 'payu' || 
+                          p.payment_method === 'payu' || 
+                          p.payment_method?.toLowerCase() === 'payu' ||
+                          (p.gateway_response && typeof p.gateway_response === 'object' && p.gateway_response.key?.includes('JP'));
+                          
+            const payment = {
+              id: p.id,
+              amount: Math.abs(p.amount || 0),
+              method: p.payment_method || '',
+              gateway: p.gateway_code || p.payment_method || '',
+              reference: p.gateway_transaction_id || p.reference_number || p.transaction_id || 
+                        (p.gateway_response?.mihpayid) || // PayU specific
+                        (p.gateway_response?.gateway_transaction_id) || '',
+              date: new Date(p.payment_date || p.created_at),
+              canRefund: isPayU || p.payment_method === 'bank_transfer' // PayU and bank transfers can be refunded
+            };
+            console.log('Mapped payment for refund:', {
+              ...payment,
+              original_gateway_code: p.gateway_code,
+              original_payment_method: p.payment_method,
+              original_reference_number: p.reference_number,
+              original_gateway_transaction_id: p.gateway_transaction_id,
+              original_transaction_id: p.transaction_id,
+              gateway_response: p.gateway_response,
+              isPayU: isPayU
+            });
+            return payment;
+          });
         
         console.log('Eligible payments for refund:', eligiblePayments);
         

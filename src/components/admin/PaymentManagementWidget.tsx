@@ -115,10 +115,10 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
   const paymentDetails = quote.payment_details as any || {};
   const transactionData = paymentTransaction?.gateway_response as any || {};
   
-  // Determine actual amount paid
-  const amountPaid = quote.amount_paid || paymentTransaction?.amount || 0;
+  // Determine actual amount paid (ensure it's not negative)
+  const amountPaid = Math.max(0, quote.amount_paid || paymentTransaction?.amount || 0);
   const paymentCurrency = paymentTransaction?.currency || quote.final_currency || 'USD';
-  const outstandingAmount = (quote.final_total || 0) - amountPaid;
+  const outstandingAmount = (quote.final_total || 0) - amountPaid; // Use the corrected amountPaid
 
   return (
     <>
@@ -132,7 +132,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
             {quote.payment_status && (
               <Badge variant={getPaymentStatusColor(quote.payment_status)}>
                 {quote.payment_status === 'partial' 
-                  ? `Partial (${paymentCurrency} ${amountPaid.toFixed(2)} of ${quote.final_total?.toFixed(2)})`
+                  ? `Partial (${paymentCurrency} ${Math.abs(quote.amount_paid || 0).toFixed(2)} of ${quote.final_total?.toFixed(2)})`
                   : quote.payment_status.charAt(0).toUpperCase() + quote.payment_status.slice(1)
                 }
               </Badge>
