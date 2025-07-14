@@ -526,7 +526,7 @@ export default function Checkout() {
           user_id: user.id,
           ...addressData,
           destination_country: shippingCountry, // Ensure destination_country is set
-          country: countries?.find(c => c.code === shippingCountry)?.name || shippingCountry
+          country: shippingCountry
         })
         .select()
         .single();

@@ -226,6 +226,45 @@ serve(async (req) => {
           
           // Note: Following PayU pattern - no separate order creation needed
           // The quote with status 'paid' IS the order
+          
+          // Record payment in ledger (following PayU pattern)
+          if (amount && quoteIds.length > 0) {
+            for (const quoteId of quoteIds) {
+              const { error: ledgerError } = await supabaseAdmin
+                .from('payment_ledger')
+                .insert({
+                  quote_id: quoteId,
+                  payment_transaction_id: paymentTx.id,
+                  payment_type: 'customer_payment',
+                  amount: amount,
+                  currency: currency,
+                  payment_method: 'paypal',
+                  gateway_code: 'paypal',
+                  gateway_transaction_id: captureId || orderId,
+                  reference_number: orderId,
+                  status: 'completed',
+                  payment_date: new Date().toISOString(),
+                  base_amount: amount, // Assuming USD for now
+                  balance_before: 0, // Would need to calculate this properly
+                  balance_after: amount, // Would need to calculate this properly
+                  notes: `PayPal payment - Order: ${orderId}, Capture: ${captureId || 'N/A'}, Payer: ${payerEmail || 'N/A'}`,
+                  created_by: paymentTx.user_id || null,
+                  gateway_response: {
+                    order_id: orderId,
+                    capture_id: captureId,
+                    payer_id: payerId,
+                    payer_email: payerEmail,
+                    webhook_event: webhookData
+                  }
+                });
+
+              if (ledgerError) {
+                console.error("❌ Failed to record payment in ledger for quote:", quoteId, ledgerError);
+              } else {
+                console.log("✅ Payment recorded in ledger for quote:", quoteId);
+              }
+            }
+          }
         }
 
         // Update quote status if payment successful

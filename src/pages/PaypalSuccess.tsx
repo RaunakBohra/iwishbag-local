@@ -116,6 +116,32 @@ const PaypalSuccess: React.FC = () => {
                   })
                   .in('id', checkoutData.quote_ids);
               }
+              
+              // Create payment ledger entry for guest checkout using the database function
+              if (checkoutData.quote_ids && checkoutData.amount) {
+                for (const qId of checkoutData.quote_ids) {
+                  try {
+                    const { data: ledgerResult, error: ledgerError } = await supabase
+                      .rpc('record_paypal_payment_to_ledger', {
+                        p_quote_id: qId,
+                        p_transaction_id: newTx?.id || crypto.randomUUID(),
+                        p_amount: checkoutData.amount,
+                        p_currency: checkoutData.currency,
+                        p_order_id: token,
+                        p_capture_id: null,
+                        p_payer_email: null
+                      });
+
+                    if (ledgerError) {
+                      console.error('Failed to create payment ledger entry:', ledgerError);
+                    } else if (ledgerResult?.success) {
+                      console.log('Payment ledger entry created:', ledgerResult);
+                    }
+                  } catch (err) {
+                    console.error('Error calling ledger function:', err);
+                  }
+                }
+              }
             }
           }
           
@@ -208,6 +234,32 @@ const PaypalSuccess: React.FC = () => {
                 }
               })
               .in('id', quoteIds);
+              
+            // Create payment ledger entries using the database function
+            for (const qId of quoteIds) {
+              try {
+                const { data: ledgerResult, error: ledgerError } = await supabase
+                  .rpc('record_paypal_payment_to_ledger', {
+                    p_quote_id: qId,
+                    p_transaction_id: paymentLink.id,
+                    p_amount: paymentLink.amount,
+                    p_currency: paymentLink.currency,
+                    p_order_id: token,
+                    p_capture_id: paymentLink.paypal_capture_id || null,
+                    p_payer_email: paymentLink.paypal_payer_email || null
+                  });
+
+                if (ledgerError) {
+                  console.error('Failed to create payment ledger entry:', ledgerError);
+                } else if (ledgerResult?.success) {
+                  console.log('Payment ledger entry created for quote:', qId, ledgerResult);
+                } else if (ledgerResult?.message) {
+                  console.log('Ledger result:', ledgerResult.message);
+                }
+              } catch (err) {
+                console.error('Error calling ledger function:', err);
+              }
+            }
           }
         }
         
