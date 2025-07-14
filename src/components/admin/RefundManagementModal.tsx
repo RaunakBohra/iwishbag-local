@@ -130,30 +130,32 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
         throw new Error('Not authenticated');
       }
 
-      // Check if this is a PayU refund and handle it automatically
-      if (refundMethod === 'original' && breakdown.length === 1 && (breakdown[0].gateway === 'payu' || breakdown[0].method === 'payu')) {
-        const payuPayment = payments.find(p => p.id === breakdown[0].paymentId);
-        console.log('PayU payment for refund:', payuPayment);
-        console.log('All payments available:', payments);
-        console.log('Looking for payment with ID:', breakdown[0].paymentId);
-        console.log('PayU transaction ID (reference):', payuPayment?.reference);
+      // Check if this is an automated gateway refund (PayU or PayPal)
+      if (refundMethod === 'original' && breakdown.length === 1) {
+        const gatewayPayment = payments.find(p => p.id === breakdown[0].paymentId);
+        const gateway = breakdown[0].gateway || breakdown[0].method;
         
-        if (!payuPayment?.reference) {
-          console.error('PayU transaction ID not found!', {
+        console.log('Gateway payment for refund:', gatewayPayment);
+        console.log('Gateway type:', gateway);
+        console.log('Transaction reference:', gatewayPayment?.reference);
+        
+        if (!gatewayPayment?.reference) {
+          console.error('Transaction ID not found!', {
             paymentId: breakdown[0].paymentId,
-            payment: payuPayment,
-            allPayments: payments
+            payment: gatewayPayment,
+            gateway: gateway
           });
           toast({
             title: "Missing Payment Reference",
-            description: "Cannot find PayU transaction ID. Please process this refund manually.",
+            description: `Cannot find ${gateway} transaction ID. Please process this refund manually.`,
             variant: "destructive"
           });
           // Continue with manual refund process
-        } else {
+        } else if (gateway === 'payu') {
+          // Handle PayU refund
           try {
             console.log('Calling PayU refund with:', {
-              paymentId: payuPayment.reference,
+              paymentId: gatewayPayment.reference,
               amount: amount,
               refundType: refundType
             });
@@ -161,7 +163,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
             // Call PayU refund Edge Function
             const { data: refundResult, error: refundError } = await supabase.functions.invoke('payu-refund', {
               body: {
-                paymentId: payuPayment.reference, // PayU transaction ID (mihpayid)
+                paymentId: gatewayPayment.reference, // PayU transaction ID (mihpayid)
                 amount: amount,
                 refundType: refundType === 'full' ? 'full' : 'partial',
                 reason: reason,
@@ -204,6 +206,66 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
             toast({
               title: "PayU Refund Failed",
               description: payuError.message || "Failed to process PayU refund. Please try again or contact support.",
+              variant: "destructive"
+            });
+            setIsProcessing(false);
+            return; // Stop here - don't record the refund in database
+          }
+        } else if (gateway === 'paypal') {
+          // Handle PayPal refund
+          try {
+            console.log('Calling PayPal refund with:', {
+              paymentTransactionId: gatewayPayment.reference,
+              amount: amount,
+              currency: quote.currency
+            });
+            
+            // Call PayPal refund Edge Function
+            const { data: refundResult, error: refundError } = await supabase.functions.invoke('paypal-refund', {
+              body: {
+                paymentTransactionId: gatewayPayment.reference, // Payment transaction ID
+                refundAmount: amount,
+                currency: quote.currency,
+                reason: reason,
+                note: internalNotes,
+                quoteId: quote.id,
+                userId: userData.user.id
+              }
+            });
+
+            if (refundError) {
+              throw refundError;
+            }
+
+            console.log('PayPal refund result:', refundResult);
+            
+            if (refundResult?.success) {
+              // PayPal refund successful - Edge Function already recorded in database
+              // Just refresh the UI and close modal
+              
+              // Invalidate queries to refresh UI
+              queryClient.invalidateQueries({ queryKey: ['payment-history', quote.id] });
+              queryClient.invalidateQueries({ queryKey: ['all-payments', quote.id] });
+              queryClient.invalidateQueries({ queryKey: ['payment-transaction', quote.id] });
+              queryClient.invalidateQueries({ queryKey: ['payment-ledger', quote.id] });
+              queryClient.invalidateQueries({ queryKey: ['quotes'] });
+
+              toast({
+                title: "PayPal Refund Successful",
+                description: `Successfully processed PayPal refund of ${quote.currency} ${amount.toFixed(2)}. Refund ID: ${refundResult.refundId}`,
+              });
+
+              onClose();
+              setIsProcessing(false);
+              return; // Exit - PayPal Edge Function already handled database recording
+            } else {
+              throw new Error(refundResult?.error || 'PayPal refund failed');
+            }
+          } catch (paypalError: any) {
+            console.error('PayPal refund error:', paypalError);
+            toast({
+              title: "PayPal Refund Failed",
+              description: paypalError.message || "Failed to process PayPal refund. Please try again or contact support.",
               variant: "destructive"
             });
             setIsProcessing(false);
@@ -461,7 +523,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
                         <div>
                           <div className="text-sm font-medium flex items-center gap-2">
                             <span>{payment.gateway} - {quote.currency} {payment.amount.toFixed(2)}</span>
-                            {(payment.gateway === 'payu' || payment.method === 'payu') && payment.canRefund && (
+                            {((payment.gateway === 'payu' || payment.method === 'payu' || payment.gateway === 'paypal' || payment.method === 'paypal') && payment.canRefund) && (
                               <Badge variant="success" className="text-xs">
                                 Auto-refund available
                               </Badge>
@@ -535,22 +597,25 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
             />
           </div>
 
-          {/* PayU Auto-Refund Notice */}
+          {/* Gateway Auto-Refund Notice */}
           {(() => {
             const breakdown = refundAmount && selectedPayments.length > 0 
               ? calculateRefundBreakdown() 
               : [];
-            const isPayUAutoRefund = refundMethod === 'original' && 
-              breakdown.length === 1 && 
-              breakdown[0]?.gateway === 'payu';
+            const gateway = breakdown.length === 1 ? breakdown[0]?.gateway : null;
+            const isAutoRefund = refundMethod === 'original' && breakdown.length === 1 && 
+              (gateway === 'payu' || gateway === 'paypal');
             
-            if (isPayUAutoRefund) {
+            if (isAutoRefund) {
+              const refundTimeline = gateway === 'payu' ? '5-7 business days' : '3-5 business days';
+              const gatewayName = gateway === 'payu' ? 'PayU' : 'PayPal';
+              
               return (
                 <Alert className="border-green-200 bg-green-50">
                   <CheckCircle className="h-4 w-4 text-green-600" />
                   <AlertDescription className="text-green-800">
-                    <strong>Automatic PayU Refund Available!</strong> This refund will be automatically processed through PayU's API. 
-                    The customer will receive the refund to their original payment method within 5-7 business days.
+                    <strong>Automatic {gatewayName} Refund Available!</strong> This refund will be automatically processed through {gatewayName}'s API. 
+                    The customer will receive the refund to their original payment method within {refundTimeline}.
                   </AlertDescription>
                 </Alert>
               );
