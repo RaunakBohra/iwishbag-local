@@ -279,30 +279,56 @@ serve(async (req) => {
       });
     }
 
-    // Store PayPal order info in temporary session (similar to PayU)
-    // We'll verify and create the actual payment record after successful payment
+    // Store PayPal order info for later verification
     console.log('✅ PayPal order created successfully');
     
-    // Store minimal info for payment verification
-    const { error: sessionError } = await supabaseAdmin
-      .from('guest_checkout_sessions')
+    // Create a pending payment transaction (similar to PayU pattern)
+    const { data: paymentTx, error: txError } = await supabaseAdmin
+      .from('payment_transactions')
       .insert({
-        id: paypalOrderData.id,
-        checkout_data: {
+        user_id: user?.id || null,
+        quote_id: quoteIds[0], // Primary quote ID
+        amount: amount,
+        currency: currency,
+        status: 'pending',
+        payment_method: 'paypal',
+        paypal_order_id: paypalOrderData.id,
+        gateway_response: {
+          order_id: paypalOrderData.id,
+          status: paypalOrderData.status,
+          links: paypalOrderData.links,
           quote_ids: quoteIds,
-          amount: amount,
-          currency: currency,
-          customer_email: customerEmail,
-          customer_name: customerName,
           transaction_id: transactionId,
-          paypal_order_id: paypalOrderData.id,
           created_at: new Date().toISOString()
-        },
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-      });
+        }
+      })
+      .select()
+      .single();
     
-    if (sessionError) {
-      console.log('⚠️ Could not store session, but PayPal order is created:', sessionError);
+    if (txError) {
+      console.log('⚠️ Could not store payment transaction:', txError);
+      // Try guest checkout session as fallback
+      const sessionId = crypto.randomUUID();
+      const { error: sessionError } = await supabaseAdmin
+        .from('guest_checkout_sessions')
+        .insert({
+          id: sessionId,
+          checkout_data: {
+            quote_ids: quoteIds,
+            amount: amount,
+            currency: currency,
+            customer_email: customerEmail,
+            customer_name: customerName,
+            transaction_id: transactionId,
+            paypal_order_id: paypalOrderData.id,
+            created_at: new Date().toISOString()
+          },
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        });
+      
+      if (sessionError) {
+        console.log('⚠️ Could not store session either:', sessionError);
+      }
     }
 
     // Return response similar to PayU pattern - just the redirect URL

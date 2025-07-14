@@ -99,81 +99,63 @@ serve(async (req) => {
       });
     }
 
-    // Get the link code from custom_id
-    const linkCode = resource.custom_id;
+    // Get order ID and transaction info
     const orderId = resource.id;
+    const transactionId = resource.custom_id;
     
-    if (!linkCode && !orderId) {
-      console.error("❌ No link code or order ID in webhook");
+    if (!orderId) {
+      console.error("❌ No order ID in webhook");
       return new Response(JSON.stringify({ 
-        error: 'Missing link code or order ID' 
+        error: 'Missing order ID' 
       }), { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Find the payment link
-    let paymentLink = null;
-    if (linkCode) {
-      const { data, error } = await supabaseAdmin
-        .from('payment_links')
-        .select('*')
-        .eq('link_code', linkCode)
-        .eq('gateway', 'paypal')
-        .single();
-      
-      if (!error && data) {
-        paymentLink = data;
-      }
-    }
+    // Find the payment transaction
+    const { data: paymentTx, error: txError } = await supabaseAdmin
+      .from('payment_transactions')
+      .select('*')
+      .eq('paypal_order_id', orderId)
+      .single();
     
-    // If not found by link code, try by gateway_link_id (order ID)
-    if (!paymentLink && orderId) {
-      const { data, error } = await supabaseAdmin
-        .from('payment_links')
-        .select('*')
-        .eq('gateway_link_id', orderId)
-        .eq('gateway', 'paypal')
-        .single();
-      
-      if (!error && data) {
-        paymentLink = data;
-      }
-    }
-
-    if (!paymentLink) {
-      console.error("❌ Payment link not found for:", linkCode || orderId);
+    if (txError || !paymentTx) {
+      console.error("❌ Payment transaction not found for order:", orderId);
+      // Don't return error - PayPal might retry. Just log and acknowledge.
       return new Response(JSON.stringify({ 
-        error: 'Payment link not found' 
+        message: 'Payment transaction not found, webhook acknowledged' 
       }), { 
-        status: 404, 
+        status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    console.log("✅ Found payment link:", paymentLink.id);
+    console.log("✅ Found payment transaction:", paymentTx.id);
 
     // Handle different event types
-    let processed: any = { payment_link: null, payment_transaction: null, quote: null };
+    let processed: any = { payment_transaction: null, quotes: null };
 
     switch (eventType) {
       case 'CHECKOUT.ORDER.APPROVED':
         // Customer approved the payment, but it's not captured yet
         console.log("💳 Order approved by customer");
         
-        const { data: updatedLink } = await supabaseAdmin
-          .from('payment_links')
+        const { data: updatedTx } = await supabaseAdmin
+          .from('payment_transactions')
           .update({
-            status: 'active',
-            gateway_response: webhookData,
+            status: 'approved',
+            gateway_response: {
+              ...paymentTx.gateway_response,
+              webhook_event: webhookData
+            },
             updated_at: new Date().toISOString()
           })
-          .eq('id', paymentLink.id)
+          .eq('id', paymentTx.id)
           .select()
           .single();
         
-        processed.payment_link = updatedLink;
+        processed.payment_transaction = updatedTx;
         break;
 
       case 'PAYMENT.CAPTURE.COMPLETED':
@@ -185,72 +167,93 @@ serve(async (req) => {
         const capture = resource.purchase_units?.[0]?.payments?.captures?.[0];
         const captureId = capture?.id || resource.id;
         const captureStatus = capture?.status || resource.status;
-        const amount = parseFloat(capture?.amount?.value || resource.amount?.value || paymentLink.amount);
-        const currency = capture?.amount?.currency_code || resource.amount?.currency_code || paymentLink.currency;
+        const amount = parseFloat(capture?.amount?.value || resource.amount?.value || paymentTx.amount);
+        const currency = capture?.amount?.currency_code || resource.amount?.currency_code || paymentTx.currency;
         
-        // Update payment link status
-        const { data: completedLink } = await supabaseAdmin
-          .from('payment_links')
+        // Extract payer info
+        const payerEmail = resource.payer?.email_address;
+        const payerId = resource.payer?.payer_id;
+        
+        // Update payment transaction
+        const { data: completedTx } = await supabaseAdmin
+          .from('payment_transactions')
           .update({
             status: 'completed',
-            gateway_response: webhookData,
+            paypal_capture_id: captureId,
+            paypal_payer_email: payerEmail,
+            paypal_payer_id: payerId,
+            gateway_response: {
+              ...paymentTx.gateway_response,
+              webhook_event: webhookData,
+              capture_details: capture
+            },
             updated_at: new Date().toISOString()
           })
-          .eq('id', paymentLink.id)
+          .eq('id', paymentTx.id)
           .select()
           .single();
         
-        processed.payment_link = completedLink;
+        processed.payment_transaction = completedTx;
 
-        // Create payment transaction (following PayU pattern)
-        const transactionId = `PAYPAL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        // Use the create_payment_with_ledger_entry function for proper ledger integration
-        const { data: paymentResult, error: paymentError } = await supabaseAdmin
-          .rpc('create_payment_with_ledger_entry', {
-            p_user_id: paymentLink.user_id,
-            p_quote_id: paymentLink.quote_id,
-            p_amount: amount,
-            p_currency: currency,
-            p_payment_method: 'paypal',
-            p_transaction_id: transactionId,
-            p_gateway_transaction_id: captureId,
-            p_gateway_response: webhookData,
-            p_metadata: {
-              link_code: linkCode,
-              order_id: orderId,
-              capture_id: captureId,
-              payer_id: resource.payer?.payer_id,
-              payer_email: resource.payer?.email_address,
-              environment: paymentLink.metadata?.environment || 'unknown'
-            }
-          });
-
-        if (paymentError) {
-          console.error("❌ Error creating payment with ledger:", paymentError);
-          // Fallback to direct insert if RPC fails
-          const { data: transaction } = await supabaseAdmin
-            .from('payment_transactions')
-            .insert({
-              user_id: paymentLink.user_id,
-              quote_id: paymentLink.quote_id,
-              amount: amount,
-              currency: currency,
-              status: 'completed',
-              payment_method: 'paypal',
-              transaction_id: transactionId,
-              gateway_response: webhookData,
-              paypal_order_id: orderId,
-              paypal_capture_id: captureId,
-              paypal_payer_id: resource.payer?.payer_id,
-              paypal_payer_email: resource.payer?.email_address
-            })
-            .select()
-            .single();
+        // Update related quotes
+        const quoteIds = (paymentTx.gateway_response as any)?.quote_ids || [];
+        if (quoteIds.length > 0) {
+          console.log("📝 Updating quotes:", quoteIds);
           
-          processed.payment_transaction = transaction;
-        } else {
-          processed.payment_transaction = paymentResult;
+          const { data: updatedQuotes, error: quoteError } = await supabaseAdmin
+            .from('quotes')
+            .update({
+              status: 'paid',
+              payment_method: 'paypal',
+              paid_at: new Date().toISOString(),
+              payment_details: {
+                paypal_order_id: orderId,
+                paypal_capture_id: captureId,
+                paypal_payer_id: payerId,
+                paypal_payer_email: payerEmail,
+                transaction_id: transactionId
+              }
+            })
+            .in('id', quoteIds)
+            .select();
+            
+          if (quoteError) {
+            console.error("❌ Error updating quotes:", quoteError);
+          } else {
+            processed.quotes = updatedQuotes;
+            console.log("✅ Updated quotes:", updatedQuotes.length);
+          }
+          
+          // Create order records for paid quotes
+          for (const quote of updatedQuotes || []) {
+            try {
+              const { data: order, error: orderError } = await supabaseAdmin
+                .from('orders')
+                .insert({
+                  user_id: quote.user_id,
+                  quote_id: quote.id,
+                  status: 'processing',
+                  total_amount: quote.final_total,
+                  currency: quote.currency || currency,
+                  payment_method: 'paypal',
+                  payment_status: 'paid',
+                  metadata: {
+                    paypal_order_id: orderId,
+                    paypal_capture_id: captureId
+                  }
+                })
+                .select()
+                .single();
+                
+              if (orderError) {
+                console.error("❌ Error creating order:", orderError);
+              } else {
+                console.log("✅ Created order:", order.id);
+              }
+            } catch (err) {
+              console.error("❌ Order creation failed:", err);
+            }
+          }
         }
 
         // Update quote status if payment successful

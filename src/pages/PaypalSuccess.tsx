@@ -55,85 +55,140 @@ const PaypalSuccess: React.FC = () => {
 
         console.log('🔵 PayPal Success - Verifying payment:', { token, payerId });
 
-        // Query the payment link to get the payment status
-        // First try to find by session_id if provided
-        const sessionId = searchParams.get('session_id');
-        let paymentLink = null;
-        let linkError = null;
+        // Look for pending payment transaction
+        const { data: paymentTx, error: txError } = await supabase
+          .from('payment_transactions')
+          .select('*')
+          .eq('paypal_order_id', token)
+          .single();
 
-        if (sessionId) {
-          // Try to find by link_code (session_id)
-          const result = await supabase
-            .from('payment_links')
-            .select('*')
-            .eq('link_code', sessionId)
-            .eq('gateway', 'paypal')
-            .single();
-          
-          paymentLink = result.data;
-          linkError = result.error;
-        }
-        
-        // If not found by session_id, try by gateway_link_id (PayPal order ID)
-        if (!paymentLink && token) {
-          const result = await supabase
-            .from('payment_links')
-            .select('*')
-            .eq('gateway_link_id', token)
-            .eq('gateway', 'paypal')
-            .single();
-            
-          paymentLink = result.data;
-          linkError = result.error;
-        }
+        let paymentLink = paymentTx;
+        let linkError = txError;
 
         if (linkError || !paymentLink) {
-          console.error('❌ Payment link not found, but PayPal payment was successful');
-          // For now, handle PayPal success without payment link
-          // This is a temporary solution until we implement proper PayPal checkout
+          console.error('❌ Payment transaction not found, creating new record');
           
-          setPaymentData({
-            transactionId: token,
-            orderId: token,
-            amount: 'Payment Completed',
-            currency: 'USD',
-            customerEmail: 'Check PayPal Dashboard',
-            payerId: payerId || 'N/A',
-            status: 'completed'
-          });
+          // Try to find from guest checkout session
+          const { data: sessions } = await supabase
+            .from('guest_checkout_sessions')
+            .select('*')
+            .ilike('checkout_data->>paypal_order_id', token);
+            
+          const session = sessions?.[0];
+          const checkoutData = session?.checkout_data as any;
           
-          // Clear cart if user is authenticated
-          if (user) {
-            clearCart();
+          if (session && checkoutData) {
+            // Create payment transaction from session data
+            const { data: newTx, error: createError } = await supabase
+              .from('payment_transactions')
+              .insert({
+                user_id: user?.id || null,
+                quote_id: checkoutData.quote_ids?.[0],
+                amount: checkoutData.amount,
+                currency: checkoutData.currency,
+                status: 'completed',
+                payment_method: 'paypal',
+                paypal_order_id: token,
+                paypal_payer_id: payerId,
+                gateway_response: {
+                  ...checkoutData,
+                  completed_at: new Date().toISOString()
+                }
+              })
+              .select()
+              .single();
+              
+            if (!createError && newTx) {
+              paymentLink = newTx;
+              
+              // Update quotes status
+              if (checkoutData.quote_ids) {
+                await supabase
+                  .from('quotes')
+                  .update({
+                    status: 'paid',
+                    payment_method: 'paypal',
+                    paid_at: new Date().toISOString(),
+                    payment_details: {
+                      paypal_order_id: token,
+                      paypal_payer_id: payerId
+                    }
+                  })
+                  .in('id', checkoutData.quote_ids);
+              }
+            }
           }
           
-          toast({
-            title: "Payment Successful",
-            description: "Your PayPal payment has been completed. Our team will process your order shortly.",
-          });
-          
-          setIsProcessing(false);
-          return;
+          // If still no data, show generic success
+          if (!paymentLink) {
+            setPaymentData({
+              transactionId: token,
+              orderId: token,
+              amount: 'Payment Completed',
+              currency: 'USD',
+              customerEmail: 'Check PayPal Dashboard',
+              payerId: payerId || 'N/A',
+              status: 'completed'
+            });
+            
+            toast({
+              title: "Payment Successful",
+              description: "Your PayPal payment has been completed. Our team will process your order shortly.",
+            });
+            
+            setIsProcessing(false);
+            return;
+          }
         }
 
-        // Check if payment is already completed
-        if (paymentLink.status === 'completed') {
-          console.log('✅ Payment already completed');
+        // Update payment transaction status if needed
+        if (paymentLink.status === 'pending') {
+          console.log('⏳ Updating payment status to completed');
           
-          // Get payment transaction details
-          const { data: transaction } = await supabase
+          const { data: updatedTx } = await supabase
             .from('payment_transactions')
-            .select('*')
-            .eq('paypal_order_id', token)
+            .update({
+              status: 'completed',
+              paypal_payer_id: payerId,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', paymentLink.id)
+            .select()
             .single();
+            
+          if (updatedTx) {
+            paymentLink = updatedTx;
+          }
+          
+          // Update related quotes
+          const quoteIds = (paymentLink.gateway_response as any)?.quote_ids;
+          if (quoteIds) {
+            await supabase
+              .from('quotes')
+              .update({
+                status: 'paid',
+                payment_method: 'paypal',
+                paid_at: new Date().toISOString(),
+                payment_details: {
+                  paypal_order_id: token,
+                  paypal_payer_id: payerId
+                }
+              })
+              .in('id', quoteIds);
+          }
+        }
+        
+        // Set payment data for display
+        if (paymentLink.status === 'completed') {
+          console.log('✅ Payment completed');
           
           setPaymentData({
-            transactionId: transaction?.paypal_capture_id || 'N/A',
+            transactionId: paymentLink.paypal_capture_id || token,
             orderId: token,
             amount: paymentLink.amount,
             currency: paymentLink.currency,
-            customerEmail: paymentLink.customer_email || transaction?.paypal_payer_email,
-            payerId: payerId || transaction?.paypal_payer_id || 'N/A',
+            customerEmail: paymentLink.paypal_payer_email || 'Payment Confirmed',
+            payerId: payerId || paymentLink.paypal_payer_id || 'N/A',
             status: 'completed'
           });
         } else {
