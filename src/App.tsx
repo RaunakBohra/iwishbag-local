@@ -62,6 +62,11 @@ const StatusDebug = React.lazy(() => import("@/pages/debug/StatusDebug"));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 
+// Import test utilities in development
+if (import.meta.env.DEV) {
+  import('@/utils/recordTestPayment');
+}
+
 const router = createBrowserRouter([
   {
     path: "admin",

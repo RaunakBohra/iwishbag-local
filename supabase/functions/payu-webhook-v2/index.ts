@@ -358,21 +358,15 @@ async function processPaymentStatusUpdate(
           .from('payment_ledger')
           .insert({
             quote_id: quoteId,
-            transaction_type: 'customer_payment',
+            payment_type: 'customer_payment', // Changed from transaction_type
             amount: amountInUSD,
             currency: 'USD',
             payment_method: 'payu',
             reference_number: mihpayid || txnid,
             status: 'completed',
+            payment_date: new Date().toISOString(),
             notes: `PayU payment via ${webhookData.mode || 'unknown'} mode (₹${amount} INR converted to USD)`,
-            gateway_transaction_id: mihpayid,
-            gateway_code: 'payu',
-            gateway_response: webhookData,
-            metadata: {
-              original_amount_inr: parseFloat(amount),
-              exchange_rate: exchangeRate,
-              converted_to_usd: amountInUSD
-            }
+            created_by: null // System-created entry
           });
 
         if (ledgerError) {

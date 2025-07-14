@@ -297,6 +297,32 @@ serve(async (req) => {
           console.error("L Error updating transaction:", updateError);
         }
       }
+
+      // Update the quote's amount_paid to reflect the refund
+      const { data: quoteData, error: quoteError } = await supabaseAdmin
+        .from('quotes')
+        .select('amount_paid, final_total')
+        .eq('id', quoteId)
+        .single();
+      
+      if (!quoteError && quoteData) {
+        const newAmountPaid = (quoteData.amount_paid || 0) - amount;
+        const newPaymentStatus = newAmountPaid <= 0 ? 'unpaid' : 
+                                newAmountPaid < quoteData.final_total ? 'partial' : 'paid';
+        
+        const { error: updateQuoteError } = await supabaseAdmin
+          .from('quotes')
+          .update({
+            amount_paid: newAmountPaid,
+            payment_status: newPaymentStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', quoteId);
+        
+        if (updateQuoteError) {
+          console.error("L Error updating quote amount_paid:", updateQuoteError);
+        }
+      }
     }
 
     // Send notification email if requested

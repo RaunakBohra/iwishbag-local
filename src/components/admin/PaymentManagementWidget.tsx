@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { UnifiedPaymentModal } from './UnifiedPaymentModal';
+import { formatAmountForDisplay } from '@/lib/currencyUtils';
 
 interface PaymentManagementWidgetProps {
   quote: Tables<'quotes'>;
@@ -77,6 +78,54 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
     enabled: quote.payment_method === 'bank_transfer'
   });
 
+  // Fetch payment ledger data for calculating totals
+  const { data: paymentLedger } = useQuery({
+    queryKey: ['payment-ledger-widget', quote.id],
+    queryFn: async () => {
+      // Fetch from payment_ledger
+      const { data: ledgerData } = await supabase
+        .from('payment_ledger')
+        .select('*')
+        .eq('quote_id', quote.id)
+        .order('created_at', { ascending: false });
+      
+      // Fetch from payment_transactions
+      const { data: transactionData } = await supabase
+        .from('payment_transactions')
+        .select('*')
+        .eq('quote_id', quote.id)
+        .in('status', ['completed', 'success'])
+        .order('created_at', { ascending: false });
+      
+      // Combine both sources
+      const combinedData = [];
+      
+      if (transactionData && transactionData.length > 0) {
+        transactionData.forEach(tx => {
+          const existsInLedger = ledgerData?.some(l => 
+            l.reference_number === tx.transaction_id || 
+            (l.payment_type === 'customer_payment' && Math.abs(l.amount - tx.amount) < 0.01)
+          );
+          
+          if (!existsInLedger) {
+            combinedData.push({
+              payment_type: 'customer_payment',
+              amount: tx.amount,
+              status: tx.status
+            });
+          }
+        });
+      }
+      
+      if (ledgerData && ledgerData.length > 0) {
+        combinedData.push(...ledgerData);
+      }
+      
+      return combinedData;
+    },
+    enabled: !!quote.id
+  });
+
 
   const getPaymentMethodIcon = (method: string) => {
     switch (method?.toLowerCase()) {
@@ -92,6 +141,58 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
     }
   };
 
+  // Calculate payment summary
+  const paymentSummary = useMemo(() => {
+    let totalPayments = 0;
+    let totalRefunds = 0;
+    
+    paymentLedger?.forEach(entry => {
+      const type = entry.payment_type;
+      const amount = parseFloat(entry.amount) || 0;
+      
+      if (type === 'payment' || type === 'customer_payment' || 
+          (entry.status === 'completed' && amount > 0)) {
+        totalPayments += Math.abs(amount);
+      } else if (type === 'refund' || type === 'partial_refund' || 
+                 type === 'credit_note' || amount < 0) {
+        totalRefunds += Math.abs(amount);
+      }
+    });
+    
+    const totalPaid = totalPayments - totalRefunds;
+    const finalTotal = parseFloat(quote.final_total) || 0;
+    const remaining = finalTotal - totalPaid;
+    
+    // Determine payment status with refund states
+    let status = 'unpaid';
+    if (totalPayments === 0) {
+      status = 'unpaid';
+    } else if (totalRefunds >= totalPayments) {
+      status = 'fully_refunded';
+    } else if (totalRefunds > 0 && totalPaid >= finalTotal) {
+      status = 'partially_refunded';
+    } else if (totalPaid >= finalTotal) {
+      status = 'paid';
+    } else if (totalPaid > 0) {
+      status = 'partial';
+    }
+    
+    const isOverpaid = totalPaid > finalTotal;
+    const hasRefunds = totalRefunds > 0;
+
+    return {
+      finalTotal,
+      totalPaid,
+      totalPayments,
+      totalRefunds,
+      remaining: Math.max(0, remaining),
+      overpaidAmount: isOverpaid ? totalPaid - finalTotal : 0,
+      status,
+      isOverpaid,
+      hasRefunds
+    };
+  }, [paymentLedger, quote.final_total]);
+
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
       case 'paid':
@@ -102,6 +203,10 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
         return 'destructive';
       case 'overpaid':
         return 'secondary';
+      case 'partially_refunded':
+        return 'secondary';
+      case 'fully_refunded':
+        return 'default';
       default:
         return 'default';
     }
@@ -114,11 +219,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
   // Extract payment details from different sources
   const paymentDetails = quote.payment_details as any || {};
   const transactionData = paymentTransaction?.gateway_response as any || {};
-  
-  // Determine actual amount paid (ensure it's not negative)
-  const amountPaid = Math.max(0, quote.amount_paid || paymentTransaction?.amount || 0);
   const paymentCurrency = paymentTransaction?.currency || quote.final_currency || 'USD';
-  const outstandingAmount = (quote.final_total || 0) - amountPaid; // Use the corrected amountPaid
 
   return (
     <>
@@ -129,50 +230,78 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               <DollarSign className="h-5 w-5" />
               Payment Information
             </span>
-            {quote.payment_status && (
-              <Badge variant={getPaymentStatusColor(quote.payment_status)}>
-                {quote.payment_status === 'partial' 
-                  ? `Partial (${paymentCurrency} ${Math.abs(quote.amount_paid || 0).toFixed(2)} of ${quote.final_total?.toFixed(2)})`
-                  : quote.payment_status.charAt(0).toUpperCase() + quote.payment_status.slice(1)
-                }
+            {paymentSummary && (
+              <Badge variant={getPaymentStatusColor(paymentSummary.status)}>
+                {paymentSummary.status === 'paid' ? 'Fully Paid' :
+                 paymentSummary.status === 'partial' ? 'Partially Paid' :
+                 paymentSummary.status === 'partially_refunded' ? 
+                   `Partially Refunded (${paymentCurrency} ${paymentSummary.totalRefunds.toFixed(2)})` :
+                 paymentSummary.status === 'fully_refunded' ? 'Fully Refunded' :
+                 'Unpaid'}
               </Badge>
             )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Payment Summary */}
+          {/* Payment Summary - Professional Display */}
           <div className="space-y-3">
+            {/* Order Total */}
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Order Total</span>
               <span className="font-semibold">
-                {quote.final_currency} {quote.final_total?.toFixed(2)}
+                {formatAmountForDisplay(paymentSummary.finalTotal, paymentCurrency)}
               </span>
             </div>
             
+            {/* Total Payments */}
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Amount Paid</span>
+              <span className="text-sm text-muted-foreground">Total Payments</span>
               <span className={cn(
                 "font-semibold",
-                amountPaid > 0 ? "text-green-600" : "text-gray-500"
+                paymentSummary.totalPayments > 0 ? "text-green-600" : "text-gray-500"
               )}>
-                {paymentCurrency} {amountPaid.toFixed(2)}
+                {formatAmountForDisplay(paymentSummary.totalPayments, paymentCurrency)}
               </span>
             </div>
-
-            {outstandingAmount > 0 && (
+            
+            {/* Total Refunds (only show if > 0) */}
+            {paymentSummary.totalRefunds > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Outstanding</span>
-                <span className="font-semibold text-orange-600">
-                  {quote.final_currency} {outstandingAmount.toFixed(2)}
+                <span className="text-sm text-muted-foreground">Total Refunds</span>
+                <span className="font-semibold text-red-600">
+                  -{formatAmountForDisplay(paymentSummary.totalRefunds, paymentCurrency)}
                 </span>
               </div>
             )}
             
-            {outstandingAmount < 0 && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Overpaid Amount</span>
-                <span className="font-semibold text-blue-600">
-                  {quote.final_currency} {Math.abs(outstandingAmount).toFixed(2)}
+            {/* Separator for totals */}
+            {(paymentSummary.totalPayments > 0 || paymentSummary.totalRefunds > 0) && (
+              <div className="border-t pt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Net Paid</span>
+                  <span className="font-bold">
+                    {formatAmountForDisplay(paymentSummary.totalPaid, paymentCurrency)}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {/* Balance Due (only show if > 0) */}
+            {paymentSummary.remaining > 0 && (
+              <div className="flex items-center justify-between bg-orange-50 p-2 rounded">
+                <span className="text-sm font-medium text-orange-800">Balance Due</span>
+                <span className="font-bold text-orange-600">
+                  {formatAmountForDisplay(paymentSummary.remaining, paymentCurrency)}
+                </span>
+              </div>
+            )}
+            
+            {/* Overpayment (only show if overpaid) */}
+            {paymentSummary.isOverpaid && (
+              <div className="flex items-center justify-between bg-blue-50 p-2 rounded">
+                <span className="text-sm font-medium text-blue-800">Overpayment</span>
+                <span className="font-bold text-blue-600">
+                  {formatAmountForDisplay(paymentSummary.overpaidAmount, paymentCurrency)}
                 </span>
               </div>
             )}
@@ -319,7 +448,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Amount</p>
-                <p className="font-medium">{paymentCurrency} {amountPaid.toFixed(2)}</p>
+                <p className="font-medium">{formatAmountForDisplay(paymentSummary.totalPaid, paymentCurrency)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>

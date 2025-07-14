@@ -171,35 +171,42 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
             console.log('PayU refund result:', refundResult);
             
             if (refundResult?.success) {
+              // PayU refund successful - Edge Function already recorded in database
+              // Just refresh the UI and close modal
+              
               // Invalidate queries to refresh UI
               queryClient.invalidateQueries({ queryKey: ['payment-history', quote.id] });
               queryClient.invalidateQueries({ queryKey: ['all-payments', quote.id] });
               queryClient.invalidateQueries({ queryKey: ['payment-transaction', quote.id] });
               queryClient.invalidateQueries({ queryKey: ['payment-ledger', quote.id] });
+              queryClient.invalidateQueries({ queryKey: ['quotes'] });
 
               toast({
                 title: "PayU Refund Initiated",
-                description: `Successfully initiated PayU refund of ${quote.currency} ${amount.toFixed(2)}. Refund ID: ${refundResult.refundId}`,
+                description: `Successfully initiated PayU refund of ${quote.currency} ${amount.toFixed(2)}. Refund ID: ${refundResult.refundId || refundResult.request_id}`,
               });
 
               onClose();
-              return;
+              setIsProcessing(false);
+              return; // Exit - PayU Edge Function already handled database recording
             } else {
               throw new Error(refundResult?.error || 'PayU refund failed');
             }
           } catch (payuError: any) {
             console.error('PayU refund error:', payuError);
-            // Fall back to manual refund processing
             toast({
               title: "PayU Refund Failed",
-              description: "Falling back to manual refund processing. " + (payuError.message || ''),
+              description: payuError.message || "Failed to process PayU refund. Please try again or contact support.",
               variant: "destructive"
             });
+            setIsProcessing(false);
+            return; // Stop here - don't record the refund in database
           }
         }
       }
 
-      // Create refund record in payment_ledger for proper accounting
+      // Create refund record in payment_ledger for manual refunds (non-gateway refunds)
+      // Note: PayU refunds are recorded by the Edge Function, not here
       const refundReference = `REF-${Date.now()}`;
       
       // Try to use payment_ledger if it exists

@@ -251,8 +251,23 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
     const finalTotal = parseFloat(quote.final_total) || 0;
     const remaining = finalTotal - totalPaid;
-    const status = remaining <= 0 ? 'paid' : totalPaid > 0 ? 'partial' : 'unpaid';
+    
+    // Determine payment status with refund states
+    let status = 'unpaid';
+    if (totalPayments === 0) {
+      status = 'unpaid';
+    } else if (totalRefunds >= totalPayments) {
+      status = 'fully_refunded';
+    } else if (totalRefunds > 0 && totalPaid >= finalTotal) {
+      status = 'partially_refunded';
+    } else if (totalPaid >= finalTotal) {
+      status = 'paid';
+    } else if (totalPaid > 0) {
+      status = 'partial';
+    }
+    
     const isOverpaid = totalPaid > finalTotal;
+    const hasRefunds = totalRefunds > 0;
 
     return {
       finalTotal,
@@ -263,6 +278,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       overpaidAmount: isOverpaid ? totalPaid - finalTotal : 0,
       status,
       isOverpaid,
+      hasRefunds,
       percentagePaid: finalTotal > 0 ? (totalPaid / finalTotal) * 100 : 0,
     };
   }, [paymentLedger, quote.final_total]);
@@ -708,6 +724,8 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       case 'paid': return 'text-green-600 bg-green-50';
       case 'partial': return 'text-orange-600 bg-orange-50';
       case 'unpaid': return 'text-red-600 bg-red-50';
+      case 'partially_refunded': return 'text-purple-600 bg-purple-50';
+      case 'fully_refunded': return 'text-gray-600 bg-gray-50';
       default: return 'text-gray-600 bg-gray-50';
     }
   };
@@ -827,30 +845,59 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Amount Details */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
+                  {/* Amount Details - Professional Display */}
+                  <div className="space-y-3">
+                    {/* Order Total */}
+                    <div className="flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">Order Total</p>
-                      <p className="text-2xl font-bold">{formatAmount(paymentSummary.finalTotal)}</p>
+                      <p className="text-lg font-bold">{formatAmount(paymentSummary.finalTotal)}</p>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Paid</p>
-                      <p className="text-2xl font-bold text-green-600">
-                        {formatAmountForDisplay(paymentSummary.totalPaid, currency)}
+                    
+                    {/* Total Payments */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground">Total Payments</p>
+                      <p className="text-lg font-semibold text-green-600">
+                        {formatAmountForDisplay(paymentSummary.totalPayments, currency)}
                       </p>
                     </div>
+                    
+                    {/* Total Refunds (only show if > 0) */}
+                    {paymentSummary.totalRefunds > 0 && (
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">Total Refunds</p>
+                        <p className="text-lg font-semibold text-red-600">
+                          -{formatAmountForDisplay(paymentSummary.totalRefunds, currency)}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Separator for totals */}
+                    {(paymentSummary.totalPayments > 0 || paymentSummary.totalRefunds > 0) && (
+                      <div className="border-t pt-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">Net Paid</p>
+                          <p className="text-xl font-bold">
+                            {formatAmountForDisplay(paymentSummary.totalPaid, currency)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Balance Due (only show if > 0) */}
                     {paymentSummary.remaining > 0 && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Remaining</p>
-                        <p className="text-xl font-semibold text-orange-600">
+                      <div className="flex items-center justify-between bg-orange-50 p-3 rounded-lg">
+                        <p className="text-sm font-medium text-orange-800">Balance Due</p>
+                        <p className="text-xl font-bold text-orange-600">
                           {formatAmountForDisplay(paymentSummary.remaining, currency)}
                         </p>
                       </div>
                     )}
+                    
+                    {/* Overpayment (only show if overpaid) */}
                     {paymentSummary.isOverpaid && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Overpaid</p>
-                        <p className="text-xl font-semibold text-blue-600">
+                      <div className="flex items-center justify-between bg-blue-50 p-3 rounded-lg">
+                        <p className="text-sm font-medium text-blue-800">Overpayment</p>
+                        <p className="text-xl font-bold text-blue-600">
                           {formatAmountForDisplay(paymentSummary.overpaidAmount, currency)}
                         </p>
                       </div>
@@ -863,7 +910,11 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                   <div className="flex items-center justify-between">
                     <Badge className={cn("text-sm px-3 py-1", getStatusColor(paymentSummary.status))}>
                       {paymentSummary.status === 'paid' ? 'Fully Paid' : 
-                       paymentSummary.status === 'partial' ? 'Partially Paid' : 'Unpaid'}
+                       paymentSummary.status === 'partial' ? 'Partially Paid' :
+                       paymentSummary.status === 'partially_refunded' ? 
+                         `Partially Refunded (${currencySymbol}${paymentSummary.totalRefunds.toFixed(2)})` :
+                       paymentSummary.status === 'fully_refunded' ? 'Fully Refunded' : 
+                       'Unpaid'}
                     </Badge>
                     
                     <div className="flex items-center gap-2">
