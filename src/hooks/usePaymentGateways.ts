@@ -304,14 +304,16 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
   // Debug the enabled condition
   const isQueryEnabled = user ? !!userProfile : !!overrideCurrency;
 
-  // Get available payment methods for current user or guest
+  // Get available payment methods for current user or guest with country-specific logic
   const { data: availableMethods, isLoading: methodsLoading } = useQuery({
     queryKey: user 
-      ? ['available-payment-methods', 'authenticated', userProfile?.preferred_display_currency, userProfile?.cod_enabled, user.id]
+      ? ['available-payment-methods', 'authenticated', userProfile?.preferred_display_currency, userProfile?.country, userProfile?.cod_enabled, user.id]
       : ['available-payment-methods', 'guest', overrideCurrency, guestShippingCountry],
     queryFn: async (): Promise<PaymentGateway[]> => {
       // Use override currency if provided (for guest checkout), otherwise use user's preferred currency
       const currencyCode = overrideCurrency || userProfile?.preferred_display_currency;
+      // Use guest shipping country or user's country
+      const countryCode = guestShippingCountry || userProfile?.country;
       
       if (!currencyCode) {
         console.log('Payment methods not available: missing currency data', {
@@ -324,14 +326,88 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
       // Debug logging for development
       if (import.meta.env.DEV) {
-        console.log('🚀 Payment gateway query starting:', { 
+        console.log('🚀 Enhanced payment gateway query starting:', { 
           currencyCode, 
+          countryCode,
           isGuest: !user,
           overrideCurrency,
           guestShippingCountry 
         });
       }
 
+      // First, try to get country-specific configuration
+      let countryGateways: PaymentGateway[] = [];
+      if (countryCode) {
+        const { data: countrySettings, error: countryError } = await supabase
+          .from('country_settings')
+          .select('available_gateways, default_gateway, gateway_config')
+          .eq('code', countryCode)
+          .single();
+
+        if (!countryError && countrySettings?.available_gateways) {
+          console.log('✅ Using country-specific gateway configuration for', countryCode, ':', countrySettings.available_gateways);
+          
+          // Filter country gateways by currency support and active status
+          const { data: gateways, error: gatewaysError } = await supabase
+            .from('payment_gateways')
+            .select('code, supported_currencies, is_active, test_mode, config')
+            .in('code', countrySettings.available_gateways)
+            .eq('is_active', true);
+
+          if (!gatewaysError && gateways) {
+            countryGateways = gateways
+              .filter(gateway => {
+                // Check currency support
+                const currencyMatch = gateway.supported_currencies.includes(currencyCode);
+                
+                // Special handling for COD - check user preference
+                if (gateway.code === 'cod') {
+                  if (user && !userProfile?.cod_enabled) {
+                    return false; // User has COD disabled
+                  }
+                }
+                
+                // Check gateway configuration for PayPal and others
+                let hasValidConfig = true;
+                if (gateway.code === 'paypal') {
+                  const clientId = gateway.test_mode ? gateway.config?.client_id_sandbox : gateway.config?.client_id_live;
+                  const clientSecret = gateway.test_mode ? gateway.config?.client_secret_sandbox : gateway.config?.client_secret_live;
+                  hasValidConfig = !!clientId && !!clientSecret;
+                  
+                  // Allow PayPal without configuration for testing
+                  if (!hasValidConfig) {
+                    console.log('⚠️ PayPal configuration missing, but allowing for testing');
+                    hasValidConfig = true;
+                  }
+                } else if (gateway.code === 'stripe') {
+                  const pk = gateway.test_mode ? gateway.config?.test_publishable_key : gateway.config?.live_publishable_key;
+                  hasValidConfig = !!pk;
+                } else if (gateway.code === 'payu') {
+                  const hasMerchantId = !!gateway.config?.merchant_id;
+                  const hasMerchantKey = !!gateway.config?.merchant_key;
+                  const hasSaltKey = !!gateway.config?.salt_key;
+                  hasValidConfig = hasMerchantId && hasMerchantKey && hasSaltKey;
+                  
+                  // TEMPORARY: Allow PayU without configuration for testing
+                  if (!hasValidConfig) {
+                    console.log('⚠️ PayU configuration missing, but allowing for testing');
+                    hasValidConfig = true;
+                  }
+                }
+                
+                return currencyMatch && hasValidConfig;
+              })
+              .map(gateway => gateway.code as PaymentGateway);
+
+            console.log('🎯 Country-specific available methods for', countryCode, ':', countryGateways);
+            return countryGateways;
+          }
+        }
+      }
+
+      // Fallback to global gateway selection if no country-specific config
+      console.log('🔄 Falling back to global gateway selection');
+      
       const { data: gateways, error } = await supabase
         .from('payment_gateways')
         .select('code, supported_countries, supported_currencies, is_active, test_mode, config')
@@ -347,15 +423,12 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
       }
       
       console.log('✅ Payment gateways fetched:', gateways.length, 'gateways');
-      
-      // Log bank_transfer specifically
-      const bankTransferInDb = gateways.find(g => g.code === 'bank_transfer');
-      console.log('🏦 Bank transfer in DB:', bankTransferInDb ? 'Found' : 'Not found', bankTransferInDb);
 
       const filteredGateways = gateways
         .filter(gateway => {
-          // Only filter by currency, not by country
+          // Filter by currency and optionally by country
           const currencyMatch = gateway.supported_currencies.includes(currencyCode);
+          const countryMatch = !countryCode || gateway.supported_countries.includes(countryCode);
           
           // Don't filter bank_transfer and cod here - they'll be handled separately
           if (gateway.code === 'bank_transfer' || gateway.code === 'cod') {
@@ -367,7 +440,6 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
             const pk = gateway.test_mode ? gateway.config?.test_publishable_key : gateway.config?.live_publishable_key;
             hasKeys = !!pk;
           } else if (gateway.code === 'payu') {
-            // Check for PayU configuration
             const hasMerchantId = !!gateway.config?.merchant_id;
             const hasMerchantKey = !!gateway.config?.merchant_key;
             const hasSaltKey = !!gateway.config?.salt_key;
@@ -378,9 +450,19 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
               console.log('⚠️ PayU configuration missing, but allowing for testing');
               hasKeys = true;
             }
+          } else if (gateway.code === 'paypal') {
+            const clientId = gateway.test_mode ? gateway.config?.client_id_sandbox : gateway.config?.client_id_live;
+            const clientSecret = gateway.test_mode ? gateway.config?.client_secret_sandbox : gateway.config?.client_secret_live;
+            hasKeys = !!clientId && !!clientSecret;
+            
+            // Allow PayPal without configuration for testing
+            if (!hasKeys) {
+              console.log('⚠️ PayPal configuration missing, but allowing for testing');
+              hasKeys = true;
+            }
           }
           
-          return currencyMatch && hasKeys;
+          return currencyMatch && countryMatch && hasKeys;
         });
 
       let finalMethods = filteredGateways.map(gateway => gateway.code as PaymentGateway);
@@ -409,20 +491,13 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
       
       // Debug logging for development
       if (import.meta.env.DEV) {
-        console.log('🎯 Available payment methods for currency', currencyCode, ':', uniqueMethods);
+        console.log('🎯 Available payment methods for', currencyCode, countryCode || 'global', ':', uniqueMethods);
         console.log('🔧 Query context:', { 
           isGuest: !user, 
           overrideCurrency, 
           guestShippingCountry,
-          userProfileCurrency: userProfile?.preferred_display_currency 
-        });
-        console.log('🏦 Payment gateways found:', {
-          totalGateways: gateways.length,
-          filteredGateways: filteredGateways.length,
-          bankTransferGateway: bankTransferGateway ? 'Found' : 'Not found',
-          codGateway: codGateway ? 'Found' : 'Not found',
-          bankTransferSupports: bankTransferGateway?.supported_currencies,
-          requestedCurrency: currencyCode
+          userProfileCurrency: userProfile?.preferred_display_currency,
+          userCountry: userProfile?.country
         });
       }
       
@@ -474,7 +549,12 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
         throw new Error('Supabase URL is not configured');
       }
       
-      const functionUrl = `${supabaseUrl}/functions/v1/create-payment`;
+      // Route to appropriate payment function based on gateway
+      let functionUrl = `${supabaseUrl}/functions/v1/create-payment`;
+      if (paymentRequest.gateway === 'paypal') {
+        // Use new PayPal payment link function that follows PayU pattern
+        functionUrl = `${supabaseUrl}/functions/v1/create-paypal-payment-link`;
+      }
 
       const response = await fetch(
         functionUrl,
@@ -509,16 +589,28 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
       if (data.success) {
         if (variables.gateway === 'stripe' && data.stripeCheckoutUrl) {
           window.location.href = data.stripeCheckoutUrl;
+        } else if (variables.gateway === 'paypal' && data.approval_url) {
+          // PayPal redirect
+          window.location.href = data.approval_url;
+        } else if (variables.gateway === 'paypal' && data.approvalUrl) {
+          // PayPal redirect (alternative field name)
+          window.location.href = data.approvalUrl;
+        } else if (variables.gateway === 'paypal' && data.url) {
+          // PayPal redirect (new function returns 'url')
+          window.location.href = data.url;
+        } else if (data.url) {
+          // Generic redirect for any gateway returning a URL (PayU, etc.)
+          window.location.href = data.url;
         } else if (data.qrCode) {
           toast({
             title: 'QR Code Generated',
             description: 'Please scan the QR code to complete payment.',
           });
           // Here you would typically open a modal with the QR code
-        } else if (data.transactionId) {
+        } else if (data.transactionId || data.order_id) {
           toast({
             title: 'Payment Initiated',
-            description: `Your payment was successfully created with ID: ${data.transactionId}`,
+            description: `Your payment was successfully created with ID: ${data.transactionId || data.order_id}`,
           });
         } else {
           toast({
@@ -603,10 +695,29 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
     try {
       // Use country-specific recommendation if country is provided
-      if (countryCode) {
-        const recommended = await paymentGatewayService.getRecommendedGateway(countryCode);
-        if (availableMethods.includes(recommended)) {
-          return recommended;
+      const targetCountry = countryCode || guestShippingCountry || userProfile?.country;
+      
+      if (targetCountry) {
+        // Try to get country-specific default gateway
+        const { data: countrySettings } = await supabase
+          .from('country_settings')
+          .select('default_gateway, available_gateways, gateway_config')
+          .eq('code', targetCountry)
+          .single();
+
+        if (countrySettings?.default_gateway && availableMethods.includes(countrySettings.default_gateway)) {
+          console.log('✅ Using country-specific default gateway:', countrySettings.default_gateway, 'for', targetCountry);
+          return countrySettings.default_gateway;
+        }
+
+        // If default not available, find first available from country's available list
+        if (countrySettings?.available_gateways) {
+          for (const gateway of countrySettings.available_gateways) {
+            if (availableMethods.includes(gateway)) {
+              console.log('✅ Using country-specific available gateway:', gateway, 'for', targetCountry);
+              return gateway;
+            }
+          }
         }
       }
 
@@ -614,11 +725,12 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
       const gateways = await paymentGatewayService.getGatewaysByPriority();
       for (const gateway of gateways) {
         if (availableMethods.includes(gateway.code)) {
+          console.log('✅ Using priority-based gateway:', gateway.code);
           return gateway.code;
         }
       }
 
-      // Final fallback to hardcoded priority
+      // Final fallback to hardcoded priority with PayPal prioritized
       const fallbackOrder: PaymentGateway[] = [
         'stripe', 'paypal', 'razorpay', 'airwallex', 'payu', 'upi', 'paytm', 
         'esewa', 'khalti', 'fonepay', 'grabpay', 'alipay', 'bank_transfer', 'cod'
@@ -626,6 +738,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
       for (const method of fallbackOrder) {
         if (availableMethods.includes(method)) {
+          console.log('✅ Using fallback gateway:', method);
           return method;
         }
       }

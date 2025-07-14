@@ -65,6 +65,7 @@ import { AddressList } from "@/components/profile/AddressList";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { currencyService, type Currency } from "@/services/CurrencyService";
+import { usePaymentGateways } from "@/hooks/usePaymentGateways";
 
 const profileFormSchema = z.object({
   full_name: z.string().min(1, "Full name is required"),
@@ -72,6 +73,7 @@ const profileFormSchema = z.object({
   phone: z.string().min(8, "Phone number is required"),
   country: z.string().min(1, "Country is required"),
   preferred_display_currency: z.string().min(1, "Preferred currency is required"),
+  preferred_payment_gateway: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -83,6 +85,7 @@ const Profile = () => {
   const { data: allCountries } = useAllCountries();
   const [availableCurrencies, setAvailableCurrencies] = useState<Currency[]>([]);
   const [currencyLoading, setCurrencyLoading] = useState(true);
+  const { getAvailablePaymentMethods, methodsLoading } = usePaymentGateways();
 
   const {
     data: profile,
@@ -155,6 +158,7 @@ const Profile = () => {
             phone: values.phone,
             country: values.country,
             preferred_display_currency: values.preferred_display_currency,
+            preferred_payment_gateway: values.preferred_payment_gateway === 'auto' ? null : values.preferred_payment_gateway,
           })
           .eq("id", user.id);
         if (error) throw new Error(`Error updating profile: ${error.message}`);
@@ -168,6 +172,7 @@ const Profile = () => {
             phone: values.phone,
             country: values.country,
             preferred_display_currency: values.preferred_display_currency,
+            preferred_payment_gateway: values.preferred_payment_gateway === 'auto' ? null : values.preferred_payment_gateway,
           });
         if (error) throw new Error(`Error creating profile: ${error.message}`);
       }
@@ -197,6 +202,7 @@ const Profile = () => {
       phone: "",
       country: "US",
       preferred_display_currency: "USD",
+      preferred_payment_gateway: "auto",
     },
   });
 
@@ -231,6 +237,7 @@ const Profile = () => {
         phone: profile.phone || "",
         country: profile.country || "US",
         preferred_display_currency: profile.preferred_display_currency || "USD",
+        preferred_payment_gateway: profile.preferred_payment_gateway || "auto",
       });
     }
   }, [profile, user, form]);
@@ -302,6 +309,8 @@ const Profile = () => {
     fields.forEach(field => {
       if (profile[field as keyof typeof profile]) completed++;
     });
+    // Bonus points for optional fields
+    if (profile.preferred_payment_gateway) completed += 0.5;
     return Math.round((completed / fields.length) * 100);
   };
   
@@ -598,6 +607,54 @@ const Profile = () => {
                           </FormItem>
                         )}
                       />
+
+                      {/* Payment Gateway Preference */}
+                      <FormField
+                        control={form.control}
+                        name="preferred_payment_gateway"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <CreditCard className="h-4 w-4 text-gray-500" />
+                              Preferred Payment Method
+                            </FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={updateProfileMutation.isPending || methodsLoading}>
+                              <FormControl>
+                                <SelectTrigger className="hover:border-primary transition-colors">
+                                  <SelectValue placeholder="Choose preferred payment method (optional)" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="auto">
+                                  <div className="flex items-center gap-2">
+                                    <span>Auto-select best method</span>
+                                    <Badge variant="secondary" className="text-xs">
+                                      Recommended
+                                    </Badge>
+                                  </div>
+                                </SelectItem>
+                                {getAvailablePaymentMethods().map((method) => (
+                                  <SelectItem key={method.code} value={method.code}>
+                                    <div className="flex items-center gap-2">
+                                      <span>{method.name}</span>
+                                      <Badge variant="outline" className="text-xs">
+                                        {method.fees}
+                                      </Badge>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {field.value === 'auto' || !field.value
+                                ? "We'll automatically select the best payment method for your location and order."
+                                : `You've chosen ${getAvailablePaymentMethods().find(m => m.code === field.value)?.name} as your preferred payment method.`
+                              }
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
 
                     {/* Current Settings Display */}
@@ -623,6 +680,21 @@ const Profile = () => {
                           <div>
                             <p className="text-xs text-gray-500">Currency</p>
                             <p className="font-medium">{getCurrencyName(form.watch('preferred_display_currency'))} ({form.watch('preferred_display_currency')})</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                            <CreditCard className="h-4 w-4 text-purple-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Payment Method</p>
+                            <p className="font-medium">
+                              {form.watch('preferred_payment_gateway') === 'auto' || !form.watch('preferred_payment_gateway')
+                                ? 'Auto-select (Recommended)'
+                                : getAvailablePaymentMethods().find(m => m.code === form.watch('preferred_payment_gateway'))?.name || 'Unknown'
+                              }
+                            </p>
                           </div>
                         </div>
                       </div>

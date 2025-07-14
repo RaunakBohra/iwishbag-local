@@ -28,11 +28,14 @@ const NotFound = React.lazy(() => import("@/pages/NotFound"));
 const MessageCenter = React.lazy(() => import("@/components/messaging/MessageCenter").then(m => ({ default: m.MessageCenter })));
 const Cart = React.lazy(() => import("@/components/cart/Cart").then(m => ({ default: m.Cart })));
 const CostEstimatorPage = React.lazy(() => import("@/pages/CostEstimator"));
+const TestPayment = React.lazy(() => import("@/pages/TestPayment"));
 const CustomerOrderDetailPage = React.lazy(() => import("@/pages/CustomerOrderDetailPage"));
 const OrderConfirmationPage = React.lazy(() => import("@/pages/OrderConfirmationPage"));
 const PaymentSuccess = React.lazy(() => import("@/pages/PaymentSuccess"));
 const PaymentFailure = React.lazy(() => import("@/pages/PaymentFailure"));
 const PaymentTest = React.lazy(() => import("@/pages/PaymentTest"));
+const PaypalSuccess = React.lazy(() => import("@/pages/PaypalSuccess"));
+const PaypalFailure = React.lazy(() => import("@/pages/PaypalFailure"));
 const QuoteDetailUnified = React.lazy(() => import("@/pages/dashboard/QuoteDetailUnified"));
 const ResetPassword = React.lazy(() => import("@/pages/auth/ResetPassword"));
 const EmailConfirmation = React.lazy(() => import("@/pages/auth/EmailConfirmation"));
@@ -193,6 +196,22 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "paypal-success", // PayPal success redirect (public access)
+        element: (
+          <ErrorBoundary fallback={PaymentErrorFallback}>
+            <PaypalSuccess />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "paypal-failure", // PayPal failure redirect (public access)
+        element: (
+          <ErrorBoundary fallback={PaymentErrorFallback}>
+            <PaypalFailure />
+          </ErrorBoundary>
+        ),
+      },
+      {
         path: "payment-test", // Test page for debugging PayU callbacks
         element: <PaymentTest />,
       },
@@ -250,6 +269,10 @@ const router = createBrowserRouter([
           {
             path: "profile/address",
             element: <Address />,
+          },
+          {
+            path: "test-payment",
+            element: <TestPayment />,
           },
         ],
       },
