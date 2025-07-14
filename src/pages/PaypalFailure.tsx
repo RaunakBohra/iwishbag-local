@@ -11,7 +11,8 @@ import {
   Home,
   ShoppingCart,
   AlertCircle,
-  Mail
+  Mail,
+  CheckCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -213,11 +214,5 @@ const PaypalFailure: React.FC = () => {
   );
 };
 
-// Fix the import in the component
-const CheckCircle = () => (
-  <svg className="h-4 w-4 text-green-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-  </svg>
-);
 
 export default PaypalFailure;
