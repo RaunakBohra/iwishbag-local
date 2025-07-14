@@ -69,6 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_oauth_tokens_expiry ON public.oauth_tokens(expire
 ALTER TABLE public.oauth_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Only allow service role to access OAuth tokens (for security)
+DROP POLICY IF EXISTS "Service role can manage OAuth tokens" ON public.oauth_tokens;
 CREATE POLICY "Service role can manage OAuth tokens" ON public.oauth_tokens
     FOR ALL USING (auth.role() = 'service_role');
 
