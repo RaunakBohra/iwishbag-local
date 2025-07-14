@@ -45,7 +45,7 @@ interface PayPalOrderRequest {
 }
 
 serve(async (req) => {
-  console.log("🔵 === CREATE PAYPAL PAYMENT LINK FUNCTION STARTED ===");
+  console.log("🔵 === CREATE PAYPAL CHECKOUT FUNCTION STARTED ===");
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -206,7 +206,7 @@ serve(async (req) => {
     const description = `Order: ${productNames} (${quoteIds.join(',')})`;
     
     // Generate invoice ID
-    const invoiceId = `LINK_${linkCode}_${Date.now()}`;
+    const invoiceId = `INV_${transactionId}`;
 
     // Create PayPal order
     console.log('📦 Creating PayPal order...');
