@@ -141,23 +141,56 @@ const PaypalSuccess: React.FC = () => {
           }
         }
 
-        // Update payment transaction status if needed
+        // Update payment transaction status if needed and capture PayPal payment
         if (paymentLink.status === 'pending') {
-          console.log('⏳ Updating payment status to completed');
+          console.log('⏳ Capturing PayPal payment and updating status');
           
-          const { data: updatedTx } = await supabase
-            .from('payment_transactions')
-            .update({
-              status: 'completed',
-              paypal_payer_id: payerId,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', paymentLink.id)
-            .select()
-            .single();
+          // First, capture the PayPal payment to get capture ID
+          try {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const captureResponse = await fetch(`${supabaseUrl}/functions/v1/capture-paypal-payment`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderID: token })
+            });
             
-          if (updatedTx) {
-            paymentLink = updatedTx;
+            const captureData = await captureResponse.json();
+            console.log('PayPal capture result:', captureData);
+            
+            // Update transaction with capture details
+            const { data: updatedTx } = await supabase
+              .from('payment_transactions')
+              .update({
+                status: 'completed',
+                paypal_payer_id: payerId,
+                paypal_capture_id: captureData.captureID,
+                paypal_payer_email: captureData.payerEmail,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', paymentLink.id)
+              .select()
+              .single();
+              
+            if (updatedTx) {
+              paymentLink = updatedTx;
+            }
+          } catch (captureError) {
+            console.error('❌ PayPal capture failed:', captureError);
+            // Still update status but without capture details
+            const { data: updatedTx } = await supabase
+              .from('payment_transactions')
+              .update({
+                status: 'completed',
+                paypal_payer_id: payerId,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', paymentLink.id)
+              .select()
+              .single();
+              
+            if (updatedTx) {
+              paymentLink = updatedTx;
+            }
           }
           
           // Update related quotes
