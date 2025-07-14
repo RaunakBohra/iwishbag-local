@@ -209,6 +209,7 @@ export function EnhancedPaymentLinkGenerator({
     phone: '',
     description: '',
     expiryDays: '7',
+    gateway: 'payu' as 'payu' | 'paypal',
     template: 'default' as 'default' | 'minimal' | 'branded',
     partialPaymentAllowed: false,
     apiMethod: 'rest' as 'rest' | 'legacy',
@@ -241,6 +242,7 @@ export function EnhancedPaymentLinkGenerator({
         phone: customer.phone,
         description: generateDescription(),
         expiryDays: getSmartExpiryDays(),
+        gateway: 'payu',
         template: 'default',
         partialPaymentAllowed: false,
         apiMethod: 'rest',
@@ -354,7 +356,12 @@ export function EnhancedPaymentLinkGenerator({
     console.log('🚀 [EnhancedPaymentLinkGenerator] Creating payment link with data:', requestBody);
 
     try {
-      const { data, error } = await supabase.functions.invoke('create-payu-payment-link-v2', {
+      // Determine which edge function to call based on gateway
+      const functionName = formData.gateway === 'paypal' 
+        ? 'create-paypal-payment-link' 
+        : 'create-payu-payment-link-v2';
+
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: requestBody
       });
 
@@ -521,36 +528,60 @@ export function EnhancedPaymentLinkGenerator({
 
                   <div className="grid gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="api-method">API Method</Label>
+                      <Label htmlFor="gateway">Payment Gateway</Label>
                       <Select
-                        value={formData.apiMethod}
-                        onValueChange={(value: any) => setFormData({ ...formData, apiMethod: value })}
+                        value={formData.gateway}
+                        onValueChange={(value: any) => setFormData({ ...formData, gateway: value })}
                       >
-                        <SelectTrigger id="api-method">
+                        <SelectTrigger id="gateway">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="rest">
-                            <div className="flex items-center gap-2">
-                              <Zap className="w-4 h-4" />
-                              Enhanced REST API (Recommended)
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="legacy">
-                            <div className="flex items-center gap-2">
-                              <Shield className="w-4 h-4" />
-                              Legacy Invoice API
-                            </div>
-                          </SelectItem>
+                          <SelectItem value="payu">PayU (India)</SelectItem>
+                          <SelectItem value="paypal">PayPal (International)</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        {formData.apiMethod === 'rest' 
-                          ? 'Uses PayU\'s latest REST API with enhanced features'
-                          : 'Uses traditional create_invoice API (fallback)'
+                        {formData.gateway === 'payu' 
+                          ? 'Best for Indian customers with INR payments'
+                          : 'Best for international customers with USD/EUR payments'
                         }
                       </p>
                     </div>
+
+                    {formData.gateway === 'payu' && (
+                      <div className="grid gap-2">
+                        <Label htmlFor="api-method">API Method</Label>
+                        <Select
+                          value={formData.apiMethod}
+                          onValueChange={(value: any) => setFormData({ ...formData, apiMethod: value })}
+                        >
+                          <SelectTrigger id="api-method">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="rest">
+                              <div className="flex items-center gap-2">
+                                <Zap className="w-4 h-4" />
+                                Enhanced REST API (Recommended)
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="legacy">
+                              <div className="flex items-center gap-2">
+                                <Shield className="w-4 h-4" />
+                                Legacy Invoice API
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          {formData.apiMethod === 'rest' 
+                            ? 'Uses PayU\'s latest REST API with enhanced features'
+                            : 'Uses traditional create_invoice API (fallback)'
+                          }
+                        </p>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">

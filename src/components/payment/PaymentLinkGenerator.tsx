@@ -136,8 +136,8 @@ export function PaymentLinkGenerator({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="payu">PayU (India)</SelectItem>
+                    <SelectItem value="paypal">PayPal (International)</SelectItem>
                     <SelectItem value="stripe" disabled>Stripe (Coming Soon)</SelectItem>
-                    <SelectItem value="paypal" disabled>PayPal (Coming Soon)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

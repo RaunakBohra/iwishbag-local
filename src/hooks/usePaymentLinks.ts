@@ -51,8 +51,17 @@ export function usePaymentLinks() {
     setIsCreating(true);
     
     try {
-      // For now, we only support PayU
-      if (params.gateway && params.gateway !== 'payu') {
+      // Determine which function to use based on gateway
+      let functionName: string;
+      
+      if (params.gateway === 'paypal') {
+        functionName = 'create-paypal-payment-link';
+      } else if (params.gateway === 'payu' || !params.gateway) {
+        // Use enhanced v2 function if advanced features are requested
+        const useV2 = params.customFields?.length || params.partialPaymentAllowed || 
+                      params.template !== 'default' || params.apiMethod === 'rest';
+        functionName = useV2 ? 'create-payu-payment-link-v2' : 'create-payment-link';
+      } else {
         toast({
           title: 'Not implemented',
           description: `${params.gateway} payment links are not yet implemented`,
@@ -60,12 +69,6 @@ export function usePaymentLinks() {
         });
         return null;
       }
-
-      // Use enhanced v2 function if advanced features are requested
-      const useV2 = params.customFields?.length || params.partialPaymentAllowed || 
-                    params.template !== 'default' || params.apiMethod === 'rest';
-      
-      const functionName = useV2 ? 'create-payu-payment-link-v2' : 'create-payment-link';
       
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: params,
