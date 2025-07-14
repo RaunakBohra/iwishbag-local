@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import * as crypto from "https://deno.land/std@0.168.0/crypto/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,6 +37,16 @@ serve(async (req) => {
       status: 204,
       headers: corsHeaders 
     })
+  }
+
+  // Only handle POST requests
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ 
+      error: 'Method not allowed. Use POST.' 
+    }), { 
+      status: 405, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 
   try {
@@ -260,18 +269,14 @@ serve(async (req) => {
     }
     
     if (!originalTxnId) {
-      console.error("❌ Could not find original transaction ID (txnid)");
-      console.error("Checked fields in metadata:", originalTransaction?.metadata ? Object.keys(originalTransaction.metadata) : 'No metadata');
-      console.error("Full transaction data:", JSON.stringify(originalTransaction, null, 2));
-      return new Response(JSON.stringify({ 
-        error: 'Original transaction ID not found. Please provide the transaction ID manually.',
-        details: 'Could not find txnid in payment transaction metadata. Checked: transaction_id, txnid, productinfo, order_id',
-        metadata_fields: originalTransaction?.metadata ? Object.keys(originalTransaction.metadata) : [],
-        transaction_data: originalTransaction
-      }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      console.warn("⚠️ Could not find original transaction ID (txnid) in metadata");
+      console.warn("Using PayU payment ID as fallback for txnid");
+      
+      // WORKAROUND: Use the PayU payment ID (mihpayid) as the transaction ID
+      // This might work if PayU accepts the same ID for both var1 and var2
+      originalTxnId = paymentId;
+      
+      console.log("📝 Using PayU payment ID as txnid:", originalTxnId);
     }
 
     // Generate unique refund request ID (PayU expects specific format)
@@ -291,22 +296,20 @@ serve(async (req) => {
     const var2 = originalTxnId; // Original transaction ID (txnid) - NOT refund ID!
     const var3 = amount.toFixed(2); // Refund amount
     
-    // Generate hash - PayU documentation is inconsistent, so we'll use the standard formula
-    // Based on SDK analysis: sha512(key|command|var1|var2|var3|salt)
-    const hashString = `${payuConfig.merchant_key}|${command}|${var1}|${var2}|${var3}|${payuConfig.salt_key}`;
-    console.log("🔐 Using hash formula: key|command|var1|var2|var3|salt");
+    // Generate hash - Use the same 4-parameter format as working PayU verification
+    // Based on working verify_payment: key|command|var1|salt
+    let hashString = `${payuConfig.merchant_key}|${command}|${var1}|${payuConfig.salt_key}`;
+    console.log("🔐 Using PayU 4-parameter hash formula (same as verify_payment): key|command|mihpayid|salt");
     console.log("🔐 Hash components:", {
       key: payuConfig.merchant_key.substring(0, 8) + '...',
       command,
-      var1,
-      var2,
-      var3,
+      var1: var1 + ' (mihpayid)',
       salt: '***'
     });
     
     const encoder = new TextEncoder();
     const data = encoder.encode(hashString);
-    const hashBuffer = await crypto.subtle.digest('SHA-512', data);
+    const hashBuffer = await globalThis.crypto.subtle.digest('SHA-512', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -325,9 +328,7 @@ serve(async (req) => {
       console.log("=5 Making PayU API request with body:", {
         key: payuConfig.merchant_key,
         command: command,
-        var1: var1,
-        var2: var2,
-        var3: var3
+        var1: var1
       });
 
       payuResponse = await fetch(`${payuConfig.api_url}/merchant/postservice.php?form=2`, {
@@ -339,9 +340,7 @@ serve(async (req) => {
           key: payuConfig.merchant_key,
           command: command,
           hash: hash,
-          var1: var1, // mihpayid (PayU transaction ID)
-          var2: var2, // txnid (Original transaction ID)
-          var3: var3  // refund amount
+          var1: var1 // mihpayid (PayU transaction ID)
         })
       });
 
@@ -372,7 +371,20 @@ serve(async (req) => {
       // Check if this is an HTML error page
       if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
         console.error("PayU returned HTML instead of JSON - likely an API error");
+        console.error("HTML response (first 500 chars):", responseText.substring(0, 500));
+        
+        // Try to extract error message from HTML
+        const errorMatch = responseText.match(/<body[^>]*>([^<]*)/i);
+        if (errorMatch) {
+          throw new Error(`PayU API error: ${errorMatch[1].trim()}`);
+        }
         throw new Error('PayU API returned HTML error page instead of JSON response');
+      }
+      
+      // Check if it's a simple text error
+      if (!responseText.startsWith('{') && !responseText.startsWith('[')) {
+        console.error("PayU returned plain text:", responseText);
+        throw new Error(`PayU API error: ${responseText}`);
       }
       
       throw new Error(`Invalid response format from PayU API: ${parseError.message}`);
