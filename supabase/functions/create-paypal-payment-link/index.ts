@@ -65,8 +65,10 @@ async function createPayPalInvoice(
 ) {
   const baseUrl = isLive ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
   
-  // Generate invoice number
-  const invoiceNumber = `IWB-${Date.now()}-${invoiceData.quoteId.substring(0, 8).toUpperCase()}`;
+  // Generate invoice number (max 25 chars for PayPal)
+  // Use timestamp in seconds (shorter) and first 6 chars of quote ID
+  const timestamp = Math.floor(Date.now() / 1000);
+  const invoiceNumber = `IWB-${timestamp}-${invoiceData.quoteId.substring(0, 6).toUpperCase()}`;
   
   // Calculate due date
   const dueDate = new Date();
@@ -93,8 +95,8 @@ async function createPayPalInvoice(
         business_name: "iwishBag"
       },
       email_address: "payments@iwishbag.com",
-      website: "https://iwishbag.com",
-      logo_url: "https://iwishbag.com/logo.png" // Update with actual logo URL
+      website: "https://iwishbag.com"
+      // logo_url removed temporarily - might cause validation issues
     },
     primary_recipients: [{
       billing_info: {
@@ -155,7 +157,7 @@ async function createPayPalInvoice(
   return await response.json();
 }
 
-// Send PayPal Invoice
+// Send PayPal Invoice to generate payment link
 async function sendPayPalInvoice(accessToken: string, invoiceId: string, isLive: boolean) {
   const baseUrl = isLive ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
   
@@ -168,10 +170,10 @@ async function sendPayPalInvoice(accessToken: string, invoiceId: string, isLive:
     },
     body: JSON.stringify({
       send_to_invoicer: false,
-      send_to_recipient: true,
+      send_to_recipient: false, // Don't send email yet
       additional_recipients: [],
       note: "Thank you for your order with iwishBag!",
-      send_to_payer: true
+      send_to_payer: false // Don't send email to payer
     })
   });
   
@@ -182,6 +184,26 @@ async function sendPayPalInvoice(accessToken: string, invoiceId: string, isLive:
   
   // Send returns 204 No Content on success
   return { sent: true };
+}
+
+// Get PayPal Invoice details to retrieve the payment link
+async function getPayPalInvoice(accessToken: string, invoiceId: string, isLive: boolean) {
+  const baseUrl = isLive ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+  
+  const response = await fetch(`${baseUrl}/v2/invoicing/invoices/${invoiceId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Failed to get PayPal invoice: ${JSON.stringify(error)}`);
+  }
+  
+  return await response.json();
 }
 
 serve(async (req) => {
@@ -265,27 +287,82 @@ serve(async (req) => {
 
     // Create invoice
     console.log('📄 Creating PayPal invoice...');
+    console.log('Invoice data being sent:', {
+      quoteId: body.quoteId,
+      amount: body.amount,
+      currency: body.currency,
+      customerEmail: body.customerInfo?.email,
+      isTestMode: isTestMode
+    });
     const invoice = await createPayPalInvoice(accessToken, body, !isTestMode);
     console.log('✅ PayPal invoice created:', invoice.id);
+    console.log('📋 Invoice links:', invoice.links?.map((l: any) => ({ rel: l.rel, href: l.href })));
 
-    // Send invoice to generate payment link
-    console.log('📧 Sending PayPal invoice...');
-    await sendPayPalInvoice(accessToken, invoice.id, !isTestMode);
-    console.log('✅ PayPal invoice sent');
-
-    // Find the payment view link
-    const paymentUrl = invoice.links?.find((link: any) => 
-      link.rel === 'payer-view' || link.rel === 'approve'
-    )?.href;
-
-    if (!paymentUrl) {
-      console.error('❌ No payment URL found in PayPal response');
-      return new Response(JSON.stringify({ 
-        error: 'Failed to get payment URL from PayPal' 
-      }), { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    // PayPal invoices are created in DRAFT status
+    // We need to send the invoice to generate the payment link
+    console.log('📧 Sending invoice to generate payment link...');
+    
+    let paymentUrl: string | undefined;
+    
+    try {
+      // Send the invoice (without sending emails)
+      await sendPayPalInvoice(accessToken, invoice.id, !isTestMode);
+      console.log('✅ Invoice sent successfully');
+      
+      // Get the updated invoice with payment link
+      console.log('🔍 Fetching updated invoice details...');
+      const updatedInvoice = await getPayPalInvoice(accessToken, invoice.id, !isTestMode);
+      console.log('📋 Updated invoice links:', updatedInvoice.links?.map((l: any) => ({ rel: l.rel, href: l.href })));
+      
+      // Look for the payer-view link in the updated invoice
+      let paymentUrl = updatedInvoice.links?.find((link: any) => 
+        link.rel === 'payer-view' || link.rel === 'payer_view' || link.rel === 'payer_pay'
+      )?.href;
+      
+      // If still no payer-view link, try to get it from metadata
+      if (!paymentUrl && updatedInvoice.metadata?.payer_view_url) {
+        paymentUrl = updatedInvoice.metadata.payer_view_url;
+      }
+      
+      // If still no payment URL, construct it based on PayPal's pattern
+      if (!paymentUrl && invoice.id) {
+        const baseUrl = !isTestMode ? 'https://www.paypal.com' : 'https://www.sandbox.paypal.com';
+        // Use the correct PayPal invoice payment URL pattern
+        paymentUrl = `${baseUrl}/invoice/payerView/details/${invoice.id}`;
+        console.log('📎 Constructed fallback payment URL:', paymentUrl);
+      }
+      
+      if (!paymentUrl) {
+        console.error('❌ No payment URL found in PayPal response after sending');
+        console.error('❌ Invoice details:', JSON.stringify(updatedInvoice, null, 2));
+        return new Response(JSON.stringify({ 
+          error: 'Failed to get payment URL from PayPal',
+          details: 'No payer-view link found in invoice response'
+        }), { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      console.log('✅ Payment URL obtained:', paymentUrl);
+      
+    } catch (sendError: any) {
+      console.error('❌ Error sending/fetching invoice:', sendError);
+      
+      // Fallback: Try to construct a payment URL anyway
+      if (invoice.id) {
+        const baseUrl = !isTestMode ? 'https://www.paypal.com' : 'https://www.sandbox.paypal.com';
+        paymentUrl = `${baseUrl}/invoice/payerView/details/${invoice.id}`;
+        console.log('📎 Using fallback payment URL due to send error:', paymentUrl);
+      } else {
+        return new Response(JSON.stringify({ 
+          error: 'Failed to send PayPal invoice',
+          details: sendError.message 
+        }), { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     // Generate link code
@@ -320,7 +397,9 @@ serve(async (req) => {
         metadata: {
           ...body.metadata,
           invoice_number: invoice.detail.invoice_number,
-          paypal_invoice_id: invoice.id
+          paypal_invoice_id: invoice.id,
+          invoice_status: 'sent',
+          payment_url_type: paymentUrl?.includes('payerView') ? 'constructed' : 'from_api'
         }
       })
       .select()

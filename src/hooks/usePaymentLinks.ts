@@ -75,6 +75,14 @@ export function usePaymentLinks() {
       });
 
       if (error) {
+        console.error('Edge function error:', error);
+        // Try to get error details from the response
+        if (error instanceof Error && 'context' in error) {
+          const context = (error as any).context;
+          if (context?.body) {
+            console.error('Error details:', context.body);
+          }
+        }
         throw error;
       }
 
