@@ -883,8 +883,8 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       </div>
                     )}
                     
-                    {/* Balance Due (only show if > 0) */}
-                    {paymentSummary.remaining > 0 && (
+                    {/* Balance Due (only show if customer underpaid, not after refunds) */}
+                    {paymentSummary.remaining > 0 && paymentSummary.totalPayments < paymentSummary.finalTotal && (
                       <div className="flex items-center justify-between bg-orange-50 p-3 rounded-lg">
                         <p className="text-sm font-medium text-orange-800">Balance Due</p>
                         <p className="text-xl font-bold text-orange-600">
@@ -1791,7 +1791,8 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
               method: p.payment_method || '',
               gateway: p.gateway_code || p.payment_method || '',
               reference: p.gateway_transaction_id || p.reference_number || p.transaction_id || 
-                        (p.gateway_response?.mihpayid) || // PayU specific
+                        (p.gateway_response?.payu_id) || // PayU specific - this is the mihpayid
+                        (p.gateway_response?.mihpayid) || // PayU fallback
                         (p.gateway_response?.gateway_transaction_id) || '',
               date: new Date(p.payment_date || p.created_at),
               canRefund: isPayU || p.payment_method === 'bank_transfer' // PayU and bank transfers can be refunded

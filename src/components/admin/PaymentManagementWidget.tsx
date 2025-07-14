@@ -286,8 +286,8 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               </div>
             )}
             
-            {/* Balance Due (only show if > 0) */}
-            {paymentSummary.remaining > 0 && (
+            {/* Balance Due (only show if customer underpaid, not after refunds) */}
+            {paymentSummary.remaining > 0 && paymentSummary.totalPayments < paymentSummary.finalTotal && (
               <div className="flex items-center justify-between bg-orange-50 p-2 rounded">
                 <span className="text-sm font-medium text-orange-800">Balance Due</span>
                 <span className="font-bold text-orange-600">

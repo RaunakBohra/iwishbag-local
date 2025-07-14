@@ -134,9 +134,16 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
       if (refundMethod === 'original' && breakdown.length === 1 && (breakdown[0].gateway === 'payu' || breakdown[0].method === 'payu')) {
         const payuPayment = payments.find(p => p.id === breakdown[0].paymentId);
         console.log('PayU payment for refund:', payuPayment);
+        console.log('All payments available:', payments);
+        console.log('Looking for payment with ID:', breakdown[0].paymentId);
         console.log('PayU transaction ID (reference):', payuPayment?.reference);
         
         if (!payuPayment?.reference) {
+          console.error('PayU transaction ID not found!', {
+            paymentId: breakdown[0].paymentId,
+            payment: payuPayment,
+            allPayments: payments
+          });
           toast({
             title: "Missing Payment Reference",
             description: "Cannot find PayU transaction ID. Please process this refund manually.",
