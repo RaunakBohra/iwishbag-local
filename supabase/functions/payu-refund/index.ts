@@ -62,7 +62,8 @@ serve(async (req) => {
     // Validate input
     if (!paymentId || !amount || amount <= 0) {
       return new Response(JSON.stringify({ 
-        error: 'Missing required fields: paymentId and amount (must be positive)' 
+        error: 'Missing required fields: paymentId and amount (must be positive)',
+        details: { paymentId, amount }
       }), { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -73,6 +74,32 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Get the user token from the Authorization header
+    const authHeader = req.headers.get('authorization');
+    let userId: string | undefined;
+    
+    if (authHeader) {
+      // Create a client with the user's token to get user context
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        {
+          global: {
+            headers: { authorization: authHeader }
+          }
+        }
+      );
+      
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+      if (!userError && user) {
+        userId = user.id;
+      } else {
+        console.error("L Error getting user from auth header:", userError);
+      }
+    } else {
+      console.warn("⚠️ No authorization header provided for refund request");
+    }
 
     // Get PayU configuration
     const { data: payuGateway, error: payuGatewayError } = await supabaseAdmin
@@ -93,6 +120,25 @@ serve(async (req) => {
 
     const config = payuGateway.config || {};
     const testMode = payuGateway.test_mode;
+    
+    // Validate required configuration
+    if (!config.merchant_key || !config.salt_key) {
+      console.error("L PayU configuration incomplete:", { 
+        has_merchant_key: !!config.merchant_key,
+        has_salt_key: !!config.salt_key 
+      });
+      return new Response(JSON.stringify({ 
+        error: 'PayU configuration incomplete - missing merchant_key or salt_key',
+        details: { 
+          has_merchant_key: !!config.merchant_key,
+          has_salt_key: !!config.salt_key 
+        }
+      }), { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
     const payuConfig = {
       merchant_key: config.merchant_key,
       salt_key: config.salt_key,
@@ -102,7 +148,8 @@ serve(async (req) => {
     console.log("=5 PayU config:", { 
       testMode, 
       merchant_key: payuConfig.merchant_key,
-      api_url: payuConfig.api_url 
+      api_url: payuConfig.api_url,
+      has_salt_key: !!payuConfig.salt_key
     });
 
     // Get transaction details from database (optional - for validation)
@@ -122,8 +169,8 @@ serve(async (req) => {
       console.log("=5 Found original transaction:", originalTransaction?.id);
     }
 
-    // Generate unique refund request ID
-    const refundRequestId = `REF${Date.now()}${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    // Generate unique refund request ID (PayU expects specific format)
+    const refundRequestId = `REF-${Date.now()}`;
     
     // Create refund data for PayU API
     const refundData = {
@@ -159,22 +206,37 @@ serve(async (req) => {
     });
 
     // Make API request to PayU
-    const payuResponse = await fetch(`${payuConfig.api_url}/merchant/postservice.php?form=2`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
+    let payuResponse;
+    try {
+      console.log("=5 Making PayU API request with body:", {
         key: payuConfig.merchant_key,
         command: command,
-        hash: hash,
-        var1: var1, // mihpayid
-        var2: var2, // refund request ID
-        var3: var3  // refund amount
-      })
-    });
+        var1: var1,
+        var2: var2,
+        var3: var3
+      });
 
-    console.log("=5 PayU API response status:", payuResponse.status);
+      payuResponse = await fetch(`${payuConfig.api_url}/merchant/postservice.php?form=2`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          key: payuConfig.merchant_key,
+          command: command,
+          hash: hash,
+          var1: var1, // mihpayid
+          var2: var2, // refund request ID
+          var3: var3  // refund amount
+        })
+      });
+
+      console.log("=5 PayU API response status:", payuResponse.status);
+      console.log("=5 PayU API response headers:", Object.fromEntries(payuResponse.headers.entries()));
+    } catch (fetchError) {
+      console.error("L PayU API fetch error:", fetchError);
+      throw new Error(`Failed to connect to PayU API: ${fetchError.message}`);
+    }
 
     if (!payuResponse.ok) {
       const errorText = await payuResponse.text();
@@ -182,8 +244,16 @@ serve(async (req) => {
       throw new Error(`PayU API request failed: ${payuResponse.status} - ${errorText}`);
     }
 
-    const payuResult = await payuResponse.json() as PayURefundResponse;
-    console.log("=5 PayU API response:", JSON.stringify(payuResult, null, 2));
+    let payuResult: PayURefundResponse;
+    try {
+      const responseText = await payuResponse.text();
+      console.log("=5 PayU API raw response:", responseText);
+      payuResult = JSON.parse(responseText) as PayURefundResponse;
+      console.log("=5 PayU API parsed response:", JSON.stringify(payuResult, null, 2));
+    } catch (parseError) {
+      console.error("L Failed to parse PayU response:", parseError);
+      throw new Error(`Invalid response format from PayU API: ${parseError.message}`);
+    }
     
     // PayU returns status: 1 for success
     // Important: error_code value 102 should be treated as success
@@ -209,7 +279,7 @@ serve(async (req) => {
           gateway_status: payuResult.msg || 'Failed',
           gateway_response: payuResult,
           refund_date: new Date().toISOString(),
-          processed_by: (await supabaseAdmin.auth.getUser()).data.user?.id
+          processed_by: userId
         });
 
       return new Response(JSON.stringify({
@@ -257,9 +327,6 @@ serve(async (req) => {
 
     // Create payment ledger entry for the refund
     if (quoteId) {
-      // Get user ID once
-      const userId = (await supabaseAdmin.auth.getUser()).data.user?.id;
-      
       const { error: ledgerError } = await supabaseAdmin
         .from('payment_ledger')
         .insert({
