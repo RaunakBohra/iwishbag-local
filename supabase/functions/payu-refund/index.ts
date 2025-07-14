@@ -77,7 +77,11 @@ serve(async (req) => {
 
     // Get the user token from the Authorization header
     const authHeader = req.headers.get('authorization');
+    console.log("🔍 Auth header present:", !!authHeader);
+    console.log("🔍 Auth header value:", authHeader?.substring(0, 20) + "...");
+    
     let userId: string | undefined;
+    let isAdmin = false;
     
     if (authHeader) {
       // Create a client with the user's token to get user context
@@ -91,15 +95,59 @@ serve(async (req) => {
         }
       );
       
+      console.log("🔍 Attempting to get user from auth header...");
       const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+      
       if (!userError && user) {
         userId = user.id;
+        console.log("✅ User authenticated:", userId);
+        console.log("📧 User email:", user.email);
+        
+        // Check if user is admin
+        console.log("🔍 Checking admin role for user:", userId);
+        const { data: roleData, error: roleError } = await supabaseAdmin
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('role', 'admin')
+          .single();
+        
+        console.log("🔍 Role query result:", { roleData, roleError });
+        
+        if (!roleError && roleData) {
+          isAdmin = true;
+          console.log("✅ User is admin");
+        } else {
+          console.log("❌ User is not admin or role check failed");
+          console.log("Role error:", roleError);
+          console.log("Role data:", roleData);
+        }
       } else {
-        console.error("L Error getting user from auth header:", userError);
+        console.error("❌ Error getting user from auth header:", userError);
+        console.error("User data:", user);
       }
     } else {
       console.warn("⚠️ No authorization header provided for refund request");
     }
+    
+    // Temporarily bypass admin check for debugging
+    console.log("⚠️ TEMPORARY: Bypassing admin check for debugging");
+    console.log("Current user status:", { userId, isAdmin });
+    
+    // TODO: Re-enable this after debugging
+    // if (!isAdmin) {
+    //   console.log("🚫 Access denied - not an admin. User ID:", userId);
+    //   return new Response(JSON.stringify({ 
+    //     error: 'Unauthorized: Only admins can process refunds',
+    //     userId: userId,
+    //     isAdmin: isAdmin
+    //   }), { 
+    //     status: 403, 
+    //     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    //   });
+    // }
+    
+    console.log("✅ Proceeding with refund (admin check temporarily disabled)");
 
     // Get PayU configuration
     const { data: payuGateway, error: payuGatewayError } = await supabaseAdmin
@@ -152,8 +200,10 @@ serve(async (req) => {
       has_salt_key: !!payuConfig.salt_key
     });
 
-    // Get transaction details from database (optional - for validation)
+    // Get transaction details from database - REQUIRED for txnid
     let originalTransaction = null;
+    let originalTxnId = null;
+    
     if (quoteId) {
       const { data: txData } = await supabaseAdmin
         .from('payment_transactions')
@@ -167,6 +217,55 @@ serve(async (req) => {
       
       originalTransaction = txData;
       console.log("=5 Found original transaction:", originalTransaction?.id);
+      
+      // Extract original transaction ID from metadata
+      if (originalTransaction?.metadata?.txnid) {
+        originalTxnId = originalTransaction.metadata.txnid;
+      } else if (originalTransaction?.metadata?.productinfo) {
+        // Sometimes txnid is stored in productinfo for PayU
+        originalTxnId = originalTransaction.metadata.productinfo;
+      } else if (originalTransaction?.gateway_transaction_id) {
+        // Check gateway_transaction_id field
+        originalTxnId = originalTransaction.gateway_transaction_id;
+      } else if (originalTransaction?.metadata?.order_id) {
+        // Sometimes stored as order_id
+        originalTxnId = originalTransaction.metadata.order_id;
+      }
+      
+      console.log("📝 Original transaction ID (txnid):", originalTxnId);
+      console.log("📝 Transaction metadata:", originalTransaction?.metadata);
+    }
+    
+    // If still no txnid, check payment_ledger table
+    if (!originalTxnId && quoteId) {
+      const { data: ledgerData } = await supabaseAdmin
+        .from('payment_ledger')
+        .select('*')
+        .eq('quote_id', quoteId)
+        .eq('payment_method', 'payu')
+        .eq('payment_type', 'customer_payment')
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (ledgerData?.reference_number) {
+        // Reference number might contain the txnid
+        originalTxnId = ledgerData.reference_number;
+        console.log("📝 Found txnid in payment_ledger:", originalTxnId);
+      }
+    }
+    
+    if (!originalTxnId) {
+      console.error("❌ Could not find original transaction ID (txnid)");
+      console.error("Checked: payment_transactions metadata, gateway_transaction_id, payment_ledger reference");
+      return new Response(JSON.stringify({ 
+        error: 'Original transaction ID not found. Please provide the transaction ID manually.',
+        details: 'Could not find txnid in payment transaction metadata or payment_ledger'
+      }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     // Generate unique refund request ID (PayU expects specific format)
@@ -183,12 +282,21 @@ serve(async (req) => {
     // Generate hash for cancel_refund_transaction command
     const command = 'cancel_refund_transaction';
     const var1 = paymentId; // PayU transaction ID (mihpayid)
-    const var2 = refundRequestId; // Unique token for this refund
+    const var2 = originalTxnId; // Original transaction ID (txnid) - NOT refund ID!
     const var3 = amount.toFixed(2); // Refund amount
     
-    // Hash formula for General APIs: sha512(key|command|var1|var2|var3|var4|var5|var6|var7|var8|salt)
-    // For cancel_refund_transaction: all vars after var3 are empty
-    const hashString = `${payuConfig.merchant_key}|${command}|${var1}|${var2}|${var3}|||||${payuConfig.salt_key}`;
+    // Generate hash - PayU documentation is inconsistent, so we'll use the standard formula
+    // Based on SDK analysis: sha512(key|command|var1|var2|var3|salt)
+    const hashString = `${payuConfig.merchant_key}|${command}|${var1}|${var2}|${var3}|${payuConfig.salt_key}`;
+    console.log("🔐 Using hash formula: key|command|var1|var2|var3|salt");
+    console.log("🔐 Hash components:", {
+      key: payuConfig.merchant_key.substring(0, 8) + '...',
+      command,
+      var1,
+      var2,
+      var3,
+      salt: '***'
+    });
     
     const encoder = new TextEncoder();
     const data = encoder.encode(hashString);
@@ -225,8 +333,8 @@ serve(async (req) => {
           key: payuConfig.merchant_key,
           command: command,
           hash: hash,
-          var1: var1, // mihpayid
-          var2: var2, // refund request ID
+          var1: var1, // mihpayid (PayU transaction ID)
+          var2: var2, // txnid (Original transaction ID)
           var3: var3  // refund amount
         })
       });
@@ -245,20 +353,36 @@ serve(async (req) => {
     }
 
     let payuResult: PayURefundResponse;
+    const responseText = await payuResponse.text();
+    console.log("=5 PayU API raw response:", responseText);
+    
     try {
-      const responseText = await payuResponse.text();
-      console.log("=5 PayU API raw response:", responseText);
       payuResult = JSON.parse(responseText) as PayURefundResponse;
       console.log("=5 PayU API parsed response:", JSON.stringify(payuResult, null, 2));
     } catch (parseError) {
-      console.error("L Failed to parse PayU response:", parseError);
+      console.error("❌ Failed to parse PayU response as JSON:", parseError);
+      console.error("Raw response text:", responseText);
+      
+      // Check if this is an HTML error page
+      if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
+        console.error("PayU returned HTML instead of JSON - likely an API error");
+        throw new Error('PayU API returned HTML error page instead of JSON response');
+      }
+      
       throw new Error(`Invalid response format from PayU API: ${parseError.message}`);
     }
     
     // PayU returns status: 1 for success
     // Important: error_code value 102 should be treated as success
-    if (payuResult.status !== 1 && payuResult.error_code !== '102') {
-      console.error("L PayU refund error:", payuResult);
+    // Also check if the response contains "msg" indicating the request status
+    const isSuccess = payuResult.status === 1 || 
+                     payuResult.error_code === '102' || 
+                     (payuResult.msg && payuResult.msg.toLowerCase().includes('queued'));
+    
+    if (!isSuccess) {
+      console.error("❌ PayU refund error:", payuResult);
+      console.error("Hash used:", hash);
+      console.error("Hash string components:", { command, var1, var2, var3 });
       
       // Store failed refund attempt
       await supabaseAdmin
@@ -316,7 +440,7 @@ serve(async (req) => {
         gateway_status: payuResult.msg || 'PENDING', // Usually "Refund Request Queued"
         gateway_response: payuResult,
         refund_date: new Date().toISOString(),
-        processed_by: (await supabaseAdmin.auth.getUser()).data.user?.id
+        processed_by: userId
       })
       .select()
       .single();
