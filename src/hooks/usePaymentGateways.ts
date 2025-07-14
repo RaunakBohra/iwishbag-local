@@ -552,8 +552,8 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
       // Route to appropriate payment function based on gateway
       let functionUrl = `${supabaseUrl}/functions/v1/create-payment`;
       if (paymentRequest.gateway === 'paypal') {
-        // Use new PayPal payment link function that follows PayU pattern
-        functionUrl = `${supabaseUrl}/functions/v1/create-paypal-payment-link`;
+        // Use PayPal checkout function for direct checkout
+        functionUrl = `${supabaseUrl}/functions/v1/create-paypal-checkout`;
       }
 
       const response = await fetch(

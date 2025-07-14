@@ -198,8 +198,8 @@ serve(async (req) => {
       }
     }
 
-    // Generate unique payment link code
-    const linkCode = await generateLinkCode(supabaseAdmin);
+    // Generate unique transaction ID for PayPal
+    const transactionId = `PAYPAL_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
     // Create product info
     const productNames = quotesToUse.map(q => q.product_name || 'Product').join(', ');
@@ -219,7 +219,7 @@ serve(async (req) => {
         },
         description: description.substring(0, 127), // PayPal limit
         invoice_id: invoiceId,
-        custom_id: linkCode
+        custom_id: transactionId
       }],
       application_context: {
         return_url: `${success_url?.split('/order-confirmation')[0]}/paypal-success` || `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.app')}/paypal-success`,
@@ -279,50 +279,38 @@ serve(async (req) => {
       });
     }
 
-    // Store payment link in database (following PayU pattern)
-    const { data: paymentLink, error: insertError } = await supabaseAdmin
-      .from('payment_links')
+    // Store PayPal order info in temporary session (similar to PayU)
+    // We'll verify and create the actual payment record after successful payment
+    console.log('✅ PayPal order created successfully');
+    
+    // Store minimal info for payment verification
+    const { error: sessionError } = await supabaseAdmin
+      .from('guest_checkout_sessions')
       .insert({
-        quote_id: quoteIds[0], // Primary quote ID
-        gateway: 'paypal',
-        api_version: 'v2',
-        gateway_link_id: paypalOrderData.id,
-        link_code: linkCode,
-        title: description,
-        amount: amount,
-        currency: currency,
-        status: 'active',
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
-        payment_url: approvalUrl,
-        customer_email: customerEmail,
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        gateway_request: paypalOrder,
-        gateway_response: paypalOrderData,
-        metadata: {
-          ...metadata,
+        id: paypalOrderData.id,
+        checkout_data: {
           quote_ids: quoteIds,
-          environment: testMode ? 'sandbox' : 'production'
-        }
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('❌ Error storing payment link:', insertError);
-      // Don't fail the request, PayPal order is already created
+          amount: amount,
+          currency: currency,
+          customer_email: customerEmail,
+          customer_name: customerName,
+          transaction_id: transactionId,
+          paypal_order_id: paypalOrderData.id,
+          created_at: new Date().toISOString()
+        },
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      });
+    
+    if (sessionError) {
+      console.log('⚠️ Could not store session, but PayPal order is created:', sessionError);
     }
 
-    console.log('✅ Payment link stored in database');
-
-    // Return response following PayU pattern
+    // Return response similar to PayU pattern - just the redirect URL
     return new Response(JSON.stringify({
       success: true,
       url: approvalUrl,
-      order_id: paypalOrderData.id,
-      link_code: linkCode,
-      expires_at: paymentLink?.expires_at,
-      payment_link_id: paymentLink?.id
+      transactionId: transactionId,
+      order_id: paypalOrderData.id
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -340,32 +328,3 @@ serve(async (req) => {
   }
 });
 
-// Generate unique link code (following PayU pattern)
-async function generateLinkCode(supabaseAdmin: any): Promise<string> {
-  const prefix = 'PPL'; // PayPal Link
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let attempts = 0;
-  
-  while (attempts < 10) {
-    let code = prefix;
-    for (let i = 0; i < 8; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    
-    // Check if code already exists
-    const { data: existing } = await supabaseAdmin
-      .from('payment_links')
-      .select('id')
-      .eq('link_code', code)
-      .single();
-    
-    if (!existing) {
-      return code;
-    }
-    
-    attempts++;
-  }
-  
-  // Fallback with timestamp
-  return `${prefix}${Date.now()}`;
-}
