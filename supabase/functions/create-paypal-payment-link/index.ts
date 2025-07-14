@@ -57,153 +57,97 @@ async function getPayPalAccessToken(clientId: string, clientSecret: string, isLi
   return data.access_token;
 }
 
-// Create PayPal Invoice
-async function createPayPalInvoice(
+// Create PayPal Order (for payment links)
+async function createPayPalOrder(
   accessToken: string, 
-  invoiceData: PayPalPaymentLinkRequest,
+  orderData: PayPalPaymentLinkRequest,
   isLive: boolean
 ) {
   const baseUrl = isLive ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
   
-  // Generate invoice number (max 25 chars for PayPal)
-  // Use timestamp in seconds (shorter) and first 6 chars of quote ID
+  // Generate unique order ID
   const timestamp = Math.floor(Date.now() / 1000);
-  const invoiceNumber = `IWB-${timestamp}-${invoiceData.quoteId.substring(0, 6).toUpperCase()}`;
+  const orderNumber = `IWB-${timestamp}-${orderData.quoteId.substring(0, 6).toUpperCase()}`;
   
-  // Calculate due date
-  const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + (invoiceData.expiryDays || 7));
+  // Prepare redirect URLs
+  const appUrl = 'https://iwishbag.com'; // Use your domain
+  const successUrl = `${appUrl}/payment/success?quote=${orderData.quoteId}`;
+  const cancelUrl = `${appUrl}/payment/cancelled?quote=${orderData.quoteId}`;
   
-  const invoice = {
-    detail: {
-      invoice_number: invoiceNumber,
-      reference: invoiceData.quoteId,
-      invoice_date: new Date().toISOString().split('T')[0],
-      currency_code: invoiceData.currency,
-      note: invoiceData.description || `Payment for iwishBag Order`,
-      payment_term: {
-        due_date: dueDate.toISOString().split('T')[0]
+  const order = {
+    intent: 'CAPTURE',
+    purchase_units: [{
+      amount: {
+        currency_code: orderData.currency,
+        value: orderData.amount.toFixed(2)
       },
-      metadata: {
-        ...invoiceData.metadata,
-        quote_id: invoiceData.quoteId,
-        created_via: 'iwishBag Payment Link'
-      }
-    },
-    invoicer: {
-      name: {
-        business_name: "iwishBag"
-      },
-      email_address: "payments@iwishbag.com",
-      website: "https://iwishbag.com"
-      // logo_url removed temporarily - might cause validation issues
-    },
-    primary_recipients: [{
-      billing_info: {
-        name: {
-          full_name: invoiceData.customerInfo.name
-        },
-        email_address: invoiceData.customerInfo.email,
-        phones: invoiceData.customerInfo.phone ? [{
-          country_code: "1", // Default to US, update based on actual country
-          national_number: invoiceData.customerInfo.phone.replace(/\D/g, ''),
-          phone_type: "MOBILE"
-        }] : [],
-        address: invoiceData.customerInfo.address ? {
-          address_line_1: invoiceData.customerInfo.address,
-          admin_area_2: "", // City
-          admin_area_1: "", // State
-          postal_code: "",
-          country_code: "US" // Default, update based on actual country
-        } : undefined
-      }
+      description: orderData.description || `Payment for iwishBag Order`,
+      custom_id: orderData.quoteId,
+      invoice_id: orderNumber
     }],
-    items: [{
-      name: invoiceData.description || `Payment for Order #${invoiceData.quoteId.substring(0, 8).toUpperCase()}`,
-      description: `iwishBag international shopping service`,
-      quantity: "1",
-      unit_amount: {
-        currency_code: invoiceData.currency,
-        value: invoiceData.amount.toFixed(2)
-      },
-      unit_of_measure: "QUANTITY"
-    }],
-    configuration: {
-      partial_payment: {
-        allow_partial_payment: false
-      },
-      allow_tip: false,
-      tax_inclusive: true
+    application_context: {
+      brand_name: 'iwishBag',
+      locale: 'en-US',
+      landing_page: 'LOGIN',
+      shipping_preference: 'NO_SHIPPING',
+      user_action: 'PAY_NOW',
+      return_url: successUrl,
+      cancel_url: cancelUrl
     }
   };
   
-  console.log('Creating PayPal invoice:', JSON.stringify(invoice, null, 2));
+  console.log('Creating PayPal order:', JSON.stringify(order, null, 2));
   
-  const response = await fetch(`${baseUrl}/v2/invoicing/invoices`, {
+  const response = await fetch(`${baseUrl}/v2/checkout/orders`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
-      'PayPal-Request-Id': `iwishbag-${Date.now()}` // Idempotency key
+      'PayPal-Request-Id': `iwishbag-${Date.now()}`,
+      'Prefer': 'return=representation'
     },
-    body: JSON.stringify(invoice),
+    body: JSON.stringify(order),
   });
   
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(`Failed to create PayPal invoice: ${JSON.stringify(error)}`);
+    throw new Error(`Failed to create PayPal order: ${JSON.stringify(error)}`);
   }
   
-  return await response.json();
+  const responseData = await response.json();
+  
+  console.log('📝 PayPal order response:', {
+    hasId: !!responseData.id,
+    hasLinks: !!responseData.links,
+    status: responseData.status
+  });
+  
+  return responseData;
 }
 
-// Send PayPal Invoice to generate payment link
-async function sendPayPalInvoice(accessToken: string, invoiceId: string, isLive: boolean) {
-  const baseUrl = isLive ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+// Extract payment URL from PayPal order response
+function extractPayPalPaymentUrl(orderData: any): string | null {
+  if (!orderData.links) return null;
   
-  const response = await fetch(`${baseUrl}/v2/invoicing/invoices/${invoiceId}/send`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-      'PayPal-Request-Id': `iwishbag-send-${Date.now()}`
-    },
-    body: JSON.stringify({
-      send_to_invoicer: false,
-      send_to_recipient: false, // Don't send email yet
-      additional_recipients: [],
-      note: "Thank you for your order with iwishBag!",
-      send_to_payer: false // Don't send email to payer
-    })
-  });
+  // Look for 'approve' rel (most common)
+  let paypalUrl = orderData.links.find((link: any) => link.rel === 'approve')?.href;
   
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to send PayPal invoice: ${JSON.stringify(error)}`);
+  // Method 2: Look for 'payer-action' rel 
+  if (!paypalUrl) {
+    paypalUrl = orderData.links.find((link: any) => link.rel === 'payer-action')?.href;
   }
   
-  // Send returns 204 No Content on success
-  return { sent: true };
-}
-
-// Get PayPal Invoice details to retrieve the payment link
-async function getPayPalInvoice(accessToken: string, invoiceId: string, isLive: boolean) {
-  const baseUrl = isLive ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
-  
-  const response = await fetch(`${baseUrl}/v2/invoicing/invoices/${invoiceId}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to get PayPal invoice: ${JSON.stringify(error)}`);
+  // Method 3: Look for any link containing 'checkout'
+  if (!paypalUrl) {
+    paypalUrl = orderData.links.find((link: any) => link.href?.includes('checkout'))?.href;
   }
   
-  return await response.json();
+  // Method 4: Look for any GET method link
+  if (!paypalUrl) {
+    paypalUrl = orderData.links.find((link: any) => link.method === 'GET')?.href;
+  }
+  
+  return paypalUrl;
 }
 
 serve(async (req) => {
@@ -266,9 +210,9 @@ serve(async (req) => {
     const config = paypalGateway.config || {};
     const isTestMode = paypalGateway.test_mode;
     
-    // Get PayPal credentials
-    const clientId = isTestMode ? config.client_id_sandbox : config.client_id_live;
-    const clientSecret = isTestMode ? config.client_secret_sandbox : config.client_secret_live;
+    // Get PayPal credentials - support both old and new config formats
+    const clientId = config.client_id || (isTestMode ? config.client_id_sandbox : config.client_id_live);
+    const clientSecret = config.client_secret || (isTestMode ? config.client_secret_sandbox : config.client_secret_live);
 
     if (!clientId || !clientSecret) {
       console.error('❌ PayPal credentials missing');
@@ -285,85 +229,57 @@ serve(async (req) => {
     const accessToken = await getPayPalAccessToken(clientId, clientSecret, !isTestMode);
     console.log('✅ Got PayPal access token');
 
-    // Create invoice
-    console.log('📄 Creating PayPal invoice...');
-    console.log('Invoice data being sent:', {
+    // Create PayPal order for payment
+    console.log('📄 Creating PayPal order...');
+    console.log('Order data being sent:', {
       quoteId: body.quoteId,
       amount: body.amount,
       currency: body.currency,
       customerEmail: body.customerInfo?.email,
       isTestMode: isTestMode
     });
-    const invoice = await createPayPalInvoice(accessToken, body, !isTestMode);
-    console.log('✅ PayPal invoice created:', invoice.id);
-    console.log('📋 Invoice links:', invoice.links?.map((l: any) => ({ rel: l.rel, href: l.href })));
-
-    // PayPal invoices are created in DRAFT status
-    // We need to send the invoice to generate the payment link
-    console.log('📧 Sending invoice to generate payment link...');
     
-    let paymentUrl: string | undefined;
+    // Generate order number (same logic as in createPayPalOrder)
+    const timestamp = Math.floor(Date.now() / 1000);
+    const orderNumber = `IWB-${timestamp}-${body.quoteId.substring(0, 6).toUpperCase()}`;
     
-    try {
-      // Send the invoice (without sending emails)
-      await sendPayPalInvoice(accessToken, invoice.id, !isTestMode);
-      console.log('✅ Invoice sent successfully');
-      
-      // Get the updated invoice with payment link
-      console.log('🔍 Fetching updated invoice details...');
-      const updatedInvoice = await getPayPalInvoice(accessToken, invoice.id, !isTestMode);
-      console.log('📋 Updated invoice links:', updatedInvoice.links?.map((l: any) => ({ rel: l.rel, href: l.href })));
-      
-      // Look for the payer-view link in the updated invoice
-      let paymentUrl = updatedInvoice.links?.find((link: any) => 
-        link.rel === 'payer-view' || link.rel === 'payer_view' || link.rel === 'payer_pay'
-      )?.href;
-      
-      // If still no payer-view link, try to get it from metadata
-      if (!paymentUrl && updatedInvoice.metadata?.payer_view_url) {
-        paymentUrl = updatedInvoice.metadata.payer_view_url;
-      }
-      
-      // If still no payment URL, construct it based on PayPal's pattern
-      if (!paymentUrl && invoice.id) {
-        const baseUrl = !isTestMode ? 'https://www.paypal.com' : 'https://www.sandbox.paypal.com';
-        // Use the correct PayPal invoice payment URL pattern
-        paymentUrl = `${baseUrl}/invoice/payerView/details/${invoice.id}`;
-        console.log('📎 Constructed fallback payment URL:', paymentUrl);
-      }
-      
-      if (!paymentUrl) {
-        console.error('❌ No payment URL found in PayPal response after sending');
-        console.error('❌ Invoice details:', JSON.stringify(updatedInvoice, null, 2));
-        return new Response(JSON.stringify({ 
-          error: 'Failed to get payment URL from PayPal',
-          details: 'No payer-view link found in invoice response'
-        }), { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-      
-      console.log('✅ Payment URL obtained:', paymentUrl);
-      
-    } catch (sendError: any) {
-      console.error('❌ Error sending/fetching invoice:', sendError);
-      
-      // Fallback: Try to construct a payment URL anyway
-      if (invoice.id) {
-        const baseUrl = !isTestMode ? 'https://www.paypal.com' : 'https://www.sandbox.paypal.com';
-        paymentUrl = `${baseUrl}/invoice/payerView/details/${invoice.id}`;
-        console.log('📎 Using fallback payment URL due to send error:', paymentUrl);
-      } else {
-        return new Response(JSON.stringify({ 
-          error: 'Failed to send PayPal invoice',
-          details: sendError.message 
-        }), { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
+    const order = await createPayPalOrder(accessToken, body, !isTestMode);
+    console.log('✅ PayPal order created:', JSON.stringify(order, null, 2));
+    
+    // Extract order ID
+    const orderId = order.id;
+    
+    if (!orderId) {
+      console.error('❌ No order ID found in PayPal response');
+      console.error('Order response structure:', JSON.stringify(order, null, 2));
+      return new Response(JSON.stringify({ 
+        error: 'Failed to get order ID from PayPal response',
+        details: 'Order was created but ID not found in response'
+      }), { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
+    
+    console.log('📋 Order ID:', orderId);
+    console.log('📋 Order links:', order.links?.map((l: any) => ({ rel: l.rel, href: l.href })));
+
+    // Extract payment URL from order response
+    const paymentUrl = extractPayPalPaymentUrl(order);
+    
+    if (!paymentUrl) {
+      console.error('❌ No payment URL found in PayPal order response');
+      console.error('❌ Order details:', JSON.stringify(order, null, 2));
+      return new Response(JSON.stringify({ 
+        error: 'Failed to get payment URL from PayPal',
+        details: 'No approval link found in order response'
+      }), { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    console.log('✅ Payment URL obtained:', paymentUrl);
 
     // Generate link code
     const linkCode = generateLinkCode();
@@ -378,10 +294,9 @@ serve(async (req) => {
       .insert({
         quote_id: body.quoteId,
         gateway: 'paypal',
-        gateway_link_id: invoice.id,
+        gateway_link_id: orderId,
         link_code: linkCode,
         title: body.description || `Payment for Order ${body.quoteId.substring(0, 8).toUpperCase()}`,
-        description: `iwishBag international shopping service`,
         amount: body.amount,
         currency: body.currency,
         original_amount: body.amount, // Can be different if currency conversion applied
@@ -390,17 +305,10 @@ serve(async (req) => {
         expires_at: expiryDate.toISOString(),
         status: 'active',
         gateway_request: body,
-        gateway_response: invoice,
+        gateway_response: order,
         customer_email: body.customerInfo.email,
         customer_name: body.customerInfo.name,
-        customer_phone: body.customerInfo.phone,
-        metadata: {
-          ...body.metadata,
-          invoice_number: invoice.detail.invoice_number,
-          paypal_invoice_id: invoice.id,
-          invoice_status: 'sent',
-          payment_url_type: paymentUrl?.includes('payerView') ? 'constructed' : 'from_api'
-        }
+        customer_phone: body.customerInfo.phone
       })
       .select()
       .single();
@@ -432,9 +340,9 @@ serve(async (req) => {
       exchangeRate: 1, // No conversion for PayPal
       apiVersion: 'v2',
       gateway_response: {
-        invoice_id: invoice.id,
-        invoice_number: invoice.detail.invoice_number,
-        status: invoice.status
+        order_id: orderId,
+        order_number: orderNumber,
+        status: order.status || 'CREATED'
       }
     }), {
       status: 200,
