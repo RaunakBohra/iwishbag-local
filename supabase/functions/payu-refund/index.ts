@@ -219,7 +219,10 @@ serve(async (req) => {
       console.log("=5 Found original transaction:", originalTransaction?.id);
       
       // Extract original transaction ID from metadata
-      if (originalTransaction?.metadata?.txnid) {
+      if (originalTransaction?.metadata?.transaction_id) {
+        // Primary location - this is the txnid generated during payment creation
+        originalTxnId = originalTransaction.metadata.transaction_id;
+      } else if (originalTransaction?.metadata?.txnid) {
         originalTxnId = originalTransaction.metadata.txnid;
       } else if (originalTransaction?.metadata?.productinfo) {
         // Sometimes txnid is stored in productinfo for PayU
@@ -258,10 +261,13 @@ serve(async (req) => {
     
     if (!originalTxnId) {
       console.error("❌ Could not find original transaction ID (txnid)");
-      console.error("Checked: payment_transactions metadata, gateway_transaction_id, payment_ledger reference");
+      console.error("Checked fields in metadata:", originalTransaction?.metadata ? Object.keys(originalTransaction.metadata) : 'No metadata');
+      console.error("Full transaction data:", JSON.stringify(originalTransaction, null, 2));
       return new Response(JSON.stringify({ 
         error: 'Original transaction ID not found. Please provide the transaction ID manually.',
-        details: 'Could not find txnid in payment transaction metadata or payment_ledger'
+        details: 'Could not find txnid in payment transaction metadata. Checked: transaction_id, txnid, productinfo, order_id',
+        metadata_fields: originalTransaction?.metadata ? Object.keys(originalTransaction.metadata) : [],
+        transaction_data: originalTransaction
       }), { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
