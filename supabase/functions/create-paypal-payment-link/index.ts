@@ -222,8 +222,8 @@ serve(async (req) => {
         custom_id: linkCode
       }],
       application_context: {
-        return_url: success_url?.replace('{CHECKOUT_SESSION_ID}', linkCode) || `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.app')}/paypal-success`,
-        cancel_url: cancel_url || `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.app')}/paypal-failure`,
+        return_url: `${success_url?.split('/order-confirmation')[0]}/paypal-success` || `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.app')}/paypal-success`,
+        cancel_url: `${cancel_url?.split('/checkout')[0]}/paypal-failure` || `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.app')}/paypal-failure`,
         brand_name: 'iwishBag',
         landing_page: 'LOGIN',
         shipping_preference: 'NO_SHIPPING',
