@@ -224,36 +224,8 @@ serve(async (req) => {
             console.log("✅ Updated quotes:", updatedQuotes.length);
           }
           
-          // Create order records for paid quotes
-          for (const quote of updatedQuotes || []) {
-            try {
-              const { data: order, error: orderError } = await supabaseAdmin
-                .from('orders')
-                .insert({
-                  user_id: quote.user_id,
-                  quote_id: quote.id,
-                  status: 'processing',
-                  total_amount: quote.final_total,
-                  currency: quote.currency || currency,
-                  payment_method: 'paypal',
-                  payment_status: 'paid',
-                  metadata: {
-                    paypal_order_id: orderId,
-                    paypal_capture_id: captureId
-                  }
-                })
-                .select()
-                .single();
-                
-              if (orderError) {
-                console.error("❌ Error creating order:", orderError);
-              } else {
-                console.log("✅ Created order:", order.id);
-              }
-            } catch (err) {
-              console.error("❌ Order creation failed:", err);
-            }
-          }
+          // Note: Following PayU pattern - no separate order creation needed
+          // The quote with status 'paid' IS the order
         }
 
         // Update quote status if payment successful
