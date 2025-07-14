@@ -196,6 +196,9 @@ serve(async (req) => {
   }
 
   try {
+    // Log the request method and headers for debugging
+    console.log("🔵 Request method:", req.method);
+    console.log("🔵 Request headers:", Object.fromEntries(req.headers.entries()));
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -239,11 +242,11 @@ serve(async (req) => {
     }
 
     const config = paypalGateway.config || {};
-    const isLive = !paypalGateway.test_mode;
+    const isTestMode = paypalGateway.test_mode;
     
     // Get PayPal credentials
-    const clientId = isLive ? config.client_id_live : config.client_id_sandbox;
-    const clientSecret = isLive ? config.client_secret_live : config.client_secret_sandbox;
+    const clientId = isTestMode ? config.client_id_sandbox : config.client_id_live;
+    const clientSecret = isTestMode ? config.client_secret_sandbox : config.client_secret_live;
 
     if (!clientId || !clientSecret) {
       console.error('❌ PayPal credentials missing');
@@ -257,17 +260,17 @@ serve(async (req) => {
 
     // Get OAuth token
     console.log('🔑 Getting PayPal access token...');
-    const accessToken = await getPayPalAccessToken(clientId, clientSecret, !isLive);
+    const accessToken = await getPayPalAccessToken(clientId, clientSecret, !isTestMode);
     console.log('✅ Got PayPal access token');
 
     // Create invoice
     console.log('📄 Creating PayPal invoice...');
-    const invoice = await createPayPalInvoice(accessToken, body, !isLive);
+    const invoice = await createPayPalInvoice(accessToken, body, !isTestMode);
     console.log('✅ PayPal invoice created:', invoice.id);
 
     // Send invoice to generate payment link
     console.log('📧 Sending PayPal invoice...');
-    await sendPayPalInvoice(accessToken, invoice.id, !isLive);
+    await sendPayPalInvoice(accessToken, invoice.id, !isTestMode);
     console.log('✅ PayPal invoice sent');
 
     // Find the payment view link
@@ -359,11 +362,13 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Unexpected error:', error);
+    console.error('❌ Error stack:', error.stack);
     return new Response(JSON.stringify({ 
       error: 'An unexpected error occurred',
-      details: error.message 
+      details: error.message || String(error),
+      stack: error.stack
     }), { 
       status: 500, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

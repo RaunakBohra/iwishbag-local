@@ -45,7 +45,8 @@
       "WebFetch(domain:docs.payu.in)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:github.com)",
-      "Bash(supabase functions:*)"
+      "Bash(supabase functions:*)",
+      "Bash(supabase logs:*)"
     ],
     "deny": []
   }
