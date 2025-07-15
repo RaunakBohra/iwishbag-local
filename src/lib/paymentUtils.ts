@@ -165,7 +165,7 @@ function getCurrencySymbol(currency: string): string {
 /**
  * Get customer information from quote for payment link
  */
-export function extractCustomerInfo(quote: any) {
+export function extractCustomerInfo(quote: Record<string, unknown>) {
   return {
     name: quote.shipping_address?.fullName || 
           quote.shipping_address?.name || 

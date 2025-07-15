@@ -19,7 +19,7 @@ interface StripePaymentFormProps {
   client_secret: string;
   amount?: number;
   currency?: string;
-  onSuccess?: (paymentIntent: any) => void;
+  onSuccess?: (paymentIntent: Record<string, unknown>) => void;
   onError?: (error: string) => void;
   className?: string;
 }
@@ -78,7 +78,7 @@ function StripePaymentFormContent({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentSucceeded, setPaymentSucceeded] = useState(false);
-  const [paymentIntent, setPaymentIntent] = useState<any>(null);
+  const [paymentIntent, setPaymentIntent] = useState<Record<string, unknown> | null>(null);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

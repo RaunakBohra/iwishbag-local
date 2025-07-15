@@ -43,6 +43,7 @@ import { usePaymentGateways } from "@/hooks/usePaymentGateways";
 import { useAllCountries } from "@/hooks/useAllCountries";
 import { currencyService } from "@/services/CurrencyService";
 import { PaymentMethodSelector } from "@/components/payment/PaymentMethodSelector";
+import { StripePaymentForm } from "@/components/payment/StripePaymentForm";
 import { useStatusManagement } from "@/hooks/useStatusManagement";
 import { QRPaymentModal } from "@/components/payment/QRPaymentModal";
 import { PaymentStatusTracker } from "@/components/payment/PaymentStatusTracker";
@@ -175,6 +176,7 @@ export default function Checkout() {
   } | null>(null);
   const [showPaymentStatus, setShowPaymentStatus] = useState(false);
   const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
   const [addressFormData, setAddressFormData] = useState<AddressFormData>({
     address_line1: '',
     address_line2: '',
@@ -940,10 +942,15 @@ export default function Checkout() {
         throw new Error('No response received from payment gateway');
       }
 
-      if (paymentResponse.url) {
-        // For redirect-based payments (Stripe, PayU Hosted Checkout)
+      if (paymentMethod === 'stripe' && paymentResponse.client_secret) {
+        // --- New Stripe inline payment logic ---
+        console.log('🎯 Stripe PaymentIntent created, showing inline form');
+        setStripeClientSecret(paymentResponse.client_secret);
+        // Do NOT redirect. We will now show our inline form.
+      } else if (paymentResponse.url) {
+        // For redirect-based payments (PayU Hosted Checkout)
         // First update quote status to processing for payment gateways
-        if (paymentMethod === 'payu' || paymentMethod === 'stripe') {
+        if (paymentMethod === 'payu') {
           const statusConfig = findStatusForPaymentMethod(paymentMethod);
           const processingStatus = statusConfig?.name || 'processing';
           
@@ -967,7 +974,7 @@ export default function Checkout() {
           console.log('⚠️ PayU payment without form data, using redirect');
           window.location.href = paymentResponse.url;
         } else {
-          // For other redirect-based payments (Stripe)
+          // For other redirect-based payments (not Stripe)
           window.location.href = paymentResponse.url;
         }
       } else if (paymentResponse.transactionId) {
@@ -1886,6 +1893,81 @@ export default function Checkout() {
           onPaymentComplete={handleQRPaymentComplete}
           onPaymentFailed={handleQRPaymentFailed}
         />
+      )}
+
+      {/* Stripe Payment Form Modal */}
+      {stripeClientSecret && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-center">Complete Your Payment</h2>
+              <p className="text-sm text-muted-foreground text-center mt-2">
+                Enter your card details to complete your order
+              </p>
+            </div>
+            <StripePaymentForm
+              client_secret={stripeClientSecret}
+              amount={totalAmount}
+              currency={paymentCurrency}
+              onSuccess={async (paymentIntent) => {
+                console.log("Payment Succeeded!", paymentIntent);
+                
+                // Update quote status to processing for Stripe payments
+                try {
+                  const statusConfig = findStatusForPaymentMethod('stripe');
+                  const processingStatus = statusConfig?.name || 'processing';
+                  
+                  console.log(`Setting Stripe quotes to ${processingStatus} status after successful payment`);
+                  
+                  await updateQuotesMutation.mutateAsync({ 
+                    ids: cartQuoteIds, 
+                    status: processingStatus, 
+                    method: 'stripe',
+                    paymentStatus: 'paid' // Mark as paid since payment succeeded
+                  });
+                  
+                  toast({ 
+                    title: "Payment Successful", 
+                    description: "Your payment has been processed successfully." 
+                  });
+                  
+                  // Hide the form
+                  setStripeClientSecret(null);
+                  
+                  // Navigate to order confirmation
+                  // The updateQuotesMutation will handle the redirect
+                } catch (error) {
+                  console.error('Error updating quotes after payment:', error);
+                  toast({ 
+                    title: "Payment Successful", 
+                    description: "Payment completed, but there was an issue updating your order. Please contact support." 
+                  });
+                  setStripeClientSecret(null);
+                }
+              }}
+              onError={(error) => {
+                console.error("Payment Failed:", error);
+                toast({ 
+                  title: "Payment Failed", 
+                  description: error || "There was an issue processing your payment. Please try again.", 
+                  variant: "destructive"
+                });
+                // Hide the form to allow retry
+                setStripeClientSecret(null);
+              }}
+            />
+            
+            {/* Cancel button */}
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => setStripeClientSecret(null)}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Cancel Payment
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Payment Status Tracker */}

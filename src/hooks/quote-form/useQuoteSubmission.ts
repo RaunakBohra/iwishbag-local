@@ -351,7 +351,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
     }
 
     // Prepare quote data
-    const quoteData: any = {
+    const quoteData: Partial<TablesInsert<'quotes'>> = {
       email: finalEmail || null, // Allow null email for anonymous quotes
       destination_country: countryCode,
       user_id: user?.id ?? null,

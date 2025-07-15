@@ -188,7 +188,7 @@ The WishBag Team`;
 }
 
 // Validate delivery option structure
-export function validateDeliveryOption(option: any): option is DeliveryOption {
+export function validateDeliveryOption(option: unknown): option is DeliveryOption {
   return (
     typeof option === 'object' &&
     typeof option.id === 'string' &&
@@ -205,7 +205,7 @@ export function validateDeliveryOption(option: any): option is DeliveryOption {
 }
 
 // Get active delivery options from shipping route
-export function getActiveDeliveryOptions(deliveryOptions: any[]): DeliveryOption[] {
+export function getActiveDeliveryOptions(deliveryOptions: unknown[]): DeliveryOption[] {
   if (!Array.isArray(deliveryOptions)) return [];
   
   return deliveryOptions
