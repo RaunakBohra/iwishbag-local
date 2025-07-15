@@ -21,6 +21,20 @@ interface PayPalPaymentLinkRequest {
   description?: string;
   expiryDays?: number;
   metadata?: Record<string, any>;
+  merchantId?: string;
+  breakdown?: {
+    item_total?: number;
+    shipping?: number;
+    tax?: number;
+    discount?: number;
+  };
+  items?: Array<{
+    name: string;
+    price: number;
+    quantity: number;
+    description?: string;
+    sku?: string;
+  }>;
 }
 
 // Generate a short link code
@@ -77,16 +91,70 @@ async function createPayPalOrder(
   const order = {
     intent: 'CAPTURE',
     purchase_units: [{
+      reference_id: orderData.quoteId,
       amount: {
         currency_code: orderData.currency,
-        value: orderData.amount.toFixed(2)
+        value: orderData.amount.toFixed(2),
+        breakdown: orderData.breakdown ? {
+          item_total: {
+            currency_code: orderData.currency,
+            value: (orderData.breakdown.item_total || orderData.amount).toFixed(2)
+          },
+          shipping: orderData.breakdown.shipping ? {
+            currency_code: orderData.currency,
+            value: orderData.breakdown.shipping.toFixed(2)
+          } : undefined,
+          tax_total: orderData.breakdown.tax ? {
+            currency_code: orderData.currency,
+            value: orderData.breakdown.tax.toFixed(2)
+          } : undefined,
+          discount: orderData.breakdown.discount ? {
+            currency_code: orderData.currency,
+            value: orderData.breakdown.discount.toFixed(2)
+          } : undefined
+        } : undefined
       },
-      description: orderData.description || `Payment for iwishBag Order`,
-      custom_id: orderData.quoteId,
-      invoice_id: orderNumber
+      description: orderData.description || `Payment for iwishBag Order #${orderNumber}`,
+      custom_id: `QUOTE_${orderData.quoteId}`,
+      invoice_id: orderNumber,
+      soft_descriptor: 'IWISHBAG',
+      items: orderData.items ? orderData.items.map(item => ({
+        name: item.name || 'Product',
+        unit_amount: {
+          currency_code: orderData.currency,
+          value: item.price ? item.price.toFixed(2) : '0.00'
+        },
+        quantity: item.quantity?.toString() || '1',
+        description: item.description,
+        sku: item.sku,
+        category: 'PHYSICAL_GOODS'
+      })) : undefined,
+      payee: {
+        merchant_id: orderData.merchantId || undefined,
+        email_address: 'payments@iwishbag.com'
+      }
     }],
+    payment_source: orderData.customerInfo ? {
+      paypal: {
+        experience_context: {
+          payment_method_preference: 'IMMEDIATE_PAYMENT_REQUIRED',
+          brand_name: 'iwishBag',
+          locale: 'en-US',
+          landing_page: 'LOGIN',
+          shipping_preference: 'NO_SHIPPING',
+          user_action: 'PAY_NOW',
+          return_url: successUrl,
+          cancel_url: cancelUrl
+        },
+        email_address: orderData.customerInfo.email,
+        name: orderData.customerInfo.name ? {
+          given_name: orderData.customerInfo.name.split(' ')[0],
+          surname: orderData.customerInfo.name.split(' ').slice(1).join(' ') || undefined
+        } : undefined
+      }
+    } : undefined,
     application_context: {
-      brand_name: 'iwishBag',
+      brand_name: 'iwishBag International Shopping',
       locale: 'en-US',
       landing_page: 'LOGIN',
       shipping_preference: 'NO_SHIPPING',

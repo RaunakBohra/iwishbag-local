@@ -133,17 +133,45 @@ serve(async (req) => {
     const captureData = await captureResponse.json();
     console.log('✅ PayPal payment captured successfully');
 
-    // Extract capture details
+    // Extract comprehensive capture details
     const capture = captureData.purchase_units?.[0]?.payments?.captures?.[0];
     const captureID = capture?.id;
-    const payerEmail = captureData.payer?.email_address;
-    const payerID = captureData.payer?.payer_id;
+    const payer = captureData.payer || {};
+    const payerEmail = payer.email_address;
+    const payerID = payer.payer_id;
+    
+    // Extract additional payer information
+    const payerName = payer.name || {};
+    const payerAddress = payer.address || {};
+    
+    // Extract payment details
+    const paymentSource = captureData.payment_source || {};
+    const purchaseUnit = captureData.purchase_units?.[0] || {};
+    const shipping = purchaseUnit.shipping || {};
+    
+    // Extract financial details
+    const captureAmount = capture?.amount || {};
+    const sellerProtection = capture?.seller_protection || {};
+    const sellerReceivableBreakdown = capture?.seller_receivable_breakdown || {};
+    
+    // Extract timestamps
+    const timestamps = {
+      create_time: captureData.create_time,
+      update_time: captureData.update_time,
+      capture_create_time: capture?.create_time,
+      capture_update_time: capture?.update_time
+    };
 
-    console.log('📋 Capture details:', {
+    console.log('📋 Comprehensive capture details:', {
       captureID,
       payerEmail,
       payerID,
-      status: capture?.status
+      payerName: `${payerName.given_name || ''} ${payerName.surname || ''}`.trim(),
+      status: capture?.status,
+      captureAmount: captureAmount.value,
+      currency: captureAmount.currency_code,
+      paypalFee: sellerReceivableBreakdown?.paypal_fee?.value,
+      netAmount: sellerReceivableBreakdown?.net_amount?.value
     });
 
     return new Response(JSON.stringify({
@@ -151,7 +179,18 @@ serve(async (req) => {
       captureID,
       payerEmail,
       payerID,
+      payerName,
+      payerAddress,
+      paymentSource,
       status: capture?.status,
+      amount: captureAmount,
+      sellerProtection,
+      sellerReceivableBreakdown,
+      timestamps,
+      shipping,
+      invoiceId: purchaseUnit.invoice_id,
+      customId: purchaseUnit.custom_id,
+      description: purchaseUnit.description,
       fullResponse: captureData
     }), {
       status: 200,

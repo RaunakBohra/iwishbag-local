@@ -194,7 +194,7 @@ const PaypalSuccess: React.FC = () => {
               throw new Error(captureData.error || 'PayPal capture failed - no capture ID received');
             }
             
-            // Update transaction with capture details - only if capture succeeded
+            // Update transaction with comprehensive capture details
             const { data: updatedTx } = await supabase
               .from('payment_transactions')
               .update({
@@ -202,6 +202,44 @@ const PaypalSuccess: React.FC = () => {
                 paypal_payer_id: payerId,
                 paypal_capture_id: captureData.captureID,
                 paypal_payer_email: captureData.payerEmail,
+                gateway_response: {
+                  ...(paymentLink.gateway_response as any || {}),
+                  capture_details: {
+                    // Core identifiers
+                    capture_id: captureData.captureID,
+                    order_id: token,
+                    payer_id: captureData.payerID,
+                    payer_email: captureData.payerEmail,
+                    
+                    // Payer information
+                    payer_name: captureData.payerName,
+                    payer_address: captureData.payerAddress,
+                    
+                    // Payment details
+                    payment_source: captureData.paymentSource,
+                    amount: captureData.amount,
+                    status: captureData.status,
+                    
+                    // Financial breakdown
+                    seller_protection: captureData.sellerProtection,
+                    seller_receivable_breakdown: captureData.sellerReceivableBreakdown,
+                    paypal_fee: captureData.sellerReceivableBreakdown?.paypal_fee,
+                    net_amount: captureData.sellerReceivableBreakdown?.net_amount,
+                    
+                    // Timestamps
+                    timestamps: captureData.timestamps,
+                    
+                    // Order details
+                    shipping: captureData.shipping,
+                    invoice_id: captureData.invoiceId,
+                    custom_id: captureData.customId,
+                    description: captureData.description,
+                    
+                    // Capture metadata
+                    captured_at: new Date().toISOString(),
+                    capture_response: captureData.fullResponse
+                  }
+                },
                 updated_at: new Date().toISOString()
               })
               .eq('id', paymentLink.id)
