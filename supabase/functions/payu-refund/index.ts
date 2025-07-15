@@ -578,102 +578,63 @@ serve(async (req) => {
 
     console.log(" PayU refund initiated successfully");
 
-    // Store successful refund record
-    const { data: refundRecord, error: refundError } = await supabaseAdmin
-      .from('gateway_refunds')
-      .insert({
-        gateway_refund_id: payuResult.request_id || refundRequestId,
-        gateway_transaction_id: paymentId,
-        gateway_code: 'payu',
-        payment_transaction_id: originalTransaction?.id,
-        quote_id: quoteId,
-        refund_amount: amount,
-        original_amount: originalTransaction?.amount || amount,
-        currency: originalTransaction?.currency || 'INR',
-        refund_type: refundType,
-        reason_code: 'CUSTOMER_REQUEST',
-        reason_description: reason,
-        admin_notes: notes,
-        customer_note: notifyCustomer ? `Refund of INR ${amount} has been initiated for your order.` : null,
-        status: 'processing',
-        gateway_status: payuResult.msg || 'PENDING', // Usually "Refund Request Queued"
-        gateway_response: payuResult,
-        refund_date: new Date().toISOString(),
-        processed_by: userId
-      })
-      .select()
-      .single();
+    // Process refund atomically using RPC
+    console.log("🔄 Processing refund atomically...");
+    
+    // Prepare refund data for atomic processing
+    const refundData = {
+      gateway_refund_id: payuResult.request_id || refundRequestId,
+      gateway_transaction_id: paymentId,
+      refund_type: refundType,
+      reason_code: 'CUSTOMER_REQUEST',
+      reason_description: reason,
+      admin_notes: notes,
+      customer_note: notifyCustomer ? `Refund of INR ${amount} has been initiated for your order.` : null,
+      gateway_status: payuResult.msg || 'PENDING',
+      currency: originalTransaction?.currency || 'INR',
+      original_amount: originalTransaction?.amount || amount
+    };
 
-    if (refundError) {
-      console.error("L Error storing refund record:", refundError);
+    // Call atomic RPC function
+    const { data: atomicResult, error: atomicError } = await supabaseAdmin
+      .rpc('process_refund_atomic', {
+        p_quote_id: quoteId,
+        p_refund_amount: amount,
+        p_refund_data: refundData,
+        p_gateway_response: payuResult,
+        p_processed_by: userId
+      });
+
+    if (atomicError) {
+      console.error("❌ Atomic refund processing failed:", atomicError);
+      return new Response(JSON.stringify({
+        error: 'Refund processing failed',
+        details: atomicError.message
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    // Create payment ledger entry for the refund
-    if (quoteId) {
-      const { error: ledgerError } = await supabaseAdmin
-        .from('payment_ledger')
-        .insert({
-          quote_id: quoteId,
-          payment_type: 'refund',
-          payment_method: 'payu',
-          amount: -amount, // Negative for refunds
-          currency: originalTransaction?.currency || 'INR',
-          status: 'processing',
-          payment_date: new Date().toISOString(),
-          reference_number: payuResult.request_id || refundRequestId,
-          notes: `PayU Refund: ${reason}`,
-          created_by: userId
-        });
-
-      if (ledgerError) {
-        console.error("L Error creating ledger entry:", ledgerError);
-        console.error("Ledger error details:", ledgerError.message, ledgerError.details);
-      }
-
-      // Update the original payment transaction if found
-      if (originalTransaction) {
-        const totalRefunded = (originalTransaction.total_refunded || 0) + amount;
-        const { error: updateError } = await supabaseAdmin
-          .from('payment_transactions')
-          .update({
-            total_refunded: totalRefunded,
-            refund_count: (originalTransaction.refund_count || 0) + 1,
-            is_fully_refunded: totalRefunded >= originalTransaction.amount,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', originalTransaction.id);
-
-        if (updateError) {
-          console.error("L Error updating transaction:", updateError);
-        }
-      }
-
-      // Update the quote's amount_paid to reflect the refund
-      const { data: quoteData, error: quoteError } = await supabaseAdmin
-        .from('quotes')
-        .select('amount_paid, final_total')
-        .eq('id', quoteId)
-        .single();
-      
-      if (!quoteError && quoteData) {
-        const newAmountPaid = (quoteData.amount_paid || 0) - amount;
-        const newPaymentStatus = newAmountPaid <= 0 ? 'unpaid' : 
-                                newAmountPaid < quoteData.final_total ? 'partial' : 'paid';
-        
-        const { error: updateQuoteError } = await supabaseAdmin
-          .from('quotes')
-          .update({
-            amount_paid: newAmountPaid,
-            payment_status: newPaymentStatus,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', quoteId);
-        
-        if (updateQuoteError) {
-          console.error("L Error updating quote amount_paid:", updateQuoteError);
-        }
-      }
+    if (!atomicResult || atomicResult.length === 0 || !atomicResult[0].success) {
+      const errorMessage = atomicResult?.[0]?.error_message || 'Unknown atomic refund processing error';
+      console.error("❌ Atomic refund processing failed:", errorMessage);
+      return new Response(JSON.stringify({
+        error: 'Refund processing failed',
+        details: errorMessage
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
+
+    const result = atomicResult[0];
+    console.log("✅ Atomic refund processing completed:", {
+      refund_id: result.refund_id,
+      payment_transaction_updated: result.payment_transaction_updated,
+      quote_updated: result.quote_updated,
+      ledger_entry_id: result.ledger_entry_id
+    });
 
     // Send notification email if requested
     if (notifyCustomer && quoteId) {
@@ -712,7 +673,13 @@ serve(async (req) => {
       message: payuResult.msg || 'Refund initiated successfully',
       amount: amount,
       status: 'processing',
-      estimatedCompletion: '5-7 business days'
+      estimatedCompletion: '5-7 business days',
+      atomicResults: {
+        refund_id: result.refund_id,
+        payment_transaction_updated: result.payment_transaction_updated,
+        quote_updated: result.quote_updated,
+        ledger_entry_id: result.ledger_entry_id
+      }
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
