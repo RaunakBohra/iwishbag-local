@@ -25,6 +25,9 @@ interface PayPalRefundResponse {
   currency?: string
   error?: string
   details?: any
+  // Additional fields for PayPalRefundManagement component compatibility
+  refund_amount?: number
+  refund_id?: string
 }
 
 // Get PayPal access token
@@ -117,18 +120,31 @@ serve(async (req) => {
     )
 
     // Parse request body
-    const refundRequest: PayPalRefundRequest = await req.json()
+    const rawRequest = await req.json()
+    
+    // Handle both RefundManagementModal and PayPalRefundManagement data formats
+    const refundRequest: PayPalRefundRequest = {
+      paymentTransactionId: rawRequest.paymentTransactionId || rawRequest.paypal_capture_id,
+      refundAmount: rawRequest.refundAmount || rawRequest.refund_amount,
+      currency: rawRequest.currency || 'USD',
+      reason: rawRequest.reason || rawRequest.reason_description,
+      note: rawRequest.note || rawRequest.admin_notes,
+      quoteId: rawRequest.quoteId,
+      userId: rawRequest.userId
+    }
+    
     console.log('🟣 Refund request:', {
       transactionId: refundRequest.paymentTransactionId,
       amount: refundRequest.refundAmount,
-      currency: refundRequest.currency
+      currency: refundRequest.currency,
+      rawRequest: rawRequest
     })
 
     // Validate required fields
     if (!refundRequest.paymentTransactionId || !refundRequest.refundAmount || !refundRequest.currency) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Missing required fields: paymentTransactionId, refundAmount, currency'
+        error: 'Missing required fields: paymentTransactionId/paypal_capture_id, refundAmount/refund_amount, currency'
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -136,7 +152,7 @@ serve(async (req) => {
     }
 
     // Get the original payment transaction details
-    // The paymentTransactionId could be either the payment_transactions.id, payment_ledger.id, or the paypal_order_id
+    // The paymentTransactionId could be either the payment_transactions.id, payment_ledger.id, paypal_order_id, or paypal_capture_id
     let transaction = null
     let transactionError = null
     
@@ -405,13 +421,16 @@ serve(async (req) => {
       console.error('⚠️ Failed to update transaction:', updateError)
     }
 
-    // Return success response
+    // Return success response (compatible with both RefundManagementModal and PayPalRefundManagement)
     const response: PayPalRefundResponse = {
       success: true,
       refundId: refundResponse.id,
       status: refundResponse.status,
       amount: refundRequest.refundAmount,
       currency: refundRequest.currency,
+      // Additional fields for PayPalRefundManagement component
+      refund_amount: refundRequest.refundAmount,
+      refund_id: refundResponse.id,
       details: {
         paypalRefundId: refundResponse.id,
         paypalStatus: refundResponse.status,
