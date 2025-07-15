@@ -2,13 +2,14 @@ import { useEffect, useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { PaymentTransaction } from '@/types/payment';
 
 interface PaymentStatusSyncOptions {
   quoteId: string;
   enabled?: boolean;
-  onPaymentStatusChange?: (status: string, transaction?: any) => void;
-  onPaymentConfirmed?: (transaction: any) => void;
-  onPaymentFailed?: (transaction: any) => void;
+  onPaymentStatusChange?: (status: string, transaction?: PaymentTransaction) => void;
+  onPaymentConfirmed?: (transaction: PaymentTransaction) => void;
+  onPaymentFailed?: (transaction: PaymentTransaction) => void;
 }
 
 export function usePaymentStatusSync({
@@ -36,7 +37,11 @@ export function usePaymentStatusSync({
   /**
    * Handle payment status updates
    */
-  const handlePaymentStatusUpdate = useCallback((payload: any) => {
+  const handlePaymentStatusUpdate = useCallback((payload: {
+    new: PaymentTransaction;
+    old: PaymentTransaction;
+    eventType: string;
+  }) => {
     const { new: newRecord, old: oldRecord, eventType } = payload;
     
     console.log('Payment status update received:', {
@@ -84,7 +89,11 @@ export function usePaymentStatusSync({
   /**
    * Handle payment ledger updates
    */
-  const handlePaymentLedgerUpdate = useCallback((payload: any) => {
+  const handlePaymentLedgerUpdate = useCallback((payload: {
+    new: Record<string, unknown>;
+    old: Record<string, unknown>;
+    eventType: string;
+  }) => {
     const { new: newRecord, eventType } = payload;
     
     console.log('Payment ledger update received:', {
@@ -125,7 +134,11 @@ export function usePaymentStatusSync({
   /**
    * Handle payment link status updates
    */
-  const handlePaymentLinkUpdate = useCallback((payload: any) => {
+  const handlePaymentLinkUpdate = useCallback((payload: {
+    new: Record<string, unknown>;
+    old: Record<string, unknown>;
+    eventType: string;
+  }) => {
     const { new: newRecord, old: oldRecord, eventType } = payload;
     
     console.log('Payment link update received:', {

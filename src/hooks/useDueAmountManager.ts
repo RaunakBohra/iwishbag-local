@@ -10,6 +10,8 @@ import {
   DueAmountInfo 
 } from '@/lib/paymentUtils';
 import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
+import { Quote } from '@/types/quote';
 
 interface UseDueAmountManagerProps {
   quoteId: string;
@@ -17,7 +19,7 @@ interface UseDueAmountManagerProps {
   autoGenerateLinks?: boolean;
   autoThreshold?: number;
   onDueAmountDetected?: (dueInfo: DueAmountInfo) => void;
-  onPaymentLinkCreated?: (link: any) => void;
+  onPaymentLinkCreated?: (link: Tables<'payment_links'>) => void;
 }
 
 export function useDueAmountManager({
@@ -37,7 +39,7 @@ export function useDueAmountManager({
   /**
    * Handle order value changes and detect due amounts
    */
-  const handleOrderValueChange = useCallback(async (newTotal: number, quote?: any) => {
+  const handleOrderValueChange = useCallback(async (newTotal: number, quote?: Quote) => {
     if (lastKnownTotal === null) {
       setLastKnownTotal(newTotal);
       return;
@@ -93,7 +95,7 @@ export function useDueAmountManager({
   /**
    * Generate payment link for due amount
    */
-  const generatePaymentLinkForDue = useCallback(async (dueAmount: number, quote?: any) => {
+  const generatePaymentLinkForDue = useCallback(async (dueAmount: number, quote?: Quote) => {
     if (!quote) {
       // Fetch quote if not provided
       const { data: fetchedQuote } = await supabase
@@ -156,8 +158,8 @@ export function useDueAmountManager({
    */
   const sendPaymentLinkEmailNotification = useCallback(async (
     customerEmail: string, 
-    paymentLink: any, 
-    quote: any, 
+    paymentLink: Tables<'payment_links'>, 
+    quote: Quote, 
     amount: number
   ) => {
     try {
@@ -179,7 +181,7 @@ export function useDueAmountManager({
   /**
    * Manually generate payment link
    */
-  const generatePaymentLink = useCallback(async (amount: number, quote?: any) => {
+  const generatePaymentLink = useCallback(async (amount: number, quote?: Quote) => {
     return await generatePaymentLinkForDue(amount, quote);
   }, [generatePaymentLinkForDue]);
 

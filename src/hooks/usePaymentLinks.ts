@@ -15,7 +15,7 @@ interface CreatePaymentLinkParams {
   expiryDays?: number;
   gateway?: 'payu' | 'stripe' | 'paypal';
   // Enhanced v2 options
-  customFields?: any[];
+  customFields?: Array<Record<string, unknown>>;
   template?: 'default' | 'minimal' | 'branded';
   partialPaymentAllowed?: boolean;
   apiMethod?: 'rest' | 'legacy';
@@ -78,7 +78,7 @@ export function usePaymentLinks() {
         console.error('Edge function error:', error);
         // Try to get error details from the response
         if (error instanceof Error && 'context' in error) {
-          const context = (error as any).context;
+          const context = (error as Error & { context?: unknown }).context;
           if (context?.body) {
             console.error('Error details:', context.body);
           }
@@ -107,7 +107,7 @@ export function usePaymentLinks() {
       }
 
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating payment link:', error);
       toast({
         title: 'Error creating payment link',
@@ -138,7 +138,7 @@ export function usePaymentLinks() {
       }
 
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching payment links:', error);
       toast({
         title: 'Error fetching payment links',
@@ -169,7 +169,7 @@ export function usePaymentLinks() {
       });
 
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error cancelling payment link:', error);
       toast({
         title: 'Error cancelling payment link',
