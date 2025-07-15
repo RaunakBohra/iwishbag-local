@@ -12,13 +12,22 @@ import {
  */
 export interface AuthenticatedCheckoutSession extends Omit<GuestCheckoutSession, 'guest_name' | 'guest_email' | 'guest_phone'> {
   user_id: string;
-  temporary_shipping_address?: any; // For temp addresses before payment
+  temporary_shipping_address?: {
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+    destination_country?: string;
+    fullName?: string;
+    phone?: string;
+  }; // For temp addresses before payment
 }
 
 export interface CreateAuthenticatedSessionRequest {
   quote_ids: string[];
   user_id: string;
-  temporary_shipping_address?: any;
+  temporary_shipping_address?: GuestCheckoutSession['shipping_address'];
   payment_currency: string;
   payment_method: string;
   payment_amount: number;
@@ -26,7 +35,7 @@ export interface CreateAuthenticatedSessionRequest {
 
 export interface UpdateAuthenticatedSessionRequest {
   session_token: string;
-  temporary_shipping_address?: any;
+  temporary_shipping_address?: GuestCheckoutSession['shipping_address'];
   payment_currency?: string;
   payment_method?: string;
   payment_amount?: number;
@@ -177,7 +186,7 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
    */
   async updateAuthenticatedSession(request: UpdateAuthenticatedSessionRequest): Promise<UnifiedSessionResponse> {
     try {
-      const updateData: any = {
+      const updateData: Partial<AuthenticatedCheckoutSession> = {
         updated_at: new Date().toISOString(),
       };
 
@@ -321,7 +330,7 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       // Try authenticated sessions
       const authResponse = await this.getAuthenticatedSession(sessionToken);
       if (authResponse.success) {
-        return { success: true, session: authResponse.session as any };
+        return { success: true, session: authResponse.session as AuthenticatedCheckoutSession };
       }
 
       return { success: false, error: 'Session not found' };
@@ -409,7 +418,7 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       // Try authenticated session
       const authResult = await this.completeAuthenticatedSession(sessionToken);
       if (authResult.success) {
-        return { success: true, session: authResult.session as any };
+        return { success: true, session: authResult.session as AuthenticatedCheckoutSession };
       }
 
       return { success: false, error: 'Session not found or already completed' };
@@ -465,7 +474,7 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       // Try authenticated session
       const authResult = await this.expireAuthenticatedSession(sessionToken);
       if (authResult.success) {
-        return { success: true, session: authResult.session as any };
+        return { success: true, session: authResult.session as AuthenticatedCheckoutSession };
       }
 
       return { success: false, error: 'Session not found' };
@@ -580,12 +589,12 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
   }
 
   // Additional compatibility methods for existing interface
-  async enhancedCleanup(triggeredBy: string = 'manual'): Promise<any> {
+  async enhancedCleanup(triggeredBy: string = 'manual'): Promise<{ deleted: number; errors: string[] }> {
     // Implementation maintained for compatibility
     return { success: true, stats: { totalProcessed: 0 } };
   }
 
-  async getCleanupHistory(limit: number = 50): Promise<any> {
+  async getCleanupHistory(limit: number = 50): Promise<{ cleanups: Array<{ timestamp: string; triggeredBy: string; deleted: number }>; total: number }> {
     // Implementation maintained for compatibility
     return { success: true, logs: [] };
   }

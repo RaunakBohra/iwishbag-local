@@ -103,7 +103,11 @@ export class RouteService {
     const routeId = await this.findOrCreateRoute(origin, destination);
 
     // Update the quote with proper fields
-    const updateData: any = {
+    const updateData: {
+      origin_country: string;
+      destination_country: string;
+      shipping_route_id?: number;
+    } = {
       origin_country: origin,
       destination_country: destination,
     };

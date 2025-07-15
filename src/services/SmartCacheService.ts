@@ -402,7 +402,7 @@ export class ExchangeRateCache {
 export const exchangeRateCache = new ExchangeRateCache();
 
 // General purpose cache for calculations and other data
-export const generalCache = new SmartCacheService<any>({
+export const generalCache = new SmartCacheService<unknown>({
   defaultTTL: 10 * 60 * 1000, // 10 minutes default
   maxSize: 200,
   cleanupInterval: 3 * 60 * 1000, // Cleanup every 3 minutes

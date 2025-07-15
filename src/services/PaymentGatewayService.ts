@@ -9,7 +9,7 @@ export interface PaymentGatewayInfo {
   supported_currencies: string[];
   fee_percent: number;
   fee_fixed: number;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   test_mode: boolean;
   priority: number;
   description?: string;

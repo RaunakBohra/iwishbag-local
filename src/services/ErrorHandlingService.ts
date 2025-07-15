@@ -37,7 +37,7 @@ export enum QuoteCalculationErrorCode {
 export interface QuoteCalculationError {
   code: QuoteCalculationErrorCode;
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
   field?: string;
   timestamp: Date;
   context?: {
@@ -101,7 +101,7 @@ export class ErrorHandlingService {
   createError(
     code: QuoteCalculationErrorCode,
     message: string,
-    details?: any,
+    details?: Record<string, unknown>,
     context?: QuoteCalculationError['context'],
     field?: string
   ): QuoteCalculationError {
@@ -128,7 +128,7 @@ export class ErrorHandlingService {
    */
   async handleError(error: QuoteCalculationError): Promise<{
     handled: boolean;
-    recovery?: any;
+    recovery?: Record<string, unknown>;
     userMessage?: string;
   }> {
     console.error('[ErrorHandlingService] Handling error:', error);
@@ -344,7 +344,7 @@ export class ErrorHandlingService {
     context?: QuoteCalculationError['context']
   ): Promise<T> {
     const maxRetries = this.config.maxRetries;
-    let lastError: any;
+    let lastError: Error | unknown;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -441,7 +441,7 @@ export const errorHandlingService = ErrorHandlingService.getInstance();
 export const createValidationError = (
   field: string,
   message: string,
-  value?: any
+  value?: unknown
 ): QuoteCalculationError => {
   return errorHandlingService.createError(
     QuoteCalculationErrorCode.INVALID_NUMERIC_VALUE,
@@ -454,7 +454,7 @@ export const createValidationError = (
 
 export const createCalculationError = (
   message: string,
-  details?: any,
+  details?: Record<string, unknown>,
   context?: QuoteCalculationError['context']
 ): QuoteCalculationError => {
   return errorHandlingService.createError(
@@ -467,7 +467,7 @@ export const createCalculationError = (
 
 export const createNetworkError = (
   message: string,
-  details?: any
+  details?: Record<string, unknown>
 ): QuoteCalculationError => {
   return errorHandlingService.createError(
     QuoteCalculationErrorCode.NETWORK_ERROR,

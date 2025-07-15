@@ -267,7 +267,7 @@ class GuestCheckoutServiceImpl implements GuestSessionService {
    */
   async getCleanupHistory(limit: number = 50): Promise<{
     success: boolean;
-    logs?: any[];
+    logs?: Array<Record<string, unknown>>;
     error?: string;
   }> {
     try {

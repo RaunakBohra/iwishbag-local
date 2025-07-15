@@ -27,7 +27,16 @@ export interface QuoteCalculationParams {
   insurance_amount?: number;
   customs_percentage?: number;
   countrySettings: Tables<'country_settings'>;
-  shippingAddress?: any;
+  shippingAddress?: {
+    destination_country?: string;
+    city?: string;
+    state_province_region?: string;
+    postal_code?: string;
+    address_line1?: string;
+    address_line2?: string;
+    recipient_name?: string;
+    phone?: string;
+  };
 }
 
 export interface QuoteCalculationBreakdown {
@@ -66,7 +75,7 @@ export interface QuoteCalculationResult {
   error?: {
     code: string;
     message: string;
-    details?: any;
+    details?: Record<string, unknown>;
   };
   warnings?: string[];
   performance?: {
@@ -335,7 +344,7 @@ export class QuoteCalculatorService {
     );
 
     // Parse numeric values with safety
-    const parseNumeric = (value: any, defaultValue = 0): number => {
+    const parseNumeric = (value: string | number | null | undefined, defaultValue = 0): number => {
       if (value === null || value === undefined || value === '') return defaultValue;
       const parsed = typeof value === 'string' ? parseFloat(value) : Number(value);
       return isNaN(parsed) ? defaultValue : parsed;
@@ -378,7 +387,7 @@ export class QuoteCalculatorService {
       international_shipping = shippingCost.cost;
       shipping_method = 'route-specific';
       shipping_route_id = shippingCost.route.id || undefined;
-      exchange_rate = (shippingCost.route as any)?.exchange_rate || purchaseCurrencyRate;
+      exchange_rate = (shippingCost.route as { exchange_rate?: number })?.exchange_rate || purchaseCurrencyRate;
       exchange_rate_source = 'shipping_route';
     } else {
       // Fallback calculation - already returns cost in purchase currency
