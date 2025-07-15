@@ -20,6 +20,10 @@ serve(async (req) => {
   }
 
   try {
+    // Authorization is optional for guest checkout
+    const authHeader = req.headers.get('authorization');
+    console.log('🔐 Authorization header present:', !!authHeader);
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''

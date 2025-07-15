@@ -175,9 +175,14 @@ const PaypalSuccess: React.FC = () => {
           // First, capture the PayPal payment to get capture ID
           try {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const { data: { session } } = await supabase.auth.getSession();
+            
             const captureResponse = await fetch(`${supabaseUrl}/functions/v1/capture-paypal-payment`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.access_token || ''}`
+              },
               body: JSON.stringify({ orderID: token })
             });
             
@@ -215,7 +220,11 @@ const PaypalSuccess: React.FC = () => {
               .update({
                 status: 'failed',
                 paypal_payer_id: payerId,
-                error_message: captureError instanceof Error ? captureError.message : 'PayPal capture failed',
+                gateway_response: {
+                  ...(paymentLink.gateway_response as any || {}),
+                  capture_error: captureError instanceof Error ? captureError.message : 'PayPal capture failed',
+                  capture_attempted_at: new Date().toISOString()
+                },
                 updated_at: new Date().toISOString()
               })
               .eq('id', paymentLink.id)
