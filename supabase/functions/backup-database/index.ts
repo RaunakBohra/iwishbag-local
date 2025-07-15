@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { authenticateUser, requireAdmin, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
@@ -15,7 +16,17 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    // Validate request method
+    validateMethod(req, ['POST']);
+
+    // Authenticate user and require admin access
+    const { user, supabaseClient } = await authenticateUser(req);
+    await requireAdmin(supabaseClient, user.id);
+
+    console.log(`🔐 Admin user ${user.email} initiated database backup`);
+
+    // Create service role client for backup operations
+    const supabaseServiceClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
@@ -46,7 +57,7 @@ serve(async (req) => {
     // Execute backup queries
     for (const query of backupQueries) {
       console.log(`📝 Executing: ${query.substring(0, 50)}...`)
-      const { error } = await supabaseClient.rpc('exec_sql', { sql_query: query })
+      const { error } = await supabaseServiceClient.rpc('exec_sql', { sql_query: query })
       if (error) {
         console.error(`❌ Error in backup query: ${error.message}`)
         throw error
@@ -63,7 +74,7 @@ serve(async (req) => {
 
     const backupSizes = []
     for (const query of verificationQueries) {
-      const { data, error } = await supabaseClient.rpc('exec_sql', { sql_query: query })
+      const { data, error } = await supabaseServiceClient.rpc('exec_sql', { sql_query: query })
       if (error) {
         console.error(`❌ Error verifying backup: ${error.message}`)
       } else {
@@ -107,6 +118,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Backup failed:', error)
+    
+    if (error instanceof AuthError) {
+      return createAuthErrorResponse(error, corsHeaders);
+    }
     
     return new Response(
       JSON.stringify({
