@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { createHash } from "node:crypto"
+import { Database } from '../../src/integrations/supabase/types.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -52,6 +53,32 @@ interface PayUWebhookPayload {
   link_status?: string;
 }
 
+// Enhanced type interfaces for better type safety
+interface WebhookLogEntry {
+  gateway_code: string;
+  webhook_type: string;
+  request_headers: Record<string, string>;
+  request_body: PayUWebhookPayload;
+  quote_id: string | null;
+  transaction_id: string | null;
+  processed_at: string;
+  response_status?: number;
+  response_body?: Record<string, unknown>;
+  error_message?: string;
+}
+
+interface ProcessedWebhookResult {
+  payment_transaction?: { id: string } | null;
+  payment_link?: { id: string } | null;
+  quote?: { id: string } | null;
+}
+
+interface PaymentStatusUpdateResult {
+  success: boolean;
+  error?: string;
+  processed?: ProcessedWebhookResult;
+}
+
 serve(async (req) => {
   console.log("🔵 === PAYU WEBHOOK V2 FUNCTION STARTED ===");
   console.log("🔵 Request method:", req.method);
@@ -66,7 +93,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin = createClient(
+    const supabaseAdmin: SupabaseClient<Database> = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
@@ -106,7 +133,7 @@ serve(async (req) => {
     } = webhookData;
 
     // Log webhook request
-    const webhookLogEntry = {
+    const webhookLogEntry: WebhookLogEntry = {
       gateway_code: 'payu',
       webhook_type: 'payment_status',
       request_headers: Object.fromEntries(req.headers.entries()),
@@ -171,11 +198,12 @@ serve(async (req) => {
     });
 
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error("❌ Webhook processing error:", error);
     
     // Log error
     try {
-      const supabaseAdmin = createClient(
+      const supabaseAdmin: SupabaseClient<Database> = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
       );
@@ -187,7 +215,7 @@ serve(async (req) => {
           webhook_type: 'payment_status',
           request_headers: Object.fromEntries(req.headers.entries()),
           response_status: 500,
-          error_message: error.message,
+          error_message: errorMessage,
           processed_at: new Date().toISOString()
         });
     } catch (logError) {
@@ -255,10 +283,10 @@ async function verifyPayUHash(data: PayUWebhookPayload, saltKey: string): Promis
  * Process payment status update
  */
 async function processPaymentStatusUpdate(
-  supabaseAdmin: any, 
+  supabaseAdmin: SupabaseClient<Database>, 
   webhookData: PayUWebhookPayload,
-  webhookLogEntry: any
-): Promise<{ success: boolean; error?: string; processed?: any }> {
+  webhookLogEntry: WebhookLogEntry
+): Promise<PaymentStatusUpdateResult> {
   const {
     txnid,
     amount,
@@ -274,7 +302,7 @@ async function processPaymentStatusUpdate(
   } = webhookData;
 
   try {
-    const processed: any = { payment_transaction: null, payment_link: null, quote: null };
+    const processed: ProcessedWebhookResult = { payment_transaction: null, payment_link: null, quote: null };
 
     // Update payment transaction if exists
     if (mihpayid || txnid) {
@@ -295,7 +323,7 @@ async function processPaymentStatusUpdate(
       if (txError) {
         console.log("⚠️ Transaction not found or update failed:", txError.message);
       } else {
-        processed.payment_transaction = transaction;
+        processed.payment_transaction = transaction ? { id: transaction.id } : null;
         console.log("✅ Payment transaction updated");
       }
     }
@@ -317,7 +345,7 @@ async function processPaymentStatusUpdate(
       if (linkError) {
         console.log("⚠️ Payment link not found or update failed:", linkError.message);
       } else {
-        processed.payment_link = paymentLink;
+        processed.payment_link = paymentLink ? { id: paymentLink.id } : null;
         console.log("✅ Payment link updated");
       }
     }
@@ -337,7 +365,7 @@ async function processPaymentStatusUpdate(
       if (quoteError) {
         console.log("⚠️ Quote not found or update failed:", quoteError.message);
       } else {
-        processed.quote = quote;
+        processed.quote = quote ? { id: quote.id } : null;
         console.log("✅ Quote status updated to paid");
       }
 
@@ -386,8 +414,9 @@ async function processPaymentStatusUpdate(
     return { success: true, processed };
 
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error("❌ Error processing payment status update:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -424,7 +453,7 @@ function mapPayUStatusToLinkStatus(payuStatus?: string): string {
 /**
  * Log webhook error
  */
-async function logWebhookError(supabaseAdmin: any, webhookLogEntry: any, errorMessage: string) {
+async function logWebhookError(supabaseAdmin: SupabaseClient<Database>, webhookLogEntry: WebhookLogEntry, errorMessage: string) {
   try {
     await supabaseAdmin
       .from('webhook_logs')
