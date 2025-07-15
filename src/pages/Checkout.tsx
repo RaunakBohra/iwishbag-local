@@ -1066,7 +1066,7 @@ export default function Checkout() {
           }
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast({ title: "An Error Occurred", description: errorMessage, variant: "destructive" });
     } finally {

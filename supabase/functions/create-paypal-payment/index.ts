@@ -15,7 +15,7 @@ interface PayPalPaymentRequest {
     phone?: string;
     address?: string;
   };
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface PayPalPaymentResponse {

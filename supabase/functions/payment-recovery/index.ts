@@ -1,6 +1,24 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+interface PaymentTransaction {
+  id: string;
+  transaction_id: string;
+  status: string;
+  amount: number;
+  currency: string;
+  created_at: string;
+  quotes: {
+    id: string;
+    user_id: string;
+    status: string;
+    final_total: number;
+    final_currency: string;
+    product_name: string;
+  };
+  [key: string]: unknown;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
   'Access-Control-Allow-Headers': 'authorization, content-type',
@@ -81,7 +99,7 @@ serve(async (req) => {
   }
 });
 
-async function sendPaymentReminder(payment: any, supabaseAdmin: any) {
+async function sendPaymentReminder(payment: PaymentTransaction, supabaseAdmin: ReturnType<typeof createClient>) {
   try {
     // Get user information
     const { data: user, error: userError } = await supabaseAdmin

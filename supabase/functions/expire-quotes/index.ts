@@ -2,6 +2,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 import { authenticateUser, requireAdmin, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
 
+interface StatusConfig {
+  name: string;
+  autoExpireHours?: number;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
   'Access-Control-Allow-Headers': 'authorization, content-type',
@@ -53,13 +58,13 @@ serve(async (req) => {
     }
 
     // Parse status configurations
-    const statusConfigs = JSON.parse(statusSettings.setting_value)
-    const statusesWithAutoExpire = statusConfigs.filter((status: any) => 
+    const statusConfigs: StatusConfig[] = JSON.parse(statusSettings.setting_value)
+    const statusesWithAutoExpire = statusConfigs.filter((status: StatusConfig) => 
       status.autoExpireHours && status.autoExpireHours > 0
     )
 
     console.log(`📋 Found ${statusesWithAutoExpire.length} statuses with auto-expire configuration:`)
-    statusesWithAutoExpire.forEach((status: any) => {
+    statusesWithAutoExpire.forEach((status: StatusConfig) => {
       console.log(`  - ${status.name}: ${status.autoExpireHours} hours`)
     })
 
@@ -119,7 +124,7 @@ serve(async (req) => {
         expiredQuotes: totalExpired,
         timestamp: new Date().toISOString(),
         message: `Successfully expired ${totalExpired} quotes`,
-        statusConfigs: statusesWithAutoExpire.map((s: any) => ({ 
+        statusConfigs: statusesWithAutoExpire.map((s: StatusConfig) => ({ 
           name: s.name, 
           autoExpireHours: s.autoExpireHours 
         }))

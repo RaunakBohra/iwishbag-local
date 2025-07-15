@@ -127,11 +127,11 @@ export const useStatusManagement = () => {
       
       // Provide more specific error messages
       let specificErrorMessage = 'Failed to save status settings';
-      if ((error as any).code === '42501') {
+      if ((error as { code?: string }).code === '42501') {
         specificErrorMessage = 'Permission denied. You may not have admin access.';
-      } else if ((error as any).code === '42P01') {
+      } else if ((error as { code?: string }).code === '42P01') {
         specificErrorMessage = 'Database table not found. Please check your database setup.';
-      } else if ((error as any).code === '23505') {
+      } else if ((error as { code?: string }).code === '23505') {
         specificErrorMessage = 'Duplicate key error. Please try again.';
       } else if (errorMessage) {
         specificErrorMessage = errorMessage;

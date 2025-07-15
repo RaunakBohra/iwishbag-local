@@ -48,7 +48,7 @@ interface PayUPaymentLinkRequest {
   furl: string; // Failure URL
   surl: string; // Success URL
   expiryDate: string;
-  customFields?: any[];
+  customFields?: CustomField[];
 }
 
 serve(async (req) => {
@@ -253,12 +253,16 @@ serve(async (req) => {
  * Create payment link using PayU's new REST API
  */
 async function createPaymentLinkREST(params: {
-  supabaseAdmin: any;
+  supabaseAdmin: ReturnType<typeof createClient>;
   quoteId: string;
   amount: number;
   originalAmount: number;
   currency: string;
-  customerInfo: any;
+  customerInfo: {
+    name: string;
+    email: string;
+    phone: string;
+  };
   description?: string;
   expiryDays: number;
   customFields: CustomField[];
@@ -599,12 +603,16 @@ async function createPaymentLinkREST(params: {
  * Create payment link using legacy Create Invoice API (fallback)
  */
 async function createPaymentLinkLegacy(params: {
-  supabaseAdmin: any;
+  supabaseAdmin: ReturnType<typeof createClient>;
   quoteId: string;
   amount: number;
   originalAmount: number;
   currency: string;
-  customerInfo: any;
+  customerInfo: {
+    name: string;
+    email: string;
+    phone: string;
+  };
   description?: string;
   expiryDays: number;
   paymentTransactionId: string;
@@ -920,7 +928,7 @@ function mapFieldType(type: string): string {
 /**
  * Generate unique link code
  */
-async function generateLinkCode(supabaseAdmin: any): Promise<string> {
+async function generateLinkCode(supabaseAdmin: ReturnType<typeof createClient>): Promise<string> {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let attempts = 0;
   

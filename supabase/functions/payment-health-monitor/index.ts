@@ -8,24 +8,53 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 }
 
+interface PaymentRecord {
+  id: string;
+  gateway: string;
+  status: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+interface ErrorLog {
+  id: string;
+  gateway: string;
+  created_at: string;
+  error_message?: string;
+  [key: string]: unknown;
+}
+
+interface WebhookLog {
+  id: string;
+  webhook_type: string;
+  status: string;
+  created_at: string;
+  error_message?: string;
+  [key: string]: unknown;
+}
+
+interface HealthAlert {
+  level: 'info' | 'warning' | 'critical';
+  message: string;
+  timestamp: string;
+  details?: unknown;
+}
+
+interface GatewayHealth {
+  gateway: string;
+  status: 'healthy' | 'warning' | 'critical';
+  success_rate: number;
+  last_success: string;
+  issues: string[];
+}
+
 interface PaymentHealthMetrics {
   overall_health: 'healthy' | 'warning' | 'critical';
   success_rate: number;
   error_rate: number;
   avg_processing_time: number;
-  gateway_health: Array<{
-    gateway: string;
-    status: 'healthy' | 'warning' | 'critical';
-    success_rate: number;
-    last_success: string;
-    issues: string[];
-  }>;
-  alerts: Array<{
-    level: 'info' | 'warning' | 'critical';
-    message: string;
-    timestamp: string;
-    details?: any;
-  }>;
+  gateway_health: GatewayHealth[];
+  alerts: HealthAlert[];
   recommendations: string[];
 }
 
@@ -117,8 +146,8 @@ serve(async (req) => {
   }
 });
 
-function calculateHealthMetrics(payments: any[], errorLogs: any[], webhookLogs: any[]): PaymentHealthMetrics {
-  const alerts: any[] = [];
+function calculateHealthMetrics(payments: PaymentRecord[], errorLogs: ErrorLog[], webhookLogs: WebhookLog[]): PaymentHealthMetrics {
+  const alerts: HealthAlert[] = [];
   const recommendations: string[] = [];
 
   // Calculate overall metrics
@@ -232,7 +261,7 @@ function calculateHealthMetrics(payments: any[], errorLogs: any[], webhookLogs: 
   };
 }
 
-function analyzeGatewayHealth(payments: any[], errorLogs: any[], webhookLogs: any[]): any[] {
+function analyzeGatewayHealth(payments: PaymentRecord[], errorLogs: ErrorLog[], webhookLogs: WebhookLog[]): GatewayHealth[] {
   const gateways = ['payu', 'stripe', 'bank_transfer', 'esewa', 'khalti'];
   
   return gateways.map(gateway => {
@@ -288,7 +317,7 @@ function analyzeGatewayHealth(payments: any[], errorLogs: any[], webhookLogs: an
   });
 }
 
-async function sendHealthAlerts(supabaseAdmin: any, alerts: any[]) {
+async function sendHealthAlerts(supabaseAdmin: ReturnType<typeof createClient>, alerts: HealthAlert[]) {
   try {
     // Get admin email addresses
     const { data: adminEmails, error: adminError } = await supabaseAdmin
