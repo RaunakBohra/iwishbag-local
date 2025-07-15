@@ -339,12 +339,14 @@ serve(async (req) => {
       .insert({
         gateway_refund_id: refundResponse.id,
         gateway_code: 'paypal',
+        gateway_transaction_id: captureId, // Added missing field
         payment_transaction_id: transaction.id,
+        quote_id: transaction.quote_id, // Added missing field
         refund_amount: refundRequest.refundAmount,
         original_amount: transaction.amount,
         currency: refundRequest.currency,
         refund_type: refundRequest.refundAmount === transaction.amount ? 'FULL' : 'PARTIAL',
-        status: refundResponse.status || 'COMPLETED',
+        status: (refundResponse.status || 'COMPLETED').toLowerCase(),
         gateway_response: refundResponse,
         refund_reason: refundRequest.reason,
         notes: refundRequest.note,
@@ -357,6 +359,33 @@ serve(async (req) => {
     if (refundError) {
       console.error('⚠️ Failed to store refund record:', refundError)
       // Don't fail the refund, just log the error
+    } else {
+      console.log('✅ Refund record stored in gateway_refunds:', gatewayRefund?.id)
+    }
+
+    // Create payment ledger entry for the refund
+    const { data: ledgerEntry, error: ledgerError } = await supabaseAdmin
+      .from('payment_ledger')
+      .insert({
+        payment_transaction_id: transaction.id,
+        type: 'refund',
+        amount: -refundRequest.refundAmount, // Negative amount for refund
+        currency: refundRequest.currency,
+        description: `PayPal refund - ${refundRequest.reason || 'Refund processed'}`,
+        reference_type: 'gateway_refund',
+        reference_id: gatewayRefund?.id || refundResponse.id,
+        gateway_transaction_id: refundResponse.id,
+        gateway_response: refundResponse,
+        status: 'completed',
+        processed_at: new Date().toISOString()
+      })
+      .select()
+      .single()
+
+    if (ledgerError) {
+      console.error('⚠️ Failed to create payment ledger entry:', ledgerError)
+    } else {
+      console.log('✅ Payment ledger entry created:', ledgerEntry?.id)
     }
 
     // Update payment transaction with refund info

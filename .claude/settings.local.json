@@ -49,7 +49,8 @@
       "Bash(supabase logs:*)",
       "WebFetch(domain:developer.paypal.com)",
       "Bash(supabase status:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }
