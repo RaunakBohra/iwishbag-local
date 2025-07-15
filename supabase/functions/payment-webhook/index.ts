@@ -23,10 +23,9 @@ interface PaymentTransactionInsert {
   created_at: string;
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+// Webhooks should not use CORS - they are called by external services, not browsers
+// Remove CORS headers for security
+const corsHeaders = {}
 
 interface PayUWebhookData {
   txnid: string;
@@ -309,9 +308,9 @@ async function createPaymentRecordWithRetry(supabaseAdmin: SupabaseClient<Databa
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  // Webhooks should not accept OPTIONS requests - only POST
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 })
   }
 
   // Add comprehensive error handling and logging

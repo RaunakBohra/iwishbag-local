@@ -3,12 +3,9 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 import { createHash } from "node:crypto"
 import { Database } from '../../src/integrations/supabase/types.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Max-Age': '86400',
-}
+// Webhooks should not use CORS - they are called by external services, not browsers
+// Remove CORS headers for security
+const corsHeaders = {}
 
 interface PayUWebhookPayload {
   // Common fields
@@ -113,15 +110,7 @@ serve(async (req) => {
     setTimeout(() => reject(new Error('Request timeout')), WEBHOOK_CONFIG.MAX_PROCESSING_TIME);
   });
   
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      status: 204,
-      headers: corsHeaders 
-    })
-  }
-  
-  // Only allow POST requests
+  // Webhooks should only accept POST requests
   if (req.method !== 'POST') {
     console.error("❌ Invalid request method:", req.method);
     return createErrorResponse('Method not allowed', 405);
