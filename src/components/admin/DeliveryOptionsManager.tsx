@@ -39,7 +39,7 @@ interface DeliveryOption {
 interface Country {
   code: string;
   name: string;
-  [key: string]: any; // For other properties
+  [key: string]: unknown; // For other properties
 }
 
 // Shipping route interface
@@ -82,14 +82,14 @@ interface Quote {
   shipping_route_id?: string;
   shipping_address?: string | ShippingAddress;
   enabled_delivery_options?: string[];
-  [key: string]: any; // For other properties
+  [key: string]: unknown; // For other properties
 }
 
 // Shipping address interface
 interface ShippingAddress {
   destination_country?: string;
   country?: string;
-  [key: string]: any; // For other properties
+  [key: string]: unknown; // For other properties
 }
 
 interface DeliveryOptionsManagerProps {

@@ -15,10 +15,13 @@ import {
   Loader2
 } from "lucide-react";
 import { useState } from "react";
+import { Tables } from '@/integrations/supabase/types';
+
+type Quote = Tables<'quotes'>;
 
 interface QuoteBulkActionsProps {
   selectedCount: number;
-  selectedQuotes?: any[]; // Add selected quotes for summary
+  selectedQuotes?: Quote[]; // Add selected quotes for summary
   onBulkAction: (action: 'approved' | 'cancelled' | 'confirm_payment' | 'email' | 'export' | 'duplicate' | 'priority') => void;
   isProcessing: boolean;
   isUpdatingStatus: boolean;
@@ -213,7 +216,7 @@ export const QuoteBulkActions = ({
               key={action}
               variant={getActionVariant(action)}
               size="sm"
-              onClick={() => onBulkAction(action as any)}
+              onClick={() => onBulkAction(action as 'approved' | 'cancelled' | 'confirm_payment' | 'email' | 'export' | 'duplicate' | 'priority')}
               disabled={isProcessing || isActionLoading(action)}
               className={[
                 // Common polish for all buttons

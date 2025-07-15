@@ -37,7 +37,7 @@ interface EmailTemplate {
   subject: string;
   html_content: string;
   template_type: string;
-  variables?: any;
+  variables?: Record<string, unknown>;
   is_active?: boolean;
 }
 
@@ -168,11 +168,12 @@ ${template.html_content}
         description: "Template saved successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Save template mutation error:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       toast({
         title: "Error",
-        description: error.message || "Failed to save template",
+        description: errorMessage || "Failed to save template",
         variant: "destructive",
       });
     },

@@ -142,8 +142,8 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
   };
 
   // Extract payment details from different sources (moved before useMemo)
-  const paymentDetails = quote.payment_details as any || {};
-  const transactionData = paymentTransaction?.gateway_response as any || {};
+  const paymentDetails = (quote.payment_details as Record<string, unknown>) || {};
+  const transactionData = (paymentTransaction?.gateway_response as Record<string, unknown>) || {};
   const paymentCurrency = paymentTransaction?.currency || quote.final_currency || 'USD';
   const quoteCurrency = quote.final_currency || 'USD';
   const hasCurrencyMismatch = paymentCurrency !== quoteCurrency;

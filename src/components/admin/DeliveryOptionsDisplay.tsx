@@ -39,12 +39,13 @@ export const DeliveryOptionsDisplay = ({
 
         if (data?.delivery_options) {
           const options = Array.isArray(data.delivery_options) 
-            ? data.delivery_options.filter((opt: any) => opt.active)
+            ? data.delivery_options.filter((opt: DeliveryOption) => opt.active)
             : [];
           setDeliveryOptions(options);
         }
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }

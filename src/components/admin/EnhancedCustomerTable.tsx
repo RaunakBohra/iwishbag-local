@@ -92,7 +92,7 @@ export const EnhancedCustomerTable = ({
     if (!sortConfig) return 0;
     const { key, direction } = sortConfig;
     
-    let aValue: any, bValue: any;
+    let aValue: string | number | Date, bValue: string | number | Date;
     
     switch (key) {
       case 'name':
