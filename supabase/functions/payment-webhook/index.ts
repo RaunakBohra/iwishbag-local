@@ -1,5 +1,27 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { Database } from '../../src/integrations/supabase/types.ts';
+
+interface WebhookLog {
+  request_id: string;
+  webhook_type: string;
+  status: string;
+  user_agent?: string;
+  error_message?: string;
+  created_at: string;
+}
+
+interface PaymentTransactionInsert {
+  user_id?: string | null;
+  quote_id: string;
+  amount: number;
+  currency: string;
+  status: 'completed' | 'failed' | 'pending';
+  payment_method: string;
+  transaction_id: string;
+  gateway_response: Record<string, unknown>;
+  created_at: string;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -139,7 +161,7 @@ interface PayUWebhookData {
 }
 
 // Log webhook attempts for monitoring and debugging
-async function logWebhookAttempt(supabaseAdmin: any, requestId: string, status: string, userAgent: string, errorMessage?: string) {
+async function logWebhookAttempt(supabaseAdmin: SupabaseClient<Database>, requestId: string, status: string, userAgent: string, errorMessage?: string) {
   try {
     await supabaseAdmin
       .from('webhook_logs')
@@ -195,7 +217,7 @@ async function verifyPayUHash(data: PayUWebhookData, salt: string): Promise<bool
 }
 
 // Enhanced database operations with retry logic
-async function updateQuotesWithRetry(supabaseAdmin: any, quoteIds: string[], updateData: any, maxRetries = 3) {
+async function updateQuotesWithRetry(supabaseAdmin: SupabaseClient<Database>, quoteIds: string[], updateData: Record<string, unknown>, maxRetries = 3) {
   let lastError;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -227,7 +249,7 @@ async function updateQuotesWithRetry(supabaseAdmin: any, quoteIds: string[], upd
 }
 
 // Enhanced payment record creation with retry logic
-async function createPaymentRecordWithRetry(supabaseAdmin: any, paymentData: any, maxRetries = 3) {
+async function createPaymentRecordWithRetry(supabaseAdmin: SupabaseClient<Database>, paymentData: PaymentTransactionInsert, maxRetries = 3) {
   let lastError;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -299,7 +321,7 @@ serve(async (req) => {
   try {
     console.log(`🔔 PayU Webhook Received [${requestId}]`);
     
-    const supabaseAdmin = createClient(
+    const supabaseAdmin: SupabaseClient<Database> = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
@@ -310,7 +332,7 @@ serve(async (req) => {
     // Parse webhook data with error handling
     let webhookData: PayUWebhookData;
     try {
-      webhookData = await req.json();
+      webhookData = (await req.json()) as PayUWebhookData; // Explicit cast for safety
     } catch (parseError) {
       console.error(`[${requestId}] JSON parsing error:`, parseError);
       await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'JSON parsing failed');
@@ -681,7 +703,7 @@ serve(async (req) => {
     console.error(`❌ PayU webhook error [${requestId}]:`, error);
     
     // Log the error
-    const supabaseAdmin = createClient(
+    const supabaseAdmin: SupabaseClient<Database> = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
