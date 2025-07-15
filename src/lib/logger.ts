@@ -8,7 +8,7 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 interface LogEntry {
   level: LogLevel;
   message: string;
-  data?: any;
+  data?: Record<string, unknown>;
   timestamp: string;
   context?: string;
 }
@@ -36,44 +36,44 @@ class Logger {
     return true; // Default to logging
   }
 
-  debug(message: string, data?: any, context?: string): void {
+  debug(message: string, data?: Record<string, unknown>, context?: string): void {
     if (this.shouldLog('debug')) {
       console.log(this.formatMessage('debug', message, context), data ? data : '');
     }
   }
 
-  info(message: string, data?: any, context?: string): void {
+  info(message: string, data?: Record<string, unknown>, context?: string): void {
     if (this.shouldLog('info')) {
       console.info(this.formatMessage('info', message, context), data ? data : '');
     }
   }
 
-  warn(message: string, data?: any, context?: string): void {
+  warn(message: string, data?: Record<string, unknown>, context?: string): void {
     if (this.shouldLog('warn')) {
       console.warn(this.formatMessage('warn', message, context), data ? data : '');
     }
   }
 
-  error(message: string, error?: any, context?: string): void {
+  error(message: string, error?: unknown, context?: string): void {
     if (this.shouldLog('error')) {
       console.error(this.formatMessage('error', message, context), error ? error : '');
     }
   }
 
   // Specialized logging methods
-  currency(message: string, data?: any): void {
+  currency(message: string, data?: Record<string, unknown>): void {
     this.debug(message, data, 'Currency');
   }
 
-  cart(message: string, data?: any): void {
+  cart(message: string, data?: Record<string, unknown>): void {
     this.debug(message, data, 'Cart');
   }
 
-  auth(message: string, data?: any): void {
+  auth(message: string, data?: Record<string, unknown>): void {
     this.debug(message, data, 'Auth');
   }
 
-  payment(message: string, data?: any): void {
+  payment(message: string, data?: Record<string, unknown>): void {
     this.debug(message, data, 'Payment');
   }
 }

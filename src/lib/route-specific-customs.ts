@@ -20,7 +20,7 @@ export interface CustomsRule {
   origin_country: string;
   destination_country: string;
   category: string;
-  conditions: any;
+  conditions: Record<string, unknown>;
   duty_percentage: number;
   priority: number;
   is_active: boolean;
@@ -123,7 +123,7 @@ export async function applyRouteSpecificCustomsRules(
 /**
  * Check if product data matches the conditions of a customs rule
  */
-function matchesConditions(productData: ProductData, conditions: any): boolean {
+function matchesConditions(productData: ProductData, conditions: Record<string, unknown>): boolean {
   if (!conditions) return true;
 
   try {

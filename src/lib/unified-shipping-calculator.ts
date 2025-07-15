@@ -6,7 +6,9 @@ import type {
   ShippingRouteDB,
   UnifiedQuoteInput,
   UnifiedQuoteResult,
-  QuoteCalculationConfig
+  QuoteCalculationConfig,
+  WeightTier,
+  Carrier
 } from '../types/shipping';
 import type { Tables } from '../integrations/supabase/types';
 
@@ -58,7 +60,7 @@ export async function getShippingCost(
  * Calculate shipping cost using route-specific settings
  */
 function calculateRouteSpecificShipping(
-  route: any,
+  route: ShippingRouteDB,
   weight: number,
   price: number
 ): ShippingCost {
@@ -86,7 +88,7 @@ function calculateRouteSpecificShipping(
   
   // Check weight tiers for minimum cost (using converted weight)
   if (route.weight_tiers) {
-    const weightTiers = route.weight_tiers as any[];
+    const weightTiers = route.weight_tiers as WeightTier[];
     for (const tier of weightTiers) {
       if (convertedWeight >= tier.min && (tier.max === null || convertedWeight <= tier.max)) {
         baseCost = Math.max(baseCost, tier.cost);
@@ -98,7 +100,7 @@ function calculateRouteSpecificShipping(
   const finalCost = baseCost + percentageCost;
   
   // Get carrier info
-  const carriers = route.carriers as any[];
+  const carriers = route.carriers as Carrier[];
   const defaultCarrier = carriers?.[0] || { name: 'DHL', days: '5-10' };
   
   return {
@@ -181,7 +183,7 @@ function calculateStandardInternationalShipping(
  */
 export async function calculateUnifiedQuote(
   input: UnifiedQuoteInput,
-  supabaseClient: any = supabase
+  supabaseClient = supabase
 ): Promise<UnifiedQuoteResult & { exchangeRate: number; exchangeRateSource: string; warning?: string }> {
   const {
     itemPrice,
@@ -309,7 +311,7 @@ export async function getShippingRoutes(): Promise<ShippingRouteDB[]> {
 /**
  * Create or update a shipping route
  */
-export async function upsertShippingRoute(routeData: any): Promise<{ success: boolean; error?: string }> {
+export async function upsertShippingRoute(routeData: Partial<ShippingRouteDB>): Promise<{ success: boolean; error?: string }> {
   try {
     // Map camelCase form fields to snake_case database fields
     const dbData = {
