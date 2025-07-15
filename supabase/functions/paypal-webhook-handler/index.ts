@@ -1,6 +1,30 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { createHash } from "node:crypto"
+import { Database } from '../../src/integrations/supabase/types.ts';
+
+// Enhanced type interfaces for better type safety
+interface PaymentTransactionGatewayResponse {
+  quote_ids?: string[];
+  webhook_event?: PayPalWebhookEvent;
+  capture_details?: any;
+  [key: string]: any;
+}
+
+interface ProcessedWebhookResult {
+  payment_transaction?: { id: string } | null;
+  quotes_updated?: number;
+  ledger_entries?: number;
+  error?: string;
+}
+
+interface AtomicProcessingResult {
+  success: boolean;
+  payment_transaction_id?: string;
+  updated_quotes_count?: number;
+  payment_ledger_entries_count?: number;
+  error_message?: string;
+}
 
 // PayPal API configuration
 const PAYPAL_BASE_URL = Deno.env.get('PAYPAL_ENVIRONMENT') === 'sandbox' 
@@ -100,7 +124,9 @@ async function verifyPayPalWebhookSignature(
     const verificationResult = await response.json();
     return verificationResult.verification_status === 'SUCCESS';
   } catch (error) {
-    console.error('PayPal signature verification error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown verification error';
+    console.error('PayPal signature verification error:', errorMessage);
+    console.error('Error details:', error);
     return false;
   }
 }
@@ -169,7 +195,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin = createClient(
+    const supabaseAdmin: SupabaseClient<Database> = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
@@ -262,7 +288,7 @@ serve(async (req) => {
     console.log("✅ Found payment transaction:", paymentTx.id);
 
     // Handle different event types
-    const processed: any = { payment_transaction: null, quotes: null };
+    const processed: ProcessedWebhookResult = { payment_transaction: null };
 
     switch (eventType) {
       case 'CHECKOUT.ORDER.APPROVED':
@@ -274,7 +300,7 @@ serve(async (req) => {
           .update({
             status: 'approved',
             gateway_response: {
-              ...paymentTx.gateway_response,
+              ...(paymentTx.gateway_response as PaymentTransactionGatewayResponse),
               webhook_event: webhookData
             },
             updated_at: new Date().toISOString()
@@ -303,11 +329,12 @@ serve(async (req) => {
         const payerId = resource.payer?.payer_id;
         
         // Get quote IDs from gateway response
-        const quoteIds = (paymentTx.gateway_response as any)?.quote_ids || [];
+        const existingGatewayResponse = paymentTx.gateway_response as PaymentTransactionGatewayResponse;
+        const quoteIds = existingGatewayResponse?.quote_ids || [];
         
         // Prepare gateway response data
-        const gatewayResponse = {
-          ...(paymentTx.gateway_response as any),
+        const updatedGatewayResponse: PaymentTransactionGatewayResponse = {
+          ...existingGatewayResponse,
           webhook_event: webhookData,
           capture_details: capture
         };
@@ -323,7 +350,7 @@ serve(async (req) => {
             p_amount: amount,
             p_currency: currency,
             p_order_id: orderId,
-            p_gateway_response: gatewayResponse,
+            p_gateway_response: updatedGatewayResponse,
             p_quote_ids: quoteIds
           });
         
@@ -341,7 +368,7 @@ serve(async (req) => {
           });
         }
         
-        const processingResult = result[0];
+        const processingResult = result[0] as AtomicProcessingResult;
         console.log("✅ Payment processed atomically:", {
           payment_transaction_id: processingResult.payment_transaction_id,
           updated_quotes_count: processingResult.updated_quotes_count,
@@ -349,9 +376,9 @@ serve(async (req) => {
         });
         
         // Store result for response
-        processed.payment_transaction = { id: processingResult.payment_transaction_id };
-        processed.quotes_updated = processingResult.updated_quotes_count;
-        processed.ledger_entries = processingResult.payment_ledger_entries_count;
+        processed.payment_transaction = { id: processingResult.payment_transaction_id || '' };
+        processed.quotes_updated = processingResult.updated_quotes_count || 0;
+        processed.ledger_entries = processingResult.payment_ledger_entries_count || 0;
         break;
 
       case 'PAYMENT.CAPTURE.DENIED':
@@ -364,7 +391,7 @@ serve(async (req) => {
           .update({
             status: 'failed',
             gateway_response: {
-              ...paymentTx.gateway_response,
+              ...(paymentTx.gateway_response as PaymentTransactionGatewayResponse),
               webhook_event: webhookData
             },
             error_message: webhookData.summary || 'Payment capture denied',
@@ -402,10 +429,14 @@ serve(async (req) => {
     });
 
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('❌ Webhook processing error:', error);
+    console.error('Error type:', typeof error);
+    
     return new Response(JSON.stringify({ 
       error: 'Webhook processing failed',
-      details: error.message 
+      details: errorMessage,
+      error_type: error instanceof Error ? 'Error' : typeof error
     }), { 
       status: 500, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
