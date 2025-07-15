@@ -27,6 +27,7 @@ interface RefundManagementModalProps {
   payments: Array<{
     id: string;
     amount: number;
+    currency?: string; // Payment-specific currency
     method: string;
     gateway: string;
     reference: string;
@@ -229,7 +230,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
               body: {
                 paymentTransactionId: gatewayPayment.id, // Use payment ledger ID - function will look up the transaction
                 refundAmount: amount,
-                currency: 'USD', // PayPal transactions are always in USD
+                currency: gatewayPayment.currency || 'USD', // Use payment currency, default to USD for PayPal
                 reason: reason,
                 note: internalNotes,
                 quoteId: quote.id,
@@ -526,7 +527,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
                         {getPaymentIcon(payment.method)}
                         <div>
                           <div className="text-sm font-medium flex items-center gap-2">
-                            <span>{payment.gateway} - {quote.currency} {payment.amount.toFixed(2)}</span>
+                            <span>{payment.gateway} - {payment.currency || quote.currency} {payment.amount.toFixed(2)}</span>
                             {((payment.gateway === 'payu' || payment.method === 'payu' || payment.gateway === 'paypal' || payment.method === 'paypal') && payment.canRefund) && (
                               <Badge variant="success" className="text-xs">
                                 Auto-refund available

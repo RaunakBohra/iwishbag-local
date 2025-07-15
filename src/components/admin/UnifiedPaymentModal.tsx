@@ -1794,6 +1794,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
             const payment = {
               id: p.id,
               amount: Math.abs(p.amount || 0),
+              currency: p.currency || currency, // Use payment currency if available, fallback to quote currency
               method: p.payment_method || '',
               gateway: p.gateway_code || p.payment_method || '',
               reference: p.gateway_transaction_id || p.reference_number || p.transaction_id || 
