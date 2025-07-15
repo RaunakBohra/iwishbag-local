@@ -95,7 +95,7 @@ const QuoteForm = () => {
     setShowAddressDialog(false);
   };
 
-  const handleAddressFormSuccess = (newAddress?: any) => {
+  const handleAddressFormSuccess = (newAddress?: Tables<'user_addresses'>) => {
     setShowAddressDialog(false);
     // Invalidate and refetch addresses
     queryClient.invalidateQueries({ queryKey: ['user_addresses', user?.id] });
@@ -105,7 +105,7 @@ const QuoteForm = () => {
     }
   };
 
-  const handleSubmit = (data: any) => {
+  const handleSubmit = (data: Record<string, unknown>) => {
     // Include selected address in the submission
     const submissionData = {
       ...data,

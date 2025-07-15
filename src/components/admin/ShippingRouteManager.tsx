@@ -12,13 +12,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useToast } from '../../hooks/use-toast';
 import { useCountryUtils } from '../../lib/countryUtils';
 import { getCurrencySymbolFromCountry } from '../../lib/currencyUtils';
-import type { ShippingRouteFormData, DeliveryOption } from '../../types/shipping';
+import type { ShippingRouteFormData, DeliveryOption, WeightTier, Carrier } from '../../types/shipping';
+import type { Tables } from '../../integrations/supabase/types';
 import { CustomsTiersManager } from './CustomsTiersManager';
 import { CurrencyInputLabel } from './DualCurrencyDisplay';
 import { ExchangeRateManager } from './ExchangeRateManager';
 import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
 
-function ShippingRouteForm({ onSubmit, onCancel, initialData }: { onSubmit: (data: ShippingRouteFormData) => Promise<any>, onCancel: () => void, initialData?: Partial<ShippingRouteFormData> }) {
+interface ShippingRouteFormProps {
+  onSubmit: (data: ShippingRouteFormData) => Promise<boolean>;
+  onCancel: () => void;
+  initialData?: Partial<ShippingRouteFormData>;
+}
+
+function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFormProps) {
   const { data: countries = [] } = useAllCountries();
   const [formData, setFormData] = useState<ShippingRouteFormData>({
     originCountry: initialData?.originCountry || '',
@@ -124,7 +131,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: { onSubmit: (dat
   const removeWeightTier = (index: number) => {
     setFormData(prev => ({ ...prev, weightTiers: prev.weightTiers.filter((_, i) => i !== index) }));
   };
-  const updateWeightTier = (index: number, field: keyof typeof formData.weightTiers[0], value: any) => {
+  const updateWeightTier = (index: number, field: keyof WeightTier, value: string | number) => {
     setFormData(prev => ({ ...prev, weightTiers: prev.weightTiers.map((tier, i) => i === index ? { ...tier, [field]: value } : tier) }));
   };
 
@@ -147,7 +154,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: { onSubmit: (dat
     setFormData(prev => ({ ...prev, deliveryOptions: prev.deliveryOptions.filter((_, i) => i !== index) }));
   };
 
-  const updateDeliveryOption = (index: number, field: string, value: any) => {
+  const updateDeliveryOption = (index: number, field: keyof DeliveryOption, value: string | number | boolean) => {
     setFormData(prev => ({ 
       ...prev, 
       deliveryOptions: prev.deliveryOptions.map((option, i) => 
@@ -342,16 +349,16 @@ export function ShippingRouteManager() {
   const [activeTab, setActiveTab] = useState<'routes' | 'customs' | 'rates'>('routes');
   const { routes, loading, error, createRoute, updateRoute, removeRoute } = useShippingRoutes();
   const { data: countries = [] } = useAllCountries();
-  const [editingRoute, setEditingRoute] = useState<any>(null);
+  const [editingRoute, setEditingRoute] = useState<Tables<'shipping_routes'> | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const handleCreate = async (data: any) => {
+  const handleCreate = async (data: ShippingRouteFormData) => {
     return await createRoute(data);
   };
 
-  const handleUpdate = async (data: any) => {
+  const handleUpdate = async (data: ShippingRouteFormData) => {
     if (!editingRoute) return { success: false, error: 'No route selected' };
     return await updateRoute(editingRoute.id, { ...data, id: editingRoute.id });
   };
@@ -368,7 +375,7 @@ export function ShippingRouteManager() {
   const { getCountryDisplayName } = useCountryUtils();
 
   // Map DB row to form data for editing
-  const mapRouteToFormData = (route: any): ShippingRouteFormData => ({
+  const mapRouteToFormData = (route: Tables<'shipping_routes'>): ShippingRouteFormData => ({
     originCountry: route.origin_country,
     destinationCountry: route.destination_country,
     baseShippingCost: route.base_shipping_cost,
@@ -539,7 +546,7 @@ export function ShippingRouteManager() {
                     <div>
                       <strong>Weight Tiers:</strong>
                       <ul className="mt-1 space-y-1">
-                        {route.weight_tiers?.map((tier: any, index: number) => (
+                        {(route.weight_tiers as WeightTier[] || []).map((tier: WeightTier, index: number) => (
                           <li key={index}>
                             {tier.min}-{tier.max || '∞'}{route.weight_unit || 'kg'}: {getCurrencySymbolFromCountry(route.origin_country)}{tier.cost}
                           </li>
@@ -549,7 +556,7 @@ export function ShippingRouteManager() {
                     <div>
                       <strong>Carriers:</strong>
                       <ul className="mt-1 space-y-1">
-                        {route.carriers?.map((carrier: any, index: number) => (
+                        {(route.carriers as Carrier[] || []).map((carrier: Carrier, index: number) => (
                           <li key={index}>
                             {carrier.name}: {carrier.days} days
                           </li>

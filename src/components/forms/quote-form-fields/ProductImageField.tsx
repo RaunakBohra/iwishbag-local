@@ -3,10 +3,17 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { Control, useWatch } from "react-hook-form";
 import { useEffect } from "react";
 
+interface ProductAnalysisResult {
+  imageUrl?: string;
+  productName?: string;
+  price?: number;
+  weight?: number;
+}
+
 interface ProductImageFieldProps {
-  control: Control<any>;
+  control: Control<Record<string, unknown>>;
   index: number;
-  analysisResult?: any; // ProductAnalysis result from parent
+  analysisResult?: ProductAnalysisResult;
 }
 
 export const ProductImageField = ({ control, index, analysisResult }: ProductImageFieldProps) => {

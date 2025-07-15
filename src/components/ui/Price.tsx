@@ -327,7 +327,19 @@ export const AdminPrice: React.FC<AdminPriceProps> = ({
 };
 
 // Utility components for common use cases
-export const QuotePrice: React.FC<{ quote: any; className?: string }> = ({ quote, className }) => {
+interface QuotePriceData {
+  final_total?: number;
+  origin_country?: string;
+  purchase_country?: string;
+  destination_country?: string;
+  exchange_rate?: number;
+  shipping_address?: {
+    destination_country?: string;
+    country?: string;
+  };
+}
+
+export const QuotePrice: React.FC<{ quote: QuotePriceData; className?: string }> = ({ quote, className }) => {
   if (!quote) return <span className={className}>N/A</span>;
 
   const originCountry = quote.origin_country || quote.purchase_country || 'US';
@@ -345,8 +357,18 @@ export const QuotePrice: React.FC<{ quote: any; className?: string }> = ({ quote
   );
 };
 
+interface CartItemData {
+  finalTotal?: number;
+  final_total?: number;
+  purchaseCountryCode?: string;
+  origin_country?: string;
+  country?: string;
+  destinationCountryCode?: string;
+  destination_country?: string;
+}
+
 export const CartItemPrice: React.FC<{ 
-  item: any; 
+  item: CartItemData; 
   quantity?: number; 
   className?: string 
 }> = ({ item, quantity = 1, className }) => {
@@ -362,7 +384,15 @@ export const CartItemPrice: React.FC<{
   );
 };
 
-export const OrderPrice: React.FC<{ order: any; className?: string }> = ({ order, className }) => {
+interface OrderPriceData {
+  final_total?: number;
+  origin_country?: string;
+  purchase_country?: string;
+  destination_country?: string;
+  exchange_rate?: number;
+}
+
+export const OrderPrice: React.FC<{ order: OrderPriceData; className?: string }> = ({ order, className }) => {
   if (!order) return <span className={className}>N/A</span>;
 
   return (

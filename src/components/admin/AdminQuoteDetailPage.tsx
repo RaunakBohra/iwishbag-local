@@ -17,6 +17,8 @@ import { ShippingInfoForm } from "./ShippingInfoForm";
 import { OrderTimeline } from "@/components/dashboard/OrderTimeline";
 import { Badge } from "@/components/ui/badge";
 import { extractShippingAddressFromNotes } from "@/lib/addressUpdates";
+import { Quote } from "@/types/quote";
+import { Tables } from "@/integrations/supabase/types";
 
 import { useWatch } from "react-hook-form";
 import { getShippingRouteById } from '@/hooks/useShippingRoutes';
@@ -117,12 +119,12 @@ const AdminQuoteDetailPage = () => {
   const hasAddress = !!shippingAddress;
 
   const originCountryWatch = useWatch({ 
-    control: form?.control || {} as any, 
+    control: form?.control, 
     name: "origin_country" 
   });
   
   const destinationCountryWatch = useWatch({ 
-    control: form?.control || {} as any, 
+    control: form?.control, 
     name: "destination_country" 
   });
 
@@ -183,7 +185,7 @@ const AdminQuoteDetailPage = () => {
       await onSubmit(formValues);
       setLastCalculationTime(new Date());
       // No toast for calculation
-    } catch (error: any) {
+    } catch (error: unknown) {
       setCalculationError(error.message || "Calculation failed");
       toast({
         title: "Calculation Failed",
@@ -196,7 +198,7 @@ const AdminQuoteDetailPage = () => {
   }, [quote, canRecalculate, isCalculating, onSubmit, toast, form]);
 
   // Update function with validation and status logic
-  const handleUpdate = useCallback(async (formValues: any) => {
+  const handleUpdate = useCallback(async (formValues: Partial<Quote>) => {
     if (!quote || !canRecalculate) return;
 
     if (!quote.final_total || quote.final_total === 0) {
@@ -233,7 +235,7 @@ const AdminQuoteDetailPage = () => {
           description: "Quote has been updated",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Update Failed",
         description: error.message || "Failed to update quote",
@@ -250,10 +252,10 @@ const AdminQuoteDetailPage = () => {
 
   // Compute real-time price and weight from form items
   const formPrice = useMemo(() => {
-    return (items || []).reduce((sum: number, item: any) => sum + (Number(item?.item_price) || 0), 0);
+    return (items || []).reduce((sum: number, item: Tables<'quote_items'>) => sum + (Number(item?.item_price) || 0), 0);
   }, [items]);
   const formWeight = useMemo(() => {
-    return (items || []).reduce((sum: number, item: any) => sum + (Number(item?.item_weight) || 0), 0);
+    return (items || []).reduce((sum: number, item: Tables<'quote_items'>) => sum + (Number(item?.item_weight) || 0), 0);
   }, [items]);
 
   // Status management functions
@@ -275,13 +277,13 @@ const AdminQuoteDetailPage = () => {
     }
 
     try {
-      await updateQuote({ id: quote.id, status: newStatus as any });
+      await updateQuote({ id: quote.id, status: newStatus });
       const statusConfig = getStatusConfig(newStatus, category);
       toast({
         title: "Status Updated",
         description: `Quote status changed to "${statusConfig?.label || newStatus}"`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Status Update Failed",
         description: error.message || "Failed to update quote status",
@@ -296,7 +298,7 @@ const AdminQuoteDetailPage = () => {
     try {
       sendQuoteEmail(quote);
       // Status will be automatically updated to 'sent' by the sendQuoteEmail function
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Send Failed",
         description: error.message || "Failed to send quote",
@@ -342,8 +344,8 @@ const AdminQuoteDetailPage = () => {
   }, [quote, routeWeightUnit, originCountryWatch, shippingAddress?.destination_country, shippingAddress?.country]);
 
   // Customs Tier Detection Logic
-  const [customsTiers, setCustomsTiers] = useState<any[]>([]);
-  const [appliedTier, setAppliedTier] = useState<any | null>(null);
+  const [customsTiers, setCustomsTiers] = useState<Array<Tables<'customs_tiers'>>>([]);
+  const [appliedTier, setAppliedTier] = useState<Tables<'customs_tiers'> | null>(null);
   const [customsLoading, setCustomsLoading] = useState(true);
   const [customsError, setCustomsError] = useState<string | null>(null);
 
@@ -376,7 +378,7 @@ const AdminQuoteDetailPage = () => {
         // Determine which tier should be applied (use formPrice/formWeight only)
         const applied = determineAppliedTier(data || [], formPrice, formWeight);
         setAppliedTier(applied);
-      } catch (err: any) {
+      } catch (err: unknown) {
         setCustomsError(err.message);
       } finally {
         setCustomsLoading(false);
@@ -387,10 +389,10 @@ const AdminQuoteDetailPage = () => {
 
   // Function to determine which tier should be applied based on price/weight/logic only
   const determineAppliedTier = (
-    tiers: any[],
+    tiers: Array<Tables<'customs_tiers'>>,
     price: number,
     weight: number
-  ): any | null => {
+  ): Tables<'customs_tiers'> | null => {
     for (const tier of tiers) {
       const priceMatch = (!tier.price_min || price >= tier.price_min) && (!tier.price_max || price <= tier.price_max);
       const weightMatch = (!tier.weight_min || weight >= tier.weight_min) && (!tier.weight_max || weight <= tier.weight_max);

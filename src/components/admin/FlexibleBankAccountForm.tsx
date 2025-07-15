@@ -10,9 +10,28 @@ import { Plus, Trash2 } from "lucide-react";
 import { BankAccount } from "@/hooks/useBankAccountSettings";
 import { useShippingCountries } from "@/hooks/useShippingCountries";
 
+interface BankAccountFormData {
+  account_name: string;
+  account_number: string;
+  bank_name: string;
+  is_active: boolean;
+  is_fallback: boolean;
+  destination_country: string | null;
+  display_order: number;
+  branch_name?: string;
+  swift_code?: string;
+  iban?: string;
+  upi_id?: string;
+  upi_qr_string?: string;
+  payment_qr_url?: string;
+  instructions?: string;
+  custom_fields?: Record<string, unknown>;
+  field_labels?: Record<string, string>;
+}
+
 interface FlexibleBankAccountFormProps {
   editingAccount: BankAccount | null;
-  onSubmit: (data: { data: any, id?: string }) => void;
+  onSubmit: (data: { data: BankAccountFormData, id?: string }) => void;
   onCancel: () => void;
   isProcessing: boolean;
 }
@@ -73,7 +92,7 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
       
       // Load custom fields
       if (editingAccount.custom_fields && typeof editingAccount.custom_fields === 'object') {
-        const customFieldsData = editingAccount.custom_fields as Record<string, any>;
+        const customFieldsData = editingAccount.custom_fields as Record<string, unknown>;
         const fieldLabels = (editingAccount.field_labels || {}) as Record<string, string>;
         
         Object.entries(customFieldsData).forEach(([key, value]) => {
@@ -97,17 +116,24 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
         fields.push({ id: 'iban', label: 'IBAN', value: editingAccount.iban, required: false });
       }
       // Add new payment fields if they exist
-      if ((editingAccount as any).upi_id) {
-        fields.push({ id: 'upi_id', label: 'UPI ID', value: (editingAccount as any).upi_id, required: false });
+      const extendedAccount = editingAccount as BankAccount & {
+        upi_id?: string;
+        upi_qr_string?: string;
+        payment_qr_url?: string;
+        instructions?: string;
+      };
+      
+      if (extendedAccount.upi_id) {
+        fields.push({ id: 'upi_id', label: 'UPI ID', value: extendedAccount.upi_id, required: false });
       }
-      if ((editingAccount as any).upi_qr_string) {
-        fields.push({ id: 'upi_qr_string', label: 'UPI QR String', value: (editingAccount as any).upi_qr_string, required: false });
+      if (extendedAccount.upi_qr_string) {
+        fields.push({ id: 'upi_qr_string', label: 'UPI QR String', value: extendedAccount.upi_qr_string, required: false });
       }
-      if ((editingAccount as any).payment_qr_url) {
-        fields.push({ id: 'payment_qr_url', label: 'Payment QR Code URL', value: (editingAccount as any).payment_qr_url, required: false });
+      if (extendedAccount.payment_qr_url) {
+        fields.push({ id: 'payment_qr_url', label: 'Payment QR Code URL', value: extendedAccount.payment_qr_url, required: false });
       }
-      if ((editingAccount as any).instructions) {
-        fields.push({ id: 'instructions', label: 'Payment Instructions', value: (editingAccount as any).instructions, required: false });
+      if (extendedAccount.instructions) {
+        fields.push({ id: 'instructions', label: 'Payment Instructions', value: extendedAccount.instructions, required: false });
       }
       
       setCustomFields(fields);
@@ -134,7 +160,7 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
     setCustomFields(customFields.filter(field => field.id !== id));
   };
 
-  const handleFieldChange = (id: string, property: keyof CustomField, value: any) => {
+  const handleFieldChange = (id: string, property: keyof CustomField, value: string | boolean) => {
     setCustomFields(customFields.map(field => 
       field.id === id ? { ...field, [property]: value } : field
     ));
@@ -145,11 +171,11 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
     
     // Prepare the data
     const defaultFieldIds = ['account_name', 'account_number', 'bank_name'];
-    const customFieldsData: Record<string, any> = {};
+    const customFieldsData: Record<string, unknown> = {};
     const fieldLabels: Record<string, string> = {};
     
     // Extract default fields
-    const accountData: any = {
+    const accountData: BankAccountFormData = {
       account_name: customFields.find(f => f.id === 'account_name')?.value || '',
       account_number: customFields.find(f => f.id === 'account_number')?.value || '',
       bank_name: customFields.find(f => f.id === 'bank_name')?.value || '',

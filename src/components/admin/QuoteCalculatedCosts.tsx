@@ -6,13 +6,29 @@ import { Badge } from "@/components/ui/badge";
 import { getCurrencySymbolFromCountry } from "@/lib/currencyUtils";
 import { useQuoteRoute } from "@/hooks/useQuoteRoute";
 
-type Quote = Tables<'quotes'> & {
+interface QuoteItem {
+  item_price?: number;
+  item_weight?: number;
+  quantity?: number;
+  product_name?: string;
+}
+
+interface QuoteWithCosts extends Tables<'quotes'> {
   profiles?: { preferred_display_currency?: string } | null;
-  quote_items?: any[];
-};
+  quote_items?: QuoteItem[];
+  salesTaxPrice?: number;
+  merchantShippingPrice?: number;
+  interNationalShipping?: number;
+  customsAndECS?: number;
+  domesticShipping?: number;
+  handlingCharge?: number;
+  insuranceAmount?: number;
+  paymentGatewayFee?: number;
+  discount?: number;
+}
 
 interface QuoteCalculatedCostsProps {
-  quote: Quote;
+  quote: QuoteWithCosts;
 }
 
 export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
@@ -100,15 +116,15 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
           {originalItemPrice && renderRow("Total Item Price", originalItemPrice)}
           
           {/* Other costs */}
-          {renderRow("Sales Tax", (quote as any).salesTaxPrice)}
-          {renderRow("Merchant Shipping", (quote as any).merchantShippingPrice)}
-          {renderRow("International Shipping", (quote as any).interNationalShipping)}
-          {renderRow("Customs & ECS", (quote as any).customsAndECS)}
-          {renderRow("Domestic Shipping", (quote as any).domesticShipping)}
-          {renderRow("Handling Charge", (quote as any).handlingCharge)}
-          {renderRow("Insurance", (quote as any).insuranceAmount)}
-          {renderRow("Payment Gateway Fee", (quote as any).paymentGatewayFee)}
-          {renderRow("Discount", (quote as any).discount, true)}
+          {renderRow("Sales Tax", quote.salesTaxPrice)}
+          {renderRow("Merchant Shipping", quote.merchantShippingPrice)}
+          {renderRow("International Shipping", quote.interNationalShipping)}
+          {renderRow("Customs & ECS", quote.customsAndECS)}
+          {renderRow("Domestic Shipping", quote.domesticShipping)}
+          {renderRow("Handling Charge", quote.handlingCharge)}
+          {renderRow("Insurance", quote.insuranceAmount)}
+          {renderRow("Payment Gateway Fee", quote.paymentGatewayFee)}
+          {renderRow("Discount", quote.discount, true)}
 
           <div className="border-t my-2"></div>
           

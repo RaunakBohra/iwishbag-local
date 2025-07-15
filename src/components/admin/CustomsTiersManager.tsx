@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import type { Tables } from '../../integrations/supabase/types';
 import { useCountryUtils } from '../../lib/countryUtils';
 import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
 import { Button } from '../ui/button';
@@ -30,7 +31,7 @@ interface CustomsTierFormData {
 }
 
 function CustomsTierForm({ onSubmit, onCancel, initialData }: { 
-  onSubmit: (data: CustomsTierFormData) => Promise<any>, 
+  onSubmit: (data: CustomsTierFormData) => Promise<boolean>, 
   onCancel: () => void, 
   initialData?: Partial<CustomsTierFormData> 
 }) {
@@ -273,10 +274,10 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
 
 export function CustomsTiersManager() {
   const { countries, getCountryDisplayName } = useCountryUtils();
-  const [tiers, setTiers] = useState<any[]>([]);
+  const [tiers, setTiers] = useState<Array<Tables<'customs_tiers'>>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingTier, setEditingTier] = useState<any>(null);
+  const [editingTier, setEditingTier] = useState<Tables<'customs_tiers'> | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -293,7 +294,7 @@ export function CustomsTiersManager() {
 
       if (error) throw error;
       setTiers(data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message);
     } finally {
       setLoading(false);
@@ -304,7 +305,7 @@ export function CustomsTiersManager() {
     fetchTiers();
   }, []);
 
-  const handleCreate = async (data: any) => {
+  const handleCreate = async (data: CustomsTierFormData) => {
     try {
       const { data: result, error } = await supabase
         .from('route_customs_tiers')
@@ -316,12 +317,12 @@ export function CustomsTiersManager() {
       
       await fetchTiers();
       return { success: true, data: result };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return { success: false, error: err.message };
     }
   };
 
-  const handleUpdate = async (data: any) => {
+  const handleUpdate = async (data: CustomsTierFormData) => {
     if (!editingTier) return { success: false, error: 'No tier selected' };
     
     try {
@@ -336,7 +337,7 @@ export function CustomsTiersManager() {
       
       await fetchTiers();
       return { success: true, data: result };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return { success: false, error: err.message };
     }
   };
@@ -352,14 +353,14 @@ export function CustomsTiersManager() {
       
       await fetchTiers();
       toast({ title: 'Success', description: 'Customs tier deleted successfully' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: 'Error', description: err.message || 'Failed to delete customs tier', variant: 'destructive' });
     }
   };
 
 
 
-  const mapTierToFormData = (tier: any): CustomsTierFormData => ({
+  const mapTierToFormData = (tier: Tables<'customs_tiers'>): CustomsTierFormData => ({
     originCountry: tier.origin_country,
     destinationCountry: tier.destination_country,
     ruleName: tier.rule_name,
