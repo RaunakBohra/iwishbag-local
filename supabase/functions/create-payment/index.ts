@@ -136,7 +136,7 @@ serve(async (req) => {
     console.log('Supabase URL:', Deno.env.get('SUPABASE_URL'));
 
     const paymentRequest: PaymentRequest = await req.json()
-    const { quoteIds, gateway, success_url, cancel_url, amount, currency, customerInfo } = paymentRequest
+    const { quoteIds, gateway, success_url, cancel_url, amount, currency, customerInfo, metadata } = paymentRequest
 
     if (!quoteIds || quoteIds.length === 0) {
       return new Response(JSON.stringify({ error: 'Missing quoteIds' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
@@ -151,37 +151,112 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // For testing purposes, use mock quotes if quoteIds contain test values
-    let quotesToUse;
-    if (quoteIds.some(id => id.startsWith('test-'))) {
-      console.log('Using mock quotes for testing');
-      quotesToUse = [{
-        product_name: 'Test Product',
-        final_total: 12.82,
-        quantity: 1,
-        final_currency: 'USD'
-      }];
-    } else {
-      const { data: quotes, error: quotesError } = await supabaseAdmin
-        .from('quotes')
-        .select('product_name, final_total, quantity, final_currency')
-        .in('id', quoteIds);
+    // --- Authentication and Authorization ---
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    const guestSessionToken = metadata?.guest_session_token;
+    const authSessionToken = metadata?.auth_session_token;
 
-      if (quotesError) {
-        throw quotesError;
-      }
+    let userId: string | null = null;
+    let isGuestSessionValid = false;
+    let isAuthSessionValid = false;
 
-      if (!quotes || quotes.length === 0) {
-        console.log('No quotes found in database, using mock quote for testing');
-        quotesToUse = [{
-          product_name: 'Test Product',
-          final_total: 12.82,
-          quantity: 1,
-          final_currency: 'USD'
-        }];
+    if (token) {
+      // Authenticate user via JWT
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: `Bearer ${token}` } } }
+      );
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+
+      if (userError || !user) {
+        console.error('JWT authentication failed:', userError?.message);
+        // If JWT fails, try session tokens if available
       } else {
-        quotesToUse = quotes;
+        userId = user.id;
+        console.log('Authenticated user ID:', userId);
       }
+    }
+
+    // Check authenticated user session if provided
+    if (userId && authSessionToken) {
+      const { data: authSession, error: authError } = await supabaseAdmin
+        .from('authenticated_checkout_sessions')
+        .select('id, user_id, quote_ids, status')
+        .eq('session_token', authSessionToken)
+        .eq('status', 'active')
+        .eq('user_id', userId)
+        .single();
+
+      if (!authError && authSession) {
+        isAuthSessionValid = true;
+        console.log('Valid authenticated session for user:', userId);
+      }
+    }
+
+    // Check guest session if no authenticated user
+    if (!userId && guestSessionToken) {
+      // Validate guest session token
+      const { data: guestSession, error: guestError } = await supabaseAdmin
+        .from('guest_checkout_sessions')
+        .select('id, quote_id, status')
+        .eq('session_token', guestSessionToken)
+        .eq('status', 'active')
+        .single();
+
+      if (guestError || !guestSession) {
+        console.error('Invalid or expired guest session token:', guestError?.message);
+      } else if (guestSession.quote_id !== quoteIds[0]) { // Ensure guest session matches the primary quote
+        console.error('Guest session quote ID mismatch.');
+      } else {
+        isGuestSessionValid = true;
+        console.log('Valid guest session for quote ID:', guestSession.quote_id);
+      }
+    }
+
+    if (!userId && !isGuestSessionValid) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: No valid user or guest session provided.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // --- End Authentication and Authorization ---
+
+    // Fetch quotes and verify ownership
+    const { data: quotes, error: quotesError } = await supabaseAdmin
+      .from('quotes')
+      .select('id, user_id, product_name, final_total, quantity, final_currency')
+      .in('id', quoteIds);
+
+    if (quotesError) {
+      console.error('Error fetching quotes:', quotesError);
+      return new Response(JSON.stringify({ error: 'Failed to fetch quotes' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+    }
+
+    if (!quotes || quotes.length === 0) {
+      return new Response(JSON.stringify({ error: 'No quotes found for provided IDs' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+    }
+
+    // Verify ownership
+    const quotesToUse = quotes.filter(quote => {
+      if (userId && quote.user_id === userId) {
+        return true;
+      }
+      // For guest sessions, only allow if it's the single quote linked to the session
+      if (isGuestSessionValid && quoteIds.length === 1 && quote.id === quoteIds[0]) {
+        return true;
+      }
+      return false;
+    });
+
+    if (quotesToUse.length !== quoteIds.length) {
+      console.error('Ownership verification failed. User/guest does not own all quotes.');
+      return new Response(JSON.stringify({ error: 'Forbidden: You do not have access to all specified quotes.' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     // Calculate total amount if not provided
