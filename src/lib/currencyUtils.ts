@@ -375,7 +375,7 @@ export function getDestinationCountryFromQuote(quote: Quote | null): string {
         : quote.shipping_address;
       
       // Get country from shipping address
-      let country = shippingAddress?.destination_country || shippingAddress?.country || 'US';
+      const country = shippingAddress?.destination_country || shippingAddress?.country || 'US';
       
       // Convert country names to country codes
       const countryNameToCode: { [key: string]: string } = {

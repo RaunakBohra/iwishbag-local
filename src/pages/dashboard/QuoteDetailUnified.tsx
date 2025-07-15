@@ -162,8 +162,8 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
   const { data: countries } = useAllCountries();
   const { approveQuote, rejectQuote, addToCart, isUpdating } = useQuoteState(quote?.id || '');
   
-  // Guest currency hook (only used if in guest mode)
-  const { guestCurrency } = isGuestMode ? useGuestCurrency() : { guestCurrency: null };
+  // Guest currency hook (always call but only use if in guest mode)
+  const { guestCurrency } = useGuestCurrency();
   
   const { formatAmount } = useQuoteDisplayCurrency({ 
     quote, 

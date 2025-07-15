@@ -25,11 +25,11 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
   onAddToCart,
   onRenewed
 }) => {
-  if (!isOwner) return null;
-
   // Subscribe to cart store to make sticky bar reactive to cart changes
   const cartItems = useCartStore((state) => state.items);
   const { getStatusConfig } = useStatusManagement();
+
+  if (!isOwner) return null;
   
   // Helper function to check if this quote is in cart
   const isQuoteInCart = (quoteId: string) => {

@@ -262,7 +262,7 @@ export async function getQuoteRouteCountries(quote, shippingAddress, allCountrie
   }
   
   // 2. Use form values first (highest priority for live form updates)
-  let origin = formOriginCountry || quote.origin_country || 'US';
+  const origin = formOriginCountry || quote.origin_country || 'US';
   let destination = formDestinationCountry || shippingAddress?.destination_country || shippingAddress?.country || quote.destination_country || '';
   
   // Convert country names to codes if needed

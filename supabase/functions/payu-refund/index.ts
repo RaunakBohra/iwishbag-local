@@ -398,7 +398,7 @@ serve(async (req) => {
           // Use the command from the attempt if specified
           command = attempt.command || 'check_action_status';
           
-          let hashString = attempt.hashParams.join('|');
+          const hashString = attempt.hashParams.join('|');
           console.log(`🔐 Using hash formula for ${attempt.type}:`);
           console.log(`🔐 Hash pattern: ${attempt.hashParams.map((p, i) => p.includes(payuConfig.salt_key) ? '***SALT***' : (p === payuConfig.merchant_key ? '***KEY***' : p)).join('|')}`);
           console.log("🔐 Hash components:", {

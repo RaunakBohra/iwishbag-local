@@ -141,21 +141,39 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
     }
   };
 
-  // Calculate payment summary
+  // Extract payment details from different sources (moved before useMemo)
+  const paymentDetails = quote.payment_details as any || {};
+  const transactionData = paymentTransaction?.gateway_response as any || {};
+  const paymentCurrency = paymentTransaction?.currency || quote.final_currency || 'USD';
+  const quoteCurrency = quote.final_currency || 'USD';
+  const hasCurrencyMismatch = paymentCurrency !== quoteCurrency;
+
+  // Calculate payment summary with currency breakdown
   const paymentSummary = useMemo(() => {
     let totalPayments = 0;
     let totalRefunds = 0;
+    const currencyBreakdown: Record<string, { payments: number; refunds: number }> = {};
     
     paymentLedger?.forEach(entry => {
       const type = entry.payment_type;
       const amount = parseFloat(entry.amount) || 0;
+      const entryCurrency = entry.currency || paymentCurrency;
+      
+      // Initialize currency in breakdown if not present
+      if (!currencyBreakdown[entryCurrency]) {
+        currencyBreakdown[entryCurrency] = { payments: 0, refunds: 0 };
+      }
       
       if (type === 'payment' || type === 'customer_payment' || 
           (entry.status === 'completed' && amount > 0)) {
-        totalPayments += Math.abs(amount);
+        const absAmount = Math.abs(amount);
+        totalPayments += absAmount;
+        currencyBreakdown[entryCurrency].payments += absAmount;
       } else if (type === 'refund' || type === 'partial_refund' || 
                  type === 'credit_note' || amount < 0) {
-        totalRefunds += Math.abs(amount);
+        const absAmount = Math.abs(amount);
+        totalRefunds += absAmount;
+        currencyBreakdown[entryCurrency].refunds += absAmount;
       }
     });
     
@@ -179,6 +197,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
     
     const isOverpaid = totalPaid > finalTotal;
     const hasRefunds = totalRefunds > 0;
+    const hasMultipleCurrencies = Object.keys(currencyBreakdown).length > 1;
 
     return {
       finalTotal,
@@ -189,9 +208,11 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
       overpaidAmount: isOverpaid ? totalPaid - finalTotal : 0,
       status,
       isOverpaid,
-      hasRefunds
+      hasRefunds,
+      hasMultipleCurrencies,
+      currencyBreakdown
     };
-  }, [paymentLedger, quote.final_total]);
+  }, [paymentLedger, quote.final_total, paymentCurrency]);
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
@@ -215,11 +236,6 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
   const handleViewProof = (proofUrl: string) => {
     window.open(proofUrl, '_blank');
   };
-
-  // Extract payment details from different sources
-  const paymentDetails = quote.payment_details as any || {};
-  const transactionData = paymentTransaction?.gateway_response as any || {};
-  const paymentCurrency = paymentTransaction?.currency || quote.final_currency || 'USD';
 
   return (
     <>
@@ -305,6 +321,33 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                 </span>
               </div>
             )}
+            
+            {/* Multi-Currency Alert */}
+            {paymentSummary.hasMultipleCurrencies && (
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm font-medium text-blue-800 mb-2">Multi-Currency Payments Detected</p>
+                <div className="space-y-1 text-sm">
+                  {Object.entries(paymentSummary.currencyBreakdown).map(([curr, amounts]) => {
+                    const netAmount = amounts.payments - amounts.refunds;
+                    if (netAmount === 0) return null;
+                    return (
+                      <div key={curr} className="flex justify-between">
+                        <span className="text-blue-700">{curr}:</span>
+                        <span className={cn(
+                          "font-medium",
+                          netAmount > 0 ? "text-green-700" : "text-red-700"
+                        )}>
+                          {formatAmountForDisplay(Math.abs(netAmount), curr)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-blue-600 mt-2">
+                  💡 Refunds must be processed in original payment currencies
+                </p>
+              </div>
+            )}
 
             <Separator />
 
@@ -318,6 +361,30 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                 </span>
               </div>
             </div>
+            
+            {/* Currency Information */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Currency</span>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{paymentCurrency}</span>
+                {hasCurrencyMismatch && (
+                  <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                    Quote: {quoteCurrency}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            
+            {/* Currency Mismatch Warning */}
+            {hasCurrencyMismatch && (
+              <div className="flex items-start gap-2 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                <div className="text-xs text-yellow-700">
+                  <p className="font-medium">Currency Mismatch Warning</p>
+                  <p>Payment was made in {paymentCurrency} but quote was calculated in {quoteCurrency}. Refunds must be processed in the original payment currency ({paymentCurrency}).</p>
+                </div>
+              </div>
+            )}
 
             {/* Payment Date - Show for all completed payments */}
             {quote.paid_at && quote.payment_status === 'paid' && (

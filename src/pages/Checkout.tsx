@@ -79,7 +79,10 @@ interface AddressFormData {
 
 // Component to display checkout item price with proper currency conversion
 const CheckoutItemPrice = ({ item, displayCurrency }: { item: any; displayCurrency?: string }) => {
-  // Create mock quote for hook with correct field mappings (always call hooks at the top)
+  // Always call hooks at the top
+  const { data: userProfile } = useUserProfile();
+  
+  // Create mock quote for hook with correct field mappings
   const mockQuote = {
     id: item.quoteId,
     origin_country: item.purchaseCountryCode || item.countryCode, // Where buying from
@@ -89,8 +92,6 @@ const CheckoutItemPrice = ({ item, displayCurrency }: { item: any; displayCurren
     }
   };
   
-  // Always call hooks at the top
-  const { data: userProfile } = useUserProfile();
   const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
   
   // If displayCurrency is provided (for guest checkout), use that currency directly
@@ -107,17 +108,17 @@ const CheckoutTotal = ({ items, displayCurrency }: { items: any[]; displayCurren
   // Use the first item to determine the quote format (all items should have same destination)
   const firstItem = items[0];
   
-  // Create mock quote for hook with correct field mappings (always call hooks at the top, even if firstItem might be null)
-  const mockQuote = firstItem ? {
-    id: firstItem.quoteId,
-    origin_country: firstItem.purchaseCountryCode || firstItem.countryCode, // Where buying from
-    destination_country: firstItem.destinationCountryCode || firstItem.countryCode, // Where shipping to
+  // Create mock quote for hook with correct field mappings - provide default values to ensure hook is always called consistently
+  const mockQuote = {
+    id: firstItem?.quoteId || 'default',
+    origin_country: firstItem?.purchaseCountryCode || firstItem?.countryCode || 'US',
+    destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US',
     shipping_address: {
-      destination_country: firstItem.destinationCountryCode || firstItem.countryCode
+      destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US'
     }
-  } : null;
+  };
   
-  // Always call hooks at the top
+  // Always call hooks at the top with consistent parameters
   const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
   
   if (!firstItem) return <>$0.00</>;
@@ -777,7 +778,7 @@ export default function Checkout() {
       // Handle guest checkout
       if (isGuestCheckout) {
         try {
-          let userId: string | null = null;
+          const userId: string | null = null;
 
 
           if (checkoutMode === 'guest') {

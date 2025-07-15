@@ -64,7 +64,7 @@ const PaypalSuccess: React.FC = () => {
           .single();
 
         let paymentLink = paymentTx;
-        let linkError = txError;
+        const linkError = txError;
 
         if (linkError || !paymentLink) {
           console.error('❌ Payment transaction not found, creating new record');

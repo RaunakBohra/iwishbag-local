@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge } from '../ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { formatDualCurrencyNew, getCurrencySymbolFromCountry } from '../../lib/currencyUtils';
-import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, Calculator } from 'lucide-react';
 
 interface DualCurrencyDisplayProps {
   amount: number | null | undefined;
@@ -13,6 +13,8 @@ interface DualCurrencyDisplayProps {
   warning?: string;
   showTooltip?: boolean;
   className?: string;
+  isTransactional?: boolean; // Whether this is a real transaction or display estimate
+  showEstimateIndicator?: boolean; // Whether to show "Estimate" badge for non-transactional displays
 }
 
 export function DualCurrencyDisplay({
@@ -23,7 +25,9 @@ export function DualCurrencyDisplay({
   exchangeRateSource = 'shipping_route',
   warning,
   showTooltip = true,
-  className = ''
+  className = '',
+  isTransactional = false,
+  showEstimateIndicator = true
 }: DualCurrencyDisplayProps) {
   const { origin, destination, short } = formatDualCurrencyNew(
     amount,
@@ -46,13 +50,28 @@ export function DualCurrencyDisplay({
   };
 
   const getStatusBadge = () => {
+    const badges = [];
+    
+    // Add estimate indicator for non-transactional displays
+    if (!isTransactional && showEstimateIndicator && !isSameCurrency) {
+      badges.push(
+        <Badge key="estimate" variant="secondary" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+          <Calculator className="h-2 w-2 mr-1" />
+          Estimate
+        </Badge>
+      );
+    }
+    
+    // Add exchange rate source badge
     if (exchangeRateSource === 'shipping_route') {
-      return <Badge variant="outline" className="text-xs bg-green-50">Route Rate</Badge>;
+      badges.push(<Badge key="route" variant="outline" className="text-xs bg-green-50">Route Rate</Badge>);
+    } else if (exchangeRateSource === 'country_settings') {
+      badges.push(<Badge key="usd" variant="outline" className="text-xs bg-blue-50">USD Rate</Badge>);
+    } else {
+      badges.push(<Badge key="fallback" variant="destructive" className="text-xs">Fallback</Badge>);
     }
-    if (exchangeRateSource === 'country_settings') {
-      return <Badge variant="outline" className="text-xs bg-blue-50">USD Rate</Badge>;
-    }
-    return <Badge variant="destructive" className="text-xs">Fallback</Badge>;
+    
+    return badges;
   };
 
   const TooltipContent_Component = () => (
@@ -64,9 +83,14 @@ export function DualCurrencyDisplay({
         {exchangeRate && exchangeRate !== 1 && (
           <div>Rate: 1 {getCurrencySymbolFromCountry(originCountry)} = {exchangeRate} {getCurrencySymbolFromCountry(destinationCountry)}</div>
         )}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           Source: {getStatusBadge()}
         </div>
+        {!isTransactional && (
+          <div className="text-orange-600 text-xs bg-orange-50 p-2 rounded border">
+            💡 This is a display estimate only. Actual transaction amounts may vary based on real-time exchange rates.
+          </div>
+        )}
         {warning && (
           <div className="text-orange-600 text-xs">{warning}</div>
         )}
@@ -101,7 +125,7 @@ export function DualCurrencyDisplay({
       {showTooltip ? (
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger className="flex items-center gap-1">
+            <TooltipTrigger className="flex items-center gap-1 flex-wrap">
               {getStatusIcon()}
               {getStatusBadge()}
             </TooltipTrigger>
@@ -111,7 +135,7 @@ export function DualCurrencyDisplay({
           </Tooltip>
         </TooltipProvider>
       ) : (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           {getStatusIcon()}
           {getStatusBadge()}
         </div>

@@ -221,7 +221,7 @@ export const FixStatusJSON = () => {
         return;
       }
 
-      let messages = [];
+      const messages = [];
 
       // Check and fix each setting
       for (const setting of data || []) {

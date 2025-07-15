@@ -84,7 +84,7 @@ export const EnhancedCustomerManagementPage = () => {
       if (dateFilter !== "all") {
         const customerDate = new Date(customer.created_at);
         const now = new Date();
-        let startDate = new Date();
+        const startDate = new Date();
         
         switch (dateFilter) {
           case "7d":

@@ -246,7 +246,7 @@ export const getPaymentMethodsByCurrency = async (currency: string, codEnabled: 
       return currencyMatch && hasKeys;
     });
 
-  let finalMethods = filteredGateways.map(gateway => gateway.code as PaymentGateway);
+  const finalMethods = filteredGateways.map(gateway => gateway.code as PaymentGateway);
 
   // Add Bank Transfer only if it supports the currency
   const bankTransferGateway = gateways.find(g => g.code === 'bank_transfer');
@@ -465,7 +465,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
           return currencyMatch && countryMatch && hasKeys;
         });
 
-      let finalMethods = filteredGateways.map(gateway => gateway.code as PaymentGateway);
+      const finalMethods = filteredGateways.map(gateway => gateway.code as PaymentGateway);
 
       // Add Bank Transfer only if it supports the currency
       const bankTransferGateway = gateways.find(g => g.code === 'bank_transfer');

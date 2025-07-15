@@ -194,7 +194,7 @@ export const useQuoteCalculation = () => {
 
             // Use customs percentage from form if provided, otherwise default to 0
             // Ensure customs percentage is reasonable (should be like 5.2%, not 520000%)
-            let rawCustomsPercent = customs_percentage !== null && customs_percentage !== undefined 
+            const rawCustomsPercent = customs_percentage !== null && customs_percentage !== undefined 
                 ? parseToNumber(customs_percentage) 
                 : 0;
             

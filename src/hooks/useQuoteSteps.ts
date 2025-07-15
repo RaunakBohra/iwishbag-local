@@ -101,7 +101,7 @@ function getIconForStatus(iconName: string): string {
 }
 
 // DYNAMIC: Helper function to determine if a status represents success using status config
-function isSuccessStatus(status: string, getStatusConfig: Function): boolean {
+function isSuccessStatus(status: string, getStatusConfig: (statusName: string, category: 'quote' | 'order') => { isSuccessful?: boolean } | null): boolean {
   const statusConfig = getStatusConfig(status, 'quote') || getStatusConfig(status, 'order');
   return statusConfig?.isSuccessful ?? ['completed', 'delivered', 'paid', 'approved'].includes(status); // fallback
 }

@@ -489,7 +489,7 @@ class CurrencyService {
     decimalSeparator: string;
   } {
     // Default formatting
-    let options = {
+    const options = {
       decimalPlaces: 2,
       thousandSeparator: ',',
       decimalSeparator: '.'

@@ -80,6 +80,28 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
     }
     return <FileText className="h-4 w-4" />;
   };
+  
+  // Check if payment amount is suspicious (same numeric value but different currency)
+  const isSuspiciousAmount = (payment: any) => {
+    const paymentCurrency = payment.currency || quote.currency;
+    const tolerance = 0.01; // Allow small differences due to rounding
+    
+    // Check if payment amount equals quote amount but currencies differ
+    if (Math.abs(payment.amount - quote.final_total) < tolerance && 
+        paymentCurrency !== quote.currency) {
+      return true;
+    }
+    
+    // Check if payment amount equals any common currency amount
+    // (e.g., 100 USD recorded as 100 INR)
+    const roundNumbers = [100, 500, 1000, 5000, 10000];
+    if (roundNumbers.includes(Math.round(payment.amount)) && 
+        paymentCurrency !== quote.currency) {
+      return true;
+    }
+    
+    return false;
+  };
 
   const calculateRefundBreakdown = () => {
     if (!refundAmount || !selectedPayments.length) return [];
@@ -87,6 +109,19 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
     const amount = parseFloat(refundAmount);
     let remaining = amount;
     const breakdown = [];
+    
+    // Check for mixed currencies in selected payments
+    const selectedPaymentObjects = selectedPayments.map(id => payments.find(p => p.id === id)).filter(Boolean);
+    const currencies = [...new Set(selectedPaymentObjects.map(p => p?.currency || quote.currency))];
+    
+    if (currencies.length > 1) {
+      toast({
+        title: "Mixed Currency Warning",
+        description: "You've selected payments in different currencies. Please select payments in the same currency for refund.",
+        variant: "destructive"
+      });
+      return [];
+    }
     
     // Allocate refund amount across selected payments
     for (const paymentId of selectedPayments) {
@@ -99,7 +134,8 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
           paymentId,
           amount: refundFromPayment,
           method: payment.method,
-          gateway: payment.gateway
+          gateway: payment.gateway,
+          currency: payment.currency || quote.currency
         });
         remaining -= refundFromPayment;
       }
@@ -124,6 +160,26 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
     try {
       const amount = parseFloat(refundAmount);
       const breakdown = calculateRefundBreakdown();
+      
+      // Additional validation for currency safety
+      if (breakdown.length === 0) {
+        setIsProcessing(false);
+        return; // Already showed error in calculateRefundBreakdown
+      }
+      
+      // Check if refund currency matches payment currency
+      const refundCurrency = breakdown[0]?.currency || quote.currency;
+      const paymentCurrency = payments.find(p => p.id === breakdown[0]?.paymentId)?.currency || quote.currency;
+      
+      if (refundCurrency !== paymentCurrency) {
+        toast({
+          title: "Currency Mismatch",
+          description: `Cannot process refund. Payment was in ${paymentCurrency} but refund is being processed in ${refundCurrency}.`,
+          variant: "destructive"
+        });
+        setIsProcessing(false);
+        return;
+      }
 
       // Get current user
       const { data: userData } = await supabase.auth.getUser();
@@ -417,6 +473,17 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
           </DialogTitle>
         </DialogHeader>
 
+        {/* Suspicious Amount Warning */}
+        {payments.some(p => isSuspiciousAmount(p)) && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Warning:</strong> Some payments show amounts that may have been recorded incorrectly 
+              (e.g., INR amount stored as USD). Please verify the actual payment amounts before processing refunds.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="space-y-6">
           {/* Refund Summary */}
           <div className="p-4 bg-gray-50 rounded-lg">
@@ -430,13 +497,21 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
                 <p className="font-semibold text-orange-600">{quote.currency} {maxRefundable.toFixed(2)}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Payment Methods</p>
-                <div className="flex gap-1 mt-1">
+                <p className="text-muted-foreground">Payment Methods & Currencies</p>
+                <div className="flex flex-wrap gap-1 mt-1">
                   {[...new Set(payments.map(p => p.method))].map(method => (
                     <Badge key={method} variant="outline" className="text-xs">
                       {method}
                     </Badge>
                   ))}
+                  {/* Show unique currencies if different from quote currency */}
+                  {[...new Set(payments.map(p => p.currency || quote.currency))]
+                    .filter(curr => curr !== quote.currency)
+                    .map(curr => (
+                      <Badge key={curr} variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                        {curr}
+                      </Badge>
+                    ))}
                 </div>
               </div>
             </div>
@@ -527,10 +602,23 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
                         {getPaymentIcon(payment.method)}
                         <div>
                           <div className="text-sm font-medium flex items-center gap-2">
-                            <span>{payment.gateway} - {payment.currency || quote.currency} {payment.amount.toFixed(2)}</span>
+                            <span>{payment.gateway} - </span>
+                            <span className="font-bold">
+                              {payment.currency || quote.currency} {payment.amount.toFixed(2)}
+                            </span>
+                            {(payment.currency && payment.currency !== quote.currency) && (
+                              <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                                Different Currency
+                              </Badge>
+                            )}
                             {((payment.gateway === 'payu' || payment.method === 'payu' || payment.gateway === 'paypal' || payment.method === 'paypal') && payment.canRefund) && (
                               <Badge variant="success" className="text-xs">
                                 Auto-refund available
+                              </Badge>
+                            )}
+                            {isSuspiciousAmount(payment) && (
+                              <Badge variant="destructive" className="text-xs">
+                                ⚠️ Amount mismatch
                               </Badge>
                             )}
                           </div>

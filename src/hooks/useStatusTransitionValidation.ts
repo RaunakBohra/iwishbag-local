@@ -7,7 +7,7 @@ import { QuoteState, isValidStatusTransition } from '@/types/quote';
  * This hook provides React components with access to dynamic status transition rules
  */
 export const useStatusTransitionValidation = () => {
-  const { getAllowedTransitions, getStatusConfig } = useStatusManagement();
+  const { getAllowedTransitions, getStatusConfig, quoteStatuses, orderStatuses } = useStatusManagement();
 
   // Validate status transitions using dynamic configuration
   const validateTransition = useCallback((
@@ -48,7 +48,6 @@ export const useStatusTransitionValidation = () => {
     action: 'edit' | 'approve' | 'cart' | 'reject' | 'cancel',
     category: 'quote' | 'order' = 'quote'
   ): string[] => {
-    const { quoteStatuses, orderStatuses } = useStatusManagement();
     const statuses = category === 'quote' ? quoteStatuses : orderStatuses;
     
     return (statuses || [])
@@ -69,7 +68,7 @@ export const useStatusTransitionValidation = () => {
         }
       })
       .map(status => status.name);
-  }, []);
+  }, [quoteStatuses, orderStatuses]);
 
   // Check if a status is terminal (no further transitions allowed)
   const isTerminalStatus = useCallback((status: string): boolean => {

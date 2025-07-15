@@ -37,7 +37,7 @@ export const useQuoteManagement = (filters = {}) => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const { toast } = useToast();
-    const { getStatusesForQuotesList } = useStatusManagement();
+    const { getStatusesForQuotesList, getStatusConfig, quoteStatuses } = useStatusManagement();
 
     const { data: quotes, isLoading: quotesLoading } = useQuery<QuoteWithItems[]>({
         queryKey: ['admin-quotes', statusFilter, searchTerm, purchaseCountryFilter, shippingCountryFilter, dateRange, amountRange, priorityFilter],
@@ -158,7 +158,7 @@ export const useQuoteManagement = (filters = {}) => {
             const updateObject: Partial<Tables<'quotes'>> = { status };
 
             // DYNAMIC: Check if this status represents a paid state
-            const statusConfig = useStatusManagement().getStatusConfig(status, 'order');
+            const statusConfig = getStatusConfig(status, 'order');
             if (statusConfig?.isSuccessful && statusConfig?.countsAsOrder) {
                 updateObject.paid_at = new Date().toISOString();
 
@@ -219,7 +219,7 @@ export const useQuoteManagement = (filters = {}) => {
     const updateMultipleQuotesRejectionMutation = useMutation({
         mutationFn: async ({ ids, reasonId, details }: { ids: string[], reasonId: string, details: string }) => {
             // DYNAMIC: Use rejected status from configuration or fallback
-            const rejectedStatusConfig = useStatusManagement().quoteStatuses.find(s => s.name === 'rejected' || s.id === 'rejected');
+            const rejectedStatusConfig = quoteStatuses.find(s => s.name === 'rejected' || s.id === 'rejected');
             const rejectedStatus = rejectedStatusConfig?.name || 'rejected';
             
             const { error } = await supabase

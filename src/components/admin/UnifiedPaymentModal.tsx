@@ -228,22 +228,33 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     staleTime: 30000, // Cache for 30 seconds
   });
 
-  // Calculate payment summary
+  // Calculate payment summary with currency breakdown
   const paymentSummary = useMemo(() => {
     let totalPayments = 0;
     let totalRefunds = 0;
+    const currencyBreakdown: Record<string, { payments: number; refunds: number }> = {};
     
     paymentLedger?.forEach(entry => {
       const type = entry.transaction_type || entry.payment_type;
       const amount = parseFloat(entry.amount) || 0;
+      const entryCurrency = entry.currency || currency;
+      
+      // Initialize currency in breakdown if not present
+      if (!currencyBreakdown[entryCurrency]) {
+        currencyBreakdown[entryCurrency] = { payments: 0, refunds: 0 };
+      }
       
       // Handle different payment types
       if (type === 'payment' || type === 'customer_payment' || 
           (entry.status === 'completed' && !type && amount > 0)) {
-        totalPayments += Math.abs(amount);
+        const absAmount = Math.abs(amount);
+        totalPayments += absAmount;
+        currencyBreakdown[entryCurrency].payments += absAmount;
       } else if (type === 'refund' || type === 'partial_refund' || 
                  type === 'credit_note' || amount < 0) {
-        totalRefunds += Math.abs(amount);
+        const absAmount = Math.abs(amount);
+        totalRefunds += absAmount;
+        currencyBreakdown[entryCurrency].refunds += absAmount;
       }
     });
     
@@ -268,6 +279,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     
     const isOverpaid = totalPaid > finalTotal;
     const hasRefunds = totalRefunds > 0;
+    const hasMultipleCurrencies = Object.keys(currencyBreakdown).length > 1;
 
     return {
       finalTotal,
@@ -279,13 +291,16 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       status,
       isOverpaid,
       hasRefunds,
+      hasMultipleCurrencies,
+      currencyBreakdown,
       percentagePaid: finalTotal > 0 ? (totalPaid / finalTotal) * 100 : 0,
     };
-  }, [paymentLedger, quote.final_total]);
+  }, [paymentLedger, quote.final_total, currency]);
 
   // Payment recording state
   const [paymentAmount, setPaymentAmount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('bank_transfer');
+  const [paymentCurrency, setPaymentCurrency] = useState<string>(currency); // Currency for this specific payment
   const [transactionId, setTransactionId] = useState('');
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [paymentNotes, setPaymentNotes] = useState('');
@@ -296,7 +311,11 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     if (isOpen && paymentSummary.remaining > 0) {
       setPaymentAmount(paymentSummary.remaining.toFixed(2));
     }
-  }, [isOpen, paymentSummary.remaining]);
+    if (isOpen) {
+      // Reset payment currency to quote's expected currency
+      setPaymentCurrency(currency);
+    }
+  }, [isOpen, paymentSummary.remaining, currency]);
 
   // Payment verification state
   const [verifyProofId, setVerifyProofId] = useState<string | null>(null);
@@ -411,7 +430,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       const { data, error } = await supabase.rpc('record_payment_with_ledger_and_triggers', {
         p_quote_id: quote.id,
         p_amount: amount,
-        p_currency: currency,
+        p_currency: paymentCurrency, // Use selected payment currency
         p_payment_method: paymentMethod,
         p_transaction_reference: transactionId || `MANUAL-${Date.now()}`,
         p_notes: paymentNotes,
@@ -423,11 +442,12 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
       toast({
         title: "Payment Recorded",
-        description: `Successfully recorded ${formatAmountForDisplay(amount, currency)} payment.`,
+        description: `Successfully recorded ${formatAmountForDisplay(amount, paymentCurrency)} payment.`,
       });
 
       // Reset form
       setPaymentAmount('');
+      setPaymentCurrency(currency); // Reset to quote currency
       setTransactionId('');
       setPaymentNotes('');
       
@@ -474,11 +494,11 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     setIsVerifying(true);
 
     try {
-      // Record the payment
+      // Record the payment using quote currency (payment proofs should match quote currency)
       const { error: paymentError } = await supabase.rpc('record_payment_with_ledger_and_triggers', {
         p_quote_id: quote.id,
         p_amount: amount,
-        p_currency: currency,
+        p_currency: currency, // Use quote currency for payment proofs
         p_payment_method: 'bank_transfer',
         p_transaction_reference: `PROOF-${verifyProofId}`,
         p_notes: verifyNotes || 'Payment verified from uploaded proof',
@@ -883,6 +903,43 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       </div>
                     )}
                     
+                    {/* Currency Breakdown - Show if multiple currencies */}
+                    {paymentSummary.hasMultipleCurrencies && (
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <p className="text-sm font-medium text-blue-800 mb-2">Multi-Currency Breakdown</p>
+                        <div className="space-y-1 text-sm">
+                          {Object.entries(paymentSummary.currencyBreakdown).map(([curr, amounts]) => {
+                            const netAmount = amounts.payments - amounts.refunds;
+                            if (netAmount === 0) return null;
+                            return (
+                              <div key={curr} className="flex justify-between">
+                                <span className="text-blue-700">{curr}:</span>
+                                <span className={cn(
+                                  "font-medium",
+                                  netAmount > 0 ? "text-green-700" : "text-red-700"
+                                )}>
+                                  {getCurrencySymbol(curr)}{Math.abs(netAmount).toFixed(2)}
+                                  {curr !== currency && (
+                                    <Badge variant="outline" className="ml-1 text-xs py-0">
+                                      {curr}
+                                    </Badge>
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {paymentSummary.hasMultipleCurrencies && (
+                          <Alert variant="default" className="mt-2">
+                            <Info className="h-4 w-4" />
+                            <AlertDescription className="text-xs">
+                              Multiple currencies detected. Refunds must be processed in the original payment currency.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </div>
+                    )}
+                    
                     {/* Balance Due (only show if customer underpaid, not after refunds) */}
                     {paymentSummary.remaining > 0 && paymentSummary.totalPayments < paymentSummary.finalTotal && (
                       <div className="flex items-center justify-between bg-orange-50 p-3 rounded-lg">
@@ -1023,24 +1080,54 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="transaction-id">Transaction ID (Optional)</Label>
-                      <Input
-                        id="transaction-id"
-                        placeholder="Enter transaction reference"
-                        value={transactionId}
-                        onChange={(e) => setTransactionId(e.target.value)}
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="payment-currency">Payment Currency</Label>
+                        <Select value={paymentCurrency} onValueChange={setPaymentCurrency}>
+                          <SelectTrigger id="payment-currency">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="USD">USD - US Dollar</SelectItem>
+                            <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                            <SelectItem value="NPR">NPR - Nepalese Rupee</SelectItem>
+                            <SelectItem value="EUR">EUR - Euro</SelectItem>
+                            <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                            <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
+                            <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                            <SelectItem value="SGD">SGD - Singapore Dollar</SelectItem>
+                            <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {paymentCurrency !== currency && (
+                          <Alert variant="destructive" className="mt-2">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription className="text-xs">
+                              <strong>Warning:</strong> Payment currency ({paymentCurrency}) differs from quote currency ({currency}). Ensure this is correct to avoid refund issues.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="transaction-id">Transaction ID (Optional)</Label>
+                        <Input
+                          id="transaction-id"
+                          placeholder="Enter transaction reference"
+                          value={transactionId}
+                          onChange={(e) => setTransactionId(e.target.value)}
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="amount">Amount ({currencySymbol})</Label>
+                      <Label htmlFor="amount">Amount ({getCurrencySymbol(paymentCurrency)})</Label>
                       <div className="relative">
                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="amount"
                           type="text"
-                          placeholder="0.00"
+                          placeholder={`0.00 ${paymentCurrency}`}
                           value={paymentAmount}
                           onChange={(e) => {
                             const value = e.target.value;
@@ -1490,6 +1577,11 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                       <p className="text-sm text-muted-foreground mt-1">
                                         {entry.payment_method?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                         {entry.gateway_code && ` via ${entry.gateway_code.toUpperCase()}`}
+                                        {entry.currency && entry.currency !== currency && (
+                                          <Badge variant="outline" className="ml-2 text-xs py-0">
+                                            {entry.currency} Payment
+                                          </Badge>
+                                        )}
                                       </p>
                                     </div>
                                     <div className="text-right">
@@ -1499,7 +1591,11 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                         isRefund ? "text-red-600" :
                                         "text-gray-600"
                                       )}>
-                                        {isPayment ? '+' : isRefund ? '-' : ''}{currencySymbol}{Math.abs(entryAmount).toFixed(2)}
+                                        {isPayment ? '+' : isRefund ? '-' : ''}
+                                        {getCurrencySymbol(entry.currency || currency)}{Math.abs(entryAmount).toFixed(2)}
+                                        {entry.currency && entry.currency !== currency && (
+                                          <span className="text-xs text-orange-600 ml-1">({entry.currency})</span>
+                                        )}
                                       </p>
                                       {entry.balance_after !== undefined && (
                                         <p className="text-xs text-muted-foreground mt-1">

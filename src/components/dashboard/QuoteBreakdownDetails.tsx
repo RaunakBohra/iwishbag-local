@@ -338,10 +338,6 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
                 <div className="text-right">
                   <div className="text-base sm:text-lg font-semibold text-foreground">{currencyDisplay.formatAmount(quote.final_total || 0)}</div>
                 </div>
-              ) : (
-                <span className="text-base sm:text-lg font-semibold text-foreground">
-                  {formatAmountForDisplay(quote.final_total, getCountryCurrency(destinationCountry))}
-                </span>
               );
             })()}
           </div>

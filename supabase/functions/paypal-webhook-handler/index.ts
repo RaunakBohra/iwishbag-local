@@ -134,7 +134,7 @@ serve(async (req) => {
     console.log("✅ Found payment transaction:", paymentTx.id);
 
     // Handle different event types
-    let processed: any = { payment_transaction: null, quotes: null };
+    const processed: any = { payment_transaction: null, quotes: null };
 
     switch (eventType) {
       case 'CHECKOUT.ORDER.APPROVED':

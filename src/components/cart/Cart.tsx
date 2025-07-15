@@ -51,22 +51,24 @@ const CartItemPrice = ({ item, quantity }: { item: any; quantity: number }) => {
 const CartTotal = ({ items }: { items: any[] }) => {
   // Use the first item to determine the quote format (all items should have same destination)
   const firstItem = items[0];
-  if (!firstItem) return <>$0.00</>;
   
+  // Create mock quote with default values to ensure hook is always called consistently
   const mockQuote = {
-    id: firstItem.quoteId,
-    origin_country: firstItem.purchaseCountryCode || firstItem.countryCode, // Where buying from
-    destination_country: firstItem.destinationCountryCode || firstItem.countryCode, // Where shipping to
+    id: firstItem?.quoteId || 'default',
+    origin_country: firstItem?.purchaseCountryCode || firstItem?.countryCode || 'US',
+    destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US',
     shipping_address: {
-      destination_country: firstItem.destinationCountryCode || firstItem.countryCode
+      destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US'
     }
   };
   
-  // Calculate total from all items
-  const totalAmount = items.reduce((sum, item) => sum + item.finalTotal * item.quantity, 0);
-  
   // Use the quote display currency hook
   const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  
+  if (!firstItem) return <>$0.00</>;
+  
+  // Calculate total from all items
+  const totalAmount = items.reduce((sum, item) => sum + item.finalTotal * item.quantity, 0);
   
   return <>{formatAmount(totalAmount)}</>;
 };

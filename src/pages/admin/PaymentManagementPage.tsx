@@ -377,8 +377,8 @@ const PaymentManagementPage = () => {
   const { data: statistics } = useQuery({
     queryKey: ['payment-proofs-stats', paymentMethodFilter],
     queryFn: async () => {
-      let bankTransferStats = { total: 0, pending: 0, verified: 0, rejected: 0 };
-      let webhookStats = { total: 0, pending: 0, verified: 0, rejected: 0 };
+      const bankTransferStats = { total: 0, pending: 0, verified: 0, rejected: 0 };
+      const webhookStats = { total: 0, pending: 0, verified: 0, rejected: 0 };
 
       // Get bank transfer stats if needed
       if (paymentMethodFilter === 'all' || paymentMethodFilter === 'bank_transfer') {

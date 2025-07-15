@@ -274,7 +274,7 @@ async function processPaymentStatusUpdate(
   } = webhookData;
 
   try {
-    let processed: any = { payment_transaction: null, payment_link: null, quote: null };
+    const processed: any = { payment_transaction: null, payment_link: null, quote: null };
 
     // Update payment transaction if exists
     if (mihpayid || txnid) {
