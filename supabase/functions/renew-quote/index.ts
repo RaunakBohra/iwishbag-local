@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { authenticateUser, requireAdmin, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
@@ -15,6 +16,15 @@ serve(async (req) => {
   }
 
   try {
+    // Validate request method
+    validateMethod(req, ['POST']);
+
+    // Authenticate user and require admin access
+    const { user, supabaseClient } = await authenticateUser(req);
+    await requireAdmin(supabaseClient, user.id);
+
+    console.log(`🔐 Admin user ${user.email} initiated quote renewal`);
+
     const { quoteId } = await req.json();
 
     if (!quoteId) {
@@ -90,6 +100,12 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    console.error('❌ Quote renewal error:', error);
+    
+    if (error instanceof AuthError) {
+      return createAuthErrorResponse(error, corsHeaders);
+    }
+    
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       { status: 500, headers: corsHeaders }
