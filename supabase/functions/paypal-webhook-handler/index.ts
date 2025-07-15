@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { createHash } from "node:crypto"
-import { Database } from '../../src/integrations/supabase/types.ts';
 
 // Enhanced type interfaces for better type safety
 interface PaymentTransactionGatewayResponse {
@@ -189,7 +188,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin: SupabaseClient<Database> = createClient(
+    const supabaseAdmin: SupabaseClient<any> = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );

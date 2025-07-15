@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { createHash } from "node:crypto"
-import { Database } from '../../src/integrations/supabase/types.ts';
 
 // Webhooks should not use CORS - they are called by external services, not browsers
 // Remove CORS headers for security
@@ -124,7 +123,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin: SupabaseClient<Database> = createClient(
+    const supabaseAdmin: SupabaseClient<any> = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
@@ -140,7 +139,7 @@ serve(async (req) => {
     
     // Log error
     try {
-      const supabaseAdmin: SupabaseClient<Database> = createClient(
+      const supabaseAdmin: SupabaseClient<any> = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
       );
@@ -319,7 +318,7 @@ async function processWebhookRequest(
     
     // Log error
     try {
-      const supabaseAdmin: SupabaseClient<Database> = createClient(
+      const supabaseAdmin: SupabaseClient<any> = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
       );
@@ -413,7 +412,7 @@ async function verifyPayUHash(data: PayUWebhookPayload, saltKey: string): Promis
  * Process payment status update
  */
 async function processPaymentStatusUpdate(
-  supabaseAdmin: SupabaseClient<Database>, 
+  supabaseAdmin: SupabaseClient<any>, 
   webhookData: PayUWebhookPayload,
   webhookLogEntry: WebhookLogEntry
 ): Promise<PaymentStatusUpdateResult> {
@@ -572,7 +571,7 @@ function mapPayUStatusToLinkStatus(payuStatus?: string): string {
 /**
  * Log webhook error
  */
-async function logWebhookError(supabaseAdmin: SupabaseClient<Database>, webhookLogEntry: WebhookLogEntry, errorMessage: string) {
+async function logWebhookError(supabaseAdmin: SupabaseClient<any>, webhookLogEntry: WebhookLogEntry, errorMessage: string) {
   try {
     await supabaseAdmin
       .from('webhook_logs')

@@ -1,13 +1,17 @@
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Database } from '../../src/integrations/supabase/types.ts';
+
+// Type definitions for authentication
+export type DatabaseUser = {
+  id: string;
+  email?: string;
+  [key: string]: any;
+};
+
+export type DatabaseClient = SupabaseClient<any>;
 
 export interface AuthResult {
-  user: {
-    id: string;
-    email?: string;
-    [key: string]: any;
-  };
-  supabaseClient: SupabaseClient<Database>;
+  user: DatabaseUser;
+  supabaseClient: DatabaseClient;
 }
 
 export class AuthError extends Error {
@@ -26,7 +30,7 @@ export async function authenticateUser(req: Request): Promise<AuthResult> {
     throw new AuthError('No authorization header provided', 401);
   }
 
-  const supabaseClient: SupabaseClient<Database> = createClient(
+  const supabaseClient: DatabaseClient = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     { global: { headers: { Authorization: authHeader } } }
@@ -43,7 +47,7 @@ export async function authenticateUser(req: Request): Promise<AuthResult> {
 /**
  * Require admin role for the authenticated user
  */
-export async function requireAdmin(supabaseClient: SupabaseClient<Database>, userId: string): Promise<void> {
+export async function requireAdmin(supabaseClient: DatabaseClient, userId: string): Promise<void> {
   const { data: userRole, error } = await supabaseClient
     .from('user_roles')
     .select('role')
@@ -60,7 +64,7 @@ export async function requireAdmin(supabaseClient: SupabaseClient<Database>, use
  * Require specific role for the authenticated user
  */
 export async function requireRole(
-  supabaseClient: SupabaseClient<Database>, 
+  supabaseClient: DatabaseClient, 
   userId: string, 
   requiredRole: 'admin' | 'moderator' | 'user'
 ): Promise<void> {
