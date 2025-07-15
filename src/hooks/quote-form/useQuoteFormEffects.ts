@@ -3,12 +3,13 @@ import { useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { QuoteFormValues } from "@/components/forms/quote-form-validation";
 import { User } from "@supabase/supabase-js";
+import { Tables } from '@/integrations/supabase/types';
 
 interface UseQuoteFormEffectsProps {
   form: UseFormReturn<QuoteFormValues>;
   user: User | null;
-  addresses: any[] | null;
-  countries: any[] | null;
+  addresses: Tables<'user_addresses'>[] | null;
+  countries: Tables<'country_settings'>[] | null;
 }
 
 export const useQuoteFormEffects = ({ form, user, addresses, countries }: UseQuoteFormEffectsProps) => {

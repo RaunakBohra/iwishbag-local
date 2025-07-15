@@ -21,7 +21,7 @@ interface EmailTemplate {
   subject: string;
   html_content: string;
   template_type: string;
-  variables?: any;
+  variables?: Record<string, unknown>;
   is_active?: boolean;
 }
 
@@ -159,7 +159,7 @@ The Team`,
 
   // Send abandonment email
   const sendAbandonmentEmailMutation = useMutation({
-    mutationFn: async ({ email, templateName, cartData }: { email: string; templateName: string; cartData: any }) => {
+    mutationFn: async ({ email, templateName, cartData }: { email: string; templateName: string; cartData: Record<string, unknown> }) => {
       // Check if cart abandonment emails are enabled
       if (!shouldSendEmail('cart_abandonment')) {
         console.log('Cart abandonment emails are disabled');
@@ -213,7 +213,7 @@ The Team`,
   });
 
   // Helper function to generate cart abandonment email HTML
-  const generateCartAbandonmentHtml = (templateName: string, cartData: any) => {
+  const generateCartAbandonmentHtml = (templateName: string, cartData: Record<string, unknown>) => {
     const baseHtml = `
       <html>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">

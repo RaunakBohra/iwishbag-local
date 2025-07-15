@@ -1,11 +1,12 @@
 import { useCountrySettings } from "@/hooks/useCountrySettings";
+import { useExchangeRateOperations } from "@/hooks/useExchangeRateOperations";
 import { CountryForm } from "./CountryForm";
 import { CountryListItem } from "./CountryListItem";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle, Plus, RefreshCw } from "lucide-react";
 
 export const CountrySettings = () => {
   const {
@@ -22,6 +23,8 @@ export const CountrySettings = () => {
     handleSubmit,
     deleteCountry,
   } = useCountrySettings();
+
+  const { triggerUpdate, isUpdating: isUpdatingRates } = useExchangeRateOperations();
 
   console.log('CountrySettings render:', { 
     countriesCount: countries?.length, 
@@ -74,16 +77,29 @@ export const CountrySettings = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Country Settings</h2>
-        <Button 
-          onClick={() => {
-            console.log('Add Country button clicked');
-            handleAddNewClick();
-          }} 
-          disabled={isCreating || isUpdating || isDeleting}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Country
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => {
+              console.log('Update Exchange Rates button clicked');
+              triggerUpdate();
+            }} 
+            disabled={isCreating || isUpdating || isDeleting || isUpdatingRates}
+            variant="outline"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isUpdatingRates ? 'animate-spin' : ''}`} />
+            Update Exchange Rates
+          </Button>
+          <Button 
+            onClick={() => {
+              console.log('Add Country button clicked');
+              handleAddNewClick();
+            }} 
+            disabled={isCreating || isUpdating || isDeleting}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Country
+          </Button>
+        </div>
       </div>
 
       {/* Dialog for Add/Edit Country Form */}
@@ -120,17 +136,29 @@ export const CountrySettings = () => {
       ) : (
         <div className="text-center py-12">
           <p className="text-muted-foreground">No country settings found.</p>
-          <Button 
-            onClick={() => {
-              console.log('Add Country button clicked');
-              handleAddNewClick();
-            }} 
-            className="mt-4"
-            disabled={isCreating || isUpdating || isDeleting}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add First Country
-          </Button>
+          <div className="flex gap-2 justify-center mt-4">
+            <Button 
+              onClick={() => {
+                console.log('Update Exchange Rates button clicked');
+                triggerUpdate();
+              }} 
+              disabled={isCreating || isUpdating || isDeleting || isUpdatingRates}
+              variant="outline"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isUpdatingRates ? 'animate-spin' : ''}`} />
+              Update Exchange Rates
+            </Button>
+            <Button 
+              onClick={() => {
+                console.log('Add Country button clicked');
+                handleAddNewClick();
+              }} 
+              disabled={isCreating || isUpdating || isDeleting}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add First Country
+            </Button>
+          </div>
         </div>
       )}
 

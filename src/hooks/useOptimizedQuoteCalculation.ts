@@ -7,7 +7,7 @@ import { Tables } from '@/integrations/supabase/types';
 export interface UseOptimizedQuoteCalculationOptions {
   enabled?: boolean;
   onCalculationComplete?: (result: QuoteCalculationResult) => void;
-  onCalculationError?: (error: any) => void;
+  onCalculationError?: (error: Error) => void;
   realTimeUpdates?: boolean;
   debounceMs?: number;
 }
@@ -23,12 +23,12 @@ export interface UseOptimizedQuoteCalculationResult {
   error: string | null;
   
   // Performance data
-  performanceMetrics: any;
-  cacheStats: any;
+  performanceMetrics: Record<string, unknown>;
+  cacheStats: Record<string, unknown>;
   
   // Utilities
   clearCache: () => void;
-  validateParams: (params: QuoteCalculationParams) => any;
+  validateParams: (params: QuoteCalculationParams) => { isValid: boolean; errors: string[]; };
 }
 
 export function useOptimizedQuoteCalculation(

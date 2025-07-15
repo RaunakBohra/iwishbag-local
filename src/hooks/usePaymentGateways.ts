@@ -185,7 +185,7 @@ export interface PaymentGatewayConfig {
   supported_currencies: string[];
   fee_percent: number;
   fee_fixed: number;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   test_mode: boolean;
   created_at: string;
   updated_at: string;

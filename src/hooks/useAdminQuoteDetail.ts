@@ -31,7 +31,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
             const purchaseCurrency = allCountries?.find(c => c.code === purchaseCountry)?.currency || 'USD';
             
             // Always use the original input values from the quote (in purchase currency)
-            const formData: Partial<AdminQuoteFormValues> & Record<string, any> = {
+            const formData: Partial<AdminQuoteFormValues> & Record<string, unknown> = {
                 id: quote.id,
                 sales_tax_price: quote.sales_tax_price,
                 merchant_shipping_price: quote.merchant_shipping_price,

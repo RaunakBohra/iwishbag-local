@@ -6,7 +6,7 @@ import { QuoteFormValues } from "@/components/forms/quote-form-validation";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { useEmailNotifications } from "@/hooks/useEmailNotifications";
-import { Tables } from "@/integrations/supabase/types";
+import { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { getCountryCurrency } from "@/lib/currencyUtils";
 
 interface UseQuoteSubmissionProps {
@@ -126,7 +126,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
               }
             }
             
-            const updateData: any = {};
+            const updateData: Partial<TablesInsert<'profiles'>> = {};
             
             if (!existingProfile.country) {
               updateData.country = destinationCountry;
@@ -161,7 +161,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       // Get the currency for the destination country
       const destinationCurrency = getCountryCurrency(countryCode);
       
-      const quoteData: any = {
+      const quoteData: Partial<TablesInsert<'quotes'>> = {
         email: finalEmail || null, // Allow null email for anonymous quotes
         destination_country: countryCode,
         user_id: user?.id ?? null,
@@ -322,7 +322,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
               }
             }
             
-            const updateData: any = {};
+            const updateData: Partial<TablesInsert<'profiles'>> = {};
             
             if (!existingProfile.country) {
               updateData.country = destinationCountry;

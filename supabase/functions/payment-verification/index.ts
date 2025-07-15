@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { authenticateUser, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
 import { createCorsHeaders } from '../_shared/cors.ts'
+import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno'
 
 interface PaymentVerificationRequest {
   transaction_id: string;
@@ -270,18 +271,108 @@ async function verifyPayUPayment(supabaseAdmin: any, request: PaymentVerificatio
   }
 }
 
-// Stripe Payment Verification (placeholder)
+// Stripe Payment Verification
 async function verifyStripePayment(supabaseAdmin: any, request: PaymentVerificationRequest, requestId: string): Promise<PaymentVerificationResponse> {
-  // TODO: Implement Stripe payment verification
-  return {
-    success: false,
-    payment_status: 'failed',
-    transaction_id: request.transaction_id,
-    gateway: 'stripe',
-    verified_at: new Date().toISOString(),
-    error_message: 'Stripe verification not implemented yet',
-    recommendations: ['Stripe payment verification coming soon']
-  };
+  try {
+    // Initialize Stripe with secret key
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    if (!stripeSecretKey) {
+      return {
+        success: false,
+        payment_status: 'failed',
+        transaction_id: request.transaction_id,
+        gateway: 'stripe',
+        verified_at: new Date().toISOString(),
+        error_message: 'Stripe secret key not configured',
+        recommendations: ['Configure Stripe secret key in environment variables']
+      };
+    }
+
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: '2023-10-16',
+    });
+
+    console.log(`🔍 Retrieving Stripe PaymentIntent [${requestId}]: ${request.transaction_id}`);
+
+    // Retrieve the PaymentIntent from Stripe
+    const paymentIntent = await stripe.paymentIntents.retrieve(request.transaction_id);
+
+    console.log(`✅ Stripe PaymentIntent retrieved [${requestId}]:`, {
+      id: paymentIntent.id,
+      status: paymentIntent.status,
+      amount: paymentIntent.amount,
+      currency: paymentIntent.currency
+    });
+
+    // Map Stripe status to our internal status
+    const paymentStatus = mapStripeStatus(paymentIntent.status);
+
+    // Convert amount from smallest unit back to major unit
+    const amountInMajorUnit = convertStripeAmountToMajorUnit(paymentIntent.amount, paymentIntent.currency);
+
+    return {
+      success: true,
+      payment_status: paymentStatus,
+      transaction_id: request.transaction_id,
+      gateway: 'stripe',
+      amount: amountInMajorUnit,
+      currency: paymentIntent.currency.toUpperCase(),
+      verified_at: new Date().toISOString(),
+      gateway_response: paymentIntent,
+      recommendations: generateStripeRecommendations(paymentStatus, paymentIntent)
+    };
+
+  } catch (error) {
+    console.error(`❌ Stripe verification error [${requestId}]:`, error);
+    
+    // Handle specific Stripe errors
+    if (error.type === 'StripeInvalidRequestError') {
+      return {
+        success: false,
+        payment_status: 'failed',
+        transaction_id: request.transaction_id,
+        gateway: 'stripe',
+        verified_at: new Date().toISOString(),
+        error_message: `Invalid PaymentIntent ID: ${error.message}`,
+        recommendations: [
+          'Verify the PaymentIntent ID is correct',
+          'Check if the PaymentIntent exists in your Stripe dashboard',
+          'Ensure the PaymentIntent belongs to your account'
+        ]
+      };
+    }
+
+    if (error.type === 'StripeAuthenticationError') {
+      return {
+        success: false,
+        payment_status: 'failed',
+        transaction_id: request.transaction_id,
+        gateway: 'stripe',
+        verified_at: new Date().toISOString(),
+        error_message: 'Stripe authentication failed',
+        recommendations: [
+          'Check Stripe secret key configuration',
+          'Verify API key permissions',
+          'Ensure using correct environment (test/live)'
+        ]
+      };
+    }
+
+    return {
+      success: false,
+      payment_status: 'failed',
+      transaction_id: request.transaction_id,
+      gateway: 'stripe',
+      verified_at: new Date().toISOString(),
+      error_message: error.message || 'Unknown Stripe error',
+      recommendations: [
+        'Check Stripe configuration',
+        'Verify network connectivity',
+        'Try again later',
+        'Contact support if issue persists'
+      ]
+    };
+  }
 }
 
 // Bank Transfer Verification (placeholder)
@@ -376,6 +467,44 @@ function mapPayUStatus(status: string): 'pending' | 'completed' | 'failed' {
   }
 }
 
+// Map Stripe PaymentIntent status to our internal status
+function mapStripeStatus(status: string): 'pending' | 'completed' | 'failed' {
+  switch (status) {
+    case 'succeeded':
+      return 'completed';
+    case 'canceled':
+    case 'payment_failed':
+      return 'failed';
+    case 'requires_payment_method':
+    case 'requires_confirmation':
+    case 'requires_action':
+    case 'processing':
+    case 'requires_capture':
+      return 'pending';
+    default:
+      return 'pending';
+  }
+}
+
+// Convert Stripe amount from smallest unit to major unit
+function convertStripeAmountToMajorUnit(amount: number, currency: string): number {
+  const upperCurrency = currency.toUpperCase();
+  
+  // Zero decimal currencies (already in major unit)
+  const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND', 'CLP', 'ISK', 'UGX'];
+  
+  // Three decimal currencies (1000 smallest units = 1 major unit)
+  const threeDecimalCurrencies = ['BHD', 'JOD', 'KWD', 'OMR', 'TND'];
+  
+  if (zeroDecimalCurrencies.includes(upperCurrency)) {
+    return amount;
+  } else if (threeDecimalCurrencies.includes(upperCurrency)) {
+    return amount / 1000;
+  } else {
+    return amount / 100; // Default to 2 decimal places
+  }
+}
+
 // Generate recommendations based on payment status
 function generateRecommendations(status: 'pending' | 'completed' | 'failed', transaction: any): string[] {
   const recommendations: string[] = [];
@@ -395,6 +524,56 @@ function generateRecommendations(status: 'pending' | 'completed' | 'failed', tra
     case 'pending':
       recommendations.push('Payment is still processing');
       recommendations.push('Check again in a few minutes');
+      break;
+  }
+
+  return recommendations;
+}
+
+// Generate Stripe-specific recommendations
+function generateStripeRecommendations(status: 'pending' | 'completed' | 'failed', paymentIntent: any): string[] {
+  const recommendations: string[] = [];
+
+  switch (status) {
+    case 'completed':
+      recommendations.push('Payment completed successfully');
+      recommendations.push('Order can be processed and fulfilled');
+      if (paymentIntent.charges?.data?.[0]?.receipt_url) {
+        recommendations.push('Receipt available in Stripe dashboard');
+      }
+      break;
+    case 'failed':
+      recommendations.push('Payment failed - customer needs to retry');
+      if (paymentIntent.last_payment_error?.message) {
+        recommendations.push('Error: ' + paymentIntent.last_payment_error.message);
+      }
+      if (paymentIntent.status === 'canceled') {
+        recommendations.push('Payment was canceled by customer or system');
+      }
+      recommendations.push('Create new PaymentIntent for retry');
+      break;
+    case 'pending':
+      const stripeStatus = paymentIntent.status;
+      switch (stripeStatus) {
+        case 'requires_payment_method':
+          recommendations.push('Customer needs to provide payment method');
+          break;
+        case 'requires_confirmation':
+          recommendations.push('Payment requires confirmation');
+          break;
+        case 'requires_action':
+          recommendations.push('Customer action required (3D Secure, etc.)');
+          break;
+        case 'processing':
+          recommendations.push('Payment is being processed');
+          recommendations.push('Check again in a few minutes');
+          break;
+        case 'requires_capture':
+          recommendations.push('Payment authorized, requires manual capture');
+          break;
+        default:
+          recommendations.push('Payment is pending');
+      }
       break;
   }
 

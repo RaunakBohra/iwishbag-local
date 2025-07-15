@@ -144,7 +144,8 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
       
       if (onClose) onClose();
       if (onOpenChange) onOpenChange(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Error rejecting quote:', error);
       toast({
         title: "Error",

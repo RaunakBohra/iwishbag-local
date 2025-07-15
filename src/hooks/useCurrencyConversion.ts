@@ -112,7 +112,7 @@ export function useQuoteCurrencyDisplay({
     return currencyConversion.formatForCustomer(amount, destinationCurrency);
   }, [isAdminView, customerPreferredCurrency, currencyConversion, destinationCountry]);
 
-  const formatBreakdown = useCallback((breakdown: any) => {
+  const formatBreakdown = useCallback((breakdown: Record<string, unknown>) => {
     const formatLineItem = (amount: number | null | undefined) => formatAmount(amount);
 
     if (isAdminView) {
