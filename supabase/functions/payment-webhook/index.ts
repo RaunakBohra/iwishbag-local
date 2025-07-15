@@ -214,97 +214,7 @@ async function verifyPayUHash(data: PayUWebhookData, salt: string): Promise<bool
   }
 }
 
-// Enhanced database operations with retry logic
-async function updateQuotesWithRetry(supabaseAdmin: SupabaseClient<Database>, quoteIds: string[], updateData: Record<string, unknown>, maxRetries = 3) {
-  let lastError;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const { error } = await supabaseAdmin
-        .from('quotes')
-        .update(updateData)
-        .in('id', quoteIds);
-      
-      if (error) {
-        throw error;
-      }
-      
-      console.log(`✅ Updated ${quoteIds.length} quotes successfully (attempt ${attempt})`);
-      return { success: true };
-    } catch (error) {
-      lastError = error;
-      console.error(`❌ Attempt ${attempt} failed:`, error);
-      
-      if (attempt < maxRetries) {
-        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
-        console.log(`⏳ Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-  
-  return { success: false, error: lastError };
-}
-
-// Enhanced payment record creation with retry logic
-async function createPaymentRecordWithRetry(supabaseAdmin: SupabaseClient<Database>, paymentData: PaymentTransactionInsert, maxRetries = 3) {
-  let lastError;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      // Create payment transaction record with PayU-specific fields
-      const { error } = await supabaseAdmin
-        .from('payment_transactions')
-        .insert({
-          user_id: paymentData.user_id || null,
-          quote_id: paymentData.quote_ids[0], // Primary quote ID
-          amount: paymentData.amount,
-          currency: paymentData.currency,
-          status: paymentData.status === 'success' ? 'completed' : 'failed',
-          payment_method: paymentData.gateway,
-          transaction_id: paymentData.transaction_id,
-          gateway_response: {
-            // Store comprehensive PayU response for debugging and reconciliation
-            mihpayid: paymentData.gateway_response.mihpayid,
-            txnid: paymentData.gateway_response.txnid,
-            status: paymentData.gateway_response.status,
-            amount: paymentData.gateway_response.amount,
-            productinfo: paymentData.gateway_response.productinfo,
-            firstname: paymentData.gateway_response.firstname,
-            email: paymentData.gateway_response.email,
-            phone: paymentData.gateway_response.phone,
-            mode: paymentData.payment_mode,
-            bankcode: paymentData.bank_code,
-            bank_ref_num: paymentData.bank_ref_num,
-            cardMask: paymentData.card_mask,
-            name_on_card: paymentData.name_on_card,
-            error_code: paymentData.error_code,
-            error_message: paymentData.error_message,
-            webhook_received_at: paymentData.created_at
-          },
-          created_at: paymentData.created_at
-        });
-      
-      if (error) {
-        throw error;
-      }
-      
-      console.log(`✅ Payment transaction record created successfully (attempt ${attempt})`);
-      return { success: true };
-    } catch (error) {
-      lastError = error;
-      console.error(`❌ Payment transaction creation attempt ${attempt} failed:`, error);
-      
-      if (attempt < maxRetries) {
-        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
-        console.log(`⏳ Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-  
-  return { success: false, error: lastError };
-}
+// Note: Individual retry functions removed - now using atomic RPC for data consistency
 
 serve(async (req) => {
   // Webhooks should not accept OPTIONS requests - only POST
@@ -457,68 +367,30 @@ serve(async (req) => {
         orderStatus = 'pending';
     }
 
-    // Handle guest checkout session if present
+    // Get guest session data if token provided
+    let guestSessionData = null;
     if (guestSessionToken) {
       try {
-        if (paymentStatus === 'success') {
-          // Get guest session data
-          const { data: guestSession, error: sessionError } = await supabaseAdmin
-            .from('guest_checkout_sessions')
-            .select('*')
-            .eq('session_token', guestSessionToken)
-            .eq('status', 'active')
-            .single();
+        const { data: guestSession, error: sessionError } = await supabaseAdmin
+          .from('guest_checkout_sessions')
+          .select('*')
+          .eq('session_token', guestSessionToken)
+          .eq('status', 'active')
+          .single();
 
-          if (sessionError || !guestSession) {
-            console.error('Guest session not found:', sessionError);
-          } else {
-            console.log('✅ Guest session found, binding details to quote');
-            
-            // Bind guest details to quote now that payment is successful
-            const { error: quoteBindError } = await supabaseAdmin
-              .from('quotes')
-              .update({
-                customer_name: guestSession.guest_name,
-                email: guestSession.guest_email,
-                shipping_address: guestSession.shipping_address,
-                is_anonymous: true, // Keep as anonymous since no user account
-                user_id: null, // Keep null for guest checkout
-                address_updated_at: new Date().toISOString(),
-                address_updated_by: null
-              })
-              .eq('id', guestSession.quote_id);
-
-            if (quoteBindError) {
-              console.error('Error binding guest details to quote:', quoteBindError);
-            } else {
-              console.log('✅ Guest details bound to quote successfully');
-            }
-
-            // Mark session as completed
-            await supabaseAdmin
-              .from('guest_checkout_sessions')
-              .update({
-                status: 'completed',
-                updated_at: new Date().toISOString()
-              })
-              .eq('session_token', guestSessionToken);
-
-            console.log('✅ Guest session marked as completed');
-          }
-        } else if (paymentStatus === 'failed') {
-          // Payment failed - expire the session but leave quote untouched
-          await supabaseAdmin
-            .from('guest_checkout_sessions')
-            .update({
-              status: 'expired',
-              updated_at: new Date().toISOString()
-            })
-            .eq('session_token', guestSessionToken);
-
-          console.log('✅ Guest session expired due to payment failure, quote remains shareable');
+        if (!sessionError && guestSession) {
+          guestSessionData = {
+            guest_name: guestSession.guest_name,
+            guest_email: guestSession.guest_email,
+            shipping_address: guestSession.shipping_address,
+            quote_id: guestSession.quote_id
+          };
+          console.log('✅ Guest session data retrieved for atomic processing');
+        } else {
+          console.error('Guest session not found:', sessionError);
         }
       } catch (error) {
-        console.error('Error handling guest checkout session:', error);
+        console.error('Error retrieving guest session:', error);
       }
     }
 
@@ -554,128 +426,82 @@ serve(async (req) => {
       final_total: q.final_total 
     })));
 
-    // Update quotes status (skip for failed guest payments - they're handled by session logic)
-    if (quoteIds.length > 0 && !(guestSessionToken && paymentStatus === 'failed')) {
-      // For guest checkout success: we already updated the quote in session logic above
-      // For guest checkout failure: we intentionally skip quote update to keep it shareable
-      // For authenticated users: always update the quote
-      
-      const updateData: any = {
-        status: orderStatus,
-        payment_method: 'payu',
-        // payment_transaction_id column doesn't exist - store in payment_details instead
-        paid_at: orderStatus === 'paid' ? new Date().toISOString() : null,
-        in_cart: false, // Remove from cart on successful payment
-        payment_details: {
-          gateway: 'payu',
-          transaction_id: webhookData.mihpayid || webhookData.txnid,
-          payu_id: webhookData.mihpayid,
-          status: webhookData.status,
-          amount: webhookData.amount,
-          currency: 'INR',
-          payment_mode: webhookData.mode,
-          bank_code: webhookData.bankcode,
-          bank_ref_num: webhookData.bank_ref_num,
-          card_mask: webhookData.cardMask,
-          name_on_card: webhookData.name_on_card,
-          error_code: webhookData.error_code,
-          error_message: webhookData.error_Message,
-          customer_name: webhookData.firstname,
-          customer_email: webhookData.email,
-          customer_phone: webhookData.phone,
-          webhook_received_at: new Date().toISOString()
-        }
-      };
-
-      // For guest checkout success, we don't need to update customer details again 
-      // (already done in session binding above)
-      const quotesResult = await updateQuotesWithRetry(supabaseAdmin, quoteIds, updateData);
-
-      if (!quotesResult.success) {
-        console.error(`[${requestId}] Failed to update quotes after retries:`, quotesResult.error);
-        await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'Failed to update quotes after retries');
-        return new Response(JSON.stringify({ error: 'Failed to update quotes' }), { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        });
-      }
-
-      console.log(`✅ Updated ${quoteIds.length} quotes to status: ${orderStatus}`);
-    } else if (guestSessionToken && paymentStatus === 'failed') {
-      console.log('✅ Skipped quote update for failed guest payment - quote remains shareable');
-    }
-
-    // Create payment record with retry logic - extract user_id from first quote
+    // Process webhook atomically using RPC
+    console.log(`[${requestId}] 🔄 Processing webhook atomically...`);
+    
+    // Prepare payment data for atomic processing
     const paymentData = {
-      user_id: existingQuotes[0]?.user_id || null, // Extract user_id from verified quotes
       transaction_id: webhookData.mihpayid || webhookData.txnid,
-      gateway: 'payu',
-      status: paymentStatus,
+      gateway_transaction_id: webhookData.mihpayid,
       amount: parseFloat(webhookData.amount),
       currency: 'INR',
-      quote_ids: quoteIds,
       customer_email: webhookData.email,
       customer_name: webhookData.firstname,
       customer_phone: webhookData.phone,
-      payment_mode: webhookData.mode,
-      bank_code: webhookData.bankcode,
-      bank_ref_num: webhookData.bank_ref_num,
-      card_mask: webhookData.cardMask,
-      name_on_card: webhookData.name_on_card,
-      error_code: webhookData.error_code,
-      error_message: webhookData.error_Message,
-      gateway_response: webhookData,
-      created_at: new Date().toISOString()
+      payment_method: 'payu',
+      gateway_response: {
+        mihpayid: webhookData.mihpayid,
+        txnid: webhookData.txnid,
+        status: webhookData.status,
+        amount: webhookData.amount,
+        productinfo: webhookData.productinfo,
+        firstname: webhookData.firstname,
+        email: webhookData.email,
+        phone: webhookData.phone,
+        mode: webhookData.mode,
+        bankcode: webhookData.bankcode,
+        bank_ref_num: webhookData.bank_ref_num,
+        cardMask: webhookData.cardMask,
+        name_on_card: webhookData.name_on_card,
+        error_code: webhookData.error_code,
+        error_message: webhookData.error_Message,
+        webhook_received_at: new Date().toISOString()
+      }
     };
 
-    const paymentResult = await createPaymentRecordWithRetry(supabaseAdmin, paymentData);
-    
-    if (!paymentResult.success) {
-      console.error(`[${requestId}] Failed to create payment record after retries:`, paymentResult.error);
-      await logWebhookAttempt(supabaseAdmin, requestId, 'warning', '', 'Failed to create payment record after retries');
-      // Don't fail the webhook if payment record creation fails - this is non-critical
-    } else {
-      console.log('✅ Payment record created');
+    // Call atomic RPC function
+    const { data: atomicResult, error: atomicError } = await supabaseAdmin
+      .rpc('process_payment_webhook_atomic', {
+        p_quote_ids: quoteIds,
+        p_payment_status: paymentStatus,
+        p_payment_data: paymentData,
+        p_guest_session_token: guestSessionToken,
+        p_guest_session_data: guestSessionData,
+        p_create_order: orderStatus === 'paid'
+      });
+
+    if (atomicError) {
+      console.error(`[${requestId}] ❌ Atomic webhook processing failed:`, atomicError);
+      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', `Atomic processing failed: ${atomicError.message}`);
+      return new Response(JSON.stringify({ 
+        error: 'Webhook processing failed',
+        details: atomicError.message 
+      }), { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
     }
 
-    // If payment is successful, create order
-    if (orderStatus === 'paid' && quoteIds.length > 0) {
-      try {
-        // Get the first quote to create order
-        const { data: quoteData, error: quoteError } = await supabaseAdmin
-          .from('quotes')
-          .select('*')
-          .eq('id', quoteIds[0])
-          .single();
-
-        if (!quoteError && quoteData) {
-          const { error: orderError } = await supabaseAdmin
-            .from('orders')
-            .insert({
-              order_number: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              user_id: quoteData.user_id,
-              quote_ids: quoteIds,
-              total_amount: parseFloat(webhookData.amount),
-              currency: 'INR',
-              status: 'confirmed',
-              payment_method: 'payu',
-              // payment_transaction_id column doesn't exist - store in payment_details instead
-              customer_email: webhookData.email,
-              customer_name: webhookData.firstname,
-              customer_phone: webhookData.phone,
-              created_at: new Date().toISOString()
-            });
-
-          if (orderError) {
-            console.error('Error creating order:', orderError);
-          } else {
-            console.log('✅ Order created successfully');
-          }
-        }
-      } catch (error) {
-        console.error('Error in order creation:', error);
-      }
+    if (!atomicResult || atomicResult.length === 0 || !atomicResult[0].success) {
+      const errorMessage = atomicResult?.[0]?.error_message || 'Unknown atomic processing error';
+      console.error(`[${requestId}] ❌ Atomic webhook processing failed:`, errorMessage);
+      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', `Atomic processing failed: ${errorMessage}`);
+      return new Response(JSON.stringify({ 
+        error: 'Webhook processing failed',
+        details: errorMessage 
+      }), { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
     }
+
+    const result = atomicResult[0];
+    console.log(`[${requestId}] ✅ Atomic webhook processing completed:`, {
+      payment_transaction_id: result.payment_transaction_id,
+      quotes_updated: result.quotes_updated,
+      guest_session_updated: result.guest_session_updated,
+      order_created: !!result.order_id
+    });
 
     // Log successful webhook processing
     const processingTime = Date.now() - startTime;
@@ -683,14 +509,21 @@ serve(async (req) => {
     
     console.log(`✅ PayU webhook processed successfully [${requestId}] in ${processingTime}ms`);
 
-    // Send success response
+    // Send success response with atomic results
     return new Response(JSON.stringify({ 
       success: true, 
       message: `Payment ${paymentStatus}`,
       quoteIds,
       transactionId: webhookData.mihpayid || webhookData.txnid,
       requestId,
-      processingTime: `${processingTime}ms`
+      processingTime: `${processingTime}ms`,
+      atomicResults: {
+        payment_transaction_id: result.payment_transaction_id,
+        quotes_updated: result.quotes_updated,
+        guest_session_updated: result.guest_session_updated,
+        order_created: !!result.order_id,
+        order_id: result.order_id
+      }
     }), { 
       status: 200, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
