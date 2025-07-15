@@ -1,14 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createCorsHeaders } from '../_shared/cors.ts'
 // REMOVED: PayU SDK import as it might be causing additional API calls
 // import PayU from 'https://esm.sh/payu@latest?target=deno';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST',
-  'Access-Control-Max-Age': '86400',
-}
 
 
 // This should match src/types/payment.ts PaymentRequest
@@ -128,6 +122,8 @@ async function generatePayUHash({
 // console.log(hash);
 
 serve(async (req) => {
+  const corsHeaders = createCorsHeaders(req);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -307,7 +303,11 @@ serve(async (req) => {
           }
 
           // Check if amount is already in INR or needs conversion from USD
-          const exchangeRate = indiaSettings.rate_from_usd || 83.0; // Default to 83 if not found
+          const exchangeRate = indiaSettings.rate_from_usd;
+          if (exchangeRate === null || exchangeRate === undefined) {
+            console.error('Error: Exchange rate for INR conversion is missing.');
+            return new Response(JSON.stringify({ error: 'Failed to get exchange rate for INR conversion' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+          }
           let amountInINR: number;
           
           if (totalCurrency === 'INR') {

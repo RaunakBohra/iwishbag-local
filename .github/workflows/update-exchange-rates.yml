@@ -1,0 +1,51 @@
+name: Update Exchange Rates
+
+# Schedule to run every 4 hours for optimal financial accuracy
+on:
+  schedule:
+    - cron: '0 */4 * * *'  # Every 4 hours (00:00, 04:00, 08:00, 12:00, 16:00, 20:00 UTC)
+  workflow_dispatch:       # Allow manual triggering from GitHub UI
+
+jobs:
+  update-exchange-rates:
+    runs-on: ubuntu-latest
+    name: Update Currency Exchange Rates
+    
+    steps:
+      - name: Update Exchange Rates via Supabase Edge Function
+        run: |
+          echo "🔵 Triggering exchange rate update..."
+          
+          response=$(curl -s -w "\nHTTP_CODE:%{http_code}" -X POST \
+            "https://grgvlrvywsfmnmkxrecd.supabase.co/functions/v1/update-exchange-rates" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json")
+          
+          # Extract HTTP status code
+          http_code=$(echo "$response" | grep "HTTP_CODE:" | cut -d: -f2)
+          body=$(echo "$response" | sed '/HTTP_CODE:/d')
+          
+          echo "📊 Response Status: $http_code"
+          echo "📋 Response Body: $body"
+          
+          # Check if request was successful
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Exchange rates updated successfully!"
+          else
+            echo "❌ Failed to update exchange rates (HTTP $http_code)"
+            echo "Response: $body"
+            exit 1
+          fi
+
+      - name: Log Completion
+        if: success()
+        run: |
+          echo "🎉 Exchange rate update completed at $(date -u)"
+          echo "⏰ Next scheduled update in 4 hours"
+
+      - name: Handle Failure
+        if: failure()
+        run: |
+          echo "🚨 Exchange rate update failed at $(date -u)"
+          echo "🔧 Check Supabase Edge Function logs for details"
+          echo "📧 Consider setting up notification alerts for critical failures"

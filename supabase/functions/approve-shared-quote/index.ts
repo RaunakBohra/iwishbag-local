@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { authenticateUser, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
@@ -14,8 +15,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Create a Supabase client with service role key
-    const supabaseClient = createClient(
+    // Validate request method
+    validateMethod(req, ['POST']);
+
+    // Authenticate user
+    const { user, supabaseClient } = await authenticateUser(req);
+    
+    console.log(`🔐 Authenticated user ${user.email} requesting shared quote approval`);
+
+    // Create admin client for database operations
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { autoRefreshToken: false, persistSession: false } }
@@ -31,7 +40,7 @@ Deno.serve(async (req) => {
     }
 
     // Validate that this is a shared quote that can be updated
-    const { data: quote, error: fetchError } = await supabaseClient
+    const { data: quote, error: fetchError } = await supabaseAdmin
       .from('quotes')
       .select('id, status, is_anonymous, share_token')
       .eq('id', quoteId)
@@ -58,7 +67,7 @@ Deno.serve(async (req) => {
       [action === 'approve' ? 'approved_at' : 'rejected_at']: new Date().toISOString(),
     };
 
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabaseAdmin
       .from('quotes')
       .update(updateData)
       .eq('id', quoteId)
@@ -77,6 +86,12 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
+    console.error('Shared quote approval error:', error);
+    
+    if (error instanceof AuthError) {
+      return createAuthErrorResponse(error, corsHeaders);
+    }
+    
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: corsHeaders }

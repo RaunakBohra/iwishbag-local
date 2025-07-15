@@ -1,13 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { base64 } from "https://deno.land/x/base64@v0.2.1/mod.ts"
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST',
-  'Access-Control-Max-Age': '86400',
-}
+import { createCorsHeaders } from '../_shared/cors.ts'
 
 interface PayPalRefundRequest {
   paymentTransactionId: string
@@ -100,11 +94,17 @@ async function processPayPalRefund(
 
 serve(async (req) => {
   console.log("🟣 === PAYPAL REFUND FUNCTION STARTED ===")
+  const corsHeaders = createCorsHeaders(req);
   
   // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
+
+  // Declare variables at function scope for error handler access
+  let transaction = null
+  let captureId = null
+  let refundRequest: PayPalRefundRequest = null
 
   try {
     // Get authorization header
@@ -127,7 +127,7 @@ serve(async (req) => {
     const rawRequest = await req.json()
     
     // Handle both RefundManagementModal and PayPalRefundManagement data formats
-    const refundRequest: PayPalRefundRequest = {
+    refundRequest = {
       paymentTransactionId: rawRequest.paymentTransactionId || rawRequest.paypal_capture_id,
       refundAmount: rawRequest.refundAmount || rawRequest.refund_amount,
       currency: rawRequest.currency || 'USD',
@@ -157,7 +157,6 @@ serve(async (req) => {
 
     // Get the original payment transaction details
     // The paymentTransactionId could be either the payment_transactions.id, payment_ledger.id, paypal_order_id, or paypal_capture_id
-    let transaction = null
     let transactionError = null
     
     // First try to find by payment_transactions.id
@@ -285,7 +284,6 @@ serve(async (req) => {
 
     // Extract capture ID from the transaction
     // PayPal transaction could have order ID or capture ID
-    let captureId = null
     const gatewayResponse = transaction.gateway_response || {}
     
     // Try to find capture ID in various places
@@ -297,6 +295,7 @@ serve(async (req) => {
       // This might be a capture ID if the response shows completed status
       captureId = gatewayResponse.id
     }
+    
 
     if (!captureId) {
       console.error('❌ No capture ID found in transaction')
@@ -340,18 +339,100 @@ serve(async (req) => {
     const accessToken = await getPayPalAccessToken(clientId, clientSecret, !isTestMode)
     console.log('✅ PayPal access token obtained')
 
-    // Process the refund
+    // Process the refund with retry logic
     console.log('💰 Processing refund...')
-    const refundResponse = await processPayPalRefund(
-      accessToken,
-      captureId,
-      refundRequest.refundAmount,
-      refundRequest.currency,
-      refundRequest.note || refundRequest.reason || 'Refund processed',
-      !isTestMode
-    )
+    let refundResponse = null
+    let lastError = null
+    let attemptCount = 0
+    const maxImmediateRetries = 2
     
-    console.log('✅ PayPal refund response:', JSON.stringify(refundResponse, null, 2))
+    // Immediate retry loop for transient failures
+    while (attemptCount < maxImmediateRetries && !refundResponse) {
+      try {
+        refundResponse = await processPayPalRefund(
+          accessToken,
+          captureId,
+          refundRequest.refundAmount,
+          refundRequest.currency,
+          refundRequest.note || refundRequest.reason || 'Refund processed',
+          !isTestMode
+        )
+        console.log('✅ PayPal refund response:', JSON.stringify(refundResponse, null, 2))
+      } catch (error) {
+        attemptCount++
+        lastError = error
+        
+        // Check if error is transient
+        const isTransientError = 
+          error.message?.includes('timeout') ||
+          error.message?.includes('network') ||
+          error.message?.includes('503') ||
+          error.message?.includes('502') ||
+          error.message?.includes('429') // Rate limit
+        
+        if (isTransientError && attemptCount < maxImmediateRetries) {
+          console.log(`🔄 Transient error detected, attempting immediate retry ${attemptCount}/${maxImmediateRetries}...`)
+          await new Promise(resolve => setTimeout(resolve, 2000 * attemptCount)) // Exponential backoff
+        } else {
+          throw error // Re-throw for queue handling
+        }
+      }
+    }
+    
+    // If all immediate retries failed, queue for background retry
+    if (!refundResponse && lastError) {
+      console.log('❌ All immediate retry attempts failed')
+      
+      // Queue for background retry
+      const refundData = {
+        paymentTransactionId: refundRequest.paymentTransactionId,
+        refundAmount: refundRequest.refundAmount,
+        currency: refundRequest.currency,
+        reason: refundRequest.reason,
+        note: refundRequest.note,
+        quoteId: refundRequest.quoteId,
+        userId: refundRequest.userId,
+        captureId: captureId,
+        originalTransaction: transaction,
+        error_context: {
+          last_error: lastError.message,
+          attempt_count: attemptCount,
+          is_transient: true
+        }
+      }
+      
+      const { data: queueResult, error: queueError } = await supabaseAdmin
+        .rpc('queue_refund_retry', {
+          p_payment_transaction_id: transaction.id,
+          p_quote_id: transaction.quote_id,
+          p_gateway_code: 'paypal',
+          p_refund_amount: refundRequest.refundAmount,
+          p_currency: refundRequest.currency,
+          p_refund_data: refundData,
+          p_created_by: refundRequest.userId,
+          p_priority: 'high', // High priority for transient errors
+          p_max_retries: 5
+        })
+      
+      if (!queueError && queueResult && queueResult[0]?.success) {
+        console.log('✅ Refund queued for retry with ID:', queueResult[0].queue_id)
+        
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'PayPal refund temporarily failed and has been queued for automatic retry',
+          queue_id: queueResult[0].queue_id,
+          retry_status: 'queued',
+          priority: 'high',
+          estimated_retry: 'Within 1 minute',
+          attempts_made: attemptCount
+        }), {
+          status: 202, // Accepted
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      } else {
+        throw lastError // Re-throw original error if queueing failed
+      }
+    }
 
     // Store refund in gateway_refunds table
     const { data: gatewayRefund, error: refundError } = await supabaseAdmin
@@ -520,10 +601,86 @@ serve(async (req) => {
   } catch (error) {
     console.error('❌ PayPal refund error:', error)
     
+    // Determine if error is retryable
+    const isRetryable = 
+      error.message?.includes('network') ||
+      error.message?.includes('timeout') ||
+      error.message?.includes('503') ||
+      error.message?.includes('502') ||
+      error.message?.includes('500') ||
+      error.message?.includes('429') ||
+      error.message?.includes('ECONNREFUSED') ||
+      error.message?.includes('ETIMEDOUT') ||
+      error.message?.includes('DNS')
+    
+    // Try to queue for retry if we have transaction context
+    if (isRetryable && transaction && transaction.quote_id) {
+      try {
+        console.log('🔄 Queueing refund for retry due to retryable error')
+        
+        const refundData = {
+          paymentTransactionId: refundRequest.paymentTransactionId,
+          refundAmount: refundRequest.refundAmount,
+          currency: refundRequest.currency,
+          reason: refundRequest.reason,
+          note: refundRequest.note,
+          quoteId: refundRequest.quoteId,
+          userId: refundRequest.userId,
+          captureId: captureId || null,
+          originalTransaction: transaction,
+          error_context: {
+            error_type: 'catch_block_error',
+            error_message: error.message,
+            error_stack: error.stack,
+            is_retryable: true
+          }
+        }
+        
+        const { data: queueResult, error: queueError } = await supabaseAdmin
+          .rpc('queue_refund_retry', {
+            p_payment_transaction_id: transaction.id,
+            p_quote_id: transaction.quote_id,
+            p_gateway_code: 'paypal',
+            p_refund_amount: refundRequest.refundAmount,
+            p_currency: refundRequest.currency,
+            p_refund_data: refundData,
+            p_created_by: refundRequest.userId,
+            p_priority: 'normal',
+            p_max_retries: 3
+          })
+        
+        if (!queueError && queueResult && queueResult[0]?.success) {
+          console.log('✅ Refund queued for retry with ID:', queueResult[0].queue_id)
+          
+          const response: PayPalRefundResponse = {
+            success: false,
+            error: 'PayPal refund temporarily failed and has been queued for automatic retry',
+            details: {
+              queue_id: queueResult[0].queue_id,
+              retry_status: 'queued',
+              original_error: error.message
+            }
+          }
+          
+          return new Response(JSON.stringify(response), {
+            status: 202, // Accepted
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+      } catch (queueError) {
+        console.error('❌ Failed to queue refund for retry:', queueError)
+      }
+    }
+    
+    // Return standard error response if not retryable or queueing failed
     const response: PayPalRefundResponse = {
       success: false,
       error: error.message || 'Failed to process PayPal refund',
-      details: error
+      details: {
+        ...error,
+        is_retryable: isRetryable,
+        has_transaction_context: !!transaction
+      }
     }
 
     return new Response(JSON.stringify(response), {

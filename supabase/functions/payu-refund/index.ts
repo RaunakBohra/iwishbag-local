@@ -1,12 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST',
-  'Access-Control-Max-Age': '86400',
-}
+import { createCorsHeaders } from '../_shared/cors.ts'
 
 interface PayURefundRequest {
   paymentId: string; // PayU transaction ID (mihpayid)
@@ -30,6 +24,7 @@ interface PayURefundResponse {
 
 serve(async (req) => {
   console.log("=5 === PAYU REFUND FUNCTION STARTED ===");
+  const corsHeaders = createCorsHeaders(req);
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -554,7 +549,102 @@ serve(async (req) => {
     if (!payuResult) {
       console.error("❌ All transaction ID types failed. Last error:", lastError);
       
-      // Return detailed debugging information about all attempts
+      // Immediate retry for transient failures
+      const isTransientError = 
+        lastError.includes('timeout') ||
+        lastError.includes('network') ||
+        lastError.includes('503');
+      
+      if (isTransientError) {
+        console.log("🔄 Attempting immediate retry for transient error...");
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+        
+        // Try one more time with the most likely successful pattern
+        const retryAttempt = refundAttempts[0]; // Use first pattern
+        try {
+          const hashString = retryAttempt.hashParams.join('|');
+          const encoder = new TextEncoder();
+          const data = encoder.encode(hashString);
+          const hashBuffer = await globalThis.crypto.subtle.digest('SHA-512', data);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          
+          const retryResponse = await fetch(`${payuConfig.api_url}/merchant/postservice.php?form=2`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'User-Agent': 'iwishBag-PayU-Refund/1.0'
+            },
+            body: new URLSearchParams({
+              key: payuConfig.merchant_key,
+              command: retryAttempt.command,
+              hash: hash,
+              ...retryAttempt.apiParams
+            })
+          });
+          
+          if (retryResponse.ok) {
+            const retryResult = await retryResponse.json();
+            if (retryResult.status === 1 || retryResult.error_code === '102') {
+              console.log("✅ Immediate retry successful!");
+              payuResult = retryResult;
+            }
+          }
+        } catch (retryError) {
+          console.error("❌ Immediate retry failed:", retryError);
+        }
+      }
+      
+      // If still no result, queue for background retry
+      if (!payuResult && originalTransaction && quoteId) {
+        try {
+          console.log("🔄 Queueing refund for background retry");
+          
+          const refundData = {
+            paymentId,
+            amount,
+            refundType,
+            reason,
+            notes,
+            notifyCustomer,
+            originalTransaction,
+            attemptHistory: debugInfo
+          };
+          
+          const { data: queueResult, error: queueError } = await supabaseAdmin
+            .rpc('queue_refund_retry', {
+              p_payment_transaction_id: originalTransaction.id,
+              p_quote_id: quoteId,
+              p_gateway_code: 'payu',
+              p_refund_amount: amount,
+              p_currency: originalTransaction.currency || 'INR',
+              p_refund_data: refundData,
+              p_created_by: userId,
+              p_priority: isTransientError ? 'high' : 'normal',
+              p_max_retries: 3
+            });
+          
+          if (!queueError && queueResult && queueResult[0]?.success) {
+            console.log("✅ Refund queued for retry with ID:", queueResult[0].queue_id);
+            
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'PayU refund failed but has been queued for automatic retry',
+              last_error: lastError,
+              queue_id: queueResult[0].queue_id,
+              retry_status: 'queued',
+              priority: isTransientError ? 'high' : 'normal'
+            }), {
+              status: 202, // Accepted
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        } catch (queueError) {
+          console.error("❌ Failed to queue refund:", queueError);
+        }
+      }
+      
+      // Return standard error if queueing failed
       return new Response(JSON.stringify({
         success: false,
         error: 'All PayU refund attempts failed',
@@ -582,7 +672,7 @@ serve(async (req) => {
     console.log("🔄 Processing refund atomically...");
     
     // Prepare refund data for atomic processing
-    const refundData = {
+    const atomicRefundData = {
       gateway_refund_id: payuResult.request_id || refundRequestId,
       gateway_transaction_id: paymentId,
       refund_type: refundType,
@@ -592,7 +682,10 @@ serve(async (req) => {
       customer_note: notifyCustomer ? `Refund of INR ${amount} has been initiated for your order.` : null,
       gateway_status: payuResult.msg || 'PENDING',
       currency: originalTransaction?.currency || 'INR',
-      original_amount: originalTransaction?.amount || amount
+      original_amount: originalTransaction?.amount || amount,
+      retry_queue_success: true, // Mark that this succeeded without retry queue
+      successful_transaction_type: debugInfo.successfulTransactionType,
+      successful_transaction_id: debugInfo.successfulTransactionId
     };
 
     // Call atomic RPC function
@@ -600,7 +693,7 @@ serve(async (req) => {
       .rpc('process_refund_atomic', {
         p_quote_id: quoteId,
         p_refund_amount: amount,
-        p_refund_data: refundData,
+        p_refund_data: atomicRefundData,
         p_gateway_response: payuResult,
         p_processed_by: userId
       });
@@ -686,11 +779,89 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("L Refund processing error:", error);
+    console.error("❌ Refund processing error:", error);
+    
+    // Determine if error is retryable
+    const isRetryable = 
+      error.message?.includes('network') ||
+      error.message?.includes('timeout') ||
+      error.message?.includes('503') ||
+      error.message?.includes('502') ||
+      error.message?.includes('500') ||
+      error.message?.includes('ECONNREFUSED') ||
+      error.message?.includes('ETIMEDOUT') ||
+      error.message?.includes('DNS');
+    
+    // Queue for retry if retryable and we have transaction details
+    if (isRetryable && originalTransaction && quoteId) {
+      try {
+        console.log("🔄 Queueing refund for retry due to retryable error");
+        
+        const refundData = {
+          paymentId,
+          amount,
+          refundType,
+          reason,
+          notes,
+          notifyCustomer,
+          originalTransaction,
+          error_context: {
+            error_type: 'catch_block_error',
+            error_message: error.message,
+            error_stack: error.stack,
+            is_retryable: true
+          }
+        };
+        
+        const { data: queueResult, error: queueError } = await supabaseAdmin
+          .rpc('queue_refund_retry', {
+            p_payment_transaction_id: originalTransaction.id,
+            p_quote_id: quoteId,
+            p_gateway_code: 'payu',
+            p_refund_amount: amount,
+            p_currency: originalTransaction.currency || 'INR',
+            p_refund_data: refundData,
+            p_created_by: userId,
+            p_priority: 'high', // High priority for catch block errors
+            p_max_retries: 5 // More retries for infrastructure errors
+          });
+        
+        if (!queueError && queueResult && queueResult[0]?.success) {
+          console.log("✅ Refund queued for retry with ID:", queueResult[0].queue_id);
+          
+          return new Response(
+            JSON.stringify({ 
+              error: 'Refund temporarily failed and has been queued for automatic retry',
+              details: error.message,
+              queue_id: queueResult[0].queue_id,
+              retry_status: 'queued',
+              priority: 'high',
+              estimated_retry: 'Within 1 minute'
+            }),
+            { 
+              status: 202, // Accepted for processing
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        } else {
+          console.error("❌ Failed to queue refund for retry:", queueError || 'Unknown queue error');
+        }
+      } catch (queueError) {
+        console.error("❌ Error queueing refund for retry:", queueError);
+      }
+    }
+    
+    // Return standard error response if not retryable or queueing failed
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error', 
-        details: error.message 
+        details: error.message,
+        is_retryable: isRetryable,
+        retry_eligible: isRetryable && !!originalTransaction && !!quoteId,
+        missing_data: {
+          has_transaction: !!originalTransaction,
+          has_quote_id: !!quoteId
+        }
       }),
       { 
         status: 500, 

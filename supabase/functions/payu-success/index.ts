@@ -1,11 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST',
-  'Access-Control-Max-Age': '86400',
-}
+import { createCorsHeaders } from '../_shared/cors.ts'
 
 interface PayUSuccessData {
   txnid: string;
@@ -26,6 +20,8 @@ interface PayUSuccessData {
 }
 
 serve(async (req) => {
+  const corsHeaders = createCorsHeaders(req);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })

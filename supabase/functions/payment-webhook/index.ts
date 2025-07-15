@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createWebhookHeaders } from '../_shared/cors.ts'
 
 interface WebhookLog {
   request_id: string;
@@ -22,9 +23,8 @@ interface PaymentTransactionInsert {
   created_at: string;
 }
 
-// Webhooks should not use CORS - they are called by external services, not browsers
-// Remove CORS headers for security
-const corsHeaders = {}
+// Get webhook headers (empty object for webhooks)
+const corsHeaders = createWebhookHeaders()
 
 interface PayUWebhookData {
   txnid: string;

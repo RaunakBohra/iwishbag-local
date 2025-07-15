@@ -55,7 +55,14 @@
       "Bash(npm test)",
       "Bash(npm test:*)",
       "Bash(tsc --noEmit)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(awk:*)",
+      "Bash(supabase migration:*)",
+      "Bash(for file in test-paypal-config capture-paypal-payment setup-paypal-integration payu-token-manager payu-success payu-failure)",
+      "Bash(do if [ -f \"$file/index.ts\" ])",
+      "Bash(then echo \"=== $file ===\")",
+      "Bash(fi)",
+      "Bash(done)"
     ],
     "deny": []
   }
