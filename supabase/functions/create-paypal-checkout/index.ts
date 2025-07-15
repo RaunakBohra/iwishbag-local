@@ -21,7 +21,7 @@ interface PayPalPaymentLinkRequest {
     phone?: string;
     address?: string;
   };
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface PayPalOrderRequest {
@@ -201,7 +201,7 @@ serve(async (req) => {
         customerName = firstQuote.customer_name || customerName;
         
         if (firstQuote.shipping_address && typeof firstQuote.shipping_address === 'object') {
-          const shippingAddress = firstQuote.shipping_address as any;
+          const shippingAddress = firstQuote.shipping_address as Record<string, unknown>;
           customerPhone = shippingAddress.phone || customerPhone;
         }
       }
@@ -242,7 +242,7 @@ serve(async (req) => {
 
     // Add payer info if available
     if (customerEmail !== 'customer@example.com') {
-      (paypalOrder as any).payer = {
+      (paypalOrder as Record<string, unknown>).payer = {
         email_address: customerEmail,
         name: {
           given_name: customerName.split(' ')[0] || customerName,
@@ -276,7 +276,8 @@ serve(async (req) => {
     console.log('✅ PayPal order created:', paypalOrderData.id);
 
     // Extract approval URL
-    const approvalUrl = paypalOrderData.links.find((link: any) => link.rel === 'approve')?.href;
+    const links = paypalOrderData.links as Array<{ rel: string; href: string }>;
+    const approvalUrl = links.find((link) => link.rel === 'approve')?.href;
     
     if (!approvalUrl) {
       console.error('❌ No approval URL in PayPal response');

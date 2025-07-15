@@ -14,7 +14,7 @@ interface PaymentRequest {
   cancel_url: string;
   amount?: number;
   currency?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   customerInfo?: {
     name?: string;
     email?: string;
@@ -372,7 +372,7 @@ serve(async (req) => {
               
               // Extract phone from shipping address if available
               if (firstQuote.shipping_address && typeof firstQuote.shipping_address === 'object') {
-                const shippingAddress = firstQuote.shipping_address as any;
+                const shippingAddress = firstQuote.shipping_address as Record<string, unknown>;
                 customerPhone = shippingAddress.phone || customerPhone;
               }
             }

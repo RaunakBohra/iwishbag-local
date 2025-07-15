@@ -4,10 +4,10 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 export type DatabaseUser = {
   id: string;
   email?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
-export type DatabaseClient = SupabaseClient<any>;
+export type DatabaseClient = SupabaseClient<unknown>;
 
 export interface AuthResult {
   user: DatabaseUser;

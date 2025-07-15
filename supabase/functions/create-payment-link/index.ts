@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { authenticateUser, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
 import { createCorsHeaders } from '../_shared/cors.ts'
 
@@ -17,7 +17,7 @@ interface PaymentLinkRequest {
 }
 
 // Generate unique link code
-async function generateLinkCode(supabaseAdmin: any): Promise<string> {
+async function generateLinkCode(supabaseAdmin: SupabaseClient): Promise<string> {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let attempts = 0;
   

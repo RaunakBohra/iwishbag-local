@@ -14,7 +14,7 @@ interface PayPalPaymentLinkRequest {
   };
   description?: string;
   expiryDays?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   merchantId?: string;
   breakdown?: {
     item_total?: number;
@@ -188,25 +188,26 @@ async function createPayPalOrder(
 }
 
 // Extract payment URL from PayPal order response
-function extractPayPalPaymentUrl(orderData: any): string | null {
+function extractPayPalPaymentUrl(orderData: Record<string, unknown>): string | null {
   if (!orderData.links) return null;
   
   // Look for 'approve' rel (most common)
-  let paypalUrl = orderData.links.find((link: any) => link.rel === 'approve')?.href;
+  const links = orderData.links as Array<{ rel: string; href: string; method?: string }>;
+  let paypalUrl = links.find((link) => link.rel === 'approve')?.href;
   
   // Method 2: Look for 'payer-action' rel 
   if (!paypalUrl) {
-    paypalUrl = orderData.links.find((link: any) => link.rel === 'payer-action')?.href;
+    paypalUrl = links.find((link) => link.rel === 'payer-action')?.href;
   }
   
   // Method 3: Look for any link containing 'checkout'
   if (!paypalUrl) {
-    paypalUrl = orderData.links.find((link: any) => link.href?.includes('checkout'))?.href;
+    paypalUrl = links.find((link) => link.href?.includes('checkout'))?.href;
   }
   
   // Method 4: Look for any GET method link
   if (!paypalUrl) {
-    paypalUrl = orderData.links.find((link: any) => link.method === 'GET')?.href;
+    paypalUrl = links.find((link) => link.method === 'GET')?.href;
   }
   
   return paypalUrl;
@@ -325,7 +326,7 @@ serve(async (req) => {
     }
     
     console.log('📋 Order ID:', orderId);
-    console.log('📋 Order links:', order.links?.map((l: any) => ({ rel: l.rel, href: l.href })));
+    console.log('📋 Order links:', (order.links as Array<{ rel: string; href: string }>)?.map((l) => ({ rel: l.rel, href: l.href })));
 
     // Extract payment URL from order response
     const paymentUrl = extractPayPalPaymentUrl(order);
@@ -412,13 +413,13 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Unexpected error:', error);
     console.error('❌ Error stack:', error.stack);
     return new Response(JSON.stringify({ 
       error: 'An unexpected error occurred',
-      details: error.message || String(error),
-      stack: error.stack
+      details: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     }), { 
       status: 500, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

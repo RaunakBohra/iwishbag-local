@@ -196,7 +196,7 @@ async function scrapeAmazonWithScrapeAPI(url: string, apiKey: string) {
   }
 }
 
-function extractAmazonDataFromScrapeAPI(data: any, url: string) {
+function extractAmazonDataFromScrapeAPI(data: Record<string, unknown>, url: string) {
   // ScrapeAPI Amazon returns structured data
   const product = data.result || data
   
@@ -211,7 +211,7 @@ function extractAmazonDataFromScrapeAPI(data: any, url: string) {
   }
 }
 
-function extractAmazonPriceFromScrapeAPI(product: any): number {
+function extractAmazonPriceFromScrapeAPI(product: Record<string, unknown>): number {
   // Try different Amazon price fields
   const priceFields = [
     product.price,
@@ -238,7 +238,7 @@ function extractAmazonPriceFromScrapeAPI(product: any): number {
   return 0
 }
 
-function extractAmazonWeightFromScrapeAPI(product: any): number {
+function extractAmazonWeightFromScrapeAPI(product: Record<string, unknown>): number {
   // Try different Amazon weight fields
   const weightFields = [
     product.weight,
@@ -275,7 +275,7 @@ function extractAmazonWeightFromScrapeAPI(product: any): number {
   return 0.5 // Default weight
 }
 
-function extractProductDataFromScrapeAPI(data: any, website: string) {
+function extractProductDataFromScrapeAPI(data: Record<string, unknown>, website: string) {
   console.log(`🔵 Extracting data from ScrapeAPI response for ${website}`)
   
   // Handle the structured response format from ScrapeAPI with autoparse
@@ -397,7 +397,7 @@ function extractWeightFromString(weightString: string): number {
   }
 }
 
-function extractPriceFromScrapeAPI(product: any): number {
+function extractPriceFromScrapeAPI(product: Record<string, unknown>): number {
   // Try different price fields
   const priceFields = [
     product.price,
@@ -422,7 +422,7 @@ function extractPriceFromScrapeAPI(product: any): number {
   return 0
 }
 
-function extractWeightFromScrapeAPI(product: any): number {
+function extractWeightFromScrapeAPI(product: Record<string, unknown>): number {
   // Try different weight fields
   const weightFields = [
     product.weight,
@@ -677,7 +677,7 @@ function detectCategory(title: string, website: string): string {
   return 'general'
 }
 
-function calculateConfidence(data: any, website: string): number {
+function calculateConfidence(data: Record<string, unknown>, website: string): number {
   let confidence = 0.5 // Base confidence
   
   // Increase confidence based on data quality
