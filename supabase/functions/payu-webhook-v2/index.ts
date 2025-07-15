@@ -87,10 +87,31 @@ interface AtomicProcessingResult {
   error_message?: string;
 }
 
+// Security configuration
+const WEBHOOK_CONFIG = {
+  MAX_PROCESSING_TIME: 30000, // 30 seconds
+  REPLAY_WINDOW: 5 * 60 * 1000, // 5 minutes
+  REQUIRED_HEADERS: ['content-type'],
+  MAX_BODY_SIZE: 10 * 1024 * 1024, // 10MB
+};
+
+// Request cache for replay attack prevention
+const processedRequests = new Map<string, number>();
+
 serve(async (req) => {
+  const startTime = Date.now();
+  const requestId = crypto.randomUUID();
+  
   console.log("🔵 === PAYU WEBHOOK V2 FUNCTION STARTED ===");
+  console.log("🔵 Request ID:", requestId);
   console.log("🔵 Request method:", req.method);
   console.log("🔵 Request URL:", req.url);
+  console.log("🔵 Request headers:", Object.fromEntries(req.headers.entries()));
+  
+  // Security timeout
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Request timeout')), WEBHOOK_CONFIG.MAX_PROCESSING_TIME);
+  });
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -99,19 +120,81 @@ serve(async (req) => {
       headers: corsHeaders 
     })
   }
+  
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    console.error("❌ Invalid request method:", req.method);
+    return createErrorResponse('Method not allowed', 405);
+  }
+  
+  // Basic security headers validation
+  const missingHeaders = WEBHOOK_CONFIG.REQUIRED_HEADERS.filter(header => !req.headers.get(header));
+  if (missingHeaders.length > 0) {
+    console.error("❌ Missing required headers:", missingHeaders);
+    return createErrorResponse('Missing required headers', 400);
+  }
 
   try {
     const supabaseAdmin: SupabaseClient<Database> = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+    
+    // Wrap processing in timeout
+    const processPromise = processWebhookRequest(req, supabaseAdmin, requestId, startTime);
+    const result = await Promise.race([processPromise, timeoutPromise]);
+    
+    return result;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error("❌ Webhook processing error:", error);
+    
+    // Log error
+    try {
+      const supabaseAdmin: SupabaseClient<Database> = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      
+      await supabaseAdmin
+        .from('webhook_logs')
+        .insert({
+          gateway_code: 'payu',
+          webhook_type: 'payment_status',
+          request_headers: Object.fromEntries(req.headers.entries()),
+          response_status: 500,
+          error_message: errorMessage,
+          processed_at: new Date().toISOString()
+        });
+    } catch (logError) {
+      console.error("❌ Failed to log webhook error:", logError);
+    }
 
-    // Parse webhook payload
+    return createErrorResponse('Internal server error', 500);
+  }
+});
+
+/**
+ * Process webhook request with enhanced security
+ */
+async function processWebhookRequest(
+  req: Request,
+  supabaseAdmin: SupabaseClient<Database>,
+  requestId: string,
+  startTime: number
+): Promise<Response> {
+  try {
+
+    // Parse webhook payload with size validation
     let webhookData: PayUWebhookPayload;
     const contentType = req.headers.get('content-type') || '';
     
     if (contentType.includes('application/json')) {
-      webhookData = await req.json();
+      const rawBody = await req.text();
+      if (rawBody.length > WEBHOOK_CONFIG.MAX_BODY_SIZE) {
+        throw new Error('Request body too large');
+      }
+      webhookData = JSON.parse(rawBody);
     } else {
       // Parse form data
       const formData = await req.formData();
@@ -122,6 +205,36 @@ serve(async (req) => {
     }
 
     console.log("🔵 Webhook payload received:", JSON.stringify(webhookData, null, 2));
+    
+    // Validate required payload fields
+    if (!webhookData.txnid) {
+      throw new Error('Missing required field: txnid');
+    }
+    
+    // Replay attack prevention
+    const replayKey = `${webhookData.txnid}_${webhookData.status}_${webhookData.amount}`;
+    const now = Date.now();
+    
+    if (processedRequests.has(replayKey)) {
+      const lastProcessed = processedRequests.get(replayKey)!;
+      if (now - lastProcessed < WEBHOOK_CONFIG.REPLAY_WINDOW) {
+        console.log("🔁 Duplicate request detected, ignoring");
+        return new Response(JSON.stringify({ success: true, message: 'Duplicate request ignored' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+    
+    // Mark request as processed
+    processedRequests.set(replayKey, now);
+    
+    // Clean up old entries (keep map size manageable)
+    for (const [key, timestamp] of processedRequests.entries()) {
+      if (now - timestamp > WEBHOOK_CONFIG.REPLAY_WINDOW) {
+        processedRequests.delete(key);
+      }
+    }
 
     // Extract key information
     const {
@@ -140,7 +253,7 @@ serve(async (req) => {
       payment_link_id
     } = webhookData;
 
-    // Log webhook request
+    // Log webhook request with enhanced information
     const webhookLogEntry: WebhookLogEntry = {
       gateway_code: 'payu',
       webhook_type: 'payment_status',
@@ -150,6 +263,10 @@ serve(async (req) => {
       transaction_id: mihpayid || txnid || null,
       processed_at: new Date().toISOString()
     };
+    
+    // Add request metadata to log entry
+    webhookLogEntry.request_headers['x-request-id'] = requestId;
+    webhookLogEntry.request_headers['x-processing-start'] = startTime.toString();
 
     // Get PayU configuration for hash verification
     const { data: payuGateway } = await supabaseAdmin
@@ -194,12 +311,14 @@ serve(async (req) => {
         response_body: { success: true, processed: result.processed }
       });
 
-    console.log("✅ Webhook processed successfully");
+    const processingTime = Date.now() - startTime;
+    console.log("✅ Webhook processed successfully in", processingTime, "ms");
 
     return new Response(JSON.stringify({
       success: true,
       message: 'Webhook processed successfully',
-      processed: result.processed
+      processed: result.processed,
+      processing_time_ms: processingTime
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -235,10 +354,16 @@ serve(async (req) => {
 });
 
 /**
- * Verify PayU hash
+ * Verify PayU hash - CRITICAL: Do not modify this function
+ * This implements PayU's required hash verification format
  */
 async function verifyPayUHash(data: PayUWebhookPayload, saltKey: string): Promise<boolean> {
-  try {
+  const verificationTimeout = 5000; // 5 seconds timeout for hash verification
+  
+  const verificationPromise = new Promise<boolean>((resolve, reject) => {
+    setTimeout(() => reject(new Error('Hash verification timeout')), verificationTimeout);
+    
+    try {
     const {
       key,
       txnid,
@@ -275,14 +400,22 @@ async function verifyPayUHash(data: PayUWebhookPayload, saltKey: string): Promis
 
     const calculatedHash = createHash('sha512').update(hashString).digest('hex');
     
-    console.log("🔵 Hash verification:");
-    console.log("  - Hash string:", hashString);
-    console.log("  - Calculated hash:", calculatedHash);
-    console.log("  - Received hash:", receivedHash);
-    
-    return calculatedHash.toLowerCase() === receivedHash?.toLowerCase();
+      console.log("🔵 Hash verification:");
+      console.log("  - Hash string:", hashString);
+      console.log("  - Calculated hash:", calculatedHash);
+      console.log("  - Received hash:", receivedHash);
+      
+      resolve(calculatedHash.toLowerCase() === receivedHash?.toLowerCase());
+    } catch (error) {
+      console.error("❌ Hash verification error:", error);
+      resolve(false);
+    }
+  });
+  
+  try {
+    return await verificationPromise;
   } catch (error) {
-    console.error("❌ Hash verification error:", error);
+    console.error("❌ Hash verification timeout or error:", error);
     return false;
   }
 }
