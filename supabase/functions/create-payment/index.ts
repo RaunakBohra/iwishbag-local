@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { createCorsHeaders } from '../_shared/cors.ts'
+import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno'
 // REMOVED: PayU SDK import as it might be causing additional API calls
 // import PayU from 'https://esm.sh/payu@latest?target=deno';
 
@@ -8,7 +9,7 @@ import { createCorsHeaders } from '../_shared/cors.ts'
 // This should match src/types/payment.ts PaymentRequest
 interface PaymentRequest {
   quoteIds: string[];
-  gateway: 'bank_transfer' | 'cod' | 'payu' | 'esewa' | 'khalti' | 'fonepay' | 'airwallex';
+  gateway: 'bank_transfer' | 'cod' | 'payu' | 'esewa' | 'khalti' | 'fonepay' | 'airwallex' | 'stripe';
   success_url: string;
   cancel_url: string;
   amount?: number;
@@ -28,6 +29,7 @@ interface PaymentResponse {
   url?: string | null;
   qrCode?: string | null;
   transactionId?: string;
+  client_secret?: string;
   error?: string;
 }
 
@@ -120,6 +122,28 @@ async function generatePayUHash({
 // const PayU = require('payu');
 // const hash = PayU.utils.hashCal('sha512', hashString);
 // console.log(hash);
+
+// Helper function to get currency multiplier for converting to smallest unit
+function getCurrencyMultiplier(currency: string): number {
+  // Most currencies use 2 decimal places (100 cents = 1 dollar)
+  const twoDecimalCurrencies = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'SGD', 'AED', 'SAR', 'EGP', 'TRY', 'INR', 'NPR'];
+  
+  // Zero decimal currencies (already in smallest unit)
+  const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND', 'CLP', 'ISK', 'UGX'];
+  
+  // Three decimal currencies (1000 smallest units = 1 major unit)
+  const threeDecimalCurrencies = ['BHD', 'JOD', 'KWD', 'OMR', 'TND'];
+  
+  const upperCurrency = currency.toUpperCase();
+  
+  if (zeroDecimalCurrencies.includes(upperCurrency)) {
+    return 1;
+  } else if (threeDecimalCurrencies.includes(upperCurrency)) {
+    return 1000;
+  } else {
+    return 100; // Default to 2 decimal places
+  }
+}
 
 serve(async (req) => {
   const corsHeaders = createCorsHeaders(req);
@@ -443,6 +467,89 @@ serve(async (req) => {
           console.error('PayU payment creation error:', error);
           return new Response(JSON.stringify({ 
             error: 'PayU payment creation failed', 
+            details: error.message 
+          }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+        }
+        break;
+
+      case 'stripe':
+        try {
+          // Initialize Stripe with secret key
+          const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+          if (!stripeSecretKey) {
+            return new Response(JSON.stringify({ error: 'Stripe secret key not configured' }), { 
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+
+          const stripe = new Stripe(stripeSecretKey, {
+            apiVersion: '2023-10-16',
+          });
+
+          // Convert amount to smallest currency unit (cents for USD, etc.)
+          const currencyMultiplier = getCurrencyMultiplier(totalCurrency);
+          const amountInSmallestUnit = Math.round(totalAmount * currencyMultiplier);
+
+          // Prepare metadata with quote IDs for tracking
+          const paymentMetadata = {
+            quote_ids: quoteIds.join(','),
+            gateway: 'stripe',
+            user_id: userId || 'guest',
+            guest_session_token: metadata?.guest_session_token || '',
+            original_amount: totalAmount.toString(),
+            original_currency: totalCurrency,
+          };
+
+          // Get customer information
+          let customerName = customerInfo?.name || 'Customer';
+          let customerEmail = customerInfo?.email || '';
+
+          // If customer info not provided, try to get from quotes
+          if (!customerInfo && quotesToUse && quotesToUse.length > 0) {
+            const { data: fullQuotes } = await supabaseAdmin
+              .from('quotes')
+              .select('email, customer_name, shipping_address')
+              .in('id', quoteIds)
+              .limit(1);
+
+            if (fullQuotes && fullQuotes.length > 0) {
+              const firstQuote = fullQuotes[0];
+              customerEmail = firstQuote.email || customerEmail;
+              customerName = firstQuote.customer_name || customerName;
+            }
+          }
+
+          // Create PaymentIntent
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: amountInSmallestUnit,
+            currency: totalCurrency.toLowerCase(),
+            metadata: paymentMetadata,
+            description: `Payment for quotes: ${quoteIds.join(', ')}`,
+            receipt_email: customerEmail || undefined,
+            automatic_payment_methods: {
+              enabled: true,
+            },
+          });
+
+          console.log('Stripe PaymentIntent created:', {
+            id: paymentIntent.id,
+            amount: amountInSmallestUnit,
+            currency: totalCurrency,
+            customer: customerEmail.substring(0, 3) + '***',
+            quote_ids: quoteIds.join(',')
+          });
+
+          responseData = {
+            success: true,
+            client_secret: paymentIntent.client_secret,
+            transactionId: paymentIntent.id,
+          };
+
+        } catch (error) {
+          console.error('Stripe payment creation error:', error);
+          return new Response(JSON.stringify({ 
+            error: 'Stripe payment creation failed', 
             details: error.message 
           }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
         }

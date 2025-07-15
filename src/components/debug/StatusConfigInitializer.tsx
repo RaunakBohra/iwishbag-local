@@ -342,11 +342,12 @@ export const StatusConfigInitializer: React.FC = () => {
       // Run diagnostics after initialization
       await runDiagnostics();
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Error initializing configurations:', error);
       toast({
         title: "Initialization Failed",
-        description: error.message || "Failed to initialize status configurations",
+        description: errorMessage || "Failed to initialize status configurations",
         variant: "destructive"
       });
     } finally {
@@ -412,11 +413,12 @@ export const StatusConfigInitializer: React.FC = () => {
         paymentPendingInOrdersList
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Error running diagnostics:', error);
       toast({
         title: "Diagnostics Failed",
-        description: error.message || "Failed to run diagnostics",
+        description: errorMessage || "Failed to run diagnostics",
         variant: "destructive"
       });
     } finally {
@@ -482,11 +484,12 @@ export const StatusConfigInitializer: React.FC = () => {
       // Run diagnostics after creating test data
       await runDiagnostics();
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Error creating test data:', error);
       toast({
         title: "Test Data Creation Failed",
-        description: error.message || "Failed to create test data",
+        description: errorMessage || "Failed to create test data",
         variant: "destructive"
       });
     } finally {

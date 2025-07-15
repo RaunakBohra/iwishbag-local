@@ -10,9 +10,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { User } from "./types";
+import { Tables } from '@/integrations/supabase/types';
 
 interface NewMessageFormProps {
-  sendMessageMutation: UseMutationResult<any, Error, { subject: string; content: string; recipientId?: string | null; attachment?: File | null }, unknown>;
+  sendMessageMutation: UseMutationResult<Tables<'messages'>, Error, { subject: string; content: string; recipientId?: string | null; attachment?: File | null }, unknown>;
   onCancel: () => void;
   isAdmin?: boolean;
   users?: User[];

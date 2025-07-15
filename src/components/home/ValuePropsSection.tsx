@@ -18,7 +18,7 @@ export const ValuePropsSection = ({ settings }: ValuePropsSectionProps) => {
   try {
     // Handle the actual data structure from database
     if (settings.value_props && typeof settings.value_props === 'object') {
-      const propsObj = settings.value_props as Record<string, any>;
+      const propsObj = settings.value_props as Record<string, unknown>;
       valueProps = Object.entries(propsObj).map(([key, value]) => ({
         title: typeof value === 'string' ? value : String(value),
         desc: `Premium ${typeof value === 'string' ? value.toLowerCase() : String(value).toLowerCase()} service for your shopping needs`,

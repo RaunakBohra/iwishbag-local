@@ -19,7 +19,7 @@ import { PaymentError, PaymentErrorContext, PaymentErrorHandler } from '@/utils/
 import { PaymentGateway } from '@/types/payment';
 
 interface PaymentErrorDisplayProps {
-  error: any;
+  error: PaymentError;
   context: PaymentErrorContext;
   onRetry?: () => void;
   onContactSupport?: () => void;

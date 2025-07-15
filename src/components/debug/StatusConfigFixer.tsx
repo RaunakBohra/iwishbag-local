@@ -114,11 +114,12 @@ export const StatusConfigFixer: React.FC = () => {
         description: "payment_pending status now correctly shows in orders list only"
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fixing status configuration:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       toast({
         title: "Fix Failed",
-        description: error.message || "Failed to fix status configuration",
+        description: errorMessage || "Failed to fix status configuration",
         variant: "destructive"
       });
     } finally {

@@ -104,7 +104,7 @@ export const PayUStatusTracker: React.FC<PayUStatusTrackerProps> = ({
     statusProgression.forEach(({ status, delay }) => {
       setTimeout(() => {
         const newStatus: PaymentStatus = {
-          status: status as any,
+          status: status as 'pending' | 'processing' | 'success' | 'failed' | 'cancelled',
           message: PAYMENT_STATUSES[status as keyof typeof PAYMENT_STATUSES].message,
           timestamp: new Date().toISOString()
         };

@@ -26,6 +26,19 @@ import { quoteCalculatorService } from "@/services/QuoteCalculatorService";
 import { useToast } from "@/components/ui/use-toast";
 import { Calculator, Package, Globe, DollarSign } from "lucide-react";
 
+interface CostEstimate {
+  itemTotal: number;
+  shippingCost: number;
+  customsDuty: number;
+  serviceFee: number;
+  total: number;
+  breakdown?: {
+    vat: number;
+    [key: string]: unknown;
+  };
+  currency: string;
+}
+
 interface OptimizedCostEstimatorProps {
   variant?: 'landing' | 'tools';
   className?: string;
@@ -42,7 +55,7 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
     itemWeight: "",
     customsCategory: "",
   });
-  const [estimate, setEstimate] = useState<any>(null);
+  const [estimate, setEstimate] = useState<CostEstimate | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [error, setError] = useState("");
 

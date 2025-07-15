@@ -154,7 +154,7 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(({
               <span className="text-base sm:text-lg font-semibold text-foreground">
                 {typeof currencyDisplay.formatAmount(quote.item_price || 0) === 'string' 
                   ? currencyDisplay.formatAmount(quote.item_price || 0)
-                  : (currencyDisplay.formatAmount(quote.item_price || 0) as any).short || '0'
+                  : (currencyDisplay.formatAmount(quote.item_price || 0) as { short: string }).short || '0'
                 }
               </span>
             </div>

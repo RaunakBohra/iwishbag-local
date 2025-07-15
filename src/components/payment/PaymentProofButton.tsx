@@ -67,7 +67,7 @@ export const PaymentProofButton = ({
         
         let uploadAttempts = 0;
         const maxAttempts = 3;
-        let uploadError: any = null;
+        let uploadError: Error | null = null;
         
         while (uploadAttempts < maxAttempts) {
           const { error } = await supabase.storage
@@ -123,9 +123,10 @@ export const PaymentProofButton = ({
         }
         
         return { success: true };
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Payment proof upload error:', error);
-        throw error;
+        throw new Error(errorMessage);
       } finally {
         setUploading(false);
       }
