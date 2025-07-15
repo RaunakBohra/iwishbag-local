@@ -10,7 +10,23 @@ import { CheckCircle, XCircle, Loader2, CreditCard, Globe, DollarSign } from 'lu
 export const PaymentGatewayTester = () => {
   const [selectedCountry, setSelectedCountry] = useState('US');
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
-  const [testResults, setTestResults] = useState<any>({});
+  interface TestResults {
+    paypalExists?: boolean;
+    paypalConfig?: Record<string, unknown>;
+    countryConfigs?: Array<{
+      code: string;
+      default_gateway: string | null;
+      available_gateways: string[] | null;
+    }>;
+    profileColumnExists?: boolean;
+    paymentTest?: {
+      availableMethods: string[];
+      recommendedMethod: string | null;
+      methodCount: number;
+    };
+  }
+
+  const [testResults, setTestResults] = useState<TestResults>({});
   const [testing, setTesting] = useState(false);
 
   const { 
@@ -33,7 +49,7 @@ export const PaymentGatewayTester = () => {
 
   const runTests = async () => {
     setTesting(true);
-    const results: any = {};
+    const results: TestResults = {};
 
     // Test 1: Check PayPal gateway exists
     try {
@@ -219,7 +235,7 @@ export const PaymentGatewayTester = () => {
                   <div className="p-2 bg-gray-50 rounded">
                     <span className="text-sm font-medium">Country Gateway Settings:</span>
                     <div className="text-xs mt-1 space-y-1">
-                      {testResults.countryConfigs.map((country: any) => (
+                      {testResults.countryConfigs.map((country) => (
                         <div key={country.code}>
                           {country.code}: {country.default_gateway} 
                           <span className="text-gray-500 ml-1">

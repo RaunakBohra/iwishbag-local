@@ -6,6 +6,8 @@ import { Clock, Package, Truck, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { Quote } from '@/types/quote';
+import { ShippingRouteDB } from '@/types/shipping';
 
 interface DeliveryOption {
   id: string;
@@ -16,7 +18,7 @@ interface DeliveryOption {
 }
 
 interface DeliveryTimelineProps {
-  quote: any;
+  quote: Quote | null;
   onDeliveryOptionChange?: (optionId: string) => void;
   selectedOptionId?: string;
   className?: string;
@@ -31,7 +33,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
   const { getStatusConfig } = useStatusManagement();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [shippingRoute, setShippingRoute] = useState<any>(null);
+  const [shippingRoute, setShippingRoute] = useState<ShippingRouteDB | null>(null);
   const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<DeliveryOption | null>(null);
 
@@ -145,7 +147,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
         // Parse delivery options
         let options: DeliveryOption[] = [];
         if (currentRoute.delivery_options && Array.isArray(currentRoute.delivery_options)) {
-          options = currentRoute.delivery_options.map((opt: any, index: number) => ({
+          options = currentRoute.delivery_options.map((opt, index: number) => ({
             id: opt.id || `option-${index}`,
             name: opt.name || `Option ${index + 1}`,
             min_days: opt.min_days || 0,
@@ -179,9 +181,10 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
           : options[0];
         setSelectedOption(defaultOption || options[0]);
 
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching shipping data:', err);
-        setError(err.message || 'Failed to load delivery information');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load delivery information';
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }

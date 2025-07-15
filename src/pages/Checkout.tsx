@@ -38,6 +38,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserCurrency } from "@/hooks/useUserCurrency";
 import { useQuoteDisplayCurrency } from "@/hooks/useQuoteDisplayCurrency";
 import { useCart } from "@/hooks/useCart";
+import { CartItem } from "@/stores/cartStore";
 import { usePaymentGateways } from "@/hooks/usePaymentGateways";
 import { useAllCountries } from "@/hooks/useAllCountries";
 import { currencyService } from "@/services/CurrencyService";
@@ -78,7 +79,7 @@ interface AddressFormData {
 }
 
 // Component to display checkout item price with proper currency conversion
-const CheckoutItemPrice = ({ item, displayCurrency }: { item: any; displayCurrency?: string }) => {
+const CheckoutItemPrice = ({ item, displayCurrency }: { item: CartItem; displayCurrency?: string }) => {
   // Always call hooks at the top
   const { data: userProfile } = useUserProfile();
   
@@ -92,7 +93,7 @@ const CheckoutItemPrice = ({ item, displayCurrency }: { item: any; displayCurren
     }
   };
   
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as QuoteType });
   
   // If displayCurrency is provided (for guest checkout), use that currency directly
   if (displayCurrency) {
@@ -104,7 +105,7 @@ const CheckoutItemPrice = ({ item, displayCurrency }: { item: any; displayCurren
 };
 
 // Component to display checkout total with proper currency conversion
-const CheckoutTotal = ({ items, displayCurrency }: { items: any[]; displayCurrency?: string }) => {
+const CheckoutTotal = ({ items, displayCurrency }: { items: CartItem[]; displayCurrency?: string }) => {
   // Use the first item to determine the quote format (all items should have same destination)
   const firstItem = items[0];
   
@@ -119,7 +120,7 @@ const CheckoutTotal = ({ items, displayCurrency }: { items: any[]; displayCurren
   };
   
   // Always call hooks at the top with consistent parameters
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as QuoteType });
   
   if (!firstItem) return <>$0.00</>;
   
@@ -479,7 +480,7 @@ export default function Checkout() {
   // Mutations
   const updateQuotesMutation = useMutation({
     mutationFn: async ({ ids, status, method, paymentStatus }: { ids: string[], status: string, method: string, paymentStatus?: string }) => {
-      const updateData: any = { 
+      const updateData: Partial<QuoteType> = { 
         status, 
         payment_method: method, 
         in_cart: false 
@@ -639,7 +640,7 @@ export default function Checkout() {
     setPaymentMethod(method);
   };
 
-  const handlePaymentSuccess = (data: any) => {
+  const handlePaymentSuccess = (data: { id: string }) => {
     toast({ title: "Payment Successful", description: "Your payment has been processed successfully." });
     navigate(`/order-confirmation/${data.id}`);
   };
@@ -660,7 +661,7 @@ export default function Checkout() {
   };
 
   // Function to submit PayU form with data
-  const submitPayUForm = (url: string, formData: any) => {
+  const submitPayUForm = (url: string, formData: Record<string, string>) => {
     console.log('🔧 Submitting PayU form...');
     console.log('URL:', url);
     console.log('Form Data:', formData);
@@ -850,11 +851,12 @@ export default function Checkout() {
           }
 
 
-        } catch (error: any) {
+        } catch (error) {
           console.error('Guest checkout failed:', error);
+          const errorMessage = error instanceof Error ? error.message : 'An error occurred during checkout. Please try again.';
           toast({ 
             title: "Checkout Failed", 
-            description: error.message || 'An error occurred during checkout. Please try again.', 
+            description: errorMessage, 
             variant: "destructive" 
           });
           setIsProcessing(false);
@@ -918,11 +920,12 @@ export default function Checkout() {
             description: "Processing your order. Your quotes will be updated upon payment confirmation." 
           });
 
-        } catch (error: any) {
+        } catch (error) {
           console.error('Authenticated checkout session failed:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Failed to create checkout session';
           toast({ 
             title: "Checkout Failed", 
-            description: error.message, 
+            description: errorMessage, 
             variant: "destructive" 
           });
           setIsProcessing(false);
@@ -1030,7 +1033,20 @@ export default function Checkout() {
                 currency: paymentCurrency
               };
               
-              sendBankTransferEmail(quoteForEmail as any, formattedBankDetails);
+              // Create a properly typed quote for email
+              const typedQuoteForEmail: Parameters<typeof sendBankTransferEmail>[0] = {
+                id: updateResult[0].id,
+                display_id: updateResult[0].display_id || '',
+                email: isGuestCheckout ? guestContact.email : user?.email || '',
+                customer_name: isGuestCheckout ? guestContact.fullName : userProfile?.full_name || '',
+                final_total: totalAmount,
+                currency: paymentCurrency,
+                status: updateResult[0].status,
+                created_at: updateResult[0].created_at,
+                user_id: updateResult[0].user_id || null
+              };
+              
+              sendBankTransferEmail(typedQuoteForEmail, formattedBankDetails);
               
               toast({ 
                 title: "Bank Transfer Details Sent", 
@@ -1044,7 +1060,8 @@ export default function Checkout() {
         }
       }
     } catch (error: any) {
-      toast({ title: "An Error Occurred", description: error.message, variant: "destructive" });
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast({ title: "An Error Occurred", description: errorMessage, variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
@@ -1438,10 +1455,11 @@ export default function Checkout() {
                               if (!signInError) {
                                 setTimeout(() => window.location.reload(), 1000);
                               }
-                            } catch (error: any) {
+                            } catch (error) {
+                              const errorMessage = error instanceof Error ? error.message : "Failed to create account. Please try again.";
                               toast({ 
                                 title: "Error", 
-                                description: error.message || "Failed to create account. Please try again.", 
+                                description: errorMessage, 
                                 variant: "destructive" 
                               });
                             } finally {

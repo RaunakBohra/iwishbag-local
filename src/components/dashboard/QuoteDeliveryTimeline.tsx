@@ -24,7 +24,22 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
   className = ''
 }) => {
   const { getStatusConfig } = useStatusManagement();
-  const [deliveryTimeline, setDeliveryTimeline] = useState<any>(null);
+  interface DeliveryPhase {
+    phase: string;
+    title: string;
+    description: string;
+    days: number;
+    estimatedDate?: Date;
+    icon: string;
+  }
+
+  interface DeliveryTimelineData {
+    phases: DeliveryPhase[];
+    totalDays: number;
+    estimatedDeliveryDate: Date;
+  }
+
+  const [deliveryTimeline, setDeliveryTimeline] = useState<DeliveryTimelineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -173,7 +188,7 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {deliveryTimeline.phases.map((phase: any, idx: number) => (
+          {deliveryTimeline.phases.map((phase, idx: number) => (
             <div key={phase.phase} className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50">
               <div className="flex-shrink-0">
                 {/* Icon for each phase */}

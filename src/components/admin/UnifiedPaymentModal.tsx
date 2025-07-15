@@ -61,10 +61,99 @@ import { useDueAmountManager } from '@/hooks/useDueAmountManager';
 import { usePaymentStatusSync } from '@/hooks/usePaymentStatusSync';
 import { DueAmountInfo } from '@/lib/paymentUtils';
 
+// Quote interface for payment modal
+interface Quote {
+  id: string;
+  display_id?: string;
+  final_total?: number;
+  amount_paid?: number;
+  currency?: string;
+  payment_method?: string;
+  shipping_address?: {
+    fullName?: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+    [key: string]: any;
+  };
+  profiles?: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    [key: string]: any;
+  };
+  customer_name?: string;
+  customer_phone?: string;
+  email?: string;
+  user_id?: string;
+  destination_country?: string;
+  created_at?: string;
+  [key: string]: any; // For other properties
+}
+
+// Payment ledger entry interface
+interface PaymentLedgerEntry {
+  id: string;
+  quote_id: string;
+  payment_type?: string;
+  transaction_type?: string;
+  payment_method?: string;
+  amount: number;
+  currency?: string;
+  status?: string;
+  reference_number?: string;
+  gateway_transaction_id?: string;
+  transaction_id?: string;
+  gateway_code?: string;
+  payment_date?: string;
+  created_at: string;
+  updated_at?: string;
+  notes?: string;
+  balance_after?: number;
+  created_by?: string | null;
+  created_by_profile?: {
+    full_name?: string;
+    email?: string;
+  };
+  gateway_response?: Record<string, any>;
+}
+
+// Payment proof interface
+interface PaymentProof {
+  id: string;
+  quote_id: string;
+  file_name: string;
+  attachment_url: string;
+  created_at: string;
+  verified_at?: string | null;
+  verified_by?: string | null;
+  verified_amount?: number | null;
+  verification_notes?: string | null;
+  verification_status?: string | null;
+  sender_id?: string;
+}
+
+// Payment link interface
+interface PaymentLink {
+  id: string;
+  quote_id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  description?: string;
+  api_version?: string;
+  created_at: string;
+  expires_at?: string;
+  payment_url?: string;
+}
+
+// Payment method type
+type PaymentMethodType = 'bank_transfer' | 'cash' | 'upi' | 'payu' | 'stripe' | 'esewa' | 'credit_note' | 'check' | 'wire_transfer' | 'other';
+
 interface UnifiedPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  quote: any;
+  quote: Quote;
 }
 
 type TabValue = 'overview' | 'record' | 'verify' | 'history' | 'refund';
@@ -86,7 +175,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const currencySymbol = getCurrencySymbol(currency);
 
   // Fetch payment data
-  const { data: paymentLedger, isLoading: ledgerLoading } = useQuery({
+  const { data: paymentLedger, isLoading: ledgerLoading } = useQuery<PaymentLedgerEntry[]>({
     queryKey: ['payment-ledger', quote.id],
     queryFn: async () => {
       console.log('Fetching payment data for quote:', quote.id);
@@ -171,7 +260,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     enabled: isOpen && !!quote.id,
   });
 
-  const { data: paymentProofs, isLoading: proofsLoading } = useQuery({
+  const { data: paymentProofs, isLoading: proofsLoading } = useQuery<PaymentProof[]>({
     queryKey: ['payment-proofs', quote.id],
     queryFn: async () => {
       // Query messages table for payment proofs
@@ -202,7 +291,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   });
 
   // Fetch payment links for this quote
-  const { data: paymentLinks, isLoading: linksLoading } = useQuery({
+  const { data: paymentLinks, isLoading: linksLoading } = useQuery<PaymentLink[]>({
     queryKey: ['payment-links', quote.id],
     queryFn: async () => {
       console.log('🔍 [UnifiedPaymentModal] Fetching payment links for quote:', quote.id);
@@ -299,7 +388,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
   // Payment recording state
   const [paymentAmount, setPaymentAmount] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<string>('bank_transfer');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('bank_transfer');
   const [paymentCurrency, setPaymentCurrency] = useState<string>(currency); // Currency for this specific payment
   const [transactionId, setTransactionId] = useState('');
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -458,11 +547,12 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       
       // Switch to history tab
       setActiveTab('history');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error recording payment:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to record payment';
       toast({
         title: "Error",
-        description: error.message || "Failed to record payment.",
+        description: errorMessage + ".",
         variant: "destructive",
       });
     } finally {
@@ -539,11 +629,12 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       
       // Switch to history tab
       setActiveTab('history');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error verifying payment:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to verify payment';
       toast({
         title: "Error",
-        description: error.message || "Failed to verify payment.",
+        description: errorMessage + ".",
         variant: "destructive",
       });
     } finally {
@@ -608,11 +699,12 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       // Refresh data
       queryClient.invalidateQueries({ queryKey: ['payment-proofs', quote.id] });
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error rejecting proof:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reject proof';
       toast({
         title: "Error",
-        description: error.message || "Failed to reject proof.",
+        description: errorMessage + ".",
         variant: "destructive",
       });
     } finally {
@@ -1049,7 +1141,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="payment-method">Payment Method</Label>
-                        <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                        <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as PaymentMethodType)}>
                           <SelectTrigger id="payment-method">
                             <SelectValue />
                           </SelectTrigger>

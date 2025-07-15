@@ -1,4 +1,4 @@
-import { Control, useWatch } from "react-hook-form";
+import { Control, useWatch, UseFormSetValue, FieldValues } from "react-hook-form";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,10 +6,22 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, Link, Package, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
+// Define the shape of a product item in the form
+interface ProductFormItem {
+  productUrl: string;
+  productName: string;
+  options: string;
+}
+
+// Define the form data structure
+interface ProductFormData extends FieldValues {
+  items: ProductFormItem[];
+}
+
 interface ProductInfoFieldsProps {
-  control: Control<any>;
+  control: Control<ProductFormData>;
   index: number;
-  setValue: (name: string, value: any) => void;
+  setValue: UseFormSetValue<ProductFormData>;
 }
 
 export const ProductInfoFields = ({ control, index, setValue }: ProductInfoFieldsProps) => {

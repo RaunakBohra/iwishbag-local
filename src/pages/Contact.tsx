@@ -67,11 +67,12 @@ const Contact = () => {
         description: "We'll get back to you within 24 hours.",
       });
       setFormData({ name: "", email: "", subject: "", message: "" });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Contact form error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to send message. Please try again.";
       toast({
         title: "Error",
-        description: error.message || "Failed to send message. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

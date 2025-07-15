@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Message } from "./types";
 import { Receipt, CheckCircle, XCircle, Eye, MessageSquare } from "lucide-react";
 import { useState } from "react";
+
+// Extended Message type for payment proof messages
+interface PaymentProofMessage extends Message {
+  message_type?: 'payment_proof' | string;
+  verification_status?: 'pending' | 'verified' | 'confirmed' | 'rejected';
+  admin_notes?: string;
+  verified_at?: string;
+}
 // PaymentProofPreviewModal removed - using new simplified payment management
 
 interface MessageItemProps {
@@ -19,8 +27,9 @@ export const MessageItem = ({ message, currentUserId, isAdmin, onVerificationUpd
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const isUserSender = message.sender_id === currentUserId;
   const isUnread = !isUserSender && !message.is_read;
-  const isPaymentProof = (message as any).message_type === 'payment_proof';
-  const verificationStatus = (message as any).verification_status || 'pending';
+  const paymentProofMessage = message as PaymentProofMessage;
+  const isPaymentProof = paymentProofMessage.message_type === 'payment_proof';
+  const verificationStatus = paymentProofMessage.verification_status || 'pending';
   
   const handleMessageClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking on buttons
@@ -105,13 +114,13 @@ export const MessageItem = ({ message, currentUserId, isAdmin, onVerificationUpd
       )}
 
       {/* Admin Notes */}
-      {isPaymentProof && (message as any).admin_notes && (
+      {isPaymentProof && paymentProofMessage.admin_notes && (
         <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
           <div className="text-xs text-blue-700 font-medium">Admin Notes:</div>
-          <div className="text-sm text-blue-800 mt-1">{(message as any).admin_notes}</div>
-          {(message as any).verified_at && (
+          <div className="text-sm text-blue-800 mt-1">{paymentProofMessage.admin_notes}</div>
+          {paymentProofMessage.verified_at && (
             <div className="text-xs text-blue-600 mt-1">
-              Updated: {new Date((message as any).verified_at).toLocaleString()}
+              Updated: {new Date(paymentProofMessage.verified_at).toLocaleString()}
             </div>
           )}
         </div>

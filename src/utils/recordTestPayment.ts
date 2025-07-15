@@ -66,5 +66,10 @@ export async function recordTestPayUPayment(quoteId: string, amount: number) {
 
 // Export to window for console testing
 if (typeof window !== 'undefined') {
-  (window as any).recordTestPayUPayment = recordTestPayUPayment;
+  // Extend window interface for test function
+  interface WindowWithTestPayment extends Window {
+    recordTestPayUPayment: typeof recordTestPayUPayment;
+  }
+  
+  (window as WindowWithTestPayment).recordTestPayUPayment = recordTestPayUPayment;
 }

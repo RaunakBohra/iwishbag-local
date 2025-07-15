@@ -26,13 +26,25 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useCart } from '@/hooks/useCart';
 import { useDebounce } from '@/hooks/useDebounce';
+import { CartItem } from '@/stores/cartStore';
+import { Tables } from '@/integrations/supabase/types';
 
 type SortOption = "date-desc" | "date-asc" | "price-desc" | "price-asc" | "name-asc" | "name-desc";
 
+// Mock quote type for cart display
+interface MockQuote {
+  id: string;
+  origin_country: string;
+  destination_country: string;
+  shipping_address?: {
+    destination_country: string;
+  };
+}
+
 // Component to display cart item price with proper currency conversion
-const CartItemPrice = ({ item, quantity }: { item: any; quantity: number }) => {
+const CartItemPrice = ({ item, quantity }: { item: CartItem; quantity: number }) => {
   // Create a mock quote object for the cart item with correct field mappings
-  const mockQuote = {
+  const mockQuote: MockQuote = {
     id: item.quoteId,
     origin_country: item.purchaseCountryCode || item.countryCode, // Where buying from
     destination_country: item.destinationCountryCode || item.countryCode, // Where shipping to
@@ -42,18 +54,18 @@ const CartItemPrice = ({ item, quantity }: { item: any; quantity: number }) => {
   };
   
   // Use the quote display currency hook
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as Tables<'quotes'> });
   
   return <>{formatAmount(item.finalTotal * quantity)}</>;
 };
 
 // Component to display cart total with proper currency conversion
-const CartTotal = ({ items }: { items: any[] }) => {
+const CartTotal = ({ items }: { items: CartItem[] }) => {
   // Use the first item to determine the quote format (all items should have same destination)
   const firstItem = items[0];
   
   // Create mock quote with default values to ensure hook is always called consistently
-  const mockQuote = {
+  const mockQuote: MockQuote = {
     id: firstItem?.quoteId || 'default',
     origin_country: firstItem?.purchaseCountryCode || firstItem?.countryCode || 'US',
     destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US',
@@ -63,7 +75,7 @@ const CartTotal = ({ items }: { items: any[] }) => {
   };
   
   // Use the quote display currency hook
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as any });
+  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as Tables<'quotes'> });
   
   if (!firstItem) return <>$0.00</>;
   
@@ -404,7 +416,7 @@ export const Cart = () => {
 
         {/* Items List */}
         <div className="space-y-4">
-          {cartItems.map((item) => (
+          {sortedCartItems.map((item) => (
             <Card key={item.id}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">
@@ -528,7 +540,7 @@ export const Cart = () => {
 
         {/* Items List */}
         <div className="space-y-4">
-          {savedItems.map((item) => (
+          {sortedSavedItems.map((item) => (
             <Card key={item.id}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">

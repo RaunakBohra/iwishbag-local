@@ -487,10 +487,11 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
           const loadedQuoteStatuses = JSON.parse(quoteSettings.setting_value);
           console.log('✅ Loaded quote statuses from database:', loadedQuoteStatuses.map(s => s.name));
           setQuoteStatuses(loadedQuoteStatuses);
-        } catch (e: any) {
-          console.error('Error parsing quote statuses JSON:', e.message);
+        } catch (e) {
+          const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+          console.error('Error parsing quote statuses JSON:', errorMessage);
           console.error('Invalid JSON content:', quoteSettings.setting_value);
-          throw new Error(`Invalid JSON in quote_statuses: ${e.message}`);
+          throw new Error(`Invalid JSON in quote_statuses: ${errorMessage}`);
         }
       }
       if (orderSettings?.setting_value) {
@@ -498,15 +499,17 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
           const loadedOrderStatuses = JSON.parse(orderSettings.setting_value);
           console.log('✅ Loaded order statuses from database:', loadedOrderStatuses.map(s => s.name));
           setOrderStatuses(loadedOrderStatuses);
-        } catch (e: any) {
-          console.error('Error parsing order statuses JSON:', e.message);
+        } catch (e) {
+          const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+          console.error('Error parsing order statuses JSON:', errorMessage);
           console.error('Invalid JSON content:', orderSettings.setting_value);
-          throw new Error(`Invalid JSON in order_statuses: ${e.message}`);
+          throw new Error(`Invalid JSON in order_statuses: ${errorMessage}`);
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('❌ Failed to load status config:', err);
-      setError(err.message || 'Failed to load status config');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load status config';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -548,7 +551,7 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
       setQuoteStatuses(defaultQuoteStatuses);
       setOrderStatuses(defaultOrderStatuses);
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Failed to initialize default statuses:', error);
       // Fallback to defaults in memory if database initialization fails
       setQuoteStatuses(defaultQuoteStatuses);

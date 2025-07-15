@@ -490,12 +490,34 @@ export const useCartStore = create<CartStore>()(
             const savedQuotes = allQuotes?.filter(q => !q.in_cart) || [];
 
             // Helper function to convert quote to cart item
-            const convertQuoteToCartItem = (quote: any): CartItem => {
+            interface QuoteWithItems {
+              id: string;
+              product_name: string;
+              final_total?: number;
+              final_total_local?: number;
+              quantity?: number;
+              item_weight?: number;
+              origin_country?: string;
+              destination_country?: string;
+              shipping_address?: any;
+              quote_items?: Array<{
+                item_price?: number;
+                quantity?: number;
+                item_weight?: number;
+                image_url?: string;
+              }>;
+              image_url?: string;
+              delivery_date?: string;
+              created_at?: string;
+              updated_at?: string;
+            }
+            
+            const convertQuoteToCartItem = (quote: QuoteWithItems): CartItem => {
               const firstItem = quote.quote_items?.[0];
               const quoteItems = quote.quote_items || [];
               
               // Calculate total from quote items with proper null checks
-              const totalFromItems = quoteItems.reduce((sum: number, item: any) => {
+              const totalFromItems = quoteItems.reduce((sum: number, item) => {
                 const itemPrice = item.item_price || 0;
                 const itemQuantity = item.quantity || 1;
                 return sum + (itemPrice * itemQuantity);

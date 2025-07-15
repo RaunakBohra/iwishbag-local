@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Tables } from '@/integrations/supabase/types';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays } from 'date-fns';
@@ -113,7 +114,7 @@ interface PaymentProofData {
   payment_type: 'bank_transfer_proof' | 'webhook_payment';
   // Webhook payment specific fields
   transaction_id?: string;
-  gateway_response?: any;
+  gateway_response?: Record<string, unknown>;
   gateway_name?: string;
 }
 
@@ -169,7 +170,7 @@ const PaymentManagementPage = () => {
           const senderIds = [...new Set(messages.map(m => m.sender_id).filter(Boolean))];
 
           // Fetch quotes data
-          let quotesData: any[] = [];
+          let quotesData: Tables<'quotes'>[] = [];
           if (quoteIds.length > 0) {
             const { data } = await supabase
               .from('quotes')
@@ -179,7 +180,7 @@ const PaymentManagementPage = () => {
           }
 
           // Fetch profiles data
-          let profilesData: any[] = [];
+          let profilesData: Tables<'profiles'>[] = [];
           if (senderIds.length > 0) {
             const { data } = await supabase
               .from('profiles')
@@ -266,7 +267,7 @@ const PaymentManagementPage = () => {
           const userIds = [...new Set(transactions.map(t => t.user_id).filter(Boolean))];
 
           // Fetch quotes data
-          let quotesData: any[] = [];
+          let quotesData: Tables<'quotes'>[] = [];
           if (quoteIds.length > 0) {
             const { data } = await supabase
               .from('quotes')
@@ -276,7 +277,7 @@ const PaymentManagementPage = () => {
           }
 
           // Fetch profiles data
-          let profilesData: any[] = [];
+          let profilesData: Tables<'profiles'>[] = [];
           if (userIds.length > 0) {
             const { data } = await supabase
               .from('profiles')
@@ -444,7 +445,7 @@ const PaymentManagementPage = () => {
       const quoteIds = messages?.map(m => m.quote_id).filter(Boolean) || [];
       
       // Fetch quote details separately
-      let quotes: any[] = [];
+      let quotes: Tables<'quotes'>[] = [];
       if (quoteIds.length > 0) {
         const { data: quotesData, error: quotesError } = await supabase
           .from('quotes')
@@ -897,7 +898,7 @@ const PaymentManagementPage = () => {
                 className="pl-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}>
               <SelectTrigger className="w-full sm:w-[150px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -908,7 +909,7 @@ const PaymentManagementPage = () => {
                 <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={paymentMethodFilter} onValueChange={(value: any) => setPaymentMethodFilter(value)}>
+            <Select value={paymentMethodFilter} onValueChange={(value) => setPaymentMethodFilter(value as typeof paymentMethodFilter)}>
               <SelectTrigger className="w-full sm:w-[150px]">
                 <SelectValue placeholder="Method" />
               </SelectTrigger>

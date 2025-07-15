@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Control } from "react-hook-form";
+import { UseFormReturn } from "react-hook-form";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAllCountries } from "@/hooks/useAllCountries";
 import { Badge } from "@/components/ui/badge";
@@ -12,14 +12,31 @@ import { useEffect, useMemo } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { useStatusManagement } from "@/hooks/useStatusManagement";
+import { AdminQuoteFormValues } from "@/components/admin/admin-quote-form-validation";
 
-export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercentage, detectedCustomsTier, isOrder = false }: {
-  form: any;
-  shippingAddress?: any;
+interface CustomsTier {
+  name?: string;
+  customs_percentage: number;
+  description?: string;
+}
+
+interface QuoteDetailFormProps {
+  form: UseFormReturn<AdminQuoteFormValues>;
+  shippingAddress?: {
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+    fullName?: string;
+    phone?: string;
+  };
   detectedCustomsPercentage?: number;
-  detectedCustomsTier?: any;
+  detectedCustomsTier?: CustomsTier;
   isOrder?: boolean;
-}) => {
+}
+
+export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercentage, detectedCustomsTier, isOrder = false }: QuoteDetailFormProps) => {
   const { toast } = useToast();
   const { data: allCountries } = useAllCountries();
   const { quoteStatuses, orderStatuses } = useStatusManagement();
@@ -53,8 +70,8 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
   }, [countryCurrency, form]);
 
   // Get currency symbol
-  const getCurrencySymbol = (currency: string) => {
-    const symbols: { [key: string]: string } = {
+  const getCurrencySymbol = (currency: string): string => {
+    const symbols: Record<string, string> = {
       'USD': '$',
       'EUR': '€',
       'GBP': '£',
@@ -72,8 +89,8 @@ export const QuoteDetailForm = ({ form, shippingAddress, detectedCustomsPercenta
 
   const currencySymbol = getCurrencySymbol(countryCurrency);
 
-  const handleNumberInputWheel = (e: React.WheelEvent) => {
-    (e.currentTarget as HTMLInputElement).blur();
+  const handleNumberInputWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+    e.currentTarget.blur();
   };
 
   // Get appropriate statuses based on whether this is an order or quote

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Tables } from '@/integrations/supabase/types';
 import { Link } from 'react-router-dom';
 import { Package, Search, Filter, ArrowLeft, Plus, Calendar, Globe, DollarSign, ShoppingCart, Eye } from 'lucide-react';
 import { useDashboardState } from '@/hooks/useDashboardState';
@@ -36,11 +37,23 @@ const AddToCartButton = ({ quoteId, className = "" }: { quoteId: string; classNa
   );
 };
 
+interface DeliveryEstimate {
+  label: string;
+  days: string;
+  origin: string;
+  destination: string;
+}
+
+interface Country {
+  code: string;
+  name: string;
+}
+
 // QuoteCard component with proper currency conversion
 const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
-  quote: any;
-  deliveryEstimate: any;
-  countries: any;
+  quote: Tables<'quotes'> & { quote_items?: Tables<'quote_items'>[] };
+  deliveryEstimate: DeliveryEstimate | undefined;
+  countries: Country[] | undefined;
   isQuoteInCart: (quoteId: string) => boolean;
 }) => {
   const { formatAmount } = useQuoteDisplayCurrency({ quote });
@@ -224,7 +237,7 @@ export default function Quotes() {
   const { quoteStatuses } = useStatusManagement();
   // formatAmount will be handled per quote with useQuoteDisplayCurrency
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [deliveryEstimates, setDeliveryEstimates] = useState<Record<string, any>>({});
+  const [deliveryEstimates, setDeliveryEstimates] = useState<Record<string, DeliveryEstimate>>({});
   
   // Subscribe to cart store to make quotes list reactive to cart changes
   const cartItems = useCartStore((state) => state.items);
@@ -243,12 +256,12 @@ export default function Quotes() {
   // Calculate delivery estimates when quotes change
   React.useEffect(() => {
     const calculateDeliveryEstimates = async () => {
-      const estimates: Record<string, any> = {};
+      const estimates: Record<string, DeliveryEstimate> = {};
       
       for (const quote of statusFilteredQuotes) {
         try {
           // Get shipping route data
-          let shippingRoute: any;
+          let shippingRoute: Tables<'shipping_routes'> | null = null;
           if (quote.shipping_route_id) {
             const { data } = await supabase
               .from('shipping_routes')
@@ -276,7 +289,7 @@ export default function Quotes() {
           let options = shippingRoute.delivery_options || [];
           const enabledOptions = Array.isArray(quote.enabled_delivery_options) ? quote.enabled_delivery_options : [];
           if (enabledOptions.length > 0) {
-            options = options.filter((opt: any) => enabledOptions.includes(opt.id));
+            options = options.filter((opt) => enabledOptions.includes(opt.id));
           }
           
           const option = options[0] || {
@@ -289,8 +302,10 @@ export default function Quotes() {
           
           // Calculate window
           let startDate: Date = new Date();
-          if (typeof (quote as any).payment_date === 'string' && (quote as any).payment_date) {
-            startDate = new Date((quote as any).payment_date);
+          // @ts-ignore - payment_date might exist on extended quote type
+          if (typeof quote.payment_date === 'string' && quote.payment_date) {
+            // @ts-ignore
+            startDate = new Date(quote.payment_date);
           } else if (typeof quote.created_at === 'string' && quote.created_at) {
             startDate = new Date(quote.created_at);
           }

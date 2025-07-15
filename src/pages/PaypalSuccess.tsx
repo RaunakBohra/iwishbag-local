@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Tables } from '@/integrations/supabase/types';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,24 @@ interface PayPalSuccessData {
   ba_token?: string;
 }
 
+interface PaymentData {
+  transactionId: string;
+  orderId: string;
+  amount: number | string;
+  currency: string;
+  customerEmail: string;
+  payerId: string;
+  status: 'completed' | 'pending' | 'uncaptured';
+}
+
+interface CheckoutData {
+  quote_ids?: string[];
+  amount: number;
+  currency: string;
+  paypal_order_id?: string;
+  [key: string]: unknown;
+}
+
 const PaypalSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -40,7 +59,7 @@ const PaypalSuccess: React.FC = () => {
   const queryClient = useQueryClient();
   const clearCart = useCartStore(state => state.clearCart);
   const [isProcessing, setIsProcessing] = useState(true);
-  const [paymentData, setPaymentData] = useState<any>(null);
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,7 +95,7 @@ const PaypalSuccess: React.FC = () => {
             .ilike('checkout_data->>paypal_order_id', token);
             
           const session = sessions?.[0];
-          const checkoutData = session?.checkout_data as any;
+          const checkoutData = session?.checkout_data as CheckoutData;
           
           if (session && checkoutData) {
             // Create payment transaction from session data
@@ -203,7 +222,7 @@ const PaypalSuccess: React.FC = () => {
                 paypal_capture_id: captureData.captureID,
                 paypal_payer_email: captureData.payerEmail,
                 gateway_response: {
-                  ...(paymentLink.gateway_response as any || {}),
+                  ...(paymentLink.gateway_response as Record<string, unknown> || {}),
                   capture_details: {
                     // Core identifiers
                     capture_id: captureData.captureID,
@@ -259,7 +278,7 @@ const PaypalSuccess: React.FC = () => {
                 status: 'failed',
                 paypal_payer_id: payerId,
                 gateway_response: {
-                  ...(paymentLink.gateway_response as any || {}),
+                  ...(paymentLink.gateway_response as Record<string, unknown> || {}),
                   capture_error: captureError instanceof Error ? captureError.message : 'PayPal capture failed',
                   capture_attempted_at: new Date().toISOString()
                 },
@@ -278,7 +297,8 @@ const PaypalSuccess: React.FC = () => {
           }
           
           // Update related quotes
-          const quoteIds = (paymentLink.gateway_response as any)?.quote_ids;
+          const gatewayResponse = paymentLink.gateway_response as { quote_ids?: string[] };
+          const quoteIds = gatewayResponse?.quote_ids;
           if (quoteIds) {
             await supabase
               .from('quotes')

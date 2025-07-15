@@ -53,8 +53,9 @@ export const SmartCustomsDetector: React.FC<SmartCustomsDetectorProps> = ({
 
       setDetectedResult(result);
       onCustomsDetected(result);
-    } catch (err: any) {
-      setError(err.message || 'Failed to detect customs category');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to detect customs category';
+      setError(errorMessage);
     } finally {
       setIsDetecting(false);
     }

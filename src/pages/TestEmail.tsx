@@ -103,11 +103,12 @@ export default function TestEmail() {
         description: "Email sent directly via Resend API.",
       });
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Direct API test error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred while testing Resend API';
       toast({
         title: "Direct API test failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

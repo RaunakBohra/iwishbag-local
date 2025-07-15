@@ -14,26 +14,47 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 
+// Payment interface for refund management
+interface Payment {
+  id: string;
+  amount: number;
+  currency?: string; // Payment-specific currency
+  method: string;
+  gateway: string;
+  reference: string;
+  date: Date;
+  canRefund: boolean;
+}
+
+// Quote summary for refund modal
+interface RefundQuote {
+  id: string;
+  final_total: number;
+  amount_paid: number;
+  currency: string;
+  payment_method: string;
+}
+
+// Refund type options
+type RefundType = 'full' | 'partial' | 'credit_note';
+
+// Refund method options
+type RefundMethod = 'original' | 'bank_transfer' | 'credit_note';
+
+// Refund breakdown item
+interface RefundBreakdownItem {
+  paymentId: string;
+  amount: number;
+  method: string;
+  gateway: string;
+  currency: string;
+}
+
 interface RefundManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
-  quote: {
-    id: string;
-    final_total: number;
-    amount_paid: number;
-    currency: string;
-    payment_method: string;
-  };
-  payments: Array<{
-    id: string;
-    amount: number;
-    currency?: string; // Payment-specific currency
-    method: string;
-    gateway: string;
-    reference: string;
-    date: Date;
-    canRefund: boolean;
-  }>;
+  quote: RefundQuote;
+  payments: Payment[];
 }
 
 export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
@@ -45,10 +66,10 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [refundType, setRefundType] = useState<'full' | 'partial' | 'credit_note'>('partial');
+  const [refundType, setRefundType] = useState<RefundType>('partial');
   const [refundAmount, setRefundAmount] = useState('');
   const [selectedPayments, setSelectedPayments] = useState<string[]>([]);
-  const [refundMethod, setRefundMethod] = useState<'original' | 'bank_transfer' | 'credit_note'>('original');
+  const [refundMethod, setRefundMethod] = useState<RefundMethod>('original');
   const [reason, setReason] = useState('');
   const [internalNotes, setInternalNotes] = useState('');
 
@@ -63,7 +84,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
   });
 
   const handleRefundTypeChange = (value: string) => {
-    setRefundType(value as any);
+    setRefundType(value as RefundType);
     if (value === 'full') {
       setRefundAmount(maxRefundable.toString());
       setSelectedPayments(refundablePayments.map(p => p.id));
@@ -82,7 +103,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
   };
   
   // Check if payment amount is suspicious (same numeric value but different currency)
-  const isSuspiciousAmount = (payment: any) => {
+  const isSuspiciousAmount = (payment: Payment) => {
     const paymentCurrency = payment.currency || quote.currency;
     const tolerance = 0.01; // Allow small differences due to rounding
     
@@ -103,7 +124,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
     return false;
   };
 
-  const calculateRefundBreakdown = () => {
+  const calculateRefundBreakdown = (): RefundBreakdownItem[] => {
     if (!refundAmount || !selectedPayments.length) return [];
     
     const amount = parseFloat(refundAmount);
@@ -258,11 +279,12 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
             } else {
               throw new Error(refundResult?.error || 'PayU refund failed');
             }
-          } catch (payuError: any) {
+          } catch (payuError) {
             console.error('PayU refund error:', payuError);
+            const errorMessage = payuError instanceof Error ? payuError.message : 'Failed to process PayU refund';
             toast({
               title: "PayU Refund Failed",
-              description: payuError.message || "Failed to process PayU refund. Please try again or contact support.",
+              description: errorMessage + ". Please try again or contact support.",
               variant: "destructive"
             });
             setIsProcessing(false);
@@ -322,11 +344,12 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
             } else {
               throw new Error(refundResult?.error || 'PayPal refund failed');
             }
-          } catch (paypalError: any) {
+          } catch (paypalError) {
             console.error('PayPal refund error:', paypalError);
+            const errorMessage = paypalError instanceof Error ? paypalError.message : 'Failed to process PayPal refund';
             toast({
               title: "PayPal Refund Failed",
-              description: paypalError.message || "Failed to process PayPal refund. Please try again or contact support.",
+              description: errorMessage + ". Please try again or contact support.",
               variant: "destructive"
             });
             setIsProcessing(false);
@@ -451,11 +474,12 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
 
       onClose();
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error processing refund:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process refund';
       toast({
         title: "Refund Failed",
-        description: error.message || "Failed to process refund. Please try again.",
+        description: errorMessage + ". Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -644,7 +668,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
           {refundType !== 'credit_note' && (
             <div>
               <Label htmlFor="refund-method">Refund Method</Label>
-              <Select value={refundMethod} onValueChange={(v: any) => setRefundMethod(v)}>
+              <Select value={refundMethod} onValueChange={(v) => setRefundMethod(v as RefundMethod)}>
                 <SelectTrigger id="refund-method" className="mt-2">
                   <SelectValue />
                 </SelectTrigger>

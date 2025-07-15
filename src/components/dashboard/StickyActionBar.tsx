@@ -5,9 +5,10 @@ import { CheckCircle, XCircle, ShoppingCart, Clock } from 'lucide-react';
 import { QuoteExpirationTimer } from './QuoteExpirationTimer';
 import { useCartStore } from '@/stores/cartStore';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { Quote } from '@/types/quote';
 
 interface StickyActionBarProps {
-  quote: any;
+  quote: Quote;
   isOwner: boolean;
   isUpdating: boolean;
   onApprove: () => void;

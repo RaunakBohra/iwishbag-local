@@ -26,6 +26,7 @@ import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
 import { formatDualCurrency, getCountryCurrency } from '@/lib/currencyUtils';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 
+// Delivery option interface
 interface DeliveryOption {
   id: string;
   name: string;
@@ -34,8 +35,65 @@ interface DeliveryOption {
   cost: number;
 }
 
+// Country interface
+interface Country {
+  code: string;
+  name: string;
+  [key: string]: any; // For other properties
+}
+
+// Shipping route interface
+interface ShippingRoute {
+  id: number;
+  origin_country: string;
+  destination_country: string;
+  base_shipping_cost: number;
+  cost_per_kg: number;
+  shipping_per_kg: number;
+  cost_percentage: number;
+  processing_days: number;
+  customs_clearance_days: number;
+  weight_unit: string;
+  delivery_options?: DeliveryOptionExtended[];
+  weight_tiers?: Array<{ min: number; max: number; cost: number }>;
+  carriers?: Array<{ name: string; costMultiplier: number; days: string }>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Extended delivery option with additional fields
+interface DeliveryOptionExtended {
+  id?: string;
+  name?: string;
+  carrier?: string;
+  min_days?: number;
+  max_days?: number;
+  price?: number;
+  cost?: number;
+  active?: boolean;
+}
+
+// Quote interface
+interface Quote {
+  id: string;
+  origin_country?: string;
+  destination_country?: string;
+  shipping_route_id?: string;
+  shipping_address?: string | ShippingAddress;
+  enabled_delivery_options?: string[];
+  [key: string]: any; // For other properties
+}
+
+// Shipping address interface
+interface ShippingAddress {
+  destination_country?: string;
+  country?: string;
+  [key: string]: any; // For other properties
+}
+
 interface DeliveryOptionsManagerProps {
-  quote: any;
+  quote: Quote;
   onOptionsChange?: (enabledOptions: string[]) => void;
   className?: string;
 }
@@ -48,7 +106,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
   const { data: allCountries = [] } = useAllCountries();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [shippingRoute, setShippingRoute] = useState<any>(null);
+  const [shippingRoute, setShippingRoute] = useState<ShippingRoute | null>(null);
   const [allDeliveryOptions, setAllDeliveryOptions] = useState<DeliveryOption[]>([]);
   const [enabledOptions, setEnabledOptions] = useState<string[]>([]);
   const [routeOrigin, setRouteOrigin] = useState<string>('');
@@ -170,12 +228,12 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
         // Parse delivery options
         let options: DeliveryOption[] = [];
         if (currentRoute.delivery_options && Array.isArray(currentRoute.delivery_options)) {
-          options = currentRoute.delivery_options.map((opt: any, index: number) => ({
+          options = currentRoute.delivery_options.map((opt: DeliveryOptionExtended, index: number) => ({
             id: opt.id || `option-${index}`,
             name: opt.name || `Option ${index + 1}`,
             min_days: opt.min_days || 0,
             max_days: opt.max_days || 0,
-            cost: opt.cost || 0
+            cost: opt.cost || opt.price || 0
           }));
         }
 
@@ -201,9 +259,10 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
           setEnabledOptions(quoteEnabledOptions);
         }
 
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching shipping data:', err);
-        setError(err.message || 'Failed to load delivery options');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load delivery options';
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }

@@ -59,7 +59,13 @@ export const ShareQuoteButton: React.FC<ShareQuoteButtonProps> = ({
       expiresAt.setDate(expiresAt.getDate() + parseFloat(expiresInDays));
 
       // Only set is_anonymous if the quote doesn't have an email
-      const updateData: any = {
+      interface ShareLinkUpdateData {
+        share_token: string;
+        expires_at: string;
+        is_anonymous?: boolean;
+      }
+      
+      const updateData: ShareLinkUpdateData = {
         share_token: shareToken,
         expires_at: expiresAt.toISOString()
       };
@@ -85,7 +91,7 @@ export const ShareQuoteButton: React.FC<ShareQuoteButtonProps> = ({
         description: "Quote share link has been created successfully.",
       });
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error generating share link:', error);
       toast({
         title: "Error",
@@ -120,7 +126,7 @@ export const ShareQuoteButton: React.FC<ShareQuoteButtonProps> = ({
       // Close the dialog after updating
       setIsOpen(false);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating expiry:', error);
       toast({
         title: "Error",
@@ -166,7 +172,7 @@ export const ShareQuoteButton: React.FC<ShareQuoteButtonProps> = ({
         <Button
           size="icon"
           variant="ghost"
-          onClick={(e) => { 
+          onClick={(e: React.MouseEvent<HTMLButtonElement>) => { 
             e.stopPropagation(); 
             handleOpen(); 
           }}
@@ -200,8 +206,10 @@ export const ShareQuoteButton: React.FC<ShareQuoteButtonProps> = ({
                         variant="ghost"
                         className="h-6 w-6"
                         onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/s/${quote.share_token}`);
-                          toast({ title: "Copied!", description: "Share link copied to clipboard." });
+                          if (quote.share_token) {
+                            navigator.clipboard.writeText(`${window.location.origin}/s/${quote.share_token}`);
+                            toast({ title: "Copied!", description: "Share link copied to clipboard." });
+                          }
                         }}
                       >
                         <Copy className="h-3 w-3" />
@@ -360,8 +368,10 @@ export const ShareQuoteButton: React.FC<ShareQuoteButtonProps> = ({
                       variant="ghost"
                       className="h-6 w-6"
                       onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/s/${quote.share_token}`);
-                        toast({ title: "Copied!", description: "Share link copied to clipboard." });
+                        if (quote.share_token) {
+                          navigator.clipboard.writeText(`${window.location.origin}/s/${quote.share_token}`);
+                          toast({ title: "Copied!", description: "Share link copied to clipboard." });
+                        }
                       }}
                     >
                       <Copy className="h-3 w-3" />

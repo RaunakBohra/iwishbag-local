@@ -51,7 +51,8 @@
       "Bash(supabase status:*)",
       "Bash(npx tsx:*)",
       "Bash(npm install:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(npm test)"
     ],
     "deny": []
   }

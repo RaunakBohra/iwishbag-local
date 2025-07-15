@@ -9,14 +9,36 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   DeliveryOption, 
   calculateDeliveryDates,
-  createDeliveryTimeline
+  createDeliveryTimeline,
+  DeliveryPhase
 } from '@/lib/delivery-estimates';
 import { EnhancedDeliveryTimeline } from './EnhancedDeliveryTimeline';
 import { format, addBusinessDays, parseISO } from 'date-fns';
+import { Tables } from '@/integrations/supabase/types';
+
+// Define estimate structure
+interface DeliveryEstimate {
+  origin_country?: string;
+  destination_country: string;
+}
+
+// Define quote structure for delivery estimates
+interface QuoteForDelivery {
+  id: string;
+  status: string;
+  paid_at?: string;
+  created_at: string;
+}
+
+// Define timeline structure
+interface DeliveryTimeline {
+  phases: DeliveryPhase[];
+  // Add other timeline properties as needed
+}
 
 interface DeliveryEstimateDisplayProps {
-  estimate: any;
-  quote?: any; // Add quote object to get status and dates
+  estimate: DeliveryEstimate;
+  quote?: QuoteForDelivery;
   className?: string;
 }
 
@@ -26,7 +48,7 @@ export const DeliveryEstimateDisplay = ({
   className = ''
 }: DeliveryEstimateDisplayProps) => {
   const [selectedOption, setSelectedOption] = useState<DeliveryOption | null>(null);
-  const [deliveryTimeline, setDeliveryTimeline] = useState<any>(null);
+  const [deliveryTimeline, setDeliveryTimeline] = useState<DeliveryTimeline | null>(null);
   const [processingDays, setProcessingDays] = useState(2);
   const [customsClearanceDays, setCustomsClearanceDays] = useState(3);
   const [loading, setLoading] = useState(false);
@@ -146,7 +168,7 @@ export const DeliveryEstimateDisplay = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {deliveryTimeline.phases.map((phase: any, idx: number) => (
+          {deliveryTimeline.phases.map((phase, idx) => (
             <div key={phase.phase} className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50">
               <div className="flex-shrink-0">
                 {/* Icon for each phase */}

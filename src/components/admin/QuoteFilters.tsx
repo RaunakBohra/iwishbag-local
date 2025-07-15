@@ -108,7 +108,7 @@ export const QuoteFilters = ({
     // Build dynamic country options
     const dynamicCountryOptions = [
         { value: 'all', label: 'All Countries' },
-        ...(allCountries ? allCountries.map((c: any) => ({ value: c.code, label: c.name })) : [])
+        ...(allCountries ? allCountries.map((c) => ({ value: c.code, label: c.name })) : [])
     ];
 
     return (

@@ -52,6 +52,27 @@ interface CleanupStats {
   durationMs: number;
 }
 
+interface SessionStats {
+  [key: string]: number;
+  total: number;
+  completed?: number;
+  active?: number;
+  expired?: number;
+  cancelled?: number;
+}
+
+interface CleanupLog {
+  id: string;
+  created_at: string;
+  triggered_by: string;
+  expired_deleted: number;
+  failed_deleted: number;
+  completed_anonymized: number;
+  anonymized_deleted: number;
+  total_processed: number;
+  cleanup_duration_ms: number;
+}
+
 const GuestSessionManagement: React.FC = () => {
   const { toast } = useToast();
   const [settings, setSettings] = useState<RetentionSettings>({
@@ -69,8 +90,8 @@ const GuestSessionManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isRunningCleanup, setIsRunningCleanup] = useState(false);
-  const [cleanupHistory, setCleanupHistory] = useState<any[]>([]);
-  const [sessionStats, setSessionStats] = useState<any>(null);
+  const [cleanupHistory, setCleanupHistory] = useState<CleanupLog[]>([]);
+  const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
 
   // Load current settings
   useEffect(() => {
@@ -98,13 +119,14 @@ const GuestSessionManagement: React.FC = () => {
 
       if (error) throw error;
 
-      const settingsMap = data?.reduce((acc, setting) => {
-        acc[setting.setting_key.replace('guest_session_', '')] = 
+      const settingsMap = data?.reduce<Partial<RetentionSettings>>((acc, setting) => {
+        const key = setting.setting_key.replace('guest_session_', '') as keyof RetentionSettings;
+        acc[key] = 
           setting.setting_key.includes('enabled') || setting.setting_key.includes('notifications')
             ? setting.setting_value === 'true'
             : parseInt(setting.setting_value);
         return acc;
-      }, {} as any);
+      }, {});
 
       setSettings(prev => ({ ...prev, ...settingsMap }));
     } catch (error) {
@@ -201,11 +223,11 @@ const GuestSessionManagement: React.FC = () => {
 
       if (error) throw error;
 
-      const stats = data?.reduce((acc, session) => {
+      const stats = data?.reduce<SessionStats>((acc, session) => {
         acc[session.status] = (acc[session.status] || 0) + 1;
         acc.total = (acc.total || 0) + 1;
         return acc;
-      }, {} as any);
+      }, { total: 0 });
 
       setSessionStats(stats);
     } catch (error) {
@@ -324,9 +346,9 @@ const GuestSessionManagement: React.FC = () => {
                   type="number"
                   min="1"
                   value={settings.expired_retention_days}
-                  onChange={(e) => setSettings(prev => ({ 
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings(prev => ({ 
                     ...prev, 
-                    expired_retention_days: parseInt(e.target.value) 
+                    expired_retention_days: parseInt(e.target.value) || 7 
                   }))}
                 />
                 <p className="text-xs text-muted-foreground">
@@ -341,9 +363,9 @@ const GuestSessionManagement: React.FC = () => {
                   type="number"
                   min="1"
                   value={settings.failed_retention_days}
-                  onChange={(e) => setSettings(prev => ({ 
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings(prev => ({ 
                     ...prev, 
-                    failed_retention_days: parseInt(e.target.value) 
+                    failed_retention_days: parseInt(e.target.value) || 30 
                   }))}
                 />
                 <p className="text-xs text-muted-foreground">
@@ -360,9 +382,9 @@ const GuestSessionManagement: React.FC = () => {
                   type="number"
                   min="1"
                   value={settings.completed_retention_days}
-                  onChange={(e) => setSettings(prev => ({ 
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings(prev => ({ 
                     ...prev, 
-                    completed_retention_days: parseInt(e.target.value) 
+                    completed_retention_days: parseInt(e.target.value) || 90 
                   }))}
                 />
                 <p className="text-xs text-muted-foreground">
@@ -377,9 +399,9 @@ const GuestSessionManagement: React.FC = () => {
                   type="number"
                   min="1"
                   value={settings.anonymized_retention_days}
-                  onChange={(e) => setSettings(prev => ({ 
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings(prev => ({ 
                     ...prev, 
-                    anonymized_retention_days: parseInt(e.target.value) 
+                    anonymized_retention_days: parseInt(e.target.value) || 365 
                   }))}
                 />
                 <p className="text-xs text-muted-foreground">
@@ -440,9 +462,9 @@ const GuestSessionManagement: React.FC = () => {
                   min="100"
                   max="10000"
                   value={settings.cleanup_batch_size}
-                  onChange={(e) => setSettings(prev => ({ 
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings(prev => ({ 
                     ...prev, 
-                    cleanup_batch_size: parseInt(e.target.value) 
+                    cleanup_batch_size: parseInt(e.target.value) || 1000 
                   }))}
                 />
               </div>
@@ -454,9 +476,9 @@ const GuestSessionManagement: React.FC = () => {
                   type="number"
                   min="7"
                   value={settings.cleanup_log_retention_days}
-                  onChange={(e) => setSettings(prev => ({ 
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings(prev => ({ 
                     ...prev, 
-                    cleanup_log_retention_days: parseInt(e.target.value) 
+                    cleanup_log_retention_days: parseInt(e.target.value) || 30 
                   }))}
                 />
               </div>

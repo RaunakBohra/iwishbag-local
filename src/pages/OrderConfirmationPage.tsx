@@ -97,7 +97,13 @@ const OrderConfirmationPage: React.FC = () => {
             items: data.quote_items,
             isAnonymous: data.is_anonymous,
           };
-          setOrderDetails(formattedOrder as any);
+          setOrderDetails({
+            ...formattedOrder,
+            quotes: {
+              display_id: data.display_id || '',
+              quote_items: data.quote_items || []
+            }
+          });
           
           // Store guest email in localStorage for convenience
           if (!user && data.email) {
@@ -107,8 +113,9 @@ const OrderConfirmationPage: React.FC = () => {
           throw new Error('Order not found.');
         }
 
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch order details';
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -166,10 +173,11 @@ const OrderConfirmationPage: React.FC = () => {
         // Navigate to dashboard
         navigate('/dashboard');
       }
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create account";
       toast({ 
         title: "Error", 
-        description: error.message || "Failed to create account", 
+        description: errorMessage, 
         variant: "destructive" 
       });
     } finally {

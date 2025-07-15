@@ -2,20 +2,20 @@
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Control } from "react-hook-form";
+import { Control, FieldValues, Path } from "react-hook-form";
 import { usePurchaseCountries } from "@/hooks/usePurchaseCountries";
 import { useShippingCountries } from "@/hooks/useShippingCountries";
 import { useCountryWithCurrency } from "@/hooks/useCountryWithCurrency";
 
-interface CountryFieldProps {
-  control: Control<any>;
+interface CountryFieldProps<TFieldValues extends FieldValues = FieldValues> {
+  control: Control<TFieldValues>;
   isLoading: boolean;
   filter?: 'purchase' | 'shipping';
-  name?: string;
+  name?: Path<TFieldValues>;
   label?: string;
 }
 
-export const CountryField = ({ control, isLoading, filter, name = "countryCode", label }: CountryFieldProps) => {
+export const CountryField = <TFieldValues extends FieldValues = FieldValues>({ control, isLoading, filter, name = "countryCode" as Path<TFieldValues>, label }: CountryFieldProps<TFieldValues>) => {
   const { data: purchaseCountries, isLoading: purchaseLoading } = usePurchaseCountries();
   const { data: shippingCountries, isLoading: shippingLoading } = useShippingCountries();
   

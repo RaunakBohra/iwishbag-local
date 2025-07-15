@@ -5,12 +5,13 @@ import { ProductInfoFields } from "./ProductInfoFields";
 import { ProductImageField } from "./ProductImageField";
 import { Trash2, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { QuoteFormValues } from "@/components/forms/quote-form-validation";
 
 interface QuoteItemProps {
   index: number;
   remove: UseFieldArrayRemove;
-  control: Control<any>;
-  setValue: UseFormSetValue<any>;
+  control: Control<QuoteFormValues>;
+  setValue: UseFormSetValue<QuoteFormValues>;
 }
 
 const QuoteItem = ({ index, remove, control, setValue }: QuoteItemProps) => {

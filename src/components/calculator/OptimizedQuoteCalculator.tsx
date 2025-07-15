@@ -3,7 +3,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { adminQuoteFormSchema, AdminQuoteFormValues } from '@/components/admin/admin-quote-form-validation';
 import { useOptimizedQuoteCalculation, useRealTimeQuoteCalculation } from '@/hooks/useOptimizedQuoteCalculation';
-import { QuoteCalculationParams } from '@/services/QuoteCalculatorService';
+import { QuoteCalculationParams, QuoteCalculationResult } from '@/services/QuoteCalculatorService';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ import { useQuoteCurrencyDisplay } from '@/hooks/useCurrencyConversion';
 
 interface OptimizedQuoteCalculatorProps {
   initialData?: Partial<AdminQuoteFormValues>;
-  onCalculationComplete?: (result: any) => void;
+  onCalculationComplete?: (result: QuoteCalculationResult) => void;
   realTimeMode?: boolean;
   showPerformanceMetrics?: boolean;
 }
@@ -68,7 +68,7 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
   });
 
   // Watch form values for real-time calculations
-  const watchedValues = form.watch();
+  const watchedValues = form.watch() as AdminQuoteFormValues;
 
   // Optimized calculation hook
   const {
@@ -142,8 +142,8 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
   const displayResult = realTimeMode ? realTimeResult : calculationResult;
 
   // Get origin and destination countries for dual currency display
-  const originCountry = watchedValues.origin_country || '';
-  const destinationCountry = watchedValues.destination_country || '';
+  const originCountry: string = watchedValues.origin_country || '';
+  const destinationCountry: string = watchedValues.destination_country || '';
 
   // Use proper currency display hook like QuoteCalculatedCosts
   const currencyDisplay = useQuoteCurrencyDisplay({
@@ -468,7 +468,7 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                         Amount ({getCurrencySymbolFromCountry(originCountry)}/{getCurrencySymbolFromCountry(destinationCountry)})
                       </span>
                     </div>
-                    {[
+                    {([
                       ['Items Total', displayResult.breakdown.total_item_price],
                       ['Sales Tax', displayResult.breakdown.sales_tax_price],
                       ['Merchant Shipping', displayResult.breakdown.merchant_shipping_price],
@@ -480,7 +480,7 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                       ['Discount', displayResult.breakdown.discount],
                       ['Payment Gateway Fee', displayResult.breakdown.payment_gateway_fee],
                       ['VAT', displayResult.breakdown.vat]
-                    ].map(([label, amount]) => {
+                    ] as const).map(([label, amount]) => {
                       if (!amount || amount === 0) return null;
                       const isDiscount = label === 'Discount';
                       const displayAmount = isDiscount ? -Math.abs(amount) : amount;

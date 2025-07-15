@@ -7,12 +7,34 @@ import { supabase } from '../../integrations/supabase/client';
 import { useCountryUtils } from '../../lib/countryUtils';
 import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
 
+// Shipping address structure
+interface ShippingAddress {
+  destination_country?: string;
+  country?: string;
+  [key: string]: any; // For other fields that might exist
+}
+
+// Quote item structure
+interface QuoteItem {
+  item_price?: number;
+  item_weight?: number;
+  [key: string]: any; // For other fields that might exist
+}
+
+// Quote structure
+interface Quote {
+  origin_country?: string;
+  destination_country?: string;
+  quote_items?: QuoteItem[];
+  [key: string]: any; // For other fields that might exist
+}
+
 interface CustomsTierDisplayProps {
-  quote: any;
-  shippingAddress?: any;
+  quote: Quote;
+  shippingAddress?: ShippingAddress;
   className?: string;
-  customsTiers: any[];
-  appliedTier: any;
+  customsTiers: CustomsTier[];
+  appliedTier: CustomsTier | null;
   loading: boolean;
   error: string | null;
 }
@@ -52,13 +74,13 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
     const found = countries.find(c => c.name === destinationCountry);
     if (found) destinationCountry = found.code;
   }
-  const quotePrice = quote.quote_items?.reduce((sum: number, item: any) => sum + (item.item_price || 0), 0) || 0;
-  const quoteWeight = quote.quote_items?.reduce((sum: number, item: any) => sum + (item.item_weight || 0), 0) || 0;
+  const quotePrice = quote.quote_items?.reduce((sum: number, item: QuoteItem) => sum + (item.item_price || 0), 0) || 0;
+  const quoteWeight = quote.quote_items?.reduce((sum: number, item: QuoteItem) => sum + (item.item_weight || 0), 0) || 0;
 
 
 
   // Check if conditions match
-  const checkConditions = (tier: any): { priceMatch: boolean; weightMatch: boolean } => {
+  const checkConditions = (tier: CustomsTier): { priceMatch: boolean; weightMatch: boolean } => {
     const priceMatch = (!tier.price_min || quotePrice >= tier.price_min) && 
                       (!tier.price_max || quotePrice <= tier.price_max);
     const weightMatch = (!tier.weight_min || quoteWeight >= tier.weight_min) && 

@@ -211,7 +211,7 @@ const PAYMENT_ERROR_CODES: Record<string, Omit<PaymentError, 'code'>> = {
 };
 
 export class PaymentErrorHandler {
-  static parseError(error: any, context: PaymentErrorContext): PaymentError {
+  static parseError(error: unknown, context: PaymentErrorContext): PaymentError {
     const errorCode = this.determineErrorCode(error, context);
     const baseError = PAYMENT_ERROR_CODES[errorCode] || PAYMENT_ERROR_CODES['UNKNOWN_ERROR'];
     
@@ -223,64 +223,69 @@ export class PaymentErrorHandler {
     };
   }
 
-  private static determineErrorCode(error: any, context: PaymentErrorContext): string {
+  private static determineErrorCode(error: unknown, context: PaymentErrorContext): string {
+    // Type guard to check if error is an Error object
+    const isError = error instanceof Error;
+    const errorMessage = isError ? error.message : String(error);
+    const errorName = isError ? error.name : '';
+    
     // Network errors
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+    if (errorName === 'TypeError' && errorMessage.includes('fetch')) {
       return 'NETWORK_ERROR';
     }
     
-    if (error.name === 'AbortError' || error.message.includes('timeout')) {
+    if (errorName === 'AbortError' || errorMessage.includes('timeout')) {
       return 'TIMEOUT_ERROR';
     }
 
     // PayU specific errors
     if (context.gateway === 'payu') {
-      if (error.message?.includes('Invalid hash')) {
+      if (errorMessage.includes('Invalid hash')) {
         return 'PAYU_INVALID_HASH';
       }
       
-      if (error.message?.includes('Insufficient funds')) {
+      if (errorMessage.includes('Insufficient funds')) {
         return 'PAYU_INSUFFICIENT_FUNDS';
       }
       
-      if (error.message?.includes('Invalid card') || error.message?.includes('card number')) {
+      if (errorMessage.includes('Invalid card') || errorMessage.includes('card number')) {
         return 'PAYU_INVALID_CARD';
       }
       
-      if (error.message?.includes('expired')) {
+      if (errorMessage.includes('expired')) {
         return 'PAYU_CARD_EXPIRED';
       }
       
-      if (error.message?.includes('transaction failed')) {
+      if (errorMessage.includes('transaction failed')) {
         return 'PAYU_TRANSACTION_FAILED';
       }
     }
 
     // Amount errors
-    if (error.message?.includes('minimum amount') || error.message?.includes('too small')) {
+    if (errorMessage.includes('minimum amount') || errorMessage.includes('too small')) {
       return 'AMOUNT_TOO_LOW';
     }
     
-    if (error.message?.includes('maximum amount') || error.message?.includes('too large')) {
+    if (errorMessage.includes('maximum amount') || errorMessage.includes('too large')) {
       return 'AMOUNT_TOO_HIGH';
     }
 
     // Currency errors
-    if (error.message?.includes('currency not supported')) {
+    if (errorMessage.includes('currency not supported')) {
       return 'CURRENCY_NOT_SUPPORTED';
     }
 
     // Configuration errors
-    if (error.message?.includes('configuration') || error.message?.includes('config')) {
+    if (errorMessage.includes('configuration') || errorMessage.includes('config')) {
       return 'GATEWAY_CONFIG_ERROR';
     }
     
-    if (error.message?.includes('unavailable') || error.message?.includes('service down')) {
+    if (errorMessage.includes('unavailable') || errorMessage.includes('service down')) {
       return 'GATEWAY_UNAVAILABLE';
     }
 
     // Authentication errors
-    if (error.message?.includes('authentication') || error.message?.includes('3D Secure')) {
+    if (errorMessage.includes('authentication') || errorMessage.includes('3D Secure')) {
       return 'AUTHENTICATION_FAILED';
     }
 
@@ -339,7 +344,7 @@ export class PaymentErrorHandler {
     return error.retryDelay || 30000; // Default 30 seconds
   }
 
-  static formatErrorForLogging(error: PaymentError, context: PaymentErrorContext): any {
+  static formatErrorForLogging(error: PaymentError, context: PaymentErrorContext): Record<string, unknown> {
     return {
       code: error.code,
       message: error.message,

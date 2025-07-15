@@ -133,9 +133,10 @@ export default function ResetPassword() {
         });
       }, 2000);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Password reset error:', error);
-      toast.error(error.message || 'Failed to reset password. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reset password. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

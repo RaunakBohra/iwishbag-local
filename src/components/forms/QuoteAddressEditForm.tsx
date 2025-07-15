@@ -120,14 +120,13 @@ function getQuoteDestinationCountry(quote: Tables<'quotes'>): string {
     }
   }
   
-  // Try to get from destination_country field if available
-  if ((quote as any).destination_country) {
-    const destCountry = (quote as any).destination_country;
-    if (/^[A-Z]{2}$/i.test(destCountry)) {
-      return destCountry.toUpperCase();
+  // Try to get from country_code field
+  if (quote.country_code) {
+    if (/^[A-Z]{2}$/i.test(quote.country_code)) {
+      return quote.country_code.toUpperCase();
     }
   }
   
-  // Default to the quote's country code (purchase country) or US
-  return quote.destination_country || 'US';
+  // Default to US
+  return 'US';
 }

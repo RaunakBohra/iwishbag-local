@@ -97,7 +97,7 @@ export const DocumentUploader = ({
         
         let uploadAttempts = 0;
         const maxAttempts = 3;
-        let uploadError: any = null;
+        let uploadError: Error | null = null;
         
         while (uploadAttempts < maxAttempts) {
           const { error } = await supabase.storage
@@ -152,9 +152,9 @@ export const DocumentUploader = ({
         }
 
         return { success: true };
-      } catch (error: any) {
+      } catch (error) {
         console.error('Document upload error:', error);
-        throw error;
+        throw error instanceof Error ? error : new Error('Failed to upload document');
       }
     },
     onSuccess: () => {

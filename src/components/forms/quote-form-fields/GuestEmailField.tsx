@@ -25,10 +25,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { QuoteFormValues } from "@/components/forms/quote-form-validation";
 
 interface GuestEmailFieldProps {
-  control: Control<any>;
-  setValue: UseFormSetValue<any>;
+  control: Control<QuoteFormValues>;
+  setValue: UseFormSetValue<QuoteFormValues>;
   enableUserSearch?: boolean;
 }
 

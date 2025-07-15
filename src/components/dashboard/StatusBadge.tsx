@@ -62,7 +62,7 @@ export const StatusBadge = ({ status, category, className, showIcon = true }: St
 
   // Get the icon component based on the icon name
   const getIconComponent = (iconName: string) => {
-    const iconMap: Record<string, React.ComponentType<any>> = {
+    const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
       'Clock': Clock,
       'CheckCircle': CheckCircle,
       'XCircle': XCircle,
@@ -81,9 +81,14 @@ export const StatusBadge = ({ status, category, className, showIcon = true }: St
 
   const IconComponent = getIconComponent(statusConfig.icon);
 
+  // Type-safe variant mapping
+  type BadgeVariant = "default" | "secondary" | "outline" | "destructive" | "success" | "warning" | "info" | "purple" | "pink" | "indigo" | "emerald" | "amber" | "rose" | "violet" | "cyan" | "lime";
+  
+  const variant = (statusConfig.color as BadgeVariant) || "default";
+
   return (
     <Badge
-      variant={statusConfig.color as any}
+      variant={variant}
       className={cn(className, "text-sm")}
       title={statusConfig.description}
     >

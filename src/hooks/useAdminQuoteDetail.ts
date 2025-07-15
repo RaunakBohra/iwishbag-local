@@ -31,7 +31,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
             const purchaseCurrency = allCountries?.find(c => c.code === purchaseCountry)?.currency || 'USD';
             
             // Always use the original input values from the quote (in purchase currency)
-            const formData: any = {
+            const formData: Partial<AdminQuoteFormValues> & Record<string, any> = {
                 id: quote.id,
                 sales_tax_price: quote.sales_tax_price,
                 merchant_shipping_price: quote.merchant_shipping_price,
@@ -96,9 +96,10 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
             await Promise.all(
                 itemsToUpdate.map(item => updateQuoteItem(item))
             );
-        } catch (error: any) {
+        } catch (error) {
             console.error('[ADMIN QUOTE SUBMIT] Error updating items:', error);
-            toast({ title: "Error updating items", description: error.message, variant: "destructive" });
+            const errorMessage = error instanceof Error ? error.message : 'Failed to update items';
+            toast({ title: "Error updating items", description: errorMessage, variant: "destructive" });
             return;
         }
         
@@ -128,7 +129,12 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
 
                 // --- Priority Logic ---
                 const country = allCountries?.find(c => c.code === quote.destination_country);
-                const thresholds = (country?.priority_thresholds || { low: 0, normal: 500, urgent: 2000 }) as any;
+                interface PriorityThresholds {
+                    low: number;
+                    normal: number;
+                    urgent: number;
+                }
+                const thresholds = (country?.priority_thresholds || { low: 0, normal: 500, urgent: 2000 }) as PriorityThresholds;
                 const finalTotal = finalQuoteData.final_total || 0;
                 // Always recalculate priority on calculate
                 let priority;
@@ -154,33 +160,48 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
                 // --- End Priority Logic ---
 
                 // --- Map snake_case to camelCase for UI breakdown (using USD-calculated values) ---
-                (finalQuoteData as any).salesTaxPrice = finalQuoteData.sales_tax_price;
-                (finalQuoteData as any).domesticShipping = finalQuoteData.domestic_shipping;
-                (finalQuoteData as any).handlingCharge = finalQuoteData.handling_charge;
-                (finalQuoteData as any).insuranceAmount = finalQuoteData.insurance_amount;
-                (finalQuoteData as any).merchantShippingPrice = finalQuoteData.merchant_shipping_price;
-                (finalQuoteData as any).discount = finalQuoteData.discount;
-                (finalQuoteData as any).interNationalShipping = finalQuoteData.international_shipping;
-                (finalQuoteData as any).customsAndECS = finalQuoteData.customs_and_ecs;
-                (finalQuoteData as any).paymentGatewayFee = finalQuoteData.payment_gateway_fee;
+                interface ExtendedQuoteData extends Partial<Quote> {
+                    id: string;
+                    salesTaxPrice?: number;
+                    domesticShipping?: number;
+                    handlingCharge?: number;
+                    insuranceAmount?: number;
+                    merchantShippingPrice?: number;
+                    discount?: number;
+                    interNationalShipping?: number;
+                    customsAndECS?: number;
+                    paymentGatewayFee?: number;
+                }
+                
+                const extendedQuoteData = finalQuoteData as ExtendedQuoteData;
+                extendedQuoteData.salesTaxPrice = finalQuoteData.sales_tax_price;
+                extendedQuoteData.domesticShipping = finalQuoteData.domestic_shipping;
+                extendedQuoteData.handlingCharge = finalQuoteData.handling_charge;
+                extendedQuoteData.insuranceAmount = finalQuoteData.insurance_amount;
+                extendedQuoteData.merchantShippingPrice = finalQuoteData.merchant_shipping_price;
+                extendedQuoteData.discount = finalQuoteData.discount;
+                extendedQuoteData.interNationalShipping = finalQuoteData.international_shipping;
+                extendedQuoteData.customsAndECS = finalQuoteData.customs_and_ecs;
+                extendedQuoteData.paymentGatewayFee = finalQuoteData.payment_gateway_fee;
                 // --- End UI mapping ---
 
                 // --- Remove camelCase fields before DB save ---
-                delete (finalQuoteData as any).salesTaxPrice;
-                delete (finalQuoteData as any).merchantShippingPrice;
-                delete (finalQuoteData as any).interNationalShipping;
-                delete (finalQuoteData as any).customsAndECS;
-                delete (finalQuoteData as any).domesticShipping;
-                delete (finalQuoteData as any).handlingCharge;
-                delete (finalQuoteData as any).insuranceAmount;
-                delete (finalQuoteData as any).paymentGatewayFee;
+                delete extendedQuoteData.salesTaxPrice;
+                delete extendedQuoteData.merchantShippingPrice;
+                delete extendedQuoteData.interNationalShipping;
+                delete extendedQuoteData.customsAndECS;
+                delete extendedQuoteData.domesticShipping;
+                delete extendedQuoteData.handlingCharge;
+                delete extendedQuoteData.insuranceAmount;
+                delete extendedQuoteData.paymentGatewayFee;
                 // --- End removal ---
 
                 updateQuote(finalQuoteData);
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('[ADMIN QUOTE SUBMIT] Error calculating quote:', error);
-            toast({ title: "Error calculating quote", description: error.message, variant: "destructive" });
+            const errorMessage = error instanceof Error ? error.message : 'Failed to calculate quote';
+            toast({ title: "Error calculating quote", description: errorMessage, variant: "destructive" });
         }
     };
 

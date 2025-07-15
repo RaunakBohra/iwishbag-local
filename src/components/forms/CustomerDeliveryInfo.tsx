@@ -18,9 +18,15 @@ import { WeatherAlertBanner } from './WeatherAlertBanner';
 import { EnhancedDeliveryTimeline } from './EnhancedDeliveryTimeline';
 import { format, parseISO } from 'date-fns';
 
+interface QuoteInfo {
+  status: string;
+  paid_at?: string;
+  created_at: string;
+}
+
 interface CustomerDeliveryInfoProps {
   estimate: DeliveryEstimate;
-  quote?: any; // Add quote object to get status and dates
+  quote?: QuoteInfo;
   originCountry: string;
   destinationCountry: string;
   orderNumber?: string;
