@@ -18,23 +18,12 @@ export const useExchangeRateOperations = () => {
       
       return data;
     },
-    onSuccess: (data) => {
-      // Invalidate relevant queries to refresh the UI
-      queryClient.invalidateQueries({ queryKey: ['countries-with-markup'] });
-      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
-      
-      if (data.success) {
-        toast({ 
-          title: "Exchange rates updated successfully",
-          description: data.message || `Updated exchange rates at ${new Date().toLocaleTimeString()}`
-        });
-      } else {
-        toast({ 
-          title: "Exchange rate update completed with issues", 
-          description: data.message || "Some rates may not have been updated",
-          variant: "destructive" 
-        });
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['country-settings'] }); // Invalidate country settings query
+      toast({
+        title: "Success",
+        description: "Exchange rates updated successfully.",
+      });
     },
     onError: (error: Error) => {
       toast({ 

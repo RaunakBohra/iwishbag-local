@@ -1,11 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Database } from '../../../src/integrations/supabase/types.ts'; // Fixed path from supabase/functions/update-exchange-rates/
-import { requireAdmin, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts';
+import { authenticateUser, requireAdmin, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Max-Age': '86400',
 };
@@ -26,7 +26,11 @@ serve(async (req) => {
     validateMethod(req, ['POST']);
 
     // Authenticate and require admin access
-    const { user, supabaseClient } = await requireAdmin(req);
+    // Authenticate user
+    const { user, supabaseClient } = await authenticateUser(req);
+
+    // Require admin access
+    await requireAdmin(supabaseClient, user.id);
     
     console.log(`🔐 Admin user ${user.email} updating exchange rates`);
 
@@ -66,7 +70,7 @@ serve(async (req) => {
     console.log("🔵 Fetching all country settings...");
     const { data: countrySettings, error: fetchError } = await supabaseAdmin
       .from('country_settings')
-      .select('code, currency, rate_from_usd');
+      .select('code, currency, rate_from_usd, name');
 
     if (fetchError) {
       console.error("❌ Error fetching country settings:" , fetchError);
@@ -84,12 +88,25 @@ serve(async (req) => {
     // Prepare updates for country_settings
     const updates = countrySettings.map(setting => {
       const currencyCode = setting.currency;
-      const rate = rates[currencyCode]; // Rate from USD to this currency
+      let rate = rates[currencyCode]; // Rate from USD to this currency
 
       if (rate) {
+        // Apply specific adjustments based on country code
+        if (setting.code === 'NP') {
+          rate += 2; // Add 2 for Nepal
+        } else if (setting.code === 'IN') {
+          rate += 3; // Add 3 for India
+        }
+        // For other countries, 'rate' remains the fetched rate
+
+        // Round to 2 decimal places
+        const roundedRate = parseFloat(rate.toFixed(2));
+
         return {
           code: setting.code,
-          rate_from_usd: rate,
+          name: setting.name,
+          currency: setting.currency,
+          rate_from_usd: roundedRate,
         };
       }
       console.warn(`⚠️ No exchange rate found for currency: ${currencyCode} (Country: ${setting.code})`);
@@ -98,6 +115,7 @@ serve(async (req) => {
 
     if (updates.length > 0) {
       console.log(`🔵 Updating ${updates.length} country settings with new rates...`);
+      console.log("🔵 Updates payload:", JSON.stringify(updates, null, 2));
       const { error: updateError } = await supabaseAdmin
         .from('country_settings')
         .upsert(updates, { onConflict: 'code' }); // Upsert based on country code

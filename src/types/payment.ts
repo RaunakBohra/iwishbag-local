@@ -3,7 +3,7 @@ export type PaymentGateway = string; // Dynamic type from database gateway codes
 
 // Fallback gateway codes for TypeScript and development
 export const FALLBACK_GATEWAY_CODES = [
-  'payu', 'esewa', 'khalti', 'fonepay', 'airwallex',
+  'payu', 'esewa', 'khalti', 'fonepay', 'airwallex', 'stripe',
   'bank_transfer', 'cod', 'razorpay', 'paypal', 'upi', 'paytm',
   'grabpay', 'alipay'
 ] as const;

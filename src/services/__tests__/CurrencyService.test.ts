@@ -1,20 +1,21 @@
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { currencyService } from '../CurrencyService';
 import { supabase } from '@/integrations/supabase/client';
 
 // Mock Supabase
-jest.mock('@/integrations/supabase/client', () => ({
+vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: jest.fn()
+    from: vi.fn()
   }
 }));
 
-const mockSupabase = supabase as jest.Mocked<typeof supabase>;
+const mockSupabase = supabase as any;
 
 describe('CurrencyService', () => {
   beforeEach(() => {
     // Clear cache before each test
     currencyService.clearCache();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Currency Symbol and Name Functions', () => {

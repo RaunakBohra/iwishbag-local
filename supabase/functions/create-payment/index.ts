@@ -474,17 +474,37 @@ serve(async (req) => {
 
       case 'stripe':
         try {
-          // Initialize Stripe with secret key
-          const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+          // Fetch Stripe config from payment_gateways table
+          const { data: stripeGateway, error: stripeGatewayError } = await supabaseAdmin
+            .from('payment_gateways')
+            .select('config, test_mode')
+            .eq('code', 'stripe')
+            .single();
+
+          if (stripeGatewayError || !stripeGateway) {
+            return new Response(JSON.stringify({ error: 'Stripe gateway config missing' }), { 
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+
+          const config = stripeGateway.config || {};
+          const testMode = stripeGateway.test_mode;
+          
+          // Get the appropriate key based on test mode
+          const stripeSecretKey = testMode 
+            ? config.test_secret_key 
+            : (config.live_secret_key || config.secret_key);
+            
           if (!stripeSecretKey) {
-            return new Response(JSON.stringify({ error: 'Stripe secret key not configured' }), { 
+            return new Response(JSON.stringify({ error: 'Stripe secret key not configured in database' }), { 
               status: 500, 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
           }
 
           const stripe = new Stripe(stripeSecretKey, {
-            apiVersion: '2023-10-16',
+            apiVersion: config.api_version || '2023-10-16',
           });
 
           // Convert amount to smallest currency unit (cents for USD, etc.)

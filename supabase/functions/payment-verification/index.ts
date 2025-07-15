@@ -274,8 +274,33 @@ async function verifyPayUPayment(supabaseAdmin: any, request: PaymentVerificatio
 // Stripe Payment Verification
 async function verifyStripePayment(supabaseAdmin: any, request: PaymentVerificationRequest, requestId: string): Promise<PaymentVerificationResponse> {
   try {
-    // Initialize Stripe with secret key
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    // Get Stripe configuration from database
+    const { data: stripeGateway, error: stripeGatewayError } = await supabaseAdmin
+      .from('payment_gateways')
+      .select('config, test_mode')
+      .eq('code', 'stripe')
+      .single();
+
+    if (stripeGatewayError || !stripeGateway) {
+      return {
+        success: false,
+        payment_status: 'failed',
+        transaction_id: request.transaction_id,
+        gateway: 'stripe',
+        verified_at: new Date().toISOString(),
+        error_message: 'Stripe configuration not found',
+        recommendations: ['Configure Stripe gateway in admin panel']
+      };
+    }
+
+    const config = stripeGateway.config || {};
+    const testMode = stripeGateway.test_mode;
+    
+    // Get the appropriate key based on test mode
+    const stripeSecretKey = testMode 
+      ? config.test_secret_key 
+      : (config.live_secret_key || config.secret_key);
+      
     if (!stripeSecretKey) {
       return {
         success: false,
@@ -283,13 +308,13 @@ async function verifyStripePayment(supabaseAdmin: any, request: PaymentVerificat
         transaction_id: request.transaction_id,
         gateway: 'stripe',
         verified_at: new Date().toISOString(),
-        error_message: 'Stripe secret key not configured',
-        recommendations: ['Configure Stripe secret key in environment variables']
+        error_message: 'Stripe secret key not configured in database',
+        recommendations: ['Add Stripe secret key to gateway config']
       };
     }
 
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2023-10-16',
+      apiVersion: config.api_version || '2023-10-16',
     });
 
     console.log(`🔍 Retrieving Stripe PaymentIntent [${requestId}]: ${request.transaction_id}`);

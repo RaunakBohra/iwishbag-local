@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import {
   Elements,
-  CardElement,
+  PaymentElement,
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
@@ -92,20 +92,24 @@ function StripePaymentFormContent({
     setIsLoading(true);
     setError(null);
 
-    const cardElement = elements.getElement(CardElement);
-
-    if (!cardElement) {
-      setError('Card element not found. Please refresh and try again.');
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      // Confirm the payment with the card element
-      const result = await stripe.confirmCardPayment(client_secret, {
-        payment_method: {
-          card: cardElement,
+      // Submit the form first
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        setError(submitError.message || 'An error occurred');
+        setIsLoading(false);
+        onError?.(submitError.message || 'An error occurred');
+        return;
+      }
+
+      // Confirm the payment
+      const result = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          // Return URL for redirect-based payment methods
+          return_url: `${window.location.origin}/checkout/success`,
         },
+        redirect: 'if_required', // Only redirect if necessary (3D Secure, etc.)
       });
 
       if (result.error) {
@@ -114,7 +118,7 @@ function StripePaymentFormContent({
         setError(errorMessage);
         onError?.(errorMessage);
         console.error('Payment failed:', result.error);
-      } else {
+      } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
         // Payment succeeded
         setPaymentSucceeded(true);
         setPaymentIntent(result.paymentIntent);
@@ -205,29 +209,16 @@ function StripePaymentFormContent({
           )}
 
           <div className="space-y-2">
-            <label htmlFor="card-element" className="text-sm font-medium">
-              Card Information
-            </label>
-            <div className="border rounded-md p-3 bg-white">
-              <CardElement
-                id="card-element"
-                options={{
-                  style: {
-                    base: {
-                      fontSize: '16px',
-                      color: '#424770',
-                      '::placeholder': {
-                        color: '#aab7c4',
-                      },
-                    },
-                    invalid: {
-                      color: '#9e2146',
-                    },
-                  },
-                  hidePostalCode: false,
-                }}
-              />
-            </div>
+            <PaymentElement 
+              options={{
+                layout: 'tabs',
+                defaultValues: {
+                  billingDetails: {
+                    // You can pre-fill billing details here if available
+                  }
+                }
+              }}
+            />
           </div>
 
           <Button
@@ -254,6 +245,7 @@ function StripePaymentFormContent({
 
           <div className="text-xs text-muted-foreground text-center space-y-1">
             <p>Your payment information is secure and encrypted.</p>
+            <p>We accept cards, digital wallets, and bank payments</p>
             <p>Powered by Stripe</p>
           </div>
         </form>
