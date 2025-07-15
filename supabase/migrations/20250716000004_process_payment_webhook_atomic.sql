@@ -10,6 +10,7 @@ CREATE OR REPLACE FUNCTION process_payment_webhook_atomic(
 ) RETURNS TABLE (
   success BOOLEAN,
   payment_transaction_id UUID,
+  payment_ledger_entry_id UUID,
   quotes_updated BOOLEAN,
   guest_session_updated BOOLEAN,
   order_id UUID,
@@ -24,6 +25,7 @@ DECLARE
   v_guest_session_id UUID;
   v_quote_record RECORD;
   v_existing_payment UUID;
+  v_ledger_entry_id UUID;
   v_transaction_id TEXT;
   v_gateway_tx_id TEXT;
   v_amount DECIMAL(10,2);
@@ -51,6 +53,7 @@ BEGIN
     IF v_transaction_id IS NULL OR v_amount IS NULL OR v_currency IS NULL THEN
       RETURN QUERY SELECT 
         FALSE,
+        NULL::UUID,
         NULL::UUID,
         FALSE,
         FALSE,
@@ -118,6 +121,63 @@ BEGIN
       WHERE id = v_existing_payment;
       
       v_payment_tx_id := v_existing_payment;
+    END IF;
+    
+    -- Create payment ledger entry for audit trail
+    IF v_payment_tx_id IS NOT NULL THEN
+      INSERT INTO payment_ledger (
+        quote_id,
+        payment_transaction_id,
+        payment_type,
+        amount,
+        currency,
+        payment_method,
+        gateway_code,
+        gateway_transaction_id,
+        reference_number,
+        status,
+        payment_date,
+        base_amount,
+        balance_before,
+        balance_after,
+        notes,
+        created_by,
+        gateway_response,
+        created_at,
+        updated_at
+      ) VALUES (
+        CASE WHEN array_length(p_quote_ids, 1) > 0 THEN p_quote_ids[1]::UUID ELSE NULL END,
+        v_payment_tx_id,
+        'customer_payment',
+        v_amount,
+        v_currency,
+        v_payment_method,
+        v_payment_method,
+        v_gateway_tx_id,
+        v_transaction_id,
+        CASE 
+          WHEN p_payment_status = 'success' THEN 'completed'
+          WHEN p_payment_status = 'failed' THEN 'failed'
+          ELSE 'pending'
+        END,
+        NOW(),
+        v_amount,
+        0.00, -- Balance tracking would need separate implementation
+        CASE WHEN p_payment_status = 'success' THEN v_amount ELSE 0.00 END,
+        'Payment webhook: ' || p_payment_status,
+        v_user_id,
+        jsonb_build_object(
+          'webhook_processing', true,
+          'payment_status', p_payment_status,
+          'transaction_id', v_transaction_id,
+          'gateway_transaction_id', v_gateway_tx_id,
+          'customer_email', v_customer_email,
+          'customer_name', v_customer_name,
+          'processed_at', NOW()
+        ) || COALESCE(v_gateway_response, '{}'::jsonb),
+        NOW(),
+        NOW()
+      ) RETURNING id INTO v_ledger_entry_id;
     END IF;
     
     -- Handle guest session updates if token provided
@@ -239,6 +299,7 @@ BEGIN
     RETURN QUERY SELECT 
       TRUE,
       v_payment_tx_id,
+      v_ledger_entry_id,
       v_quotes_updated,
       v_guest_session_updated,
       v_order_id,
@@ -249,6 +310,7 @@ BEGIN
       -- Rollback will happen automatically
       RETURN QUERY SELECT 
         FALSE,
+        NULL::UUID,
         NULL::UUID,
         FALSE,
         FALSE,
@@ -263,4 +325,4 @@ GRANT EXECUTE ON FUNCTION process_payment_webhook_atomic TO service_role;
 GRANT EXECUTE ON FUNCTION process_payment_webhook_atomic TO authenticated;
 
 -- Add comment
-COMMENT ON FUNCTION process_payment_webhook_atomic IS 'Atomically processes payment webhook data including quotes update, guest session handling, payment transaction creation, and order creation. Ensures all operations succeed or fail together.';
+COMMENT ON FUNCTION process_payment_webhook_atomic IS 'Atomically processes payment webhook data including quotes update, guest session handling, payment transaction creation, payment ledger entries, and order creation. Ensures all operations succeed or fail together with comprehensive audit trail.';

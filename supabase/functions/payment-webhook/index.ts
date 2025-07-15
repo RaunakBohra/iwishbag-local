@@ -498,6 +498,7 @@ serve(async (req) => {
     const result = atomicResult[0];
     console.log(`[${requestId}] ✅ Atomic webhook processing completed:`, {
       payment_transaction_id: result.payment_transaction_id,
+      payment_ledger_entry_id: result.payment_ledger_entry_id,
       quotes_updated: result.quotes_updated,
       guest_session_updated: result.guest_session_updated,
       order_created: !!result.order_id
@@ -519,6 +520,7 @@ serve(async (req) => {
       processingTime: `${processingTime}ms`,
       atomicResults: {
         payment_transaction_id: result.payment_transaction_id,
+        payment_ledger_entry_id: result.payment_ledger_entry_id,
         quotes_updated: result.quotes_updated,
         guest_session_updated: result.guest_session_updated,
         order_created: !!result.order_id,
