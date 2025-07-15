@@ -302,9 +302,9 @@ export default function Quotes() {
           
           // Calculate window
           let startDate: Date = new Date();
-          // @ts-ignore - payment_date might exist on extended quote type
+          // @ts-expect-error - payment_date might exist on extended quote type
           if (typeof quote.payment_date === 'string' && quote.payment_date) {
-            // @ts-ignore
+            // @ts-expect-error - payment_date property access on extended quote type
             startDate = new Date(quote.payment_date);
           } else if (typeof quote.created_at === 'string' && quote.created_at) {
             startDate = new Date(quote.created_at);

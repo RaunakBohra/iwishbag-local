@@ -16,7 +16,7 @@ export function formatCurrency(amount: number, currencyCode: string = "USD") {
 /**
  * Safely parse JSON data that might be a string or already an object
  */
-export function safeJsonParse<T = any>(data: any, defaultValue: T = {} as T): T {
+export function safeJsonParse<T = Record<string, unknown>>(data: unknown, defaultValue: T = {} as T): T {
   if (!data) return defaultValue;
   
   if (typeof data === 'string') {

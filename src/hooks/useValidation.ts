@@ -2,14 +2,14 @@ import { useState, useCallback } from 'react';
 import { z } from 'zod';
 import { validateAndSanitize } from '@/lib/validation';
 
-interface ValidationResult {
+interface ValidationResult<T = unknown> {
   isValid: boolean;
   errors: string[];
-  data?: any;
+  data?: T;
 }
 
 interface UseValidationReturn<T> {
-  validate: (data: unknown) => ValidationResult;
+  validate: (data: unknown) => ValidationResult<T>;
   errors: string[];
   isValid: boolean;
   reset: () => void;
@@ -24,7 +24,7 @@ export function useValidation<T>(schema: z.ZodSchema<T>): UseValidationReturn<T>
   const [errors, setErrors] = useState<string[]>([]);
   const [isValid, setIsValid] = useState<boolean>(true);
 
-  const validate = useCallback((data: unknown): ValidationResult => {
+  const validate = useCallback((data: unknown): ValidationResult<T> => {
     const result = validateAndSanitize(data, schema);
     
     if (result.success) {

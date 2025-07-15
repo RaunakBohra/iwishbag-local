@@ -64,7 +64,7 @@ export function formatBankDetailsForEmail(account: BankAccountType): string {
 
   // Add custom fields if available
   if (account.custom_fields && typeof account.custom_fields === 'object') {
-    const customFieldsData = account.custom_fields as Record<string, any>;
+    const customFieldsData = account.custom_fields as Record<string, unknown>;
     const fieldLabels = (account.field_labels || {}) as Record<string, string>;
     
     Object.entries(customFieldsData).forEach(([key, value]) => {
@@ -112,7 +112,7 @@ export function formatBankDetailsForText(account: BankAccountType): string {
 
   // Add custom fields if available
   if (account.custom_fields && typeof account.custom_fields === 'object') {
-    const customFieldsData = account.custom_fields as Record<string, any>;
+    const customFieldsData = account.custom_fields as Record<string, unknown>;
     const fieldLabels = (account.field_labels || {}) as Record<string, string>;
     
     Object.entries(customFieldsData).forEach(([key, value]) => {

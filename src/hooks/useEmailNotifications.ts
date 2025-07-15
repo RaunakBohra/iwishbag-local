@@ -6,10 +6,43 @@ import { Quote } from "@/types/quote";
 
 type EmailTemplate = 'quote_sent' | 'quote_approved' | 'quote_rejected' | 'order_shipped' | 'order_delivered' | 'contact_form' | 'bank_transfer_details' | 'password_reset' | 'password_reset_success' | 'payment_link';
 
+interface QuoteEmailData {
+  quoteId: string;
+  customerName?: string;
+  totalAmount?: string | number;
+  currency?: string;
+  rejectionReason?: string;
+  trackingNumber?: string;
+  carrier?: string;
+  bankDetails?: string;
+}
+
+interface PasswordResetEmailData {
+  resetLink: string;
+  customerName?: string;
+}
+
+interface ContactFormEmailData {
+  subject: string;
+  message: string;
+  name: string;
+  email: string;
+}
+
+interface PaymentLinkEmailData {
+  quoteId: string;
+  customerName?: string;
+  totalAmount?: string | number;
+  currency?: string;
+  paymentLink: string;
+}
+
+type EmailData = QuoteEmailData | PasswordResetEmailData | ContactFormEmailData | PaymentLinkEmailData;
+
 interface EmailNotificationOptions {
   to: string;
   template: EmailTemplate;
-  data: Record<string, any>;
+  data: EmailData;
   from?: string;
 }
 
@@ -56,10 +89,11 @@ export const useEmailNotifications = () => {
           subject = 'Password Reset Successful - iwishBag';
           break;
         case 'contact_form':
-          subject = `Contact Form: ${data.subject}`;
+          subject = 'subject' in data ? `Contact Form: ${data.subject}` : 'Contact Form';
           break;
         default:
-          subject = `Quote ${data.quoteId} - ${template.replace('_', ' ').toUpperCase()}`;
+          const quoteId = 'quoteId' in data ? data.quoteId : 'N/A';
+          subject = `Quote ${quoteId} - ${template.replace('_', ' ').toUpperCase()}`;
       }
 
       // Use Supabase Edge Function instead of /api/send-email
@@ -102,114 +136,129 @@ export const useEmailNotifications = () => {
   });
 
   // Helper function to generate email HTML
-  const generateEmailHtml = (template: EmailTemplate, data: Record<string, any>) => {
+  const generateEmailHtml = (template: EmailTemplate, data: EmailData) => {
+    const customerName = 'customerName' in data ? data.customerName : 'Customer';
     const baseHtml = `
       <html>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #2563eb;">Quote Update</h2>
-          <p>Dear ${data.customerName || 'Customer'},</p>
+          <p>Dear ${customerName || 'Customer'},</p>
     `;
 
     let content = '';
     switch (template) {
       case 'quote_sent':
-        content = `
-          <p>Your quote has been sent for review.</p>
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0;">Quote Details</h3>
-            <p><strong>Quote ID:</strong> ${data.quoteId}</p>
-            <p><strong>Total Amount:</strong> $${data.totalAmount}</p>
-            <p><strong>Currency:</strong> ${data.currency}</p>
-          </div>
-        `;
+        if ('quoteId' in data) {
+          content = `
+            <p>Your quote has been sent for review.</p>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Quote Details</h3>
+              <p><strong>Quote ID:</strong> ${data.quoteId}</p>
+              <p><strong>Total Amount:</strong> $${data.totalAmount || 'N/A'}</p>
+              <p><strong>Currency:</strong> ${data.currency || 'USD'}</p>
+            </div>
+          `;
+        }
         break;
       case 'quote_approved':
-        content = `
-          <p>Great news! Your quote has been approved.</p>
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0;">Approved Quote</h3>
-            <p><strong>Quote ID:</strong> ${data.quoteId}</p>
-            <p><strong>Total Amount:</strong> $${data.totalAmount}</p>
-            <p><strong>Currency:</strong> ${data.currency}</p>
-          </div>
-        `;
+        if ('quoteId' in data) {
+          content = `
+            <p>Great news! Your quote has been approved.</p>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Approved Quote</h3>
+              <p><strong>Quote ID:</strong> ${data.quoteId}</p>
+              <p><strong>Total Amount:</strong> $${data.totalAmount || 'N/A'}</p>
+              <p><strong>Currency:</strong> ${data.currency || 'USD'}</p>
+            </div>
+          `;
+        }
         break;
       case 'quote_rejected':
-        content = `
-          <p>We regret to inform you that your quote has been rejected.</p>
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0;">Rejection Details</h3>
-            <p><strong>Quote ID:</strong> ${data.quoteId}</p>
-            <p><strong>Reason:</strong> ${data.rejectionReason}</p>
-          </div>
-        `;
+        if ('quoteId' in data) {
+          content = `
+            <p>We regret to inform you that your quote has been rejected.</p>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Rejection Details</h3>
+              <p><strong>Quote ID:</strong> ${data.quoteId}</p>
+              <p><strong>Reason:</strong> ${data.rejectionReason || 'No reason provided'}</p>
+            </div>
+          `;
+        }
         break;
       case 'order_shipped':
-        content = `
-          <p>Your order has been shipped!</p>
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0;">Shipping Details</h3>
-            <p><strong>Quote ID:</strong> ${data.quoteId}</p>
-            <p><strong>Tracking Number:</strong> ${data.trackingNumber}</p>
-            <p><strong>Carrier:</strong> ${data.carrier}</p>
-          </div>
-        `;
+        if ('quoteId' in data) {
+          content = `
+            <p>Your order has been shipped!</p>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Shipping Details</h3>
+              <p><strong>Quote ID:</strong> ${data.quoteId}</p>
+              <p><strong>Tracking Number:</strong> ${data.trackingNumber || 'N/A'}</p>
+              <p><strong>Carrier:</strong> ${data.carrier || 'N/A'}</p>
+            </div>
+          `;
+        }
         break;
       case 'order_delivered':
-        content = `
-          <p>Your order has been delivered!</p>
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0;">Delivery Confirmation</h3>
-            <p><strong>Quote ID:</strong> ${data.quoteId}</p>
-          </div>
-        `;
+        if ('quoteId' in data) {
+          content = `
+            <p>Your order has been delivered!</p>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Delivery Confirmation</h3>
+              <p><strong>Quote ID:</strong> ${data.quoteId}</p>
+            </div>
+          `;
+        }
         break;
       case 'bank_transfer_details':
-        content = `
-          <p>Thank you for your order! Please complete your payment using the bank details below:</p>
-          
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0;">Order Details</h3>
-            <p><strong>Order ID:</strong> ${data.quoteId}</p>
-            <p><strong>Total Amount:</strong> ${data.totalAmount} ${data.currency}</p>
-          </div>
-          
-          <div style="background-color: #e0f2fe; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #0284c7;">
-            <h3 style="margin-top: 0; color: #0284c7;">Bank Account Details</h3>
-            ${data.bankDetails || '<p>Bank details will be provided by our support team.</p>'}
-          </div>
-          
-          <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #f59e0b;">
-            <h4 style="margin-top: 0; color: #d97706;">Important Instructions:</h4>
-            <ul style="margin: 0; padding-left: 20px;">
-              <li>Please use your Order ID (${data.quoteId}) as the payment reference</li>
-              <li>Send payment confirmation to support@iwishbag.com</li>
-              <li>Your order will be processed once payment is confirmed</li>
-            </ul>
-          </div>
-        `;
+        if ('quoteId' in data) {
+          content = `
+            <p>Thank you for your order! Please complete your payment using the bank details below:</p>
+            
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Order Details</h3>
+              <p><strong>Order ID:</strong> ${data.quoteId}</p>
+              <p><strong>Total Amount:</strong> ${data.totalAmount || 'N/A'} ${data.currency || 'USD'}</p>
+            </div>
+            
+            <div style="background-color: #e0f2fe; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #0284c7;">
+              <h3 style="margin-top: 0; color: #0284c7;">Bank Account Details</h3>
+              ${data.bankDetails || '<p>Bank details will be provided by our support team.</p>'}
+            </div>
+            
+            <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #f59e0b;">
+              <h4 style="margin-top: 0; color: #d97706;">Important Instructions:</h4>
+              <ul style="margin: 0; padding-left: 20px;">
+                <li>Please use your Order ID (${data.quoteId}) as the payment reference</li>
+                <li>Send payment confirmation to support@iwishbag.com</li>
+                <li>Your order will be processed once payment is confirmed</li>
+              </ul>
+            </div>
+          `;
+        }
         break;
       case 'password_reset':
-        content = `
-          <p>We received a request to reset your password. Click the button below to create a new password:</p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${data.resetLink}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Reset Password</a>
-          </div>
-          
-          <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
-          <p style="color: #2563eb; font-size: 14px; word-break: break-all;">${data.resetLink}</p>
-          
-          <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #f59e0b;">
-            <p style="margin: 0; color: #d97706;"><strong>Security Notice:</strong></p>
-            <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #92400e;">
-              <li>This link will expire in 24 hours</li>
-              <li>If you didn't request a password reset, please ignore this email</li>
-              <li>Your password won't be changed until you create a new one</li>
-            </ul>
-          </div>
-        `;
+        if ('resetLink' in data) {
+          content = `
+            <p>We received a request to reset your password. Click the button below to create a new password:</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${data.resetLink}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Reset Password</a>
+            </div>
+            
+            <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+            <p style="color: #2563eb; font-size: 14px; word-break: break-all;">${data.resetLink}</p>
+            
+            <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #f59e0b;">
+              <p style="margin: 0; color: #d97706;"><strong>Security Notice:</strong></p>
+              <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #92400e;">
+                <li>This link will expire in 24 hours</li>
+                <li>If you didn't request a password reset, please ignore this email</li>
+                <li>Your password won't be changed until you create a new one</li>
+              </ul>
+            </div>
+          `;
+        }
         break;
       case 'password_reset_success':
         content = `
@@ -380,10 +429,11 @@ export const useEmailNotifications = () => {
       });
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Failed to send payment link",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { getAddressHistory } from '@/lib/addressUpdates';
-import { AddressChange } from '@/types/address';
+import { AddressChange, ShippingAddress } from '@/types/address';
 import { getAddressChangeSummary, compareAddresses } from '@/lib/addressValidation';
 
 interface UseAddressHistoryOptions {
@@ -24,13 +24,13 @@ export function useAddressHistory({ quoteId, enabled = true }: UseAddressHistory
     const previousChange = index < history.length - 1 ? history[index + 1] : null;
     
     // Calculate changes between this and previous entry
-    let changes: any[] = [];
+    let changes: { field: keyof ShippingAddress; oldValue: string; newValue: string }[] = [];
     if (change.oldAddress && change.newAddress) {
       changes = compareAddresses(change.oldAddress, change.newAddress);
     } else if (change.newAddress && !change.oldAddress) {
       // This is a creation - all fields are new
       changes = Object.entries(change.newAddress).map(([field, value]) => ({
-        field,
+        field: field as keyof ShippingAddress,
         oldValue: '',
         newValue: value || '',
       }));

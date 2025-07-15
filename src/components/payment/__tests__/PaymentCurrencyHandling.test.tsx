@@ -105,7 +105,7 @@ describe('Payment Currency Handling', () => {
             })
           })
         })
-      } as any);
+      }) as any;
 
       // Mock payment ledger query
       mockSupabase.from.mockImplementation((table) => {
@@ -132,7 +132,7 @@ describe('Payment Currency Handling', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       renderWithQueryClient(
         <PaymentManagementWidget quote={mockQuoteWithMultiCurrency as any} />
@@ -185,7 +185,7 @@ describe('Payment Currency Handling', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       renderWithQueryClient(
         <PaymentManagementWidget quote={quoteWithMismatch as any} />
@@ -213,7 +213,7 @@ describe('Payment Currency Handling', () => {
             })
           })
         })
-      } as any);
+      }) as any;
 
       renderWithQueryClient(
         <UnifiedPaymentModal 
@@ -294,7 +294,7 @@ describe('Payment Currency Handling', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       renderWithQueryClient(
         <RefundManagementModal 
@@ -349,7 +349,7 @@ describe('Payment Currency Handling', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 
@@ -437,7 +437,7 @@ describe('Payment Currency Handling', () => {
             })
           })
         })
-      } as any);
+      }) as any;
 
       renderWithQueryClient(
         <PaymentManagementWidget quote={mockQuoteWithMultiCurrency as any} />

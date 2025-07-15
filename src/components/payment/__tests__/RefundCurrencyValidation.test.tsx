@@ -136,7 +136,7 @@ describe('Refund Currency Validation', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 
@@ -190,7 +190,7 @@ describe('Refund Currency Validation', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 
@@ -239,7 +239,7 @@ describe('Refund Currency Validation', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 
@@ -287,7 +287,7 @@ describe('Refund Currency Validation', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 
@@ -337,7 +337,7 @@ describe('Refund Currency Validation', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 
@@ -381,7 +381,7 @@ describe('Refund Currency Validation', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 
@@ -474,7 +474,7 @@ describe('Refund Currency Validation', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 
@@ -531,7 +531,7 @@ describe('Refund Currency Validation', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 
@@ -612,7 +612,7 @@ describe('Refund Currency Validation', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 
@@ -680,7 +680,7 @@ describe('Refund Currency Validation', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 
@@ -712,7 +712,7 @@ describe('Refund Currency Validation', () => {
             })
           })
         })
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 
@@ -763,7 +763,7 @@ describe('Refund Currency Validation', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const onClose = jest.fn();
 

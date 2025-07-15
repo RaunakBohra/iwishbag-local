@@ -302,150 +302,75 @@ serve(async (req) => {
         const payerEmail = resource.payer?.email_address;
         const payerId = resource.payer?.payer_id;
         
-        // Update payment transaction
-        const { data: completedTx } = await supabaseAdmin
-          .from('payment_transactions')
-          .update({
-            status: 'completed',
-            paypal_capture_id: captureId,
-            paypal_payer_email: payerEmail,
-            paypal_payer_id: payerId,
-            gateway_response: {
-              ...paymentTx.gateway_response,
-              webhook_event: webhookData,
-              capture_details: capture
-            },
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', paymentTx.id)
-          .select()
-          .single();
-        
-        processed.payment_transaction = completedTx;
-
-        // Update related quotes
+        // Get quote IDs from gateway response
         const quoteIds = (paymentTx.gateway_response as any)?.quote_ids || [];
-        if (quoteIds.length > 0) {
-          console.log("📝 Updating quotes:", quoteIds);
+        
+        // Prepare gateway response data
+        const gatewayResponse = {
+          ...(paymentTx.gateway_response as any),
+          webhook_event: webhookData,
+          capture_details: capture
+        };
+        
+        // Use atomic function to process payment
+        console.log("🔄 Processing payment atomically...");
+        const { data: result, error: rpcError } = await supabaseAdmin
+          .rpc('process_paypal_payment_atomic', {
+            p_payment_transaction_id: paymentTx.id,
+            p_capture_id: captureId,
+            p_payer_email: payerEmail,
+            p_payer_id: payerId,
+            p_amount: amount,
+            p_currency: currency,
+            p_order_id: orderId,
+            p_gateway_response: gatewayResponse,
+            p_quote_ids: quoteIds
+          });
+        
+        if (rpcError || !result || !result[0]?.success) {
+          const errorMessage = rpcError?.message || result?.[0]?.error_message || 'Unknown error';
+          console.error("❌ Atomic payment processing failed:", errorMessage);
           
-          const { data: updatedQuotes, error: quoteError } = await supabaseAdmin
-            .from('quotes')
-            .update({
-              status: 'paid',
-              payment_method: 'paypal',
-              paid_at: new Date().toISOString(),
-              payment_details: {
-                paypal_order_id: orderId,
-                paypal_capture_id: captureId,
-                paypal_payer_id: payerId,
-                paypal_payer_email: payerEmail,
-                transaction_id: transactionId
-              }
-            })
-            .in('id', quoteIds)
-            .select();
-            
-          if (quoteError) {
-            console.error("❌ Error updating quotes:", quoteError);
-          } else {
-            processed.quotes = updatedQuotes;
-            console.log("✅ Updated quotes:", updatedQuotes.length);
-          }
-          
-          // Note: Following PayU pattern - no separate order creation needed
-          // The quote with status 'paid' IS the order
-          
-          // Record payment in ledger (following PayU pattern)
-          if (amount && quoteIds.length > 0) {
-            for (const quoteId of quoteIds) {
-              const { error: ledgerError } = await supabaseAdmin
-                .from('payment_ledger')
-                .insert({
-                  quote_id: quoteId,
-                  payment_transaction_id: paymentTx.id,
-                  payment_type: 'customer_payment',
-                  amount: amount,
-                  currency: currency,
-                  payment_method: 'paypal',
-                  gateway_code: 'paypal',
-                  gateway_transaction_id: captureId || orderId,
-                  reference_number: orderId,
-                  status: 'completed',
-                  payment_date: new Date().toISOString(),
-                  base_amount: amount, // Assuming USD for now
-                  balance_before: 0, // Would need to calculate this properly
-                  balance_after: amount, // Would need to calculate this properly
-                  notes: `PayPal payment - Order: ${orderId}, Capture: ${captureId || 'N/A'}, Payer: ${payerEmail || 'N/A'}`,
-                  created_by: paymentTx.user_id || null,
-                  gateway_response: {
-                    order_id: orderId,
-                    capture_id: captureId,
-                    payer_id: payerId,
-                    payer_email: payerEmail,
-                    webhook_event: webhookData
-                  }
-                });
-
-              if (ledgerError) {
-                console.error("❌ Failed to record payment in ledger for quote:", quoteId, ledgerError);
-              } else {
-                console.log("✅ Payment recorded in ledger for quote:", quoteId);
-              }
-            }
-          }
+          // Return error but don't fail the webhook completely
+          return new Response(JSON.stringify({ 
+            error: 'Payment processing failed', 
+            details: errorMessage 
+          }), { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         }
-
-        // Update quote status if payment successful
-        if (paymentLink.quote_id && processed.payment_transaction) {
-          const { data: quote } = await supabaseAdmin
-            .from('quotes')
-            .update({
-              status: 'paid',
-              payment_status: 'paid',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', paymentLink.quote_id)
-            .select()
-            .single();
-          
-          processed.quote = quote;
-          console.log("✅ Quote marked as paid");
-        }
+        
+        const processingResult = result[0];
+        console.log("✅ Payment processed atomically:", {
+          payment_transaction_id: processingResult.payment_transaction_id,
+          updated_quotes_count: processingResult.updated_quotes_count,
+          payment_ledger_entries_count: processingResult.payment_ledger_entries_count
+        });
+        
+        // Store result for response
+        processed.payment_transaction = { id: processingResult.payment_transaction_id };
+        processed.quotes_updated = processingResult.updated_quotes_count;
+        processed.ledger_entries = processingResult.payment_ledger_entries_count;
         break;
 
       case 'PAYMENT.CAPTURE.DENIED':
         // Payment capture was denied
         console.log("❌ Payment capture denied");
         
-        const { data: deniedLink } = await supabaseAdmin
-          .from('payment_links')
-          .update({
-            status: 'cancelled',
-            gateway_response: webhookData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', paymentLink.id)
-          .select()
-          .single();
-        
-        processed.payment_link = deniedLink;
-        
-        // Create failed transaction record
-        const failedTxnId = `PAYPAL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // Update the existing payment transaction to failed status
         const { data: failedTransaction } = await supabaseAdmin
           .from('payment_transactions')
-          .insert({
-            user_id: paymentLink.user_id,
-            quote_id: paymentLink.quote_id,
-            amount: paymentLink.amount,
-            currency: paymentLink.currency,
+          .update({
             status: 'failed',
-            payment_method: 'paypal',
-            transaction_id: failedTxnId,
-            gateway_response: webhookData,
+            gateway_response: {
+              ...paymentTx.gateway_response,
+              webhook_event: webhookData
+            },
             error_message: webhookData.summary || 'Payment capture denied',
-            paypal_order_id: orderId
+            updated_at: new Date().toISOString()
           })
+          .eq('id', paymentTx.id)
           .select()
           .single();
         

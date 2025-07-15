@@ -35,6 +35,7 @@ import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { Icon } from '@/components/ui/icon';
 import { StatusTransitionHistory } from './StatusTransitionHistory';
 import { getCurrencySymbolFromCountry } from '@/lib/currencyUtils';
+import { QuoteItem } from '@/types/quote';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -377,7 +378,7 @@ const AdminOrderDetailPage = () => {
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
-                {quote.items?.map((item: any, index: number) => (
+                {quote.items?.map((item: QuoteItem, index: number) => (
                   <div key={item.id || index} className="border rounded-lg p-4 space-y-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-2">

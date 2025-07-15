@@ -32,7 +32,7 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
   });
 
   // Render custom fields
-  const customFields = account.custom_fields as Record<string, any> || {};
+  const customFields = account.custom_fields as Record<string, unknown> || {};
   const fieldLabels = account.field_labels as Record<string, string> || {};
 
   return (

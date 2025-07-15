@@ -135,7 +135,7 @@ export function isAddressComplete(address: CheckoutAddressForm | null): boolean 
  * Handles both string and object formats
  */
 export function extractQuoteShippingAddress(
-  shippingAddress: any
+  shippingAddress: unknown
 ): QuoteShippingAddress | null {
   if (!shippingAddress) return null;
 

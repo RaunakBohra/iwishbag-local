@@ -251,7 +251,7 @@ describe('QuoteCalculatorService Currency Handling', () => {
             })
           })
         };
-      } as any);
+      }) as any;
 
       const params = {
         origin_country: 'US',

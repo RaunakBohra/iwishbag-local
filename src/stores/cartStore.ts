@@ -499,7 +499,7 @@ export const useCartStore = create<CartStore>()(
               item_weight?: number;
               origin_country?: string;
               destination_country?: string;
-              shipping_address?: any;
+              shipping_address?: Record<string, unknown>;
               quote_items?: Array<{
                 item_price?: number;
                 quantity?: number;

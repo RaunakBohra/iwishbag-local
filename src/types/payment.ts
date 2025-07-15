@@ -10,6 +10,58 @@ export const FALLBACK_GATEWAY_CODES = [
 
 export type FallbackPaymentGateway = typeof FALLBACK_GATEWAY_CODES[number];
 
+// Payment Gateway Configuration Types
+export interface PaymentGatewayCredentials {
+  api_key?: string;
+  secret_key?: string;
+  merchant_id?: string;
+  webhook_secret?: string;
+  sandbox_mode?: boolean;
+  endpoint_url?: string;
+  public_key?: string;
+  private_key?: string;
+  client_id?: string;
+  client_secret?: string;
+}
+
+// Gateway Response Types
+export interface GatewayResponse {
+  transaction_id?: string;
+  status?: string;
+  amount?: number;
+  currency?: string;
+  gateway_transaction_id?: string;
+  error_code?: string;
+  error_message?: string;
+  payment_url?: string;
+  qr_code?: string;
+  additional_data?: Record<string, unknown>;
+}
+
+// Webhook Payload Types
+export interface WebhookPayload {
+  event_type: string;
+  transaction_id?: string;
+  gateway_transaction_id?: string;
+  status?: string;
+  amount?: number;
+  currency?: string;
+  timestamp?: string;
+  signature?: string;
+  raw_data?: Record<string, unknown>;
+}
+
+// Payment Request Metadata
+export interface PaymentMetadata {
+  order_id?: string;
+  customer_id?: string;
+  description?: string;
+  custom_fields?: Record<string, string>;
+  return_url?: string;
+  cancel_url?: string;
+  webhook_url?: string;
+}
+
 export type PaymentStatus = 
   | 'pending'
   | 'processing'
@@ -40,7 +92,7 @@ export interface PaymentGatewayConfig {
   supported_currencies: string[];
   fee_percent: number;
   fee_fixed: number;
-  config: Record<string, any>;
+  config: PaymentGatewayCredentials;
   webhook_url?: string;
   test_mode: boolean;
   created_at: string;
@@ -57,7 +109,7 @@ export interface PaymentTransaction {
   amount: number;
   currency: string;
   status: PaymentStatus;
-  gateway_response: Record<string, any>;
+  gateway_response: GatewayResponse;
   error_message?: string;
   refunded_amount: number;
   refund_status: 'none' | 'partial' | 'full';
@@ -97,7 +149,7 @@ export interface PaymentWebhook {
   id: string;
   gateway_code: PaymentGateway;
   event_type: string;
-  payload: Record<string, any>;
+  payload: WebhookPayload;
   processed: boolean;
   error_message?: string;
   created_at: string;
@@ -117,7 +169,7 @@ export interface PaymentRequest {
     phone?: string;
     address?: string;
   };
-  metadata?: Record<string, any>;
+  metadata?: PaymentMetadata;
 }
 
 export interface PaymentResponse {

@@ -189,11 +189,12 @@ export const useUserRoles = () => {
         description: "Role assigned successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Assign role mutation error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to assign role. Please check the email and try again.",
+        description: errorMessage || "Failed to assign role. Please check the email and try again.",
         variant: "destructive",
       });
     },
@@ -248,11 +249,12 @@ export const useUserRoles = () => {
         description: "Role removed successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Remove role mutation error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to remove role",
+        description: errorMessage || "Failed to remove role",
         variant: "destructive",
       });
     },

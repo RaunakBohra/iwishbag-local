@@ -14,7 +14,7 @@ export const usePaymentErrorHandler = ({ gateway, onErrorLogged }: UsePaymentErr
   const supabase = useSupabaseClient();
 
   const handleError = useCallback(async (
-    error: any,
+    error: unknown,
     context: Partial<PaymentErrorContext> = {}
   ) => {
     const fullContext: PaymentErrorContext = {

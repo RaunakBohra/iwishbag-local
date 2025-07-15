@@ -11,14 +11,14 @@ import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
 interface ShippingAddress {
   destination_country?: string;
   country?: string;
-  [key: string]: any; // For other fields that might exist
+  [key: string]: unknown; // For other fields that might exist
 }
 
 // Quote item structure
 interface QuoteItem {
   item_price?: number;
   item_weight?: number;
-  [key: string]: any; // For other fields that might exist
+  [key: string]: unknown; // For other fields that might exist
 }
 
 // Quote structure
@@ -26,7 +26,7 @@ interface Quote {
   origin_country?: string;
   destination_country?: string;
   quote_items?: QuoteItem[];
-  [key: string]: any; // For other fields that might exist
+  [key: string]: unknown; // For other fields that might exist
 }
 
 interface CustomsTierDisplayProps {
