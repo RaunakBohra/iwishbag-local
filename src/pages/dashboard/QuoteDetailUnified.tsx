@@ -1247,15 +1247,11 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
 // Wrapper component to provide guest currency context
 export default function QuoteDetailUnified({ isShareToken = false }: UnifiedQuoteDetailProps) {
   const { shareToken } = useParams<{ shareToken: string }>();
-  const isGuestMode = isShareToken || !!shareToken;
 
-  if (isGuestMode) {
-    return (
-      <GuestCurrencyProvider shareToken={shareToken}>
-        <QuoteDetailUnifiedContent isShareToken={isShareToken} />
-      </GuestCurrencyProvider>
-    );
-  }
-
-  return <QuoteDetailUnifiedContent isShareToken={isShareToken} />;
+  // Always provide GuestCurrencyProvider to avoid context errors
+  return (
+    <GuestCurrencyProvider shareToken={shareToken}>
+      <QuoteDetailUnifiedContent isShareToken={isShareToken} />
+    </GuestCurrencyProvider>
+  );
 }
