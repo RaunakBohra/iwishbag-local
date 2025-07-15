@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { authenticateUser, requireAdmin, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
@@ -14,8 +15,17 @@ serve(async (req) => {
   }
 
   try {
+    // Validate request method
+    validateMethod(req, ['POST']);
+
+    // Authenticate user and require admin access
+    const { user, supabaseClient } = await authenticateUser(req);
+    await requireAdmin(supabaseClient, user.id);
+
+    console.log(`🔐 Admin user ${user.email} initiated SQL changes`);
+
     // Use service role for administrative operations
-    const supabaseClient = createClient(
+    const supabaseServiceClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       {
@@ -94,7 +104,7 @@ serve(async (req) => {
     for (const sql of sqlCommands) {
       try {
         console.log(`📝 Executing: ${sql.substring(0, 50)}...`)
-        const { error } = await supabaseClient.rpc('exec_sql', { sql_query: sql })
+        const { error } = await supabaseServiceClient.rpc('exec_sql', { sql_query: sql })
         if (error) {
           console.error(`❌ Error:`, error)
           errorCount++
@@ -111,7 +121,7 @@ serve(async (req) => {
     for (const sql of countryUpdates) {
       try {
         console.log(`📝 Executing country update...`)
-        const { error } = await supabaseClient.rpc('exec_sql', { sql_query: sql })
+        const { error } = await supabaseServiceClient.rpc('exec_sql', { sql_query: sql })
         if (error) {
           console.error(`❌ Error:`, error)
           errorCount++
@@ -126,13 +136,13 @@ serve(async (req) => {
     }
 
     // Verify PayPal was added
-    const { data: paypalGateway } = await supabaseClient
+    const { data: paypalGateway } = await supabaseServiceClient
       .from('payment_gateways')
       .select('*')
       .eq('code', 'paypal')
       .single()
 
-    const { data: countries } = await supabaseClient
+    const { data: countries } = await supabaseServiceClient
       .from('country_settings')
       .select('code, default_gateway, available_gateways')
       .in('code', ['US', 'IN', 'NP'])
@@ -160,6 +170,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ PayPal integration failed:', error)
+    
+    if (error instanceof AuthError) {
+      return createAuthErrorResponse(error, corsHeaders);
+    }
     
     return new Response(
       JSON.stringify({
