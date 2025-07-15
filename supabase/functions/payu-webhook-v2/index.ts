@@ -79,6 +79,14 @@ interface PaymentStatusUpdateResult {
   processed?: ProcessedWebhookResult;
 }
 
+interface AtomicProcessingResult {
+  success: boolean;
+  payment_transaction_id?: string;
+  quote_updated?: boolean;
+  payment_ledger_entry_id?: string;
+  error_message?: string;
+}
+
 serve(async (req) => {
   console.log("🔵 === PAYU WEBHOOK V2 FUNCTION STARTED ===");
   console.log("🔵 Request method:", req.method);
@@ -304,27 +312,68 @@ async function processPaymentStatusUpdate(
   try {
     const processed: ProcessedWebhookResult = { payment_transaction: null, payment_link: null, quote: null };
 
-    // Update payment transaction if exists
-    if (mihpayid || txnid) {
-      const { data: transaction, error: txError } = await supabaseAdmin
-        .from('payment_transactions')
-        .update({
-          status: mapPayUStatusToInternal(status),
-          gateway_response: webhookData,
-          updated_at: new Date().toISOString(),
-          ...(mihpayid && { gateway_transaction_id: mihpayid }),
-          ...(payuError && { error_message: `${payuError}: ${error_Message}` })
-        })
-        .eq('transaction_id', txnid)
-        .or(`gateway_transaction_id.eq.${mihpayid}`)
-        .select()
-        .single();
+    // Use atomic function for successful payments with quote_id
+    if (status === 'success' && quoteId && amount && parseFloat(amount) > 0) {
+      console.log("🔄 Processing payment atomically...");
+      
+      const { data: result, error: rpcError } = await supabaseAdmin
+        .rpc('process_payu_payment_atomic', {
+          p_transaction_id: txnid || '',
+          p_gateway_transaction_id: mihpayid || '',
+          p_amount: parseFloat(amount),
+          p_currency: 'INR',
+          p_status: 'completed',
+          p_gateway_response: webhookData,
+          p_quote_id: quoteId,
+          p_customer_email: email || '',
+          p_customer_name: firstname || '',
+          p_payment_method: 'payu',
+          p_notes: `PayU payment via ${webhookData.mode || 'unknown'} mode (₹${amount} INR)`
+        });
+      
+      if (rpcError || !result || !result[0]?.success) {
+        const errorMessage = rpcError?.message || result?.[0]?.error_message || 'Unknown error';
+        console.error("❌ Atomic payment processing failed:", errorMessage);
+        return { success: false, error: errorMessage };
+      }
+      
+      const processingResult = result[0] as AtomicProcessingResult;
+      console.log("✅ Payment processed atomically:", {
+        payment_transaction_id: processingResult.payment_transaction_id,
+        quote_updated: processingResult.quote_updated,
+        payment_ledger_entry_id: processingResult.payment_ledger_entry_id
+      });
+      
+      // Set processed result
+      processed.payment_transaction = processingResult.payment_transaction_id ? { id: processingResult.payment_transaction_id } : null;
+      processed.quote = processingResult.quote_updated ? { id: quoteId } : null;
+      
+    } else {
+      // Fallback to individual updates for non-success payments or those without quote_id
+      console.log("🔄 Processing payment with individual updates...");
+      
+      // Update payment transaction if exists
+      if (mihpayid || txnid) {
+        const { data: transaction, error: txError } = await supabaseAdmin
+          .from('payment_transactions')
+          .update({
+            status: mapPayUStatusToInternal(status),
+            gateway_response: webhookData,
+            updated_at: new Date().toISOString(),
+            ...(mihpayid && { gateway_transaction_id: mihpayid }),
+            ...(payuError && { error_message: `${payuError}: ${error_Message}` })
+          })
+          .eq('transaction_id', txnid)
+          .or(`gateway_transaction_id.eq.${mihpayid}`)
+          .select()
+          .single();
 
-      if (txError) {
-        console.log("⚠️ Transaction not found or update failed:", txError.message);
-      } else {
-        processed.payment_transaction = transaction ? { id: transaction.id } : null;
-        console.log("✅ Payment transaction updated");
+        if (txError) {
+          console.log("⚠️ Transaction not found or update failed:", txError.message);
+        } else {
+          processed.payment_transaction = transaction ? { id: transaction.id } : null;
+          console.log("✅ Payment transaction updated");
+        }
       }
     }
 
@@ -350,60 +399,8 @@ async function processPaymentStatusUpdate(
       }
     }
 
-    // Update quote status if payment is successful
-    if (status === 'success' && quoteId) {
-      const { data: quote, error: quoteError } = await supabaseAdmin
-        .from('quotes')
-        .update({
-          status: 'paid',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', quoteId)
-        .select()
-        .single();
-
-      if (quoteError) {
-        console.log("⚠️ Quote not found or update failed:", quoteError.message);
-      } else {
-        processed.quote = quote ? { id: quote.id } : null;
-        console.log("✅ Quote status updated to paid");
-      }
-
-      // Record payment in ledger
-      if (amount && parseFloat(amount) > 0) {
-        // Convert INR amount back to USD for consistent storage
-        // Get exchange rate from country_settings
-        const { data: indiaSettings } = await supabaseAdmin
-          .from('country_settings')
-          .select('rate_from_usd')
-          .eq('code', 'IN')
-          .single();
-        
-        const exchangeRate = indiaSettings?.rate_from_usd || 83.0;
-        const amountInUSD = parseFloat(amount) / exchangeRate;
-        
-        const { error: ledgerError } = await supabaseAdmin
-          .from('payment_ledger')
-          .insert({
-            quote_id: quoteId,
-            payment_type: 'customer_payment', // Changed from transaction_type
-            amount: amountInUSD,
-            currency: 'USD',
-            payment_method: 'payu',
-            reference_number: mihpayid || txnid,
-            status: 'completed',
-            payment_date: new Date().toISOString(),
-            notes: `PayU payment via ${webhookData.mode || 'unknown'} mode (₹${amount} INR converted to USD)`,
-            created_by: null // System-created entry
-          });
-
-        if (ledgerError) {
-          console.error("❌ Failed to record payment in ledger:", ledgerError);
-        } else {
-          console.log("✅ Payment recorded in ledger");
-        }
-      }
-    }
+    // Note: Quote and ledger updates are now handled by atomic function for successful payments
+    // This section only handles non-success payments or those without quote_id
 
     // Send notification for failed payments
     if (status === 'failure' || status === 'cancel') {
