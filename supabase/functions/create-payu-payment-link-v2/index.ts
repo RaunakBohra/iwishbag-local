@@ -127,6 +127,42 @@ serve(async (req) => {
       amountInINR = amount * exchangeRate;
     }
 
+    // STEP 1: Initial Insert - Record pending payment BEFORE external API call
+    const transactionId = `PAYU_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    console.log("🔄 COMPENSATION: Creating initial pending payment record BEFORE external API call");
+    const { data: initialTransaction, error: initialError } = await supabaseAdmin
+      .from('payment_transactions')
+      .insert({
+        transaction_id: transactionId,
+        gateway_code: 'payu',
+        quote_id: quoteId,
+        amount: amountInINR,
+        currency: 'INR',
+        status: 'pending',
+        payment_state: 'pending',
+        metadata: {
+          quote_id: quoteId,
+          original_amount: amount,
+          original_currency: currency,
+          customer_info: customerInfo,
+          description: description,
+          api_method: apiMethod,
+          compensation_step: 'initial_insert',
+          created_at: new Date().toISOString()
+        }
+      })
+      .select('id')
+      .single();
+
+    if (initialError) {
+      console.error("❌ COMPENSATION: Failed to create initial pending payment record:", initialError);
+      throw new Error(`Failed to initialize payment tracking: ${initialError.message}`);
+    }
+    
+    const paymentTransactionId = initialTransaction.id;
+    console.log("✅ COMPENSATION: Initial pending payment record created:", transactionId);
+
     // Decide which API to use
     if (apiMethod === 'rest') {
       return await createPaymentLinkREST({
@@ -140,7 +176,9 @@ serve(async (req) => {
         expiryDays,
         customFields,
         template,
-        partialPaymentAllowed
+        partialPaymentAllowed,
+        paymentTransactionId,
+        transactionId
       });
     } else {
       // Fall back to legacy create-invoice API
@@ -152,12 +190,55 @@ serve(async (req) => {
         currency,
         customerInfo,
         description,
-        expiryDays
+        expiryDays,
+        paymentTransactionId,
+        transactionId
       });
     }
 
   } catch (error) {
     console.error("❌ Payment link creation error:", error);
+    
+    // STEP 4: Error Handling - Update payment_state if transaction was created
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      
+      if (typeof paymentTransactionId !== 'undefined') {
+        let errorState = 'failed';
+        let errorContext = 'unknown_error';
+        
+        if (error.message?.includes('PayU') || error.message?.includes('API')) {
+          errorState = 'orphaned';
+          errorContext = 'payu_api_error';
+        } else if (error.message?.includes('database') || error.message?.includes('supabase')) {
+          errorState = 'orphaned';
+          errorContext = 'database_error';
+        }
+        
+        console.log(`🔄 COMPENSATION: Updating payment state to ${errorState} due to error`);
+        
+        await supabaseAdmin
+          .from('payment_transactions')
+          .update({
+            payment_state: errorState,
+            status: 'failed',
+            metadata: {
+              error_context: errorContext,
+              error_message: error.message,
+              error_time: new Date().toISOString(),
+              compensation_step: 'error_handling_main'
+            }
+          })
+          .eq('id', paymentTransactionId);
+          
+        console.log(`✅ COMPENSATION: Payment state updated to ${errorState}`);
+      }
+    } catch (compensationError) {
+      console.error("❌ COMPENSATION: Failed to update payment state on error:", compensationError);
+    }
     
     if (error instanceof AuthError) {
       return createAuthErrorResponse(error, corsHeaders);
@@ -188,6 +269,8 @@ async function createPaymentLinkREST(params: {
   customFields: CustomField[];
   template: string;
   partialPaymentAllowed: boolean;
+  paymentTransactionId: string;
+  transactionId: string;
 }): Promise<Response> {
   const {
     supabaseAdmin,
@@ -303,7 +386,9 @@ async function createPaymentLinkREST(params: {
         currency,
         customerInfo,
         description,
-        expiryDays
+        expiryDays,
+        paymentTransactionId: params.paymentTransactionId,
+        transactionId: params.transactionId
       });
     }
 
@@ -324,11 +409,43 @@ async function createPaymentLinkREST(params: {
         currency,
         customerInfo,
         description,
-        expiryDays
+        expiryDays,
+        paymentTransactionId: params.paymentTransactionId,
+        transactionId: params.transactionId
       });
     }
 
     console.log("✅ PayU REST API success");
+    
+    // STEP 2: External API Success - Update payment_state to external_created
+    console.log("🔄 COMPENSATION: Updating payment state to external_created");
+    const { error: externalUpdateError } = await supabaseAdmin
+      .from('payment_transactions')
+      .update({
+        gateway_transaction_id: payuResult.result?.paymentLinkId || invoiceNumber,
+        payment_state: 'external_created',
+        gateway_response: payuResult,
+        metadata: {
+          quote_id: quoteId,
+          original_amount: originalAmount,
+          original_currency: currency,
+          customer_info: customerInfo,
+          description: description,
+          api_method: 'rest',
+          compensation_step: 'external_created',
+          payu_link_id: invoiceNumber,
+          payment_url: payuResult.result?.paymentLink || payuResult.paymentLink || payuResult.url,
+          external_api_success_at: new Date().toISOString()
+        }
+      })
+      .eq('id', params.paymentTransactionId);
+      
+    if (externalUpdateError) {
+      console.error("❌ COMPENSATION: Failed to update payment state to external_created:", externalUpdateError);
+      // Continue execution but log the issue - PayU link exists
+    } else {
+      console.log("✅ COMPENSATION: Payment state updated to external_created");
+    }
 
     // Generate unique link code for our system
     const linkCode = await generateLinkCode(supabaseAdmin);
@@ -373,6 +490,36 @@ async function createPaymentLinkREST(params: {
     }
     
     console.log('✅ Payment link stored in database successfully:', paymentLink);
+    
+    // STEP 3: Database Insert Success - Update payment_state to db_recorded
+    console.log("🔄 COMPENSATION: Updating payment state to db_recorded");
+    const { error: finalUpdateError } = await supabaseAdmin
+      .from('payment_transactions')
+      .update({
+        payment_state: 'db_recorded',
+        metadata: {
+          quote_id: quoteId,
+          original_amount: originalAmount,
+          original_currency: currency,
+          customer_info: customerInfo,
+          description: description,
+          api_method: 'rest',
+          compensation_step: 'db_recorded',
+          payu_link_id: invoiceNumber,
+          payment_link_id: paymentLink.id,
+          link_code: linkCode,
+          payment_url: payuResult.result?.paymentLink || payuResult.paymentLink || payuResult.url,
+          db_recorded_at: new Date().toISOString()
+        }
+      })
+      .eq('id', params.paymentTransactionId);
+      
+    if (finalUpdateError) {
+      console.error("❌ COMPENSATION: Failed to update payment state to db_recorded:", finalUpdateError);
+      // Continue execution - payment link is functional but state tracking incomplete
+    } else {
+      console.log("✅ COMPENSATION: Payment state updated to db_recorded - payment link creation complete");
+    }
 
     const shortUrl = `${publicUrl}/pay/${linkCode}`;
 
@@ -401,6 +548,41 @@ async function createPaymentLinkREST(params: {
   } catch (error) {
     console.error("❌ Error in REST API payment link creation:", error);
     
+    // STEP 4: Error Handling - Update payment_state based on error context
+    try {
+      let errorState = 'failed';
+      let errorContext = 'unknown_error';
+      
+      if (error.message?.includes('PayU') || error.message?.includes('API')) {
+        errorState = 'orphaned';
+        errorContext = 'payu_api_error';
+      } else if (error.message?.includes('database') || error.message?.includes('supabase')) {
+        errorState = 'orphaned';
+        errorContext = 'database_error_after_external_success';
+      }
+      
+      console.log(`🔄 COMPENSATION: Updating payment state to ${errorState} due to error`);
+      
+      await supabaseAdmin
+        .from('payment_transactions')
+        .update({
+          payment_state: errorState,
+          status: 'failed',
+          metadata: {
+            error_context: errorContext,
+            error_message: error.message,
+            error_time: new Date().toISOString(),
+            compensation_step: 'error_handling',
+            api_method: 'rest'
+          }
+        })
+        .eq('id', params.paymentTransactionId);
+        
+      console.log(`✅ COMPENSATION: Payment state updated to ${errorState}`);
+    } catch (compensationError) {
+      console.error("❌ COMPENSATION: Failed to update payment state on error:", compensationError);
+    }
+    
     // Fallback to legacy API
     console.log("🔄 Falling back to legacy API due to error...");
     return await createPaymentLinkLegacy({
@@ -411,7 +593,9 @@ async function createPaymentLinkREST(params: {
       currency,
       customerInfo,
       description,
-      expiryDays
+      expiryDays,
+      paymentTransactionId: params.paymentTransactionId,
+      transactionId: params.transactionId
     });
   }
 }
@@ -428,6 +612,8 @@ async function createPaymentLinkLegacy(params: {
   customerInfo: any;
   description?: string;
   expiryDays: number;
+  paymentTransactionId: string;
+  transactionId: string;
 }): Promise<Response> {
   console.log("🔵 Using legacy Create Invoice API");
 
@@ -546,6 +732,36 @@ async function createPaymentLinkLegacy(params: {
       console.error("❌ PayU legacy API error response:", payuResult);
       throw new Error(`PayU API error: ${payuResult.msg || payuResult.error || 'Unknown error'} (Status: ${payuResult.status})`);
     }
+    
+    // STEP 2: External API Success - Update payment_state to external_created
+    console.log("🔄 COMPENSATION: Updating payment state to external_created (legacy)");
+    const { error: externalUpdateError } = await supabaseAdmin
+      .from('payment_transactions')
+      .update({
+        gateway_transaction_id: invoiceId,
+        payment_state: 'external_created',
+        gateway_response: payuResult,
+        metadata: {
+          quote_id: quoteId,
+          original_amount: originalAmount,
+          original_currency: currency,
+          customer_info: customerInfo,
+          description: description,
+          api_method: 'legacy',
+          compensation_step: 'external_created',
+          payu_invoice_id: invoiceId,
+          payment_url: payuResult.URL || payuResult.result?.paymentLink || payuResult.paymentLink,
+          external_api_success_at: new Date().toISOString()
+        }
+      })
+      .eq('id', params.paymentTransactionId);
+      
+    if (externalUpdateError) {
+      console.error("❌ COMPENSATION: Failed to update payment state to external_created:", externalUpdateError);
+      // Continue execution but log the issue - PayU invoice exists
+    } else {
+      console.log("✅ COMPENSATION: Payment state updated to external_created (legacy)");
+    }
 
     // Generate unique link code for our system
     const linkCode = await generateLinkCode(supabaseAdmin);
@@ -590,6 +806,36 @@ async function createPaymentLinkLegacy(params: {
     }
     
     console.log('✅ Payment link stored in database successfully (legacy):', paymentLink);
+    
+    // STEP 3: Database Insert Success - Update payment_state to db_recorded
+    console.log("🔄 COMPENSATION: Updating payment state to db_recorded (legacy)");
+    const { error: finalUpdateError } = await supabaseAdmin
+      .from('payment_transactions')
+      .update({
+        payment_state: 'db_recorded',
+        metadata: {
+          quote_id: quoteId,
+          original_amount: originalAmount,
+          original_currency: currency,
+          customer_info: customerInfo,
+          description: description,
+          api_method: 'legacy',
+          compensation_step: 'db_recorded',
+          payu_invoice_id: invoiceId,
+          payment_link_id: paymentLink.id,
+          link_code: linkCode,
+          payment_url: payuResult.URL || payuResult.result?.paymentLink || payuResult.paymentLink,
+          db_recorded_at: new Date().toISOString()
+        }
+      })
+      .eq('id', params.paymentTransactionId);
+      
+    if (finalUpdateError) {
+      console.error("❌ COMPENSATION: Failed to update payment state to db_recorded:", finalUpdateError);
+      // Continue execution - payment link is functional but state tracking incomplete
+    } else {
+      console.log("✅ COMPENSATION: Payment state updated to db_recorded - payment link creation complete (legacy)");
+    }
 
     const publicUrl = Deno.env.get('PUBLIC_URL') || 'https://iwishbag.com';
     const shortUrl = `${publicUrl}/pay/${linkCode}`;
@@ -614,6 +860,42 @@ async function createPaymentLinkLegacy(params: {
 
   } catch (error) {
     console.error("❌ Legacy API error:", error);
+    
+    // STEP 4: Error Handling - Update payment_state based on error context
+    try {
+      let errorState = 'failed';
+      let errorContext = 'unknown_error';
+      
+      if (error.message?.includes('PayU') || error.message?.includes('API')) {
+        errorState = 'orphaned';
+        errorContext = 'payu_api_error';
+      } else if (error.message?.includes('database') || error.message?.includes('supabase')) {
+        errorState = 'orphaned';
+        errorContext = 'database_error_after_external_success';
+      }
+      
+      console.log(`🔄 COMPENSATION: Updating payment state to ${errorState} due to error (legacy)`);
+      
+      await params.supabaseAdmin
+        .from('payment_transactions')
+        .update({
+          payment_state: errorState,
+          status: 'failed',
+          metadata: {
+            error_context: errorContext,
+            error_message: error.message,
+            error_time: new Date().toISOString(),
+            compensation_step: 'error_handling',
+            api_method: 'legacy'
+          }
+        })
+        .eq('id', params.paymentTransactionId);
+        
+      console.log(`✅ COMPENSATION: Payment state updated to ${errorState} (legacy)`);
+    } catch (compensationError) {
+      console.error("❌ COMPENSATION: Failed to update payment state on error:", compensationError);
+    }
+    
     return new Response(JSON.stringify({
       error: 'Legacy API failed',
       details: error.message
