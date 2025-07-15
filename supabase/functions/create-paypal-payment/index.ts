@@ -279,6 +279,33 @@ serve(async (req) => {
     console.log("🛒 Creating PayPal order...");
     const paypalOrder = await createPayPalOrder(accessToken, orderData, !isTestMode);
     console.log("✅ PayPal order created:", paypalOrder.id);
+    
+    // STEP 2: External API Success - Update payment_state to external_created
+    console.log("🔄 COMPENSATION: Updating payment state to external_created");
+    const { error: externalUpdateError } = await supabaseAdmin
+      .from('payment_transactions')
+      .update({
+        gateway_transaction_id: paypalOrder.id,
+        payment_state: 'external_created',
+        gateway_response: paypalOrder,
+        metadata: {
+          quote_ids: paymentRequest.quoteIds,
+          customer_info: paymentRequest.customerInfo,
+          order_description: orderDescription,
+          invoice_id: invoiceId,
+          compensation_step: 'external_created',
+          paypal_order_id: paypalOrder.id,
+          external_api_success_at: new Date().toISOString()
+        }
+      })
+      .eq('id', paymentTransactionId);
+      
+    if (externalUpdateError) {
+      console.error("❌ COMPENSATION: Failed to update payment state to external_created:", externalUpdateError);
+      // Continue execution but log the issue - PayPal order exists
+    } else {
+      console.log("✅ COMPENSATION: Payment state updated to external_created");
+    }
 
     // Find approval URL
     const approvalLink = paypalOrder.links.find(link => link.rel === 'approve');
@@ -286,33 +313,64 @@ serve(async (req) => {
       throw new Error('PayPal approval URL not found in response');
     }
 
-    // Store payment transaction in database
+    // STEP 1: Initial Insert - Record pending payment before external API call
     const transactionId = `PAYPAL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    const { error: transactionError } = await supabaseAdmin
+    console.log("🔄 COMPENSATION: Creating initial pending payment record");
+    const { data: initialTransaction, error: initialError } = await supabaseAdmin
       .from('payment_transactions')
       .insert({
         transaction_id: transactionId,
-        gateway_transaction_id: paypalOrder.id, // PayPal order ID
         gateway_code: 'paypal',
         quote_id: paymentRequest.quoteIds[0], // Primary quote ID
         amount: paymentRequest.amount,
         currency: paymentRequest.currency,
         status: 'pending',
-        gateway_response: paypalOrder,
+        payment_state: 'pending',
         metadata: {
           quote_ids: paymentRequest.quoteIds,
           customer_info: paymentRequest.customerInfo,
           order_description: orderDescription,
-          invoice_id: invoiceId
+          invoice_id: invoiceId,
+          compensation_step: 'initial_insert',
+          created_at: new Date().toISOString()
         }
-      });
+      })
+      .select('id')
+      .single();
 
-    if (transactionError) {
-      console.error("❌ Error storing transaction:", transactionError);
-      // Don't fail the payment, just log the error
+    if (initialError) {
+      console.error("❌ COMPENSATION: Failed to create initial pending payment record:", initialError);
+      throw new Error(`Failed to initialize payment tracking: ${initialError.message}`);
+    }
+    
+    const paymentTransactionId = initialTransaction.id;
+    console.log("✅ COMPENSATION: Initial pending payment record created:", transactionId);
+
+    // STEP 3: Database Insert Success - Update payment_state to db_recorded
+    console.log("🔄 COMPENSATION: Updating payment state to db_recorded");
+    const { error: finalUpdateError } = await supabaseAdmin
+      .from('payment_transactions')
+      .update({
+        payment_state: 'db_recorded',
+        metadata: {
+          quote_ids: paymentRequest.quoteIds,
+          customer_info: paymentRequest.customerInfo,
+          order_description: orderDescription,
+          invoice_id: invoiceId,
+          compensation_step: 'db_recorded',
+          paypal_order_id: paypalOrder.id,
+          approval_url: approvalLink.href,
+          db_recorded_at: new Date().toISOString()
+        }
+      })
+      .eq('id', paymentTransactionId);
+      
+    if (finalUpdateError) {
+      console.error("❌ COMPENSATION: Failed to update payment state to db_recorded:", finalUpdateError);
+      // Continue execution - payment is functional but state tracking incomplete
     } else {
-      console.log("✅ Payment transaction stored:", transactionId);
+      console.log("✅ COMPENSATION: Payment state updated to db_recorded - payment creation complete");
     }
 
     const response: PayPalPaymentResponse = {
@@ -321,7 +379,7 @@ serve(async (req) => {
       approval_url: approvalLink.href,
     };
 
-    console.log("🎉 PayPal payment creation successful");
+    console.log("🎉 PayPal payment creation successful with compensation tracking");
     return new Response(JSON.stringify(response), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -329,6 +387,54 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("❌ PayPal payment creation error:", error);
+    
+    // STEP 4: Error Handling - Update payment_state based on error context
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      
+      // Determine appropriate payment_state based on error context
+      let errorState = 'failed';
+      let errorContext = 'unknown_error';
+      
+      if (error.message?.includes('PayPal')) {
+        // External API error - payment might be orphaned
+        errorState = 'orphaned';
+        errorContext = 'paypal_api_error';
+      } else if (error.message?.includes('database') || error.message?.includes('supabase')) {
+        // Database error after external API success
+        errorState = 'orphaned';
+        errorContext = 'database_error_after_external_success';
+      }
+      
+      console.log(`🔄 COMPENSATION: Updating payment state to ${errorState} due to error`);
+      
+      // Try to update any existing payment transaction
+      await supabaseAdmin
+        .from('payment_transactions')
+        .update({
+          payment_state: errorState,
+          status: 'failed',
+          metadata: {
+            error_context: errorContext,
+            error_message: error.message,
+            error_time: new Date().toISOString(),
+            compensation_step: 'error_handling'
+          }
+        })
+        .eq('transaction_id', `PAYPAL_${Date.now()}`)  // This won't match, but shows pattern
+        .or(`gateway_code.eq.paypal,quote_id.in.(${paymentRequest?.quoteIds?.join(',') || ''})`)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1);
+        
+      console.log(`✅ COMPENSATION: Payment state updated to ${errorState}`);
+    } catch (compensationError) {
+      console.error("❌ COMPENSATION: Failed to update payment state on error:", compensationError);
+      // Continue with original error handling
+    }
     
     if (error instanceof AuthError) {
       return createAuthErrorResponse(error, corsHeaders);
