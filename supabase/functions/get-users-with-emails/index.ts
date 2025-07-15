@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { requireAdmin, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
@@ -15,47 +16,13 @@ serve(async (req) => {
   }
 
   try {
-    // Create a Supabase client with the Auth context of the function
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    )
+    // Validate request method
+    validateMethod(req, ['GET']);
 
-    // Get the current user to verify admin access
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
+    // Authenticate and require admin access
+    const { user, supabaseClient } = await requireAdmin(req);
     
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
-
-    // Check if user has admin role
-    const { data: userRole, error: roleError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .single()
-
-    if (roleError || !userRole) {
-      return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { 
-          status: 403, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
+    console.log(`🔐 Admin user ${user.email} accessing user emails`);
 
     // Fetch all profiles with their addresses
     const { data: profiles, error: profilesError } = await supabaseClient
@@ -119,7 +86,12 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error:', error);
+    
+    if (error instanceof AuthError) {
+      return createAuthErrorResponse(error, corsHeaders);
+    }
+    
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

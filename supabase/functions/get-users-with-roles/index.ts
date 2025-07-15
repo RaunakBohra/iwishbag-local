@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { requireAdmin, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
@@ -15,6 +16,14 @@ serve(async (req) => {
   }
 
   try {
+    // Validate request method
+    validateMethod(req, ['GET']);
+
+    // Authenticate and require admin access
+    const { user, supabaseClient } = await requireAdmin(req);
+    
+    console.log(`🔐 Admin user ${user.email} accessing user roles`);
+
     // Create a Supabase client with the service role key
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -113,7 +122,12 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in get-users-with-roles function:', error)
+    console.error('Error in get-users-with-roles function:', error);
+    
+    if (error instanceof AuthError) {
+      return createAuthErrorResponse(error, corsHeaders);
+    }
+    
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { 
