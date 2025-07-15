@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useBankAccountSettings, BankAccount } from "@/hooks/useBankAccountSettings";
+import { useBankAccountSettings, BankAccount, BankAccountFormData } from "@/hooks/useBankAccountSettings";
 import { Button } from "@/components/ui/button";
 import { FlexibleBankAccountForm } from "./FlexibleBankAccountForm";
 import { BankAccountListItem } from "./BankAccountListItem";
@@ -31,7 +31,7 @@ export const BankAccountSettings = () => {
     setIsFormOpen(false);
   };
 
-  const handleSubmit = (data: { data: any, id?: string }) => {
+  const handleSubmit = (data: { data: BankAccountFormData, id?: string }) => {
     createOrUpdateBankAccount(data, {
       onSuccess: () => {
         handleCancel();

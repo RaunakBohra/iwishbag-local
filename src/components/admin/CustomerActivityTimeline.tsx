@@ -52,7 +52,7 @@ type ActivityItem = {
   date: Date;
   status?: string;
   amount?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 };
 
 export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelineProps) => {

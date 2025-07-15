@@ -14,7 +14,7 @@ interface StatusTransition {
   from_status: string;
   to_status: string;
   trigger: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   changed_by: string | null;
   changed_at: string;
 }

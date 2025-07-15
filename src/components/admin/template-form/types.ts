@@ -1,5 +1,8 @@
 
 import * as z from "zod";
+import { Tables } from '@/integrations/supabase/types';
+
+type QuoteTemplate = Tables<'quote_templates'>;
 
 export const templateFormSchema = z.object({
   template_name: z.string().min(1, "Template name is required."),
@@ -17,5 +20,5 @@ export type TemplateFormValues = z.infer<typeof templateFormSchema>;
 export interface CreateOrEditTemplateDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
-    template?: any; // Will be typed based on QuoteTemplate from parent
+    template?: QuoteTemplate;
 }

@@ -125,7 +125,7 @@ export const QuoteListHeader = ({ quotes, selectedQuoteIds, onToggleSelectAll, o
                             key={action}
                             variant={getActionVariant(action)}
                             size="sm"
-                            onClick={() => onBulkAction(action as any)}
+                            onClick={() => onBulkAction(action as 'approved' | 'cancelled' | 'confirm_payment' | 'export' | 'priority')}
                             disabled={isProcessing || isActionLoading(action, isUpdatingStatus, activeStatusUpdate)}
                             className={[
                                 "rounded-md px-3 py-2 font-medium text-sm transition",

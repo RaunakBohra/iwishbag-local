@@ -74,13 +74,13 @@ interface Quote {
     name?: string;
     email?: string;
     phone?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   profiles?: {
     full_name?: string;
     email?: string;
     phone?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   customer_name?: string;
   customer_phone?: string;
@@ -88,7 +88,7 @@ interface Quote {
   user_id?: string;
   destination_country?: string;
   created_at?: string;
-  [key: string]: any; // For other properties
+  [key: string]: unknown; // For other properties
 }
 
 // Payment ledger entry interface
@@ -115,7 +115,7 @@ interface PaymentLedgerEntry {
     full_name?: string;
     email?: string;
   };
-  gateway_response?: Record<string, any>;
+  gateway_response?: Record<string, unknown>;
 }
 
 // Payment proof interface

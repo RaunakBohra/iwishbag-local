@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { AddressChange } from '@/types/address';
 import { getAddressChangeSummary, compareAddresses } from '@/lib/addressValidation';
+import { ShippingAddress } from '@/types/address';
 
 interface AddressHistoryProps {
   history: AddressChange[];
@@ -149,7 +150,7 @@ export const AddressHistory: React.FC<AddressHistoryProps> = ({
         <div className="space-y-3">
           {(isExpanded ? history : displayHistory).map((change, index) => {
             // Calculate changes between this and previous entry
-            let changes: any[] = [];
+            let changes: { field: keyof ShippingAddress; oldValue: string; newValue: string }[] = [];
             if (change.oldAddress && change.newAddress) {
               changes = compareAddresses(change.oldAddress, change.newAddress);
             } else if (change.newAddress && !change.oldAddress) {

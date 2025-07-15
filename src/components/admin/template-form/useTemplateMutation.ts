@@ -3,8 +3,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { TemplateFormValues } from "./types";
+import { Tables } from '@/integrations/supabase/types';
 
-export const useTemplateMutation = (template: any, onOpenChange: (isOpen: boolean) => void) => {
+type QuoteTemplate = Tables<'quote_templates'>;
+
+export const useTemplateMutation = (template: QuoteTemplate | undefined, onOpenChange: (isOpen: boolean) => void) => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
 

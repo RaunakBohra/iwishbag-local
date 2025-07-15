@@ -243,7 +243,7 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
 
                 {/* Display additional fields from custom_fields */}
                 {defaultAccount.custom_fields && typeof defaultAccount.custom_fields === 'object' && 
-                  Object.entries(defaultAccount.custom_fields as Record<string, any>).map(([key, value]) => {
+                  Object.entries(defaultAccount.custom_fields as Record<string, unknown>).map(([key, value]) => {
                     if (!value) return null;
                     const label = (defaultAccount.field_labels as Record<string, string>)?.[key] || key;
                     return (
