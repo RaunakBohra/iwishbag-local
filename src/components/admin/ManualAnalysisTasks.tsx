@@ -13,13 +13,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { ExternalLink, Clock, CheckCircle, XCircle, AlertCircle, Edit3 } from 'lucide-react';
 
+interface AnalysisResult {
+  name: string;
+  price: number;
+  weight: number;
+  category: string;
+  currency: string;
+  availability: boolean;
+  imageUrl?: string;
+  notes?: string;
+}
+
 interface ManualAnalysisTask {
   id: string;
   url?: string;
   product_name?: string;
   status: 'pending' | 'in_progress' | 'completed' | 'failed';
   assigned_to?: string;
-  analysis_result?: any;
+  analysis_result?: AnalysisResult;
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -88,7 +99,7 @@ export const ManualAnalysisTasks = () => {
 
   // Complete task with analysis result
   const completeTaskMutation = useMutation({
-    mutationFn: async ({ taskId, analysisResult }: { taskId: string; analysisResult: any }) => {
+    mutationFn: async ({ taskId, analysisResult }: { taskId: string; analysisResult: AnalysisResult }) => {
       try {
         const { error } = await supabase
           .from('manual_analysis_tasks')
@@ -161,7 +172,7 @@ export const ManualAnalysisTasks = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleCompleteTask = (formData: any) => {
+  const handleCompleteTask = (formData: Record<string, string>) => {
     if (!selectedTask) return;
 
     const analysisResult = {

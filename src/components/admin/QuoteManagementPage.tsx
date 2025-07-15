@@ -135,7 +135,7 @@ export const QuoteManagementPage = () => {
         if (confirmAction === 'delete') {
             handleDeleteQuotes();
         } else if (confirmAction) {
-            handleBulkAction(confirmAction as any);
+            handleBulkAction(confirmAction as 'approved' | 'cancelled' | 'confirm_payment' | 'email' | 'export' | 'duplicate' | 'priority');
         }
         setConfirmOpen(false);
         setConfirmAction(null);

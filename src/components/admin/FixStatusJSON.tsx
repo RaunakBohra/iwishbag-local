@@ -228,8 +228,9 @@ export const FixStatusJSON = () => {
         try {
           JSON.parse(setting.setting_value);
           messages.push(`✅ ${setting.setting_key} has valid JSON`);
-        } catch (e: any) {
-          messages.push(`❌ ${setting.setting_key} has invalid JSON: ${e.message}`);
+        } catch (e: unknown) {
+          const errorMessage = e instanceof Error ? e.message : String(e);
+          messages.push(`❌ ${setting.setting_key} has invalid JSON: ${errorMessage}`);
           
           // Try to fix common issues
           let fixedJSON = setting.setting_value;
@@ -261,8 +262,9 @@ export const FixStatusJSON = () => {
             } else {
               messages.push(`✅ Updated ${setting.setting_key} with fixed JSON`);
             }
-          } catch (fixError: any) {
-            messages.push(`❌ Could not fix JSON for ${setting.setting_key}: ${fixError.message}`);
+          } catch (fixError: unknown) {
+            const errorMessage = fixError instanceof Error ? fixError.message : String(fixError);
+            messages.push(`❌ Could not fix JSON for ${setting.setting_key}: ${errorMessage}`);
             messages.push(`🔄 Resetting ${setting.setting_key} to defaults...`);
             
             // Reset to defaults
@@ -324,8 +326,9 @@ export const FixStatusJSON = () => {
       messages.push('🎉 Fix complete! You can now refresh the Status Management page to see if the error is resolved.');
       
       setResult(messages.join('\n'));
-    } catch (error: any) {
-      setResult(`Error: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setResult(`Error: ${errorMessage}`);
     } finally {
       setIsFixing(false);
     }

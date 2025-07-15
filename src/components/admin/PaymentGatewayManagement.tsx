@@ -45,7 +45,7 @@ interface PaymentGatewayFormData {
   supported_currencies: string[];
   fee_percent: number;
   fee_fixed: number;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   webhook_url?: string;
   test_mode: boolean;
 }
@@ -137,7 +137,7 @@ export const PaymentGatewayManagement: React.FC = () => {
         const averageAmount = totalTransactions > 0 ? totalAmount / totalTransactions : 0;
 
         // Calculate gateway breakdown
-        const gatewayBreakdown: Record<PaymentGateway, { count: number; amount: number; success_rate: number }> = {} as any;
+        const gatewayBreakdown: Record<PaymentGateway, { count: number; amount: number; success_rate: number }> = {};
         
         gateways?.forEach(gateway => {
           const gatewayTransactions = transactions?.filter(t => t.gateway_code === gateway.code) || [];
@@ -172,7 +172,7 @@ export const PaymentGatewayManagement: React.FC = () => {
           currency: 'USD',
           success_rate: 0,
           average_amount: 0,
-          gateway_breakdown: {} as any,
+          gateway_breakdown: {},
           time_period: {
             start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
             end: new Date().toISOString()

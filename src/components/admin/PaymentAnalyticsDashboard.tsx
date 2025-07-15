@@ -19,6 +19,16 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { Tables } from '@/integrations/supabase/types';
+
+type PaymentTransaction = Tables<'payment_transactions'>;
+type PaymentErrorLog = {
+  error_code: string;
+  severity: string;
+  gateway: string;
+  created_at: string;
+};
+type WebhookLog = Record<string, unknown>;
 
 interface PaymentMetrics {
   total_transactions: number;
@@ -73,7 +83,7 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
     try {
       // Get basic payment metrics
       const { data: payments, error: paymentsError } = await supabase
-        .from('payments')
+        .from('payment_transactions')
         .select('*')
         .gte('created_at', getDateRange(timeRange))
         .order('created_at', { ascending: false });
@@ -114,7 +124,7 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
     return date.toISOString();
   };
 
-  const processPaymentMetrics = (payments: any[], errors: any[], webhooks: any[]): PaymentMetrics => {
+  const processPaymentMetrics = (payments: PaymentTransaction[], errors: PaymentErrorLog[], webhooks: WebhookLog[]): PaymentMetrics => {
     const total = payments.length;
     const successful = payments.filter(p => p.status === 'success').length;
     const failed = payments.filter(p => p.status === 'failed').length;
@@ -175,7 +185,7 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
     };
   };
 
-  const getDailyStats = (payments: any[], days: number): Array<{
+  const getDailyStats = (payments: PaymentTransaction[], days: number): Array<{
     date: string;
     transactions: number;
     amount: number;

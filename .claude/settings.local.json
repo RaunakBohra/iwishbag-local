@@ -62,7 +62,11 @@
       "Bash(do if [ -f \"$file/index.ts\" ])",
       "Bash(then echo \"=== $file ===\")",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(for migration in 20250716000008 20250716000009 20250716000010 20250716000011 20250716000012 20250716000013 20250716000014 20250716000015 20250716000016 20250716000017)",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(PGPASSWORD=\"Pass@321\" psql -h aws-0-ap-south-1.pooler.supabase.com -p 6543 -U postgres.scvoviqcqzlplrsdzukx -d postgres -c \"SELECT COUNT(*) FROM payment_reconciliation_logs;\")"
     ],
     "deny": []
   }
