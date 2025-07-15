@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { authenticateUser, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
@@ -56,6 +57,14 @@ serve(async (req) => {
   }
 
   try {
+    // Validate request method
+    validateMethod(req, ['POST']);
+
+    // Authenticate user
+    const { user, supabaseClient } = await authenticateUser(req);
+    
+    console.log(`🔐 Authenticated user ${user.email} creating PayPal checkout`);
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -357,6 +366,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Unexpected error:', error);
+    
+    if (error instanceof AuthError) {
+      return createAuthErrorResponse(error, corsHeaders);
+    }
+    
     return new Response(JSON.stringify({ 
       error: 'An unexpected error occurred',
       details: error.message 

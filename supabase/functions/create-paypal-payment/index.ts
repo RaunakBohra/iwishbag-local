@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { authenticateUser, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
@@ -130,17 +131,14 @@ serve(async (req) => {
     });
   }
 
-  // Only handle POST requests
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ 
-      error: 'Method not allowed. Use POST.' 
-    }), { 
-      status: 405, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-
   try {
+    // Validate request method
+    validateMethod(req, ['POST']);
+
+    // Authenticate user
+    const { user, supabaseClient } = await authenticateUser(req);
+    
+    console.log(`🔐 Authenticated user ${user.email} creating PayPal payment`);
     const paymentRequest: PayPalPaymentRequest = await req.json();
     console.log("🟦 PayPal payment request:", { 
       quoteIds: paymentRequest.quoteIds,
@@ -331,6 +329,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("❌ PayPal payment creation error:", error);
+    
+    if (error instanceof AuthError) {
+      return createAuthErrorResponse(error, corsHeaders);
+    }
     
     const response: PayPalPaymentResponse = {
       success: false,
