@@ -23,6 +23,8 @@ interface PayPalRefundResponse {
   status?: string
   amount?: number
   currency?: string
+  message?: string
+  estimatedCompletion?: string
   error?: string
   details?: any
   // Additional fields for PayPalRefundManagement component compatibility
@@ -362,11 +364,14 @@ serve(async (req) => {
         original_amount: transaction.amount,
         currency: refundRequest.currency,
         refund_type: refundRequest.refundAmount === transaction.amount ? 'FULL' : 'PARTIAL',
-        status: (refundResponse.status || 'COMPLETED').toLowerCase(),
+        status: 'processing', // Initial status like PayU
+        gateway_status: refundResponse.status || 'PENDING',
         gateway_response: refundResponse,
         refund_reason: refundRequest.reason,
         notes: refundRequest.note,
+        customer_note: `Refund of ${refundRequest.currency} ${refundRequest.refundAmount} has been initiated for your order.`,
         processed_by: refundRequest.userId,
+        refund_date: new Date().toISOString(),
         processed_at: new Date().toISOString()
       })
       .select()
@@ -392,7 +397,7 @@ serve(async (req) => {
         reference_id: gatewayRefund?.id || refundResponse.id,
         gateway_transaction_id: refundResponse.id,
         gateway_response: refundResponse,
-        status: 'completed',
+        status: 'processing', // Match gateway_refunds status
         processed_at: new Date().toISOString()
       })
       .select()
@@ -421,13 +426,77 @@ serve(async (req) => {
       console.error('⚠️ Failed to update transaction:', updateError)
     }
 
-    // Return success response (compatible with both RefundManagementModal and PayPalRefundManagement)
+    // Update the quote's amount_paid to reflect the refund (like PayU does)
+    if (transaction.quote_id) {
+      const { data: quoteData, error: quoteError } = await supabaseAdmin
+        .from('quotes')
+        .select('amount_paid, final_total')
+        .eq('id', transaction.quote_id)
+        .single()
+      
+      if (!quoteError && quoteData) {
+        const newAmountPaid = (quoteData.amount_paid || 0) - refundRequest.refundAmount
+        const newPaymentStatus = newAmountPaid <= 0 ? 'unpaid' : 
+                                newAmountPaid < quoteData.final_total ? 'partial' : 'paid'
+        
+        const { error: updateQuoteError } = await supabaseAdmin
+          .from('quotes')
+          .update({
+            amount_paid: newAmountPaid,
+            payment_status: newPaymentStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', transaction.quote_id)
+        
+        if (updateQuoteError) {
+          console.error('⚠️ Failed to update quote amount_paid:', updateQuoteError)
+        } else {
+          console.log('✅ Updated quote payment status')
+        }
+      }
+    }
+
+    // Send notification email if we have quote details (like PayU does)
+    if (transaction.quote_id) {
+      try {
+        const { data: quote } = await supabaseAdmin
+          .from('quotes')
+          .select('email, display_id, product_name')
+          .eq('id', transaction.quote_id)
+          .single()
+
+        if (quote?.email) {
+          await supabaseAdmin.functions.invoke('send-email', {
+            body: {
+              to: quote.email,
+              subject: `Refund Initiated - Order ${quote.display_id}`,
+              html: `
+                <p>Dear Customer,</p>
+                <p>We have initiated a refund of <strong>${refundRequest.currency} ${refundRequest.refundAmount}</strong> for your order <strong>${quote.display_id}</strong> (${quote.product_name}).</p>
+                <p>The refund will be credited to your original PayPal account within 3-5 business days.</p>
+                <p>Refund Reference: ${refundResponse.id}</p>
+                <p>If you have any questions, please contact our support team.</p>
+                <p>Thank you for your patience.</p>
+              `
+            }
+          })
+          console.log('✅ Refund notification email sent to:', quote.email)
+        }
+      } catch (emailError) {
+        console.error('⚠️ Error sending notification email:', emailError)
+        // Don't fail the refund due to email error
+      }
+    }
+
+    // Return success response (aligned with PayU format)
     const response: PayPalRefundResponse = {
       success: true,
       refundId: refundResponse.id,
-      status: refundResponse.status,
+      status: 'processing', // Match what we stored
       amount: refundRequest.refundAmount,
       currency: refundRequest.currency,
+      message: 'Refund initiated successfully',
+      estimatedCompletion: '3-5 business days',
       // Additional fields for PayPalRefundManagement component
       refund_amount: refundRequest.refundAmount,
       refund_id: refundResponse.id,
