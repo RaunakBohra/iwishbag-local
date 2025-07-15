@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts"
+import { authenticateUser, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
@@ -32,6 +33,14 @@ serve(async (req) => {
   }
 
   try {
+    // Validate request method
+    validateMethod(req, ['POST']);
+
+    // Authenticate user
+    const { user, supabaseClient } = await authenticateUser(req);
+    
+    console.log(`🔐 Authenticated user ${user.email} requesting email send`);
+    
     console.log("🔵 Parsing request body...");
     const body = await req.json();
     console.log("🔵 Request body received:", JSON.stringify(body, null, 2));
@@ -208,6 +217,11 @@ serve(async (req) => {
   } catch (error) {
     console.log("❌ Top-level function error:", error);
     console.error('!!! TOP-LEVEL FUNCTION ERROR !!!:', error)
+    
+    if (error instanceof AuthError) {
+      return createAuthErrorResponse(error, corsHeaders);
+    }
+    
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error.message }),
       { 
