@@ -2,6 +2,109 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { createHash } from "node:crypto"
 
+// PayPal API configuration
+const PAYPAL_BASE_URL = Deno.env.get('PAYPAL_ENVIRONMENT') === 'sandbox' 
+  ? 'https://api-m.sandbox.paypal.com'
+  : 'https://api-m.paypal.com';
+
+// PayPal OAuth token cache
+let cachedToken: { access_token: string; expires_at: number } | null = null;
+
+// Get PayPal OAuth token
+async function getPayPalOAuthToken(): Promise<string> {
+  const clientId = Deno.env.get('PAYPAL_CLIENT_ID');
+  const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET');
+  
+  if (!clientId || !clientSecret) {
+    throw new Error('PayPal credentials not configured');
+  }
+
+  // Check if we have a valid cached token
+  if (cachedToken && Date.now() < cachedToken.expires_at) {
+    return cachedToken.access_token;
+  }
+
+  const auth = btoa(`${clientId}:${clientSecret}`);
+  
+  const response = await fetch(`${PAYPAL_BASE_URL}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials'
+  });
+
+  if (!response.ok) {
+    throw new Error(`PayPal OAuth failed: ${response.status}`);
+  }
+
+  const tokenData = await response.json();
+  
+  // Cache the token (expires in 9 hours, we'll refresh after 8 hours)
+  cachedToken = {
+    access_token: tokenData.access_token,
+    expires_at: Date.now() + (8 * 60 * 60 * 1000) // 8 hours
+  };
+
+  return tokenData.access_token;
+}
+
+// Verify PayPal webhook signature
+async function verifyPayPalWebhookSignature(
+  rawBody: string,
+  headers: { [key: string]: string }
+): Promise<boolean> {
+  try {
+    const webhookId = Deno.env.get('PAYPAL_WEBHOOK_ID');
+    if (!webhookId) {
+      throw new Error('PAYPAL_WEBHOOK_ID not configured');
+    }
+
+    const transmissionId = headers['paypal-transmission-id'];
+    const transmissionTime = headers['paypal-transmission-time'];
+    const transmissionSig = headers['paypal-transmission-signature'];
+    const certUrl = headers['paypal-cert-url'];
+
+    if (!transmissionId || !transmissionTime || !transmissionSig) {
+      console.error('Missing PayPal webhook headers');
+      return false;
+    }
+
+    const accessToken = await getPayPalOAuthToken();
+    
+    const verificationBody = {
+      auth_algo: 'NONE',
+      cert_url: certUrl || '',
+      transmission_id: transmissionId,
+      transmission_time: transmissionTime,
+      webhook_id: webhookId,
+      transmission_sig: transmissionSig,
+      webhook_event: JSON.parse(rawBody)
+    };
+
+    const response = await fetch(`${PAYPAL_BASE_URL}/v1/notifications/verify-webhook-signature`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(verificationBody)
+    });
+
+    if (!response.ok) {
+      console.error('PayPal verification API error:', response.status);
+      return false;
+    }
+
+    const verificationResult = await response.json();
+    return verificationResult.verification_status === 'SUCCESS';
+  } catch (error) {
+    console.error('PayPal signature verification error:', error);
+    return false;
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -71,8 +174,33 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Get raw body for signature verification
+    const rawBody = await req.text();
+    
+    // Convert headers to object for verification
+    const headerObj: { [key: string]: string } = {};
+    req.headers.forEach((value, key) => {
+      headerObj[key.toLowerCase()] = value;
+    });
+
+    // Verify PayPal webhook signature
+    console.log("🔐 Verifying PayPal webhook signature...");
+    const isValidSignature = await verifyPayPalWebhookSignature(rawBody, headerObj);
+    
+    if (!isValidSignature) {
+      console.error("❌ PayPal webhook signature verification failed");
+      return new Response(JSON.stringify({ 
+        error: 'Webhook signature verification failed' 
+      }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log("✅ PayPal webhook signature verified successfully");
+
     // Parse webhook payload
-    const webhookData: PayPalWebhookEvent = await req.json();
+    const webhookData: PayPalWebhookEvent = JSON.parse(rawBody);
     console.log("🔵 Webhook event received:", webhookData.event_type);
     console.log("🔵 Resource type:", webhookData.resource_type);
 
