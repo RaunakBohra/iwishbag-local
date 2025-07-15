@@ -16,12 +16,33 @@ import { cn } from '@/lib/utils';
 import { DueAmountInfo } from '@/lib/paymentUtils';
 import { PaymentLinkGenerator } from './PaymentLinkGenerator';
 
+interface QuoteWithCustomerInfo {
+  id?: string;
+  shipping_address?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
+  user?: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+  };
+}
+
+interface PaymentLinkData {
+  success?: boolean;
+  shortUrl?: string;
+  amountInINR?: number;
+  linkCode?: string;
+}
+
 interface DueAmountNotificationProps {
   dueInfo: DueAmountInfo;
   currency: string;
   currencySymbol: string;
-  quote?: any;
-  onPaymentLinkCreated?: (link: any) => void;
+  quote?: QuoteWithCustomerInfo;
+  onPaymentLinkCreated?: (link: PaymentLinkData) => void;
   showActions?: boolean;
   className?: string;
 }
@@ -72,7 +93,7 @@ export function DueAmountNotification({
     return `Outstanding payment: ${dueAmountFormatted}`;
   };
 
-  const handleLinkCreated = (link: any) => {
+  const handleLinkCreated = (link: PaymentLinkData) => {
     setLinkSent(true);
     onPaymentLinkCreated?.(link);
   };

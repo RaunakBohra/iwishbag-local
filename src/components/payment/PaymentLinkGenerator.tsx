@@ -23,6 +23,16 @@ import { Link, Loader2, Copy, ExternalLink } from 'lucide-react';
 import { usePaymentLinks } from '@/hooks/usePaymentLinks';
 import { useToast } from '@/components/ui/use-toast';
 
+interface PaymentLinkResult {
+  success?: boolean;
+  shortUrl?: string;
+  amountInINR?: number;
+  originalCurrency?: string;
+  originalAmount?: number;
+  expiresAt?: string;
+  linkCode?: string;
+}
+
 interface PaymentLinkGeneratorProps {
   quoteId: string;
   amount: number;
@@ -32,7 +42,7 @@ interface PaymentLinkGeneratorProps {
     email: string;
     phone: string;
   };
-  onLinkCreated?: (link: any) => void;
+  onLinkCreated?: (link: PaymentLinkResult) => void;
 }
 
 export function PaymentLinkGenerator({
@@ -53,7 +63,7 @@ export function PaymentLinkGenerator({
     expiryDays: '7',
     gateway: 'payu' as const,
   });
-  const [createdLink, setCreatedLink] = useState<any>(null);
+  const [createdLink, setCreatedLink] = useState<PaymentLinkResult | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,7 +139,7 @@ export function PaymentLinkGenerator({
                 <Label htmlFor="gateway">Payment Gateway</Label>
                 <Select
                   value={formData.gateway}
-                  onValueChange={(value: any) => setFormData({ ...formData, gateway: value })}
+                  onValueChange={(value: 'payu' | 'paypal' | 'stripe') => setFormData({ ...formData, gateway: value })}
                 >
                   <SelectTrigger id="gateway">
                     <SelectValue />

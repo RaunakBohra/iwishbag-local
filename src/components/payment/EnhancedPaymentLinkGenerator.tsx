@@ -48,6 +48,58 @@ interface CustomField {
   placeholder?: string;
 }
 
+interface QuoteData {
+  id?: string;
+  display_id?: string;
+  order_display_id?: string;
+  product_name?: string;
+  final_total?: number;
+  amount_paid?: number;
+  payment_status?: string;
+  shipping_address?: {
+    fullName?: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
+  user?: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+  };
+  profiles?: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+  };
+  customer_name?: string;
+  customer_phone?: string;
+  email?: string;
+  approved_at?: string;
+  priority?: 'high' | 'urgent' | 'normal';
+  destination_country?: string;
+  origin_country?: string;
+}
+
+interface PaymentLinkResponse {
+  success?: boolean;
+  paymentUrl?: string;
+  shortUrl?: string;
+  amountInINR?: number;
+  originalCurrency?: string;
+  originalAmount?: number;
+  expiresAt?: string;
+  linkCode?: string;
+  exchangeRate?: number;
+  apiVersion?: string;
+  fallbackUsed?: boolean;
+  features?: {
+    customFields?: boolean;
+    partialPayment?: boolean;
+  };
+  error?: string;
+}
+
 interface EnhancedPaymentLinkGeneratorProps {
   quoteId: string;
   amount: number;
@@ -57,8 +109,8 @@ interface EnhancedPaymentLinkGeneratorProps {
     email: string;
     phone: string;
   };
-  quote?: any; // Full quote object for intelligent prefilling
-  onLinkCreated?: (link: any) => void;
+  quote?: QuoteData;
+  onLinkCreated?: (link: PaymentLinkResponse) => void;
 }
 
 export function EnhancedPaymentLinkGenerator({
@@ -253,7 +305,7 @@ export function EnhancedPaymentLinkGenerator({
   }, [open, quote, customerInfo]);
 
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [createdLink, setCreatedLink] = useState<any>(null);
+  const [createdLink, setCreatedLink] = useState<PaymentLinkResponse | null>(null);
   const [showSuggestedFields, setShowSuggestedFields] = useState(false);
   
   // Get suggested custom fields
@@ -384,11 +436,11 @@ export function EnhancedPaymentLinkGenerator({
         console.error('❌ [EnhancedPaymentLinkGenerator] Payment link creation failed:', data);
         throw new Error(data?.error || 'Failed to create payment link');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('💥 [EnhancedPaymentLinkGenerator] Payment link creation error:', error);
       toast({
         title: "Failed to create payment link",
-        description: error.message || 'Unknown error occurred',
+        description: (error instanceof Error ? error.message : 'Unknown error occurred'),
         variant: "destructive",
       });
     } finally {
@@ -531,7 +583,7 @@ export function EnhancedPaymentLinkGenerator({
                       <Label htmlFor="gateway">Payment Gateway</Label>
                       <Select
                         value={formData.gateway}
-                        onValueChange={(value: any) => setFormData({ ...formData, gateway: value })}
+                        onValueChange={(value: 'payu' | 'paypal') => setFormData({ ...formData, gateway: value })}
                       >
                         <SelectTrigger id="gateway">
                           <SelectValue />
@@ -554,7 +606,7 @@ export function EnhancedPaymentLinkGenerator({
                         <Label htmlFor="api-method">API Method</Label>
                         <Select
                           value={formData.apiMethod}
-                          onValueChange={(value: any) => setFormData({ ...formData, apiMethod: value })}
+                          onValueChange={(value: 'rest' | 'legacy') => setFormData({ ...formData, apiMethod: value })}
                         >
                           <SelectTrigger id="api-method">
                             <SelectValue />
@@ -684,7 +736,7 @@ export function EnhancedPaymentLinkGenerator({
                       <CardContent>
                         <Select
                           value={formData.template}
-                          onValueChange={(value: any) => setFormData({ ...formData, template: value })}
+                          onValueChange={(value: 'default' | 'minimal' | 'branded') => setFormData({ ...formData, template: value })}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -821,7 +873,7 @@ export function EnhancedPaymentLinkGenerator({
                               <Label className="text-xs">Field Type</Label>
                               <Select
                                 value={field.type}
-                                onValueChange={(value: any) => updateCustomField(index, { type: value })}
+                                onValueChange={(value: 'text' | 'number' | 'email' | 'phone' | 'date' | 'dropdown') => updateCustomField(index, { type: value })}
                               >
                                 <SelectTrigger className="h-8">
                                   <SelectValue />
