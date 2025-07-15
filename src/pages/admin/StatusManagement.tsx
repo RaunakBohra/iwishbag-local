@@ -236,7 +236,8 @@ export default function StatusManagement() {
       
       await saveStatusSettings(localQuoteStatuses, localOrderStatuses);
       console.log('Status settings saved successfully');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Failed to save status:', error);
       console.error('Error details:', {
         message: error.message,
@@ -434,7 +435,7 @@ export default function StatusManagement() {
                 <Label>Color</Label>
                 <Select
                   value={editingStatus.color}
-                  onValueChange={(value) => updateStatus(editingStatus.id, { color: value as any }, editingStatus.category)}
+                  onValueChange={(value) => updateStatus(editingStatus.id, { color: value as string }, editingStatus.category)}
                 >
                   <SelectTrigger>
                     <SelectValue />

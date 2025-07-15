@@ -9,7 +9,7 @@ export interface StatusTransitionEvent {
   fromStatus: string;
   toStatus: string;
   trigger: 'payment_received' | 'quote_sent' | 'order_shipped' | 'quote_expired' | 'manual' | 'auto_calculation';
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export const useStatusTransitions = () => {
@@ -96,7 +96,7 @@ export const useStatusTransitions = () => {
   };
 
   // Get email template for status notification
-  const getStatusEmailTemplate = async (status: string): Promise<any> => {
+  const getStatusEmailTemplate = async (status: string): Promise<Record<string, unknown> | null> => {
     try {
       const { data, error } = await supabase
         .from('email_templates')

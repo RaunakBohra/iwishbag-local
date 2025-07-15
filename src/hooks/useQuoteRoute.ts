@@ -10,7 +10,7 @@ interface RouteInfo {
  * Unified hook to get quote route information
  * This ensures consistent route determination across all components
  */
-export function useQuoteRoute(quote: any): RouteInfo | null {
+export function useQuoteRoute(quote: Record<string, unknown> | null): RouteInfo | null {
   const [route, setRoute] = useState<RouteInfo | null>(null);
 
   useEffect(() => {

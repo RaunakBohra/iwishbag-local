@@ -283,7 +283,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
   
   
   // Get quote UI state
-  const getQuoteUIState = (quote: any) => {
+  const getQuoteUIState = (quote: Record<string, unknown>) => {
     const { status, in_cart } = quote;
     
     let step: 'review' | 'approve' | 'cart' | 'checkout' | 'rejected' = 'review';

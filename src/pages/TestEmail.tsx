@@ -55,11 +55,12 @@ export default function TestEmail() {
         description: "Check your email inbox and the browser console for details.",
       });
       
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Email test error:', error);
       toast({
         title: "Email test failed",
-        description: error.message || 'An error occurred while sending the test email',
+        description: errorMessage || 'An error occurred while sending the test email',
         variant: "destructive"
       });
     } finally {

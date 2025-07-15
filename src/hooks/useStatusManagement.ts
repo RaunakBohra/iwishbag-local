@@ -120,25 +120,26 @@ export const useStatusManagement = () => {
       // Refresh the provider data to pick up the new settings
       await refreshData();
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Error saving status settings:', error);
       console.error('Full error object:', error);
       
       // Provide more specific error messages
-      let errorMessage = 'Failed to save status settings';
-      if (error.code === '42501') {
-        errorMessage = 'Permission denied. You may not have admin access.';
-      } else if (error.code === '42P01') {
-        errorMessage = 'Database table not found. Please check your database setup.';
-      } else if (error.code === '23505') {
-        errorMessage = 'Duplicate key error. Please try again.';
-      } else if (error.message) {
-        errorMessage = error.message;
+      let specificErrorMessage = 'Failed to save status settings';
+      if ((error as any).code === '42501') {
+        specificErrorMessage = 'Permission denied. You may not have admin access.';
+      } else if ((error as any).code === '42P01') {
+        specificErrorMessage = 'Database table not found. Please check your database setup.';
+      } else if ((error as any).code === '23505') {
+        specificErrorMessage = 'Duplicate key error. Please try again.';
+      } else if (errorMessage) {
+        specificErrorMessage = errorMessage;
       }
       
       toast({
         title: "Error",
-        description: errorMessage,
+        description: specificErrorMessage,
         variant: "destructive"
       });
       throw error;

@@ -23,7 +23,7 @@ export const useQuoteCalculation = () => {
         quoteDataFromForm: AdminQuoteFormValues,
         itemsToUpdate: ItemToUpdate[],
         allCountrySettings: CountrySetting[],
-        shippingAddress?: any,
+        shippingAddress?: Record<string, unknown>,
         currentStatus?: string
     ): Promise<(Partial<Quote> & { id: string }) | null> => {
 
@@ -48,7 +48,7 @@ export const useQuoteCalculation = () => {
         }
 
         // Clean and validate form data - ensure all values are numbers in purchase currency
-        const parseToNumber = (value: any): number => {
+        const parseToNumber = (value: unknown): number => {
             if (value === null || value === undefined || value === '') return 0;
             const parsed = typeof value === 'string' ? parseFloat(value) : Number(value);
             return isNaN(parsed) ? 0 : parsed;
@@ -399,13 +399,13 @@ export const useQuoteCalculation = () => {
                 final_currency: purchaseCurrency || countrySettings.currency,
                 final_total_local: finalTotal, // Already in purchase currency
                 // Store the shipping route's exchange rate if available, otherwise use purchase currency rate
-                exchange_rate: (shippingCost.route as any)?.exchange_rate || purchaseCurrencyRate,
+                exchange_rate: (shippingCost.route as Record<string, unknown>)?.exchange_rate as number || purchaseCurrencyRate,
                 // New fields for shipping routes
                 origin_country: originCountry,
                 shipping_method: shippingMethod,
                 shipping_route_id: shippingRouteId ?? null,
                 // Preserve current status - don't change status on calculation
-                status: currentStatus as any
+                status: currentStatus as string
             };
             
             // Log the values returned in the calculation result

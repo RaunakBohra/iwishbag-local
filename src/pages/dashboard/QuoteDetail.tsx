@@ -211,7 +211,7 @@ export default function QuoteDetail() {
   }, [statusConfig, quote?.status]);
 
   // Mapping function for quote state (inlined from QuoteBreakdown)
-  const getQuoteUIState = (quote: any) => {
+  const getQuoteUIState = (quote: Record<string, unknown>) => {
     const { status, in_cart } = quote;
     
     let step: 'review' | 'approve' | 'cart' | 'checkout' | 'rejected' = 'review';
@@ -1111,7 +1111,7 @@ export default function QuoteDetail() {
               onSave={async (updatedAddress) => {
                 await supabase
                   .from('quotes')
-                  .update({ shipping_address: updatedAddress as any })
+                  .update({ shipping_address: updatedAddress as Record<string, unknown> })
                   .eq('id', quote.id);
                 setIsAddressDialogOpen(false);
                 refetch();

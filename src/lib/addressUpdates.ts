@@ -12,7 +12,7 @@ export async function updateQuoteAddress(
   newAddress: ShippingAddress,
   userId: string,
   reason?: string
-): Promise<{ success: boolean; error?: string; changes?: any[] }> {
+): Promise<{ success: boolean; error?: string; changes?: Record<string, unknown>[] }> {
   try {
     // Get current quote data
     const { data: quote, error: quoteError } = await supabase
@@ -152,7 +152,7 @@ export async function unlockAddress(
 /**
  * Gets address change history for a quote
  */
-export async function getAddressHistory(quoteId: string): Promise<{ data?: any[]; error?: string }> {
+export async function getAddressHistory(quoteId: string): Promise<{ data?: Record<string, unknown>[]; error?: string }> {
   try {
     const { data, error } = await supabase
       .from('quote_address_history')
