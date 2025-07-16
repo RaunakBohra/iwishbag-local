@@ -1142,11 +1142,11 @@ export default function Checkout() {
             // Use the same simple approach as the working test page
             console.log('🚀 Submitting PayU form with simple direct submission...');
             
-            // Create form (same as test page)
+            // Create form with immediate submission to avoid flash
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = paymentResponse.url;
-            form.target = '_blank'; // Open in new tab (same as working test page)
+            form.target = '_self'; // Submit in same window for reliable submission
             form.style.display = 'none';
 
             // Add all form fields
@@ -1161,10 +1161,12 @@ export default function Checkout() {
             document.body.appendChild(form);
             
             console.log('✅ Form created with ' + form.elements.length + ' fields');
-            console.log('🚀 Submitting to PayU...');
+            console.log('🚀 Submitting to PayU immediately...');
             
-            // Submit form (same as test page)
-            form.submit();
+            // Submit form immediately to prevent any page flash
+            setTimeout(() => {
+              form.submit();
+            }, 100); // Small delay to ensure form is ready
           } else {
             // PayU without form data - this shouldn't happen
             console.error('⚠️ PayU payment missing form data or URL!');
