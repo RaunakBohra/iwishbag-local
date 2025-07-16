@@ -1,0 +1,50 @@
+name: Payment Health Monitor
+
+# Monitor payment gateway health every 15 minutes (critical for business)
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  payment-health-monitor:
+    runs-on: ubuntu-latest
+    name: Monitor Payment Health
+    
+    steps:
+      - name: Monitor Payment Health
+        run: |
+          echo "🔵 Monitoring payment health..."
+          
+          response=$(curl -s -w "\nHTTP_CODE:%{http_code}" -X POST \
+            "https://grgvlrvywsfmnmkxrecd.supabase.co/functions/v1/payment-health-monitor" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json")
+          
+          # Extract HTTP status code
+          http_code=$(echo "$response" | grep "HTTP_CODE:" | cut -d: -f2)
+          body=$(echo "$response" | sed '/HTTP_CODE:/d')
+          
+          echo "📊 Response Status: $http_code"
+          echo "📋 Response Body: $body"
+          
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Payment health monitored successfully!"
+          else
+            echo "❌ Failed to monitor payment health (HTTP $http_code)"
+            echo "Response: $body"
+            exit 1
+          fi
+
+      - name: Log Completion
+        if: success()
+        run: |
+          echo "🎉 Payment health monitoring completed at $(date -u)"
+          echo "⏰ Next monitoring in 15 minutes"
+
+      - name: Handle Failure
+        if: failure()
+        run: |
+          echo "🚨 Payment health monitoring failed at $(date -u)"
+          echo "🔧 Check payment gateway connectivity"
+          echo "📧 Consider setting up alerts for payment issues"
