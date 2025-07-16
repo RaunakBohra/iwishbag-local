@@ -697,8 +697,8 @@ export default function Checkout() {
     // Validate form data
     const validation = validatePayUFormData(formData);
     
-    // Log validation results
-    PayUDebugger.log('submission', {
+    // Store initial debug data (will be enhanced later)
+    const debugData = {
       url,
       formData,
       validation,
@@ -713,7 +713,7 @@ export default function Checkout() {
         phone: formData.phone,
         hash: formData.hash?.substring(0, 20) + '...'
       }
-    });
+    };
     
     // Validate form data
     if (!formData || Object.keys(formData).length === 0) {
@@ -755,17 +755,81 @@ export default function Checkout() {
     // Add form to page and submit
     document.body.appendChild(form);
     
+    // Debug: Log the actual form HTML before submission
+    console.log('🔍 Form HTML before submission:');
+    console.log(form.outerHTML);
+    
+    // Debug: Verify form is properly attached
+    console.log('🔍 Form parent:', form.parentElement);
+    console.log('🔍 Form action:', form.action);
+    console.log('🔍 Form method:', form.method);
+    console.log('🔍 Form fields count:', form.elements.length);
+    
+    // Log form data for verification
+    const formDataForSubmission = new FormData(form);
+    console.log('🔍 FormData entries:');
+    for (let [key, value] of formDataForSubmission.entries()) {
+      console.log(`  ${key}: ${value}`);
+    }
+    
+    // Store detailed form submission info
+    PayUDebugger.log('submission', {
+      ...debugData,
+      formHTML: form.outerHTML,
+      formAction: form.action,
+      formMethod: form.method,
+      formFieldsCount: form.elements.length,
+      formParent: form.parentElement?.tagName || 'null',
+      formDataEntries: Array.from(formDataForSubmission.entries()),
+      timestamp: new Date().toISOString()
+    });
+    
     // Show debug info in toast
     toast({
       title: "Redirecting to PayU...",
-      description: `Check browser console for debug info. Run: PayUDebugger.displayInConsole()`,
+      description: `Form has ${form.elements.length} fields. Check console for debug info.`,
     });
     
     // Add a small delay to ensure form is properly added
     setTimeout(() => {
       console.log('📤 Submitting form to PayU...');
       console.log('💡 To view debug logs after redirect, run in console: PayUDebugger.displayInConsole()');
-      form.submit();
+      
+      // Try different submission methods to see if one works
+      try {
+        // Method 1: Standard form submit
+        console.log('🔄 Attempting standard form.submit()...');
+        form.submit();
+      } catch (error) {
+        console.error('❌ Standard form.submit() failed:', error);
+        
+        // Method 2: Create and dispatch submit event
+        try {
+          console.log('🔄 Attempting submit event dispatch...');
+          const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+          form.dispatchEvent(submitEvent);
+        } catch (eventError) {
+          console.error('❌ Submit event dispatch failed:', eventError);
+          
+          // Method 3: Manual form submission via fetch (as fallback)
+          console.log('🔄 Attempting manual fetch submission...');
+          const formData = new FormData(form);
+          
+          // Show error to user
+          toast({
+            title: "Form Submission Error",
+            description: "Unable to submit form automatically. Please try again.",
+            variant: "destructive"
+          });
+          
+          PayUDebugger.log('error', {
+            error: 'Form submission failed',
+            standardSubmitError: error,
+            eventDispatchError: eventError,
+            fallbackAttempted: true
+          });
+        }
+      }
     }, 100);
   };
 
