@@ -1159,6 +1159,12 @@ export default function Checkout() {
           console.log('- Email:', directFormData.email);
           console.log('- Hash:', hash.substring(0, 30) + '...');
           
+          // DETAILED DEBUG: Log all form data
+          console.log('🔍 COMPLETE FORM DATA:');
+          Object.entries(directFormData).forEach(([key, value]) => {
+            console.log(`  ${key}: "${value}" (type: ${typeof value})`);
+          });
+          
           // Create form (same as test page)
           const form = document.createElement('form');
           form.method = 'POST';
@@ -1166,22 +1172,36 @@ export default function Checkout() {
           form.target = '_self';
           form.style.display = 'none';
 
-          // Add all form fields
+          // Add all form fields with detailed logging
+          console.log('🔧 Adding form fields:');
           Object.entries(directFormData).forEach(([key, value]) => {
             const input = document.createElement('input');
             input.type = 'hidden';
             input.name = key;
-            input.value = value;
+            input.value = String(value); // Ensure string conversion
             form.appendChild(input);
+            console.log(`  Added field: ${key} = "${input.value}"`);
           });
 
           document.body.appendChild(form);
           
           console.log('✅ Form created with ' + form.elements.length + ' fields');
+          
+          // DETAILED DEBUG: Log actual form HTML
+          console.log('🔍 FORM HTML:', form.outerHTML);
+          
+          // DETAILED DEBUG: Log FormData
+          const formData = new FormData(form);
+          console.log('🔍 FORMDATA ENTRIES:');
+          for (let [key, value] of formData.entries()) {
+            console.log(`  ${key}: "${value}"`);
+          }
+          
           console.log('🚀 Submitting to PayU directly...');
           
           // Submit form immediately 
           setTimeout(() => {
+            console.log('🎯 SUBMITTING FORM NOW...');
             form.submit();
           }, 100);
         } else {
