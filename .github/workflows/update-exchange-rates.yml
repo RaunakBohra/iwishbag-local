@@ -1,9 +1,9 @@
 name: Update Exchange Rates
 
-# Schedule to run once daily at midnight for daily exchange rate updates
+# Schedule to run once daily at midnight IST for daily exchange rate updates
 on:
   schedule:
-    - cron: '0 0 * * *'  # Daily at 12:00 AM UTC (midnight)
+    - cron: '30 18 * * *'  # Daily at 12:00 AM IST (6:30 PM UTC)
   workflow_dispatch:       # Allow manual triggering from GitHub UI
 
 jobs:
@@ -41,7 +41,7 @@ jobs:
         if: success()
         run: |
           echo "🎉 Exchange rate update completed at $(date -u)"
-          echo "⏰ Next scheduled update in 24 hours (tomorrow at midnight UTC)"
+          echo "⏰ Next scheduled update in 24 hours (tomorrow at midnight IST)"
 
       - name: Handle Failure
         if: failure()

@@ -1087,9 +1087,7 @@ export default function Checkout() {
         }
         
         if (paymentMethod === 'payu') {
-          console.log('🎯 PayU payment response:', paymentResponse);
-          
-          // TEMPORARY FIX: Generate form data directly like test page
+          // TEMPORARY FIX: Generate PayU form data directly like test page
           // This bypasses Edge Function until it's redeployed with new salt key
           console.log('🔧 Generating PayU form data directly (bypassing Edge Function)');
           
