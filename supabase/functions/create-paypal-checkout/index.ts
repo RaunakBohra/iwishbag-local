@@ -50,6 +50,8 @@ serve(async (req) => {
     })
   }
 
+  const corsHeaders = createCorsHeaders(req);
+  
   try {
     // Validate request method
     validateMethod(req, ['POST']);

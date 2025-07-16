@@ -3,6 +3,69 @@
  * Implements security hardening and input validation
  */
 
+// Missing interface definitions
+interface EnhancedStripePaymentParams {
+  stripe: any; // Stripe instance
+  amount: number;
+  currency: string;
+  quoteIds: string[];
+  userId: string;
+  customerInfo?: CustomerInfo;
+  quotes: QuoteData[];
+  supabaseAdmin: any;
+}
+
+interface StripePaymentResult {
+  success: boolean;
+  client_secret?: string;
+  transactionId?: string;
+  customer_id?: string;
+  error?: string;
+}
+
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+interface StripeCustomerRecord {
+  id: string;
+  email?: string;
+  name?: string;
+  phone?: string;
+  address?: any;
+  metadata?: Record<string, string>;
+}
+
+interface StripePaymentIntentData {
+  amount: number;
+  currency: string;
+  metadata: Record<string, string>;
+  description: string;
+  receipt_email?: string;
+  automatic_payment_methods: {
+    enabled: boolean;
+  };
+  customer?: string;
+  shipping?: {
+    name: string;
+    phone?: string;
+    address: any;
+  };
+}
+
+interface QuoteShippingAddress {
+  streetAddress?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  destination_country?: string;
+  fullName?: string;
+  phone?: string;
+  email?: string;
+}
+
 // Simple types for Edge Function - avoiding frontend dependencies
 interface CustomerInfo {
   name?: string;
