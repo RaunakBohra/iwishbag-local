@@ -125,8 +125,9 @@ export class QuoteCalculatorService {
     totalApiCalls: 0,
     averageCalculationTime: 0
   };
+  
   // **NEW: Monitoring tracking**
-  private activeCalculations = new Map<string, { apiCalls: number; cacheHits: number; userId?: string }>>();
+  private activeCalculations = new Map<string, { apiCalls: number; cacheHits: number; userId?: string }>();
 
   private constructor() {}
 

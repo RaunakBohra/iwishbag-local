@@ -49,7 +49,7 @@ import { QRPaymentModal } from "@/components/payment/QRPaymentModal";
 import { PaymentStatusTracker } from "@/components/payment/PaymentStatusTracker";
 import { PaymentGateway, PaymentRequest } from "@/types/payment";
 import { PayUDebugger, validatePayUFormData } from "@/utils/payuDebug";
-import { PayUFormSubmitter, PayUFormData } from "@/utils/payuFormSubmitter";
+import { PayUFormData } from "@/utils/payuFormSubmitter";
 import { cn } from "@/lib/utils";
 import { 
   quoteAddressToCheckoutForm, 
@@ -689,170 +689,6 @@ export default function Checkout() {
     });
   };
 
-  // Function to submit PayU form with data
-  const submitPayUForm = (url: string, formData: Record<string, string>) => {
-    console.log('🔧 Submitting PayU form...');
-    console.log('URL:', url);
-    console.log('Form Data:', formData);
-    
-    // Validate form data
-    const validation = validatePayUFormData(formData);
-    
-    // Store initial debug data (will be enhanced later)
-    const debugData = {
-      url,
-      formData,
-      validation,
-      formDataKeys: Object.keys(formData),
-      formDataSample: {
-        key: formData.key?.substring(0, 10) + '...',
-        txnid: formData.txnid,
-        amount: formData.amount,
-        productinfo: formData.productinfo,
-        firstname: formData.firstname,
-        email: formData.email,
-        phone: formData.phone,
-        hash: formData.hash?.substring(0, 20) + '...'
-      }
-    };
-    
-    // Validate form data
-    if (!formData || Object.keys(formData).length === 0) {
-      console.error('❌ PayU form data is empty!');
-      toast({
-        title: "Payment Error",
-        description: "Payment form data is missing. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!validation.isValid) {
-      console.error('❌ Missing required PayU fields:', validation.missingFields);
-      toast({
-        title: "Payment Error",
-        description: `Missing required fields: ${validation.missingFields.join(', ')}. Check console for details.`,
-        variant: "destructive"
-      });
-    }
-    
-    // Create form element - make it visible to avoid browser blocking
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = url;
-    form.target = '_self';
-    
-    // Style the form to be visible but unobtrusive
-    form.style.position = 'fixed';
-    form.style.top = '50%';
-    form.style.left = '50%';
-    form.style.transform = 'translate(-50%, -50%)';
-    form.style.zIndex = '10000';
-    form.style.padding = '20px';
-    form.style.backgroundColor = '#f0f8ff';
-    form.style.border = '2px solid #4CAF50';
-    form.style.borderRadius = '10px';
-    form.style.textAlign = 'center';
-    form.style.fontFamily = 'Arial, sans-serif';
-    
-    // Add a submit button and instructions
-    const instructions = document.createElement('div');
-    instructions.innerHTML = `
-      <h3 style="margin: 0 0 10px 0; color: #333;">Redirecting to PayU...</h3>
-      <p style="margin: 0 0 15px 0; color: #666;">Please click the button below to continue to PayU payment page.</p>
-    `;
-    form.appendChild(instructions);
-    
-    const submitButton = document.createElement('button');
-    submitButton.type = 'submit';
-    submitButton.textContent = 'Continue to PayU Payment';
-    submitButton.style.padding = '10px 20px';
-    submitButton.style.backgroundColor = '#4CAF50';
-    submitButton.style.color = 'white';
-    submitButton.style.border = 'none';
-    submitButton.style.borderRadius = '5px';
-    submitButton.style.cursor = 'pointer';
-    submitButton.style.fontSize = '16px';
-    form.appendChild(submitButton);
-
-    // Add all form fields
-    Object.keys(formData).forEach(key => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = key;
-      input.value = formData[key] || ''; // Ensure no undefined values
-      form.appendChild(input);
-      console.log(`📝 Added form field: ${key} = ${formData[key]}`);
-    });
-
-    // Add form to page and submit
-    document.body.appendChild(form);
-    
-    // Debug: Log the actual form HTML before submission
-    console.log('🔍 Form HTML before submission:');
-    console.log(form.outerHTML);
-    
-    // Debug: Verify form is properly attached
-    console.log('🔍 Form parent:', form.parentElement);
-    console.log('🔍 Form action:', form.action);
-    console.log('🔍 Form method:', form.method);
-    console.log('🔍 Form fields count:', form.elements.length);
-    
-    // Log form data for verification
-    const formDataForSubmission = new FormData(form);
-    console.log('🔍 FormData entries:');
-    for (let [key, value] of formDataForSubmission.entries()) {
-      console.log(`  ${key}: ${value}`);
-    }
-    
-    // Store detailed form submission info
-    PayUDebugger.log('submission', {
-      ...debugData,
-      formHTML: form.outerHTML,
-      formAction: form.action,
-      formMethod: form.method,
-      formFieldsCount: form.elements.length,
-      formParent: form.parentElement?.tagName || 'null',
-      formDataEntries: Array.from(formDataForSubmission.entries()),
-      timestamp: new Date().toISOString()
-    });
-    
-    // Show debug info in toast
-    toast({
-      title: "PayU Payment Form Ready",
-      description: `Form created with ${form.elements.length - 2} fields. Click the button to continue.`,
-    });
-    
-    // Try the new form submitter as an alternative
-    console.log('🎆 Trying PayU form submitter as alternative...');
-    
-    // Remove the form we just created (we'll use the submitter instead)
-    document.body.removeChild(form);
-    
-    // Convert formData to PayUFormData format
-    const payuFormData: PayUFormData = {
-      key: formData.key,
-      txnid: formData.txnid,
-      amount: formData.amount,
-      productinfo: formData.productinfo,
-      firstname: formData.firstname,
-      email: formData.email,
-      phone: formData.phone,
-      surl: formData.surl,
-      furl: formData.furl,
-      hash: formData.hash,
-      udf1: formData.udf1 || '',
-      udf2: formData.udf2 || '',
-      udf3: formData.udf3 || '',
-      udf4: formData.udf4 || '',
-      udf5: formData.udf5 || ''
-    };
-    
-    // Use the form submitter with visible method
-    PayUFormSubmitter.submit(url, payuFormData, 'visible');
-    
-    console.log('💡 To view debug logs after redirect, run in console: PayUDebugger.displayInConsole()');
-  };
 
   const handlePlaceOrder = async () => {
     if (!paymentMethod) {
@@ -1275,33 +1111,60 @@ export default function Checkout() {
             console.log('✅ PayU payment has form data');
             console.log('Form Data keys:', Object.keys(paymentResponse.formData));
             console.log('Form Data values:', paymentResponse.formData);
-            // Try both methods - first the enhanced submitter, then fallback
-            try {
-              // Convert to PayUFormData format
-              const payuFormData: PayUFormData = {
-                key: paymentResponse.formData.key,
-                txnid: paymentResponse.formData.txnid,
-                amount: paymentResponse.formData.amount,
-                productinfo: paymentResponse.formData.productinfo,
-                firstname: paymentResponse.formData.firstname,
-                email: paymentResponse.formData.email,
-                phone: paymentResponse.formData.phone,
-                surl: paymentResponse.formData.surl,
-                furl: paymentResponse.formData.furl,
-                hash: paymentResponse.formData.hash,
-                udf1: paymentResponse.formData.udf1 || '',
-                udf2: paymentResponse.formData.udf2 || '',
-                udf3: paymentResponse.formData.udf3 || '',
-                udf4: paymentResponse.formData.udf4 || '',
-                udf5: paymentResponse.formData.udf5 || ''
-              };
-              
-              // Use the enhanced form submitter
-              PayUFormSubmitter.submit(paymentResponse.url, payuFormData, 'visible');
-            } catch (submitterError) {
-              console.error('Form submitter failed, trying fallback:', submitterError);
-              submitPayUForm(paymentResponse.url, paymentResponse.formData);
-            }
+            
+            // Convert to PayUFormData format
+            const payuFormData: PayUFormData = {
+              key: paymentResponse.formData.key,
+              txnid: paymentResponse.formData.txnid,
+              amount: paymentResponse.formData.amount,
+              productinfo: paymentResponse.formData.productinfo,
+              firstname: paymentResponse.formData.firstname,
+              email: paymentResponse.formData.email,
+              phone: paymentResponse.formData.phone,
+              surl: paymentResponse.formData.surl,
+              furl: paymentResponse.formData.furl,
+              hash: paymentResponse.formData.hash,
+              udf1: paymentResponse.formData.udf1 || '',
+              udf2: paymentResponse.formData.udf2 || '',
+              udf3: paymentResponse.formData.udf3 || '',
+              udf4: paymentResponse.formData.udf4 || '',
+              udf5: paymentResponse.formData.udf5 || ''
+            };
+            
+            // Log form data for debugging
+            PayUDebugger.log('submission', {
+              url: paymentResponse.url,
+              formData: payuFormData,
+              formDataKeys: Object.keys(payuFormData),
+              allFieldsPresent: Object.values(payuFormData).every(val => val !== undefined && val !== null)
+            });
+            
+            // Use the same simple approach as the working test page
+            console.log('🚀 Submitting PayU form with simple direct submission...');
+            
+            // Create form (same as test page)
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = paymentResponse.url;
+            form.target = '_self'; // Submit in same window
+            form.style.display = 'none';
+
+            // Add all form fields
+            Object.entries(payuFormData).forEach(([key, value]) => {
+              const input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = key;
+              input.value = value;
+              form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            
+            console.log('✅ Form created with ' + form.elements.length + ' fields');
+            console.log('🚀 Submitting to PayU...');
+            
+            // Submit form (same as test page)
+            form.submit();
           } else {
             // PayU without form data - this shouldn't happen
             console.error('⚠️ PayU payment missing form data or URL!');
@@ -1316,8 +1179,8 @@ export default function Checkout() {
             });
             
             toast({
-              title: "Payment Error",
-              description: "PayU payment configuration error. Check console: PayUDebugger.displayInConsole()",
+              title: "Payment Error", 
+              description: "PayU form data missing. Check PayUDebugger.displayInConsole() for details.",
               variant: "destructive"
             });
           }
