@@ -19,31 +19,30 @@
 
     <div class="form-container">
         <h3>PayU Payment Form</h3>
-        <form method="POST" action="https://test.payu.in/_payment">
-            <!-- Use the same test keys from your database -->
-            <input type="hidden" name="key" value="rjQUPktU" />
-            <input type="hidden" name="txnid" value="PAYU_SIMPLE_TEST_123456" />
+        <form id="payuTestForm" method="POST" action="https://test.payu.in/_payment">
+            <!-- Keys will be populated by JavaScript -->
+            <input type="hidden" name="key" value="" />
+            <input type="hidden" name="txnid" value="" />
             <input type="hidden" name="amount" value="100.00" />
-            <input type="hidden" name="productinfo" value="Simple Test Product" />
+            <input type="hidden" name="productinfo" value="" />
             <input type="hidden" name="firstname" value="Test User" />
             <input type="hidden" name="email" value="test@example.com" />
             <input type="hidden" name="phone" value="9999999999" />
             <input type="hidden" name="surl" value="https://example.com/success" />
             <input type="hidden" name="furl" value="https://example.com/failure" />
-            <!-- Generate a simple hash for testing -->
-            <input type="hidden" name="hash" value="test_hash_simple_123" />
+            <input type="hidden" name="hash" value="" />
             <input type="hidden" name="udf1" value="" />
             <input type="hidden" name="udf2" value="" />
             <input type="hidden" name="udf3" value="" />
             <input type="hidden" name="udf4" value="" />
             <input type="hidden" name="udf5" value="" />
             
-            <button type="submit">Submit to PayU</button>
+            <button type="button" onclick="generateAndSubmit()">Generate Hash & Submit to PayU</button>
         </form>
         
         <p style="font-size: 12px; color: #666; margin-top: 15px;">
-            <strong>Note:</strong> This form uses a test hash. PayU may reject it for invalid hash, 
-            but we should see different error messages if the form data is being received.
+            <strong>Note:</strong> This form uses your actual PayU test keys and generates a proper SHA-512 hash.
+            If everything works correctly, PayU should accept the payment.
         </p>
     </div>
 
@@ -57,16 +56,91 @@
     </div>
 
     <script>
-        // Log form data when page loads
-        window.onload = function() {
-            const form = document.querySelector('form');
-            const formData = new FormData(form);
+        // Your actual PayU test keys from the database
+        const PAYU_CONFIG = {
+            merchant_key: 'rjQUPktU',
+            salt_key: 'e5iIg1jwi8UnzIZJJP9hK43y9PNYvBKBSFMvVHrOHx'
+        };
+        
+        // Generate SHA-512 hash for PayU
+        async function generatePayUHash(data) {
+            // PayU hash format: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT
+            const hashString = [
+                data.key,
+                data.txnid,
+                data.amount,
+                data.productinfo,
+                data.firstname,
+                data.email,
+                data.udf1 || '',
+                data.udf2 || '',
+                data.udf3 || '',
+                data.udf4 || '',
+                data.udf5 || '',
+                '', '', '', '', '', // 5 empty fields
+                PAYU_CONFIG.salt_key
+            ].join('|');
             
-            console.log('=== PayU Simple Test Form Data ===');
-            for (let [key, value] of formData.entries()) {
+            console.log('Hash string:', hashString);
+            
+            const encoder = new TextEncoder();
+            const data_encoded = encoder.encode(hashString);
+            const hashBuffer = await crypto.subtle.digest('SHA-512', data_encoded);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            
+            console.log('Generated hash:', hashHex);
+            return hashHex;
+        }
+        
+        async function generateAndSubmit() {
+            const form = document.getElementById('payuTestForm');
+            const txnid = 'PAYU_SIMPLE_TEST_' + Date.now();
+            const productinfo = 'Simple Test Product (' + txnid + ')';
+            
+            // Prepare form data
+            const formData = {
+                key: PAYU_CONFIG.merchant_key,
+                txnid: txnid,
+                amount: '100.00',
+                productinfo: productinfo,
+                firstname: 'Test User',
+                email: 'test@example.com',
+                phone: '9999999999',
+                surl: 'https://example.com/success',
+                furl: 'https://example.com/failure',
+                udf1: '',
+                udf2: '',
+                udf3: '',
+                udf4: '',
+                udf5: ''
+            };
+            
+            // Generate hash
+            const hash = await generatePayUHash(formData);
+            
+            // Populate form fields
+            form.querySelector('[name="key"]').value = formData.key;
+            form.querySelector('[name="txnid"]').value = formData.txnid;
+            form.querySelector('[name="productinfo"]').value = formData.productinfo;
+            form.querySelector('[name="hash"]').value = hash;
+            
+            // Log form data
+            console.log('=== PayU Test Form Data ===');
+            Object.entries(formData).forEach(([key, value]) => {
                 console.log(`${key}: ${value}`);
-            }
-            console.log('Total fields:', Array.from(formData.entries()).length);
+            });
+            console.log('hash:', hash);
+            
+            // Submit form
+            console.log('Submitting to PayU...');
+            form.submit();
+        }
+        
+        // Initialize form when page loads
+        window.onload = function() {
+            console.log('PayU test page loaded with correct keys:', PAYU_CONFIG.merchant_key);
+            console.log('Click "Generate Hash & Submit to PayU" to test payment');
         };
     </script>
 </body>
