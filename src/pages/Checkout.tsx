@@ -48,6 +48,7 @@ import { useStatusManagement } from "@/hooks/useStatusManagement";
 import { QRPaymentModal } from "@/components/payment/QRPaymentModal";
 import { PaymentStatusTracker } from "@/components/payment/PaymentStatusTracker";
 import { PaymentGateway, PaymentRequest } from "@/types/payment";
+import { PayUDebugger, validatePayUFormData } from "@/utils/payuDebug";
 import { cn } from "@/lib/utils";
 import { 
   quoteAddressToCheckoutForm, 
@@ -694,6 +695,27 @@ export default function Checkout() {
     console.log('Form Data:', formData);
     
     // Validate form data
+    const validation = validatePayUFormData(formData);
+    
+    // Log validation results
+    PayUDebugger.log('submission', {
+      url,
+      formData,
+      validation,
+      formDataKeys: Object.keys(formData),
+      formDataSample: {
+        key: formData.key?.substring(0, 10) + '...',
+        txnid: formData.txnid,
+        amount: formData.amount,
+        productinfo: formData.productinfo,
+        firstname: formData.firstname,
+        email: formData.email,
+        phone: formData.phone,
+        hash: formData.hash?.substring(0, 20) + '...'
+      }
+    });
+    
+    // Validate form data
     if (!formData || Object.keys(formData).length === 0) {
       console.error('❌ PayU form data is empty!');
       toast({
@@ -702,6 +724,15 @@ export default function Checkout() {
         variant: "destructive"
       });
       return;
+    }
+    
+    if (!validation.isValid) {
+      console.error('❌ Missing required PayU fields:', validation.missingFields);
+      toast({
+        title: "Payment Error",
+        description: `Missing required fields: ${validation.missingFields.join(', ')}. Check console for details.`,
+        variant: "destructive"
+      });
     }
     
     // Create a temporary form element
@@ -724,9 +755,16 @@ export default function Checkout() {
     // Add form to page and submit
     document.body.appendChild(form);
     
+    // Show debug info in toast
+    toast({
+      title: "Redirecting to PayU...",
+      description: `Check browser console for debug info. Run: PayUDebugger.displayInConsole()`,
+    });
+    
     // Add a small delay to ensure form is properly added
     setTimeout(() => {
       console.log('📤 Submitting form to PayU...');
+      console.log('💡 To view debug logs after redirect, run in console: PayUDebugger.displayInConsole()');
       form.submit();
     }, 100);
   };
@@ -1130,6 +1168,23 @@ export default function Checkout() {
         if (paymentMethod === 'payu') {
           console.log('🎯 PayU payment response:', paymentResponse);
           
+          // Log the response for debugging
+          PayUDebugger.log('response', {
+            hasUrl: !!paymentResponse.url,
+            hasFormData: !!paymentResponse.formData,
+            formDataKeys: paymentResponse.formData ? Object.keys(paymentResponse.formData) : [],
+            url: paymentResponse.url,
+            transactionId: paymentResponse.transactionId,
+            amountInINR: paymentResponse.amountInINR,
+            exchangeRate: paymentResponse.exchangeRate,
+            paymentRequest: {
+              quoteIds: cartQuoteIds,
+              amount: totalAmount,
+              currency: guestCurrency,
+              destination_country: shippingCountry
+            }
+          });
+          
           if (paymentResponse.formData && paymentResponse.url) {
             // Handle PayU Hosted Checkout - submit form with data
             console.log('✅ PayU payment has form data');
@@ -1140,9 +1195,18 @@ export default function Checkout() {
             // PayU without form data - this shouldn't happen
             console.error('⚠️ PayU payment missing form data or URL!');
             console.error('Response:', paymentResponse);
+            
+            // Log error for debugging
+            PayUDebugger.log('error', {
+              error: 'Missing form data or URL',
+              response: paymentResponse,
+              hasUrl: !!paymentResponse.url,
+              hasFormData: !!paymentResponse.formData
+            });
+            
             toast({
               title: "Payment Error",
-              description: "PayU payment configuration error. Please try again.",
+              description: "PayU payment configuration error. Check console: PayUDebugger.displayInConsole()",
               variant: "destructive"
             });
           }

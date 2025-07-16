@@ -46,6 +46,7 @@ const EmailTemplatesPage = React.lazy(() => import("@/pages/admin/EmailTemplates
 const PaymentManagement = React.lazy(() => import("@/pages/admin/PaymentManagement"));
 const ShippingRoutesPage = React.lazy(() => import("@/pages/admin/ShippingRoutes"));
 const StatusManagementPage = React.lazy(() => import("@/pages/admin/StatusManagement"));
+const PayUDebugPage = React.lazy(() => import("@/pages/admin/PayUDebugPage").then(m => ({ default: m.PayUDebugPage })));
 const Address = React.lazy(() => import('@/pages/profile/Address'));
 
 // Admin components (lazy loaded for better performance)
@@ -113,6 +114,7 @@ const router = createBrowserRouter([
           { path: "status-management", element: <StatusManagementPage /> },
           { path: "payment-proofs", element: <PaymentManagementPageNew /> },
           { path: "debug/status", element: <StatusDebug /> },
+          { path: "debug/payu", element: <PayUDebugPage /> },
           
           { path: "*", element: <NotFound /> },
         ],
