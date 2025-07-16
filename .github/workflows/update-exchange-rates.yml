@@ -17,7 +17,7 @@ jobs:
           echo "🔵 Triggering exchange rate update..."
           
           response=$(curl -s -w "\nHTTP_CODE:%{http_code}" -X POST \
-            "https://grgvlrvywsfmnmkxrecd.supabase.co/functions/v1/update-exchange-rates" \
+            "https://grgvlrvywsfmnmkxrecd.supabase.co/functions/v1/update-exchange-rates-service" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Content-Type: application/json")
           
