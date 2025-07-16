@@ -1146,7 +1146,7 @@ export default function Checkout() {
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = paymentResponse.url;
-            form.target = '_self'; // Submit in same window
+            form.target = '_blank'; // Open in new tab (same as working test page)
             form.style.display = 'none';
 
             // Add all form fields

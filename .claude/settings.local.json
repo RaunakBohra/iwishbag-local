@@ -111,7 +111,11 @@
       "Bash(PGPASSWORD:*)",
       "Bash(touch:*)",
       "Bash(supabase secrets list:*)",
-      "Bash(open test-payu-local-integration.html)"
+      "Bash(open test-payu-local-integration.html)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh secret list:*)",
+      "Bash(gh workflow run:*)"
     ],
     "deny": []
   }
