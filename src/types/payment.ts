@@ -188,6 +188,13 @@ export interface PaymentResponse {
     amount: number;
     env: 'demo' | 'prod';
   };
+  // PayU specific fields
+  method?: string;
+  formData?: Record<string, string>;
+  transactionId?: string;
+  amountInINR?: number;
+  exchangeRate?: number;
+  paymentId?: string;
 }
 
 // Country-specific payment methods

@@ -725,6 +725,13 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
         const data = await response.json();
         
+        // Debug PayU response
+        if (paymentRequest.gateway === 'payu') {
+          console.log('🔍 PayU raw response:', data);
+          console.log('🔍 PayU formData present?', !!data.formData);
+          console.log('🔍 PayU formData keys:', data.formData ? Object.keys(data.formData) : 'None');
+        }
+        
         if (!response.ok) {
           // Log detailed error information
           console.error(`❌ Payment creation failed:`, {
@@ -765,6 +772,16 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
             redirectUrl: data.url || data.stripeCheckoutUrl || data.approval_url || data.approvalUrl
           }
         );
+        
+        // Ensure PayU response has all required fields
+        if (paymentRequest.gateway === 'payu') {
+          console.log('✅ PayU payment response complete:', {
+            hasUrl: !!data.url,
+            hasFormData: !!data.formData,
+            formDataKeys: data.formData ? Object.keys(data.formData).length : 0,
+            transactionId: data.transactionId
+          });
+        }
 
         return { ...data, paymentId };
       } catch (error) {

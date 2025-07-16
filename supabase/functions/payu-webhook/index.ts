@@ -188,6 +188,66 @@ serve(async (req)=>{
         userId = quote.user_id;
       }
     }
+    // CRITICAL: Check for duplicate webhook processing
+    console.log('Checking for duplicate webhook processing for txnid:', data.txnid);
+    
+    // Check if we've already processed this webhook by looking in webhook_logs
+    const { data: existingWebhookLog } = await supabaseAdmin
+      .from('webhook_logs')
+      .select('id, status')
+      .eq('request_id', `payu_${data.txnid}`)
+      .eq('webhook_type', 'payu')
+      .neq('status', 'test')
+      .single();
+    
+    if (existingWebhookLog) {
+      console.warn('Duplicate webhook detected via logs! Already processed:', {
+        txnid: data.txnid,
+        mihpayid: data.mihpayid,
+        previousStatus: existingWebhookLog.status
+      });
+      
+      // Return success to acknowledge receipt but don't process again
+      return new Response(JSON.stringify({
+        message: 'Webhook already processed',
+        txnid: data.txnid,
+        duplicate: true
+      }), {
+        status: 200,
+        headers: createWebhookHeaders()
+      });
+    }
+    
+    // Check if payment already exists in payment_transactions by checking gateway_response JSONB
+    const { data: existingPayments } = await supabaseAdmin
+      .from('payment_transactions')
+      .select('id, status, gateway_response')
+      .eq('gateway_response->>txnid', data.txnid);
+    
+    const existingPayment = existingPayments?.find(p => p.gateway_response?.mihpayid === data.mihpayid);
+    
+    if (existingPayment && existingPayment.status === 'completed') {
+      console.warn('Payment already completed for txnid:', data.txnid);
+      
+      // Store webhook event in webhook_logs for audit but don't process
+      await supabaseAdmin.from('webhook_logs').insert({
+        request_id: `payu_${data.txnid}_duplicate`,
+        webhook_type: 'payu',
+        status: 'duplicate',
+        error_message: 'Payment already completed',
+        user_agent: req.headers.get('user-agent') || 'PayU Webhook'
+      });
+      
+      return new Response(JSON.stringify({
+        message: 'Payment already completed',
+        txnid: data.txnid,
+        duplicate: true
+      }), {
+        status: 200,
+        headers: createWebhookHeaders()
+      });
+    }
+
     // Store payment record in payment_transactions table
     const paymentRecord = {
       user_id: userId,
@@ -198,14 +258,7 @@ serve(async (req)=>{
       payment_method: data.mode || 'unknown',
       gateway_code: 'payu',
       gateway_response: data,
-      customer_email: data.email,
-      customer_name: data.firstname,
-      customer_phone: data.phone,
-      error_message: data.error_message || data.error || null,
-      payu_mihpayid: data.mihpayid,
-      payu_txnid: data.txnid,
-      payu_mode: data.mode,
-      payu_bank_ref_num: data.bank_ref_num || null
+      error_message: data.error_message || data.error || null
     };
     // Insert payment transaction record
     const { data: insertedPayment, error: paymentError } = await supabaseAdmin.from('payment_transactions').insert(paymentRecord).select().single();
@@ -222,13 +275,12 @@ serve(async (req)=>{
     } else {
       console.log('Payment transaction saved:', insertedPayment?.id);
     }
-    // Store webhook event for audit trail
-    await supabaseAdmin.from('payu_webhook_events').insert({
-      transaction_id: data.txnid,
-      mihpayid: data.mihpayid,
-      status: data.status,
-      event_data: data,
-      processed_at: new Date().toISOString()
+    // Store webhook event in webhook_logs for audit trail
+    await supabaseAdmin.from('webhook_logs').insert({
+      request_id: `payu_${data.txnid}`,
+      webhook_type: 'payu',
+      status: data.status === 'success' ? 'success' : 'failed',
+      user_agent: req.headers.get('user-agent') || 'PayU Webhook'
     });
     // Update quote status if payment was successful
     if (data.status === 'success' && quoteIds.length > 0) {
@@ -254,17 +306,39 @@ serve(async (req)=>{
         }
       }
       if (quoteIds.length > 0) {
-        const { error: quoteError } = await supabaseAdmin.from('quotes').update({
-          status: 'paid',
-          payment_status: 'paid',
-          payment_gateway: 'payu',
-          payment_transaction_id: data.txnid,
-          payment_gateway_code: 'payu'
-        }).in('id', quoteIds);
-        if (quoteError) {
-          console.error('Error updating quote status:', quoteError);
-          // Log error but continue
-          await supabaseAdmin.from('webhook_logs').insert({
+        // First check if quotes are already paid to prevent duplicate updates
+        const { data: existingQuotes } = await supabaseAdmin
+          .from('quotes')
+          .select('id, status, payment_status')
+          .in('id', quoteIds);
+        
+        const unpaidQuotes = existingQuotes?.filter(q => 
+          q.status !== 'paid' && q.payment_status !== 'paid'
+        ) || [];
+        
+        if (unpaidQuotes.length === 0) {
+          console.warn('All quotes already paid, skipping update:', quoteIds);
+        } else {
+          const unpaidQuoteIds = unpaidQuotes.map(q => q.id);
+          console.log('Updating unpaid quotes:', unpaidQuoteIds);
+          
+          const { error: quoteError } = await supabaseAdmin.from('quotes').update({
+            status: 'paid',
+            payment_status: 'paid',
+            payment_status: 'paid',
+            payment_method: 'payu',
+            payment_details: {
+              gateway: 'payu',
+              transaction_id: data.txnid,
+              mihpayid: data.mihpayid
+            },
+            paid_at: new Date().toISOString()
+          }).in('id', unpaidQuoteIds);
+          
+          if (quoteError) {
+            console.error('Error updating quote status:', quoteError);
+            // Log error but continue
+            await supabaseAdmin.from('webhook_logs').insert({
             request_id: `payu_${data.txnid}_${Date.now()}`,
             webhook_type: 'payu',
             status: 'warning',
@@ -280,6 +354,7 @@ serve(async (req)=>{
             status: 'success',
             user_agent: req.headers.get('user-agent') || 'Unknown'
           });
+        }
         }
       }
     } else if (data.status === 'failure' || data.status === 'failed') {

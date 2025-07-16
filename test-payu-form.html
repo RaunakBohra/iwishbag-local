@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test PayU Form Submission</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-field {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+        .form-field label {
+            font-weight: bold;
+            display: inline-block;
+            width: 150px;
+        }
+        .form-field input {
+            width: 300px;
+            padding: 5px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .warning {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>PayU Form Test</h1>
+    
+    <div class="info">
+        <strong>Instructions:</strong>
+        <ol>
+            <li>Open browser console (F12) to see the form data being submitted</li>
+            <li>Click "Test PayU Form" to see what data would be sent</li>
+            <li>This will show you exactly what PayU receives</li>
+        </ol>
+    </div>
+
+    <div class="warning">
+        <strong>Note:</strong> This is a test form. It will show you the data but won't actually submit to PayU.
+    </div>
+
+    <form id="payuForm" method="POST" action="https://test.payu.in/_payment">
+        <div class="form-field">
+            <label>Key:</label>
+            <input type="text" name="key" value="" placeholder="Merchant Key">
+        </div>
+        <div class="form-field">
+            <label>Transaction ID:</label>
+            <input type="text" name="txnid" value="" placeholder="PAYU_xxx">
+        </div>
+        <div class="form-field">
+            <label>Amount:</label>
+            <input type="text" name="amount" value="" placeholder="100.00">
+        </div>
+        <div class="form-field">
+            <label>Product Info:</label>
+            <input type="text" name="productinfo" value="" placeholder="Order: Product Name">
+        </div>
+        <div class="form-field">
+            <label>First Name:</label>
+            <input type="text" name="firstname" value="" placeholder="Customer Name">
+        </div>
+        <div class="form-field">
+            <label>Email:</label>
+            <input type="text" name="email" value="" placeholder="customer@example.com">
+        </div>
+        <div class="form-field">
+            <label>Phone:</label>
+            <input type="text" name="phone" value="" placeholder="9999999999">
+        </div>
+        <div class="form-field">
+            <label>Success URL:</label>
+            <input type="text" name="surl" value="" placeholder="Success URL">
+        </div>
+        <div class="form-field">
+            <label>Failure URL:</label>
+            <input type="text" name="furl" value="" placeholder="Failure URL">
+        </div>
+        <div class="form-field">
+            <label>Hash:</label>
+            <input type="text" name="hash" value="" placeholder="SHA-512 Hash">
+        </div>
+    </form>
+
+    <button onclick="testForm()">Test PayU Form</button>
+    <button onclick="fillSampleData()">Fill Sample Data</button>
+
+    <script>
+        function testForm() {
+            const form = document.getElementById('payuForm');
+            const formData = new FormData(form);
+            const data = {};
+            
+            console.log('=== PayU Form Data ===');
+            for (let [key, value] of formData.entries()) {
+                data[key] = value;
+                console.log(`${key}: ${value || '(empty)'}`);
+            }
+            
+            // Check for missing required fields
+            const required = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
+            const missing = required.filter(field => !data[field] || data[field] === '');
+            
+            if (missing.length > 0) {
+                console.error('❌ Missing required fields:', missing);
+                alert('Missing required fields: ' + missing.join(', '));
+            } else {
+                console.log('✅ All required fields present');
+                alert('All required fields are present! Check console for details.');
+            }
+            
+            // Show the form data that would be sent
+            console.log('\n=== Form Data Object ===');
+            console.log(data);
+            
+            // Show what PayU expects
+            console.log('\n=== PayU Requirements ===');
+            console.log('Mandatory parameters:', required);
+            console.log('Your parameters:', Object.keys(data).filter(k => data[k]));
+            console.log('Missing parameters:', missing);
+        }
+        
+        function fillSampleData() {
+            document.querySelector('[name="key"]').value = 'SAMPLE_KEY';
+            document.querySelector('[name="txnid"]').value = 'PAYU_' + Date.now();
+            document.querySelector('[name="amount"]').value = '100.00';
+            document.querySelector('[name="productinfo"]').value = 'Order: Test Product';
+            document.querySelector('[name="firstname"]').value = 'Test Customer';
+            document.querySelector('[name="email"]').value = 'test@example.com';
+            document.querySelector('[name="phone"]').value = '9999999999';
+            document.querySelector('[name="surl"]').value = 'https://example.com/success';
+            document.querySelector('[name="furl"]').value = 'https://example.com/failure';
+            document.querySelector('[name="hash"]').value = 'SAMPLE_HASH_VALUE';
+            
+            alert('Sample data filled! Click "Test PayU Form" to validate.');
+        }
+    </script>
+</body>
+</html>

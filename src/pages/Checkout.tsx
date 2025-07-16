@@ -693,6 +693,17 @@ export default function Checkout() {
     console.log('URL:', url);
     console.log('Form Data:', formData);
     
+    // Validate form data
+    if (!formData || Object.keys(formData).length === 0) {
+      console.error('❌ PayU form data is empty!');
+      toast({
+        title: "Payment Error",
+        description: "Payment form data is missing. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Create a temporary form element
     const form = document.createElement('form');
     form.method = 'POST';
@@ -705,8 +716,9 @@ export default function Checkout() {
       const input = document.createElement('input');
       input.type = 'hidden';
       input.name = key;
-      input.value = formData[key];
+      input.value = formData[key] || ''; // Ensure no undefined values
       form.appendChild(input);
+      console.log(`📝 Added form field: ${key} = ${formData[key]}`);
     });
 
     // Add form to page and submit
@@ -1115,15 +1127,25 @@ export default function Checkout() {
           });
         }
         
-        if (paymentMethod === 'payu' && paymentResponse.formData) {
-          // Handle PayU Hosted Checkout - submit form with data
-          console.log('🎯 PayU payment detected with form data');
-          console.log('Payment Response:', paymentResponse);
-          submitPayUForm(paymentResponse.url, paymentResponse.formData);
-        } else if (paymentMethod === 'payu') {
-          // PayU without form data - fallback to redirect
-          console.log('⚠️ PayU payment without form data, using redirect');
-          window.location.href = paymentResponse.url;
+        if (paymentMethod === 'payu') {
+          console.log('🎯 PayU payment response:', paymentResponse);
+          
+          if (paymentResponse.formData && paymentResponse.url) {
+            // Handle PayU Hosted Checkout - submit form with data
+            console.log('✅ PayU payment has form data');
+            console.log('Form Data keys:', Object.keys(paymentResponse.formData));
+            console.log('Form Data values:', paymentResponse.formData);
+            submitPayUForm(paymentResponse.url, paymentResponse.formData);
+          } else {
+            // PayU without form data - this shouldn't happen
+            console.error('⚠️ PayU payment missing form data or URL!');
+            console.error('Response:', paymentResponse);
+            toast({
+              title: "Payment Error",
+              description: "PayU payment configuration error. Please try again.",
+              variant: "destructive"
+            });
+          }
         } else {
           // For other redirect-based payments (not Stripe)
           window.location.href = paymentResponse.url;

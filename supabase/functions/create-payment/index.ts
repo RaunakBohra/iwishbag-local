@@ -52,6 +52,13 @@ interface PaymentResponse {
     amount: number;
     env: 'demo' | 'prod';
   };
+  // PayU specific fields
+  method?: string;
+  formData?: Record<string, string>;
+  amountInINR?: number;
+  exchangeRate?: number;
+  paymentId?: string;
+  customer_id?: string;
 }
 
 // REMOVED: PayU client initialization to avoid additional API calls
