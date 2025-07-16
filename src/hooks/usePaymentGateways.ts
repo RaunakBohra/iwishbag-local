@@ -44,7 +44,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     name: 'eSewa',
     description: 'Pay using eSewa mobile app with QR code.',
     icon: 'smartphone',
-    is_mobile_only: true,
+    is_mobile_only: false,
     requires_qr: true,
     processing_time: '5-30 minutes',
     fees: '1.5%'
@@ -54,7 +54,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     name: 'Khalti',
     description: 'Pay using Khalti mobile app with QR code.',
     icon: 'smartphone',
-    is_mobile_only: true,
+    is_mobile_only: false,
     requires_qr: true,
     processing_time: '5-30 minutes',
     fees: '1.5%'
@@ -64,7 +64,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     name: 'Fonepay',
     description: 'Pay using Fonepay mobile app with QR code.',
     icon: 'smartphone',
-    is_mobile_only: true,
+    is_mobile_only: false,
     requires_qr: true,
     processing_time: '5-30 minutes',
     fees: '1.5%'

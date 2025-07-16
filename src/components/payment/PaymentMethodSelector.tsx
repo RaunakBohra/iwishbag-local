@@ -13,7 +13,6 @@ import {
   Banknote, 
   Shield, 
   Clock, 
-  AlertTriangle,
   CheckCircle,
   QrCode,
   ExternalLink,
@@ -80,14 +79,12 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   availableMethods: propAvailableMethods,
   methodsLoading: propMethodsLoading
 }) => {
-  const [showMobileWarning, setShowMobileWarning] = useState(false);
   
   // Use payment methods from props if provided, otherwise call hook (for backward compatibility)
   const { 
     availableMethods: hookAvailableMethods, 
     methodsLoading: hookIsLoading, 
     getRecommendedPaymentMethod, 
-    isMobileOnlyPayment, 
     getPaymentMethodDisplay, 
     PAYMENT_METHOD_DISPLAYS 
   } = usePaymentGateways();
@@ -151,19 +148,9 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     // Convert string to PaymentGateway type
     const paymentMethod = method as PaymentGateway;
 
-    // Check if mobile-only payment is selected on desktop
-    if (isMobileOnlyPayment(paymentMethod) && !isMobileDevice()) {
-      setShowMobileWarning(true);
-      return;
-    }
-
-    setShowMobileWarning(false);
     onMethodChange(paymentMethod);
   };
 
-  const isMobileDevice = () => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  };
 
   const getMethodFee = (method: PaymentGateway, amount: number) => {
     const display = getPaymentMethodDisplay(method);
@@ -264,14 +251,6 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       </CardHeader>
       
       <CardContent>
-        {showMobileWarning && (
-          <Alert className="mb-4 border-orange-200 bg-orange-50">
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-orange-800">
-              This payment method requires a mobile app. Please use your mobile device or select a different payment method.
-            </AlertDescription>
-          </Alert>
-        )}
         
 
         
@@ -294,16 +273,6 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           </Alert>
         )}
         
-        {/* Mobile-only payment instructions */}
-        {isMobileOnlyPayment(validSelectedMethod) && (
-          <Alert className="mt-4 border-blue-200 bg-blue-50">
-            <Smartphone className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">
-              <strong>Mobile Payment Required:</strong> You'll need to scan a QR code with your mobile app to complete this payment. 
-              Make sure you have the {getPaymentMethodDisplay(validSelectedMethod).name} app installed on your phone.
-            </AlertDescription>
-          </Alert>
-        )}
         
         {/* QR Code payment instructions */}
         {getPaymentMethodDisplay(validSelectedMethod).requires_qr && (
