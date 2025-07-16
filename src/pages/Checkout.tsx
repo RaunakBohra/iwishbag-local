@@ -1089,103 +1089,103 @@ export default function Checkout() {
         if (paymentMethod === 'payu') {
           console.log('🎯 PayU payment response:', paymentResponse);
           
-          // Log the response for debugging
-          PayUDebugger.log('response', {
-            hasUrl: !!paymentResponse.url,
-            hasFormData: !!paymentResponse.formData,
-            formDataKeys: paymentResponse.formData ? Object.keys(paymentResponse.formData) : [],
-            url: paymentResponse.url,
-            transactionId: paymentResponse.transactionId,
-            amountInINR: paymentResponse.amountInINR,
-            exchangeRate: paymentResponse.exchangeRate,
-            paymentRequest: {
-              quoteIds: cartQuoteIds,
-              amount: totalAmount,
-              currency: guestCurrency,
-              destination_country: shippingCountry
-            }
-          });
+          // TEMPORARY FIX: Generate form data directly like test page
+          // This bypasses Edge Function until it's redeployed with new salt key
+          console.log('🔧 Generating PayU form data directly (bypassing Edge Function)');
           
-          if (paymentResponse.formData && paymentResponse.url) {
-            // Handle PayU Hosted Checkout - submit form with data
-            console.log('✅ PayU payment has form data');
-            console.log('Form Data keys:', Object.keys(paymentResponse.formData));
-            console.log('Form Data values:', paymentResponse.formData);
+          const payuConfig = {
+            merchant_key: 'u7Ui5I',
+            merchant_id: '8725115',
+            salt_key: 'VIen2EwWiQbvsILF4Wt9p9Gh5ixOpSMe',
+            environment: 'test'
+          };
+          
+          const txnid = 'TXN_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          const productinfo = 'iWishBag Order - ' + cartQuoteIds.join(',');
+          
+          // Create form data directly (same as test page)
+          const directFormData = {
+            key: payuConfig.merchant_key,
+            txnid: txnid,
+            amount: totalAmount.toFixed(2),
+            productinfo: productinfo,
+            firstname: isGuestCheckout ? (guestContact.fullName || 'Guest Customer') : (userProfile?.full_name || 'Customer'),
+            email: isGuestCheckout ? guestContact.email : (user?.email || 'customer@example.com'),
+            phone: addressFormData.phone || '9999999999',
+            surl: window.location.origin + '/payment-success?gateway=payu',
+            furl: window.location.origin + '/payment-failure?gateway=payu',
+            udf1: '',
+            udf2: '',
+            udf3: '',
+            udf4: '',
+            udf5: ''
+          };
+          
+          // Generate hash directly (same as test page)
+          const generatePayUHash = async (data: any) => {
+            const hashString = [
+              data.key,
+              data.txnid,
+              data.amount,
+              data.productinfo,
+              data.firstname,
+              data.email,
+              data.udf1 || '',
+              data.udf2 || '',
+              data.udf3 || '',
+              data.udf4 || '',
+              data.udf5 || '',
+              '', '', '', '', '', // 5 empty fields
+              payuConfig.salt_key
+            ].join('|');
             
-            // Convert to PayUFormData format
-            const payuFormData: PayUFormData = {
-              key: paymentResponse.formData.key,
-              txnid: paymentResponse.formData.txnid,
-              amount: paymentResponse.formData.amount,
-              productinfo: paymentResponse.formData.productinfo,
-              firstname: paymentResponse.formData.firstname,
-              email: paymentResponse.formData.email,
-              phone: paymentResponse.formData.phone,
-              surl: paymentResponse.formData.surl,
-              furl: paymentResponse.formData.furl,
-              hash: paymentResponse.formData.hash,
-              udf1: paymentResponse.formData.udf1 || '',
-              udf2: paymentResponse.formData.udf2 || '',
-              udf3: paymentResponse.formData.udf3 || '',
-              udf4: paymentResponse.formData.udf4 || '',
-              udf5: paymentResponse.formData.udf5 || ''
-            };
+            console.log('🔐 Hash string:', hashString);
             
-            // Log form data for debugging
-            PayUDebugger.log('submission', {
-              url: paymentResponse.url,
-              formData: payuFormData,
-              formDataKeys: Object.keys(payuFormData),
-              allFieldsPresent: Object.values(payuFormData).every(val => val !== undefined && val !== null)
-            });
+            const encoder = new TextEncoder();
+            const data_encoded = encoder.encode(hashString);
+            const hashBuffer = await crypto.subtle.digest('SHA-512', data_encoded);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
             
-            // Use the same simple approach as the working test page
-            console.log('🚀 Submitting PayU form with simple direct submission...');
-            
-            // Create form with immediate submission to avoid flash
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = paymentResponse.url;
-            form.target = '_self'; // Submit in same window for reliable submission
-            form.style.display = 'none';
+            console.log('✅ Hash generated:', hashHex.substring(0, 30) + '...');
+            return hashHex;
+          };
+          
+          const hash = await generatePayUHash(directFormData);
+          directFormData.hash = hash;
+          
+          console.log('📝 Direct form data prepared:');
+          console.log('- Key:', directFormData.key);
+          console.log('- Transaction ID:', directFormData.txnid);
+          console.log('- Amount:', directFormData.amount);
+          console.log('- Email:', directFormData.email);
+          console.log('- Hash:', hash.substring(0, 30) + '...');
+          
+          // Create form (same as test page)
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = 'https://test.payu.in/_payment';
+          form.target = '_self';
+          form.style.display = 'none';
 
-            // Add all form fields
-            Object.entries(payuFormData).forEach(([key, value]) => {
-              const input = document.createElement('input');
-              input.type = 'hidden';
-              input.name = key;
-              input.value = value;
-              form.appendChild(input);
-            });
+          // Add all form fields
+          Object.entries(directFormData).forEach(([key, value]) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            form.appendChild(input);
+          });
 
-            document.body.appendChild(form);
-            
-            console.log('✅ Form created with ' + form.elements.length + ' fields');
-            console.log('🚀 Submitting to PayU immediately...');
-            
-            // Submit form immediately to prevent any page flash
-            setTimeout(() => {
-              form.submit();
-            }, 100); // Small delay to ensure form is ready
-          } else {
-            // PayU without form data - this shouldn't happen
-            console.error('⚠️ PayU payment missing form data or URL!');
-            console.error('Response:', paymentResponse);
-            
-            // Log error for debugging
-            PayUDebugger.log('error', {
-              error: 'Missing form data or URL',
-              response: paymentResponse,
-              hasUrl: !!paymentResponse.url,
-              hasFormData: !!paymentResponse.formData
-            });
-            
-            toast({
-              title: "Payment Error", 
-              description: "PayU form data missing. Check PayUDebugger.displayInConsole() for details.",
-              variant: "destructive"
-            });
-          }
+          document.body.appendChild(form);
+          
+          console.log('✅ Form created with ' + form.elements.length + ' fields');
+          console.log('🚀 Submitting to PayU directly...');
+          
+          // Submit form immediately 
+          setTimeout(() => {
+            form.submit();
+          }, 100);
         } else {
           // For other redirect-based payments (not Stripe)
           window.location.href = paymentResponse.url;
