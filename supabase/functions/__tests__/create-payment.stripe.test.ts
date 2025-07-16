@@ -1,5 +1,22 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 
+// Type definitions
+interface PaymentRequest {
+  quoteIds: string[];
+  gateway: 'bank_transfer' | 'cod' | 'payu' | 'esewa' | 'khalti' | 'fonepay' | 'airwallex' | 'stripe';
+  success_url: string;
+  cancel_url: string;
+  amount?: number;
+  currency?: string;
+  metadata?: Record<string, unknown>;
+  customerInfo?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
+}
+
 // Mock Deno global and environment
 const mockDeno = {
   env: {
@@ -18,7 +35,7 @@ const mockDeno = {
 };
 
 // Mock global Deno
-global.Deno = mockDeno as any;
+global.Deno = mockDeno as typeof Deno;
 
 // Mock Stripe
 const mockStripe = {
@@ -103,7 +120,7 @@ describe('create-payment Stripe Integration', () => {
       mockStripe.paymentIntents.create.mockResolvedValue(mockPaymentIntent);
 
       // Mock the actual function logic
-      const createStripePayment = async (request: any) => {
+      const createStripePayment = async (request: PaymentRequest) => {
         const paymentIntent = await mockStripe.paymentIntents.create({
           amount: request.amount,
           currency: request.currency.toLowerCase(),
@@ -162,7 +179,7 @@ describe('create-payment Stripe Integration', () => {
 
       mockStripe.paymentIntents.create.mockResolvedValue(mockPaymentIntent);
 
-      const createStripePayment = async (request: any) => {
+      const createStripePayment = async (request: PaymentRequest) => {
         const paymentIntent = await mockStripe.paymentIntents.create({
           amount: request.amount,
           currency: request.currency.toLowerCase(),
@@ -214,7 +231,7 @@ describe('create-payment Stripe Integration', () => {
 
       mockStripe.paymentIntents.create.mockResolvedValue(mockPaymentIntent);
 
-      const createStripePayment = async (request: any) => {
+      const createStripePayment = async (request: PaymentRequest) => {
         const paymentIntent = await mockStripe.paymentIntents.create({
           amount: request.amount,
           currency: request.currency.toLowerCase(),
@@ -269,7 +286,7 @@ describe('create-payment Stripe Integration', () => {
         status: 'requires_payment_method',
       });
 
-      const createStripePayment = async (request: any) => {
+      const createStripePayment = async (request: PaymentRequest) => {
         const paymentIntent = await mockStripe.paymentIntents.create({
           amount: request.amount,
           currency: request.currency.toLowerCase(),
@@ -324,7 +341,7 @@ describe('create-payment Stripe Integration', () => {
         status: 'requires_payment_method',
       });
 
-      const createStripePayment = async (request: any) => {
+      const createStripePayment = async (request: PaymentRequest) => {
         const paymentIntent = await mockStripe.paymentIntents.create({
           amount: request.amount,
           currency: request.currency.toLowerCase(),
@@ -372,7 +389,7 @@ describe('create-payment Stripe Integration', () => {
       const stripeError = new Error('Invalid API key');
       mockStripe.paymentIntents.create.mockRejectedValue(stripeError);
 
-      const createStripePayment = async (request: any) => {
+      const createStripePayment = async (request: PaymentRequest) => {
         try {
           const paymentIntent = await mockStripe.paymentIntents.create({
             amount: request.amount,
@@ -416,7 +433,7 @@ describe('create-payment Stripe Integration', () => {
       const stripeError = new Error('Invalid currency: INVALID');
       mockStripe.paymentIntents.create.mockRejectedValue(stripeError);
 
-      const createStripePayment = async (request: any) => {
+      const createStripePayment = async (request: PaymentRequest) => {
         try {
           const paymentIntent = await mockStripe.paymentIntents.create({
             amount: request.amount,
@@ -460,7 +477,7 @@ describe('create-payment Stripe Integration', () => {
       const stripeError = new Error('Amount must be greater than 0');
       mockStripe.paymentIntents.create.mockRejectedValue(stripeError);
 
-      const createStripePayment = async (request: any) => {
+      const createStripePayment = async (request: PaymentRequest) => {
         try {
           const paymentIntent = await mockStripe.paymentIntents.create({
             amount: request.amount,
@@ -516,7 +533,7 @@ describe('create-payment Stripe Integration', () => {
         insert: vi.fn().mockResolvedValue({ data: { id: 'txn_123' }, error: null }),
       });
 
-      const createStripePaymentWithDb = async (request: any) => {
+      const createStripePaymentWithDb = async (request: PaymentRequest) => {
         const paymentIntent = await mockStripe.paymentIntents.create({
           amount: request.amount,
           currency: request.currency.toLowerCase(),
@@ -575,7 +592,7 @@ describe('create-payment Stripe Integration', () => {
         }),
       });
 
-      const createStripePaymentWithDb = async (request: any) => {
+      const createStripePaymentWithDb = async (request: PaymentRequest) => {
         try {
           const paymentIntent = await mockStripe.paymentIntents.create({
             amount: request.amount,

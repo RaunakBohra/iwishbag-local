@@ -5,6 +5,8 @@ This is an e-commerce platform for international shopping from Amazon, Flipkart,
 
 user side pages and admin side pages are different, be careful while making changes in quotes orders pages and others as well because we need to know if i want changes in user side or admin side.
 
+###NEVER RESET THE DB !! donot use supabase db reset --local or cloud
+
 ## Key Technologies
 - **Frontend**: React 18, TypeScript 5, Vite, Tailwind CSS, Shadcn UI
 - **Backend**: Supabase (PostgreSQL + Auth + Storage)

@@ -1,3 +1,4 @@
+import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -12,6 +13,9 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { paymentGatewayService } from '@/services/PaymentGatewayService';
+import { usePaymentMonitoring } from '@/hooks/usePaymentMonitoring';
+import { PaymentErrorCode } from '@/services/PaymentMonitoringService';
+import { logInfo, logError, LogCategory } from '@/services/LoggingService';
 
 // Payment method display configurations
 const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
@@ -241,6 +245,25 @@ export const getPaymentMethodsByCurrency = async (currency: string, codEnabled: 
         if (!hasKeys) {
           hasKeys = true;
         }
+      } else if (gateway.code === 'airwallex') {
+        const apiKey = gateway.test_mode ? gateway.config?.test_api_key : (gateway.config?.live_api_key || gateway.config?.api_key);
+        const clientId = gateway.config?.client_id;
+        hasKeys = !!apiKey && !!clientId;
+        
+        if (!hasKeys) {
+          console.log('⚠️ Airwallex configuration missing in getPaymentMethodsByCurrency. Required: api_key and client_id', {
+            test_mode: gateway.test_mode,
+            hasApiKey: !!apiKey,
+            hasClientId: !!clientId,
+            configKeys: Object.keys(gateway.config || {})
+          });
+        } else {
+          console.log('✅ Airwallex configuration valid in getPaymentMethodsByCurrency', {
+            test_mode: gateway.test_mode,
+            hasApiKey: !!apiKey,
+            hasClientId: !!clientId
+          });
+        }
       }
       
       return currencyMatch && hasKeys;
@@ -268,6 +291,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const paymentMonitoring = usePaymentMonitoring({ componentName: 'PaymentGateways' });
 
   // Fetch all payment gateways (admin only)
   const { data: allGateways, isLoading: gatewaysLoading } = useQuery({
@@ -334,6 +358,16 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
           guestShippingCountry 
         });
       }
+      
+      // Log payment methods loading
+      logInfo(LogCategory.PAYMENT_PROCESSING, 'Loading available payment methods', {
+        metadata: {
+          currencyCode,
+          countryCode,
+          isGuest: !user,
+          userId: user?.id
+        }
+      });
 
       // First, try to get country-specific configuration
       let countryGateways: PaymentGateway[] = [];
@@ -392,6 +426,25 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
                   if (!hasValidConfig) {
                     console.log('⚠️ PayU configuration missing, but allowing for testing');
                     hasValidConfig = true;
+                  }
+                } else if (gateway.code === 'airwallex') {
+                  const apiKey = gateway.test_mode ? gateway.config?.test_api_key : (gateway.config?.live_api_key || gateway.config?.api_key);
+                  const clientId = gateway.config?.client_id;
+                  hasValidConfig = !!apiKey && !!clientId;
+                  
+                  if (!hasValidConfig) {
+                    console.log('⚠️ Airwallex configuration missing. Required: api_key and client_id', {
+                      test_mode: gateway.test_mode,
+                      hasApiKey: !!apiKey,
+                      hasClientId: !!clientId,
+                      configKeys: Object.keys(gateway.config || {})
+                    });
+                  } else {
+                    console.log('✅ Airwallex configuration valid', {
+                      test_mode: gateway.test_mode,
+                      hasApiKey: !!apiKey,
+                      hasClientId: !!clientId
+                    });
                   }
                 }
                 
@@ -460,6 +513,25 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
               console.log('⚠️ PayPal configuration missing, but allowing for testing');
               hasKeys = true;
             }
+          } else if (gateway.code === 'airwallex') {
+            const apiKey = gateway.test_mode ? gateway.config?.test_api_key : (gateway.config?.live_api_key || gateway.config?.api_key);
+            const clientId = gateway.config?.client_id;
+            hasKeys = !!apiKey && !!clientId;
+            
+            if (!hasKeys) {
+              console.log('⚠️ Airwallex configuration missing. Required: api_key and client_id', {
+                test_mode: gateway.test_mode,
+                hasApiKey: !!apiKey,
+                hasClientId: !!clientId,
+                configKeys: Object.keys(gateway.config || {})
+              });
+            } else {
+              console.log('✅ Airwallex configuration valid', {
+                test_mode: gateway.test_mode,
+                hasApiKey: !!apiKey,
+                hasClientId: !!clientId
+              });
+            }
           }
           
           return currencyMatch && countryMatch && hasKeys;
@@ -506,9 +578,28 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
     enabled: isQueryEnabled,
     onError: (error) => {
       console.error('❌ Payment methods query error:', error);
+      logError(
+        LogCategory.PAYMENT_PROCESSING,
+        'Failed to load payment methods',
+        error instanceof Error ? error : new Error('Payment methods query failed'),
+        {
+          metadata: {
+            isGuest: !user,
+            overrideCurrency,
+            guestShippingCountry
+          }
+        }
+      );
     },
     onSuccess: (data) => {
       console.log('✅ Payment methods query success:', data);
+      logInfo(LogCategory.PAYMENT_PROCESSING, 'Payment methods loaded successfully', {
+        metadata: {
+          methodsCount: data.length,
+          methods: data,
+          isGuest: !user
+        }
+      });
     },
     staleTime: 1000 * 60 * 5, // 5 minutes - prevent excessive refetching
     retry: 3,
@@ -518,75 +609,218 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
   // Create payment mutation
   const createPaymentMutation = useMutation({
     mutationFn: async (paymentRequest: PaymentRequest): Promise<PaymentResponse> => {
-      // Validate payment request first
-      const { isValid, errors } = validatePaymentRequest(paymentRequest);
-      if (!isValid) {
-        throw new Error(`Invalid payment request: ${errors.join(', ')}`);
-      }
-
-      // For guest checkout, we'll use the anon key instead of user's access token
-      let authToken: string;
+      // Generate payment ID for tracking
+      const paymentId = `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      if (paymentRequest.metadata?.checkout_type === 'guest') {
-        // For guest checkout, use the anon key
-        authToken = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        if (!authToken) {
-          throw new Error('Anonymous key not configured');
+      // Start payment monitoring
+      paymentMonitoring.monitorPaymentStart({
+        paymentId,
+        gateway: paymentRequest.gateway,
+        amount: paymentRequest.amount,
+        currency: paymentRequest.currency,
+        quoteId: paymentRequest.quoteIds?.[0], // First quote ID
+        metadata: {
+          quoteCount: paymentRequest.quoteIds?.length,
+          checkoutType: paymentRequest.metadata?.checkout_type
         }
-      } else {
-        // For authenticated users, get the session token
-        const { data: { session } } = await supabase.auth.getSession();
-        authToken = session?.access_token || '';
+      });
+
+      try {
+        // Validate payment request first
+        const { isValid, errors } = validatePaymentRequest(paymentRequest);
+        if (!isValid) {
+          const error = new Error(`Invalid payment request: ${errors.join(', ')}`);
+          paymentMonitoring.monitorPaymentComplete(
+            paymentId,
+            false,
+            PaymentErrorCode.PAYMENT_PROCESSING_FAILED,
+            error.message
+          );
+          throw error;
+        }
+
+        // For guest checkout, we'll use the anon key instead of user's access token
+        let authToken: string;
         
-        if (!authToken) {
-          throw new Error('User is not authenticated.');
+        if (paymentRequest.metadata?.checkout_type === 'guest') {
+          // For guest checkout, use the anon key
+          authToken = import.meta.env.VITE_SUPABASE_ANON_KEY;
+          if (!authToken) {
+            const error = new Error('Anonymous key not configured');
+            paymentMonitoring.monitorPaymentComplete(
+              paymentId,
+              false,
+              PaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+              error.message
+            );
+            throw error;
+          }
+        } else {
+          // For authenticated users, get the session token
+          const { data: { session } } = await supabase.auth.getSession();
+          authToken = session?.access_token || '';
+          
+          if (!authToken) {
+            const error = new Error('User is not authenticated.');
+            paymentMonitoring.monitorPaymentComplete(
+              paymentId,
+              false,
+              PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS,
+              error.message
+            );
+            throw error;
+          }
         }
-      }
 
-      // Use the local Supabase URL for Edge Functions
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) {
-        throw new Error('Supabase URL is not configured');
-      }
-      
-      // Route to appropriate payment function based on gateway
-      let functionUrl = `${supabaseUrl}/functions/v1/create-payment`;
-      if (paymentRequest.gateway === 'paypal') {
-        // Use PayPal checkout function for direct checkout
-        functionUrl = `${supabaseUrl}/functions/v1/create-paypal-checkout`;
-      }
+        // Use the local Supabase URL for Edge Functions
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        if (!supabaseUrl) {
+          const error = new Error('Supabase URL is not configured');
+          paymentMonitoring.monitorPaymentComplete(
+            paymentId,
+            false,
+            PaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+            error.message
+          );
+          throw error;
+        }
+        
+        // Route to appropriate payment function based on gateway
+        let functionUrl = `${supabaseUrl}/functions/v1/create-payment`;
+        if (paymentRequest.gateway === 'paypal') {
+          // Use PayPal checkout function for direct checkout
+          functionUrl = `${supabaseUrl}/functions/v1/create-paypal-checkout`;
+        }
 
-      const response = await fetch(
-        functionUrl,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`,
+        // Log gateway API call start
+        paymentMonitoring.logPaymentEvent(
+          'gateway_api_call_start',
+          {
+            functionUrl,
+            gateway: paymentRequest.gateway,
+            amount: paymentRequest.amount,
+            currency: paymentRequest.currency
           },
-          body: JSON.stringify(paymentRequest),
+          paymentId
+        );
+
+        // Monitor the API call
+        const response = await paymentMonitoring.monitorGatewayCall(
+          'create_payment',
+          async () => {
+            return await fetch(
+              functionUrl,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({ ...paymentRequest, paymentId }),
+              }
+            );
+          },
+          paymentId
+        );
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          // Log detailed error information
+          console.error(`❌ Payment creation failed:`, {
+            status: response.status,
+            error: data?.error,
+            details: data?.details,
+            code: data?.code,
+            gateway: paymentRequest.gateway,
+            functionUrl
+          });
+          
+          const error = new Error(data?.error || 'Failed to create payment');
+          const errorCode = data?.code === 'GATEWAY_ERROR' 
+            ? PaymentErrorCode[`${paymentRequest.gateway.toUpperCase()}_API_ERROR` as keyof typeof PaymentErrorCode] || PaymentErrorCode.PAYMENT_PROCESSING_FAILED
+            : PaymentErrorCode.PAYMENT_PROCESSING_FAILED;
+          
+          paymentMonitoring.monitorPaymentComplete(
+            paymentId,
+            false,
+            errorCode,
+            error.message,
+            {
+              responseStatus: response.status,
+              responseData: data
+            }
+          );
+          throw error;
         }
-      );
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data?.error || 'Failed to create payment');
+        // Payment created successfully
+        paymentMonitoring.monitorPaymentComplete(
+          paymentId,
+          true,
+          undefined,
+          undefined,
+          {
+            transactionId: data.transactionId || data.order_id,
+            redirectUrl: data.url || data.stripeCheckoutUrl || data.approval_url || data.approvalUrl
+          }
+        );
+
+        return { ...data, paymentId };
+      } catch (error) {
+        // If payment monitoring wasn't completed in the specific error handlers, complete it here
+        if (paymentMonitoring && paymentId) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown payment error';
+          
+          // Check if this is a network error
+          const errorCode = errorMessage.includes('fetch') || errorMessage.includes('network')
+            ? PaymentErrorCode.GATEWAY_TIMEOUT
+            : PaymentErrorCode.PAYMENT_PROCESSING_FAILED;
+          
+          paymentMonitoring.monitorPaymentComplete(
+            paymentId,
+            false,
+            errorCode,
+            errorMessage
+          );
+        }
+        
+        throw error;
       }
-
-      return data;
     },
     onSuccess: (data, variables) => {
+      const paymentId = data?.paymentId;
+      
       if (!data) {
         toast({
           title: 'Payment Error',
           description: 'No response received from payment gateway',
           variant: 'destructive',
         });
+        
+        // Log this unexpected scenario
+        paymentMonitoring.logPaymentError(
+          'empty_response',
+          new Error('No response received from payment gateway'),
+          { gateway: variables.gateway },
+          paymentId
+        );
         return;
       }
       
-      if (data.success) {
+      if (data.success !== false) { // Treat as success if not explicitly false
+        // Log successful redirect
+        paymentMonitoring.logPaymentEvent(
+          'payment_redirect',
+          {
+            gateway: variables.gateway,
+            hasRedirectUrl: !!(data.url || data.stripeCheckoutUrl || data.approval_url || data.approvalUrl),
+            hasQrCode: !!data.qrCode,
+            transactionId: data.transactionId || data.order_id
+          },
+          paymentId
+        );
+        
         if (variables.gateway === 'stripe' && data.stripeCheckoutUrl) {
           window.location.href = data.stripeCheckoutUrl;
         } else if (variables.gateway === 'paypal' && data.approval_url) {
@@ -619,6 +853,17 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
           });
         }
       } else {
+        // Log payment failure from success response
+        paymentMonitoring.logPaymentError(
+          'payment_failed_in_success',
+          new Error(data?.error || 'Payment failed'),
+          {
+            gateway: variables.gateway,
+            responseData: data
+          },
+          paymentId
+        );
+        
         toast({
           title: 'Payment Failed',
           description: data?.error || 'Unable to create payment',
@@ -626,7 +871,18 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
         });
       }
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      // Log payment error - monitoring completion already handled in mutationFn
+      paymentMonitoring.logPaymentError(
+        'payment_mutation_error',
+        error,
+        {
+          gateway: variables.gateway,
+          amount: variables.amount,
+          currency: variables.currency
+        }
+      );
+      
       toast({
         title: 'Payment Error',
         description: error.message,
@@ -833,6 +1089,13 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
     return availableMethods.filter(method => method !== excludeGateway);
   };
 
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      paymentMonitoring.cleanup();
+    };
+  }, [paymentMonitoring]);
+
   return {
     // Data
     allGateways,
@@ -859,6 +1122,9 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
     getFallbackMethods,
     
     // Payment method displays
-    PAYMENT_METHOD_DISPLAYS
+    PAYMENT_METHOD_DISPLAYS,
+    
+    // Monitoring
+    paymentMonitoring
   };
 }; 

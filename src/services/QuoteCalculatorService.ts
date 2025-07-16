@@ -1,6 +1,21 @@
 import { getExchangeRate, ExchangeRateResult } from '@/lib/currencyUtils';
 import { getShippingCost } from '@/lib/unified-shipping-calculator';
 import { Tables } from '@/integrations/supabase/types';
+import { 
+  startQuoteCalculationMonitoring, 
+  completeQuoteCalculationMonitoring, 
+  recordQuoteCalculationApiCall,
+  QuoteCalculationErrorCode
+} from '@/services/ErrorHandlingService';
+import { 
+  logger, 
+  LogCategory, 
+  logInfo, 
+  logError, 
+  logWarn,
+  logPerformanceStart,
+  logPerformanceEnd
+} from '@/services/LoggingService';
 
 // Types
 export interface QuoteItem {
@@ -110,6 +125,8 @@ export class QuoteCalculatorService {
     totalApiCalls: 0,
     averageCalculationTime: 0
   };
+  // **NEW: Monitoring tracking**
+  private activeCalculations = new Map<string, { apiCalls: number; cacheHits: number; userId?: string }>>();
 
   private constructor() {}
 
@@ -123,9 +140,48 @@ export class QuoteCalculatorService {
   /**
    * Main quote calculation method
    */
-  async calculateQuote(params: QuoteCalculationParams): Promise<QuoteCalculationResult> {
+  async calculateQuote(
+    params: QuoteCalculationParams, 
+    userId?: string,
+    sessionId?: string
+  ): Promise<QuoteCalculationResult> {
     const startTime = Date.now();
     this.performanceMetrics.totalCalculations++;
+
+    // **NEW: Generate unique calculation ID and start monitoring**
+    const calculationId = `calc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const totalValue = params.items.reduce((sum, item) => sum + (item.item_price * item.quantity), 0);
+    
+    // Initialize monitoring tracking
+    this.activeCalculations.set(calculationId, { apiCalls: 0, cacheHits: 0, userId });
+    
+    // Start monitoring
+    startQuoteCalculationMonitoring(
+      calculationId,
+      params.originCountry,
+      params.destinationCountry,
+      params.currency,
+      params.items.length,
+      totalValue,
+      userId,
+      sessionId
+    );
+
+    // Enhanced logging
+    logInfo(LogCategory.QUOTE_CALCULATION, 'Quote calculation started', {
+      quoteId: calculationId,
+      userId,
+      sessionId,
+      originCountry: params.originCountry,
+      destinationCountry: params.destinationCountry,
+      currency: params.currency,
+      metadata: {
+        itemCount: params.items.length,
+        totalValue,
+        hasShippingAddress: !!params.shippingAddress,
+        hasCustomsPercentage: params.customs_percentage !== undefined
+      }
+    });
 
     try {
       // Generate cache key
@@ -135,12 +191,73 @@ export class QuoteCalculatorService {
       const cachedResult = this.getCachedCalculation(cacheKey);
       if (cachedResult) {
         this.performanceMetrics.totalCacheHits++;
+        // **NEW: Record cache hit**
+        const tracking = this.activeCalculations.get(calculationId);
+        if (tracking) {
+          tracking.cacheHits++;
+          recordQuoteCalculationApiCall(calculationId, true);
+        }
+        
+        // Enhanced logging for cache hit
+        logInfo(LogCategory.CACHE_OPERATION, 'Quote calculation cache hit', {
+          quoteId: calculationId,
+          userId,
+          sessionId,
+          metadata: {
+            cacheKey,
+            finalTotal: cachedResult.breakdown?.final_total,
+            calculationTime: Date.now() - startTime
+          }
+        });
+        
+        // **NEW: Complete monitoring for cached result**
+        completeQuoteCalculationMonitoring(
+          calculationId,
+          true, // success
+          cachedResult.breakdown?.final_total,
+          undefined, // no error
+          tracking?.apiCalls || 0,
+          tracking?.cacheHits || 1,
+          0 // no cache misses for pure cache hit
+        );
+        
+        this.activeCalculations.delete(calculationId);
         return cachedResult;
       }
+
+      // **NEW: Record cache miss**
+      recordQuoteCalculationApiCall(calculationId, false);
 
       // Validate input parameters
       const validation = this.validateCalculationParams(params);
       if (!validation.isValid) {
+        // Enhanced logging for validation errors
+        logError(LogCategory.QUOTE_CALCULATION, 'Quote calculation validation failed', undefined, {
+          quoteId: calculationId,
+          userId,
+          sessionId,
+          errorCode: validation.errors[0]?.code,
+          metadata: {
+            errors: validation.errors,
+            warnings: validation.warnings,
+            originCountry: params.originCountry,
+            destinationCountry: params.destinationCountry
+          }
+        });
+        
+        // **NEW: Complete monitoring for validation error**
+        const errorCode = this.mapValidationErrorToMonitoringCode(validation.errors[0]?.code);
+        completeQuoteCalculationMonitoring(
+          calculationId,
+          false, // failed
+          undefined,
+          errorCode,
+          this.activeCalculations.get(calculationId)?.apiCalls || 0,
+          this.activeCalculations.get(calculationId)?.cacheHits || 0,
+          1 // cache miss
+        );
+        
+        this.activeCalculations.delete(calculationId);
         return {
           success: false,
           breakdown: null,
@@ -153,16 +270,17 @@ export class QuoteCalculatorService {
       }
 
       // Perform calculation
-      const breakdown = await this.performCalculation(params);
+      const breakdown = await this.performCalculation(params, calculationId);
       
+      const tracking = this.activeCalculations.get(calculationId);
       const result: QuoteCalculationResult = {
         success: true,
         breakdown,
         warnings: validation.warnings.map(w => w.message),
         performance: {
           calculation_time_ms: Date.now() - startTime,
-          cache_hits: 0,
-          api_calls: this.performanceMetrics.totalApiCalls
+          cache_hits: tracking?.cacheHits || 0,
+          api_calls: tracking?.apiCalls || 0
         }
       };
 
@@ -172,10 +290,68 @@ export class QuoteCalculatorService {
       // Update performance metrics
       this.updatePerformanceMetrics(Date.now() - startTime);
 
+      // Enhanced logging for successful calculation
+      logInfo(LogCategory.QUOTE_CALCULATION, 'Quote calculation completed successfully', {
+        quoteId: calculationId,
+        userId,
+        sessionId,
+        metadata: {
+          finalTotal: breakdown.final_total,
+          currency: params.currency,
+          calculationTime: result.performance?.calculation_time_ms,
+          apiCalls: tracking?.apiCalls || 0,
+          cacheHits: tracking?.cacheHits || 0,
+          warningCount: validation.warnings.length
+        }
+      });
+
+      // **NEW: Complete monitoring for successful calculation**
+      completeQuoteCalculationMonitoring(
+        calculationId,
+        true, // success
+        breakdown.final_total,
+        undefined, // no error
+        tracking?.apiCalls || 0,
+        tracking?.cacheHits || 0,
+        1 // one cache miss (for the initial lookup)
+      );
+      
+      this.activeCalculations.delete(calculationId);
       return result;
 
     } catch (error) {
-      console.error('[QuoteCalculatorService] Calculation error:', error);
+      // Enhanced error logging
+      logError(
+        LogCategory.QUOTE_CALCULATION, 
+        'Quote calculation failed with exception',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          quoteId: calculationId,
+          userId,
+          sessionId,
+          metadata: {
+            originCountry: params.originCountry,
+            destinationCountry: params.destinationCountry,
+            currency: params.currency,
+            itemCount: params.items.length,
+            calculationTime: Date.now() - startTime
+          }
+        }
+      );
+      
+      // **NEW: Complete monitoring for calculation error**
+      const tracking = this.activeCalculations.get(calculationId);
+      completeQuoteCalculationMonitoring(
+        calculationId,
+        false, // failed
+        undefined,
+        QuoteCalculationErrorCode.CALCULATION_FAILED,
+        tracking?.apiCalls || 0,
+        tracking?.cacheHits || 0,
+        1 // cache miss
+      );
+      
+      this.activeCalculations.delete(calculationId);
       return {
         success: false,
         breakdown: null,
@@ -332,9 +508,42 @@ export class QuoteCalculatorService {
   }
 
   /**
+   * Map validation error codes to monitoring error codes
+   */
+  private mapValidationErrorToMonitoringCode(errorCode?: string): QuoteCalculationErrorCode {
+    switch (errorCode) {
+      case 'MISSING_ITEMS':
+        return QuoteCalculationErrorCode.MISSING_ITEMS;
+      case 'MISSING_ORIGIN_COUNTRY':
+        return QuoteCalculationErrorCode.MISSING_ORIGIN_COUNTRY;
+      case 'MISSING_DESTINATION_COUNTRY':
+        return QuoteCalculationErrorCode.MISSING_DESTINATION_COUNTRY;
+      case 'MISSING_COUNTRY_SETTINGS':
+        return QuoteCalculationErrorCode.MISSING_COUNTRY_SETTINGS;
+      case 'INVALID_ITEM_PRICE':
+        return QuoteCalculationErrorCode.INVALID_ITEM_PRICE;
+      case 'INVALID_ITEM_WEIGHT':
+        return QuoteCalculationErrorCode.INVALID_ITEM_WEIGHT;
+      case 'INVALID_ITEM_QUANTITY':
+        return QuoteCalculationErrorCode.INVALID_ITEM_QUANTITY;
+      case 'INVALID_EXCHANGE_RATE':
+        return QuoteCalculationErrorCode.INVALID_EXCHANGE_RATE;
+      case 'INVALID_NUMERIC_VALUE':
+        return QuoteCalculationErrorCode.INVALID_NUMERIC_VALUE;
+      case 'NEGATIVE_VALUE':
+        return QuoteCalculationErrorCode.NEGATIVE_VALUE;
+      default:
+        return QuoteCalculationErrorCode.CALCULATION_FAILED;
+    }
+  }
+
+  /**
    * Perform the actual calculation
    */
-  private async performCalculation(params: QuoteCalculationParams): Promise<QuoteCalculationBreakdown> {
+  private async performCalculation(params: QuoteCalculationParams, calculationId?: string): Promise<QuoteCalculationBreakdown> {
+    // Start performance tracking for calculation steps
+    logPerformanceStart(`calculation.${calculationId}`);
+    
     // Calculate item totals
     const total_item_price = params.items.reduce(
       (sum, item) => sum + (item.item_price * item.quantity), 0
@@ -342,6 +551,16 @@ export class QuoteCalculatorService {
     const total_item_weight = params.items.reduce(
       (sum, item) => sum + (item.item_weight * item.quantity), 0
     );
+
+    // Log calculation details
+    logger.debug(LogCategory.QUOTE_CALCULATION, 'Starting calculation breakdown', {
+      quoteId: calculationId,
+      metadata: {
+        totalItemPrice: total_item_price,
+        totalItemWeight: total_item_weight,
+        itemCount: params.items.length
+      }
+    });
 
     // Parse numeric values with safety
     const parseNumeric = (value: string | number | null | undefined, defaultValue = 0): number => {
@@ -368,11 +587,47 @@ export class QuoteCalculatorService {
 
     // Get shipping cost
     this.performanceMetrics.totalApiCalls++;
+    // **NEW: Record API call for monitoring**
+    if (calculationId) {
+      const tracking = this.activeCalculations.get(calculationId);
+      if (tracking) {
+        tracking.apiCalls++;
+        recordQuoteCalculationApiCall(calculationId, false); // Not a cache hit
+      }
+    }
+    
+    // Log shipping API call
+    const shippingStartTime = performance.now();
+    const apiRequestId = logger.logApiRequest('GET', 'getShippingCost', {
+      quoteId: calculationId,
+      metadata: {
+        originCountry: params.originCountry,
+        destinationCountry: params.destinationCountry,
+        totalWeight: total_item_weight,
+        totalPrice: total_item_price
+      }
+    });
+    
     const shippingCost = await getShippingCost(
       params.originCountry,
       params.destinationCountry,
       total_item_weight,
       total_item_price
+    );
+    
+    // Log shipping API response
+    logger.logApiResponse(
+      apiRequestId,
+      200, // Assuming success
+      performance.now() - shippingStartTime,
+      {
+        quoteId: calculationId,
+        metadata: {
+          method: shippingCost.method,
+          cost: shippingCost.cost,
+          hasRoute: !!shippingCost.route
+        }
+      }
     );
 
     let international_shipping: number;
@@ -424,6 +679,33 @@ export class QuoteCalculatorService {
     const subtotal = subtotal_before_fees + payment_gateway_fee;
     const vat = Math.round(subtotal * ((params.countrySettings.vat || 0) / 100) * 100) / 100;
     const final_total = Math.round((subtotal + vat) * 100) / 100;
+
+    // End performance tracking
+    logPerformanceEnd(`calculation.${calculationId}`, LogCategory.QUOTE_CALCULATION, {
+      quoteId: calculationId,
+      metadata: {
+        finalTotal: final_total,
+        currency: params.currency
+      }
+    });
+
+    // Log calculation breakdown summary
+    logger.debug(LogCategory.QUOTE_CALCULATION, 'Calculation breakdown completed', {
+      quoteId: calculationId,
+      metadata: {
+        breakdown: {
+          itemTotal: total_item_price,
+          internationalShipping: international_shipping,
+          customsAndEcs: customs_and_ecs,
+          paymentGatewayFee: payment_gateway_fee,
+          vat,
+          finalTotal: final_total
+        },
+        exchangeRate,
+        exchangeRateSource,
+        shippingMethod
+      }
+    });
 
     return {
       total_item_price,

@@ -1,13 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { authenticateUser, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST',
-  'Access-Control-Max-Age': '86400',
-}
+import { createCorsHeaders } from '../_shared/cors.ts'
 
 interface PayPalPaymentLinkRequest {
   quoteIds: string[];
@@ -52,7 +46,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { 
       status: 204,
-      headers: corsHeaders 
+      headers: createCorsHeaders(req) 
     })
   }
 
@@ -94,7 +88,7 @@ serve(async (req) => {
         error: 'Missing required fields: quoteIds, amount, currency' 
       }), { 
         status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...createCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -111,7 +105,7 @@ serve(async (req) => {
         error: 'PayPal gateway configuration not found' 
       }), { 
         status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...createCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -131,7 +125,7 @@ serve(async (req) => {
         error: 'PayPal credentials not configured' 
       }), { 
         status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...createCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -163,7 +157,7 @@ serve(async (req) => {
         error: 'Failed to authenticate with PayPal' 
       }), { 
         status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...createCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -188,7 +182,7 @@ serve(async (req) => {
           error: 'Quotes not found' 
         }), { 
           status: 404, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...createCorsHeaders(req), 'Content-Type': 'application/json' }
         });
       }
 
@@ -268,7 +262,7 @@ serve(async (req) => {
         details: errorData 
       }), { 
         status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...createCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -285,7 +279,7 @@ serve(async (req) => {
         error: 'PayPal order created but no approval URL found' 
       }), { 
         status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...createCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -369,7 +363,7 @@ serve(async (req) => {
     console.error('❌ Unexpected error:', error);
     
     if (error instanceof AuthError) {
-      return createAuthErrorResponse(error, corsHeaders);
+      return createAuthErrorResponse(error, createCorsHeaders(req));
     }
     
     return new Response(JSON.stringify({ 
@@ -377,7 +371,7 @@ serve(async (req) => {
       details: error.message 
     }), { 
       status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...createCorsHeaders(req), 'Content-Type': 'application/json' }
     });
   }
 });

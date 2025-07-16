@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test PayPal CORS</title>
+</head>
+<body>
+    <h1>Testing PayPal CORS</h1>
+    <button onclick="testPayPal()">Test PayPal Checkout</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testPayPal() {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:54321/functions/v1/create-paypal-checkout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+                    },
+                    body: JSON.stringify({
+                        quoteIds: ['test-123'],
+                        amount: 100,
+                        currency: 'USD',
+                        success_url: 'http://localhost:8080/success',
+                        cancel_url: 'http://localhost:8080/cancel'
+                    })
+                });
+                
+                const data = await response.json();
+                resultEl.textContent = JSON.stringify({
+                    status: response.status,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    data: data
+                }, null, 2);
+            } catch (error) {
+                resultEl.textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,20 +1,31 @@
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { QuoteCalculatorService } from '../QuoteCalculatorService';
 import { currencyService } from '../CurrencyService';
 import { supabase } from '@/integrations/supabase/client';
 
 // Mock dependencies
-jest.mock('../CurrencyService');
-jest.mock('@/integrations/supabase/client');
+vi.mock('../CurrencyService');
+vi.mock('@/integrations/supabase/client');
 
-const mockCurrencyService = currencyService as jest.Mocked<typeof currencyService>;
-const mockSupabase = supabase as jest.Mocked<typeof supabase>;
+type MockCurrencyService = {
+  getCurrencyForCountrySync: ReturnType<typeof vi.fn>;
+  getCurrencySymbol: ReturnType<typeof vi.fn>;
+  formatAmount: ReturnType<typeof vi.fn>;
+};
+
+type MockSupabaseClient = {
+  from: ReturnType<typeof vi.fn>;
+};
+
+const mockCurrencyService = currencyService as unknown as MockCurrencyService;
+const mockSupabase = supabase as unknown as MockSupabaseClient;
 
 describe('QuoteCalculatorService Currency Handling', () => {
   let calculatorService: QuoteCalculatorService;
 
   beforeEach(() => {
     calculatorService = QuoteCalculatorService.getInstance();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Setup currency service mocks
     mockCurrencyService.getCurrencyForCountrySync.mockImplementation((country) => {
@@ -30,15 +41,15 @@ describe('QuoteCalculatorService Currency Handling', () => {
 
     // Mock Supabase queries
     mockSupabase.from.mockReturnValue({
-      select: jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          maybeSingle: jest.fn().mockResolvedValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
             data: { rate_from_usd: 83 }, // 1 USD = 83 INR
             error: null
           })
         })
       })
-    } as any);
+    });
   });
 
   describe('Currency Determination', () => {
@@ -115,15 +126,15 @@ describe('QuoteCalculatorService Currency Handling', () => {
     test('should handle no exchange rate gracefully (default to 1)', async () => {
       // Mock no exchange rate found
       mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            maybeSingle: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({
               data: null,
               error: null
             })
           })
         })
-      } as any);
+      });
 
       const params = {
         destination_country: 'IN',
@@ -224,10 +235,10 @@ describe('QuoteCalculatorService Currency Handling', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'shipping_routes') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                eq: jest.fn().mockReturnValue({
-                  maybeSingle: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({
                     data: {
                       base_shipping_cost: 500, // INR
                       cost_per_kg: 100,        // INR per kg
@@ -242,16 +253,16 @@ describe('QuoteCalculatorService Currency Handling', () => {
         }
         // For country_settings
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              maybeSingle: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({
                 data: { rate_from_usd: 83 },
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
       const params = {
         origin_country: 'US',

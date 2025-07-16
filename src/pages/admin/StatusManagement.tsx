@@ -240,14 +240,13 @@ export default function StatusManagement() {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Failed to save status:', error);
       console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: (error as any)?.code,
+        details: (error as any)?.details,
+        hint: (error as any)?.hint
       });
       
-      // Show more specific error message
-      const errorMessage = error.message || 'Unknown error occurred';
+      // Show error message to user
       alert(`Failed to save status settings: ${errorMessage}`);
     } finally {
       setIsSaving(false);

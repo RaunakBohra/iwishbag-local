@@ -4,14 +4,20 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { StripePaymentForm } from '../StripePaymentForm';
 
 // Mock Stripe hooks and components
+const mockConfirmCardPayment = vi.fn();
+const mockGetElement = vi.fn(() => ({}));
+
 vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: React.ReactNode }) => <div data-testid="stripe-elements">{children}</div>,
   CardElement: () => <div data-testid="card-element" />,
+  PaymentElement: () => <div data-testid="payment-element" />,
   useStripe: () => ({
-    confirmCardPayment: vi.fn(),
+    confirmCardPayment: mockConfirmCardPayment,
+    confirmPayment: mockConfirmCardPayment,
   }),
   useElements: () => ({
-    getElement: vi.fn(() => ({})),
+    getElement: mockGetElement,
+    submit: vi.fn().mockResolvedValue({ error: null }),
   }),
 }));
 
@@ -117,10 +123,10 @@ describe('StripePaymentForm', () => {
 
     test('should show loading state when processing payment', async () => {
       const { useStripe } = await import('@stripe/react-stripe-js');
-      const mockStripe = useStripe() as any;
+      // Stripe mock is already set up globally
       
       // Mock a slow payment confirmation
-      mockStripe.confirmCardPayment.mockImplementation(() => 
+      mockConfirmCardPayment.mockImplementation(() => 
         new Promise(resolve => setTimeout(() => resolve({ paymentIntent: { id: 'pi_123' } }), 1000))
       );
 
@@ -156,7 +162,7 @@ describe('StripePaymentForm', () => {
   describe('Payment Success Flow', () => {
     test('should show success state after successful payment', async () => {
       const { useStripe } = await import('@stripe/react-stripe-js');
-      const mockStripe = useStripe() as any;
+      // Stripe mock is already set up globally
       
       const mockPaymentIntent = {
         id: 'pi_1234567890',
@@ -164,7 +170,7 @@ describe('StripePaymentForm', () => {
         amount: 100000, // Stripe uses cents
       };
 
-      mockStripe.confirmCardPayment.mockResolvedValue({
+      mockConfirmCardPayment.mockResolvedValue({
         paymentIntent: mockPaymentIntent,
       });
 
@@ -183,11 +189,11 @@ describe('StripePaymentForm', () => {
 
     test('should call onSuccess callback with payment intent', async () => {
       const { useStripe } = await import('@stripe/react-stripe-js');
-      const mockStripe = useStripe() as any;
+      // Stripe mock is already set up globally
       const onSuccessMock = vi.fn();
       
       const mockPaymentIntent = { id: 'pi_123', status: 'succeeded' };
-      mockStripe.confirmCardPayment.mockResolvedValue({
+      mockConfirmCardPayment.mockResolvedValue({
         paymentIntent: mockPaymentIntent,
       });
 
@@ -203,9 +209,9 @@ describe('StripePaymentForm', () => {
 
     test('should display payment details in success state', async () => {
       const { useStripe } = await import('@stripe/react-stripe-js');
-      const mockStripe = useStripe() as any;
+      // Stripe mock is already set up globally
       
-      mockStripe.confirmCardPayment.mockResolvedValue({
+      mockConfirmCardPayment.mockResolvedValue({
         paymentIntent: { id: 'pi_123', status: 'succeeded' },
       });
 
@@ -226,9 +232,9 @@ describe('StripePaymentForm', () => {
   describe('Error Handling', () => {
     test('should display error when payment fails', async () => {
       const { useStripe } = await import('@stripe/react-stripe-js');
-      const mockStripe = useStripe() as any;
+      // Stripe mock is already set up globally
       
-      mockStripe.confirmCardPayment.mockResolvedValue({
+      mockConfirmCardPayment.mockResolvedValue({
         error: {
           message: 'Your card was declined.',
           type: 'card_error',
@@ -247,10 +253,10 @@ describe('StripePaymentForm', () => {
 
     test('should call onError callback when payment fails', async () => {
       const { useStripe } = await import('@stripe/react-stripe-js');
-      const mockStripe = useStripe() as any;
+      // Stripe mock is already set up globally
       const onErrorMock = vi.fn();
       
-      mockStripe.confirmCardPayment.mockResolvedValue({
+      mockConfirmCardPayment.mockResolvedValue({
         error: { message: 'Payment failed' },
       });
 
@@ -266,9 +272,9 @@ describe('StripePaymentForm', () => {
 
     test('should handle card element not found error', async () => {
       const { useElements } = await import('@stripe/react-stripe-js');
-      const mockElements = useElements() as any;
+      // Elements mock is already set up globally
       
-      mockElements.getElement.mockReturnValue(null);
+      mockGetElement.mockReturnValue(null);
 
       render(<StripePaymentForm {...mockProps} />);
       
@@ -282,9 +288,9 @@ describe('StripePaymentForm', () => {
 
     test('should handle unexpected errors gracefully', async () => {
       const { useStripe } = await import('@stripe/react-stripe-js');
-      const mockStripe = useStripe() as any;
+      // Stripe mock is already set up globally
       
-      mockStripe.confirmCardPayment.mockRejectedValue(new Error('Network error'));
+      mockConfirmCardPayment.mockRejectedValue(new Error('Network error'));
 
       render(<StripePaymentForm {...mockProps} />);
       
@@ -298,9 +304,9 @@ describe('StripePaymentForm', () => {
 
     test('should handle unknown errors', async () => {
       const { useStripe } = await import('@stripe/react-stripe-js');
-      const mockStripe = useStripe() as any;
+      // Stripe mock is already set up globally
       
-      mockStripe.confirmCardPayment.mockRejectedValue('Unknown error');
+      mockConfirmCardPayment.mockRejectedValue('Unknown error');
 
       render(<StripePaymentForm {...mockProps} />);
       
@@ -324,9 +330,9 @@ describe('StripePaymentForm', () => {
 
     test('should handle missing callbacks gracefully', async () => {
       const { useStripe } = await import('@stripe/react-stripe-js');
-      const mockStripe = useStripe() as any;
+      // Stripe mock is already set up globally
       
-      mockStripe.confirmCardPayment.mockResolvedValue({
+      mockConfirmCardPayment.mockResolvedValue({
         paymentIntent: { id: 'pi_123', status: 'succeeded' },
       });
 
@@ -379,7 +385,7 @@ describe('StripePaymentForm', () => {
 
     test('should use client_secret for payment confirmation', async () => {
       const { useStripe } = await import('@stripe/react-stripe-js');
-      const mockStripe = useStripe() as any;
+      // Stripe mock is already set up globally
 
       render(<StripePaymentForm {...mockProps} />);
       
@@ -398,10 +404,10 @@ describe('StripePaymentForm', () => {
   describe('Integration Scenarios', () => {
     test('should handle complete payment workflow', async () => {
       const { useStripe } = await import('@stripe/react-stripe-js');
-      const mockStripe = useStripe() as any;
+      // Stripe mock is already set up globally
       const onSuccessMock = vi.fn();
       
-      mockStripe.confirmCardPayment.mockResolvedValue({
+      mockConfirmCardPayment.mockResolvedValue({
         paymentIntent: { 
           id: 'pi_integration_test',
           status: 'succeeded',

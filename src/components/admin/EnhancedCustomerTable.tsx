@@ -107,18 +107,20 @@ export const EnhancedCustomerTable = ({
         aValue = new Date(a.created_at);
         bValue = new Date(b.created_at);
         break;
-      case 'total_spent':
+      case 'total_spent': {
         const aAnalytics = customerAnalytics?.find(analytics => analytics.customerId === a.id);
         const bAnalytics = customerAnalytics?.find(analytics => analytics.customerId === b.id);
         aValue = aAnalytics?.totalSpent || 0;
         bValue = bAnalytics?.totalSpent || 0;
         break;
-      case 'order_count':
+      }
+      case 'order_count': {
         const aOrderAnalytics = customerAnalytics?.find(analytics => analytics.customerId === a.id);
         const bOrderAnalytics = customerAnalytics?.find(analytics => analytics.customerId === b.id);
         aValue = aOrderAnalytics?.orderCount || 0;
         bValue = bOrderAnalytics?.orderCount || 0;
         break;
+      }
       case 'location':
         aValue = a.user_addresses[0]?.country || '';
         bValue = b.user_addresses[0]?.country || '';

@@ -484,7 +484,9 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
       // Load from database
       if (quoteSettings?.setting_value) {
         try {
-          const loadedQuoteStatuses = JSON.parse(quoteSettings.setting_value);
+          // Clean up invalid escapes before parsing
+          const cleanedJSON = quoteSettings.setting_value.replace(/\\!/g, '!');
+          const loadedQuoteStatuses = JSON.parse(cleanedJSON);
           console.log('✅ Loaded quote statuses from database:', loadedQuoteStatuses.map(s => s.name));
           setQuoteStatuses(loadedQuoteStatuses);
         } catch (e) {
@@ -496,7 +498,9 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
       }
       if (orderSettings?.setting_value) {
         try {
-          const loadedOrderStatuses = JSON.parse(orderSettings.setting_value);
+          // Clean up invalid escapes before parsing
+          const cleanedJSON = orderSettings.setting_value.replace(/\\!/g, '!');
+          const loadedOrderStatuses = JSON.parse(cleanedJSON);
           console.log('✅ Loaded order statuses from database:', loadedOrderStatuses.map(s => s.name));
           setOrderStatuses(loadedOrderStatuses);
         } catch (e) {

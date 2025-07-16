@@ -1,5 +1,15 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 
+// Type definitions
+interface WebhookRequest {
+  headers: {
+    'stripe-signature'?: string;
+    'user-agent'?: string;
+    [key: string]: string | undefined;
+  };
+  body?: string;
+}
+
 // Mock Deno global and environment
 const mockDeno = {
   env: {
@@ -16,12 +26,12 @@ const mockDeno = {
 };
 
 // Mock global Deno
-global.Deno = mockDeno as any;
+global.Deno = mockDeno as typeof Deno;
 
 // Mock crypto for UUID generation
 global.crypto = {
   randomUUID: vi.fn(() => 'test-uuid-123'),
-} as any;
+} as Crypto;
 
 // Mock Stripe
 const mockStripe = {
@@ -598,7 +608,7 @@ describe('payment-verification Stripe Integration', () => {
         }),
       };
 
-      const validateWebhookSecurity = (request: any) => {
+      const validateWebhookSecurity = (request: WebhookRequest) => {
         const signature = request.headers['stripe-signature'];
         const userAgent = request.headers['user-agent'];
         
@@ -630,7 +640,7 @@ describe('payment-verification Stripe Integration', () => {
         }),
       };
 
-      const validateWebhookSecurity = (request: any) => {
+      const validateWebhookSecurity = (request: WebhookRequest) => {
         const signature = request.headers['stripe-signature'];
         
         if (!signature) {

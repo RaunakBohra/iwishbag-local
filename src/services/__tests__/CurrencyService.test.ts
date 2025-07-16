@@ -9,7 +9,9 @@ vi.mock('@/integrations/supabase/client', () => ({
   }
 }));
 
-const mockSupabase = supabase as any;
+const mockSupabase = supabase as unknown as {
+  from: ReturnType<typeof vi.fn>;
+};
 
 describe('CurrencyService', () => {
   beforeEach(() => {
@@ -94,16 +96,16 @@ describe('CurrencyService', () => {
     test('should handle async minimum payment amounts with database fallback', async () => {
       // Mock database returning null (to test fallback)
       mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            not: jest.fn().mockReturnValue({
-              limit: jest.fn().mockReturnValue({
-                single: jest.fn().mockResolvedValue({ data: null, error: new Error('Not found') })
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            not: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({ data: null, error: new Error('Not found') })
               })
             })
           })
         })
-      } as any);
+      });
 
       const minAmount = await currencyService.getMinimumPaymentAmount('USD');
       expect(minAmount).toBe(10); // Should fallback to sync version
@@ -112,11 +114,11 @@ describe('CurrencyService', () => {
     test('should handle async minimum payment amounts with database data', async () => {
       // Mock database returning data
       mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            not: jest.fn().mockReturnValue({
-              limit: jest.fn().mockReturnValue({
-                single: jest.fn().mockResolvedValue({ 
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            not: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({ 
                   data: { minimum_payment_amount: 25 }, 
                   error: null 
                 })
@@ -124,7 +126,7 @@ describe('CurrencyService', () => {
             })
           })
         })
-      } as any);
+      });
 
       const minAmount = await currencyService.getMinimumPaymentAmount('USD');
       expect(minAmount).toBe(25);
@@ -208,15 +210,15 @@ describe('CurrencyService', () => {
   describe('Async Database Operations', () => {
     test('should handle getAllCurrencies with database error gracefully', async () => {
       mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          not: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnValue({
+          not: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({
               data: null,
               error: new Error('Database error')
             })
           })
         })
-      } as any);
+      });
 
       const currencies = await currencyService.getAllCurrencies();
       expect(currencies.length).toBeGreaterThan(0); // Should return fallback currencies
@@ -226,15 +228,15 @@ describe('CurrencyService', () => {
 
     test('should handle getCurrency with cache miss gracefully', async () => {
       mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          not: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnValue({
+          not: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({
               data: [],
               error: null
             })
           })
         })
-      } as any);
+      });
 
       const currency = await currencyService.getCurrency('USD');
       expect(currency).toBeNull(); // Should return null for unknown currency after database check
@@ -248,13 +250,13 @@ describe('CurrencyService', () => {
       ];
 
       mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          not: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnValue({
+          not: vi.fn().mockResolvedValue({
             data: mockCountrySettings,
             error: null
           })
         })
-      } as any);
+      });
 
       const map = await currencyService.getCountryCurrencyMap();
       expect(map.get('US')).toBe('USD');
@@ -271,15 +273,15 @@ describe('CurrencyService', () => {
 
       // Mock first call
       mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          not: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnValue({
+          not: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({
               data: mockCountrySettings,
               error: null
             })
           })
         })
-      } as any);
+      });
 
       // First call should hit database
       await currencyService.getAllCurrencies();
@@ -302,15 +304,15 @@ describe('CurrencyService', () => {
       
       // Mock for second call
       mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          not: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnValue({
+          not: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({
               data: [],
               error: null
             })
           })
         })
-      } as any);
+      });
 
       // Should hit database again after cache clear
       await currencyService.getAllCurrencies();

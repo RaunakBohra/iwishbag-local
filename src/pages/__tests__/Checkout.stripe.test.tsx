@@ -144,7 +144,12 @@ vi.mock('@/components/ui/use-toast', () => ({
 
 // Mock Stripe components
 vi.mock('@/components/payment/StripePaymentForm', () => ({
-  StripePaymentForm: ({ onSuccess, onError, amount, currency }: any) => (
+  StripePaymentForm: ({ onSuccess, onError, amount, currency }: {
+    onSuccess?: (paymentIntent: { id: string }) => void;
+    onError?: (error: string) => void;
+    amount?: number;
+    currency?: string;
+  }) => (
     <div data-testid="stripe-payment-form">
       <div>Stripe Payment Form</div>
       <div>Amount: {amount}</div>
@@ -166,7 +171,10 @@ vi.mock('@/components/payment/StripePaymentForm', () => ({
 }));
 
 vi.mock('@/components/payment/PaymentMethodSelector', () => ({
-  PaymentMethodSelector: ({ onSelect, selectedMethod }: any) => (
+  PaymentMethodSelector: ({ onSelect, selectedMethod }: {
+    onSelect: (method: string) => void;
+    selectedMethod?: string;
+  }) => (
     <div data-testid="payment-method-selector">
       <button 
         onClick={() => onSelect('stripe')}
@@ -187,7 +195,10 @@ vi.mock('@/components/payment/PaymentMethodSelector', () => ({
 }));
 
 vi.mock('@/components/payment/QRPaymentModal', () => ({
-  QRPaymentModal: ({ isOpen, onClose }: any) => (
+  QRPaymentModal: ({ isOpen, onClose }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) => (
     isOpen ? (
       <div data-testid="qr-payment-modal">
         <div>QR Payment Modal</div>
@@ -198,7 +209,9 @@ vi.mock('@/components/payment/QRPaymentModal', () => ({
 }));
 
 vi.mock('@/components/payment/PaymentStatusTracker', () => ({
-  PaymentStatusTracker: ({ transactionId }: any) => (
+  PaymentStatusTracker: ({ transactionId }: {
+    transactionId: string;
+  }) => (
     <div data-testid="payment-status-tracker">
       <div>Tracking: {transactionId}</div>
     </div>
@@ -427,10 +440,24 @@ describe('Checkout - Stripe Integration', () => {
       const { usePaymentGateways } = await import('@/hooks/usePaymentGateways');
       
       vi.mocked(usePaymentGateways).mockReturnValue({
-        data: [],
-        isLoading: false,
-        error: new Error('Gateway initialization failed'),
-      } as any);
+        allGateways: [],
+        availableMethods: [],
+        userProfile: undefined,
+        gatewaysLoading: false,
+        methodsLoading: false,
+        createPayment: vi.fn(),
+        createPaymentAsync: vi.fn(),
+        isCreatingPayment: false,
+        getPaymentMethodDisplay: vi.fn(),
+        getAvailablePaymentMethods: vi.fn(),
+        isMobileOnlyPayment: vi.fn(),
+        requiresQRCode: vi.fn(),
+        getRecommendedPaymentMethod: vi.fn(),
+        getRecommendedPaymentMethodSync: vi.fn(),
+        validatePaymentRequest: vi.fn(),
+        getFallbackMethods: vi.fn(),
+        PAYMENT_METHOD_DISPLAYS: {}
+      });
 
       renderWithProviders(<Checkout />);
 
@@ -448,7 +475,7 @@ describe('Checkout - Stripe Integration', () => {
         error: new Error('Cart loading failed'),
         clearCart: vi.fn(),
         removeFromCart: vi.fn(),
-      } as any);
+      });
 
       renderWithProviders(<Checkout />);
 
@@ -466,7 +493,7 @@ describe('Checkout - Stripe Integration', () => {
         data: undefined,
         isLoading: true,
         error: null,
-      } as any);
+      });
 
       renderWithProviders(<Checkout />);
 
@@ -484,7 +511,7 @@ describe('Checkout - Stripe Integration', () => {
         error: null,
         clearCart: vi.fn(),
         removeFromCart: vi.fn(),
-      } as any);
+      });
 
       renderWithProviders(<Checkout />);
 

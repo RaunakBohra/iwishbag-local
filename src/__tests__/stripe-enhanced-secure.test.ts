@@ -239,7 +239,7 @@ describe('CustomerValidator', () => {
 });
 
 describe('SecureLogger', () => {
-  let consoleSpy: any;
+  let consoleSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -277,7 +277,7 @@ describe('SecureLogger', () => {
 
       // Ensure no PII is exposed
       expect(sensitiveData.email).not.toBe(sanitized.email_domain);
-      expect(sanitiveData.name).not.toEqual(expect.objectContaining(sanitized));
+      expect(sensitiveData.name).not.toEqual(expect.objectContaining(sanitized));
     });
 
     it('should handle missing data gracefully', () => {

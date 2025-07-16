@@ -65,6 +65,31 @@ import { formatBankDetailsForEmail } from "@/lib/bankDetailsFormatter";
 type QuoteType = Tables<'quotes'>;
 type ProfileType = Tables<'profiles'>;
 
+// Declare Airwallex SDK types
+declare global {
+  interface Window {
+    AirwallexComponentsSDK?: {
+      init: (config: {
+        env: 'demo' | 'prod' | 'staging';
+        enabledElements: string[];
+      }) => Promise<{
+        payments: {
+          redirectToCheckout: (params: {
+            env: 'demo' | 'prod' | 'staging';
+            mode: 'payment' | 'recurring';
+            intent_id: string;
+            client_secret: string;
+            currency: string;
+            country_code: string;
+            successUrl?: string;
+            failUrl?: string;
+          }) => void;
+        };
+      }>;
+    };
+  }
+}
+
 interface AddressFormData {
   address_line1: string;
   address_line2?: string;
@@ -947,6 +972,132 @@ export default function Checkout() {
         console.log('🎯 Stripe PaymentIntent created, showing inline form');
         setStripeClientSecret(paymentResponse.client_secret);
         // Do NOT redirect. We will now show our inline form.
+      } else if (paymentMethod === 'airwallex' && paymentResponse.client_secret) {
+        // Airwallex requires using their SDK for hosted payment page
+        console.log('🎯 Airwallex PaymentIntent created:', {
+          client_secret: paymentResponse.client_secret,
+          transactionId: paymentResponse.transactionId,
+          airwallexData: paymentResponse.airwallexData,
+          fullResponse: paymentResponse
+        });
+        
+        // Payment data is now stored in the redirectToCheckout handlers
+        
+        // Check if we have airwallexData with the required fields
+        if (paymentResponse.airwallexData) {
+          const { intent_id, client_secret, currency, env } = paymentResponse.airwallexData;
+          
+          // Load Airwallex SDK if not already loaded
+          if (!window.AirwallexComponentsSDK) {
+            const script = document.createElement('script');
+            script.src = 'https://static.airwallex.com/components/sdk/v1/index.js';
+            script.async = true;
+            script.onload = async () => {
+              // SDK loaded, now initialize and redirect
+              try {
+                const { payments } = await window.AirwallexComponentsSDK.init({
+                  env: env || 'demo',
+                  enabledElements: ['payments']
+                });
+                
+                // Get country code from shipping address or default
+                const countryCode = addressFormData?.country || 'US';
+                
+                // Store complete payment data for success page
+                const airwallexPaymentData = {
+                  paymentIntentId: intent_id,
+                  transactionId: paymentResponse.transactionId,
+                  amount: paymentRequest.amount || totalAmount, // Use the actual amount from payment request
+                  currency: currency || paymentRequest.currency || 'USD',
+                  quoteIds: paymentRequest.quoteIds,
+                  timestamp: Date.now()
+                };
+                sessionStorage.setItem('airwallex_payment_pending', JSON.stringify(airwallexPaymentData));
+                
+                // Redirect to Airwallex hosted payment page
+                payments.redirectToCheckout({
+                  env: env || 'demo',
+                  mode: 'payment',
+                  intent_id: intent_id,
+                  client_secret: client_secret,
+                  currency: currency,
+                  country_code: countryCode,
+                  successUrl: window.location.origin + '/payment-success?gateway=airwallex',
+                  failUrl: window.location.origin + '/payment-failure?gateway=airwallex'
+                });
+              } catch (error) {
+                console.error('Airwallex SDK initialization failed:', error);
+                toast({ 
+                  title: "Payment Error", 
+                  description: "Failed to initialize Airwallex payment. Please try again.", 
+                  variant: "destructive" 
+                });
+                setIsProcessing(false);
+              }
+            };
+            script.onerror = () => {
+              console.error('Failed to load Airwallex SDK');
+              toast({ 
+                title: "Payment Error", 
+                description: "Failed to load payment provider. Please try again.", 
+                variant: "destructive" 
+              });
+              setIsProcessing(false);
+            };
+            document.body.appendChild(script);
+          } else {
+            // SDK already loaded, initialize and redirect
+            try {
+              const { payments } = await window.AirwallexComponentsSDK.init({
+                env: env || 'demo',
+                enabledElements: ['payments']
+              });
+              
+              // Get country code from shipping address or default
+              const countryCode = addressFormData?.country || 'US';
+              
+              // Store complete payment data for success page
+              const airwallexPaymentData = {
+                paymentIntentId: intent_id,
+                transactionId: paymentResponse.transactionId,
+                amount: paymentRequest.amount || totalAmount, // Use the actual amount from payment request
+                currency: currency || paymentRequest.currency || 'USD',
+                quoteIds: paymentRequest.quoteIds,
+                timestamp: Date.now()
+              };
+              sessionStorage.setItem('airwallex_payment_pending', JSON.stringify(airwallexPaymentData));
+              
+              // Redirect to Airwallex hosted payment page
+              payments.redirectToCheckout({
+                env: env || 'demo',
+                mode: 'payment',
+                intent_id: intent_id,
+                client_secret: client_secret,
+                currency: currency,
+                country_code: countryCode,
+                successUrl: window.location.origin + '/payment-success?gateway=airwallex',
+                failUrl: window.location.origin + '/payment-failure?gateway=airwallex'
+              });
+            } catch (error) {
+              console.error('Airwallex redirect failed:', error);
+              toast({ 
+                title: "Payment Error", 
+                description: "Failed to redirect to payment page. Please try again.", 
+                variant: "destructive" 
+              });
+              setIsProcessing(false);
+            }
+          }
+        } else {
+          // Fallback error if airwallexData is missing
+          console.error('Airwallex payment response missing required data');
+          toast({ 
+            title: "Payment Error", 
+            description: "Payment configuration error. Please try again.", 
+            variant: "destructive" 
+          });
+          setIsProcessing(false);
+        }
       } else if (paymentResponse.url) {
         // For redirect-based payments (PayU Hosted Checkout)
         // First update quote status to processing for payment gateways

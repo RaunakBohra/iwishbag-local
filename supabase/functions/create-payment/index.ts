@@ -5,6 +5,18 @@ import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno'
 // REMOVED: PayU SDK import as it might be causing additional API calls
 // import PayU from 'https://esm.sh/payu@latest?target=deno';
 import { createStripePaymentEnhancedSecure } from './stripe-enhanced-secure.ts'
+import { createAirwallexPaymentIntent } from './airwallex-api.ts'
+import { 
+  withEdgeMonitoring,
+  extractPaymentId,
+  extractUserId,
+  mapGatewayError,
+  createErrorResponse,
+  createSuccessResponse,
+  sanitizeForLogging
+} from '../_shared/monitoring-utils.ts'
+import { EdgeLogCategory } from '../_shared/edge-logging.ts'
+import { EdgePaymentErrorCode } from '../_shared/edge-payment-monitoring.ts'
 
 
 // This should match src/types/payment.ts PaymentRequest
@@ -32,6 +44,14 @@ interface PaymentResponse {
   transactionId?: string;
   client_secret?: string;
   error?: string;
+  paymentIntentId?: string;
+  airwallexData?: {
+    intent_id: string;
+    client_secret: string;
+    currency: string;
+    amount: number;
+    env: 'demo' | 'prod';
+  };
 }
 
 // REMOVED: PayU client initialization to avoid additional API calls
@@ -155,19 +175,71 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Stripe Key:', Deno.env.get('STRIPE_SECRET_KEY')?.substring(0, 10));
-    console.log('Supabase URL:', Deno.env.get('SUPABASE_URL'));
+    const response = await withEdgeMonitoring('create-payment', async (logger, paymentMonitoring) => {
+    try {
+      logger.info(EdgeLogCategory.EDGE_FUNCTION, 'Payment creation function started', {
+        metadata: {
+          method: req.method,
+          userAgent: req.headers.get('user-agent'),
+          origin: req.headers.get('origin')
+        }
+      });
 
-    const paymentRequest: PaymentRequest = await req.json()
-    const { quoteIds, gateway, success_url, cancel_url, amount, currency, customerInfo, metadata } = paymentRequest
-
-    if (!quoteIds || quoteIds.length === 0) {
-      return new Response(JSON.stringify({ error: 'Missing quoteIds' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
-    }
+      const paymentRequest: PaymentRequest = await req.json()
+      
+      // Extract and sanitize request data for logging
+      const sanitizedRequest = sanitizeForLogging(paymentRequest);
+      
+      logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Payment request received', {
+        metadata: {
+          gateway: paymentRequest.gateway,
+          amount: paymentRequest.amount,
+          currency: paymentRequest.currency,
+          quoteIds: paymentRequest.quoteIds,
+          hasCustomerInfo: !!paymentRequest.customerInfo,
+          metadataKeys: Object.keys(paymentRequest.metadata || {}),
+          hasAuthToken: !!req.headers.get('Authorization')
+        }
+      });
     
-    if (!gateway) {
-      return new Response(JSON.stringify({ error: 'Missing payment gateway' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
-    }
+      const { quoteIds, gateway, success_url, cancel_url, amount, currency, customerInfo, metadata } = paymentRequest
+
+      // Generate payment ID for tracking
+      const paymentId = extractPaymentId(paymentRequest) || `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Start payment monitoring
+      paymentMonitoring.startPaymentMonitoring({
+        paymentId,
+        gateway,
+        amount: amount || 0,
+        currency: currency || 'USD',
+        metadata: {
+          quoteIds: quoteIds,
+          hasCustomerInfo: !!customerInfo,
+          requestSource: 'edge_function'
+        }
+      });
+
+      // Validation with monitoring
+      if (!quoteIds || quoteIds.length === 0) {
+        paymentMonitoring.completePaymentMonitoring(
+          paymentId,
+          false,
+          EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
+          'Missing quoteIds'
+        );
+        return createErrorResponse(new Error('Missing quoteIds'), 400, logger);
+      }
+      
+      if (!gateway) {
+        paymentMonitoring.completePaymentMonitoring(
+          paymentId,
+          false,
+          EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
+          'Missing payment gateway'
+        );
+        return createErrorResponse(new Error('Missing payment gateway'), 400, logger);
+      }
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -238,12 +310,25 @@ serve(async (req) => {
       }
     }
 
-    if (!userId && !isGuestSessionValid) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: No valid user or guest session provided.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      if (!userId && !isGuestSessionValid) {
+        paymentMonitoring.completePaymentMonitoring(
+          paymentId,
+          false,
+          EdgePaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS,
+          'No valid user or guest session provided'
+        );
+        return createErrorResponse(new Error('Unauthorized: No valid user or guest session provided'), 401, logger);
+      }
+
+      logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Authentication successful', {
+        paymentId,
+        userId,
+        metadata: {
+          hasAuthenticatedUser: !!userId,
+          hasGuestSession: isGuestSessionValid,
+          quoteCount: quoteIds.length
+        }
       });
-    }
 
     // --- End Authentication and Authorization ---
 
@@ -292,15 +377,34 @@ serve(async (req) => {
 
       case 'payu':
         try {
+          logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Starting PayU payment creation', {
+            paymentId,
+            userId,
+            metadata: { amount: totalAmount, currency: totalCurrency }
+          });
+
           // Fetch PayU config from payment_gateways table
-          const { data: payuGateway, error: payuGatewayError } = await supabaseAdmin
-            .from('payment_gateways')
-            .select('config, test_mode')
-            .eq('code', 'payu')
-            .single();
+          const { data: payuGateway, error: payuGatewayError } = await paymentMonitoring.monitorGatewayCall(
+            'fetch_payu_config',
+            'payu',
+            async () => {
+              return await supabaseAdmin
+                .from('payment_gateways')
+                .select('config, test_mode')
+                .eq('code', 'payu')
+                .single();
+            },
+            paymentId
+          );
 
           if (payuGatewayError || !payuGateway) {
-            return new Response(JSON.stringify({ error: 'PayU gateway config missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+              'PayU gateway config missing'
+            );
+            return createErrorResponse(new Error('PayU gateway config missing'), 500, logger);
           }
 
           const config = payuGateway.config || {};
@@ -312,7 +416,13 @@ serve(async (req) => {
           };
           console.log('PayU config loaded successfully');
           if (!payuConfig.merchant_key || !payuConfig.salt_key) {
-            return new Response(JSON.stringify({ error: 'PayU configuration missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+              'PayU merchant key or salt key missing'
+            );
+            return createErrorResponse(new Error('PayU configuration missing'), 500, logger);
           }
 
           // Get India's exchange rate for USD to INR conversion
@@ -449,11 +559,31 @@ serve(async (req) => {
           };
 
           // Log transaction details (non-sensitive)
-          console.log('PayU payment initiated:', { 
-            txnid, 
-            amountINR: amountInINR,
-            customerEmail: customerEmail.substring(0, 3) + '***' 
+          logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'PayU payment created successfully', {
+            paymentId,
+            userId,
+            metadata: {
+              transactionId: txnid,
+              amountINR: amountInINR,
+              originalAmount: totalAmount,
+              originalCurrency: totalCurrency,
+              exchangeRate: totalCurrency === 'INR' ? 1 : exchangeRate,
+              testMode
+            }
           });
+
+          paymentMonitoring.completePaymentMonitoring(
+            paymentId,
+            true,
+            undefined,
+            undefined,
+            {
+              transactionId: txnid,
+              gateway: 'payu',
+              amountInINR,
+              exchangeRate: totalCurrency === 'INR' ? 1 : exchangeRate
+            }
+          );
           
           responseData = { 
             success: true, 
@@ -462,31 +592,69 @@ serve(async (req) => {
             formData: payuRequest,
             transactionId: txnid,
             amountInINR: amountInINR,
-            exchangeRate: totalCurrency === 'INR' ? 1 : exchangeRate
+            exchangeRate: totalCurrency === 'INR' ? 1 : exchangeRate,
+            paymentId
           };
         } catch (error) {
-          console.error('PayU payment creation error:', error);
-          return new Response(JSON.stringify({ 
-            error: 'PayU payment creation failed', 
-            details: error.message 
-          }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+          const errorCode = mapGatewayError('payu', error instanceof Error ? error : new Error('PayU error'));
+          
+          paymentMonitoring.completePaymentMonitoring(
+            paymentId,
+            false,
+            errorCode,
+            error instanceof Error ? error.message : 'PayU payment creation failed'
+          );
+
+          logger.error(
+            EdgeLogCategory.PAYMENT_PROCESSING,
+            'PayU payment creation failed',
+            error instanceof Error ? error : new Error('PayU payment creation failed'),
+            {
+              paymentId,
+              userId,
+              metadata: { gateway: 'payu', amount: totalAmount, currency: totalCurrency }
+            }
+          );
+
+          return createErrorResponse(
+            error instanceof Error ? error : new Error('PayU payment creation failed'),
+            500,
+            logger,
+            { gateway: 'payu', paymentId }
+          );
         }
         break;
 
       case 'stripe':
         try {
+          logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Starting Stripe payment creation', {
+            paymentId,
+            userId,
+            metadata: { amount: totalAmount, currency: totalCurrency }
+          });
+
           // Fetch Stripe config from payment_gateways table
-          const { data: stripeGateway, error: stripeGatewayError } = await supabaseAdmin
-            .from('payment_gateways')
-            .select('config, test_mode')
-            .eq('code', 'stripe')
-            .single();
+          const { data: stripeGateway, error: stripeGatewayError } = await paymentMonitoring.monitorGatewayCall(
+            'fetch_stripe_config',
+            'stripe',
+            async () => {
+              return await supabaseAdmin
+                .from('payment_gateways')
+                .select('config, test_mode')
+                .eq('code', 'stripe')
+                .single();
+            },
+            paymentId
+          );
 
           if (stripeGatewayError || !stripeGateway) {
-            return new Response(JSON.stringify({ error: 'Stripe gateway config missing' }), { 
-              status: 500, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+              'Stripe gateway config missing'
+            );
+            return createErrorResponse(new Error('Stripe gateway config missing'), 500, logger);
           }
 
           const config = stripeGateway.config || {};
@@ -498,19 +666,175 @@ serve(async (req) => {
             : (config.live_secret_key || config.secret_key);
             
           if (!stripeSecretKey) {
-            return new Response(JSON.stringify({ error: 'Stripe secret key not configured in database' }), { 
-              status: 500, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+              'Stripe secret key not configured'
+            );
+            return createErrorResponse(new Error('Stripe secret key not configured in database'), 500, logger);
           }
 
           const stripe = new Stripe(stripeSecretKey, {
             apiVersion: config.api_version || '2023-10-16',
           });
 
-          // Use secure enhanced Stripe payment creation
-          const result = await createStripePaymentEnhancedSecure({
-            stripe,
+          // Use secure enhanced Stripe payment creation with monitoring
+          const result = await paymentMonitoring.monitorGatewayCall(
+            'create_stripe_payment',
+            'stripe',
+            async () => {
+              return await createStripePaymentEnhancedSecure({
+                stripe,
+                amount: totalAmount,
+                currency: totalCurrency,
+                quoteIds,
+                userId: userId || 'guest',
+                customerInfo,
+                quotes: quotesToUse,
+                supabaseAdmin
+              });
+            },
+            paymentId
+          );
+
+          if (!result.success) {
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.STRIPE_API_ERROR,
+              result.error || 'Stripe payment creation failed'
+            );
+            return createErrorResponse(
+              new Error(result.error || 'Stripe payment creation failed'),
+              400,
+              logger,
+              { gateway: 'stripe', paymentId }
+            );
+          }
+
+          logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Stripe payment created successfully', {
+            paymentId,
+            userId,
+            metadata: {
+              transactionId: result.transactionId,
+              customerId: result.customer_id,
+              amount: totalAmount,
+              currency: totalCurrency,
+              testMode
+            }
+          });
+
+          paymentMonitoring.completePaymentMonitoring(
+            paymentId,
+            true,
+            undefined,
+            undefined,
+            {
+              transactionId: result.transactionId,
+              gateway: 'stripe',
+              customerId: result.customer_id
+            }
+          );
+
+          responseData = {
+            success: result.success,
+            client_secret: result.client_secret,
+            transactionId: result.transactionId,
+            customer_id: result.customer_id,
+            paymentId
+          };
+
+        } catch (error) {
+          const errorCode = mapGatewayError('stripe', error instanceof Error ? error : new Error('Stripe error'));
+          
+          paymentMonitoring.completePaymentMonitoring(
+            paymentId,
+            false,
+            errorCode,
+            error instanceof Error ? error.message : 'Stripe payment creation failed'
+          );
+
+          logger.error(
+            EdgeLogCategory.PAYMENT_PROCESSING,
+            'Stripe payment creation failed',
+            error instanceof Error ? error : new Error('Stripe payment creation failed'),
+            {
+              paymentId,
+              userId,
+              metadata: { gateway: 'stripe', amount: totalAmount, currency: totalCurrency }
+            }
+          );
+
+          return createErrorResponse(
+            error instanceof Error ? error : new Error('Stripe payment creation failed'),
+            500,
+            logger,
+            { gateway: 'stripe', paymentId }
+          );
+        }
+        break;
+
+      case 'airwallex':
+        try {
+          console.log('💳 Starting Airwallex payment creation');
+          
+          // Fetch Airwallex config from payment_gateways table
+          const { data: airwallexGateway, error: airwallexGatewayError } = await supabaseAdmin
+            .from('payment_gateways')
+            .select('config, test_mode')
+            .eq('code', 'airwallex')
+            .single();
+
+          if (airwallexGatewayError || !airwallexGateway) {
+            console.error('❌ Airwallex gateway config error:', airwallexGatewayError);
+            return new Response(JSON.stringify({ error: 'Airwallex gateway config missing' }), { 
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+
+          const airwallexConfig = airwallexGateway.config || {};
+          const airwallexTestMode = airwallexGateway.test_mode;
+          
+          // Extract API key and client ID from config
+          const airwallexApiKey = airwallexTestMode 
+            ? airwallexConfig.test_api_key 
+            : (airwallexConfig.live_api_key || airwallexConfig.api_key);
+            
+          const airwallexClientId = airwallexConfig.client_id;
+            
+          if (!airwallexApiKey || !airwallexClientId) {
+            return new Response(JSON.stringify({ error: 'Airwallex configuration incomplete' }), { 
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+
+          // Secure debugging: Log credential metadata without exposing secrets
+          const apiKeyHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(airwallexApiKey));
+          const apiKeyHashHex = Array.from(new Uint8Array(apiKeyHash))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+          
+          console.log('🔐 Airwallex configuration loaded (secure debug)', {
+            testMode: airwallexTestMode,
+            hasApiKey: !!airwallexApiKey,
+            hasClientId: !!airwallexClientId,
+            apiKeyLength: airwallexApiKey.length,
+            apiKeyLast4: airwallexApiKey.slice(-4),
+            apiKeyHash: apiKeyHashHex.slice(0, 8), // First 8 chars of hash
+            clientIdLength: airwallexClientId.length,
+            clientIdLast4: airwallexClientId.slice(-4),
+            configKeys: Object.keys(airwallexConfig),
+            selectedKeyType: airwallexTestMode ? 'test_api_key' : (airwallexConfig.live_api_key ? 'live_api_key' : 'api_key')
+          });
+
+          // Call the Airwallex API module to create payment intent
+          const result = await createAirwallexPaymentIntent({
+            apiKey: airwallexApiKey,
+            clientId: airwallexClientId,
+            testMode: airwallexTestMode,
             amount: totalAmount,
             currency: totalCurrency,
             quoteIds,
@@ -520,26 +844,38 @@ serve(async (req) => {
             supabaseAdmin
           });
 
+          // Handle the result
           if (!result.success) {
             return new Response(JSON.stringify({ 
-              error: result.error || 'Stripe payment creation failed'
+              error: result.error || 'Airwallex payment creation failed'
             }), { 
               status: 400, 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
           }
 
+          // Set response data from successful result
           responseData = {
             success: result.success,
             client_secret: result.client_secret,
             transactionId: result.transactionId,
-            customer_id: result.customer_id
+            url: result.confirmationUrl,
+            paymentIntentId: result.paymentIntentId,
+            // Include airwallexData if present
+            ...(result.airwallexData && { airwallexData: result.airwallexData })
           };
 
+          console.log('Airwallex payment created successfully:', {
+            transactionId: responseData.transactionId,
+            paymentIntentId: result.paymentIntentId,
+            url: responseData.url,
+            hasClientSecret: !!responseData.client_secret
+          });
+
         } catch (error) {
-          console.error('Stripe payment creation error:', error);
+          console.error('Airwallex payment creation error:', error);
           return new Response(JSON.stringify({ 
-            error: 'Stripe payment creation failed', 
+            error: 'Airwallex payment creation failed', 
             details: error.message 
           }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
         }
@@ -547,29 +883,85 @@ serve(async (req) => {
 
       case 'bank_transfer':
       case 'cod':
+        logger.info(EdgeLogCategory.PAYMENT_PROCESSING, `Manual payment method selected: ${gateway}`, {
+          paymentId,
+          userId,
+          metadata: { amount: totalAmount, currency: totalCurrency }
+        });
+
+        paymentMonitoring.completePaymentMonitoring(
+          paymentId,
+          true,
+          undefined,
+          undefined,
+          {
+            gateway,
+            paymentMethod: 'manual'
+          }
+        );
+
         // For manual methods, just return success without transactionId to avoid showing payment status tracker
-        responseData = { success: true };
+        responseData = { success: true, paymentId };
         break;
       
       // TODO: Add cases for other payment gateways (eSewa, Khalti, etc.)
 
       default:
-        return new Response(JSON.stringify({ error: `Unsupported gateway: ${gateway}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }});
+        paymentMonitoring.completePaymentMonitoring(
+          paymentId,
+          false,
+          EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
+          `Unsupported gateway: ${gateway}`
+        );
+        return createErrorResponse(new Error(`Unsupported gateway: ${gateway}`), 400, logger);
     }
 
-    return new Response(JSON.stringify(responseData), { 
-      status: 200, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Payment creation completed successfully', {
+      paymentId,
+      userId,
+      metadata: {
+        gateway,
+        responseType: typeof responseData,
+        hasTransactionId: !!(responseData.transactionId)
+      }
     });
 
+    return createSuccessResponse(responseData, 200, logger, { gateway, paymentId });
+
+    } catch (error) {
+      // Note: paymentRequest and paymentId may not be available in scope here
+      logger.error(
+        EdgeLogCategory.EDGE_FUNCTION,
+        'Unexpected error in payment creation',
+        error instanceof Error ? error : new Error('Unknown payment creation error')
+      );
+
+      return createErrorResponse(
+        error instanceof Error ? error : new Error('Internal server error'),
+        500,
+        logger
+      );
+    }
+  }, req);
+    
+    // Add CORS headers to the response from withEdgeMonitoring
+    return addCorsHeaders(response);
   } catch (error) {
-    console.error('Payment creation error:', error)
+    console.error('Function error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify({ error: error.message || 'Internal server error' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
-    )
+    );
+  }
+  
+  // Helper function to add CORS headers to any response
+  function addCorsHeaders(response: Response): Response {
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+    return response;
   }
 }) 

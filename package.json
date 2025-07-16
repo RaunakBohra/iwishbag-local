@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "dev:local": "vite --mode development",
+    "dev:local": "npm run db:start && vite --mode development",
     "dev:cloud": "vite --mode production",
     "build": "tsc && vite build",
     "build:dev": "vite build --mode development",
@@ -17,7 +17,15 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "db:start": "supabase start && npm run db:verify-schema",
+    "db:stop": "supabase stop",
+    "db:reset": "./reset-db.sh",
+    "db:reset:old": "supabase db reset && npm run db:verify-schema",
+    "db:verify-schema": "./fix-database-schema.sh local",
+    "validate-schema": "node scripts/validate-schema-sync.js",
+    "pre-deploy": "npm run validate-schema && npm run build",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -42,7 +50,7 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "@stripe/react-stripe-js": "^3.7.0",
     "@stripe/stripe-js": "^7.4.0",
-    "@supabase/supabase-js": "^2.50.0",
+    "@supabase/supabase-js": "^2.51.0",
     "@tanstack/react-query": "^5.80.7",
     "@tanstack/react-query-devtools": "^5.80.7",
     "@types/node-fetch": "^2.6.12",

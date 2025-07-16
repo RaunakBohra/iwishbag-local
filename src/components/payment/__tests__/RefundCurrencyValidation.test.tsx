@@ -1,27 +1,45 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { RefundManagementModal } from '../RefundManagementModal';
 import { currencyService } from '@/services/CurrencyService';
+import type { Tables } from '@/integrations/supabase/types';
 
 // Mock dependencies
-jest.mock('@/integrations/supabase/client');
-jest.mock('@/services/CurrencyService');
-jest.mock('@/hooks/use-toast', () => ({
+vi.mock('@/integrations/supabase/client');
+vi.mock('@/services/CurrencyService');
+vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
-    toast: jest.fn()
+    toast: vi.fn()
   })
 }));
-jest.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'admin-user-id' },
     userProfile: { id: 'admin-profile-id', role: 'admin' }
   })
 }));
 
-const mockSupabase = supabase as jest.Mocked<typeof supabase>;
-const mockCurrencyService = currencyService as jest.Mocked<typeof currencyService>;
+type MockSupabaseClient = {
+  from: ReturnType<typeof vi.fn>;
+  auth: {
+    getUser: ReturnType<typeof vi.fn>;
+  };
+};
+
+type MockCurrencyService = {
+  getCurrencySymbol: ReturnType<typeof vi.fn>;
+  getCurrencyName: ReturnType<typeof vi.fn>;
+  formatAmount: ReturnType<typeof vi.fn>;
+  formatAmountSync: ReturnType<typeof vi.fn>;
+  isValidPaymentAmountSync: ReturnType<typeof vi.fn>;
+  isSupportedByPaymentGateway: ReturnType<typeof vi.fn>;
+};
+
+const mockSupabase = supabase as unknown as MockSupabaseClient;
+const mockCurrencyService = currencyService as unknown as MockCurrencyService;
 
 const createQueryClient = () => new QueryClient({
   defaultOptions: {
@@ -40,7 +58,7 @@ const renderWithQueryClient = (component: React.ReactElement) => {
 };
 
 // Test data
-const mockQuote = {
+const mockQuote: Partial<Tables<'quotes'>> = {
   id: 'test-quote-id',
   final_total: 1000,
   final_currency: 'USD',
@@ -49,7 +67,7 @@ const mockQuote = {
   user_id: 'customer-user-id'
 };
 
-const mockSingleCurrencyPayments = [
+const mockSingleCurrencyPayments: Partial<Tables<'payment_ledger'>>[] = [
   {
     id: 'payment-1',
     quote_id: 'test-quote-id',
@@ -90,7 +108,7 @@ const mockMultiCurrencyPayments = [
 
 describe('Refund Currency Validation', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Setup currency service mocks
     mockCurrencyService.getCurrencySymbol.mockImplementation((code) => {
@@ -116,9 +134,9 @@ describe('Refund Currency Validation', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: mockSingleCurrencyPayments,
                   error: null
                 })
@@ -127,24 +145,24 @@ describe('Refund Currency Validation', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuote as any} 
+          quote={mockQuote as Tables<'quotes'>} 
         />
       );
 
@@ -170,9 +188,9 @@ describe('Refund Currency Validation', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: mockSingleCurrencyPayments,
                   error: null
                 })
@@ -181,24 +199,24 @@ describe('Refund Currency Validation', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuote as any} 
+          quote={mockQuote as Tables<'quotes'>} 
         />
       );
 
@@ -219,9 +237,9 @@ describe('Refund Currency Validation', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: mockSingleCurrencyPayments, // USD payments
                   error: null
                 })
@@ -230,24 +248,24 @@ describe('Refund Currency Validation', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuote as any} 
+          quote={mockQuote as Tables<'quotes'>} 
         />
       );
 
@@ -267,9 +285,9 @@ describe('Refund Currency Validation', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: mockMultiCurrencyPayments,
                   error: null
                 })
@@ -278,24 +296,24 @@ describe('Refund Currency Validation', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuote as any} 
+          quote={mockQuote as Tables<'quotes'>} 
         />
       );
 
@@ -317,9 +335,9 @@ describe('Refund Currency Validation', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: mockMultiCurrencyPayments,
                   error: null
                 })
@@ -328,24 +346,24 @@ describe('Refund Currency Validation', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuote as any} 
+          quote={mockQuote as Tables<'quotes'>} 
         />
       );
 
@@ -361,9 +379,9 @@ describe('Refund Currency Validation', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: mockMultiCurrencyPayments,
                   error: null
                 })
@@ -372,24 +390,24 @@ describe('Refund Currency Validation', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuote as any} 
+          quote={mockQuote as Tables<'quotes'>} 
         />
       );
 
@@ -454,9 +472,9 @@ describe('Refund Currency Validation', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: payuPayment,
                   error: null
                 })
@@ -465,24 +483,24 @@ describe('Refund Currency Validation', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuote as any} 
+          quote={mockQuote as Tables<'quotes'>} 
         />
       );
 
@@ -511,9 +529,9 @@ describe('Refund Currency Validation', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: stripePayment,
                   error: null
                 })
@@ -522,24 +540,24 @@ describe('Refund Currency Validation', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuote as any} 
+          quote={mockQuote as Tables<'quotes'>} 
         />
       );
 
@@ -592,9 +610,9 @@ describe('Refund Currency Validation', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: mockSingleCurrencyPayments,
                   error: null
                 })
@@ -603,24 +621,24 @@ describe('Refund Currency Validation', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuote as any} 
+          quote={mockQuote as Tables<'quotes'>} 
         />
       );
 
@@ -660,9 +678,9 @@ describe('Refund Currency Validation', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: [], // No payments found
                   error: null
                 })
@@ -671,24 +689,24 @@ describe('Refund Currency Validation', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuote as any} 
+          quote={mockQuote as Tables<'quotes'>} 
         />
       );
 
@@ -704,23 +722,23 @@ describe('Refund Currency Validation', () => {
 
     test('should handle database errors gracefully', async () => {
       mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({
               data: null,
               error: new Error('Database connection failed')
             })
           })
         })
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuote as any} 
+          quote={mockQuote as Tables<'quotes'>} 
         />
       );
 
@@ -743,9 +761,9 @@ describe('Refund Currency Validation', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: zeroPayment,
                   error: null
                 })
@@ -754,24 +772,24 @@ describe('Refund Currency Validation', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuote as any} 
+          quote={mockQuote as Tables<'quotes'>} 
         />
       );
 

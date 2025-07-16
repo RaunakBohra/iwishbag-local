@@ -1,25 +1,42 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedPaymentModal } from '../UnifiedPaymentModal';
 import { RefundManagementModal } from '../RefundManagementModal';
 import { PaymentManagementWidget } from '../../admin/PaymentManagementWidget';
 import { currencyService } from '@/services/CurrencyService';
+import type { Tables } from '@/integrations/supabase/types';
 
 // Mock dependencies
-jest.mock('@/integrations/supabase/client');
-jest.mock('@/services/CurrencyService');
-jest.mock('@/hooks/use-toast');
-jest.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/integrations/supabase/client');
+vi.mock('@/services/CurrencyService');
+vi.mock('@/hooks/use-toast');
+vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'test-user-id' },
     userProfile: { id: 'test-profile-id', role: 'admin' }
   })
 }));
 
-const mockSupabase = supabase as jest.Mocked<typeof supabase>;
-const mockCurrencyService = currencyService as jest.Mocked<typeof currencyService>;
+type MockSupabaseClient = {
+  from: ReturnType<typeof vi.fn>;
+  auth: {
+    getUser: ReturnType<typeof vi.fn>;
+  };
+};
+
+type MockCurrencyService = {
+  getCurrencySymbol: ReturnType<typeof vi.fn>;
+  getCurrencyName: ReturnType<typeof vi.fn>;
+  formatAmount: ReturnType<typeof vi.fn>;
+  isValidPaymentAmountSync: ReturnType<typeof vi.fn>;
+  isSupportedByPaymentGateway: ReturnType<typeof vi.fn>;
+};
+
+const mockSupabase = supabase as unknown as MockSupabaseClient;
+const mockCurrencyService = currencyService as unknown as MockCurrencyService;
 
 const createQueryClient = () => new QueryClient({
   defaultOptions: {
@@ -38,7 +55,7 @@ const renderWithQueryClient = (component: React.ReactElement) => {
 };
 
 // Mock quote with multi-currency payments
-const mockQuoteWithMultiCurrency = {
+const mockQuoteWithMultiCurrency: Partial<Tables<'quotes'>> = {
   id: 'test-quote-id',
   final_total: 1000,
   final_currency: 'USD',
@@ -47,7 +64,7 @@ const mockQuoteWithMultiCurrency = {
   user_id: 'test-user-id'
 };
 
-const mockPaymentLedgerData = [
+const mockPaymentLedgerData: Partial<Tables<'payment_ledger'>>[] = [
   {
     id: 'payment-1',
     quote_id: 'test-quote-id',
@@ -70,7 +87,7 @@ const mockPaymentLedgerData = [
 
 describe('Payment Currency Handling', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Setup currency service mocks
     mockCurrencyService.getCurrencySymbol.mockImplementation((code) => {
@@ -96,24 +113,24 @@ describe('Payment Currency Handling', () => {
     test('should detect and display multi-currency payments in PaymentManagementWidget', async () => {
       // Mock supabase queries
       mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              limit: jest.fn().mockReturnValue({
-                maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null })
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
               })
             })
           })
         })
-      }) as any;
+      });
 
       // Mock payment ledger query
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: mockPaymentLedgerData,
                   error: null
                 })
@@ -122,20 +139,20 @@ describe('Payment Currency Handling', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                limit: jest.fn().mockReturnValue({
-                  maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null })
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                limit: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
                 })
               })
             })
           })
         };
-      }) as any;
+      });
 
       renderWithQueryClient(
-        <PaymentManagementWidget quote={mockQuoteWithMultiCurrency as any} />
+        <PaymentManagementWidget quote={mockQuoteWithMultiCurrency as Tables<'quotes'>} />
       );
 
       await waitFor(() => {
@@ -148,7 +165,7 @@ describe('Payment Currency Handling', () => {
     });
 
     test('should show currency mismatch warnings', async () => {
-      const quoteWithMismatch = {
+      const quoteWithMismatch: Partial<Tables<'quotes'>> = {
         ...mockQuoteWithMultiCurrency,
         final_currency: 'USD'
       };
@@ -157,11 +174,11 @@ describe('Payment Currency Handling', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_transactions') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockReturnValue({
-                  limit: jest.fn().mockReturnValue({
-                    maybeSingle: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockReturnValue({
+                    maybeSingle: vi.fn().mockResolvedValue({
                       data: { 
                         id: 'tx-1', 
                         currency: 'INR',
@@ -176,19 +193,19 @@ describe('Payment Currency Handling', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
       renderWithQueryClient(
-        <PaymentManagementWidget quote={quoteWithMismatch as any} />
+        <PaymentManagementWidget quote={quoteWithMismatch as Tables<'quotes'>} />
       );
 
       await waitFor(() => {
@@ -201,25 +218,25 @@ describe('Payment Currency Handling', () => {
 
   describe('Payment Recording Validation', () => {
     test('should validate currency selection in UnifiedPaymentModal', async () => {
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       // Mock Supabase queries for UnifiedPaymentModal
       mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({
               data: [],
               error: null
             })
           })
         })
-      }) as any;
+      });
 
       renderWithQueryClient(
         <UnifiedPaymentModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuoteWithMultiCurrency as any} 
+          quote={mockQuoteWithMultiCurrency as Tables<'quotes'>} 
         />
       );
 
@@ -247,13 +264,13 @@ describe('Payment Currency Handling', () => {
         return `${currency}${amount}`;
       });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <UnifiedPaymentModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuoteWithMultiCurrency as any} 
+          quote={mockQuoteWithMultiCurrency as Tables<'quotes'>} 
         />
       );
 
@@ -268,15 +285,15 @@ describe('Payment Currency Handling', () => {
 
   describe('Refund Currency Validation', () => {
     test('should prevent mixed currency refunds', async () => {
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       // Mock payment ledger with multiple currencies
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: mockPaymentLedgerData, // Contains both USD and INR
                   error: null
                 })
@@ -285,22 +302,22 @@ describe('Payment Currency Handling', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuoteWithMultiCurrency as any} 
+          quote={mockQuoteWithMultiCurrency as Tables<'quotes'>} 
         />
       );
 
@@ -329,9 +346,9 @@ describe('Payment Currency Handling', () => {
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: singleCurrencyPayment,
                   error: null
                 })
@@ -340,24 +357,24 @@ describe('Payment Currency Handling', () => {
           };
         }
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
                 data: [],
                 error: null
               })
             })
           })
         };
-      }) as any;
+      });
 
-      const onClose = jest.fn();
+      const onClose = vi.fn();
 
       renderWithQueryClient(
         <RefundManagementModal 
           isOpen={true} 
           onClose={onClose} 
-          quote={mockQuoteWithMultiCurrency as any} 
+          quote={mockQuoteWithMultiCurrency as Tables<'quotes'>} 
         />
       );
 
@@ -407,7 +424,7 @@ describe('Payment Currency Handling', () => {
       mockCurrencyService.formatAmount.mockReturnValue('$1,234.56');
 
       renderWithQueryClient(
-        <PaymentManagementWidget quote={mockQuoteWithMultiCurrency as any} />
+        <PaymentManagementWidget quote={mockQuoteWithMultiCurrency as Tables<'quotes'>} />
       );
 
       // The formatting should be consistent
@@ -429,18 +446,18 @@ describe('Payment Currency Handling', () => {
   describe('Error Scenarios', () => {
     test('should handle database errors gracefully', async () => {
       mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({
               data: null,
               error: new Error('Database connection failed')
             })
           })
         })
-      }) as any;
+      });
 
       renderWithQueryClient(
-        <PaymentManagementWidget quote={mockQuoteWithMultiCurrency as any} />
+        <PaymentManagementWidget quote={mockQuoteWithMultiCurrency as Tables<'quotes'>} />
       );
 
       // Should not crash and should handle the error gracefully

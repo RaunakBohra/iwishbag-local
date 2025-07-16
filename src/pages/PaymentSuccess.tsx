@@ -49,20 +49,128 @@ const PaymentSuccess: React.FC = () => {
   useEffect(() => {
     const processPaymentSuccess = async () => {
       try {
-        // Extract payment data from URL parameters
-        const txnid = searchParams.get('txnid');
-        const mihpayid = searchParams.get('mihpayid');
-        const status = searchParams.get('status');
-        const amount = searchParams.get('amount');
-        const productinfo = searchParams.get('productinfo');
-        const firstname = searchParams.get('firstname');
-        const email = searchParams.get('email');
-        const phone = searchParams.get('phone');
-        const hash = searchParams.get('hash');
-        const gateway = searchParams.get('gateway') || 'payu';
-
-        // Validate payment success (handle both 'success' and 'Success' status)
-        if ((status === 'success' || status === 'Success') && txnid) {
+        // First check if this is an Airwallex payment by gateway parameter
+        const gateway = searchParams.get('gateway');
+        const isAirwallexGateway = gateway === 'airwallex';
+        
+        if (isAirwallexGateway) {
+          // Handle Airwallex payment
+          console.log('Processing Airwallex payment success page');
+          
+          // Get stored payment data
+          const storedPaymentDataStr = sessionStorage.getItem('airwallex_payment_pending');
+          let storedPaymentData: any = null;
+          
+          if (storedPaymentDataStr) {
+            try {
+              storedPaymentData = JSON.parse(storedPaymentDataStr);
+              console.log('Found stored Airwallex payment data:', storedPaymentData);
+              
+              // Clear the stored data
+              sessionStorage.removeItem('airwallex_payment_pending');
+              
+              // Check if payment is recent (within 5 minutes)
+              const isRecent = Date.now() - storedPaymentData.timestamp < 5 * 60 * 1000;
+              
+              if (isRecent && storedPaymentData.paymentIntentId) {
+                // We have valid payment data
+                const paymentInfo: PaymentSuccessData = {
+                  transactionId: storedPaymentData.transactionId,
+                  amount: storedPaymentData.amount,
+                  currency: storedPaymentData.currency,
+                  gateway: 'airwallex',
+                  orderId: storedPaymentData.quoteIds?.[0],
+                  customerName: user?.user_metadata?.full_name || 'Customer',
+                  customerEmail: user?.email,
+                  productInfo: `Payment for ${storedPaymentData.quoteIds?.length || 1} item(s)`
+                };
+                
+                setPaymentData(paymentInfo);
+                
+                // The webhook should have already updated the order
+                // Just show success message
+                toast({
+                  title: "Payment Successful!",
+                  description: `Your payment of ${paymentInfo.currency} ${paymentInfo.amount} has been processed successfully.`,
+                });
+                
+                // Invalidate queries to show updated data
+                queryClient.invalidateQueries({ queryKey: ['quotes'] });
+                queryClient.invalidateQueries({ queryKey: ['orders'] });
+                queryClient.invalidateQueries({ queryKey: ['cart'] });
+              } else {
+                // No recent payment data, check database for recent paid quotes
+                console.log('No recent Airwallex payment data found, checking database...');
+                
+                // Show success but suggest checking orders
+                setPaymentData({
+                  transactionId: 'AIRWALLEX_' + Date.now(),
+                  amount: 0,
+                  currency: 'USD',
+                  gateway: 'airwallex'
+                });
+                
+                toast({
+                  title: "Payment Processed",
+                  description: "Your payment has been processed. Please check your orders for confirmation.",
+                });
+              }
+            } catch (e) {
+              console.error('Error processing Airwallex payment data:', e);
+              setPaymentData({
+                transactionId: 'AIRWALLEX_ERROR',
+                amount: 0,
+                currency: 'USD',
+                gateway: 'airwallex'
+              });
+            }
+          } else {
+            // No stored data, but we're on success page - still show success
+            console.log('Airwallex success page without stored data');
+            
+            // Try to get quote information from URL or recent orders
+            const quoteId = searchParams.get('quote_id');
+            const paymentIntentId = searchParams.get('payment_intent');
+            
+            // Create success data
+            const successData: PaymentSuccessData = {
+              transactionId: paymentIntentId || 'AIRWALLEX_' + Date.now(),
+              amount: 0, // Will show as success even without amount
+              currency: 'USD',
+              gateway: 'airwallex',
+              orderId: quoteId || undefined,
+              customerName: user?.user_metadata?.full_name || 'Customer',
+              customerEmail: user?.email,
+              productInfo: 'Airwallex Payment'
+            };
+            
+            setPaymentData(successData);
+            
+            toast({
+              title: "Payment Successful!",
+              description: "Your Airwallex payment has been processed successfully. You can view your order details in the dashboard.",
+            });
+            
+            // Invalidate queries to refresh data
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+          }
+        }
+        // Check for PayU payment parameters
+        else {
+          // Extract PayU payment data from URL parameters
+          const txnid = searchParams.get('txnid');
+          const mihpayid = searchParams.get('mihpayid');
+          const status = searchParams.get('status');
+          const amount = searchParams.get('amount');
+          const productinfo = searchParams.get('productinfo');
+          const firstname = searchParams.get('firstname');
+          const email = searchParams.get('email');
+          const phone = searchParams.get('phone');
+          const hash = searchParams.get('hash');
+          
+          // Validate PayU payment success (handle both 'success' and 'Success' status)
+          if ((status === 'success' || status === 'Success') && txnid) {
           const paymentInfo: PaymentSuccessData = {
             transactionId: txnid,
             amount: parseFloat(amount || '0'),
@@ -96,14 +204,15 @@ const PaymentSuccess: React.FC = () => {
               variant: "default"
             });
           }
-        } else {
-          // Payment failed or cancelled
-          toast({
-            title: "Payment Failed",
-            description: "Your payment could not be processed. Please try again.",
-            variant: "destructive"
-          });
-          navigate('/checkout');
+          } else {
+            // Payment failed or cancelled
+            toast({
+              title: "Payment Failed",
+              description: "Your payment could not be processed. Please try again.",
+              variant: "destructive"
+            });
+            navigate('/checkout');
+          }
         }
       } catch (error) {
         console.error('Error processing payment success:', error);
@@ -307,6 +416,8 @@ const PaymentSuccess: React.FC = () => {
         return <Smartphone className="h-6 w-6" />;
       case 'stripe':
         return <CreditCard className="h-6 w-6" />;
+      case 'airwallex':
+        return <CreditCard className="h-6 w-6" />;
       default:
         return <IndianRupee className="h-6 w-6" />;
     }
@@ -318,6 +429,8 @@ const PaymentSuccess: React.FC = () => {
         return 'PayU';
       case 'stripe':
         return 'Credit Card';
+      case 'airwallex':
+        return 'Airwallex';
       default:
         return gateway;
     }
@@ -465,7 +578,16 @@ const PaymentSuccess: React.FC = () => {
                   <div className="flex justify-between items-center px-4">
                     <span className="font-medium text-gray-600">Amount Paid:</span>
                     <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                      ₹<AnimatedCounter end={paymentData.amount} decimals={2} />
+                      {paymentData.gateway === 'airwallex' && paymentData.amount > 0 ? (
+                        <>
+                          {paymentData.currency === 'USD' ? '$' : paymentData.currency}
+                          <AnimatedCounter end={paymentData.amount} decimals={2} />
+                        </>
+                      ) : paymentData.gateway === 'airwallex' ? (
+                        <span className="text-lg">Processing...</span>
+                      ) : (
+                        <>₹<AnimatedCounter end={paymentData.amount} decimals={2} /></>
+                      )}
                     </span>
                   </div>
                 </div>

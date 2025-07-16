@@ -29,6 +29,10 @@ export default tseslint.config(
       "no-case-declarations": "warn",
       "prefer-const": "warn",
       "@typescript-eslint/no-require-imports": "warn",
+      // Prevent missing imports - especially lucide-react icons
+      "no-undef": "error",
+      // Ensure all imports are properly resolved
+      "import/no-unresolved": "off", // Disabled as we use TypeScript for this
     },
   }
 );

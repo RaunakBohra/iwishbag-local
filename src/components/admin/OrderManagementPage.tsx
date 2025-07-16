@@ -14,7 +14,8 @@ import {
   AlertCircle,
   Receipt,
   TrendingUp,
-  DollarSign
+  DollarSign,
+  Package
 } from "lucide-react";
 
 export const OrderManagementPage = () => {

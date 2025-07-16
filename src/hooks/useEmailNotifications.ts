@@ -91,9 +91,10 @@ export const useEmailNotifications = () => {
         case 'contact_form':
           subject = 'subject' in data ? `Contact Form: ${data.subject}` : 'Contact Form';
           break;
-        default:
+        default: {
           const quoteId = 'quoteId' in data ? data.quoteId : 'N/A';
           subject = `Quote ${quoteId} - ${template.replace('_', ' ').toUpperCase()}`;
+        }
       }
 
       // Use Supabase Edge Function instead of /api/send-email

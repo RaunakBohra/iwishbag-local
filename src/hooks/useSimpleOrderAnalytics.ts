@@ -25,13 +25,21 @@ export const useSimpleOrderAnalytics = () => {
       }
 
       // Get pending payment proofs count
-      const { data: proofs, error: proofsError } = await supabase
-        .from('payment_documents')
-        .select('id')
-        .eq('verified', false);
-      
-      if (proofsError) {
-        console.error('Error fetching payment proofs:', proofsError);
+      // Note: payment_documents table may not exist in local development
+      let proofs = null;
+      try {
+        const { data, error } = await supabase
+          .from('payment_documents')
+          .select('id')
+          .eq('verified', false);
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "relation does not exist"
+          console.error('Error fetching payment proofs:', error);
+        } else {
+          proofs = data;
+        }
+      } catch (err) {
+        console.log('payment_documents table not available in local development');
       }
 
       // Get recent payments (last 7 days) from payment_ledger

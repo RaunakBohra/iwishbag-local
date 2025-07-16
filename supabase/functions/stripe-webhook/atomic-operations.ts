@@ -6,12 +6,15 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno'
 import { SecureLogger } from '../../../src/lib/secureLogger.ts'
+import { EdgeLogger, EdgeLogCategory, logEdgeInfo, logEdgeError } from '../_shared/edge-logging.ts'
+import { EdgePaymentErrorCode } from '../_shared/edge-payment-monitoring.ts'
 
 interface AtomicPaymentResult {
   success: boolean;
   error?: string;
   transactionId?: string;
   affectedQuotes?: string[];
+  quotesUpdated?: number;
 }
 
 interface CustomerDetailsFromStripe {
@@ -29,18 +32,37 @@ interface CustomerDetailsFromStripe {
  */
 export async function processPaymentSuccessAtomic(
   supabaseAdmin: SupabaseClient,
-  paymentIntent: Stripe.PaymentIntent
+  paymentIntent: Stripe.PaymentIntent,
+  logger?: EdgeLogger
 ): Promise<AtomicPaymentResult> {
   const quoteIds = paymentIntent.metadata.quote_ids?.split(',') || []
   const userId = paymentIntent.metadata.user_id
   const amount = paymentIntent.amount / 100
   const currency = paymentIntent.currency.toUpperCase()
 
+  if (logger) {
+    logger.info(EdgeLogCategory.DATABASE_OPERATION, 'Starting atomic payment success processing', {
+      metadata: {
+        paymentIntentId: paymentIntent.id,
+        userId,
+        quoteCount: quoteIds.length,
+        amount,
+        currency
+      }
+    });
+  }
+
   if (!quoteIds.length) {
+    const error = 'No quote IDs found in payment metadata';
+    if (logger) {
+      logger.error(EdgeLogCategory.DATABASE_OPERATION, error, new Error(error), {
+        metadata: { paymentIntentId: paymentIntent.id }
+      });
+    }
     return {
       success: false,
-      error: 'No quote IDs found in payment metadata'
-    }
+      error
+    };
   }
 
   // Extract customer details securely
@@ -53,9 +75,9 @@ export async function processPaymentSuccessAtomic(
     shipping_address: paymentIntent.shipping?.address || undefined,
     billing_details: paymentIntent.charges?.data?.[0]?.billing_details || undefined,
     customer_id: paymentIntent.customer || undefined
-  }
+  };
 
-  // Log operation securely
+  // Log operation securely (preserve existing SecureLogger)
   SecureLogger.logWebhookProcessing(
     'payment_intent.succeeded',
     {
@@ -69,9 +91,14 @@ export async function processPaymentSuccessAtomic(
       phone: customerDetails.phone,
       address: customerDetails.shipping_address
     }
-  )
+  );
 
   try {
+    // Start performance tracking for database operation
+    if (logger) {
+      logger.startPerformance('db_payment_success_atomic');
+    }
+
     // Use database function for atomic operations
     const { data: result, error } = await supabaseAdmin.rpc('process_stripe_payment_success', {
       p_payment_intent_id: paymentIntent.id,
@@ -84,30 +111,83 @@ export async function processPaymentSuccessAtomic(
         customer_details: customerDetails
       },
       p_customer_details: customerDetails
-    })
+    });
+
+    // End performance tracking
+    if (logger) {
+      logger.endPerformance('db_payment_success_atomic', EdgeLogCategory.DATABASE_OPERATION, {
+        metadata: {
+          paymentIntentId: paymentIntent.id,
+          success: !error,
+          quoteCount: quoteIds.length
+        }
+      });
+    }
 
     if (error) {
-      console.error('Atomic payment processing failed:', error)
+      if (logger) {
+        logger.error(
+          EdgeLogCategory.DATABASE_OPERATION,
+          'Atomic payment processing database operation failed',
+          new Error(error.message),
+          {
+            metadata: {
+              paymentIntentId: paymentIntent.id,
+              userId,
+              quoteIds,
+              rpcFunction: 'process_stripe_payment_success'
+            }
+          }
+        );
+      }
       return {
         success: false,
         error: `Database operation failed: ${error.message}`
-      }
+      };
+    }
+
+    if (logger) {
+      logger.info(EdgeLogCategory.DATABASE_OPERATION, 'Payment success processing completed', {
+        metadata: {
+          paymentIntentId: paymentIntent.id,
+          userId,
+          quotesUpdated: quoteIds.length,
+          amount,
+          currency
+        }
+      });
     }
 
     return {
       success: true,
       transactionId: paymentIntent.id,
-      affectedQuotes: quoteIds
-    }
+      affectedQuotes: quoteIds,
+      quotesUpdated: quoteIds.length
+    };
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Atomic payment processing error:', errorMessage)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    if (logger) {
+      logger.endPerformance('db_payment_success_atomic', EdgeLogCategory.DATABASE_OPERATION);
+      logger.error(
+        EdgeLogCategory.DATABASE_OPERATION,
+        'Atomic payment processing exception',
+        error instanceof Error ? error : new Error(errorMessage),
+        {
+          metadata: {
+            paymentIntentId: paymentIntent.id,
+            userId,
+            operation: 'process_stripe_payment_success'
+          }
+        }
+      );
+    }
     
     return {
       success: false,
       error: `Payment processing failed: ${errorMessage}`
-    }
+    };
   }
 }
 
@@ -116,7 +196,8 @@ export async function processPaymentSuccessAtomic(
  */
 export async function processPaymentFailureAtomic(
   supabaseAdmin: SupabaseClient,
-  paymentIntent: Stripe.PaymentIntent
+  paymentIntent: Stripe.PaymentIntent,
+  logger?: EdgeLogger
 ): Promise<AtomicPaymentResult> {
   const quoteIds = paymentIntent.metadata.quote_ids?.split(',') || []
   const userId = paymentIntent.metadata.user_id
@@ -162,7 +243,8 @@ export async function processPaymentFailureAtomic(
  */
 export async function processChargeSucceededAtomic(
   supabaseAdmin: SupabaseClient,
-  charge: Stripe.Charge
+  charge: Stripe.Charge,
+  logger?: EdgeLogger
 ): Promise<AtomicPaymentResult> {
   if (!charge.payment_intent) {
     return {
@@ -214,7 +296,8 @@ export async function processChargeSucceededAtomic(
  */
 export async function processRefundAtomic(
   supabaseAdmin: SupabaseClient,
-  charge: Stripe.Charge
+  charge: Stripe.Charge,
+  logger?: EdgeLogger
 ): Promise<AtomicPaymentResult> {
   if (!charge.payment_intent || charge.amount_refunded <= 0) {
     return {

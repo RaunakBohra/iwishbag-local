@@ -179,6 +179,15 @@ export interface PaymentResponse {
   transaction_id?: string;
   error?: string;
   fallback_methods?: PaymentGateway[];
+  client_secret?: string;
+  paymentIntentId?: string;
+  airwallexData?: {
+    intent_id: string;
+    client_secret: string;
+    currency: string;
+    amount: number;
+    env: 'demo' | 'prod';
+  };
 }
 
 // Country-specific payment methods
