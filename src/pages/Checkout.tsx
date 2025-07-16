@@ -1069,6 +1069,35 @@ export default function Checkout() {
           });
           setIsProcessing(false);
         }
+      } else if (requiresQRCode(paymentMethod) && paymentResponse.qrCode) {
+        // QR-based payments (Khalti, eSewa, Fonepay)
+        console.log('🎯 QR payment initiated:', paymentMethod);
+        
+        // Update quote status to processing for QR payments
+        const statusConfig = findStatusForPaymentMethod(paymentMethod);
+        const processingStatus = statusConfig?.name || 'processing';
+        
+        console.log(`Setting ${paymentMethod} quotes to ${processingStatus} status for QR payment`);
+        
+        await updateQuotesMutation.mutateAsync({ 
+          ids: cartQuoteIds, 
+          status: processingStatus, 
+          method: paymentMethod,
+          paymentStatus: 'unpaid' // Will be updated to 'paid' by webhook
+        });
+        
+        // Show QR modal
+        setQrPaymentData({
+          qrCodeUrl: paymentResponse.qrCode,
+          transactionId: paymentResponse.transactionId || `${paymentMethod.toUpperCase()}_${Date.now()}`,
+          gateway: paymentMethod
+        });
+        setShowQRModal(true);
+        
+        if (paymentMethod === 'khalti') {
+          // For Khalti, redirect to payment URL for better UX
+          window.location.href = paymentResponse.url;
+        }
       } else if (paymentResponse.url) {
         // For redirect-based payments (PayU Hosted Checkout)
         // First update quote status to processing for payment gateways

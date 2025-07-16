@@ -632,6 +632,230 @@ serve(async (req) => {
         }
         break;
 
+      case 'khalti':
+        try {
+          logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Starting Khalti payment creation', {
+            paymentId,
+            userId,
+            metadata: { amount: totalAmount, currency: totalCurrency }
+          });
+
+          // Fetch Khalti config from payment_gateways table
+          const { data: khaltiGateway, error: khaltiGatewayError } = await paymentMonitoring.monitorGatewayCall(
+            'fetch_khalti_config',
+            'khalti',
+            async () => {
+              return await supabaseAdmin
+                .from('payment_gateways')
+                .select('config, test_mode')
+                .eq('code', 'khalti')
+                .single();
+            },
+            paymentId
+          );
+
+          if (khaltiGatewayError || !khaltiGateway) {
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+              'Khalti gateway config missing'
+            );
+            return createErrorResponse(new Error('Khalti gateway config missing'), 500, logger);
+          }
+
+          const config = khaltiGateway.config || {};
+          const testMode = khaltiGateway.test_mode;
+          const khaltiConfig = {
+            public_key: testMode ? config.test_public_key : config.live_public_key,
+            secret_key: testMode ? config.test_secret_key : config.live_secret_key,
+            base_url: testMode ? config.sandbox_base_url : config.production_base_url
+          };
+
+          if (!khaltiConfig.public_key || !khaltiConfig.secret_key) {
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+              'Khalti API keys missing'
+            );
+            return createErrorResponse(new Error('Khalti configuration missing'), 500, logger);
+          }
+
+          // Get Nepal's exchange rate for USD to NPR conversion
+          const { data: nepalSettings, error: countryError } = await supabaseAdmin
+            .from('country_settings')
+            .select('rate_from_usd')
+            .eq('code', 'NP')
+            .single();
+
+          if (countryError || !nepalSettings) {
+            console.error('Error fetching Nepal settings:', countryError);
+            return createErrorResponse(new Error('Failed to get exchange rate for NPR conversion'), 500, logger);
+          }
+
+          // Convert amount to NPR if needed
+          const exchangeRate = nepalSettings.rate_from_usd;
+          let amountInNPR: number;
+          
+          if (totalCurrency === 'NPR') {
+            amountInNPR = totalAmount;
+            console.log(`Amount is already in NPR: ${amountInNPR}`);
+          } else {
+            amountInNPR = totalAmount * exchangeRate;
+            console.log(`Converting ${totalAmount} ${totalCurrency} to ${amountInNPR} NPR (rate: ${exchangeRate})`);
+          }
+
+          // Convert to paisa (Khalti expects amount in paisa: 1 NPR = 100 paisa)
+          const amountInPaisa = Math.round(amountInNPR * 100);
+          
+          // Check minimum amount (Khalti requires at least 1000 paisa = 10 NPR)
+          if (amountInPaisa < 1000) {
+            return createErrorResponse(new Error('Amount too small for Khalti. Minimum amount is NPR 10.'), 400, logger);
+          }
+
+          // Get customer information
+          let customerName = customerInfo?.name || 'Customer';
+          let customerEmail = customerInfo?.email || 'customer@example.com';
+          let customerPhone = customerInfo?.phone || '9999999999';
+
+          // If customerInfo not provided, try to get from quotes
+          if (!customerInfo && quotesToUse && quotesToUse.length > 0 && !quoteIds.some(id => id.startsWith('test-'))) {
+            const { data: fullQuotes } = await supabaseAdmin
+              .from('quotes')
+              .select('email, customer_name, shipping_address')
+              .in('id', quoteIds)
+              .limit(1);
+
+            if (fullQuotes && fullQuotes.length > 0) {
+              const firstQuote = fullQuotes[0];
+              customerEmail = firstQuote.email || customerEmail;
+              customerName = firstQuote.customer_name || customerName;
+              
+              if (firstQuote.shipping_address && typeof firstQuote.shipping_address === 'object') {
+                const shippingAddress = firstQuote.shipping_address as Record<string, unknown>;
+                customerPhone = shippingAddress.phone || customerPhone;
+              }
+            }
+          }
+
+          // Generate unique purchase order ID
+          const purchaseOrderId = `KHALTI_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
+          // Create product info
+          const productNames = quotesToUse.map(q => q.product_name || 'Product').join(', ');
+          const purchaseOrderName = `Order: ${productNames} (${quoteIds.join(',')})`;
+          
+          const baseUrl = success_url.includes('localhost') 
+            ? 'http://localhost:8080' 
+            : 'https://whyteclub.com';
+          
+          const khaltiReturnUrl = `${baseUrl}/api/khalti-callback`;
+          const khaltiWebsiteUrl = baseUrl;
+
+          // Prepare Khalti payment initiation request
+          const khaltiRequest = {
+            return_url: khaltiReturnUrl,
+            website_url: khaltiWebsiteUrl,
+            amount: amountInPaisa,
+            purchase_order_id: purchaseOrderId,
+            purchase_order_name: purchaseOrderName,
+            customer_info: {
+              name: customerName,
+              email: customerEmail,
+              phone: customerPhone
+            }
+          };
+
+          // Initiate payment with Khalti
+          const khaltiResponse = await fetch(`${khaltiConfig.base_url}epayment/initiate/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Key ${khaltiConfig.secret_key}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(khaltiRequest)
+          });
+
+          if (!khaltiResponse.ok) {
+            const errorData = await khaltiResponse.json();
+            console.error('Khalti API error:', errorData);
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
+              `Khalti API error: ${JSON.stringify(errorData)}`
+            );
+            return createErrorResponse(new Error(`Khalti API error: ${JSON.stringify(errorData)}`), 500, logger);
+          }
+
+          const khaltiData = await khaltiResponse.json();
+          
+          // Log transaction details (non-sensitive)
+          logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Khalti payment created successfully', {
+            paymentId,
+            userId,
+            metadata: {
+              purchaseOrderId,
+              amountNPR: amountInNPR,
+              amountPaisa: amountInPaisa,
+              originalAmount: totalAmount,
+              originalCurrency: totalCurrency,
+              exchangeRate: totalCurrency === 'NPR' ? 1 : exchangeRate,
+              testMode,
+              pidx: khaltiData.pidx
+            }
+          });
+
+          // Complete payment monitoring
+          paymentMonitoring.completePaymentMonitoring(
+            paymentId,
+            true,
+            EdgePaymentErrorCode.PAYMENT_PROCESSING_SUCCESS,
+            'Khalti payment initiated successfully'
+          );
+
+          responseData = {
+            success: true,
+            url: khaltiData.payment_url,
+            transactionId: khaltiData.pidx,
+            gateway: 'khalti',
+            amount: amountInNPR,
+            currency: 'NPR',
+            qrCode: khaltiData.payment_url, // Khalti payment URL can be used for QR
+            khaltiData: {
+              pidx: khaltiData.pidx,
+              payment_url: khaltiData.payment_url,
+              expires_at: khaltiData.expires_at,
+              purchase_order_id: purchaseOrderId
+            }
+          };
+
+        } catch (error) {
+          console.error('Khalti payment creation error:', error);
+          paymentMonitoring.completePaymentMonitoring(
+            paymentId,
+            false,
+            EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
+            error instanceof Error ? error.message : 'Unknown error'
+          );
+
+          logger.error(EdgeLogCategory.PAYMENT_PROCESSING, 'Khalti payment creation failed', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            paymentId,
+            userId,
+            metadata: { gateway: 'khalti', amount: totalAmount, currency: totalCurrency }
+          });
+
+          return createErrorResponse(
+            error instanceof Error ? error : new Error('Khalti payment creation failed'),
+            500,
+            logger,
+            { gateway: 'khalti', paymentId }
+          );
+        }
+        break;
+
       case 'stripe':
         try {
           logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Starting Stripe payment creation', {

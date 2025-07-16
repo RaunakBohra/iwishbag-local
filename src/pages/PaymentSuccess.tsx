@@ -156,6 +156,49 @@ const PaymentSuccess: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['orders'] });
           }
         }
+        // Check for Khalti payment parameters
+        else if (gateway === 'khalti') {
+          console.log('Processing Khalti payment success page');
+          
+          const pidx = searchParams.get('pidx');
+          const txnId = searchParams.get('txn');
+          const amount = searchParams.get('amount');
+          const mobile = searchParams.get('mobile');
+          
+          if (pidx) {
+            const paymentInfo: PaymentSuccessData = {
+              transactionId: txnId || pidx,
+              amount: amount ? parseFloat(amount) / 100 : 0, // Convert paisa to NPR
+              currency: 'NPR',
+              gateway: 'khalti',
+              customerName: user?.user_metadata?.full_name || 'Customer',
+              customerEmail: user?.email,
+              customerPhone: mobile || undefined,
+              productInfo: 'Khalti Payment'
+            };
+
+            setPaymentData(paymentInfo);
+            
+            // The webhook should have already updated the order status
+            // Just show success message
+            toast({
+              title: "Payment Successful!",
+              description: `Your Khalti payment of NPR ${paymentInfo.amount} has been processed successfully.`,
+            });
+            
+            // Invalidate queries to refresh data
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            queryClient.invalidateQueries({ queryKey: ['cart'] });
+          } else {
+            console.error('Missing Khalti pidx parameter');
+            toast({
+              title: "Payment Verification Failed",
+              description: "Could not verify Khalti payment. Please contact support.",
+              variant: "destructive"
+            });
+          }
+        }
         // Check for PayU payment parameters
         else {
           // Extract PayU payment data from URL parameters
@@ -418,6 +461,8 @@ const PaymentSuccess: React.FC = () => {
         return <CreditCard className="h-6 w-6" />;
       case 'airwallex':
         return <CreditCard className="h-6 w-6" />;
+      case 'khalti':
+        return <Smartphone className="h-6 w-6" />;
       default:
         return <IndianRupee className="h-6 w-6" />;
     }
@@ -431,6 +476,8 @@ const PaymentSuccess: React.FC = () => {
         return 'Credit Card';
       case 'airwallex':
         return 'Airwallex';
+      case 'khalti':
+        return 'Khalti';
       default:
         return gateway;
     }
@@ -585,6 +632,8 @@ const PaymentSuccess: React.FC = () => {
                         </>
                       ) : paymentData.gateway === 'airwallex' ? (
                         <span className="text-lg">Processing...</span>
+                      ) : paymentData.gateway === 'khalti' ? (
+                        <>NPR <AnimatedCounter end={paymentData.amount} decimals={2} /></>
                       ) : (
                         <>₹<AnimatedCounter end={paymentData.amount} decimals={2} /></>
                       )}
