@@ -1,17 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Database } from '../../../src/integrations/supabase/types.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Max-Age': '86400',
-};
+import { createCorsHeaders } from '../_shared/cors.ts';
 
 const EXCHANGERATE_API_BASE_URL = "https://v6.exchangerate-api.com/v6/";
 
 serve(async (req) => {
+  const corsHeaders = createCorsHeaders(req);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -23,20 +19,20 @@ serve(async (req) => {
   try {
     // Validate request method
     if (req.method !== 'POST') {
-      return createErrorResponse('Method not allowed', 405);
+      return createErrorResponse('Method not allowed', 405, corsHeaders);
     }
 
     // Authenticate using service role key
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return createErrorResponse('No authorization header provided', 401);
+      return createErrorResponse('No authorization header provided', 401, corsHeaders);
     }
 
     const token = authHeader.replace('Bearer ', '');
     const expectedServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!expectedServiceKey || token !== expectedServiceKey) {
-      return createErrorResponse('Invalid service role key', 401);
+      return createErrorResponse('Invalid service role key', 401, corsHeaders);
     }
 
     console.log("🔐 Service role authenticated for exchange rate update");
@@ -51,7 +47,7 @@ serve(async (req) => {
     const apiKey = Deno.env.get('EXCHANGERATE_API_KEY');
     if (!apiKey) {
       console.error("❌ EXCHANGERATE_API_KEY not configured." );
-      return createErrorResponse('Exchange Rate API key not configured.', 500);
+      return createErrorResponse('Exchange Rate API key not configured.', 500, corsHeaders);
     }
 
     // Fetch latest exchange rates with USD as base
@@ -61,13 +57,13 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ Failed to fetch exchange rates:  ${response.status} - ${errorText}`);
-      return createErrorResponse(`Failed to fetch exchange rates: ${response.statusText}`, 500);
+      return createErrorResponse(`Failed to fetch exchange rates: ${response.statusText}`, 500, corsHeaders);
     }
 
     const data = await response.json();
     if (data.result !== 'success') {
       console.error("❌ Exchange Rate API returned an error:" , data);
-      return createErrorResponse(`Exchange Rate API error: ${data.result}`, 500);
+      return createErrorResponse(`Exchange Rate API error: ${data.result}`, 500, corsHeaders);
     }
 
     const rates: Record<string, number> = data.conversion_rates;
@@ -81,7 +77,7 @@ serve(async (req) => {
 
     if (fetchError) {
       console.error("❌ Error fetching country settings:" , fetchError);
-      return createErrorResponse('Failed to fetch country settings.', 500);
+      return createErrorResponse('Failed to fetch country settings.', 500, corsHeaders);
     }
 
     if (!countrySettings || countrySettings.length === 0) {
@@ -157,7 +153,7 @@ serve(async (req) => {
   }
 });
 
-function createErrorResponse(message: string, status: number): Response {
+function createErrorResponse(message: string, status: number, corsHeaders: Record<string, string>): Response {
   return new Response(JSON.stringify({
     success: false,
     error: message,

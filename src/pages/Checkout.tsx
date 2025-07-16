@@ -49,6 +49,7 @@ import { QRPaymentModal } from "@/components/payment/QRPaymentModal";
 import { PaymentStatusTracker } from "@/components/payment/PaymentStatusTracker";
 import { PaymentGateway, PaymentRequest } from "@/types/payment";
 import { PayUDebugger, validatePayUFormData } from "@/utils/payuDebug";
+import { PayUFormSubmitter, PayUFormData } from "@/utils/payuFormSubmitter";
 import { cn } from "@/lib/utils";
 import { 
   quoteAddressToCheckoutForm, 
@@ -735,12 +736,44 @@ export default function Checkout() {
       });
     }
     
-    // Create a temporary form element
+    // Create form element - make it visible to avoid browser blocking
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = url;
-    form.style.display = 'none';
-    form.target = '_self'; // Ensure it opens in same window
+    form.target = '_self';
+    
+    // Style the form to be visible but unobtrusive
+    form.style.position = 'fixed';
+    form.style.top = '50%';
+    form.style.left = '50%';
+    form.style.transform = 'translate(-50%, -50%)';
+    form.style.zIndex = '10000';
+    form.style.padding = '20px';
+    form.style.backgroundColor = '#f0f8ff';
+    form.style.border = '2px solid #4CAF50';
+    form.style.borderRadius = '10px';
+    form.style.textAlign = 'center';
+    form.style.fontFamily = 'Arial, sans-serif';
+    
+    // Add a submit button and instructions
+    const instructions = document.createElement('div');
+    instructions.innerHTML = `
+      <h3 style="margin: 0 0 10px 0; color: #333;">Redirecting to PayU...</h3>
+      <p style="margin: 0 0 15px 0; color: #666;">Please click the button below to continue to PayU payment page.</p>
+    `;
+    form.appendChild(instructions);
+    
+    const submitButton = document.createElement('button');
+    submitButton.type = 'submit';
+    submitButton.textContent = 'Continue to PayU Payment';
+    submitButton.style.padding = '10px 20px';
+    submitButton.style.backgroundColor = '#4CAF50';
+    submitButton.style.color = 'white';
+    submitButton.style.border = 'none';
+    submitButton.style.borderRadius = '5px';
+    submitButton.style.cursor = 'pointer';
+    submitButton.style.fontSize = '16px';
+    form.appendChild(submitButton);
 
     // Add all form fields
     Object.keys(formData).forEach(key => {
@@ -786,51 +819,39 @@ export default function Checkout() {
     
     // Show debug info in toast
     toast({
-      title: "Redirecting to PayU...",
-      description: `Form has ${form.elements.length} fields. Check console for debug info.`,
+      title: "PayU Payment Form Ready",
+      description: `Form created with ${form.elements.length - 2} fields. Click the button to continue.`,
     });
     
-    // Add a small delay to ensure form is properly added
-    setTimeout(() => {
-      console.log('📤 Submitting form to PayU...');
-      console.log('💡 To view debug logs after redirect, run in console: PayUDebugger.displayInConsole()');
-      
-      // Try different submission methods to see if one works
-      try {
-        // Method 1: Standard form submit
-        console.log('🔄 Attempting standard form.submit()...');
-        form.submit();
-      } catch (error) {
-        console.error('❌ Standard form.submit() failed:', error);
-        
-        // Method 2: Create and dispatch submit event
-        try {
-          console.log('🔄 Attempting submit event dispatch...');
-          const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-          form.dispatchEvent(submitEvent);
-        } catch (eventError) {
-          console.error('❌ Submit event dispatch failed:', eventError);
-          
-          // Method 3: Manual form submission via fetch (as fallback)
-          console.log('🔄 Attempting manual fetch submission...');
-          const formData = new FormData(form);
-          
-          // Show error to user
-          toast({
-            title: "Form Submission Error",
-            description: "Unable to submit form automatically. Please try again.",
-            variant: "destructive"
-          });
-          
-          PayUDebugger.log('error', {
-            error: 'Form submission failed',
-            standardSubmitError: error,
-            eventDispatchError: eventError,
-            fallbackAttempted: true
-          });
-        }
-      }
-    }, 100);
+    // Try the new form submitter as an alternative
+    console.log('🎆 Trying PayU form submitter as alternative...');
+    
+    // Remove the form we just created (we'll use the submitter instead)
+    document.body.removeChild(form);
+    
+    // Convert formData to PayUFormData format
+    const payuFormData: PayUFormData = {
+      key: formData.key,
+      txnid: formData.txnid,
+      amount: formData.amount,
+      productinfo: formData.productinfo,
+      firstname: formData.firstname,
+      email: formData.email,
+      phone: formData.phone,
+      surl: formData.surl,
+      furl: formData.furl,
+      hash: formData.hash,
+      udf1: formData.udf1 || '',
+      udf2: formData.udf2 || '',
+      udf3: formData.udf3 || '',
+      udf4: formData.udf4 || '',
+      udf5: formData.udf5 || ''
+    };
+    
+    // Use the form submitter with visible method
+    PayUFormSubmitter.submit(url, payuFormData, 'visible');
+    
+    console.log('💡 To view debug logs after redirect, run in console: PayUDebugger.displayInConsole()');
   };
 
   const handlePlaceOrder = async () => {
@@ -1254,7 +1275,33 @@ export default function Checkout() {
             console.log('✅ PayU payment has form data');
             console.log('Form Data keys:', Object.keys(paymentResponse.formData));
             console.log('Form Data values:', paymentResponse.formData);
-            submitPayUForm(paymentResponse.url, paymentResponse.formData);
+            // Try both methods - first the enhanced submitter, then fallback
+            try {
+              // Convert to PayUFormData format
+              const payuFormData: PayUFormData = {
+                key: paymentResponse.formData.key,
+                txnid: paymentResponse.formData.txnid,
+                amount: paymentResponse.formData.amount,
+                productinfo: paymentResponse.formData.productinfo,
+                firstname: paymentResponse.formData.firstname,
+                email: paymentResponse.formData.email,
+                phone: paymentResponse.formData.phone,
+                surl: paymentResponse.formData.surl,
+                furl: paymentResponse.formData.furl,
+                hash: paymentResponse.formData.hash,
+                udf1: paymentResponse.formData.udf1 || '',
+                udf2: paymentResponse.formData.udf2 || '',
+                udf3: paymentResponse.formData.udf3 || '',
+                udf4: paymentResponse.formData.udf4 || '',
+                udf5: paymentResponse.formData.udf5 || ''
+              };
+              
+              // Use the enhanced form submitter
+              PayUFormSubmitter.submit(paymentResponse.url, payuFormData, 'visible');
+            } catch (submitterError) {
+              console.error('Form submitter failed, trying fallback:', submitterError);
+              submitPayUForm(paymentResponse.url, paymentResponse.formData);
+            }
           } else {
             // PayU without form data - this shouldn't happen
             console.error('⚠️ PayU payment missing form data or URL!');

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple PayU Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+        .form-container { background: #f0f8ff; padding: 20px; border-radius: 10px; border: 2px solid #4CAF50; }
+        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .info { background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>PayU Simple Form Test</h1>
+    
+    <div class="info">
+        <p><strong>Purpose:</strong> Test if PayU can receive form data when submitted from a simple, static HTML page.</p>
+        <p>This form uses the exact same data structure and PayU test keys as your app.</p>
+    </div>
+
+    <div class="form-container">
+        <h3>PayU Payment Form</h3>
+        <form method="POST" action="https://test.payu.in/_payment">
+            <!-- Use the same test keys from your database -->
+            <input type="hidden" name="key" value="rjQUPktU" />
+            <input type="hidden" name="txnid" value="PAYU_SIMPLE_TEST_123456" />
+            <input type="hidden" name="amount" value="100.00" />
+            <input type="hidden" name="productinfo" value="Simple Test Product" />
+            <input type="hidden" name="firstname" value="Test User" />
+            <input type="hidden" name="email" value="test@example.com" />
+            <input type="hidden" name="phone" value="9999999999" />
+            <input type="hidden" name="surl" value="https://example.com/success" />
+            <input type="hidden" name="furl" value="https://example.com/failure" />
+            <!-- Generate a simple hash for testing -->
+            <input type="hidden" name="hash" value="test_hash_simple_123" />
+            <input type="hidden" name="udf1" value="" />
+            <input type="hidden" name="udf2" value="" />
+            <input type="hidden" name="udf3" value="" />
+            <input type="hidden" name="udf4" value="" />
+            <input type="hidden" name="udf5" value="" />
+            
+            <button type="submit">Submit to PayU</button>
+        </form>
+        
+        <p style="font-size: 12px; color: #666; margin-top: 15px;">
+            <strong>Note:</strong> This form uses a test hash. PayU may reject it for invalid hash, 
+            but we should see different error messages if the form data is being received.
+        </p>
+    </div>
+
+    <div class="info">
+        <h4>Expected Results:</h4>
+        <ul>
+            <li><strong>If form data is received:</strong> PayU will show "Invalid hash" error</li>
+            <li><strong>If form data is NOT received:</strong> PayU will show "Mandatory parameter missing" error</li>
+        </ul>
+        <p>This will help us determine if the issue is with form submission or hash generation.</p>
+    </div>
+
+    <script>
+        // Log form data when page loads
+        window.onload = function() {
+            const form = document.querySelector('form');
+            const formData = new FormData(form);
+            
+            console.log('=== PayU Simple Test Form Data ===');
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
+            console.log('Total fields:', Array.from(formData.entries()).length);
+        };
+    </script>
+</body>
+</html>
