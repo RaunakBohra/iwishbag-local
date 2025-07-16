@@ -40,7 +40,7 @@ serve(async (req) => {
     const apiKey = Deno.env.get('EXCHANGERATE_API_KEY');
     if (!apiKey) {
       console.error("❌ EXCHANGERATE_API_KEY not configured." );
-      return createErrorResponse('Exchange Rate API key not configured.', 500);
+      return createErrorResponse('Exchange Rate API key not configured.', 500, corsHeaders);
     }
 
     // Fetch latest exchange rates with USD as base
@@ -50,13 +50,13 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ Failed to fetch exchange rates:  ${response.status} - ${errorText}`);
-      return createErrorResponse(`Failed to fetch exchange rates: ${response.statusText}`, 500);
+      return createErrorResponse(`Failed to fetch exchange rates: ${response.statusText}`, 500, corsHeaders);
     }
 
     const data = await response.json();
     if (data.result !== 'success') {
       console.error("❌ Exchange Rate API returned an error:" , data);
-      return createErrorResponse(`Exchange Rate API error: ${data.result}`, 500);
+      return createErrorResponse(`Exchange Rate API error: ${data.result}`, 500, corsHeaders);
     }
 
     const rates: Record<string, number> = data.conversion_rates;
@@ -70,7 +70,7 @@ serve(async (req) => {
 
     if (fetchError) {
       console.error("❌ Error fetching country settings:" , fetchError);
-      return createErrorResponse('Failed to fetch country settings.', 500);
+      return createErrorResponse('Failed to fetch country settings.', 500, corsHeaders);
     }
 
     if (!countrySettings || countrySettings.length === 0) {
@@ -118,7 +118,7 @@ serve(async (req) => {
 
       if (updateError) {
         console.error("❌ Error updating country settings:" , updateError);
-        return createErrorResponse('Failed to update country settings.', 500);
+        return createErrorResponse('Failed to update country settings.', 500, corsHeaders);
       }
       console.log("✅ Country settings updated successfully." );
     } else {
@@ -146,11 +146,11 @@ serve(async (req) => {
       return createAuthErrorResponse(error, corsHeaders);
     }
     
-    return createErrorResponse(`Internal server error: ${errorMessage}`, 500);
+    return createErrorResponse(`Internal server error: ${errorMessage}`, 500, corsHeaders);
   }
 });
 
-function createErrorResponse(message: string, status: number): Response {
+function createErrorResponse(message: string, status: number, corsHeaders: Record<string, string>): Response {
   return new Response(JSON.stringify({
     success: false,
     error: message,

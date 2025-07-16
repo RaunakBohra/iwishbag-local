@@ -125,7 +125,7 @@ serve(async (req) => {
 
       if (updateError) {
         console.error("❌ Error updating country settings:" , updateError);
-        return createErrorResponse('Failed to update country settings.', 500);
+        return createErrorResponse('Failed to update country settings.', 500, corsHeaders);
       }
       console.log("✅ Country settings updated successfully." );
     } else {
@@ -149,7 +149,7 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error("❌ Top-level error in update-exchange-rates-service:" , error);
     
-    return createErrorResponse(`Internal server error: ${errorMessage}`, 500);
+    return createErrorResponse(`Internal server error: ${errorMessage}`, 500, corsHeaders);
   }
 });
 
