@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { createCorsHeaders } from '../_shared/cors.ts'
 
 interface RefundQueueItem {
@@ -9,7 +9,7 @@ interface RefundQueueItem {
   gateway_code: string
   refund_amount: number
   currency: string
-  refund_data: any
+  refund_data: Record<string, unknown>
   status: string
   retry_count: number
   max_retries: number
@@ -208,7 +208,7 @@ serve(async (req) => {
 })
 
 // Process PayU refund from queue
-async function processPayURefund(supabaseAdmin: any, queueItem: RefundQueueItem) {
+async function processPayURefund(supabaseAdmin: SupabaseClient, queueItem: RefundQueueItem) {
   console.log(`🔵 Processing PayU refund from queue: ${queueItem.id}`)
   
   try {
@@ -265,7 +265,7 @@ async function processPayURefund(supabaseAdmin: any, queueItem: RefundQueueItem)
 }
 
 // Process PayPal refund from queue
-async function processPayPalRefund(supabaseAdmin: any, queueItem: RefundQueueItem) {
+async function processPayPalRefund(supabaseAdmin: SupabaseClient, queueItem: RefundQueueItem) {
   console.log(`🟣 Processing PayPal refund from queue: ${queueItem.id}`)
   
   try {

@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { authenticateUser, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
 import { createCorsHeaders } from '../_shared/cors.ts'
 import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno'
@@ -19,7 +19,7 @@ interface PaymentVerificationResponse {
   gateway: string;
   amount?: number;
   currency?: string;
-  gateway_response?: any;
+  gateway_response?: Record<string, unknown>;
   verified_at: string;
   error_message?: string;
   recommendations?: string[];
@@ -114,7 +114,7 @@ serve(async (req) => {
 });
 
 // PayU Payment Verification
-async function verifyPayUPayment(supabaseAdmin: any, request: PaymentVerificationRequest, requestId: string): Promise<PaymentVerificationResponse> {
+async function verifyPayUPayment(supabaseAdmin: SupabaseClient, request: PaymentVerificationRequest, requestId: string): Promise<PaymentVerificationResponse> {
   try {
     // Get PayU configuration
     const { data: payuGateway, error: payuGatewayError } = await supabaseAdmin
@@ -272,7 +272,7 @@ async function verifyPayUPayment(supabaseAdmin: any, request: PaymentVerificatio
 }
 
 // Stripe Payment Verification
-async function verifyStripePayment(supabaseAdmin: any, request: PaymentVerificationRequest, requestId: string): Promise<PaymentVerificationResponse> {
+async function verifyStripePayment(supabaseAdmin: SupabaseClient, request: PaymentVerificationRequest, requestId: string): Promise<PaymentVerificationResponse> {
   try {
     // Get Stripe configuration from database
     const { data: stripeGateway, error: stripeGatewayError } = await supabaseAdmin
@@ -401,7 +401,7 @@ async function verifyStripePayment(supabaseAdmin: any, request: PaymentVerificat
 }
 
 // Bank Transfer Verification (placeholder)
-async function verifyBankTransfer(supabaseAdmin: any, request: PaymentVerificationRequest, requestId: string): Promise<PaymentVerificationResponse> {
+async function verifyBankTransfer(supabaseAdmin: SupabaseClient, request: PaymentVerificationRequest, requestId: string): Promise<PaymentVerificationResponse> {
   // For bank transfers, we rely on manual verification
   const { data: existingPayment, error: paymentError } = await supabaseAdmin
     .from('payments')
@@ -531,7 +531,7 @@ function convertStripeAmountToMajorUnit(amount: number, currency: string): numbe
 }
 
 // Generate recommendations based on payment status
-function generateRecommendations(status: 'pending' | 'completed' | 'failed', transaction: any): string[] {
+function generateRecommendations(status: 'pending' | 'completed' | 'failed', transaction: Record<string, unknown>): string[] {
   const recommendations: string[] = [];
 
   switch (status) {
@@ -556,7 +556,7 @@ function generateRecommendations(status: 'pending' | 'completed' | 'failed', tra
 }
 
 // Generate Stripe-specific recommendations
-function generateStripeRecommendations(status: 'pending' | 'completed' | 'failed', paymentIntent: any): string[] {
+function generateStripeRecommendations(status: 'pending' | 'completed' | 'failed', paymentIntent: Stripe.PaymentIntent): string[] {
   const recommendations: string[] = [];
 
   switch (status) {
@@ -606,7 +606,7 @@ function generateStripeRecommendations(status: 'pending' | 'completed' | 'failed
 }
 
 // Log verification attempts
-async function logVerificationAttempt(supabaseAdmin: any, requestId: string, transactionId: string, gateway: string, success: boolean) {
+async function logVerificationAttempt(supabaseAdmin: SupabaseClient, requestId: string, transactionId: string, gateway: string, success: boolean) {
   try {
     await supabaseAdmin
       .from('payment_verification_logs')

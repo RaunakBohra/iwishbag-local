@@ -22,6 +22,18 @@ interface StripePaymentFormProps {
   onSuccess?: (paymentIntent: Record<string, unknown>) => void;
   onError?: (error: string) => void;
   className?: string;
+  customerInfo?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: {
+      line1?: string;
+      city?: string;
+      state?: string;
+      postal_code?: string;
+      country?: string;
+    };
+  };
 }
 
 // Main wrapper component that provides Stripe Elements context
@@ -31,7 +43,8 @@ export function StripePaymentForm({
   currency = 'USD',
   onSuccess, 
   onError,
-  className 
+  className,
+  customerInfo 
 }: StripePaymentFormProps) {
   const options = {
     clientSecret: client_secret,
@@ -58,6 +71,7 @@ export function StripePaymentForm({
         onSuccess={onSuccess}
         onError={onError}
         className={className}
+        customerInfo={customerInfo}
       />
     </Elements>
   );
@@ -71,6 +85,7 @@ function StripePaymentFormContent({
   onSuccess,
   onError,
   className,
+  customerInfo,
 }: StripePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -214,7 +229,30 @@ function StripePaymentFormContent({
                 layout: 'tabs',
                 defaultValues: {
                   billingDetails: {
-                    // You can pre-fill billing details here if available
+                    name: customerInfo?.name || '',
+                    email: customerInfo?.email || '',
+                    phone: customerInfo?.phone || '',
+                    address: customerInfo?.address ? {
+                      line1: customerInfo.address.line1 || '',
+                      city: customerInfo.address.city || '',
+                      state: customerInfo.address.state || '',
+                      postal_code: customerInfo.address.postal_code || '',
+                      country: customerInfo.address.country || ''
+                    } : undefined
+                  }
+                },
+                fields: {
+                  billingDetails: {
+                    name: 'auto',
+                    email: 'auto',
+                    phone: 'auto',
+                    address: {
+                      line1: 'auto',
+                      city: 'auto',
+                      state: 'auto',
+                      country: 'auto',
+                      postalCode: 'auto'
+                    }
                   }
                 }
               }}

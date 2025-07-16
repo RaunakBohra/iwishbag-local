@@ -4,7 +4,7 @@ import { createHash } from "node:crypto"
 import { createWebhookHeaders } from '../_shared/cors.ts'
 
 // Database type for type safety
-type Database = any
+type Database = Record<string, unknown>
 
 // Get webhook headers (empty object for webhooks)
 const corsHeaders = createWebhookHeaders()

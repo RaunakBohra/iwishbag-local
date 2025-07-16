@@ -1909,6 +1909,20 @@ export default function Checkout() {
               client_secret={stripeClientSecret}
               amount={totalAmount}
               currency={paymentCurrency}
+              customerInfo={{
+                name: isGuestCheckout 
+                  ? (addressFormData.recipient_name || guestContact.fullName)
+                  : (addressFormData.recipient_name || userProfile?.full_name || ''),
+                email: isGuestCheckout ? guestContact.email : (user?.email || ''),
+                phone: addressFormData.phone || '',
+                address: isAddressComplete(addressFormData) ? {
+                  line1: addressFormData.address_line1,
+                  city: addressFormData.city,
+                  state: addressFormData.state_province_region,
+                  postal_code: addressFormData.postal_code,
+                  country: addressFormData.country || shippingCountry || 'US'
+                } : undefined
+              }}
               onSuccess={async (paymentIntent) => {
                 console.log("Payment Succeeded!", paymentIntent);
                 

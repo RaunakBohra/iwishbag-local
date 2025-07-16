@@ -374,7 +374,7 @@ serve(async (req) => {
     let command = 'check_action_status'; // Will be overridden per attempt
     let payuResult: PayURefundResponse | null = null;
     let lastError = '';
-    let debugInfo: any = {};
+    let debugInfo: Record<string, unknown> = {};
     
     console.log("🔍 Trying different hash formulas with mihpayid:");
     

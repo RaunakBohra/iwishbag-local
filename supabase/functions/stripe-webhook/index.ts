@@ -1,7 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno'
 import { createWebhookHeaders } from '../_shared/cors.ts'
+import { 
+  processPaymentSuccessAtomic,
+  processPaymentFailureAtomic,
+  processChargeSucceededAtomic,
+  processRefundAtomic
+} from './atomic-operations.ts'
 
 // Get webhook headers (empty object for webhooks)
 const corsHeaders = createWebhookHeaders()
@@ -83,51 +89,71 @@ serve(async (req) => {
     console.log(`Processing Stripe webhook: ${event.type}`)
 
     // Handle the event
+    let processingSuccess = false
+    let processingError: string | undefined
+
     switch (event.type) {
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        await handlePaymentSuccess(supabaseAdmin, paymentIntent)
+        const result = await processPaymentSuccessAtomic(supabaseAdmin, paymentIntent)
+        processingSuccess = result.success
+        processingError = result.error
         break
       }
 
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        await handlePaymentFailure(supabaseAdmin, paymentIntent)
+        const result = await processPaymentFailureAtomic(supabaseAdmin, paymentIntent)
+        processingSuccess = result.success
+        processingError = result.error
         break
       }
 
       case 'payment_intent.canceled': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        await handlePaymentCanceled(supabaseAdmin, paymentIntent)
+        const result = await processPaymentFailureAtomic(supabaseAdmin, paymentIntent)
+        processingSuccess = result.success
+        processingError = result.error
         break
       }
 
       case 'charge.succeeded': {
         const charge = event.data.object as Stripe.Charge
-        await handleChargeSucceeded(supabaseAdmin, charge)
+        const result = await processChargeSucceededAtomic(supabaseAdmin, charge)
+        processingSuccess = result.success
+        processingError = result.error
         break
       }
 
       case 'charge.failed': {
         const charge = event.data.object as Stripe.Charge
-        await handleChargeFailed(supabaseAdmin, charge)
+        console.log('Processing failed charge:', charge.id)
+        console.error('Charge failure reason:', charge.failure_message)
+        processingSuccess = true // Just log, no database changes needed
         break
       }
 
       case 'charge.refunded': {
         const charge = event.data.object as Stripe.Charge
-        await handleChargeRefunded(supabaseAdmin, charge)
+        const result = await processRefundAtomic(supabaseAdmin, charge)
+        processingSuccess = result.success
+        processingError = result.error
         break
       }
 
       case 'charge.dispute.created': {
         const dispute = event.data.object as Stripe.Dispute
-        await handleDisputeCreated(supabaseAdmin, dispute)
+        console.log('Processing new dispute:', dispute.id)
+        console.log('Dispute reason:', dispute.reason)
+        console.log('Dispute amount:', dispute.amount / 100, dispute.currency.toUpperCase())
+        // TODO: Create admin notification for dispute
+        processingSuccess = true // Just log for now
         break
       }
 
       default:
         console.log(`Unhandled event type: ${event.type}`)
+        processingSuccess = true // Don't fail for unknown events
     }
 
     // Mark webhook as processed
@@ -135,14 +161,19 @@ serve(async (req) => {
       await supabaseAdmin
         .from('webhook_logs')
         .update({ 
-          status: 'completed',
+          status: processingSuccess ? 'completed' : 'failed',
+          error_message: processingError || null,
           updated_at: new Date().toISOString()
         })
         .eq('request_id', requestId)
     }
 
-    return new Response(JSON.stringify({ received: true }), { 
-      status: 200,
+    return new Response(JSON.stringify({ 
+      received: true, 
+      processed: processingSuccess,
+      error: processingError 
+    }), { 
+      status: processingSuccess ? 200 : 500,
       headers: { 'Content-Type': 'application/json' }
     })
     
@@ -154,197 +185,5 @@ serve(async (req) => {
   }
 })
 
-async function handlePaymentSuccess(supabaseAdmin: any, paymentIntent: Stripe.PaymentIntent) {
-  console.log('Processing successful payment:', paymentIntent.id)
-  
-  // Extract metadata
-  const quoteIds = paymentIntent.metadata.quote_ids?.split(',') || []
-  const userId = paymentIntent.metadata.user_id
-  const amount = paymentIntent.amount / 100 // Convert from cents
-  const currency = paymentIntent.currency.toUpperCase()
-
-  if (!quoteIds.length) {
-    console.error('No quote IDs found in payment metadata')
-    return
-  }
-
-  // Create payment transaction record
-  const { error: txError } = await supabaseAdmin
-    .from('payment_transactions')
-    .insert({
-      user_id: userId,
-      quote_id: quoteIds[0], // Primary quote
-      amount: amount,
-      currency: currency,
-      status: 'completed',
-      payment_method: 'stripe',
-      gateway_response: paymentIntent,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    })
-
-  if (txError) {
-    console.error('Error creating payment transaction:', txError)
-  }
-
-  // Update quote status for all quotes
-  for (const quoteId of quoteIds) {
-    const { error: quoteError } = await supabaseAdmin
-      .from('quotes')
-      .update({
-        status: 'paid',
-        payment_status: 'paid',
-        payment_method: 'stripe',
-        paid_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', quoteId)
-      .neq('status', 'paid') // Only update if not already paid
-
-    if (quoteError) {
-      console.error(`Error updating quote ${quoteId}:`, quoteError)
-    }
-  }
-
-  // Create payment ledger entry directly
-  try {
-    const { error: ledgerError } = await supabaseAdmin
-      .from('payment_ledger')
-      .insert({
-        quote_id: quoteIds[0],
-        amount: amount,
-        currency: currency,
-        payment_type: 'customer_payment',
-        payment_method: 'stripe',
-        reference_number: paymentIntent.id,
-        gateway_code: 'stripe',
-        gateway_transaction_id: paymentIntent.id,
-        notes: `Stripe payment via webhook - ${paymentIntent.description || ''}`,
-        created_by: userId, // Required field
-        created_at: new Date().toISOString()
-      })
-
-    if (ledgerError) {
-      console.error('Error creating ledger entry:', ledgerError)
-    } else {
-      console.log('Payment ledger entry created successfully')
-    }
-  } catch (error) {
-    console.error('Error creating payment ledger entry:', error)
-  }
-
-  console.log(`Payment ${paymentIntent.id} processed successfully`)
-}
-
-async function handlePaymentFailure(supabaseAdmin: any, paymentIntent: Stripe.PaymentIntent) {
-  console.log('Processing failed payment:', paymentIntent.id)
-  
-  const quoteIds = paymentIntent.metadata.quote_ids?.split(',') || []
-  const userId = paymentIntent.metadata.user_id
-
-  // Record failed payment attempt
-  await supabaseAdmin
-    .from('payment_transactions')
-    .insert({
-      user_id: userId,
-      quote_id: quoteIds[0],
-      amount: paymentIntent.amount / 100,
-      currency: paymentIntent.currency.toUpperCase(),
-      status: 'failed',
-      payment_method: 'stripe',
-      gateway_response: paymentIntent,
-      created_at: new Date().toISOString()
-    })
-
-  // Log the failure reason
-  if (paymentIntent.last_payment_error) {
-    console.error('Payment failure reason:', paymentIntent.last_payment_error.message)
-  }
-}
-
-async function handlePaymentCanceled(supabaseAdmin: any, paymentIntent: Stripe.PaymentIntent) {
-  console.log('Processing canceled payment:', paymentIntent.id)
-  
-  const quoteIds = paymentIntent.metadata.quote_ids?.split(',') || []
-  const userId = paymentIntent.metadata.user_id
-
-  // Record canceled payment
-  await supabaseAdmin
-    .from('payment_transactions')
-    .insert({
-      user_id: userId,
-      quote_id: quoteIds[0],
-      amount: paymentIntent.amount / 100,
-      currency: paymentIntent.currency.toUpperCase(),
-      status: 'cancelled',
-      payment_method: 'stripe',
-      gateway_response: paymentIntent,
-      created_at: new Date().toISOString()
-    })
-}
-
-async function handleChargeSucceeded(supabaseAdmin: any, charge: Stripe.Charge) {
-  console.log('Processing successful charge:', charge.id)
-  
-  // Update payment transaction with charge details
-  if (charge.payment_intent) {
-    await supabaseAdmin
-      .from('payment_transactions')
-      .update({
-        gateway_response: charge,
-        updated_at: new Date().toISOString()
-      })
-      .eq('gateway_response->id', charge.payment_intent)
-  }
-
-  // Store receipt URL if available
-  if (charge.receipt_url) {
-    console.log('Receipt URL available:', charge.receipt_url)
-  }
-}
-
-async function handleChargeFailed(supabaseAdmin: any, charge: Stripe.Charge) {
-  console.log('Processing failed charge:', charge.id)
-  console.error('Charge failure reason:', charge.failure_message)
-}
-
-async function handleChargeRefunded(supabaseAdmin: any, charge: Stripe.Charge) {
-  console.log('Processing refunded charge:', charge.id)
-  
-  const refundAmount = charge.amount_refunded / 100
-  const currency = charge.currency.toUpperCase()
-  
-  // Create refund record in payment ledger
-  if (charge.payment_intent && refundAmount > 0) {
-    // Find the original quote
-    const { data: transaction } = await supabaseAdmin
-      .from('payment_transactions')
-      .select('quote_id, user_id')
-      .eq('gateway_response->id', charge.payment_intent)
-      .single()
-
-    if (transaction) {
-      await supabaseAdmin.rpc('create_payment_with_ledger_entry', {
-        p_quote_id: transaction.quote_id,
-        p_amount: refundAmount,
-        p_currency: currency,
-        p_payment_method: 'stripe',
-        p_payment_type: charge.amount_refunded === charge.amount ? 'refund' : 'partial_refund',
-        p_reference_number: `${charge.id}_refund`,
-        p_gateway_code: 'stripe',
-        p_gateway_transaction_id: charge.id,
-        p_notes: `Stripe refund via webhook`,
-        p_user_id: transaction.user_id
-      })
-    }
-  }
-}
-
-async function handleDisputeCreated(supabaseAdmin: any, dispute: Stripe.Dispute) {
-  console.log('Processing new dispute:', dispute.id)
-  console.log('Dispute reason:', dispute.reason)
-  console.log('Dispute amount:', dispute.amount / 100, dispute.currency.toUpperCase())
-  
-  // TODO: Create notification for admin about the dispute
-  // This is critical as disputes can lead to chargebacks
-}
+// Legacy handler functions removed - now using atomic operations from atomic-operations.ts
+// This ensures data consistency and proper error handling

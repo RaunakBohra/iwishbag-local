@@ -7,8 +7,8 @@ import { createWebhookHeaders } from '../_shared/cors.ts'
 interface PaymentTransactionGatewayResponse {
   quote_ids?: string[];
   webhook_event?: PayPalWebhookEvent;
-  capture_details?: any;
-  [key: string]: any;
+  capture_details?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 interface ProcessedWebhookResult {
@@ -188,7 +188,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin: SupabaseClient<any> = createClient(
+    const supabaseAdmin: SupabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );

@@ -1,4 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
+import { QuoteShippingAddress } from '@/lib/addressUtils';
+import { CountrySettings } from '@/services/CurrencyService';
 
 export interface ProductData {
   price: number;
@@ -240,9 +243,9 @@ export async function getAvailableCustomsRoutes(): Promise<Array<{origin: string
 
 /**
  * Returns the origin and destination country codes for a quote, using unified logic.
- * @param {any} quote - The quote object
- * @param {any} shippingAddress - The shipping address (optional)
- * @param {any[]} allCountries - List of all countries (optional, for name/code resolution)
+ * @param {Tables<'quotes'>} quote - The quote object
+ * @param {QuoteShippingAddress} shippingAddress - The shipping address (optional)
+ * @param {CountrySettings[]} allCountries - List of all countries (optional, for name/code resolution)
  * @param {function} fetchRouteById - Async function to fetch route by id (must return {origin_country, destination_country})
  * @param {string} formOriginCountry - Current form origin country value (optional, highest priority)
  * @param {string} formDestinationCountry - Current form destination country value (optional, highest priority)

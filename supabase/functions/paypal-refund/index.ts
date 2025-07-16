@@ -22,7 +22,7 @@ interface PayPalRefundResponse {
   message?: string
   estimatedCompletion?: string
   error?: string
-  details?: any
+  details?: Record<string, unknown>
   // Additional fields for PayPalRefundManagement component compatibility
   refund_amount?: number
   refund_id?: string
@@ -59,7 +59,7 @@ async function processPayPalRefund(
   currency: string,
   note: string,
   isLive: boolean
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   const baseUrl = isLive ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com'
   
   const refundRequest = {

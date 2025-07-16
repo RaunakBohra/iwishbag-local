@@ -4,6 +4,7 @@ import { createCorsHeaders } from '../_shared/cors.ts'
 import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno'
 // REMOVED: PayU SDK import as it might be causing additional API calls
 // import PayU from 'https://esm.sh/payu@latest?target=deno';
+import { createStripePaymentEnhancedSecure } from './stripe-enhanced-secure.ts'
 
 
 // This should match src/types/payment.ts PaymentRequest
@@ -507,63 +508,32 @@ serve(async (req) => {
             apiVersion: config.api_version || '2023-10-16',
           });
 
-          // Convert amount to smallest currency unit (cents for USD, etc.)
-          const currencyMultiplier = getCurrencyMultiplier(totalCurrency);
-          const amountInSmallestUnit = Math.round(totalAmount * currencyMultiplier);
+          // Use secure enhanced Stripe payment creation
+          const result = await createStripePaymentEnhancedSecure({
+            stripe,
+            amount: totalAmount,
+            currency: totalCurrency,
+            quoteIds,
+            userId: userId || 'guest',
+            customerInfo,
+            quotes: quotesToUse,
+            supabaseAdmin
+          });
 
-          // Prepare metadata with quote IDs for tracking
-          const paymentMetadata = {
-            quote_ids: quoteIds.join(','),
-            gateway: 'stripe',
-            user_id: userId || 'guest',
-            guest_session_token: metadata?.guest_session_token || '',
-            original_amount: totalAmount.toString(),
-            original_currency: totalCurrency,
-          };
-
-          // Get customer information
-          let customerName = customerInfo?.name || 'Customer';
-          let customerEmail = customerInfo?.email || '';
-
-          // If customer info not provided, try to get from quotes
-          if (!customerInfo && quotesToUse && quotesToUse.length > 0) {
-            const { data: fullQuotes } = await supabaseAdmin
-              .from('quotes')
-              .select('email, customer_name, shipping_address')
-              .in('id', quoteIds)
-              .limit(1);
-
-            if (fullQuotes && fullQuotes.length > 0) {
-              const firstQuote = fullQuotes[0];
-              customerEmail = firstQuote.email || customerEmail;
-              customerName = firstQuote.customer_name || customerName;
-            }
+          if (!result.success) {
+            return new Response(JSON.stringify({ 
+              error: result.error || 'Stripe payment creation failed'
+            }), { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
           }
 
-          // Create PaymentIntent
-          const paymentIntent = await stripe.paymentIntents.create({
-            amount: amountInSmallestUnit,
-            currency: totalCurrency.toLowerCase(),
-            metadata: paymentMetadata,
-            description: `Payment for quotes: ${quoteIds.join(', ')}`,
-            receipt_email: customerEmail || undefined,
-            automatic_payment_methods: {
-              enabled: true,
-            },
-          });
-
-          console.log('Stripe PaymentIntent created:', {
-            id: paymentIntent.id,
-            amount: amountInSmallestUnit,
-            currency: totalCurrency,
-            customer: customerEmail.substring(0, 3) + '***',
-            quote_ids: quoteIds.join(',')
-          });
-
           responseData = {
-            success: true,
-            client_secret: paymentIntent.client_secret,
-            transactionId: paymentIntent.id,
+            success: result.success,
+            client_secret: result.client_secret,
+            transactionId: result.transactionId,
+            customer_id: result.customer_id
           };
 
         } catch (error) {
