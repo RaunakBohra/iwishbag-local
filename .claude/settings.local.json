@@ -115,7 +115,8 @@
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(gh secret list:*)",
-      "Bash(gh workflow run:*)"
+      "Bash(gh workflow run:*)",
+      "WebFetch(domain:docs.khalti.com)"
     ],
     "deny": []
   }

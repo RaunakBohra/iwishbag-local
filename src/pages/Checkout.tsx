@@ -1087,9 +1087,8 @@ export default function Checkout() {
         }
         
         if (paymentMethod === 'payu') {
-          // TEMPORARY FIX: Generate PayU form data directly like test page
-          // This bypasses Edge Function until it's redeployed with new salt key
-          console.log('🔧 Generating PayU form data directly (bypassing Edge Function)');
+          // Direct PayU form submission (same as working test page)
+          console.log('🔧 PayU: Direct form submission approach');
           
           const payuConfig = {
             merchant_key: 'u7Ui5I',
@@ -1098,17 +1097,17 @@ export default function Checkout() {
             environment: 'test'
           };
           
-          const txnid = 'TXN_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-          const productinfo = 'iWishBag Order - ' + cartQuoteIds.join(',');
+          const txnid = 'PAYU_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          const productinfo = 'iWishBag Order (' + txnid + ')';
           
-          // Create form data directly (same as test page)
-          const directFormData = {
+          // Create form data exactly like test page
+          const formData = {
             key: payuConfig.merchant_key,
             txnid: txnid,
             amount: totalAmount.toFixed(2),
             productinfo: productinfo,
-            firstname: isGuestCheckout ? (guestContact.fullName || 'Guest Customer') : (userProfile?.full_name || 'Customer'),
-            email: isGuestCheckout ? guestContact.email : (user?.email || 'customer@example.com'),
+            firstname: isGuestCheckout ? (guestContact.fullName || 'Test Customer') : (userProfile?.full_name || 'Test Customer'),
+            email: isGuestCheckout ? guestContact.email || 'test@example.com' : (user?.email || 'test@example.com'),
             phone: addressFormData.phone || '9999999999',
             surl: window.location.origin + '/payment-success?gateway=payu',
             furl: window.location.origin + '/payment-failure?gateway=payu',
@@ -1118,8 +1117,8 @@ export default function Checkout() {
             udf4: '',
             udf5: ''
           };
-          
-          // Generate hash directly (same as test page)
+
+          // Generate hash exactly like test page
           const generatePayUHash = async (data: any) => {
             const hashString = [
               data.key,
@@ -1137,7 +1136,7 @@ export default function Checkout() {
               payuConfig.salt_key
             ].join('|');
             
-            console.log('🔐 Hash string:', hashString);
+            console.log('🔐 Hash string: ' + hashString);
             
             const encoder = new TextEncoder();
             const data_encoded = encoder.encode(hashString);
@@ -1145,65 +1144,56 @@ export default function Checkout() {
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
             
-            console.log('✅ Hash generated:', hashHex.substring(0, 30) + '...');
+            console.log('✅ Hash generated: ' + hashHex.substring(0, 30) + '...');
             return hashHex;
           };
+
+          console.log('📝 Form data prepared:');
+          console.log('- Key: ' + formData.key);
+          console.log('- Transaction ID: ' + formData.txnid);
+          console.log('- Amount: ' + formData.amount);
+
+          // Generate hash
+          console.log('🔐 Generating hash...');
+          const hash = await generatePayUHash(formData);
+          formData.hash = hash;
+
+          // Validate required fields
+          const requiredFields = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
+          const missingFields = requiredFields.filter(field => !formData[field]);
           
-          const hash = await generatePayUHash(directFormData);
-          directFormData.hash = hash;
+          if (missingFields.length > 0) {
+            console.log('❌ Missing required fields: ' + missingFields.join(', '));
+            return;
+          } else {
+            console.log('✅ All required fields present');
+          }
+
+          // Create and submit form exactly like test page
+          console.log('📋 Creating form for PayU submission...');
           
-          console.log('📝 Direct form data prepared:');
-          console.log('- Key:', directFormData.key);
-          console.log('- Transaction ID:', directFormData.txnid);
-          console.log('- Amount:', directFormData.amount);
-          console.log('- Email:', directFormData.email);
-          console.log('- Hash:', hash.substring(0, 30) + '...');
-          
-          // DETAILED DEBUG: Log all form data
-          console.log('🔍 COMPLETE FORM DATA:');
-          Object.entries(directFormData).forEach(([key, value]) => {
-            console.log(`  ${key}: "${value}" (type: ${typeof value})`);
-          });
-          
-          // Create form (same as test page)
           const form = document.createElement('form');
           form.method = 'POST';
           form.action = 'https://test.payu.in/_payment';
-          form.target = '_self';
+          form.target = '_self'; // Use same window like test page
           form.style.display = 'none';
 
-          // Add all form fields with detailed logging
-          console.log('🔧 Adding form fields:');
-          Object.entries(directFormData).forEach(([key, value]) => {
+          // Add all form fields
+          Object.entries(formData).forEach(([key, value]) => {
             const input = document.createElement('input');
             input.type = 'hidden';
             input.name = key;
-            input.value = String(value); // Ensure string conversion
+            input.value = value;
             form.appendChild(input);
-            console.log(`  Added field: ${key} = "${input.value}"`);
           });
 
           document.body.appendChild(form);
           
           console.log('✅ Form created with ' + form.elements.length + ' fields');
+          console.log('🚀 Submitting to PayU...');
           
-          // DETAILED DEBUG: Log actual form HTML
-          console.log('🔍 FORM HTML:', form.outerHTML);
-          
-          // DETAILED DEBUG: Log FormData
-          const formData = new FormData(form);
-          console.log('🔍 FORMDATA ENTRIES:');
-          for (let [key, value] of formData.entries()) {
-            console.log(`  ${key}: "${value}"`);
-          }
-          
-          console.log('🚀 Submitting to PayU directly...');
-          
-          // Submit form immediately 
-          setTimeout(() => {
-            console.log('🎯 SUBMITTING FORM NOW...');
-            form.submit();
-          }, 100);
+          // Submit form immediately
+          form.submit();
         } else {
           // For other redirect-based payments (not Stripe)
           window.location.href = paymentResponse.url;
