@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PayU Direct Submission Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+            width: 100%;
+        }
+        button:hover { background: #45a049; }
+        .log {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #2196F3;
+        }
+        .success { background: #e8f5e8; border-left-color: #4CAF50; }
+        .warning { background: #fff3cd; border-left-color: #ff9800; }
+        .form-data {
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 11px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PayU Direct Submission Test</h1>
+        
+        <div class="info">
+            <h3>🎯 Test Purpose</h3>
+            <p>Since the Edge Function call failed, this test creates PayU form data directly using your database keys and tests the form submission to PayU.</p>
+            <p><strong>This bypasses the backend</strong> and tests only the form submission part.</p>
+        </div>
+
+        <button onclick="testPayUDirectSubmission()">🚀 Test PayU Direct Submission</button>
+        
+        <div id="logOutput" class="log"></div>
+        
+        <div id="formDataDisplay" class="form-data" style="display: none;"></div>
+
+        <div class="info warning">
+            <h3>⚠️ What This Tests</h3>
+            <p>This test will show us if the issue is:</p>
+            <ul>
+                <li>❌ <strong>Form submission blocking</strong> - If PayU still says "missing parameters"</li>
+                <li>✅ <strong>Backend issue</strong> - If PayU receives the data properly</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Your PayU configuration (from your database)
+        const PAYU_CONFIG = {
+            merchant_key: 'rjQUPktU',
+            salt_key: 'e5iIg1jwi8UnzIZJJP9hK43y9PNYvBKBSFMvVHrOHx'
+        };
+
+        function log(message) {
+            const logDiv = document.getElementById('logOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += '[' + timestamp + '] ' + message + '<br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function displayFormData(formData) {
+            const displayDiv = document.getElementById('formDataDisplay');
+            displayDiv.style.display = 'block';
+            displayDiv.innerHTML = '<h4>Form Data Being Sent to PayU:</h4>';
+            
+            Object.entries(formData).forEach(([key, value]) => {
+                if (key === 'hash') {
+                    displayDiv.innerHTML += key + ': ' + value.substring(0, 30) + '... (' + value.length + ' chars)<br>';
+                } else {
+                    displayDiv.innerHTML += key + ': ' + value + '<br>';
+                }
+            });
+        }
+
+        // Generate PayU hash (same algorithm as your backend)
+        async function generatePayUHash(data) {
+            const hashString = [
+                data.key,
+                data.txnid,
+                data.amount,
+                data.productinfo,
+                data.firstname,
+                data.email,
+                data.udf1 || '',
+                data.udf2 || '',
+                data.udf3 || '',
+                data.udf4 || '',
+                data.udf5 || '',
+                '', '', '', '', '', // 5 empty fields
+                PAYU_CONFIG.salt_key
+            ].join('|');
+            
+            log('🔐 Hash string: ' + hashString);
+            
+            const encoder = new TextEncoder();
+            const data_encoded = encoder.encode(hashString);
+            const hashBuffer = await crypto.subtle.digest('SHA-512', data_encoded);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            
+            log('✅ Hash generated: ' + hashHex.substring(0, 30) + '...');
+            return hashHex;
+        }
+
+        async function testPayUDirectSubmission() {
+            log('🧪 Starting PayU direct submission test...');
+            log('📋 Bypassing backend, testing form submission only');
+            
+            const txnid = 'PAYU_DIRECT_TEST_' + Date.now();
+            const productinfo = 'Direct Test Product (' + txnid + ')';
+            
+            // Create form data (same structure as your backend)
+            const formData = {
+                key: PAYU_CONFIG.merchant_key,
+                txnid: txnid,
+                amount: '100.00',
+                productinfo: productinfo,
+                firstname: 'Test Customer',
+                email: 'test@example.com',
+                phone: '9999999999',
+                surl: 'https://example.com/success',
+                furl: 'https://example.com/failure',
+                udf1: '',
+                udf2: '',
+                udf3: '',
+                udf4: '',
+                udf5: ''
+            };
+
+            log('📝 Form data prepared:');
+            log('- Key: ' + formData.key);
+            log('- Transaction ID: ' + formData.txnid);
+            log('- Amount: ' + formData.amount);
+            log('- Product: ' + formData.productinfo);
+
+            // Generate hash
+            log('🔐 Generating PayU hash...');
+            const hash = await generatePayUHash(formData);
+            formData.hash = hash;
+
+            // Display form data
+            displayFormData(formData);
+
+            // Validate required fields
+            const requiredFields = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
+            const missingFields = requiredFields.filter(field => !formData[field]);
+            
+            if (missingFields.length > 0) {
+                log('❌ Missing required fields: ' + missingFields.join(', '));
+                return;
+            } else {
+                log('✅ All required fields present');
+            }
+
+            // Method 1: Hidden form submission (like your current app)
+            log('🔄 Method 1: Hidden form submission');
+            await testHiddenFormSubmission(formData);
+
+            // Wait a bit, then try Method 2
+            setTimeout(() => {
+                log('🔄 Method 2: Visible form submission');
+                testVisibleFormSubmission(formData);
+            }, 3000);
+        }
+
+        async function testHiddenFormSubmission(formData) {
+            log('📋 Creating hidden form...');
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://test.payu.in/_payment';
+            form.target = '_blank'; // Open in new tab so we can see result
+            form.style.display = 'none';
+
+            // Add all form fields
+            Object.entries(formData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            
+            log('✅ Hidden form created with ' + form.elements.length + ' fields');
+            log('🚀 Submitting hidden form to PayU...');
+            
+            try {
+                form.submit();
+                log('✅ Hidden form submitted - check new tab for result');
+            } catch (error) {
+                log('❌ Hidden form submission failed: ' + error.message);
+            }
+        }
+
+        function testVisibleFormSubmission(formData) {
+            log('📋 Creating visible form...');
+            
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            overlay.style.zIndex = '9999';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+
+            // Create form container
+            const container = document.createElement('div');
+            container.style.backgroundColor = '#f0f8ff';
+            container.style.padding = '30px';
+            container.style.borderRadius = '10px';
+            container.style.border = '2px solid #4CAF50';
+            container.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+            container.style.textAlign = 'center';
+
+            // Create form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://test.payu.in/_payment';
+            form.target = '_self';
+
+            // Add form fields
+            Object.entries(formData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+
+            // Add visible content
+            const title = document.createElement('h3');
+            title.textContent = 'Redirecting to PayU...';
+            title.style.margin = '0 0 15px 0';
+            title.style.color = '#333';
+
+            const description = document.createElement('p');
+            description.textContent = 'Click the button below to continue to PayU payment page.';
+            description.style.margin = '0 0 20px 0';
+            description.style.color = '#666';
+
+            const submitButton = document.createElement('button');
+            submitButton.type = 'submit';
+            submitButton.textContent = 'Continue to PayU Payment';
+            submitButton.style.padding = '12px 24px';
+            submitButton.style.backgroundColor = '#4CAF50';
+            submitButton.style.color = 'white';
+            submitButton.style.border = 'none';
+            submitButton.style.borderRadius = '5px';
+            submitButton.style.cursor = 'pointer';
+            submitButton.style.fontSize = '16px';
+
+            // Add close button
+            const closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.textContent = 'Cancel';
+            closeButton.style.padding = '8px 16px';
+            closeButton.style.backgroundColor = '#666';
+            closeButton.style.color = 'white';
+            closeButton.style.border = 'none';
+            closeButton.style.borderRadius = '5px';
+            closeButton.style.cursor = 'pointer';
+            closeButton.style.fontSize = '14px';
+            closeButton.style.marginLeft = '10px';
+            closeButton.onclick = () => {
+                document.body.removeChild(overlay);
+                log('❌ Visible form submission cancelled');
+            };
+
+            container.appendChild(title);
+            container.appendChild(description);
+            container.appendChild(form);
+            form.appendChild(submitButton);
+            form.appendChild(closeButton);
+            
+            overlay.appendChild(container);
+            document.body.appendChild(overlay);
+
+            log('✅ Visible form created with ' + form.elements.length + ' fields');
+            log('👆 Click "Continue to PayU Payment" to submit');
+
+            // Auto-submit after 5 seconds
+            setTimeout(() => {
+                if (document.body.contains(overlay)) {
+                    log('⏰ Auto-submitting visible form...');
+                    form.submit();
+                }
+            }, 5000);
+        }
+
+        // Initialize
+        window.onload = function() {
+            log('🎯 PayU direct submission test loaded');
+            log('🔑 Using merchant key: ' + PAYU_CONFIG.merchant_key);
+            log('👆 Click the button above to test form submission');
+        };
+    </script>
+</body>
+</html>
