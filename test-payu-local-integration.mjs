@@ -1,0 +1,254 @@
+#!/usr/bin/env node
+
+// Test PayU payment creation through your local development environment
+import { writeFileSync } from 'fs';
+
+const SUPABASE_URL = 'https://grgvlrvywsfmnmkxrecd.supabase.co';
+
+async function testPayUIntegration() {
+  console.log('🧪 Testing PayU integration through local environment...\n');
+
+  // Create a test HTML page that connects to your local backend
+  const testHTML = `<!DOCTYPE html>
+<html>
+<head>
+    <title>PayU Local Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+            width: 100%;
+        }
+        button:hover { background: #45a049; }
+        .log {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #2196F3;
+        }
+        .success { background: #e8f5e8; border-left-color: #4CAF50; }
+        .error { background: #ffebee; border-left-color: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PayU Local Integration Test</h1>
+        
+        <div class="info">
+            <h3>🎯 Test Purpose</h3>
+            <p>This test calls your actual create-payment Edge Function to generate PayU form data, then submits it to PayU to see if the parameters are received correctly.</p>
+            <p><strong>Environment:</strong> Local development with your actual database</p>
+        </div>
+
+        <button onclick="testPayUPayment()">🚀 Test PayU Payment Creation</button>
+        
+        <div id="logOutput" class="log"></div>
+
+        <div class="info success">
+            <h3>✅ What This Tests</h3>
+            <ul>
+                <li>✅ Your create-payment Edge Function</li>
+                <li>✅ PayU key configuration from database</li>
+                <li>✅ Hash generation algorithm</li>
+                <li>✅ Form data structure</li>
+                <li>✅ Actual form submission to PayU</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = '${SUPABASE_URL}';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZ3Zscnb5d3NmbW5ta3hyZWNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjgzMjgzMTMsImV4cCI6MjA0MzkwNDMxM30.yCgHJQN3Y4rrXJUJZTqFojl8N3lcFXp2xsz84MQO2qU';
+
+        function log(message) {
+            const logDiv = document.getElementById('logOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += '[' + timestamp + '] ' + message + '<br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        async function testPayUPayment() {
+            log('🧪 Starting PayU integration test...');
+            
+            // Create a test payment request (using guest checkout)
+            const paymentRequest = {
+                quoteIds: ['test-quote-' + Date.now()],
+                email: 'test@example.com',
+                userId: 'test-user-' + Date.now(),
+                customerName: 'Test Customer',
+                customerPhone: '9999999999',
+                success_url: 'https://example.com/success',
+                failure_url: 'https://example.com/failure',
+                amount: 100.00,
+                currency: 'USD',
+                destination_country: 'IN',
+                gateway: 'payu',
+                metadata: {
+                    checkout_type: 'guest'
+                }
+            };
+
+            log('📝 Payment request prepared:');
+            log('- Amount: ' + paymentRequest.amount + ' ' + paymentRequest.currency);
+            log('- Destination: ' + paymentRequest.destination_country);
+            log('- Gateway: ' + paymentRequest.gateway);
+
+            try {
+                log('🔄 Calling create-payment Edge Function...');
+                
+                const response = await fetch(SUPABASE_URL + '/functions/v1/create-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                        'x-supabase-gateway': 'payu'
+                    },
+                    body: JSON.stringify(paymentRequest)
+                });
+
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    log('❌ API Error: ' + (result.error || 'Unknown error'));
+                    log('Status: ' + response.status);
+                    log('Response: ' + JSON.stringify(result, null, 2));
+                    return;
+                }
+
+                log('✅ Payment creation successful!');
+                log('- Transaction ID: ' + result.transactionId);
+                log('- PayU URL: ' + result.url);
+                log('- Amount in INR: ' + result.amountInINR);
+                log('- Exchange Rate: ' + result.exchangeRate);
+
+                if (result.formData) {
+                    log('✅ Form data received with ' + Object.keys(result.formData).length + ' fields');
+                    
+                    // Validate required fields
+                    const requiredFields = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
+                    const missingFields = requiredFields.filter(field => !result.formData[field]);
+                    
+                    if (missingFields.length > 0) {
+                        log('❌ Missing required fields: ' + missingFields.join(', '));
+                    } else {
+                        log('✅ All required fields present');
+                    }
+
+                    // Show form data (without sensitive info)
+                    log('📋 Form data details:');
+                    Object.entries(result.formData).forEach(([key, value]) => {
+                        if (key === 'hash') {
+                            log('  ' + key + ': ' + value.substring(0, 20) + '... (' + value.length + ' chars)');
+                        } else {
+                            log('  ' + key + ': ' + value);
+                        }
+                    });
+
+                    // Now submit to PayU
+                    log('🚀 Submitting to PayU...');
+                    
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = result.url;
+                    form.target = '_self';
+                    form.style.display = 'none';
+
+                    // Add all form fields
+                    Object.entries(result.formData).forEach(([key, value]) => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.value = value || '';
+                        form.appendChild(input);
+                    });
+
+                    document.body.appendChild(form);
+                    
+                    log('✅ Form created with ' + form.elements.length + ' fields');
+                    log('⏳ Submitting to PayU in 2 seconds...');
+                    
+                    // Submit after delay
+                    setTimeout(() => {
+                        form.submit();
+                    }, 2000);
+                    
+                } else {
+                    log('❌ No form data received from backend');
+                    log('Response: ' + JSON.stringify(result, null, 2));
+                }
+
+            } catch (error) {
+                log('❌ Error: ' + error.message);
+                console.error('Full error:', error);
+            }
+        }
+
+        // Initialize
+        window.onload = function() {
+            log('🎯 PayU local integration test loaded');
+            log('📡 Connected to: ' + SUPABASE_URL);
+            log('👆 Click the button above to test PayU payment creation');
+        };
+    </script>
+</body>
+</html>`;
+
+  // Write the test HTML file
+  writeFileSync('test-payu-local-integration.html', testHTML);
+  
+  console.log('✅ Created test file: test-payu-local-integration.html');
+  console.log('');
+  console.log('🎯 To test:');
+  console.log('1. Open the test file in your browser:');
+  console.log('   file://' + process.cwd() + '/test-payu-local-integration.html');
+  console.log('2. Click "Test PayU Payment Creation"');
+  console.log('3. It will call your Edge Function and submit to PayU');
+  console.log('');
+  console.log('📊 This will test:');
+  console.log('- ✅ Your Edge Function response');
+  console.log('- ✅ PayU key configuration');
+  console.log('- ✅ Hash generation');
+  console.log('- ✅ Form submission to PayU');
+  console.log('');
+  console.log('📋 Expected results:');
+  console.log('- If PayU receives data: Payment page or different error');
+  console.log('- If PayU receives nothing: "Mandatory parameter missing"');
+  console.log('');
+  console.log('🔗 Direct link to test:');
+  console.log('file://' + process.cwd() + '/test-payu-local-integration.html');
+}
+
+// Run the test
+testPayUIntegration().catch(console.error);

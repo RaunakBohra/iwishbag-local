@@ -110,7 +110,8 @@
       "Bash(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c \"SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN (''quote_statuses'', ''order_statuses'');\")",
       "Bash(PGPASSWORD:*)",
       "Bash(touch:*)",
-      "Bash(supabase secrets list:*)"
+      "Bash(supabase secrets list:*)",
+      "Bash(open test-payu-local-integration.html)"
     ],
     "deny": []
   }
