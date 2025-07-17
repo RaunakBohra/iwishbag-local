@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AccessibilityProvider } from '@/components/ui/AccessibilityProvider';
 import {
@@ -391,14 +392,16 @@ function App() {
         <AuthProvider>
           <AccessibilityProvider>
             <StatusConfigProvider>
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center min-h-screen">Loading...</div>
-                }
-              >
-                <RouterProvider router={router} />
-              </Suspense>
-              <Toaster />
+              <HelmetProvider>
+                <Suspense
+                  fallback={
+                    <div className="flex items-center justify-center min-h-screen">Loading...</div>
+                  }
+                >
+                  <RouterProvider router={router} />
+                </Suspense>
+                <Toaster />
+              </HelmetProvider>
             </StatusConfigProvider>
           </AccessibilityProvider>
         </AuthProvider>

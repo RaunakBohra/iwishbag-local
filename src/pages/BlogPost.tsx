@@ -32,7 +32,10 @@ const BlogPost = () => {
   const { toast } = useToast();
 
   const { data: post, isLoading, error } = useBlogPost(slug!);
-  const { data: relatedPosts, isLoading: relatedLoading } = useRelatedPosts(slug!, 3);
+  const { data: relatedPosts, isLoading: relatedLoading } = useRelatedPosts(
+    slug && post ? slug : '',
+    3,
+  );
 
   if (isLoading) {
     return (
@@ -215,9 +218,9 @@ const BlogPost = () => {
             {/* Tags */}
             {post.tags && post.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-8">
-                {post.tags.map((tag) => (
-                  <Badge key={tag.id} variant="outline" className="text-xs">
-                    #{tag.name}
+                {post.tags.map((tagRelation) => (
+                  <Badge key={tagRelation.tag.id} variant="outline" className="text-xs">
+                    #{tagRelation.tag.name}
                   </Badge>
                 ))}
               </div>

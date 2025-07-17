@@ -50,7 +50,7 @@ export interface BlogPost {
 
   // Relations (populated when needed)
   category?: BlogCategory;
-  tags?: BlogTag[];
+  tags?: BlogPostTag[];
   comments?: BlogComment[];
   author?: {
     id: string;
@@ -85,6 +85,9 @@ export interface BlogPostTag {
   post_id: string;
   tag_id: string;
   created_at: string;
+
+  // Relations (populated when needed)
+  tag: BlogTag;
 }
 
 // API Response Types
@@ -123,6 +126,8 @@ export interface RelatedPost {
   featured_image_url?: string;
   category_name: string;
   published_at: string;
+  reading_time_minutes: number;
+  views_count: number;
 }
 
 // Form Types

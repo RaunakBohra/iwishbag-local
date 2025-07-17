@@ -68,9 +68,9 @@ export const BlogCard = ({
         <CardContent className="space-y-3">
           {post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {post.tags.slice(0, 3).map((tag) => (
-                <Badge key={tag.id} variant="outline" className="text-xs">
-                  {tag.name}
+              {post.tags.slice(0, 3).map((tagRelation) => (
+                <Badge key={tagRelation.tag.id} variant="outline" className="text-xs">
+                  {tagRelation.tag.name}
                 </Badge>
               ))}
               {post.tags.length > 3 && (

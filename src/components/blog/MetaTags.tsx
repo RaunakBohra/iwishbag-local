@@ -26,7 +26,7 @@ export const MetaTags: React.FC<MetaTagsProps> = ({ post, baseUrl = 'https://iwi
   // Keywords from category and tags
   const keywords = [
     post.category?.name,
-    ...(post.tags?.map((tag) => tag.name) || []),
+    ...(post.tags?.map((tagRelation) => tagRelation.tag.name) || []),
     post.focus_keyword,
     'iwishBag',
     'international shopping',
@@ -57,8 +57,8 @@ export const MetaTags: React.FC<MetaTagsProps> = ({ post, baseUrl = 'https://iwi
       <meta property="article:published_time" content={post.published_at} />
       <meta property="article:modified_time" content={post.updated_at} />
       <meta property="article:section" content={post.category?.name} />
-      {post.tags?.map((tag) => (
-        <meta key={tag.id} property="article:tag" content={tag.name} />
+      {post.tags?.map((tagRelation) => (
+        <meta key={tagRelation.tag.id} property="article:tag" content={tagRelation.tag.name} />
       ))}
 
       {/* Twitter Card Tags */}
@@ -118,9 +118,9 @@ export const MetaTags: React.FC<MetaTagsProps> = ({ post, baseUrl = 'https://iwi
             description: 'Tips and guides for international e-commerce shopping',
           },
           mentions:
-            post.tags?.map((tag) => ({
+            post.tags?.map((tagRelation) => ({
               '@type': 'Thing',
-              name: tag.name,
+              name: tagRelation.tag.name,
             })) || [],
         })}
       </script>

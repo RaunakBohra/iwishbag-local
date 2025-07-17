@@ -168,18 +168,25 @@ export const useRelatedPosts = (slug: string, limit: number = 3) => {
   return useQuery({
     queryKey: BLOG_POSTS_KEYS.related(slug),
     queryFn: async (): Promise<RelatedPost[]> => {
+      // Skip if no slug provided
+      if (!slug || slug.trim() === '') {
+        return [];
+      }
+
       const { data, error } = await supabase.rpc('get_related_posts', {
         post_slug: slug,
         limit_count: limit,
       });
 
       if (error) {
+        console.error('Related posts error:', error);
         throw new Error(error.message);
       }
 
       return data || [];
     },
     staleTime: 15 * 60 * 1000, // 15 minutes
+    enabled: !!slug && slug.trim() !== '', // Only run query when slug is valid
   });
 };
 
