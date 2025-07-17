@@ -1,6 +1,7 @@
 import { getExchangeRate, ExchangeRateResult } from '@/lib/currencyUtils';
 import { getShippingCost } from '@/lib/unified-shipping-calculator';
 import { Tables } from '@/integrations/supabase/types';
+import { currencyService } from '@/services/CurrencyService';
 import { 
   startQuoteCalculationMonitoring, 
   completeQuoteCalculationMonitoring, 
@@ -77,6 +78,7 @@ export interface QuoteCalculationBreakdown {
   final_total: number;
   
   // Metadata
+  currency: string;
   exchange_rate: number;
   exchange_rate_source: string;
   shipping_method: string;
@@ -553,6 +555,9 @@ export class QuoteCalculatorService {
       (sum, item) => sum + (item.item_weight * item.quantity), 0
     );
 
+    // Determine destination currency
+    const destinationCurrency = currencyService.getCurrencyForCountrySync(params.destinationCountry);
+
     // Log calculation details
     logger.debug(LogCategory.QUOTE_CALCULATION, 'Starting calculation breakdown', {
       quoteId: calculationId,
@@ -702,9 +707,9 @@ export class QuoteCalculatorService {
           vat,
           finalTotal: final_total
         },
-        exchangeRate,
-        exchangeRateSource,
-        shippingMethod
+        exchangeRate: exchange_rate,
+        exchangeRateSource: exchange_rate_source,
+        shippingMethod: shipping_method
       }
     });
 
@@ -724,6 +729,7 @@ export class QuoteCalculatorService {
       subtotal,
       vat,
       final_total,
+      currency: destinationCurrency,
       exchange_rate,
       exchange_rate_source,
       shipping_method,

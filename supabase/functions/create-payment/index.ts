@@ -1402,7 +1402,213 @@ serve(async (req) => {
         responseData = { success: true, paymentId };
         break;
       
-      // TODO: Add cases for other payment gateways (eSewa, Khalti, etc.)
+      case 'esewa':
+        try {
+          console.log('💳 Processing eSewa payment');
+          
+          // Get Nepal country settings for exchange rate (same as Fonepay)
+          const { data: nepalSettings, error: nepalError } = await supabaseAdmin
+            .from('country_settings')
+            .select('rate_from_usd')
+            .eq('code', 'NP')
+            .single();
+
+          if (nepalError || !nepalSettings) {
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+              'Nepal exchange rate not found'
+            );
+            return createErrorResponse(new Error('Nepal exchange rate not found'), 500, logger);
+          }
+
+          // Convert amount to NPR (same as Fonepay)
+          const exchangeRate = nepalSettings.rate_from_usd;
+          let amountInNPR: number;
+          
+          if (totalCurrency === 'NPR') {
+            amountInNPR = totalAmount;
+            console.log(`Amount is already in NPR: ${amountInNPR}`);
+          } else {
+            amountInNPR = totalAmount * exchangeRate;
+            console.log(`Converting ${totalAmount} ${totalCurrency} to ${amountInNPR} NPR (rate: ${exchangeRate})`);
+          }
+
+          // Get eSewa gateway configuration
+          const { data: esewaGateway, error: esewaGatewayError } = await supabaseAdmin
+            .from('payment_gateways')
+            .select('config, test_mode')
+            .eq('code', 'esewa')
+            .single();
+
+          if (esewaGatewayError || !esewaGateway) {
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+              'eSewa gateway config missing'
+            );
+            return createErrorResponse(new Error('eSewa gateway config missing'), 500, logger);
+          }
+
+          const esewaConfig = esewaGateway.config as {
+            product_code: string;
+            secret_key: string;
+            test_mode?: boolean;
+          };
+
+          if (!esewaConfig.product_code || !esewaConfig.secret_key) {
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+              'eSewa API keys missing'
+            );
+            return createErrorResponse(new Error('eSewa configuration missing'), 500, logger);
+          }
+
+          // Generate unique transaction UUID
+          const transactionUuid = `ESW_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
+          // Get customer information (same pattern as Fonepay)
+          let customerName = customerInfo?.name || 'Customer';
+          let customerEmail = customerInfo?.email || 'customer@example.com';
+          
+          if (quoteIds && quoteIds.length > 0) {
+            const { data: fullQuotes } = await supabaseAdmin
+              .from('quotes')
+              .select('email, customer_name, shipping_address')
+              .in('id', quoteIds)
+              .limit(1);
+
+            if (fullQuotes && fullQuotes.length > 0) {
+              const firstQuote = fullQuotes[0];
+              customerEmail = firstQuote.email || customerEmail;
+              customerName = firstQuote.customer_name || customerName;
+            }
+          }
+          
+          // Format amount to 2 decimal places
+          const formattedAmount = amountInNPR.toFixed(2);
+          
+          // Get base URL from success_url for return URLs
+          const baseUrl = new URL(success_url).origin;
+          const successUrl = `${baseUrl}/payment-callback/esewa-success`;
+          const failureUrl = `${baseUrl}/payment-callback/esewa-failure`;
+          
+          // eSewa payment parameters (following eSewa API v2 spec)
+          const paymentParams = {
+            amount: formattedAmount,
+            tax_amount: "0",
+            total_amount: formattedAmount,
+            transaction_uuid: transactionUuid,
+            product_code: esewaConfig.product_code,
+            product_service_charge: "0",
+            product_delivery_charge: "0",
+            success_url: successUrl,
+            failure_url: failureUrl,
+            signed_field_names: "total_amount,transaction_uuid,product_code"
+          };
+
+          // Debug logging
+          console.log('📊 eSewa payment params:', {
+            amount: paymentParams.amount,
+            total_amount: paymentParams.total_amount,
+            transaction_uuid: paymentParams.transaction_uuid,
+            product_code: paymentParams.product_code,
+            secret_key: esewaConfig.secret_key,
+            secret_key_length: esewaConfig.secret_key.length
+          });
+
+          // Generate HMAC-SHA256 signature (eSewa specification)
+          const signatureString = `${paymentParams.total_amount},${paymentParams.transaction_uuid},${paymentParams.product_code}`;
+          
+          console.log('🔐 eSewa signature string:', signatureString);
+          console.log('🔑 eSewa secret key:', esewaConfig.secret_key);
+
+          // Generate HMAC-SHA256 for eSewa
+          const encoder = new TextEncoder();
+          const keyData = encoder.encode(esewaConfig.secret_key);
+          const messageData = encoder.encode(signatureString);
+          
+          const cryptoKey = await crypto.subtle.importKey(
+            'raw',
+            keyData,
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign']
+          );
+          
+          const hashBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+          
+          // Try different Base64 encoding approaches
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const signature = btoa(String.fromCharCode(...hashArray));
+          
+          // Alternative approach - direct base64 from buffer
+          const base64url = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(hashBuffer))));
+          const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+          
+          console.log('✅ eSewa signature generated (method 1):', signature);
+          console.log('✅ eSewa signature generated (method 2):', base64);
+          console.log('📝 Signature length:', signature.length);
+          console.log('🔍 Are signatures same?', signature === base64);
+
+          // Determine eSewa environment URL
+          const esewaTestMode = esewaGateway.test_mode ?? true;
+          const esewaUrl = esewaTestMode 
+            ? 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'
+            : 'https://epay.esewa.com.np/api/epay/main/v2/form';
+
+          // Create form data for POST submission (eSewa requires POST)
+          const formData = {
+            ...paymentParams,
+            signature: signature
+          };
+
+          console.log('🚀 eSewa payment form generated');
+          console.log('📦 Complete form data being sent:', JSON.stringify(formData, null, 2));
+          
+          // Don't complete payment monitoring here - let callback handle completion
+          // This way monitoring shows "pending" until callback confirms payment
+
+          responseData = {
+            success: true,
+            url: esewaUrl,
+            method: 'POST',
+            formData: formData,
+            transactionId: transactionUuid,
+            gateway: 'esewa',
+            amount: amountInNPR,
+            currency: 'NPR'
+          };
+
+        } catch (error) {
+          paymentMonitoring.completePaymentMonitoring(
+            paymentId,
+            false,
+            EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
+            error instanceof Error ? error.message : 'eSewa payment creation failed'
+          );
+
+          logger.error(
+            EdgeLogCategory.PAYMENT_PROCESSING,
+            'eSewa payment creation failed',
+            {
+              error: error instanceof Error ? error.message : 'Unknown error',
+              paymentId,
+              userId
+            }
+          );
+
+          return createErrorResponse(
+            error instanceof Error ? error : new Error('eSewa payment creation failed'),
+            500,
+            logger
+          );
+        }
+        break;
 
       default:
         paymentMonitoring.completePaymentMonitoring(

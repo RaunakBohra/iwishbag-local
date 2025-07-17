@@ -27,7 +27,7 @@ vi.mock('@/contexts/AuthContext', () => ({
 }));
 
 vi.mock('@/hooks/useCart', () => ({
-  useCart: () => ({
+  useCart: vi.fn(() => ({
     items: [
       {
         id: 'quote-1',
@@ -48,11 +48,11 @@ vi.mock('@/hooks/useCart', () => ({
     addToCart: vi.fn(),
     updateQuantity: vi.fn(),
     error: null,
-  }),
+  })),
 }));
 
 vi.mock('@/hooks/usePaymentGateways', () => ({
-  usePaymentGateways: () => ({
+  usePaymentGateways: vi.fn(() => ({
     data: [
       {
         id: 'stripe',
@@ -72,7 +72,7 @@ vi.mock('@/hooks/usePaymentGateways', () => ({
       },
     ],
     isLoading: false,
-  }),
+  })),
 }));
 
 vi.mock('@/hooks/useAllCountries', () => ({

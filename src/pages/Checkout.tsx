@@ -1104,7 +1104,7 @@ export default function Checkout() {
       } else if (paymentResponse.url) {
         // For redirect-based payments (PayU Hosted Checkout)
         // First update quote status to processing for payment gateways
-        if (paymentMethod === 'payu') {
+        if (paymentMethod === 'payu' || paymentMethod === 'esewa') {
           const statusConfig = findStatusForPaymentMethod(paymentMethod);
           const processingStatus = statusConfig?.name || 'processing';
           
@@ -1226,6 +1226,38 @@ export default function Checkout() {
           
           // Submit form immediately
           form.submit();
+        } else if (paymentMethod === 'esewa') {
+          // For eSewa, use form POST submission (similar to PayU)
+          if (paymentResponse.formData && paymentResponse.url) {
+            console.log('📋 Creating form for eSewa submission...');
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = paymentResponse.url;
+            form.target = '_self';
+            form.style.display = 'none';
+
+            // Add all form fields from Edge Function response
+            Object.entries(paymentResponse.formData).forEach(([key, value]) => {
+              const input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = key;
+              input.value = String(value);
+              form.appendChild(input);
+              console.log(`📝 eSewa form field: ${key} = ${value}`);
+            });
+
+            document.body.appendChild(form);
+            
+            console.log('✅ eSewa form created with ' + form.elements.length + ' fields');
+            console.log('🚀 Submitting to eSewa...');
+            
+            // Submit form immediately
+            form.submit();
+          } else {
+            console.error('❌ eSewa formData missing, falling back to direct redirect');
+            window.location.href = paymentResponse.url;
+          }
         } else {
           // For other redirect-based payments (not Stripe)
           window.location.href = paymentResponse.url;

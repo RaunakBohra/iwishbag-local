@@ -40,6 +40,8 @@ const QuoteDetailUnified = React.lazy(() => import("@/pages/dashboard/QuoteDetai
 const ResetPassword = React.lazy(() => import("@/pages/auth/ResetPassword"));
 const EmailConfirmation = React.lazy(() => import("@/pages/auth/EmailConfirmation"));
 const FonepayCallback = React.lazy(() => import("@/pages/api/fonepay-callback"));
+const EsewaSuccess = React.lazy(() => import("@/pages/payment-callback/esewa-success"));
+const EsewaFailure = React.lazy(() => import("@/pages/payment-callback/esewa-failure"));
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import("@/pages/admin/Dashboard"));
@@ -219,6 +221,22 @@ const router = createBrowserRouter([
         element: (
           <ErrorBoundary fallback={PaymentErrorFallback}>
             <FonepayCallback />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "payment-callback/esewa-success", // eSewa success callback (public access)
+        element: (
+          <ErrorBoundary fallback={PaymentErrorFallback}>
+            <EsewaSuccess />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "payment-callback/esewa-failure", // eSewa failure callback (public access)
+        element: (
+          <ErrorBoundary fallback={PaymentErrorFallback}>
+            <EsewaFailure />
           </ErrorBoundary>
         ),
       },

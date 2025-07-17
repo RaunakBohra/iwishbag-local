@@ -55,12 +55,72 @@ global.console = {
   error: vi.fn(),
 };
 
-// Mock environment variables
+// Mock environment variables for Supabase
+process.env.VITE_SUPABASE_URL = 'https://test.supabase.co';
+process.env.VITE_SUPABASE_ANON_KEY = 'test-anon-key';
+
+// Create a flexible Supabase mock that can be overridden by individual tests
+const createMockSupabaseQuery = () => ({
+  select: vi.fn(() => ({
+    eq: vi.fn(() => ({
+      order: vi.fn(() => ({
+        limit: vi.fn(() => ({
+          maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+          single: vi.fn(() => Promise.resolve({ data: null, error: null }))
+        })),
+        maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        single: vi.fn(() => Promise.resolve({ data: null, error: null }))
+      })),
+      maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+      single: vi.fn(() => Promise.resolve({ data: null, error: null }))
+    })),
+    maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+    single: vi.fn(() => Promise.resolve({ data: null, error: null }))
+  })),
+  insert: vi.fn(() => ({
+    select: vi.fn(() => Promise.resolve({ data: null, error: null }))
+  })),
+  update: vi.fn(() => ({
+    eq: vi.fn(() => ({
+      select: vi.fn(() => Promise.resolve({ data: null, error: null }))
+    }))
+  })),
+  delete: vi.fn(() => ({
+    eq: vi.fn(() => Promise.resolve({ data: null, error: null }))
+  }))
+});
+
+// Mock Supabase client with complete API surface - allows test-level overrides
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: vi.fn(),
-    auth: vi.fn(),
-    storage: vi.fn(),
+    from: vi.fn(() => createMockSupabaseQuery()),
+    auth: {
+      getUser: vi.fn(() => Promise.resolve({ data: { user: null }, error: null })),
+      signInWithPassword: vi.fn(() => Promise.resolve({ data: null, error: null })),
+      signUp: vi.fn(() => Promise.resolve({ data: null, error: null })),
+      signOut: vi.fn(() => Promise.resolve({ error: null })),
+      resetPasswordForEmail: vi.fn(() => Promise.resolve({ data: null, error: null })),
+      updateUser: vi.fn(() => Promise.resolve({ data: null, error: null })),
+      onAuthStateChange: vi.fn(() => ({
+        data: { subscription: { unsubscribe: vi.fn() } }
+      }))
+    },
+    storage: {
+      from: vi.fn(() => ({
+        upload: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        download: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        remove: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'test-url' } }))
+      }))
+    },
+    functions: {
+      invoke: vi.fn(() => Promise.resolve({ data: null, error: null }))
+    },
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn(() => Promise.resolve('OK')),
+      unsubscribe: vi.fn(() => Promise.resolve('OK'))
+    }))
   },
 }));
 

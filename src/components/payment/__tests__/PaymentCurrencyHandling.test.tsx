@@ -34,6 +34,7 @@ type MockSupabaseClient = {
   auth: {
     getUser: ReturnType<typeof vi.fn>;
   };
+  channel: ReturnType<typeof vi.fn>;
 };
 
 type MockCurrencyService = {
@@ -73,7 +74,15 @@ const mockQuoteWithMultiCurrency: Partial<Tables<'quotes'>> = {
   user_id: 'test-user-id'
 };
 
-const mockPaymentLedgerData: Partial<Tables<'payment_ledger'>>[] = [
+const mockPaymentLedgerData: Array<{
+  id: string;
+  quote_id: string;
+  amount: number;
+  currency: string;
+  payment_type: string;
+  status: string;
+  payment_date: string;
+}> = [
   {
     id: 'payment-1',
     quote_id: 'test-quote-id',
@@ -92,6 +101,29 @@ const mockPaymentLedgerData: Partial<Tables<'payment_ledger'>>[] = [
     status: 'completed',
     payment_date: '2024-01-16T10:00:00Z'
   }
+];
+
+const mockPayments = [
+  {
+    id: 'pay-1',
+    amount: 500,
+    currency: 'USD',
+    method: 'card',
+    gateway: 'stripe',
+    reference: 'ref-stripe-1',
+    date: new Date(),
+    canRefund: true,
+  },
+  {
+    id: 'pay-2',
+    amount: 300,
+    currency: 'INR',
+    method: 'netbanking',
+    gateway: 'payu',
+    reference: 'ref-payu-1',
+    date: new Date(),
+    canRefund: true,
+  },
 ];
 
 describe('Payment Currency Handling', () => {
@@ -116,24 +148,18 @@ describe('Payment Currency Handling', () => {
 
     mockCurrencyService.isValidPaymentAmountSync.mockReturnValue(true);
     mockCurrencyService.isSupportedByPaymentGateway.mockReturnValue(true);
+
+    // Mock Supabase real-time
+    mockSupabase.channel.mockReturnValue({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+      unsubscribe: vi.fn().mockReturnThis(),
+    });
   });
 
   describe('Multi-Currency Payment Detection', () => {
     test('should detect and display multi-currency payments in PaymentManagementWidget', async () => {
-      // Mock supabase queries
-      mockSupabase.from.mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            order: vi.fn().mockReturnValue({
-              limit: vi.fn().mockReturnValue({
-                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
-              })
-            })
-          })
-        })
-      });
-
-      // Mock payment ledger query
+      // Mock payment ledger query to return multi-currency data
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'payment_ledger') {
           return {
@@ -147,6 +173,22 @@ describe('Payment Currency Handling', () => {
             })
           };
         }
+        // For payment_transactions table - include the .in() method
+        if (table === 'payment_transactions') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockReturnValue({
+                  order: vi.fn().mockResolvedValue({
+                    data: [], // No transactions, only ledger data
+                    error: null
+                  })
+                })
+              })
+            })
+          };
+        }
+        // For all other tables
         return {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
@@ -327,6 +369,7 @@ describe('Payment Currency Handling', () => {
           isOpen={true} 
           onClose={onClose} 
           quote={mockQuoteWithMultiCurrency as Tables<'quotes'>} 
+          payments={mockPayments}
         />
       );
 
@@ -384,6 +427,7 @@ describe('Payment Currency Handling', () => {
           isOpen={true} 
           onClose={onClose} 
           quote={mockQuoteWithMultiCurrency as Tables<'quotes'>} 
+          payments={mockPayments}
         />
       );
 
