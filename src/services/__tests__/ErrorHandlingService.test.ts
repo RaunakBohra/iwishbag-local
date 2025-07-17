@@ -584,7 +584,18 @@ describe('ErrorHandlingService', () => {
         enableFallbacks: true,
         logErrors: true,
         showUserMessages: true,
-        autoRecovery: true
+        autoRecovery: true,
+        enableMetrics: true,
+        alerting: {
+          enableAlerts: true,
+          warningThreshold: 5,
+          criticalThreshold: 10
+        },
+        performanceThresholds: {
+          timeoutMs: 30000,
+          slowCalculationMs: 5000,
+          errorRatePercent: 5
+        }
       });
     });
 

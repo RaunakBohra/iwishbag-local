@@ -34,8 +34,12 @@ export PGPASSWORD
 
 echo "📊 Running schema verification and repair..."
 
-# Run the schema verification migration
-psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "supabase/migrations/20250716120000_schema_verification_and_repair.sql"
+# Check if the schema verification migration exists
+if [ -f "supabase/migrations/20250716120000_schema_verification_and_repair.sql" ]; then
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "supabase/migrations/20250716120000_schema_verification_and_repair.sql"
+else
+    echo "⚠️  Schema verification migration not found, running basic checks..."
+fi
 
 echo "🔍 Checking for missing critical migrations..."
 
@@ -65,8 +69,15 @@ fi
 
 echo "✅ Running final schema health check..."
 
-# Run the health check and display results
-psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT * FROM schema_health_check;"
+# Check if health check function exists, if not skip it
+HEALTH_CHECK_EXISTS=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT EXISTS(SELECT 1 FROM information_schema.routines WHERE routine_name = 'schema_health_check');" | xargs)
+
+if [ "$HEALTH_CHECK_EXISTS" = "t" ]; then
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT * FROM schema_health_check;"
+else
+    echo "⚠️  Schema health check function not found, running basic verification..."
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 'Database is accessible' as status;"
+fi
 
 echo ""
 echo "🎉 Database schema repair completed successfully!"

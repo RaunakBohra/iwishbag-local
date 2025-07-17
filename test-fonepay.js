@@ -3,8 +3,8 @@ const testFonepayPayment = async () => {
   const testPaymentRequest = {
     quoteIds: ['2c51b248-475f-41e1-8450-4f02831752a1'], // Using a real quote ID
     gateway: 'fonepay',
-    success_url: 'http://localhost:8080/payment-success',
-    cancel_url: 'http://localhost:8080/payment-failure',
+    success_url: 'http://localhost:8081/payment-success', // Updated to correct port
+    cancel_url: 'http://localhost:8081/payment-failure',
     amount: 100, // NPR 100
     currency: 'NPR',
     customerInfo: {
@@ -14,7 +14,7 @@ const testFonepayPayment = async () => {
     },
     metadata: {
       test: true,
-      guest_session_token: 'test-session-123'
+      guest_session_token: `test-session-${Date.now()}` // Dynamic session token
     }
   };
 
@@ -26,7 +26,7 @@ const testFonepayPayment = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU`
+        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0`
       },
       body: JSON.stringify(testPaymentRequest)
     });
@@ -59,17 +59,17 @@ const testFonepayPayment = async () => {
 const testFonepayHash = async () => {
   console.log('\n🔐 Testing Fonepay hash generation...');
   
-  const secretKey = 'dd3f7d1be3ad401a84b374aca469aa48';
+  const secretKey = 'fonepay'; // Test secret key from documentation
   const params = {
-    PID: '2222050014849742',
+    PID: 'fonepay123', // Test merchant code from documentation
     MD: 'P',
-    PRN: 'TEST_123456',
+    PRN: `TEST_${Date.now()}`,
     AMT: '100.00',
     CRN: 'NPR',
     DT: new Date().toLocaleDateString('en-US'),
     R1: 'Test Order',
     R2: 'Test Customer',
-    RU: 'http://localhost:8080/api/fonepay-callback'
+    RU: 'http://localhost:8081/api/fonepay-callback'
   };
   
   const hashString = [
@@ -103,7 +103,7 @@ const testFonepayCallback = async () => {
   // Simulate Fonepay callback parameters
   const callbackParams = {
     PRN: 'FP_1234567890_abc123',
-    PID: '2222050014849742',
+    PID: 'fonepay123', // Updated to use test merchant code
     PS: 'true',
     RC: '00',
     UID: 'FONEPAY-12345',
