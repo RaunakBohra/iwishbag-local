@@ -3,14 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  AlertTriangle, 
-  Clock, 
-  RefreshCw, 
-  XCircle, 
+import {
+  AlertTriangle,
+  Clock,
+  RefreshCw,
+  XCircle,
   CheckCircle,
   Smartphone,
-  IndianRupee
+  IndianRupee,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -36,34 +36,35 @@ const ERROR_TYPES: Record<string, ErrorDetails> = {
     message: 'Too many payment requests',
     solution: 'Please wait before trying again. This prevents overwhelming the payment system.',
     retryable: true,
-    retryDelay: 60
+    retryDelay: 60,
   },
   'PayU configuration missing': {
     type: 'configuration',
     message: 'Payment gateway configuration error',
     solution: 'Please contact support. The payment system is not properly configured.',
-    retryable: false
+    retryable: false,
   },
   'Failed to get exchange rate': {
     type: 'configuration',
     message: 'Currency conversion error',
     solution: 'Please contact support. Unable to convert currency for payment.',
-    retryable: false
+    retryable: false,
   },
   'Network error': {
     type: 'network',
     message: 'Connection error',
     solution: 'Please check your internet connection and try again.',
     retryable: true,
-    retryDelay: 30
+    retryDelay: 30,
   },
   'Payment failed': {
     type: 'payment',
     message: 'Payment processing error',
-    solution: 'Your payment could not be processed. Please try again or use a different payment method.',
+    solution:
+      'Your payment could not be processed. Please try again or use a different payment method.',
     retryable: true,
-    retryDelay: 30
-  }
+    retryDelay: 30,
+  },
 };
 
 export const PayUErrorHandler: React.FC<PayUErrorHandlerProps> = ({
@@ -71,21 +72,21 @@ export const PayUErrorHandler: React.FC<PayUErrorHandlerProps> = ({
   retryAfter = 60,
   onRetry,
   onCancel,
-  transactionId
+  transactionId,
 }) => {
   const { toast } = useToast();
   const [countdown, setCountdown] = useState(retryAfter);
   const [canRetry, setCanRetry] = useState(false);
 
   // Determine error type
-  const errorDetails = Object.entries(ERROR_TYPES).find(([key]) => 
-    error.toLowerCase().includes(key.toLowerCase())
+  const errorDetails = Object.entries(ERROR_TYPES).find(([key]) =>
+    error.toLowerCase().includes(key.toLowerCase()),
   )?.[1] || {
     type: 'unknown',
     message: 'Payment error',
     solution: 'An unexpected error occurred. Please try again or contact support.',
     retryable: true,
-    retryDelay: 30
+    retryDelay: 30,
   };
 
   // Countdown timer for rate limiting
@@ -103,8 +104,8 @@ export const PayUErrorHandler: React.FC<PayUErrorHandlerProps> = ({
   const handleRetry = () => {
     if (canRetry && onRetry) {
       toast({
-        title: "Retrying payment",
-        description: "Redirecting to PayU payment page...",
+        title: 'Retrying payment',
+        description: 'Redirecting to PayU payment page...',
       });
       onRetry();
     }
@@ -141,15 +142,11 @@ export const PayUErrorHandler: React.FC<PayUErrorHandlerProps> = ({
   return (
     <Card className="w-full max-w-md mx-auto shadow-lg">
       <CardHeader className="text-center pb-4">
-        <div className="flex justify-center mb-4">
-          {getErrorIcon()}
-        </div>
+        <div className="flex justify-center mb-4">{getErrorIcon()}</div>
         <CardTitle className="text-xl font-semibold text-gray-900">
           {errorDetails.message}
         </CardTitle>
-        <p className="text-sm text-gray-600 mt-2">
-          {errorDetails.solution}
-        </p>
+        <p className="text-sm text-gray-600 mt-2">{errorDetails.solution}</p>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -193,11 +190,11 @@ export const PayUErrorHandler: React.FC<PayUErrorHandlerProps> = ({
         {/* Action Buttons */}
         <div className="flex gap-2">
           {errorDetails.retryable && (
-            <Button 
+            <Button
               onClick={handleRetry}
               disabled={!canRetry}
               className="flex-1"
-              variant={canRetry ? "default" : "outline"}
+              variant={canRetry ? 'default' : 'outline'}
             >
               {canRetry ? (
                 <>
@@ -213,11 +210,7 @@ export const PayUErrorHandler: React.FC<PayUErrorHandlerProps> = ({
             </Button>
           )}
 
-          <Button 
-            onClick={handleCancel}
-            variant="outline"
-            className="flex-1"
-          >
+          <Button onClick={handleCancel} variant="outline" className="flex-1">
             <XCircle className="h-4 w-4 mr-2" />
             Cancel
           </Button>
@@ -227,10 +220,7 @@ export const PayUErrorHandler: React.FC<PayUErrorHandlerProps> = ({
         <div className="text-center">
           <p className="text-xs text-gray-500">
             Need help? Contact support at{' '}
-            <a 
-              href="mailto:support@iwishbag.com" 
-              className="text-blue-600 hover:underline"
-            >
+            <a href="mailto:support@iwishbag.com" className="text-blue-600 hover:underline">
               support@iwishbag.com
             </a>
           </p>
@@ -238,4 +228,4 @@ export const PayUErrorHandler: React.FC<PayUErrorHandlerProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

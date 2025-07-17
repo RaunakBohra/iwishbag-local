@@ -39,7 +39,7 @@ export function ShippingRouteDisplay({
           {showIcon && iconType === 'mapPin' && <MapPin className="h-3 w-3" />}
           <span>Origin:</span>
           <span className="font-medium text-foreground">
-            {countries.find(c => c.code === origin)?.name || origin}
+            {countries.find((c) => c.code === origin)?.name || origin}
             {showCodes && ` (${origin})`}
           </span>
         </div>
@@ -47,7 +47,7 @@ export function ShippingRouteDisplay({
           {showIcon && iconType === 'mapPin' && <MapPin className="h-3 w-3" />}
           <span>Destination:</span>
           <span className="font-medium text-foreground">
-            {countries.find(c => c.code === destination)?.name || destination}
+            {countries.find((c) => c.code === destination)?.name || destination}
             {showCodes && ` (${destination})`}
           </span>
         </div>
@@ -59,9 +59,7 @@ export function ShippingRouteDisplay({
     <span className={cn('inline-flex items-center gap-1', className)}>
       {showIcon && iconType === 'mapPin' && <MapPin className="h-3 w-3" />}
       <span>{routeText}</span>
-      {showIcon && iconType === 'arrow' && (
-        <ArrowRight className="h-3 w-3 mx-1 inline" />
-      )}
+      {showIcon && iconType === 'arrow' && <ArrowRight className="h-3 w-3 mx-1 inline" />}
     </span>
   );
 }

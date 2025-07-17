@@ -36,11 +36,13 @@ export interface CustomsRule {
 export async function applyRouteSpecificCustomsRules(
   productData: ProductData,
   originCountry: string,
-  destinationCountry: string
+  destinationCountry: string,
 ): Promise<CustomsResult> {
   try {
     console.log(`🔍 Checking customs rules for route: ${originCountry} → ${destinationCountry}`);
-    console.log(`📦 Product: ${productData.weight}kg, $${productData.price}, category: ${productData.category || 'unknown'}`);
+    console.log(
+      `📦 Product: ${productData.weight}kg, $${productData.price}, category: ${productData.category || 'unknown'}`,
+    );
 
     // Get route-specific customs rules
     const { data: customsRules, error } = await supabase
@@ -56,7 +58,9 @@ export async function applyRouteSpecificCustomsRules(
       throw error;
     }
 
-    console.log(`📋 Found ${customsRules?.length || 0} customs rules for ${originCountry} → ${destinationCountry}`);
+    console.log(
+      `📋 Found ${customsRules?.length || 0} customs rules for ${originCountry} → ${destinationCountry}`,
+    );
 
     // Match against route-specific rules
     for (const rule of customsRules || []) {
@@ -66,9 +70,9 @@ export async function applyRouteSpecificCustomsRules(
           dutyPercentage: rule.duty_percentage,
           confidence: 0.9, // High confidence for route-specific rules
           ruleApplied: `${rule.category} (${originCountry}→${destinationCountry})`,
-          route: `${originCountry}→${destinationCountry}`
+          route: `${originCountry}→${destinationCountry}`,
         };
-        
+
         console.log(`✅ Matched rule: ${rule.category} (${rule.duty_percentage}%)`);
         return result;
       }
@@ -90,9 +94,9 @@ export async function applyRouteSpecificCustomsRules(
         dutyPercentage: fallbackRule.duty_percentage,
         confidence: 0.7,
         ruleApplied: `General (${originCountry}→${destinationCountry})`,
-        route: `${originCountry}→${destinationCountry}`
+        route: `${originCountry}→${destinationCountry}`,
       };
-      
+
       console.log(`⚠️ Using fallback rule: General (${fallbackRule.duty_percentage}%)`);
       return result;
     }
@@ -103,22 +107,23 @@ export async function applyRouteSpecificCustomsRules(
       dutyPercentage: 0,
       confidence: 0.3,
       ruleApplied: `No route rules found (${originCountry}→${destinationCountry})`,
-      route: `${originCountry}→${destinationCountry}`
+      route: `${originCountry}→${destinationCountry}`,
     };
-    
-    console.log(`❌ No customs rules found for ${originCountry} → ${destinationCountry}, using default`);
-    return result;
 
+    console.log(
+      `❌ No customs rules found for ${originCountry} → ${destinationCountry}, using default`,
+    );
+    return result;
   } catch (error) {
     console.error('❌ Error in route-specific customs:', error);
-    
+
     // Return safe fallback
     return {
       category: 'general',
       dutyPercentage: 0,
       confidence: 0.1,
       ruleApplied: `Error occurred (${originCountry}→${destinationCountry})`,
-      route: `${originCountry}→${destinationCountry}`
+      route: `${originCountry}→${destinationCountry}`,
     };
   }
 }
@@ -149,14 +154,14 @@ function matchesConditions(productData: ProductData, conditions: Record<string, 
     // Category conditions
     if (conditions.category_contains && productData.category) {
       const categoryLower = productData.category.toLowerCase();
-      const requiredCategories = Array.isArray(conditions.category_contains) 
-        ? conditions.category_contains 
+      const requiredCategories = Array.isArray(conditions.category_contains)
+        ? conditions.category_contains
         : [conditions.category_contains];
-      
-      const matchesCategory = requiredCategories.some(required => 
-        categoryLower.includes(required.toLowerCase())
+
+      const matchesCategory = requiredCategories.some((required) =>
+        categoryLower.includes(required.toLowerCase()),
       );
-      
+
       if (!matchesCategory) {
         return false;
       }
@@ -165,14 +170,12 @@ function matchesConditions(productData: ProductData, conditions: Record<string, 
     // Title conditions
     if (conditions.title_contains && productData.title) {
       const titleLower = productData.title.toLowerCase();
-      const requiredTerms = Array.isArray(conditions.title_contains) 
-        ? conditions.title_contains 
+      const requiredTerms = Array.isArray(conditions.title_contains)
+        ? conditions.title_contains
         : [conditions.title_contains];
-      
-      const matchesTitle = requiredTerms.some(term => 
-        titleLower.includes(term.toLowerCase())
-      );
-      
+
+      const matchesTitle = requiredTerms.some((term) => titleLower.includes(term.toLowerCase()));
+
       if (!matchesTitle) {
         return false;
       }
@@ -190,7 +193,7 @@ function matchesConditions(productData: ProductData, conditions: Record<string, 
  */
 export async function getRouteCustomsRules(
   originCountry: string,
-  destinationCountry: string
+  destinationCountry: string,
 ): Promise<CustomsRule[]> {
   const { data, error } = await supabase
     .from('customs_rules')
@@ -211,7 +214,9 @@ export async function getRouteCustomsRules(
 /**
  * Get all available routes that have customs rules
  */
-export async function getAvailableCustomsRoutes(): Promise<Array<{origin: string, destination: string}>> {
+export async function getAvailableCustomsRoutes(): Promise<
+  Array<{ origin: string; destination: string }>
+> {
   const { data, error } = await supabase
     .from('customs_rules')
     .select('origin_country, destination_country')
@@ -225,15 +230,15 @@ export async function getAvailableCustomsRoutes(): Promise<Array<{origin: string
 
   // Remove duplicates
   const uniqueRoutes = new Set();
-  const routes: Array<{origin: string, destination: string}> = [];
-  
-  data?.forEach(rule => {
+  const routes: Array<{ origin: string; destination: string }> = [];
+
+  data?.forEach((rule) => {
     const routeKey = `${rule.origin_country}→${rule.destination_country}`;
     if (!uniqueRoutes.has(routeKey)) {
       uniqueRoutes.add(routeKey);
       routes.push({
         origin: rule.origin_country,
-        destination: rule.destination_country
+        destination: rule.destination_country,
       });
     }
   });
@@ -251,30 +256,45 @@ export async function getAvailableCustomsRoutes(): Promise<Array<{origin: string
  * @param {string} formDestinationCountry - Current form destination country value (optional, highest priority)
  * @returns {Promise<{origin: string, destination: string}>}
  */
-export async function getQuoteRouteCountries(quote, shippingAddress, allCountries, fetchRouteById, formOriginCountry, formDestinationCountry) {
+export async function getQuoteRouteCountries(
+  quote,
+  shippingAddress,
+  allCountries,
+  fetchRouteById,
+  formOriginCountry,
+  formDestinationCountry,
+) {
   // 1. If shipping_route_id exists, use the route from DB - this is the source of truth
   if (quote.shipping_route_id && fetchRouteById) {
     try {
       const route = await fetchRouteById(quote.shipping_route_id);
       if (route && route.origin_country && route.destination_country) {
-        return { origin: route.origin_country, destination: route.destination_country };
+        return {
+          origin: route.origin_country,
+          destination: route.destination_country,
+        };
       }
     } catch (e) {
       console.warn('Failed to fetch shipping route by ID:', e);
     }
   }
-  
+
   // 2. Use form values first (highest priority for live form updates)
   const origin = formOriginCountry || quote.origin_country || 'US';
-  let destination = formDestinationCountry || shippingAddress?.destination_country || shippingAddress?.country || quote.destination_country || '';
-  
+  let destination =
+    formDestinationCountry ||
+    shippingAddress?.destination_country ||
+    shippingAddress?.country ||
+    quote.destination_country ||
+    '';
+
   // Convert country names to codes if needed
   if (destination && destination.length > 2 && allCountries) {
-    const found = allCountries.find(c => c.name === destination);
+    const found = allCountries.find((c) => c.name === destination);
     if (found) destination = found.code;
   }
-  
+
   // Note: destination_country is the new field name, country_code is deprecated
-  
+
   return { origin, destination };
-} 
+}

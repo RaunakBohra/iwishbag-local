@@ -53,7 +53,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     customerActionText: 'Waiting for Review',
     // CSS styling
     cssClass: 'status-pending',
-    badgeVariant: 'secondary'
+    badgeVariant: 'secondary',
   },
   {
     id: 'sent',
@@ -96,7 +96,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     customerActionText: 'Review Quote',
     // CSS styling
     cssClass: 'status-sent',
-    badgeVariant: 'outline'
+    badgeVariant: 'outline',
   },
   {
     id: 'approved',
@@ -138,7 +138,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     customerActionText: 'Add to Cart',
     // CSS styling
     cssClass: 'status-approved',
-    badgeVariant: 'default'
+    badgeVariant: 'default',
   },
   {
     id: 'rejected',
@@ -180,7 +180,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     customerActionText: 'Request New Quote',
     // CSS styling
     cssClass: 'status-rejected',
-    badgeVariant: 'destructive'
+    badgeVariant: 'destructive',
   },
   {
     id: 'expired',
@@ -200,7 +200,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: true,
     showsInOrdersList: false,
-    canBePaid: false
+    canBePaid: false,
   },
   {
     id: 'calculated',
@@ -219,8 +219,8 @@ const defaultQuoteStatuses: StatusConfig[] = [
     requiresAction: true,
     showsInQuotesList: true,
     showsInOrdersList: false,
-    canBePaid: false
-  }
+    canBePaid: false,
+  },
 ];
 
 const defaultOrderStatuses: StatusConfig[] = [
@@ -264,7 +264,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     customerActionText: 'Pay Now',
     // CSS styling
     cssClass: 'status-payment-pending',
-    badgeVariant: 'outline'
+    badgeVariant: 'outline',
   },
   {
     id: 'processing',
@@ -284,7 +284,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     requiresAction: true,
     showsInQuotesList: false,
     showsInOrdersList: true,
-    canBePaid: false
+    canBePaid: false,
   },
   {
     id: 'paid',
@@ -326,7 +326,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     customerActionText: 'View Order',
     // CSS styling
     cssClass: 'status-paid',
-    badgeVariant: 'default'
+    badgeVariant: 'default',
   },
   {
     id: 'ordered',
@@ -346,7 +346,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: false,
     showsInOrdersList: true,
-    canBePaid: false
+    canBePaid: false,
   },
   {
     id: 'shipped',
@@ -388,7 +388,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     customerActionText: 'Track Package',
     // CSS styling
     cssClass: 'status-shipped',
-    badgeVariant: 'secondary'
+    badgeVariant: 'secondary',
   },
   {
     id: 'completed',
@@ -430,7 +430,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     customerActionText: 'Order Again',
     // CSS styling
     cssClass: 'status-completed',
-    badgeVariant: 'outline'
+    badgeVariant: 'outline',
   },
   {
     id: 'cancelled',
@@ -450,8 +450,8 @@ const defaultOrderStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: true,
     showsInOrdersList: true,
-    canBePaid: false
-  }
+    canBePaid: false,
+  },
 ];
 
 export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
@@ -470,24 +470,27 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
         .select('*')
         .in('setting_key', ['quote_statuses', 'order_statuses']);
       if (error) throw error;
-      
-      const quoteSettings = data?.find(s => s.setting_key === 'quote_statuses');
-      const orderSettings = data?.find(s => s.setting_key === 'order_statuses');
-      
+
+      const quoteSettings = data?.find((s) => s.setting_key === 'quote_statuses');
+      const orderSettings = data?.find((s) => s.setting_key === 'order_statuses');
+
       // If database is empty, initialize with defaults
       if (!quoteSettings || !orderSettings) {
         console.log('📝 Database empty - initializing with default statuses...');
         await initializeDefaultStatuses();
         return; // Will reload after initialization
       }
-      
+
       // Load from database
       if (quoteSettings?.setting_value) {
         try {
           // Clean up invalid escapes before parsing
           const cleanedJSON = quoteSettings.setting_value.replace(/\\!/g, '!');
           const loadedQuoteStatuses = JSON.parse(cleanedJSON);
-          console.log('✅ Loaded quote statuses from database:', loadedQuoteStatuses.map(s => s.name));
+          console.log(
+            '✅ Loaded quote statuses from database:',
+            loadedQuoteStatuses.map((s) => s.name),
+          );
           setQuoteStatuses(loadedQuoteStatuses);
         } catch (e) {
           const errorMessage = e instanceof Error ? e.message : 'Unknown error';
@@ -501,7 +504,10 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
           // Clean up invalid escapes before parsing
           const cleanedJSON = orderSettings.setting_value.replace(/\\!/g, '!');
           const loadedOrderStatuses = JSON.parse(cleanedJSON);
-          console.log('✅ Loaded order statuses from database:', loadedOrderStatuses.map(s => s.name));
+          console.log(
+            '✅ Loaded order statuses from database:',
+            loadedOrderStatuses.map((s) => s.name),
+          );
           setOrderStatuses(loadedOrderStatuses);
         } catch (e) {
           const errorMessage = e instanceof Error ? e.message : 'Unknown error';
@@ -522,39 +528,40 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
   const initializeDefaultStatuses = async () => {
     try {
       console.log('🏗️ Initializing default statuses in database...');
-      
+
       // Save default quote statuses
-      const { error: quoteError } = await supabase
-        .from('system_settings')
-        .upsert({
+      const { error: quoteError } = await supabase.from('system_settings').upsert(
+        {
           setting_key: 'quote_statuses',
           setting_value: JSON.stringify(defaultQuoteStatuses),
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'setting_key'
-        });
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'setting_key',
+        },
+      );
 
       if (quoteError) throw quoteError;
 
       // Save default order statuses
-      const { error: orderError } = await supabase
-        .from('system_settings')
-        .upsert({
+      const { error: orderError } = await supabase.from('system_settings').upsert(
+        {
           setting_key: 'order_statuses',
           setting_value: JSON.stringify(defaultOrderStatuses),
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'setting_key'
-        });
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'setting_key',
+        },
+      );
 
       if (orderError) throw orderError;
-      
+
       console.log('✅ Default statuses initialized successfully');
-      
+
       // Set local state to defaults
       setQuoteStatuses(defaultQuoteStatuses);
       setOrderStatuses(defaultOrderStatuses);
-      
     } catch (error) {
       console.error('❌ Failed to initialize default statuses:', error);
       // Fallback to defaults in memory if database initialization fails
@@ -572,14 +579,17 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <StatusConfigContext.Provider value={{ quoteStatuses, orderStatuses, isLoading, error, refreshData }}>
+    <StatusConfigContext.Provider
+      value={{ quoteStatuses, orderStatuses, isLoading, error, refreshData }}
+    >
       {children}
     </StatusConfigContext.Provider>
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useStatusConfig() {
   const ctx = useContext(StatusConfigContext);
   if (!ctx) throw new Error('useStatusConfig must be used within a StatusConfigProvider');
   return ctx;
-} 
+}

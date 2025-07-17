@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Exact Working Test Replica</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            margin: 10px 0; 
+            background: #f9f9f9;
+        }
+        button { 
+            padding: 10px 20px; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f0f0f0; padding: 10px; border-radius: 4px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+    <h1>Exact Working Test Replica</h1>
+    <p>This replicates the exact working test-esewa-v2.html with programmatic submission</p>
+    
+    <div class="test-section">
+        <h3>Test 1: Manual Form (Like Working Test)</h3>
+        <p>Creates form with visible inputs and manual submit button</p>
+        <button onclick="createManualForm()">Create Manual Form</button>
+        <div id="result1"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Auto-Submit Form (Like Checkout)</h3>
+        <p>Creates form and submits automatically after delay</p>
+        <button onclick="createAutoSubmitForm()">Create Auto-Submit Form</button>
+        <div id="result2"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: Hidden Form with Timeout</h3>
+        <p>Creates hidden form and submits with timeout</p>
+        <button onclick="createHiddenFormWithTimeout()">Create Hidden Form</button>
+        <div id="result3"></div>
+    </div>
+
+    <script>
+        function generateTransactionUuid() {
+            const currentTime = new Date();
+            return currentTime.toISOString().slice(2, 10).replace(/-/g, '') + '-' + 
+                   currentTime.getHours() + currentTime.getMinutes() + currentTime.getSeconds();
+        }
+
+        function generateSignature(total_amount, transaction_uuid, product_code) {
+            const signatureString = `total_amount=${total_amount},transaction_uuid=${transaction_uuid},product_code=${product_code}`;
+            const secretKey = '8gBm/:&EnhH.1/q';
+            const hash = CryptoJS.HmacSHA256(signatureString, secretKey);
+            return CryptoJS.enc.Base64.stringify(hash);
+        }
+
+        function createManualForm() {
+            const resultDiv = document.getElementById('result1');
+            resultDiv.innerHTML = '<p class="info">Creating manual form...</p>';
+            
+            const transaction_uuid = generateTransactionUuid();
+            const signature = generateSignature('100', transaction_uuid, 'EPAYTEST');
+            
+            const formHTML = `
+                <form id="manualForm" action="https://rc-epay.esewa.com.np/api/epay/main/v2/form" method="POST" target="_blank">
+                    <div>
+                        <label>Amount:</label>
+                        <input type="text" name="amount" value="100" />
+                    </div>
+                    <div>
+                        <label>Tax Amount:</label>
+                        <input type="text" name="tax_amount" value="0" />
+                    </div>
+                    <div>
+                        <label>Total Amount:</label>
+                        <input type="text" name="total_amount" value="100" />
+                    </div>
+                    <div>
+                        <label>Transaction UUID:</label>
+                        <input type="text" name="transaction_uuid" value="${transaction_uuid}" />
+                    </div>
+                    <div>
+                        <label>Product Code:</label>
+                        <input type="text" name="product_code" value="EPAYTEST" />
+                    </div>
+                    <div>
+                        <label>Product Service Charge:</label>
+                        <input type="text" name="product_service_charge" value="0" />
+                    </div>
+                    <div>
+                        <label>Product Delivery Charge:</label>
+                        <input type="text" name="product_delivery_charge" value="0" />
+                    </div>
+                    <div>
+                        <label>Success URL:</label>
+                        <input type="text" name="success_url" value="https://esewa.com.np" />
+                    </div>
+                    <div>
+                        <label>Failure URL:</label>
+                        <input type="text" name="failure_url" value="https://google.com" />
+                    </div>
+                    <div>
+                        <label>Signed Field Names:</label>
+                        <input type="text" name="signed_field_names" value="total_amount,transaction_uuid,product_code" />
+                    </div>
+                    <div>
+                        <label>Signature:</label>
+                        <input type="text" name="signature" value="${signature}" />
+                    </div>
+                    <button type="submit" style="background: #28a745; color: white; padding: 10px 20px; border: none; cursor: pointer;">Pay with eSewa</button>
+                </form>
+            `;
+            
+            resultDiv.innerHTML = '<div class="success">✅ Manual form created. Click "Pay with eSewa" to test.</div>' + formHTML;
+        }
+
+        function createAutoSubmitForm() {
+            const resultDiv = document.getElementById('result2');
+            resultDiv.innerHTML = '<p class="info">Creating auto-submit form...</p>';
+            
+            const transaction_uuid = generateTransactionUuid();
+            const signature = generateSignature('100', transaction_uuid, 'EPAYTEST');
+            
+            const form = document.createElement('form');
+            form.id = 'autoSubmitForm';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.method = 'POST';
+            form.target = '_blank';
+            
+            const formData = {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: transaction_uuid,
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code',
+                signature: signature
+            };
+            
+            Object.entries(formData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <p>✅ Auto-submit form created</p>
+                    <p><strong>Method:</strong> ${form.method}</p>
+                    <p><strong>Action:</strong> ${form.action}</p>
+                    <p><strong>Target:</strong> ${form.target}</p>
+                    <p><strong>Transaction UUID:</strong> ${transaction_uuid}</p>
+                    <p><strong>Signature:</strong> ${signature.substring(0, 20)}...</p>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                try {
+                    console.log('About to submit auto-submit form');
+                    console.log('Form method:', form.method);
+                    console.log('Form action:', form.action);
+                    form.submit();
+                    resultDiv.innerHTML += '<p class="success">✅ Auto-submit form submitted</p>';
+                } catch (error) {
+                    resultDiv.innerHTML += '<p class="error">❌ Auto-submit failed: ' + error.message + '</p>';
+                }
+            }, 3000);
+        }
+
+        function createHiddenFormWithTimeout() {
+            const resultDiv = document.getElementById('result3');
+            resultDiv.innerHTML = '<p class="info">Creating hidden form with timeout...</p>';
+            
+            const transaction_uuid = generateTransactionUuid();
+            const signature = generateSignature('100', transaction_uuid, 'EPAYTEST');
+            
+            const form = document.createElement('form');
+            form.id = 'hiddenForm';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.method = 'POST';
+            form.target = '_blank';
+            form.style.display = 'none';
+            
+            const formData = {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: transaction_uuid,
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code',
+                signature: signature
+            };
+            
+            Object.entries(formData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <p>✅ Hidden form created</p>
+                    <p><strong>Method:</strong> ${form.method}</p>
+                    <p><strong>Action:</strong> ${form.action}</p>
+                    <p><strong>Target:</strong> ${form.target}</p>
+                    <p><strong>Display:</strong> ${form.style.display}</p>
+                    <p><strong>Transaction UUID:</strong> ${transaction_uuid}</p>
+                    <p><strong>Signature:</strong> ${signature.substring(0, 20)}...</p>
+                </div>
+            `;
+            
+            let countdown = 5;
+            const countdownInterval = setInterval(() => {
+                resultDiv.innerHTML += `<p class="info">Submitting in ${countdown} seconds...</p>`;
+                countdown--;
+                if (countdown < 0) {
+                    clearInterval(countdownInterval);
+                    try {
+                        console.log('About to submit hidden form');
+                        console.log('Form method:', form.method);
+                        console.log('Form action:', form.action);
+                        form.submit();
+                        resultDiv.innerHTML += '<p class="success">✅ Hidden form submitted</p>';
+                    } catch (error) {
+                        resultDiv.innerHTML += '<p class="error">❌ Hidden form submission failed: ' + error.message + '</p>';
+                    }
+                }
+            }, 1000);
+        }
+
+        console.log('Exact working test page loaded');
+        console.log('CryptoJS available:', typeof CryptoJS !== 'undefined');
+    </script>
+</body>
+</html>

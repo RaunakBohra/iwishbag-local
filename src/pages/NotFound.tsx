@@ -1,39 +1,51 @@
-import { useLocation, Link } from "react-router-dom";
-import { useEffect } from "react";
-import { 
-  Home, 
-  Search, 
-  ArrowLeft, 
-  Compass, 
-  MapPin, 
+import { useLocation, Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import {
+  Home,
+  Search,
+  ArrowLeft,
+  Compass,
+  MapPin,
   HelpCircle,
   Mail,
   Sparkles,
   Package,
   ShoppingBag,
-  Globe
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { AnimatedSection } from "@/components/shared/AnimatedSection";
-import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
+  Globe,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { AnimatedSection } from '@/components/shared/AnimatedSection';
+import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 
 const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname
-    );
+    console.error('404 Error: User attempted to access non-existent route:', location.pathname);
   }, [location.pathname]);
 
   const quickLinks = [
     { label: 'Home', icon: Home, to: '/', color: 'from-blue-500 to-blue-600' },
-    { label: 'Request Quote', icon: Package, to: '/quote', color: 'from-purple-500 to-purple-600' },
-    { label: 'Dashboard', icon: ShoppingBag, to: '/dashboard', color: 'from-green-500 to-green-600' },
-    { label: 'About Us', icon: Globe, to: '/about', color: 'from-orange-500 to-orange-600' },
+    {
+      label: 'Request Quote',
+      icon: Package,
+      to: '/quote',
+      color: 'from-purple-500 to-purple-600',
+    },
+    {
+      label: 'Dashboard',
+      icon: ShoppingBag,
+      to: '/dashboard',
+      color: 'from-green-500 to-green-600',
+    },
+    {
+      label: 'About Us',
+      icon: Globe,
+      to: '/about',
+      color: 'from-orange-500 to-orange-600',
+    },
   ];
 
   return (
@@ -41,9 +53,18 @@ const NotFound = () => {
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-0 -left-40 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" />
-        <div className="absolute top-0 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" style={{ animationDelay: '2s' }} />
-        <div className="absolute -bottom-32 left-20 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" style={{ animationDelay: '4s' }} />
-        <div className="absolute bottom-0 right-20 w-80 h-80 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" style={{ animationDelay: '6s' }} />
+        <div
+          className="absolute top-0 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
+          style={{ animationDelay: '2s' }}
+        />
+        <div
+          className="absolute -bottom-32 left-20 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
+          style={{ animationDelay: '4s' }}
+        />
+        <div
+          className="absolute bottom-0 right-20 w-80 h-80 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
+          style={{ animationDelay: '6s' }}
+        />
       </div>
 
       {/* Floating Elements */}
@@ -56,14 +77,20 @@ const NotFound = () => {
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
               animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${4 + Math.random() * 3}s`
+              animationDuration: `${4 + Math.random() * 3}s`,
             }}
           >
-            <div className={`w-3 h-3 rounded-full ${
-              i % 4 === 0 ? 'bg-blue-300' : 
-              i % 4 === 1 ? 'bg-purple-300' : 
-              i % 4 === 2 ? 'bg-pink-300' : 'bg-yellow-300'
-            } opacity-40`} />
+            <div
+              className={`w-3 h-3 rounded-full ${
+                i % 4 === 0
+                  ? 'bg-blue-300'
+                  : i % 4 === 1
+                    ? 'bg-purple-300'
+                    : i % 4 === 2
+                      ? 'bg-pink-300'
+                      : 'bg-yellow-300'
+              } opacity-40`}
+            />
           </div>
         ))}
       </div>
@@ -118,8 +145,8 @@ const NotFound = () => {
                 <AnimatedSection animation="fadeInUp" delay={600}>
                   <div className="relative mb-8">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input 
-                      placeholder="Search for what you need..." 
+                    <Input
+                      placeholder="Search for what you need..."
                       className="pl-10 h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors"
                     />
                   </div>
@@ -134,10 +161,14 @@ const NotFound = () => {
                         <AnimatedSection key={index} animation="zoomIn" delay={800 + index * 100}>
                           <Link to={link.to}>
                             <div className="group p-4 bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 cursor-pointer hover:border-blue-300">
-                              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${link.color} flex items-center justify-center text-white mx-auto mb-2 group-hover:scale-110 transition-transform`}>
+                              <div
+                                className={`w-10 h-10 rounded-lg bg-gradient-to-br ${link.color} flex items-center justify-center text-white mx-auto mb-2 group-hover:scale-110 transition-transform`}
+                              >
                                 <link.icon className="w-5 h-5" />
                               </div>
-                              <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{link.label}</p>
+                              <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                                {link.label}
+                              </p>
                             </div>
                           </Link>
                         </AnimatedSection>
@@ -149,13 +180,20 @@ const NotFound = () => {
                 {/* Action Buttons */}
                 <AnimatedSection animation="fadeInUp" delay={1200}>
                   <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                    <Button asChild className="flex-1 group bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 h-12">
+                    <Button
+                      asChild
+                      className="flex-1 group bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 h-12"
+                    >
                       <Link to="/">
                         <Home className="w-5 h-5 mr-2 group-hover:-translate-y-0.5 transition-transform" />
                         Go Home
                       </Link>
                     </Button>
-                    <Button asChild variant="outline" className="flex-1 group border-2 hover:bg-gray-50 h-12">
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="flex-1 group border-2 hover:bg-gray-50 h-12"
+                    >
                       <Link to="/contact">
                         <HelpCircle className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
                         Get Help
@@ -171,9 +209,7 @@ const NotFound = () => {
           <AnimatedSection animation="fadeIn" delay={1400}>
             <div className="mt-8 flex items-center justify-center gap-2 text-gray-500">
               <Sparkles className="w-5 h-5 animate-pulse" />
-              <p className="text-sm">
-                Don't worry, even the best explorers get lost sometimes!
-              </p>
+              <p className="text-sm">Don't worry, even the best explorers get lost sometimes!</p>
               <Sparkles className="w-5 h-5 animate-pulse" />
             </div>
           </AnimatedSection>

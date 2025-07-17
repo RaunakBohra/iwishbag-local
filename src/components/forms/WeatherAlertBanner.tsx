@@ -3,22 +3,22 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { 
-  AlertTriangle, 
-  ChevronDown, 
-  ChevronUp, 
-  CloudRain, 
-  Thermometer, 
-  Wind, 
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  CloudRain,
+  Thermometer,
+  Wind,
   Snowflake,
   Waves,
-  Zap
+  Zap,
 } from 'lucide-react';
-import { 
-  getWeatherAlertsForRoute, 
-  getWeatherDelay, 
-  generateWeatherAlertMessage,
-  WeatherAlert 
+import {
+  getWeatherAlertsForRoute,
+  getWeatherDelay,
+  // generateWeatherAlertMessage,
+  // WeatherAlert,
 } from '@/lib/weather-impact';
 
 interface WeatherAlertBannerProps {
@@ -32,7 +32,7 @@ export const WeatherAlertBanner: React.FC<WeatherAlertBannerProps> = ({
   originCountry,
   destinationCountry,
   showDetails = false,
-  className = ''
+  className = '',
 }) => {
   const [isExpanded, setIsExpanded] = useState(showDetails);
   const alerts = getWeatherAlertsForRoute(originCountry, destinationCountry);
@@ -111,14 +111,15 @@ export const WeatherAlertBanner: React.FC<WeatherAlertBannerProps> = ({
           </AlertTitle>
           <AlertDescription className="mt-1">
             <p className="text-sm">
-              Weather conditions may affect delivery times for your route from {originCountry} to {destinationCountry}.
+              Weather conditions may affect delivery times for your route from {originCountry} to{' '}
+              {destinationCountry}.
             </p>
-            
+
             <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
               <CollapsibleTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="mt-2 h-auto p-0 text-xs hover:bg-transparent"
                 >
                   {isExpanded ? (
@@ -132,7 +133,7 @@ export const WeatherAlertBanner: React.FC<WeatherAlertBannerProps> = ({
                   )}
                 </Button>
               </CollapsibleTrigger>
-              
+
               <CollapsibleContent className="mt-3 space-y-3">
                 {alerts.map((alert) => (
                   <div key={alert.id} className="p-3 bg-white/50 rounded border">
@@ -143,8 +144,8 @@ export const WeatherAlertBanner: React.FC<WeatherAlertBannerProps> = ({
                           <span className="font-medium text-sm capitalize">
                             {alert.type.replace('_', ' ')}
                           </span>
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={`text-xs ${getSeverityColor(alert.severity)}`}
                           >
                             {alert.severity}
@@ -153,20 +154,22 @@ export const WeatherAlertBanner: React.FC<WeatherAlertBannerProps> = ({
                         <p className="text-sm font-medium">{alert.location}</p>
                       </div>
                     </div>
-                    
+
                     <p className="text-sm mb-2">{alert.description}</p>
-                    
+
                     <div className="flex items-center justify-between text-xs">
                       <span>
-                        {alert.start_date.toLocaleDateString()} - {alert.end_date.toLocaleDateString()}
+                        {alert.start_date.toLocaleDateString()} -{' '}
+                        {alert.end_date.toLocaleDateString()}
                       </span>
                       <span className="font-medium">
-                        +{alert.estimated_delay_days} day{alert.estimated_delay_days > 1 ? 's' : ''} delay
+                        +{alert.estimated_delay_days} day
+                        {alert.estimated_delay_days > 1 ? 's' : ''} delay
                       </span>
                     </div>
                   </div>
                 ))}
-                
+
                 <div className="p-2 bg-white/50 rounded text-xs">
                   <p className="font-medium mb-1">What this means for your delivery:</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
@@ -182,4 +185,4 @@ export const WeatherAlertBanner: React.FC<WeatherAlertBannerProps> = ({
       </div>
     </Alert>
   );
-}; 
+};

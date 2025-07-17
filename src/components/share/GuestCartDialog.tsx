@@ -33,7 +33,7 @@ export const GuestCartDialog: React.FC<GuestCartDialogProps> = ({
   const handleCreateTempAccount = async () => {
     try {
       const tempAccount = await createTempAccountForCart(guestEmail, quoteId);
-      
+
       if (tempAccount) {
         setIsCreated(true);
         // Give user a moment to see success message
@@ -43,7 +43,6 @@ export const GuestCartDialog: React.FC<GuestCartDialogProps> = ({
           setIsCreated(false);
         }, 2000);
       }
-      
     } catch (error) {
       console.error('Error in handleCreateTempAccount:', error);
     }
@@ -69,9 +68,7 @@ export const GuestCartDialog: React.FC<GuestCartDialogProps> = ({
                 <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-green-800">Successfully added to cart!</p>
-                  <p className="text-xs text-green-700 mt-1">
-                    Account: {guestEmail}
-                  </p>
+                  <p className="text-xs text-green-700 mt-1">Account: {guestEmail}</p>
                 </div>
               </div>
             </div>
@@ -105,8 +102,8 @@ export const GuestCartDialog: React.FC<GuestCartDialogProps> = ({
             Add to Cart
           </DialogTitle>
           <DialogDescription>
-            To add this quote to your cart, we'll create a secure account for you.
-            You can set your password during checkout.
+            To add this quote to your cart, we'll create a secure account for you. You can set your
+            password during checkout.
           </DialogDescription>
         </DialogHeader>
 

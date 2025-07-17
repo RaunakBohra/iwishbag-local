@@ -1,7 +1,6 @@
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { OrdersTable } from "./OrdersTable";
-import { Tables } from "@/integrations/supabase/types";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { OrdersTable } from './OrdersTable';
+import { Tables } from '@/integrations/supabase/types';
 
 type Quote = Tables<'quotes'>;
 
@@ -14,9 +13,7 @@ export const DashboardOrdersTab = ({ orders }: DashboardOrdersTabProps) => {
     <Card>
       <CardHeader>
         <CardTitle>Your Orders</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Track your orders and view their history
-        </p>
+        <p className="text-sm text-muted-foreground">Track your orders and view their history</p>
       </CardHeader>
       <CardContent>
         <OrdersTable orders={orders || []} />

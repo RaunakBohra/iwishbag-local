@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   getQuoteCalculationMetrics,
   getQuoteBusinessMetrics,
-  getAlertSummary
+  getAlertSummary,
 } from '@/services/ErrorHandlingService';
 
 interface UseQuoteMonitoringOptions {
@@ -49,11 +49,7 @@ export function useQuoteMonitoring(options: UseQuoteMonitoringOptions = {}) {
 
   // Refetch all data
   const refetchAll = async () => {
-    await Promise.all([
-      performanceQuery.refetch(),
-      businessQuery.refetch(),
-      alertsQuery.refetch()
-    ]);
+    await Promise.all([performanceQuery.refetch(), businessQuery.refetch(), alertsQuery.refetch()]);
   };
 
   return {
@@ -66,7 +62,7 @@ export function useQuoteMonitoring(options: UseQuoteMonitoringOptions = {}) {
     queries: {
       performance: performanceQuery,
       business: businessQuery,
-      alerts: alertsQuery
-    }
+      alerts: alertsQuery,
+    },
   };
 }

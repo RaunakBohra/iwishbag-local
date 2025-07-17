@@ -7,12 +7,24 @@ import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useToast } from '../../hooks/use-toast';
 import { useCountryUtils } from '../../lib/countryUtils';
 import { getCurrencySymbolFromCountry } from '../../lib/currencyUtils';
-import type { ShippingRouteFormData, DeliveryOption, WeightTier, Carrier } from '../../types/shipping';
+import type {
+  ShippingRouteFormData,
+  DeliveryOption,
+  WeightTier,
+  Carrier,
+} from '../../types/shipping';
 import type { Tables } from '../../integrations/supabase/types';
 import { CustomsTiersManager } from './CustomsTiersManager';
 import { CurrencyInputLabel } from './DualCurrencyDisplay';
@@ -44,8 +56,8 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         carrier: 'DHL',
         min_days: 3,
         max_days: 5,
-        price: 45.00,
-        active: true
+        price: 45.0,
+        active: true,
       },
       {
         id: 'standard',
@@ -53,8 +65,8 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         carrier: 'FedEx',
         min_days: 7,
         max_days: 12,
-        price: 25.00,
-        active: true
+        price: 25.0,
+        active: true,
       },
       {
         id: 'economy',
@@ -62,20 +74,20 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         carrier: 'USPS',
         min_days: 14,
         max_days: 21,
-        price: 15.00,
-        active: true
-      }
+        price: 15.0,
+        active: true,
+      },
     ],
     weightTiers: initialData?.weightTiers || [
-      { min: 0, max: 1, cost: 15.00 },
-      { min: 1, max: 3, cost: 25.00 },
-      { min: 3, max: 5, cost: 35.00 },
-      { min: 5, max: null, cost: 45.00 }
+      { min: 0, max: 1, cost: 15.0 },
+      { min: 1, max: 3, cost: 25.0 },
+      { min: 3, max: 5, cost: 35.0 },
+      { min: 5, max: null, cost: 45.0 },
     ],
     carriers: initialData?.carriers || [
       { name: 'DHL', costMultiplier: 1.0, days: '3-5' },
       { name: 'FedEx', costMultiplier: 0.9, days: '5-7' },
-      { name: 'USPS', costMultiplier: 0.7, days: '7-14' }
+      { name: 'USPS', costMultiplier: 0.7, days: '7-14' },
     ],
     maxWeight: initialData?.maxWeight,
     restrictedItems: initialData?.restrictedItems || [],
@@ -91,7 +103,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
     setLoading(true);
     try {
       // Transform form data to match database schema
-      const dbData = {
+      const _dbData = {
         origin_country: formData.originCountry,
         destination_country: formData.destinationCountry,
         base_shipping_cost: formData.baseShippingCost,
@@ -113,53 +125,85 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
 
       const result = await onSubmit(formData);
       if (result.success) {
-        toast({ title: 'Success', description: 'Shipping route saved successfully' });
+        toast({
+          title: 'Success',
+          description: 'Shipping route saved successfully',
+        });
         onCancel();
       } else {
-        toast({ title: 'Error', description: result.error || 'Failed to save shipping route', variant: 'destructive' });
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to save shipping route',
+          variant: 'destructive',
+        });
       }
-    } catch (error) {
-      toast({ title: 'Error', description: 'An unexpected error occurred', variant: 'destructive' });
+    } catch (_error) {
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const addWeightTier = () => {
-    setFormData(prev => ({ ...prev, weightTiers: [...prev.weightTiers, { min: 0, max: null, cost: 0 }] }));
+    setFormData((prev) => ({
+      ...prev,
+      weightTiers: [...prev.weightTiers, { min: 0, max: null, cost: 0 }],
+    }));
   };
   const removeWeightTier = (index: number) => {
-    setFormData(prev => ({ ...prev, weightTiers: prev.weightTiers.filter((_, i) => i !== index) }));
+    setFormData((prev) => ({
+      ...prev,
+      weightTiers: prev.weightTiers.filter((_, i) => i !== index),
+    }));
   };
   const updateWeightTier = (index: number, field: keyof WeightTier, value: string | number) => {
-    setFormData(prev => ({ ...prev, weightTiers: prev.weightTiers.map((tier, i) => i === index ? { ...tier, [field]: value } : tier) }));
+    setFormData((prev) => ({
+      ...prev,
+      weightTiers: prev.weightTiers.map((tier, i) =>
+        i === index ? { ...tier, [field]: value } : tier,
+      ),
+    }));
   };
 
   const addDeliveryOption = () => {
-    setFormData(prev => ({ 
-      ...prev, 
-      deliveryOptions: [...prev.deliveryOptions, {
-        id: `option_${Date.now()}`,
-        name: 'New Option',
-        carrier: 'DHL',
-        min_days: 5,
-        max_days: 10,
-        price: 25.00,
-        active: true
-      }]
+    setFormData((prev) => ({
+      ...prev,
+      deliveryOptions: [
+        ...prev.deliveryOptions,
+        {
+          id: `option_${Date.now()}`,
+          name: 'New Option',
+          carrier: 'DHL',
+          min_days: 5,
+          max_days: 10,
+          price: 25.0,
+          active: true,
+        },
+      ],
     }));
   };
 
   const removeDeliveryOption = (index: number) => {
-    setFormData(prev => ({ ...prev, deliveryOptions: prev.deliveryOptions.filter((_, i) => i !== index) }));
+    setFormData((prev) => ({
+      ...prev,
+      deliveryOptions: prev.deliveryOptions.filter((_, i) => i !== index),
+    }));
   };
 
-  const updateDeliveryOption = (index: number, field: keyof DeliveryOption, value: string | number | boolean) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      deliveryOptions: prev.deliveryOptions.map((option, i) => 
-        i === index ? { ...option, [field]: value } : option
-      )
+  const updateDeliveryOption = (
+    index: number,
+    field: keyof DeliveryOption,
+    value: string | number | boolean,
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      deliveryOptions: prev.deliveryOptions.map((option, i) =>
+        i === index ? { ...option, [field]: value } : option,
+      ),
     }));
   };
 
@@ -168,7 +212,10 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="originCountry">Origin Country</Label>
-          <Select value={formData.originCountry} onValueChange={(value) => setFormData(prev => ({ ...prev, originCountry: value }))}>
+          <Select
+            value={formData.originCountry}
+            onValueChange={(value) => setFormData((prev) => ({ ...prev, originCountry: value }))}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select origin country" />
             </SelectTrigger>
@@ -183,7 +230,12 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         </div>
         <div>
           <Label htmlFor="destinationCountry">Destination Country</Label>
-          <Select value={formData.destinationCountry} onValueChange={(value) => setFormData(prev => ({ ...prev, destinationCountry: value }))}>
+          <Select
+            value={formData.destinationCountry}
+            onValueChange={(value) =>
+              setFormData((prev) => ({ ...prev, destinationCountry: value }))
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select destination country" />
             </SelectTrigger>
@@ -203,32 +255,106 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         <h3 className="text-lg font-medium">Shipping Costs</h3>
         {formData.originCountry && (
           <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-            <strong>Currency:</strong> All costs below should be entered in {getCurrencySymbolFromCountry(formData.originCountry)} ({formData.originCountry} currency)
+            <strong>Currency:</strong> All costs below should be entered in{' '}
+            {getCurrencySymbolFromCountry(formData.originCountry)} ({formData.originCountry}{' '}
+            currency)
           </div>
         )}
         <div className="grid grid-cols-5 gap-4">
           <div>
-            <CurrencyInputLabel countryCode={formData.originCountry || 'US'} label="Base Shipping Cost" required />
-            <Input id="baseShippingCost" type="number" step="0.01" value={formData.baseShippingCost} onChange={e => setFormData(prev => ({ ...prev, baseShippingCost: parseFloat(e.target.value) || 0 }))} required />
+            <CurrencyInputLabel
+              countryCode={formData.originCountry || 'US'}
+              label="Base Shipping Cost"
+              required
+            />
+            <Input
+              id="baseShippingCost"
+              type="number"
+              step="0.01"
+              value={formData.baseShippingCost}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  baseShippingCost: parseFloat(e.target.value) || 0,
+                }))
+              }
+              required
+            />
           </div>
           <div>
-            <CurrencyInputLabel countryCode={formData.originCountry || 'US'} label={`Cost per ${formData.weightUnit.toUpperCase()}`} required />
-            <Input id="costPerKg" type="number" step="0.01" value={formData.costPerKg} onChange={e => setFormData(prev => ({ ...prev, costPerKg: parseFloat(e.target.value) || 0 }))} required />
+            <CurrencyInputLabel
+              countryCode={formData.originCountry || 'US'}
+              label={`Cost per ${formData.weightUnit.toUpperCase()}`}
+              required
+            />
+            <Input
+              id="costPerKg"
+              type="number"
+              step="0.01"
+              value={formData.costPerKg}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  costPerKg: parseFloat(e.target.value) || 0,
+                }))
+              }
+              required
+            />
           </div>
           <div>
-            <CurrencyInputLabel countryCode={formData.originCountry || 'US'} label={`Shipping per ${formData.weightUnit.toUpperCase()}`} required />
-            <Input id="shippingPerKg" type="number" step="0.01" value={formData.shippingPerKg} onChange={e => setFormData(prev => ({ ...prev, shippingPerKg: parseFloat(e.target.value) || 0 }))} required />
+            <CurrencyInputLabel
+              countryCode={formData.originCountry || 'US'}
+              label={`Shipping per ${formData.weightUnit.toUpperCase()}`}
+              required
+            />
+            <Input
+              id="shippingPerKg"
+              type="number"
+              step="0.01"
+              value={formData.shippingPerKg}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  shippingPerKg: parseFloat(e.target.value) || 0,
+                }))
+              }
+              required
+            />
           </div>
           <div>
             <Label htmlFor="costPercentage">Cost Percentage (%)</Label>
-            <Input id="costPercentage" type="number" step="0.01" value={formData.costPercentage} onChange={e => setFormData(prev => ({ ...prev, costPercentage: parseFloat(e.target.value) || 0 }))} />
+            <Input
+              id="costPercentage"
+              type="number"
+              step="0.01"
+              value={formData.costPercentage}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  costPercentage: parseFloat(e.target.value) || 0,
+                }))
+              }
+            />
           </div>
           <div>
             <Label htmlFor="exchangeRate">Exchange Rate</Label>
-            <Input id="exchangeRate" type="number" step="0.01" value={formData.exchangeRate} onChange={e => setFormData(prev => ({ ...prev, exchangeRate: parseFloat(e.target.value) || 1 }))} placeholder="1.0" />
+            <Input
+              id="exchangeRate"
+              type="number"
+              step="0.01"
+              value={formData.exchangeRate}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  exchangeRate: parseFloat(e.target.value) || 1,
+                }))
+              }
+              placeholder="1.0"
+            />
             {formData.originCountry && formData.destinationCountry && (
               <div className="text-xs text-gray-500 mt-1">
-                1 {getCurrencySymbolFromCountry(formData.originCountry)} = {formData.exchangeRate} {getCurrencySymbolFromCountry(formData.destinationCountry)}
+                1 {getCurrencySymbolFromCountry(formData.originCountry)} = {formData.exchangeRate}{' '}
+                {getCurrencySymbolFromCountry(formData.destinationCountry)}
               </div>
             )}
           </div>
@@ -241,11 +367,35 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="processingDays">Processing Days</Label>
-            <Input id="processingDays" type="number" min="1" value={formData.processingDays} onChange={e => setFormData(prev => ({ ...prev, processingDays: parseInt(e.target.value) || 2 }))} required />
+            <Input
+              id="processingDays"
+              type="number"
+              min="1"
+              value={formData.processingDays}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  processingDays: parseInt(e.target.value) || 2,
+                }))
+              }
+              required
+            />
           </div>
           <div>
             <Label htmlFor="customsClearanceDays">Customs Clearance Days</Label>
-            <Input id="customsClearanceDays" type="number" min="1" value={formData.customsClearanceDays} onChange={e => setFormData(prev => ({ ...prev, customsClearanceDays: parseInt(e.target.value) || 3 }))} required />
+            <Input
+              id="customsClearanceDays"
+              type="number"
+              min="1"
+              value={formData.customsClearanceDays}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  customsClearanceDays: parseInt(e.target.value) || 3,
+                }))
+              }
+              required
+            />
           </div>
         </div>
       </div>
@@ -254,37 +404,78 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium">Delivery Options</h3>
-          <Button type="button" variant="outline" size="sm" onClick={addDeliveryOption}>Add Option</Button>
+          <Button type="button" variant="outline" size="sm" onClick={addDeliveryOption}>
+            Add Option
+          </Button>
         </div>
         {formData.deliveryOptions.map((option, index) => (
           <div key={index} className="border rounded-lg p-4 space-y-3">
             <div className="grid grid-cols-6 gap-3">
               <div>
                 <Label>Name</Label>
-                <Input value={option.name} onChange={e => updateDeliveryOption(index, 'name', e.target.value)} placeholder="Express Delivery" />
+                <Input
+                  value={option.name}
+                  onChange={(e) => updateDeliveryOption(index, 'name', e.target.value)}
+                  placeholder="Express Delivery"
+                />
               </div>
               <div>
                 <Label>Carrier</Label>
-                <Input value={option.carrier} onChange={e => updateDeliveryOption(index, 'carrier', e.target.value)} placeholder="DHL" />
+                <Input
+                  value={option.carrier}
+                  onChange={(e) => updateDeliveryOption(index, 'carrier', e.target.value)}
+                  placeholder="DHL"
+                />
               </div>
               <div>
                 <Label>Min Days</Label>
-                <Input type="number" min="1" value={option.min_days} onChange={e => updateDeliveryOption(index, 'min_days', parseInt(e.target.value) || 1)} />
+                <Input
+                  type="number"
+                  min="1"
+                  value={option.min_days}
+                  onChange={(e) =>
+                    updateDeliveryOption(index, 'min_days', parseInt(e.target.value) || 1)
+                  }
+                />
               </div>
               <div>
                 <Label>Max Days</Label>
-                <Input type="number" min="1" value={option.max_days} onChange={e => updateDeliveryOption(index, 'max_days', parseInt(e.target.value) || 1)} />
+                <Input
+                  type="number"
+                  min="1"
+                  value={option.max_days}
+                  onChange={(e) =>
+                    updateDeliveryOption(index, 'max_days', parseInt(e.target.value) || 1)
+                  }
+                />
               </div>
               <div>
                 <CurrencyInputLabel countryCode={formData.originCountry || 'US'} label="Price" />
-                <Input type="number" step="0.01" value={option.price} onChange={e => updateDeliveryOption(index, 'price', parseFloat(e.target.value) || 0)} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={option.price}
+                  onChange={(e) =>
+                    updateDeliveryOption(index, 'price', parseFloat(e.target.value) || 0)
+                  }
+                />
               </div>
               <div className="flex items-center space-x-2">
-                <Switch checked={option.active} onCheckedChange={checked => updateDeliveryOption(index, 'active', checked)} />
+                <Switch
+                  checked={option.active}
+                  onCheckedChange={(checked) => updateDeliveryOption(index, 'active', checked)}
+                />
                 <Label>Active</Label>
               </div>
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={() => removeDeliveryOption(index)}>Remove Option</Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => removeDeliveryOption(index)}
+            >
+              Remove Option
+            </Button>
           </div>
         ))}
       </div>
@@ -292,7 +483,12 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="weightUnit">Weight Unit</Label>
-          <Select value={formData.weightUnit} onValueChange={(value: 'kg' | 'lb') => setFormData(prev => ({ ...prev, weightUnit: value }))}>
+          <Select
+            value={formData.weightUnit}
+            onValueChange={(value: 'kg' | 'lb') =>
+              setFormData((prev) => ({ ...prev, weightUnit: value }))
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select weight unit" />
             </SelectTrigger>
@@ -304,42 +500,112 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         </div>
         <div>
           <Label htmlFor="maxWeight">Max Weight ({formData.weightUnit.toUpperCase()})</Label>
-          <Input id="maxWeight" type="number" step="0.01" value={formData.maxWeight || ''} onChange={e => setFormData(prev => ({ ...prev, maxWeight: parseFloat(e.target.value) || undefined }))} />
+          <Input
+            id="maxWeight"
+            type="number"
+            step="0.01"
+            value={formData.maxWeight || ''}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                maxWeight: parseFloat(e.target.value) || undefined,
+              }))
+            }
+          />
         </div>
       </div>
       <div>
         <Label htmlFor="restrictedItems">Restricted Items (comma-separated)</Label>
-        <Input id="restrictedItems" value={formData.restrictedItems?.join(', ') || ''} onChange={e => setFormData(prev => ({ ...prev, restrictedItems: e.target.value.split(',').map(item => item.trim()).filter(Boolean) }))} placeholder="electronics, liquids, batteries" />
+        <Input
+          id="restrictedItems"
+          value={formData.restrictedItems?.join(', ') || ''}
+          onChange={(e) =>
+            setFormData((prev) => ({
+              ...prev,
+              restrictedItems: e.target.value
+                .split(',')
+                .map((item) => item.trim())
+                .filter(Boolean),
+            }))
+          }
+          placeholder="electronics, liquids, batteries"
+        />
       </div>
       <div className="flex items-center space-x-2">
-        <Switch id="requiresDocumentation" checked={formData.requiresDocumentation} onCheckedChange={checked => setFormData(prev => ({ ...prev, requiresDocumentation: checked }))} />
+        <Switch
+          id="requiresDocumentation"
+          checked={formData.requiresDocumentation}
+          onCheckedChange={(checked) =>
+            setFormData((prev) => ({ ...prev, requiresDocumentation: checked }))
+          }
+        />
         <Label htmlFor="requiresDocumentation">Requires Documentation</Label>
       </div>
       <div className="flex items-center space-x-2">
-        <Switch id="isActive" checked={formData.isActive} onCheckedChange={checked => setFormData(prev => ({ ...prev, isActive: checked }))} />
+        <Switch
+          id="isActive"
+          checked={formData.isActive}
+          onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isActive: checked }))}
+        />
         <Label htmlFor="isActive">Active</Label>
       </div>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <Label>Weight Tiers</Label>
-          <Button type="button" variant="outline" size="sm" onClick={addWeightTier}>Add Tier</Button>
+          <Button type="button" variant="outline" size="sm" onClick={addWeightTier}>
+            Add Tier
+          </Button>
         </div>
         {formData.weightTiers.map((tier, index) => (
           <div key={index} className="flex items-center space-x-2">
-            <Input type="number" step="0.01" value={tier.min} onChange={e => updateWeightTier(index, 'min', parseFloat(e.target.value) || 0)} placeholder="Min" className="w-20" />
+            <Input
+              type="number"
+              step="0.01"
+              value={tier.min}
+              onChange={(e) => updateWeightTier(index, 'min', parseFloat(e.target.value) || 0)}
+              placeholder="Min"
+              className="w-20"
+            />
             <span>to</span>
-            <Input type="number" step="0.01" value={tier.max || ''} onChange={e => updateWeightTier(index, 'max', parseFloat(e.target.value) || null)} placeholder="Max" className="w-20" />
+            <Input
+              type="number"
+              step="0.01"
+              value={tier.max || ''}
+              onChange={(e) => updateWeightTier(index, 'max', parseFloat(e.target.value) || null)}
+              placeholder="Max"
+              className="w-20"
+            />
             <div className="flex items-center space-x-1">
-              <Input type="number" step="0.01" value={tier.cost} onChange={e => updateWeightTier(index, 'cost', parseFloat(e.target.value) || 0)} placeholder="Cost" className="w-24" />
-              <span className="text-xs text-gray-500">{getCurrencySymbolFromCountry(formData.originCountry || 'US')}</span>
+              <Input
+                type="number"
+                step="0.01"
+                value={tier.cost}
+                onChange={(e) => updateWeightTier(index, 'cost', parseFloat(e.target.value) || 0)}
+                placeholder="Cost"
+                className="w-24"
+              />
+              <span className="text-xs text-gray-500">
+                {getCurrencySymbolFromCountry(formData.originCountry || 'US')}
+              </span>
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={() => removeWeightTier(index)}>Remove</Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => removeWeightTier(index)}
+            >
+              Remove
+            </Button>
           </div>
         ))}
       </div>
       <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Create Route'}</Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Saving...' : 'Create Route'}
+        </Button>
       </div>
     </form>
   );
@@ -348,7 +614,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
 export function ShippingRouteManager() {
   const [activeTab, setActiveTab] = useState<'routes' | 'customs' | 'rates'>('routes');
   const { routes, loading, error, createRoute, updateRoute, removeRoute } = useShippingRoutes();
-  const { data: countries = [] } = useAllCountries();
+  const { data: _countries = [] } = useAllCountries();
   const [editingRoute, setEditingRoute] = useState<Tables<'shipping_routes'> | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -366,13 +632,20 @@ export function ShippingRouteManager() {
   const handleDelete = async (id: number) => {
     const result = await removeRoute(id);
     if (result.success) {
-      toast({ title: 'Success', description: 'Shipping route deleted successfully' });
+      toast({
+        title: 'Success',
+        description: 'Shipping route deleted successfully',
+      });
     } else {
-      toast({ title: 'Error', description: result.error || 'Failed to delete shipping route', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to delete shipping route',
+        variant: 'destructive',
+      });
     }
   };
 
-  const { getCountryDisplayName } = useCountryUtils();
+  const { getCountryDisplayName: _getCountryDisplayName } = useCountryUtils();
 
   // Map DB row to form data for editing
   const mapRouteToFormData = (route: Tables<'shipping_routes'>): ShippingRouteFormData => ({
@@ -454,7 +727,9 @@ export function ShippingRouteManager() {
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create Shipping Route</DialogTitle>
-                  <DialogDescription>Configure shipping costs for a specific origin-destination combination.</DialogDescription>
+                  <DialogDescription>
+                    Configure shipping costs for a specific origin-destination combination.
+                  </DialogDescription>
                 </DialogHeader>
                 <ShippingRouteForm
                   onSubmit={async (data) => {
@@ -467,14 +742,19 @@ export function ShippingRouteManager() {
               </DialogContent>
             </Dialog>
             {/* Edit Dialog */}
-            <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-              setIsEditDialogOpen(open);
-              if (!open) setEditingRoute(null);
-            }}>
+            <Dialog
+              open={isEditDialogOpen}
+              onOpenChange={(open) => {
+                setIsEditDialogOpen(open);
+                if (!open) setEditingRoute(null);
+              }}
+            >
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Edit Shipping Route</DialogTitle>
-                  <DialogDescription>Update shipping costs for this origin-destination combination.</DialogDescription>
+                  <DialogDescription>
+                    Update shipping costs for this origin-destination combination.
+                  </DialogDescription>
                 </DialogHeader>
                 {editingRoute && (
                   <ShippingRouteForm
@@ -500,8 +780,8 @@ export function ShippingRouteManager() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center space-x-2">
-                        <ShippingRouteDisplay 
-                          origin={route.origin_country} 
+                        <ShippingRouteDisplay
+                          origin={route.origin_country}
                           destination={route.destination_country}
                           showCodes={true}
                           showIcon={false}
@@ -511,11 +791,16 @@ export function ShippingRouteManager() {
                         </Badge>
                       </CardTitle>
                       <CardDescription>
-                        Base: {getCurrencySymbolFromCountry(route.origin_country)}{route.base_shipping_cost} + {getCurrencySymbolFromCountry(route.origin_country)}{route.cost_per_kg}/{route.weight_unit || 'kg'}
+                        Base: {getCurrencySymbolFromCountry(route.origin_country)}
+                        {route.base_shipping_cost} +{' '}
+                        {getCurrencySymbolFromCountry(route.origin_country)}
+                        {route.cost_per_kg}/{route.weight_unit || 'kg'}
                         {route.cost_percentage > 0 && ` + ${route.cost_percentage}% of price`}
                         {route.exchange_rate && route.exchange_rate !== 1 && (
                           <div className="text-xs text-blue-600 mt-1">
-                            Rate: 1 {getCurrencySymbolFromCountry(route.origin_country)} = {route.exchange_rate} {getCurrencySymbolFromCountry(route.destination_country)}
+                            Rate: 1 {getCurrencySymbolFromCountry(route.origin_country)} ={' '}
+                            {route.exchange_rate}{' '}
+                            {getCurrencySymbolFromCountry(route.destination_country)}
                           </div>
                         )}
                       </CardDescription>
@@ -531,11 +816,7 @@ export function ShippingRouteManager() {
                       >
                         Edit
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(route.id)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => handleDelete(route.id)}>
                         Delete
                       </Button>
                     </div>
@@ -546,21 +827,28 @@ export function ShippingRouteManager() {
                     <div>
                       <strong>Weight Tiers:</strong>
                       <ul className="mt-1 space-y-1">
-                        {(route.weight_tiers as WeightTier[] || []).map((tier: WeightTier, index: number) => (
-                          <li key={index}>
-                            {tier.min}-{tier.max || '∞'}{route.weight_unit || 'kg'}: {getCurrencySymbolFromCountry(route.origin_country)}{tier.cost}
-                          </li>
-                        ))}
+                        {((route.weight_tiers as WeightTier[]) || []).map(
+                          (tier: WeightTier, index: number) => (
+                            <li key={index}>
+                              {tier.min}-{tier.max || '∞'}
+                              {route.weight_unit || 'kg'}:{' '}
+                              {getCurrencySymbolFromCountry(route.origin_country)}
+                              {tier.cost}
+                            </li>
+                          ),
+                        )}
                       </ul>
                     </div>
                     <div>
                       <strong>Carriers:</strong>
                       <ul className="mt-1 space-y-1">
-                        {(route.carriers as Carrier[] || []).map((carrier: Carrier, index: number) => (
-                          <li key={index}>
-                            {carrier.name}: {carrier.days} days
-                          </li>
-                        ))}
+                        {((route.carriers as Carrier[]) || []).map(
+                          (carrier: Carrier, index: number) => (
+                            <li key={index}>
+                              {carrier.name}: {carrier.days} days
+                            </li>
+                          ),
+                        )}
                       </ul>
                     </div>
                   </div>
@@ -572,7 +860,9 @@ export function ShippingRouteManager() {
             <Card>
               <CardContent className="text-center py-8">
                 <p className="text-gray-600">No shipping routes configured yet.</p>
-                <p className="text-sm text-gray-500 mt-2">Create your first shipping route to get started.</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Create your first shipping route to get started.
+                </p>
               </CardContent>
             </Card>
           )}
@@ -584,4 +874,4 @@ export function ShippingRouteManager() {
       )}
     </div>
   );
-} 
+}

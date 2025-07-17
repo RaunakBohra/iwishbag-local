@@ -110,7 +110,10 @@ interface StripeInstance {
 interface SupabaseClient {
   from: (table: string) => {
     select: (columns: string) => {
-      in: (column: string, values: string[]) => Promise<{
+      in: (
+        column: string,
+        values: string[],
+      ) => Promise<{
         data: QuoteData[] | null;
         error: unknown;
       }>;
@@ -119,10 +122,11 @@ interface SupabaseClient {
 }
 
 export async function createStripePaymentEnhancedSecure(
-  params: EnhancedStripePaymentParams
+  params: EnhancedStripePaymentParams,
 ): Promise<StripePaymentResult> {
-  const { stripe, amount, currency, quoteIds, userId, customerInfo, quotes, supabaseAdmin } = params;
-  
+  const { stripe, amount, currency, quoteIds, userId, customerInfo, quotes, supabaseAdmin } =
+    params;
+
   // Input validation
   const validationResult = validateInputs(params);
   if (!validationResult.isValid) {
@@ -130,11 +134,11 @@ export async function createStripePaymentEnhancedSecure(
       'payment_create_validation_failed',
       { userId, operation: 'create_payment' },
       customerInfo || {},
-      { success: false, error: validationResult.errors.join(', ') }
+      { success: false, error: validationResult.errors.join(', ') },
     );
     return {
       success: false,
-      error: `Validation failed: ${validationResult.errors.join(', ')}`
+      error: `Validation failed: ${validationResult.errors.join(', ')}`,
     };
   }
 
@@ -142,11 +146,11 @@ export async function createStripePaymentEnhancedSecure(
     // Convert amount to smallest currency unit with validation
     const currencyMultiplier = getCurrencyMultiplier(currency);
     const amountInSmallestUnit = Math.round(amount * currencyMultiplier);
-    
+
     if (amountInSmallestUnit <= 0) {
       return {
         success: false,
-        error: 'Invalid payment amount'
+        error: 'Invalid payment amount',
       };
     }
 
@@ -155,13 +159,13 @@ export async function createStripePaymentEnhancedSecure(
       customerInfo,
       quotes,
       quoteIds,
-      supabaseAdmin as SupabaseClient
+      supabaseAdmin as SupabaseClient,
     );
 
     if (!customerDetailsResult.success) {
       return {
         success: false,
-        error: customerDetailsResult.error
+        error: customerDetailsResult.error,
       };
     }
 
@@ -172,7 +176,7 @@ export async function createStripePaymentEnhancedSecure(
       console.error('Customer validation failed: Missing required fields');
       return {
         success: false,
-        error: 'Customer email and name are required'
+        error: 'Customer email and name are required',
       };
     }
 
@@ -194,7 +198,7 @@ export async function createStripePaymentEnhancedSecure(
       stripe as StripeInstance,
       sanitizedCustomerDetails,
       userId,
-      quoteIds[0]
+      quoteIds[0],
     );
 
     // Create PaymentIntent with enhanced, validated details
@@ -215,8 +219,11 @@ export async function createStripePaymentEnhancedSecure(
     }
 
     // Add shipping address if complete and valid
-    if (sanitizedCustomerDetails.address && 
-        sanitizedCustomerDetails.email && sanitizedCustomerDetails.name) {
+    if (
+      sanitizedCustomerDetails.address &&
+      sanitizedCustomerDetails.email &&
+      sanitizedCustomerDetails.name
+    ) {
       paymentIntentData.shipping = {
         name: sanitizedCustomerDetails.name || 'Customer',
         phone: sanitizedCustomerDetails.phone || undefined,
@@ -232,7 +239,7 @@ export async function createStripePaymentEnhancedSecure(
         transactionId: paymentIntent.id,
         userId,
         operation: 'create_payment',
-        gateway: 'stripe'
+        gateway: 'stripe',
       },
       sanitizedCustomerDetails,
       {
@@ -240,7 +247,7 @@ export async function createStripePaymentEnhancedSecure(
         currency: currency,
         hasCustomer: !!(stripeCustomerResult.success && stripeCustomerResult.customer),
         hasShipping: !!paymentIntentData.shipping,
-      }
+      },
     );
 
     return {
@@ -249,15 +256,14 @@ export async function createStripePaymentEnhancedSecure(
       transactionId: paymentIntent.id,
       customer_id: stripeCustomerResult.customer?.id,
     };
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    
+
     console.log(
       'payment_create_error',
       { userId, operation: 'create_payment' },
       customerInfo || {},
-      { success: false, error: errorMessage }
+      { success: false, error: errorMessage },
     );
 
     return {
@@ -314,11 +320,11 @@ async function extractCustomerDetails(
   customerInfo: CustomerInfo | undefined,
   quotes: QuoteData[],
   quoteIds: string[],
-  supabaseAdmin: SupabaseClient
+  supabaseAdmin: SupabaseClient,
 ): Promise<{ success: boolean; data?: CustomerInfo; error?: string }> {
   try {
     // Start with provided customer info
-    let customerDetails: CustomerInfo = {
+    const customerDetails: CustomerInfo = {
       name: customerInfo?.name || '',
       email: customerInfo?.email || '',
       phone: customerInfo?.phone || '',
@@ -338,17 +344,18 @@ async function extractCustomerDetails(
 
       if (fullQuotes && fullQuotes.length > 0) {
         const firstQuote = fullQuotes[0];
-        
+
         // Use quote data if customer info not provided (fallback)
         customerDetails.email = customerDetails.email || firstQuote.email || '';
         customerDetails.name = customerDetails.name || firstQuote.customer_name || '';
         customerDetails.phone = customerDetails.phone || firstQuote.customer_phone || '';
-        
+
         // Extract shipping address if available
         if (firstQuote.shipping_address && !customerDetails.address) {
-          const shippingAddr = typeof firstQuote.shipping_address === 'string' 
-            ? JSON.parse(firstQuote.shipping_address) as QuoteShippingAddress
-            : firstQuote.shipping_address as QuoteShippingAddress;
+          const shippingAddr =
+            typeof firstQuote.shipping_address === 'string'
+              ? (JSON.parse(firstQuote.shipping_address) as QuoteShippingAddress)
+              : (firstQuote.shipping_address as QuoteShippingAddress);
 
           if (shippingAddr.streetAddress) {
             customerDetails.address = {
@@ -358,7 +365,7 @@ async function extractCustomerDetails(
               postal_code: shippingAddr.postalCode || '',
               country: shippingAddr.country || shippingAddr.destination_country || 'US',
             };
-            
+
             // Also update name, phone, email from shipping address if not already set
             customerDetails.name = customerDetails.name || shippingAddr.fullName || '';
             customerDetails.phone = customerDetails.phone || shippingAddr.phone || '';
@@ -381,8 +388,12 @@ async function createOrUpdateStripeCustomer(
   stripe: StripeInstance,
   customerDetails: CustomerInfo,
   userId: string,
-  quoteId: string
-): Promise<{ success: boolean; customer?: StripeCustomerRecord; error?: string }> {
+  quoteId: string,
+): Promise<{
+  success: boolean;
+  customer?: StripeCustomerRecord;
+  error?: string;
+}> {
   if (!customerDetails.email) {
     return { success: false, error: 'Email required for customer creation' };
   }
@@ -425,15 +436,18 @@ async function createOrUpdateStripeCustomer(
   } catch (error) {
     // Log error but don't fail payment - payment can work without customer record
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     console.log(
       'stripe_customer_error',
       { userId, operation: 'create_customer' },
       customerDetails,
-      { success: false, error: errorMessage }
+      { success: false, error: errorMessage },
     );
 
-    return { success: false, error: 'Customer creation failed but payment can continue' };
+    return {
+      success: false,
+      error: 'Customer creation failed but payment can continue',
+    };
   }
 }
 
@@ -442,13 +456,26 @@ async function createOrUpdateStripeCustomer(
  */
 function getCurrencyMultiplier(currency: string): number {
   const zeroDecimalCurrencies = [
-    'JPY', 'KRW', 'VND', 'CLP', 'PYG', 'UGX', 'RWF', 'GNF', 
-    'XAF', 'XOF', 'XPF', 'MGA', 'BIF', 'KMF', 'DJF'
+    'JPY',
+    'KRW',
+    'VND',
+    'CLP',
+    'PYG',
+    'UGX',
+    'RWF',
+    'GNF',
+    'XAF',
+    'XOF',
+    'XPF',
+    'MGA',
+    'BIF',
+    'KMF',
+    'DJF',
   ];
-  
+
   if (zeroDecimalCurrencies.includes(currency.toUpperCase())) {
     return 1;
   }
-  
+
   return 100;
 }

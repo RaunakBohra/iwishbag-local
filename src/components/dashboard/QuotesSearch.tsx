@@ -1,8 +1,7 @@
-
-import React from "react";
-import { Input } from "@/components/ui/input";
-import { Search, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React from 'react';
+import { Input } from '@/components/ui/input';
+import { Search, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface QuotesSearchProps {
   searchTerm: string;
@@ -16,7 +15,7 @@ export const QuotesSearch = ({
   isSearching = false,
 }: QuotesSearchProps) => {
   const handleClearSearch = () => {
-    onSearchChange("");
+    onSearchChange('');
   };
 
   return (

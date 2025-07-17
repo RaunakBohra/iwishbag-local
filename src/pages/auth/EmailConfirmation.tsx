@@ -11,19 +11,23 @@ export default function EmailConfirmation() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
-  const [confirmationStatus, setConfirmationStatus] = useState<'pending' | 'success' | 'error' | 'expired'>('pending');
+  const [confirmationStatus, setConfirmationStatus] = useState<
+    'pending' | 'success' | 'error' | 'expired'
+  >('pending');
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     // Enhanced session handling with SIGNED_UP event detection
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change:', event, session);
-      
+
       if (event === 'SIGNED_UP') {
         setConfirmationStatus('success');
         setUserEmail(session?.user?.email || null);
         setIsLoading(false);
-        
+
         toast.success('Email confirmed successfully! Welcome to iWishBag!');
       } else if (event === 'SIGNED_IN' && session?.user) {
         // User is already confirmed and signed in
@@ -46,19 +50,21 @@ export default function EmailConfirmation() {
       console.error('Email confirmation error:', error, errorDescription);
     } else if (accessToken && refreshToken && type === 'signup') {
       // Handle confirmation manually if SIGNED_UP event wasn't triggered
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      }).then(({ data, error }) => {
-        if (error) {
-          setConfirmationStatus('error');
-          console.error('Session set error:', error);
-        } else {
-          setConfirmationStatus('success');
-          setUserEmail(data.user?.email || null);
-        }
-        setIsLoading(false);
-      });
+      supabase.auth
+        .setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+        .then(({ data, error }) => {
+          if (error) {
+            setConfirmationStatus('error');
+            console.error('Session set error:', error);
+          } else {
+            setConfirmationStatus('success');
+            setUserEmail(data.user?.email || null);
+          }
+          setIsLoading(false);
+        });
     } else if (!accessToken && !error) {
       // No tokens present, might be a direct visit
       setTimeout(() => {
@@ -80,9 +86,7 @@ export default function EmailConfirmation() {
                 <Loader2 className="h-8 w-8 text-primary animate-spin" />
               </div>
             </div>
-            <CardTitle className="text-2xl text-center">
-              Confirming Your Email
-            </CardTitle>
+            <CardTitle className="text-2xl text-center">Confirming Your Email</CardTitle>
             <CardDescription className="text-center">
               Please wait while we verify your email address...
             </CardDescription>
@@ -119,13 +123,15 @@ export default function EmailConfirmation() {
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
                 {userEmail ? (
-                  <>Your account <strong>{userEmail}</strong> is now active and ready to use!</>
+                  <>
+                    Your account <strong>{userEmail}</strong> is now active and ready to use!
+                  </>
                 ) : (
                   'Your account is now active and ready to use!'
                 )}
               </AlertDescription>
             </Alert>
-            
+
             <div className="space-y-3">
               <h4 className="font-semibold text-sm">What's next?</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
@@ -147,19 +153,12 @@ export default function EmailConfirmation() {
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-2 pt-2">
-              <Button 
-                className="w-full" 
-                onClick={() => navigate('/')}
-              >
+              <Button className="w-full" onClick={() => navigate('/')}>
                 Start Shopping
               </Button>
-              <Button 
-                variant="outline"
-                className="w-full" 
-                onClick={() => navigate('/profile')}
-              >
+              <Button variant="outline" className="w-full" onClick={() => navigate('/profile')}>
                 Complete Your Profile
               </Button>
             </div>
@@ -179,9 +178,7 @@ export default function EmailConfirmation() {
                 <AlertCircle className="h-8 w-8 text-red-600" />
               </div>
             </div>
-            <CardTitle className="text-2xl text-center text-red-800">
-              Confirmation Failed
-            </CardTitle>
+            <CardTitle className="text-2xl text-center text-red-800">Confirmation Failed</CardTitle>
             <CardDescription className="text-center">
               There was an issue confirming your email address
             </CardDescription>
@@ -190,22 +187,16 @@ export default function EmailConfirmation() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                The confirmation link is invalid or has expired. Please try creating a new account or request a new confirmation email.
+                The confirmation link is invalid or has expired. Please try creating a new account
+                or request a new confirmation email.
               </AlertDescription>
             </Alert>
-            
+
             <div className="space-y-2">
-              <Button 
-                className="w-full" 
-                onClick={() => navigate('/auth')}
-              >
+              <Button className="w-full" onClick={() => navigate('/auth')}>
                 Try Again
               </Button>
-              <Button 
-                variant="outline"
-                className="w-full" 
-                onClick={() => navigate('/')}
-              >
+              <Button variant="outline" className="w-full" onClick={() => navigate('/')}>
                 Go to Homepage
               </Button>
             </div>
@@ -225,9 +216,7 @@ export default function EmailConfirmation() {
               <Mail className="h-8 w-8 text-yellow-600" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">
-            Check Your Email
-          </CardTitle>
+          <CardTitle className="text-2xl text-center">Check Your Email</CardTitle>
           <CardDescription className="text-center">
             We've sent a confirmation link to your email address
           </CardDescription>
@@ -236,10 +225,11 @@ export default function EmailConfirmation() {
           <Alert className="border-blue-200 bg-blue-50">
             <Mail className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800">
-              Please check your inbox and click the confirmation link to activate your iWishBag account.
+              Please check your inbox and click the confirmation link to activate your iWishBag
+              account.
             </AlertDescription>
           </Alert>
-          
+
           <div className="text-sm text-muted-foreground space-y-2">
             <p className="font-medium">Didn't receive the email?</p>
             <ul className="list-disc list-inside space-y-1 ml-2">
@@ -248,20 +238,12 @@ export default function EmailConfirmation() {
               <li>The link expires in 24 hours</li>
             </ul>
           </div>
-          
+
           <div className="space-y-2">
-            <Button 
-              variant="outline"
-              className="w-full" 
-              onClick={() => navigate('/auth')}
-            >
+            <Button variant="outline" className="w-full" onClick={() => navigate('/auth')}>
               Back to Sign Up
             </Button>
-            <Button 
-              variant="ghost"
-              className="w-full" 
-              onClick={() => navigate('/')}
-            >
+            <Button variant="ghost" className="w-full" onClick={() => navigate('/')}>
               Continue as Guest
             </Button>
           </div>

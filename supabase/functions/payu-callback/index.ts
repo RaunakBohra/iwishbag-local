@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createCorsHeaders } from '../_shared/cors.ts';
 // Verify PayU hash to ensure request is legitimate
@@ -25,24 +25,24 @@ async function verifyPayUHash(data, salt) {
       data.productinfo || '',
       data.amount || '',
       data.txnid || '',
-      data.key || ''
+      data.key || '',
     ].join('|');
     const encoder = new TextEncoder();
     const hashData = encoder.encode(reverseHashString);
     const hashBuffer = await crypto.subtle.digest('SHA-512', hashData);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const calculatedHash = hashArray.map((b)=>b.toString(16).padStart(2, '0')).join('');
+    const calculatedHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
     return calculatedHash === data.hash;
   } catch (error) {
     console.error('Hash verification error:', error);
     return false;
   }
 }
-serve(async (req)=>{
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
-      headers: createCorsHeaders(req)
+      headers: createCorsHeaders(req),
     });
   }
   // This endpoint must be public for PayU to access it
@@ -71,11 +71,11 @@ serve(async (req)=>{
           error_message: params.get('error_Message') || '',
           udf1: params.get('udf1') || '',
           udf2: params.get('udf2') || '',
-          key: params.get('key') || ''
+          key: params.get('key') || '',
         };
         // Process as if it were a POST request
         req.method = 'POST'; // Trick the rest of the code
-      // Continue processing below
+        // Continue processing below
       } else {
         // Regular GET request without PayU params - show info page
         const html = `
@@ -126,8 +126,8 @@ serve(async (req)=>{
         return new Response(html, {
           status: 200,
           headers: {
-            'Content-Type': 'text/html'
-          }
+            'Content-Type': 'text/html',
+          },
         });
       }
     }
@@ -138,7 +138,7 @@ serve(async (req)=>{
       const formData = await req.formData();
       data = {};
       // Convert FormData to object
-      for (const [key, value] of formData.entries()){
+      for (const [key, value] of formData.entries()) {
         data[key] = value;
       }
     } else {
@@ -158,7 +158,7 @@ serve(async (req)=>{
         error_message: params.get('error_Message') || '',
         udf1: params.get('udf1') || '',
         udf2: params.get('udf2') || '',
-        key: params.get('key') || ''
+        key: params.get('key') || '',
       };
     }
     console.log('PayU callback data:', {
@@ -166,16 +166,23 @@ serve(async (req)=>{
       status: data.status,
       mihpayid: data.mihpayid,
       amount: data.amount,
-      email: data.email
+      email: data.email,
     });
     // Initialize Supabase client
-    const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
     // Get PayU configuration to verify hash
-    const { data: payuGateway, error: payuGatewayError } = await supabaseAdmin.from('payment_gateways').select('config, test_mode').eq('code', 'payu').single();
+    const { data: payuGateway, error: payuGatewayError } = await supabaseAdmin
+      .from('payment_gateways')
+      .select('config, test_mode')
+      .eq('code', 'payu')
+      .single();
     if (payuGatewayError || !payuGateway) {
       console.error('PayU configuration not found');
       return new Response('Configuration error', {
-        status: 500
+        status: 500,
       });
     }
     const testMode = payuGateway.test_mode;
@@ -184,7 +191,7 @@ serve(async (req)=>{
     if (!salt) {
       console.error('PayU salt key not found');
       return new Response('Configuration error', {
-        status: 500
+        status: 500,
       });
     }
     console.log(`PayU callback processing in ${testMode ? 'TEST' : 'PRODUCTION'} mode`);
@@ -196,7 +203,7 @@ serve(async (req)=>{
       if (!isValidHash) {
         console.error('Invalid PayU hash - possible security breach');
         return new Response('Invalid request', {
-          status: 403
+          status: 403,
         });
       }
       console.log('PayU hash verified successfully');
@@ -214,11 +221,11 @@ serve(async (req)=>{
       customer_name: data.firstname,
       customer_phone: data.phone,
       gateway_response: data,
-      error_message: data.error_message || data.error || null
+      error_message: data.error_message || data.error || null,
     };
     // Insert or update payment record
     const { error: paymentError } = await supabaseAdmin.from('payments').upsert(paymentRecord, {
-      onConflict: 'transaction_id'
+      onConflict: 'transaction_id',
     });
     if (paymentError) {
       console.error('Error saving payment record:', paymentError);
@@ -231,12 +238,15 @@ serve(async (req)=>{
       const quoteIds = quoteIdsMatch ? quoteIdsMatch[1].split(',') : [];
       console.log('Updating quote status for IDs:', quoteIds);
       if (quoteIds.length > 0) {
-        const { error: quoteError } = await supabaseAdmin.from('quotes').update({
-          status: 'paid',
-          payment_status: 'paid',
-          payment_gateway: 'payu',
-          payment_transaction_id: data.txnid
-        }).in('id', quoteIds);
+        const { error: quoteError } = await supabaseAdmin
+          .from('quotes')
+          .update({
+            status: 'paid',
+            payment_status: 'paid',
+            payment_gateway: 'payu',
+            payment_transaction_id: data.txnid,
+          })
+          .in('id', quoteIds);
         if (quoteError) {
           console.error('Error updating quote status:', quoteError);
         } else {
@@ -297,13 +307,13 @@ serve(async (req)=>{
     return new Response(html, {
       status: 200,
       headers: {
-        'Content-Type': 'text/html'
-      }
+        'Content-Type': 'text/html',
+      },
     });
   } catch (error) {
     console.error('PayU callback error:', error);
     return new Response('Internal server error', {
-      status: 500
+      status: 500,
     });
   }
 });

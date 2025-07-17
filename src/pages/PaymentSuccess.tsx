@@ -43,9 +43,7 @@ const PaymentSuccess: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [paymentData, setPaymentData] = useState<PaymentSuccessData | null>(
-    null
-  );
+  const [paymentData, setPaymentData] = useState<PaymentSuccessData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -60,25 +58,19 @@ const PaymentSuccess: React.FC = () => {
           console.log('Processing Airwallex payment success page');
 
           // Get stored payment data
-          const storedPaymentDataStr = sessionStorage.getItem(
-            'airwallex_payment_pending'
-          );
+          const storedPaymentDataStr = sessionStorage.getItem('airwallex_payment_pending');
           let storedPaymentData: any = null;
 
           if (storedPaymentDataStr) {
             try {
               storedPaymentData = JSON.parse(storedPaymentDataStr);
-              console.log(
-                'Found stored Airwallex payment data:',
-                storedPaymentData
-              );
+              console.log('Found stored Airwallex payment data:', storedPaymentData);
 
               // Clear the stored data
               sessionStorage.removeItem('airwallex_payment_pending');
 
               // Check if payment is recent (within 5 minutes)
-              const isRecent =
-                Date.now() - storedPaymentData.timestamp < 5 * 60 * 1000;
+              const isRecent = Date.now() - storedPaymentData.timestamp < 5 * 60 * 1000;
 
               if (isRecent && storedPaymentData.paymentIntentId) {
                 // We have valid payment data
@@ -108,9 +100,7 @@ const PaymentSuccess: React.FC = () => {
                 queryClient.invalidateQueries({ queryKey: ['cart'] });
               } else {
                 // No recent payment data, check database for recent paid quotes
-                console.log(
-                  'No recent Airwallex payment data found, checking database...'
-                );
+                console.log('No recent Airwallex payment data found, checking database...');
 
                 // Show success but suggest checking orders
                 setPaymentData({
@@ -206,8 +196,7 @@ const PaymentSuccess: React.FC = () => {
             console.error('Missing Khalti pidx parameter');
             toast({
               title: 'Payment Verification Failed',
-              description:
-                'Could not verify Khalti payment. Please contact support.',
+              description: 'Could not verify Khalti payment. Please contact support.',
               variant: 'destructive',
             });
           }
@@ -235,8 +224,7 @@ const PaymentSuccess: React.FC = () => {
             // The webhook should have already updated the order status
             toast({
               title: 'Payment Successful!',
-              description:
-                'Your Fonepay payment has been processed successfully.',
+              description: 'Your Fonepay payment has been processed successfully.',
             });
 
             // Invalidate queries to refresh data
@@ -247,8 +235,7 @@ const PaymentSuccess: React.FC = () => {
             console.error('Missing Fonepay transaction ID');
             toast({
               title: 'Payment Verification Failed',
-              description:
-                'Could not verify Fonepay payment. Please contact support.',
+              description: 'Could not verify Fonepay payment. Please contact support.',
               variant: 'destructive',
             });
           }
@@ -306,8 +293,7 @@ const PaymentSuccess: React.FC = () => {
             // Payment failed or cancelled
             toast({
               title: 'Payment Failed',
-              description:
-                'Your payment could not be processed. Please try again.',
+              description: 'Your payment could not be processed. Please try again.',
               variant: 'destructive',
             });
             navigate('/checkout');
@@ -317,8 +303,7 @@ const PaymentSuccess: React.FC = () => {
         console.error('Error processing payment success:', error);
         toast({
           title: 'Error',
-          description:
-            'There was an issue processing your payment. Please contact support.',
+          description: 'There was an issue processing your payment. Please contact support.',
           variant: 'destructive',
         });
       } finally {
@@ -331,16 +316,13 @@ const PaymentSuccess: React.FC = () => {
 
   const updateOrderStatus = async (
     paymentData: PaymentSuccessData,
-    guestSessionToken?: string | null
+    guestSessionToken?: string | null,
   ) => {
     try {
       // Extract quote IDs from multiple possible sources
       let quoteIds: string[] = [];
 
-      console.log(
-        '🔍 Extracting quote IDs from PayU callback data:',
-        paymentData
-      );
+      console.log('🔍 Extracting quote IDs from PayU callback data:', paymentData);
 
       // Method 1: Extract from productinfo - Format: "Order: Product Name (quote_id1,quote_id2)"
       const productInfo = paymentData?.productInfo || '';
@@ -349,33 +331,26 @@ const PaymentSuccess: React.FC = () => {
         if (quoteIdsMatch) {
           quoteIds = quoteIdsMatch[1]
             .split(',')
-            .map(id => id.trim())
-            .filter(id => id);
-          console.log(
-            '✅ Found quote IDs in productinfo with parentheses:',
-            quoteIds
-          );
+            .map((id) => id.trim())
+            .filter((id) => id);
+          console.log('✅ Found quote IDs in productinfo with parentheses:', quoteIds);
         }
       }
 
       // Method 2: Primary fallback - Extract UUID-like strings directly from productinfo
       if (quoteIds.length === 0 && productInfo) {
-        const uuidRegex =
-          /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+        const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
         const uuidMatches = productInfo.match(uuidRegex);
         if (uuidMatches) {
           quoteIds = uuidMatches;
-          console.log(
-            '✅ Found quote IDs via UUID regex in productinfo:',
-            quoteIds
-          );
+          console.log('✅ Found quote IDs via UUID regex in productinfo:', quoteIds);
         }
       }
 
       // Method 3: Fallback - Extract from transaction ID if it contains quote ID
       if (quoteIds.length === 0 && paymentData?.transactionId) {
         const txnUuidMatch = paymentData.transactionId.match(
-          /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+          /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
         );
         if (txnUuidMatch) {
           quoteIds = [txnUuidMatch[0]];
@@ -390,17 +365,14 @@ const PaymentSuccess: React.FC = () => {
         if (quotesParam) {
           quoteIds = quotesParam
             .split(',')
-            .map(id => id.trim())
-            .filter(id => id);
+            .map((id) => id.trim())
+            .filter((id) => id);
           console.log('✅ Found quote IDs in URL params:', quoteIds);
         }
       }
 
       if (quoteIds.length === 0) {
-        console.error(
-          '❌ No quote IDs found in any location. PayU data:',
-          paymentData
-        );
+        console.error('❌ No quote IDs found in any location. PayU data:', paymentData);
         console.error('ProductInfo:', productInfo);
         console.error('TransactionId:', paymentData.transactionId);
         console.error('URL:', window.location.href);
@@ -436,11 +408,11 @@ const PaymentSuccess: React.FC = () => {
 
       console.log(
         '📋 Found quotes to update:',
-        existingQuotes.map(q => ({
+        existingQuotes.map((q) => ({
           id: q.id,
           display_id: q.display_id,
           status: q.status,
-        }))
+        })),
       );
 
       // Update quotes to paid status - let trigger calculate payment_status and amount_paid
@@ -481,35 +453,33 @@ const PaymentSuccess: React.FC = () => {
 
       console.log(
         '✅ Successfully updated quotes:',
-        updatedQuotes.map(q => ({
+        updatedQuotes.map((q) => ({
           id: q.id,
           display_id: q.display_id,
           status: q.status,
           payment_method: q.payment_method,
-        }))
+        })),
       );
 
       // Create payment transaction record
-      const { error: transactionError } = await supabase
-        .from('payment_transactions')
-        .insert({
-          quote_id: quoteIds[0], // Primary quote ID
-          amount: paymentData.amount,
-          currency: paymentData.currency,
-          status: 'completed',
-          payment_method: paymentData.gateway,
-          gateway_response: {
-            transaction_id: paymentData.transactionId,
-            payu_id: paymentData.payuId,
-            customer_info: {
-              name: paymentData.customerName,
-              email: paymentData.customerEmail,
-              phone: paymentData.customerPhone,
-            },
-            product_info: paymentData.productInfo,
-            all_quote_ids: quoteIds,
+      const { error: transactionError } = await supabase.from('payment_transactions').insert({
+        quote_id: quoteIds[0], // Primary quote ID
+        amount: paymentData.amount,
+        currency: paymentData.currency,
+        status: 'completed',
+        payment_method: paymentData.gateway,
+        gateway_response: {
+          transaction_id: paymentData.transactionId,
+          payu_id: paymentData.payuId,
+          customer_info: {
+            name: paymentData.customerName,
+            email: paymentData.customerEmail,
+            phone: paymentData.customerPhone,
           },
-        });
+          product_info: paymentData.productInfo,
+          all_quote_ids: quoteIds,
+        },
+      });
 
       if (transactionError) {
         console.error('Error creating payment transaction:', transactionError);
@@ -585,9 +555,7 @@ const PaymentSuccess: React.FC = () => {
                 <Package className="w-8 h-8 text-white" />
               </div>
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600 mx-auto"></div>
-              <p className="mt-6 text-gray-600 font-medium">
-                Processing your payment...
-              </p>
+              <p className="mt-6 text-gray-600 font-medium">Processing your payment...</p>
               <p className="text-sm text-gray-500 mt-2">
                 Please wait while we confirm your transaction
               </p>
@@ -616,8 +584,7 @@ const PaymentSuccess: React.FC = () => {
             <CardContent className="p-8">
               <AnimatedSection animation="fadeInUp" delay={400}>
                 <p className="text-gray-600 text-lg">
-                  There was an issue processing your payment. Please try again
-                  or contact support.
+                  There was an issue processing your payment. Please try again or contact support.
                 </p>
               </AnimatedSection>
             </CardContent>
@@ -666,11 +633,7 @@ const PaymentSuccess: React.FC = () => {
           >
             <Sparkles
               className={`w-4 h-4 ${
-                i % 3 === 0
-                  ? 'text-green-500'
-                  : i % 3 === 1
-                    ? 'text-blue-500'
-                    : 'text-purple-500'
+                i % 3 === 0 ? 'text-green-500' : i % 3 === 1 ? 'text-blue-500' : 'text-purple-500'
               }`}
             />
           </div>
@@ -687,12 +650,8 @@ const PaymentSuccess: React.FC = () => {
                 </div>
               </AnimatedSection>
               <AnimatedSection animation="fadeInUp" delay={300}>
-                <CardTitle className="mt-6 text-3xl font-bold">
-                  Payment Successful!
-                </CardTitle>
-                <p className="text-green-100 mt-2">
-                  Your transaction has been completed
-                </p>
+                <CardTitle className="mt-6 text-3xl font-bold">Payment Successful!</CardTitle>
+                <p className="text-green-100 mt-2">Your transaction has been completed</p>
               </AnimatedSection>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
@@ -708,9 +667,7 @@ const PaymentSuccess: React.FC = () => {
               <AnimatedSection animation="fadeIn" delay={500}>
                 <div className="border-t border-b py-6 space-y-4 bg-gray-50 rounded-lg">
                   <div className="flex justify-between items-center px-4">
-                    <span className="font-medium text-gray-600">
-                      Transaction ID:
-                    </span>
+                    <span className="font-medium text-gray-600">Transaction ID:</span>
                     <Badge
                       variant="secondary"
                       className="text-sm font-mono bg-gradient-to-r from-green-100 to-emerald-100"
@@ -721,9 +678,7 @@ const PaymentSuccess: React.FC = () => {
 
                   {paymentData.payuId && (
                     <div className="flex justify-between items-center px-4">
-                      <span className="font-medium text-gray-600">
-                        PayU ID:
-                      </span>
+                      <span className="font-medium text-gray-600">PayU ID:</span>
                       <Badge
                         variant="secondary"
                         className="text-sm font-mono bg-gradient-to-r from-blue-100 to-purple-100"
@@ -734,9 +689,7 @@ const PaymentSuccess: React.FC = () => {
                   )}
 
                   <div className="flex justify-between items-center px-4">
-                    <span className="font-medium text-gray-600">
-                      Payment Method:
-                    </span>
+                    <span className="font-medium text-gray-600">Payment Method:</span>
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white">
                         {getGatewayIcon(paymentData.gateway)}
@@ -748,38 +701,23 @@ const PaymentSuccess: React.FC = () => {
                   </div>
 
                   <div className="flex justify-between items-center px-4">
-                    <span className="font-medium text-gray-600">
-                      Amount Paid:
-                    </span>
+                    <span className="font-medium text-gray-600">Amount Paid:</span>
                     <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                      {paymentData.gateway === 'airwallex' &&
-                      paymentData.amount > 0 ? (
+                      {paymentData.gateway === 'airwallex' && paymentData.amount > 0 ? (
                         <>
-                          {paymentData.currency === 'USD'
-                            ? '$'
-                            : paymentData.currency}
-                          <AnimatedCounter
-                            end={paymentData.amount}
-                            decimals={2}
-                          />
+                          {paymentData.currency === 'USD' ? '$' : paymentData.currency}
+                          <AnimatedCounter end={paymentData.amount} decimals={2} />
                         </>
                       ) : paymentData.gateway === 'airwallex' ? (
                         <span className="text-lg">Processing...</span>
                       ) : paymentData.gateway === 'khalti' ? (
                         <>
-                          NPR{' '}
-                          <AnimatedCounter
-                            end={paymentData.amount}
-                            decimals={2}
-                          />
+                          NPR <AnimatedCounter end={paymentData.amount} decimals={2} />
                         </>
                       ) : (
                         <>
                           ₹
-                          <AnimatedCounter
-                            end={paymentData.amount}
-                            decimals={2}
-                          />
+                          <AnimatedCounter end={paymentData.amount} decimals={2} />
                         </>
                       )}
                     </span>
@@ -795,10 +733,7 @@ const PaymentSuccess: React.FC = () => {
                         <CheckCircle className="w-5 h-5 text-green-600" />
                         <p className="font-medium text-gray-700">
                           Thank you,{' '}
-                          <span className="text-green-600">
-                            {paymentData.customerName}
-                          </span>
-                          !
+                          <span className="text-green-600">{paymentData.customerName}</span>!
                         </p>
                       </div>
                     )}
@@ -821,9 +756,7 @@ const PaymentSuccess: React.FC = () => {
                       <div className="mt-3 pt-3 border-t border-green-100">
                         <div className="flex items-start justify-center gap-2 text-sm text-gray-600">
                           <Package className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                          <p className="text-center">
-                            {paymentData.productInfo}
-                          </p>
+                          <p className="text-center">{paymentData.productInfo}</p>
                         </div>
                       </div>
                     )}

@@ -3,8 +3,112 @@ const paypalGateway = {
   name: 'PayPal',
   code: 'paypal',
   is_active: true,
-  supported_countries: ['US','CA','GB','AU','DE','FR','IT','ES','NL','BE','AT','CH','SE','NO','DK','FI','PL','CZ','HU','SG','MY','TH','PH','VN','IN','NP','BD','LK','PK','AE','SA','KW','QA','BH','OM','JO','LB','EG','MA','TN','DZ','NG','GH','KE','UG','TZ','ZA','BR','MX','AR','CL','CO','PE','UY','PY','BO','EC','VE'],
-  supported_currencies: ['USD','EUR','GBP','CAD','AUD','JPY','SGD','MYR','THB','PHP','VND','INR','NPR','BDT','LKR','PKR','AED','SAR','KWD','QAR','BHD','OMR','JOD','LBP','EGP','MAD','TND','DZD','NGN','GHS','KES','UGX','TZS','ZAR','BRL','MXN','ARS','CLP','COP','PEN','UYU','PYG','BOB','VES'],
+  supported_countries: [
+    'US',
+    'CA',
+    'GB',
+    'AU',
+    'DE',
+    'FR',
+    'IT',
+    'ES',
+    'NL',
+    'BE',
+    'AT',
+    'CH',
+    'SE',
+    'NO',
+    'DK',
+    'FI',
+    'PL',
+    'CZ',
+    'HU',
+    'SG',
+    'MY',
+    'TH',
+    'PH',
+    'VN',
+    'IN',
+    'NP',
+    'BD',
+    'LK',
+    'PK',
+    'AE',
+    'SA',
+    'KW',
+    'QA',
+    'BH',
+    'OM',
+    'JO',
+    'LB',
+    'EG',
+    'MA',
+    'TN',
+    'DZ',
+    'NG',
+    'GH',
+    'KE',
+    'UG',
+    'TZ',
+    'ZA',
+    'BR',
+    'MX',
+    'AR',
+    'CL',
+    'CO',
+    'PE',
+    'UY',
+    'PY',
+    'BO',
+    'EC',
+    'VE',
+  ],
+  supported_currencies: [
+    'USD',
+    'EUR',
+    'GBP',
+    'CAD',
+    'AUD',
+    'JPY',
+    'SGD',
+    'MYR',
+    'THB',
+    'PHP',
+    'VND',
+    'INR',
+    'NPR',
+    'BDT',
+    'LKR',
+    'PKR',
+    'AED',
+    'SAR',
+    'KWD',
+    'QAR',
+    'BHD',
+    'OMR',
+    'JOD',
+    'LBP',
+    'EGP',
+    'MAD',
+    'TND',
+    'DZD',
+    'NGN',
+    'GHS',
+    'KES',
+    'UGX',
+    'TZS',
+    'ZAR',
+    'BRL',
+    'MXN',
+    'ARS',
+    'CLP',
+    'COP',
+    'PEN',
+    'UYU',
+    'PYG',
+    'BOB',
+    'VES',
+  ],
   fee_percent: 3.49,
   fee_fixed: 0.49,
   priority: 2,
@@ -18,9 +122,9 @@ const paypalGateway = {
     supported_funding_sources: ['paypal', 'card', 'venmo', 'applepay', 'googlepay'],
     supported_payment_methods: ['paypal', 'card'],
     merchant_account_id: '',
-    partner_attribution_id: 'iwishBag_Cart_SPB'
+    partner_attribution_id: 'iwishBag_Cart_SPB',
   },
-  test_mode: true
+  test_mode: true,
 };
 
 console.log('To add PayPal to your database, run these commands in your Supabase SQL Editor:');
@@ -56,9 +160,15 @@ console.log('ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferred_paym
 
 console.log('');
 console.log('-- 3. Add columns to country_settings');
-console.log('ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS available_gateways TEXT[] DEFAULT ARRAY[\'bank_transfer\'];');
-console.log('ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS default_gateway TEXT DEFAULT \'bank_transfer\';');
-console.log('ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS gateway_config JSONB DEFAULT \'{}\';');
+console.log(
+  "ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS available_gateways TEXT[] DEFAULT ARRAY['bank_transfer'];",
+);
+console.log(
+  "ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS default_gateway TEXT DEFAULT 'bank_transfer';",
+);
+console.log(
+  "ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS gateway_config JSONB DEFAULT '{}';",
+);
 
 console.log('');
 console.log('-- 4. Update key countries');
@@ -81,5 +191,9 @@ console.log(`UPDATE public.country_settings SET
 WHERE code = 'NP';`);
 
 console.log('');
-console.log('✅ Copy and paste these SQL commands into your Supabase SQL Editor to complete the PayPal integration.');
-console.log('💡 After running these, update the usePaymentGateways hook to include PayPal in the frontend.');
+console.log(
+  '✅ Copy and paste these SQL commands into your Supabase SQL Editor to complete the PayPal integration.',
+);
+console.log(
+  '💡 After running these, update the usePaymentGateways hook to include PayPal in the frontend.',
+);

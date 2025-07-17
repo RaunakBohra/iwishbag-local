@@ -1,7 +1,6 @@
-
-import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import React from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CurrencyDisplay {
   amount: string;
@@ -18,12 +17,12 @@ interface MultiCurrencyDisplayProps {
   cleanFormat?: boolean; // New prop for cleaner formatting
 }
 
-export const MultiCurrencyDisplay = ({ 
-  currencies, 
-  orientation = 'vertical', 
+export const MultiCurrencyDisplay = ({
+  currencies,
+  orientation = 'vertical',
   showLabels = true,
   compact = false,
-  cleanFormat = false
+  cleanFormat = false,
 }: MultiCurrencyDisplayProps) => {
   if (!currencies || currencies.length === 0) {
     return <span className="text-muted-foreground">N/A</span>;
@@ -31,14 +30,12 @@ export const MultiCurrencyDisplay = ({
 
   if (currencies.length === 1) {
     return (
-      <span className={currencies[0].isPrimary ? "font-semibold" : ""}>
-        {currencies[0].amount}
-      </span>
+      <span className={currencies[0].isPrimary ? 'font-semibold' : ''}>{currencies[0].amount}</span>
     );
   }
 
-  const primaryCurrency = currencies.find(c => c.isPrimary) || currencies[0];
-  const otherCurrencies = currencies.filter(c => !c.isPrimary);
+  const primaryCurrency = currencies.find((c) => c.isPrimary) || currencies[0];
+  const otherCurrencies = currencies.filter((c) => !c.isPrimary);
 
   // Clean format: show currencies separated by " / "
   if (cleanFormat && currencies.length <= 2) {
@@ -46,9 +43,7 @@ export const MultiCurrencyDisplay = ({
       <div className="flex items-center gap-1">
         {currencies.map((currency, index) => (
           <React.Fragment key={index}>
-            <span className={currency.isPrimary ? "font-semibold" : ""}>
-              {currency.amount}
-            </span>
+            <span className={currency.isPrimary ? 'font-semibold' : ''}>{currency.amount}</span>
             {index < currencies.length - 1 && <span className="text-muted-foreground">/</span>}
           </React.Fragment>
         ))}
@@ -72,7 +67,9 @@ export const MultiCurrencyDisplay = ({
                 {otherCurrencies.map((currency, index) => (
                   <div key={index} className="text-sm">
                     <span className="font-medium">{currency.amount}</span>
-                    {showLabels && <span className="text-muted-foreground ml-1">({currency.currency})</span>}
+                    {showLabels && (
+                      <span className="text-muted-foreground ml-1">({currency.currency})</span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -83,19 +80,19 @@ export const MultiCurrencyDisplay = ({
     );
   }
 
-  const containerClass = orientation === 'horizontal' 
-    ? "flex items-center gap-2 flex-wrap" 
-    : "space-y-1";
+  const containerClass =
+    orientation === 'horizontal' ? 'flex items-center gap-2 flex-wrap' : 'space-y-1';
 
   return (
     <div className={containerClass}>
       {currencies.map((currency, index) => (
-        <div key={index} className={`flex items-center gap-1 ${orientation === 'horizontal' ? '' : 'justify-between'}`}>
-          <span className={currency.isPrimary ? "font-semibold" : ""}>
-            {currency.amount}
-          </span>
+        <div
+          key={index}
+          className={`flex items-center gap-1 ${orientation === 'horizontal' ? '' : 'justify-between'}`}
+        >
+          <span className={currency.isPrimary ? 'font-semibold' : ''}>{currency.amount}</span>
           {showLabels && !cleanFormat && (
-            <Badge variant={currency.isPrimary ? "default" : "outline"} className="text-xs">
+            <Badge variant={currency.isPrimary ? 'default' : 'outline'} className="text-xs">
               {currency.label}
             </Badge>
           )}

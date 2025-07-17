@@ -1,14 +1,20 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
-import { BankAccount } from "@/hooks/useBankAccountSettings";
-import { useShippingCountries } from "@/hooks/useShippingCountries";
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Plus, Trash2 } from 'lucide-react';
+import { BankAccount } from '@/hooks/useBankAccountSettings';
+import { useShippingCountries } from '@/hooks/useShippingCountries';
 
 interface BankAccountFormData {
   account_name: string;
@@ -31,7 +37,7 @@ interface BankAccountFormData {
 
 interface FlexibleBankAccountFormProps {
   editingAccount: BankAccount | null;
-  onSubmit: (data: { data: BankAccountFormData, id?: string }) => void;
+  onSubmit: (data: { data: BankAccountFormData; id?: string }) => void;
   onCancel: () => void;
   isProcessing: boolean;
 }
@@ -66,13 +72,18 @@ const COMMON_BANK_FIELDS = [
   { value: 'instructions', label: 'Payment Instructions' },
 ];
 
-export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, isProcessing }: FlexibleBankAccountFormProps) => {
+export const FlexibleBankAccountForm = ({
+  editingAccount,
+  onSubmit,
+  onCancel,
+  isProcessing,
+}: FlexibleBankAccountFormProps) => {
   const [isActive, setIsActive] = useState(true);
   const [isFallback, setIsFallback] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [customFields, setCustomFields] = useState<CustomField[]>(DEFAULT_FIELDS);
   const [displayOrder, setDisplayOrder] = useState(0);
-  
+
   const { data: countries, isLoading: countriesLoading } = useShippingCountries();
 
   useEffect(() => {
@@ -81,39 +92,54 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
       setIsFallback(editingAccount.is_fallback ?? false);
       setSelectedCountry(editingAccount.destination_country || '');
       setDisplayOrder(editingAccount.display_order || 0);
-      
+
       // Load custom fields from the account
       const fields: CustomField[] = [...DEFAULT_FIELDS];
-      
+
       // Set default field values
       fields[0].value = editingAccount.account_name;
       fields[1].value = editingAccount.account_number;
       fields[2].value = editingAccount.bank_name;
-      
+
       // Load custom fields
       if (editingAccount.custom_fields && typeof editingAccount.custom_fields === 'object') {
         const customFieldsData = editingAccount.custom_fields as Record<string, unknown>;
         const fieldLabels = (editingAccount.field_labels || {}) as Record<string, string>;
-        
+
         Object.entries(customFieldsData).forEach(([key, value]) => {
           fields.push({
             id: key,
             label: fieldLabels[key] || key,
             value: String(value || ''),
-            required: false
+            required: false,
           });
         });
       }
-      
+
       // Add legacy fields if they exist
       if (editingAccount.branch_name) {
-        fields.push({ id: 'branch_name', label: 'Branch Name', value: editingAccount.branch_name, required: false });
+        fields.push({
+          id: 'branch_name',
+          label: 'Branch Name',
+          value: editingAccount.branch_name,
+          required: false,
+        });
       }
       if (editingAccount.swift_code) {
-        fields.push({ id: 'swift_code', label: 'SWIFT/BIC Code', value: editingAccount.swift_code, required: false });
+        fields.push({
+          id: 'swift_code',
+          label: 'SWIFT/BIC Code',
+          value: editingAccount.swift_code,
+          required: false,
+        });
       }
       if (editingAccount.iban) {
-        fields.push({ id: 'iban', label: 'IBAN', value: editingAccount.iban, required: false });
+        fields.push({
+          id: 'iban',
+          label: 'IBAN',
+          value: editingAccount.iban,
+          required: false,
+        });
       }
       // Add new payment fields if they exist
       const extendedAccount = editingAccount as BankAccount & {
@@ -122,20 +148,40 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
         payment_qr_url?: string;
         instructions?: string;
       };
-      
+
       if (extendedAccount.upi_id) {
-        fields.push({ id: 'upi_id', label: 'UPI ID', value: extendedAccount.upi_id, required: false });
+        fields.push({
+          id: 'upi_id',
+          label: 'UPI ID',
+          value: extendedAccount.upi_id,
+          required: false,
+        });
       }
       if (extendedAccount.upi_qr_string) {
-        fields.push({ id: 'upi_qr_string', label: 'UPI QR String', value: extendedAccount.upi_qr_string, required: false });
+        fields.push({
+          id: 'upi_qr_string',
+          label: 'UPI QR String',
+          value: extendedAccount.upi_qr_string,
+          required: false,
+        });
       }
       if (extendedAccount.payment_qr_url) {
-        fields.push({ id: 'payment_qr_url', label: 'Payment QR Code URL', value: extendedAccount.payment_qr_url, required: false });
+        fields.push({
+          id: 'payment_qr_url',
+          label: 'Payment QR Code URL',
+          value: extendedAccount.payment_qr_url,
+          required: false,
+        });
       }
       if (extendedAccount.instructions) {
-        fields.push({ id: 'instructions', label: 'Payment Instructions', value: extendedAccount.instructions, required: false });
+        fields.push({
+          id: 'instructions',
+          label: 'Payment Instructions',
+          value: extendedAccount.instructions,
+          required: false,
+        });
       }
-      
+
       setCustomFields(fields);
     } else {
       setIsActive(true);
@@ -151,45 +197,55 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
       id: `field_${Date.now()}`,
       label: '',
       value: '',
-      required: false
+      required: false,
     };
     setCustomFields([...customFields, newField]);
   };
 
   const handleRemoveField = (id: string) => {
-    setCustomFields(customFields.filter(field => field.id !== id));
+    setCustomFields(customFields.filter((field) => field.id !== id));
   };
 
   const handleFieldChange = (id: string, property: keyof CustomField, value: string | boolean) => {
-    setCustomFields(customFields.map(field => 
-      field.id === id ? { ...field, [property]: value } : field
-    ));
+    setCustomFields(
+      customFields.map((field) => (field.id === id ? { ...field, [property]: value } : field)),
+    );
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     // Prepare the data
     const defaultFieldIds = ['account_name', 'account_number', 'bank_name'];
     const customFieldsData: Record<string, unknown> = {};
     const fieldLabels: Record<string, string> = {};
-    
+
     // Extract default fields
     const accountData: BankAccountFormData = {
-      account_name: customFields.find(f => f.id === 'account_name')?.value || '',
-      account_number: customFields.find(f => f.id === 'account_number')?.value || '',
-      bank_name: customFields.find(f => f.id === 'bank_name')?.value || '',
+      account_name: customFields.find((f) => f.id === 'account_name')?.value || '',
+      account_number: customFields.find((f) => f.id === 'account_number')?.value || '',
+      bank_name: customFields.find((f) => f.id === 'bank_name')?.value || '',
       is_active: isActive,
       is_fallback: isFallback,
       destination_country: isFallback ? null : selectedCountry || null,
       display_order: displayOrder,
     };
-    
+
     // Handle legacy fields and custom fields
-    customFields.forEach(field => {
+    customFields.forEach((field) => {
       if (!defaultFieldIds.includes(field.id) && field.value) {
         // Check if it's a legacy field or new payment field
-        if (['branch_name', 'swift_code', 'iban', 'upi_id', 'upi_qr_string', 'payment_qr_url', 'instructions'].includes(field.id)) {
+        if (
+          [
+            'branch_name',
+            'swift_code',
+            'iban',
+            'upi_id',
+            'upi_qr_string',
+            'payment_qr_url',
+            'instructions',
+          ].includes(field.id)
+        ) {
           accountData[field.id] = field.value;
         } else {
           customFieldsData[field.id] = field.value;
@@ -197,13 +253,13 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
         }
       }
     });
-    
+
     accountData.custom_fields = customFieldsData;
     accountData.field_labels = fieldLabels;
-    
+
     onSubmit({ data: accountData, id: editingAccount?.id });
   };
-  
+
   return (
     <Card>
       <CardHeader>
@@ -214,13 +270,15 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="country">Country</Label>
-              <Select 
-                value={selectedCountry} 
+              <Select
+                value={selectedCountry}
                 onValueChange={setSelectedCountry}
                 disabled={isFallback || countriesLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={countriesLoading ? "Loading countries..." : "Select country"} />
+                  <SelectValue
+                    placeholder={countriesLoading ? 'Loading countries...' : 'Select country'}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {countries?.map((country) => (
@@ -231,13 +289,13 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <Label htmlFor="display_order">Display Order</Label>
-              <Input 
-                id="display_order" 
-                type="number" 
-                value={displayOrder} 
+              <Input
+                id="display_order"
+                type="number"
+                value={displayOrder}
                 onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)}
               />
             </div>
@@ -245,8 +303,8 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
 
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="is_fallback" 
+              <Checkbox
+                id="is_fallback"
                 checked={isFallback}
                 onCheckedChange={(checked) => {
                   setIsFallback(!!checked);
@@ -257,10 +315,10 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
                 Fallback Account (shown when no country-specific account exists)
               </Label>
             </div>
-            
+
             <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="is_active" 
+              <Checkbox
+                id="is_active"
                 checked={isActive}
                 onCheckedChange={(checked) => setIsActive(!!checked)}
               />
@@ -272,8 +330,8 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
 
           <div className="space-y-4">
             <h3 className="text-sm font-semibold">Bank Account Fields</h3>
-            
-            {customFields.map((field, index) => (
+
+            {customFields.map((field) => (
               <div key={field.id} className="flex gap-2 items-end">
                 <div className="flex-1">
                   <Label htmlFor={`label_${field.id}`}>Field Label</Label>
@@ -282,11 +340,11 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
                     value={field.label}
                     onChange={(e) => handleFieldChange(field.id, 'label', e.target.value)}
                     placeholder="e.g., IFSC Code"
-                    disabled={DEFAULT_FIELDS.some(df => df.id === field.id)}
+                    disabled={DEFAULT_FIELDS.some((df) => df.id === field.id)}
                     required={field.required}
                   />
                 </div>
-                
+
                 <div className="flex-1">
                   <Label htmlFor={`value_${field.id}`}>Value</Label>
                   {field.id === 'instructions' ? (
@@ -308,8 +366,8 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
                     />
                   )}
                 </div>
-                
-                {!DEFAULT_FIELDS.some(df => df.id === field.id) && (
+
+                {!DEFAULT_FIELDS.some((df) => df.id === field.id) && (
                   <Button
                     type="button"
                     variant="ghost"
@@ -321,36 +379,37 @@ export const FlexibleBankAccountForm = ({ editingAccount, onSubmit, onCancel, is
                 )}
               </div>
             ))}
-            
+
             <div className="flex gap-2">
-              <Select 
+              <Select
                 value=""
                 onValueChange={(value) => {
-                  const selectedField = COMMON_BANK_FIELDS.find(f => f.value === value);
-                  if (selectedField && !customFields.some(f => f.id === selectedField.value)) {
+                  const selectedField = COMMON_BANK_FIELDS.find((f) => f.value === value);
+                  if (selectedField && !customFields.some((f) => f.id === selectedField.value)) {
                     const newField: CustomField = {
                       id: selectedField.value,
                       label: selectedField.label,
                       value: '',
-                      required: false
+                      required: false,
                     };
                     setCustomFields([...customFields, newField]);
                   }
-                }}>
+                }}
+              >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Add common field" />
                 </SelectTrigger>
                 <SelectContent>
-                  {COMMON_BANK_FIELDS
-                    .filter(field => !customFields.some(f => f.id === field.value))
-                    .map((field) => (
-                      <SelectItem key={field.value} value={field.value}>
-                        {field.label}
-                      </SelectItem>
-                    ))}
+                  {COMMON_BANK_FIELDS.filter(
+                    (field) => !customFields.some((f) => f.id === field.value),
+                  ).map((field) => (
+                    <SelectItem key={field.value} value={field.value}>
+                      {field.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              
+
               <Button type="button" variant="outline" onClick={handleAddField}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Custom Field

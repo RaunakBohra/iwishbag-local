@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,11 @@ interface State {
 
 interface Props {
   children: React.ReactNode;
-  fallback?: React.ComponentType<{ error: Error; retry: () => void; retryCount: number }>;
+  fallback?: React.ComponentType<{
+    error: Error;
+    retry: () => void;
+    retryCount: number;
+  }>;
 }
 
 export class DashboardErrorBoundary extends React.Component<Props, State> {
@@ -31,10 +34,10 @@ export class DashboardErrorBoundary extends React.Component<Props, State> {
   }
 
   retry = () => {
-    this.setState(prevState => ({
+    this.setState((prevState) => ({
       hasError: false,
       error: undefined,
-      retryCount: prevState.retryCount + 1
+      retryCount: prevState.retryCount + 1,
     }));
   };
 
@@ -43,9 +46,9 @@ export class DashboardErrorBoundary extends React.Component<Props, State> {
       if (this.props.fallback) {
         const FallbackComponent = this.props.fallback;
         return (
-          <FallbackComponent 
-            error={this.state.error!} 
-            retry={this.retry} 
+          <FallbackComponent
+            error={this.state.error!}
+            retry={this.retry}
             retryCount={this.state.retryCount}
           />
         );
@@ -71,22 +74,22 @@ export class DashboardErrorBoundary extends React.Component<Props, State> {
                   </ul>
                 </AlertDescription>
               </Alert>
-              
+
               <div className="flex flex-col gap-2">
                 <Button onClick={this.retry} className="w-full">
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Retry {this.state.retryCount > 0 && `(Attempt ${this.state.retryCount + 1})`}
                 </Button>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={() => window.location.reload()} 
+
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.reload()}
                   className="w-full"
                 >
                   Refresh Page
                 </Button>
               </div>
-              
+
               {this.state.retryCount > 2 && (
                 <Alert>
                   <AlertDescription>

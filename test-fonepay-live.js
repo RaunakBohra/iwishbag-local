@@ -4,7 +4,7 @@ import { createHmac } from 'crypto';
 const testFonepayLive = async () => {
   console.log('🚀 Testing Fonepay LIVE configuration...');
   console.log('⚠️  This will use the production Fonepay API\n');
-  
+
   // Live production parameters
   const secretKey = 'dd3f7d1be3ad401a84b374aca469aa48'; // Live secret key
   const params = {
@@ -16,9 +16,9 @@ const testFonepayLive = async () => {
     DT: new Date().toLocaleDateString('en-US'),
     R1: 'Live Test Order',
     R2: 'Test Customer',
-    RU: 'http://localhost:8081/api/fonepay-callback'
+    RU: 'http://localhost:8081/api/fonepay-callback',
   };
-  
+
   // Generate hash string
   const hashString = [
     params.PID,
@@ -29,43 +29,41 @@ const testFonepayLive = async () => {
     params.DT,
     params.R1,
     params.R2,
-    params.RU
+    params.RU,
   ].join(',');
-  
+
   console.log('📝 Hash string:', hashString);
-  
+
   // Generate HMAC-SHA512 hash
-  const hash = createHmac('sha512', secretKey)
-    .update(hashString)
-    .digest('hex');
-  
+  const hash = createHmac('sha512', secretKey).update(hashString).digest('hex');
+
   console.log('🔐 Generated hash:', hash.substring(0, 20) + '...');
-  
+
   // Build URL for LIVE API
   const queryParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     queryParams.append(key, value);
   });
   queryParams.append('DV', hash);
-  
+
   const fonepayLiveUrl = `https://clientapi.fonepay.com/api/merchantRequest?${queryParams.toString()}`;
-  
+
   console.log('🔗 Live Payment URL Generated');
   console.log('📋 Parameters:');
   console.log('   - Merchant Code:', params.PID);
   console.log('   - Amount:', params.AMT, 'NPR');
   console.log('   - PRN:', params.PRN);
   console.log('   - Environment: PRODUCTION');
-  
+
   try {
     console.log('\n🧪 Testing live API connectivity...');
-    const response = await fetch(fonepayLiveUrl, { 
+    const response = await fetch(fonepayLiveUrl, {
       method: 'GET',
-      timeout: 10000
+      timeout: 10000,
     });
-    
+
     console.log('✅ Response Status:', response.status);
-    
+
     if (response.status === 200) {
       console.log('🎉 Live Fonepay API is accessible!');
       console.log('✅ Configuration appears to be correct');
@@ -78,11 +76,10 @@ const testFonepayLive = async () => {
       const result = await response.text();
       console.log('📄 Response:', result.substring(0, 200) + '...');
     }
-    
   } catch (error) {
     console.error('❌ Live API test failed:', error.message);
   }
-  
+
   console.log('\n💡 To test actual payment:');
   console.log('1. Use the frontend checkout');
   console.log('2. Select Fonepay payment method');
@@ -93,7 +90,7 @@ const testFonepayLive = async () => {
 // Test our Edge Function configuration
 const testEdgeFunction = async () => {
   console.log('\n🔧 Testing Edge Function with live config...');
-  
+
   const testPaymentRequest = {
     quoteIds: ['2c51b248-475f-41e1-8450-4f02831752a1'],
     gateway: 'fonepay',
@@ -104,12 +101,12 @@ const testEdgeFunction = async () => {
     customerInfo: {
       name: 'Live Test Customer',
       email: 'test@example.com',
-      phone: '9801234567'
+      phone: '9801234567',
     },
     metadata: {
       test: true,
-      guest_session_token: `live-test-${Date.now()}`
-    }
+      guest_session_token: `live-test-${Date.now()}`,
+    },
   };
 
   try {
@@ -117,15 +114,15 @@ const testEdgeFunction = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0`
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0`,
       },
-      body: JSON.stringify(testPaymentRequest)
+      body: JSON.stringify(testPaymentRequest),
     });
 
     const result = await response.json();
-    
+
     console.log('✅ Edge Function Response Status:', response.status);
-    
+
     if (result.success && result.url) {
       console.log('🎉 Edge Function created live payment URL successfully!');
       console.log('🔗 Payment URL contains live API endpoint');
@@ -136,7 +133,6 @@ const testEdgeFunction = async () => {
     } else {
       console.log('❌ Edge Function response:', result);
     }
-
   } catch (error) {
     console.error('❌ Edge Function test failed:', error.message);
   }
@@ -145,11 +141,14 @@ const testEdgeFunction = async () => {
 // Run tests
 console.log('🚀 Starting Fonepay Live Configuration Tests...\n');
 
-testFonepayLive().then(() => {
-  return testEdgeFunction();
-}).then(() => {
-  console.log('\n✅ Live configuration tests completed!');
-  console.log('\n🎯 Ready for production testing!');
-}).catch(error => {
-  console.error('\n❌ Live tests failed:', error);
-});
+testFonepayLive()
+  .then(() => {
+    return testEdgeFunction();
+  })
+  .then(() => {
+    console.log('\n✅ Live configuration tests completed!');
+    console.log('\n🎯 Ready for production testing!');
+  })
+  .catch((error) => {
+    console.error('\n❌ Live tests failed:', error);
+  });

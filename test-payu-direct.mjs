@@ -4,7 +4,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://grgvlrvywsfmnmkxrecd.supabase.co';
-const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZ3Zscnb5d3NmbW5ta3hyZWNkIiwicm9sZSI6InNlcnZpY2Ukcm9sZSIsImlhdCI6MTcyODMyODMxMywiZXhwIjoyMDQzOTA0MzEzfQ.iZ1JLTDKY5w3xKe5S37GUJY7AxcQURv-9B0TFfyG-3g';
+const SUPABASE_SERVICE_ROLE =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZ3Zscnb5d3NmbW5ta3hyZWNkIiwicm9sZSI6InNlcnZpY2Ukcm9sZSIsImlhdCI6MTcyODMyODMxMywiZXhwIjoyMDQzOTA0MzEzfQ.iZ1JLTDKY5w3xKe5S37GUJY7AxcQURv-9B0TFfyG-3g';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
 
@@ -43,23 +44,23 @@ async function testPayUDirect() {
       amount: quote.final_total,
       currency: 'USD',
       destination_country: quote.destination_country || 'IN',
-      gateway: 'payu'
+      gateway: 'payu',
     };
 
     console.log('\n📤 Calling create-payment edge function...');
-    
+
     const response = await fetch(`${SUPABASE_URL}/functions/v1/create-payment`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE}`,
-        'x-supabase-gateway': 'payu'
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+        'x-supabase-gateway': 'payu',
       },
-      body: JSON.stringify(paymentRequest)
+      body: JSON.stringify(paymentRequest),
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       console.error('❌ Error:', response.status, result);
       return;
@@ -72,22 +73,33 @@ async function testPayUDirect() {
     console.log('- Transaction ID:', result.transactionId);
     console.log('- Amount in INR:', result.amountInINR);
     console.log('- Exchange Rate:', result.exchangeRate);
-    
+
     if (result.formData) {
       console.log('\n📝 Form Data Present: YES');
       console.log('- Total fields:', Object.keys(result.formData).length);
-      
+
       // Check required fields
-      const requiredFields = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
+      const requiredFields = [
+        'key',
+        'txnid',
+        'amount',
+        'productinfo',
+        'firstname',
+        'email',
+        'phone',
+        'surl',
+        'furl',
+        'hash',
+      ];
       const presentFields = Object.keys(result.formData);
-      const missingFields = requiredFields.filter(field => !presentFields.includes(field));
-      
+      const missingFields = requiredFields.filter((field) => !presentFields.includes(field));
+
       if (missingFields.length > 0) {
         console.error('❌ Missing required fields:', missingFields);
       } else {
         console.log('✅ All required fields present');
       }
-      
+
       // Display form data summary
       console.log('\nForm field summary:');
       Object.entries(result.formData).forEach(([key, value]) => {
@@ -99,7 +111,7 @@ async function testPayUDirect() {
           console.log(`  ${key}: ${value}`);
         }
       });
-      
+
       // Test form submission HTML
       console.log('\n📋 Creating test HTML form...');
       const htmlContent = `
@@ -121,23 +133,21 @@ async function testPayUDirect() {
   <h1>PayU Payment Test</h1>
   <p>Form will auto-submit in 3 seconds...</p>
   <form id="payuForm" method="POST" action="${result.url}">
-    ${Object.entries(result.formData).map(([key, value]) => 
-      `<input type="hidden" name="${key}" value="${value}" />`
-    ).join('\n    ')}
+    ${Object.entries(result.formData)
+      .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
+      .join('\n    ')}
     <button type="submit">Submit Now</button>
   </form>
 </body>
 </html>`;
-      
+
       const fs = await import('fs');
       await fs.promises.writeFile('test-payu-direct.html', htmlContent);
       console.log('✅ Test HTML saved to: test-payu-direct.html');
-      
     } else {
       console.error('\n❌ No form data in response!');
       console.log('Full response:', JSON.stringify(result, null, 2));
     }
-    
   } catch (error) {
     console.error('❌ Error:', error);
   }

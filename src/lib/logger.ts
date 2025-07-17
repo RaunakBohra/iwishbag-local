@@ -27,12 +27,12 @@ class Logger {
     if (this.isDevelopment) {
       return true; // Log everything in development
     }
-    
+
     if (this.isProduction) {
       // Only log warnings and errors in production
       return level === 'warn' || level === 'error';
     }
-    
+
     return true; // Default to logging
   }
 

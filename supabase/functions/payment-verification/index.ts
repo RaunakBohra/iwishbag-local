@@ -1,8 +1,13 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { authenticateUser, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
-import { createCorsHeaders } from '../_shared/cors.ts'
-import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  authenticateUser,
+  AuthError,
+  createAuthErrorResponse,
+  validateMethod,
+} from '../_shared/auth.ts';
+import { createCorsHeaders } from '../_shared/cors.ts';
+import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno';
 
 interface PaymentVerificationRequest {
   transaction_id: string;
@@ -27,40 +32,43 @@ interface PaymentVerificationResponse {
 
 serve(async (req) => {
   const corsHeaders = createCorsHeaders(req);
-  
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   const requestId = crypto.randomUUID();
-  
+
   try {
     console.log(`🔍 Payment Verification Request [${requestId}]`);
-    
+
     // Validate request method
     validateMethod(req, ['POST']);
 
     // Authenticate user
     const { user, supabaseClient } = await authenticateUser(req);
-    
+
     console.log(`🔐 Authenticated user ${user.email} requesting payment verification`);
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // Parse request body
     const body: PaymentVerificationRequest = await req.json();
-    
+
     if (!body.transaction_id || !body.gateway) {
-      return new Response(JSON.stringify({ 
-        error: 'Missing required fields: transaction_id and gateway' 
-      }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      return new Response(
+        JSON.stringify({
+          error: 'Missing required fields: transaction_id and gateway',
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     console.log(`🔍 Verifying payment: ${body.transaction_id} on ${body.gateway}`);
@@ -79,42 +87,57 @@ serve(async (req) => {
         verificationResult = await verifyBankTransfer(supabaseAdmin, body, requestId);
         break;
       default:
-        return new Response(JSON.stringify({ 
-          error: `Unsupported gateway: ${body.gateway}` 
-        }), { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Unsupported gateway: ${body.gateway}`,
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
     }
 
     // Log verification attempt
-    await logVerificationAttempt(supabaseAdmin, requestId, body.transaction_id, body.gateway, verificationResult.success);
+    await logVerificationAttempt(
+      supabaseAdmin,
+      requestId,
+      body.transaction_id,
+      body.gateway,
+      verificationResult.success,
+    );
 
-    return new Response(JSON.stringify(verificationResult), { 
-      status: 200, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    return new Response(JSON.stringify(verificationResult), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
   } catch (error) {
     console.error(`❌ Payment verification error [${requestId}]:`, error);
-    
+
     if (error instanceof AuthError) {
       return createAuthErrorResponse(error, corsHeaders);
     }
-    
-    return new Response(JSON.stringify({ 
-      error: 'Payment verification failed', 
-      details: error.message,
-      requestId
-    }), { 
-      status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-    });
+
+    return new Response(
+      JSON.stringify({
+        error: 'Payment verification failed',
+        details: error.message,
+        requestId,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   }
 });
 
 // PayU Payment Verification
-async function verifyPayUPayment(supabaseAdmin: SupabaseClient, request: PaymentVerificationRequest, requestId: string): Promise<PaymentVerificationResponse> {
+async function verifyPayUPayment(
+  supabaseAdmin: SupabaseClient,
+  request: PaymentVerificationRequest,
+  requestId: string,
+): Promise<PaymentVerificationResponse> {
   try {
     // Get PayU configuration
     const { data: payuGateway, error: payuGatewayError } = await supabaseAdmin
@@ -131,13 +154,13 @@ async function verifyPayUPayment(supabaseAdmin: SupabaseClient, request: Payment
         gateway: 'payu',
         verified_at: new Date().toISOString(),
         error_message: 'PayU configuration not found',
-        recommendations: ['Configure PayU gateway in admin panel']
+        recommendations: ['Configure PayU gateway in admin panel'],
       };
     }
 
     const config = payuGateway.config || {};
     const testMode = payuGateway.test_mode;
-    
+
     if (!config.merchant_key || !config.salt_key) {
       return {
         success: false,
@@ -146,7 +169,7 @@ async function verifyPayUPayment(supabaseAdmin: SupabaseClient, request: Payment
         gateway: 'payu',
         verified_at: new Date().toISOString(),
         error_message: 'PayU credentials missing',
-        recommendations: ['Add PayU merchant key and salt key to gateway config']
+        recommendations: ['Add PayU merchant key and salt key to gateway config'],
       };
     }
 
@@ -177,27 +200,27 @@ async function verifyPayUPayment(supabaseAdmin: SupabaseClient, request: Payment
           currency: existingPayment.currency,
           verified_at: new Date().toISOString(),
           gateway_response: existingPayment.gateway_response,
-          recommendations: ['Payment verified from recent database record']
+          recommendations: ['Payment verified from recent database record'],
         };
       }
     }
 
     // Call PayU Verify Payment API
-    const verifyUrl = testMode 
+    const verifyUrl = testMode
       ? 'https://test.payu.in/merchant/postservice?form=2'
       : 'https://info.payu.in/merchant/postservice?form=2';
 
     const verifyHash = await generatePayUVerifyHash(
       config.merchant_key,
       request.transaction_id,
-      config.salt_key
+      config.salt_key,
     );
 
     const verifyData = new URLSearchParams({
       key: config.merchant_key,
       command: 'verify_payment',
       var1: request.transaction_id,
-      hash: verifyHash
+      hash: verifyHash,
     });
 
     console.log(`🔍 Calling PayU verify API [${requestId}]`);
@@ -206,9 +229,9 @@ async function verifyPayUPayment(supabaseAdmin: SupabaseClient, request: Payment
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'iwishBag-PayU-Verifier/1.0'
+        'User-Agent': 'iwishBag-PayU-Verifier/1.0',
       },
-      body: verifyData
+      body: verifyData,
     });
 
     if (!response.ok) {
@@ -220,10 +243,10 @@ async function verifyPayUPayment(supabaseAdmin: SupabaseClient, request: Payment
 
     if (result.status === 1 && result.transaction_details) {
       const transaction = result.transaction_details[request.transaction_id];
-      
+
       if (transaction) {
         const paymentStatus = mapPayUStatus(transaction.status);
-        
+
         return {
           success: true,
           payment_status: paymentStatus,
@@ -233,7 +256,7 @@ async function verifyPayUPayment(supabaseAdmin: SupabaseClient, request: Payment
           currency: 'INR',
           verified_at: new Date().toISOString(),
           gateway_response: transaction,
-          recommendations: generateRecommendations(paymentStatus, transaction)
+          recommendations: generateRecommendations(paymentStatus, transaction),
         };
       }
     }
@@ -248,13 +271,12 @@ async function verifyPayUPayment(supabaseAdmin: SupabaseClient, request: Payment
       recommendations: [
         'Check if transaction ID is correct',
         'Verify payment was made through PayU',
-        'Contact PayU support if payment was made'
-      ]
+        'Contact PayU support if payment was made',
+      ],
     };
-
   } catch (error) {
     console.error(`PayU verification error [${requestId}]:`, error);
-    
+
     return {
       success: false,
       payment_status: 'failed',
@@ -265,14 +287,18 @@ async function verifyPayUPayment(supabaseAdmin: SupabaseClient, request: Payment
       recommendations: [
         'Check PayU configuration',
         'Verify network connectivity',
-        'Try again later'
-      ]
+        'Try again later',
+      ],
     };
   }
 }
 
 // Stripe Payment Verification
-async function verifyStripePayment(supabaseAdmin: SupabaseClient, request: PaymentVerificationRequest, requestId: string): Promise<PaymentVerificationResponse> {
+async function verifyStripePayment(
+  supabaseAdmin: SupabaseClient,
+  request: PaymentVerificationRequest,
+  requestId: string,
+): Promise<PaymentVerificationResponse> {
   try {
     // Get Stripe configuration from database
     const { data: stripeGateway, error: stripeGatewayError } = await supabaseAdmin
@@ -289,18 +315,18 @@ async function verifyStripePayment(supabaseAdmin: SupabaseClient, request: Payme
         gateway: 'stripe',
         verified_at: new Date().toISOString(),
         error_message: 'Stripe configuration not found',
-        recommendations: ['Configure Stripe gateway in admin panel']
+        recommendations: ['Configure Stripe gateway in admin panel'],
       };
     }
 
     const config = stripeGateway.config || {};
     const testMode = stripeGateway.test_mode;
-    
+
     // Get the appropriate key based on test mode
-    const stripeSecretKey = testMode 
-      ? config.test_secret_key 
-      : (config.live_secret_key || config.secret_key);
-      
+    const stripeSecretKey = testMode
+      ? config.test_secret_key
+      : config.live_secret_key || config.secret_key;
+
     if (!stripeSecretKey) {
       return {
         success: false,
@@ -309,7 +335,7 @@ async function verifyStripePayment(supabaseAdmin: SupabaseClient, request: Payme
         gateway: 'stripe',
         verified_at: new Date().toISOString(),
         error_message: 'Stripe secret key not configured in database',
-        recommendations: ['Add Stripe secret key to gateway config']
+        recommendations: ['Add Stripe secret key to gateway config'],
       };
     }
 
@@ -326,14 +352,17 @@ async function verifyStripePayment(supabaseAdmin: SupabaseClient, request: Payme
       id: paymentIntent.id,
       status: paymentIntent.status,
       amount: paymentIntent.amount,
-      currency: paymentIntent.currency
+      currency: paymentIntent.currency,
     });
 
     // Map Stripe status to our internal status
     const paymentStatus = mapStripeStatus(paymentIntent.status);
 
     // Convert amount from smallest unit back to major unit
-    const amountInMajorUnit = convertStripeAmountToMajorUnit(paymentIntent.amount, paymentIntent.currency);
+    const amountInMajorUnit = convertStripeAmountToMajorUnit(
+      paymentIntent.amount,
+      paymentIntent.currency,
+    );
 
     return {
       success: true,
@@ -344,12 +373,11 @@ async function verifyStripePayment(supabaseAdmin: SupabaseClient, request: Payme
       currency: paymentIntent.currency.toUpperCase(),
       verified_at: new Date().toISOString(),
       gateway_response: paymentIntent,
-      recommendations: generateStripeRecommendations(paymentStatus, paymentIntent)
+      recommendations: generateStripeRecommendations(paymentStatus, paymentIntent),
     };
-
   } catch (error) {
     console.error(`❌ Stripe verification error [${requestId}]:`, error);
-    
+
     // Handle specific Stripe errors
     if (error.type === 'StripeInvalidRequestError') {
       return {
@@ -362,8 +390,8 @@ async function verifyStripePayment(supabaseAdmin: SupabaseClient, request: Payme
         recommendations: [
           'Verify the PaymentIntent ID is correct',
           'Check if the PaymentIntent exists in your Stripe dashboard',
-          'Ensure the PaymentIntent belongs to your account'
-        ]
+          'Ensure the PaymentIntent belongs to your account',
+        ],
       };
     }
 
@@ -378,8 +406,8 @@ async function verifyStripePayment(supabaseAdmin: SupabaseClient, request: Payme
         recommendations: [
           'Check Stripe secret key configuration',
           'Verify API key permissions',
-          'Ensure using correct environment (test/live)'
-        ]
+          'Ensure using correct environment (test/live)',
+        ],
       };
     }
 
@@ -394,14 +422,18 @@ async function verifyStripePayment(supabaseAdmin: SupabaseClient, request: Payme
         'Check Stripe configuration',
         'Verify network connectivity',
         'Try again later',
-        'Contact support if issue persists'
-      ]
+        'Contact support if issue persists',
+      ],
     };
   }
 }
 
 // Bank Transfer Verification (placeholder)
-async function verifyBankTransfer(supabaseAdmin: SupabaseClient, request: PaymentVerificationRequest, requestId: string): Promise<PaymentVerificationResponse> {
+async function verifyBankTransfer(
+  supabaseAdmin: SupabaseClient,
+  request: PaymentVerificationRequest,
+  requestId: string,
+): Promise<PaymentVerificationResponse> {
   // For bank transfers, we rely on manual verification
   const { data: existingPayment, error: paymentError } = await supabaseAdmin
     .from('payments')
@@ -423,7 +455,7 @@ async function verifyBankTransfer(supabaseAdmin: SupabaseClient, request: Paymen
       amount: existingPayment.amount,
       currency: existingPayment.currency,
       verified_at: new Date().toISOString(),
-      recommendations: ['Bank transfer verified through manual process']
+      recommendations: ['Bank transfer verified through manual process'],
     };
   }
 
@@ -437,28 +469,32 @@ async function verifyBankTransfer(supabaseAdmin: SupabaseClient, request: Paymen
     recommendations: [
       'Upload bank transfer receipt in admin panel',
       'Wait for manual verification by admin',
-      'Contact support if payment was made'
-    ]
+      'Contact support if payment was made',
+    ],
   };
 }
 
 // Generate hash for PayU verify payment API
-async function generatePayUVerifyHash(merchantKey: string, txnid: string, salt: string): Promise<string> {
+async function generatePayUVerifyHash(
+  merchantKey: string,
+  txnid: string,
+  salt: string,
+): Promise<string> {
   const hashString = `${merchantKey}|verify_payment|${txnid}|${salt}`;
-  
+
   const encoder = new TextEncoder();
   const data = encoder.encode(hashString);
   const hashBuffer = await crypto.subtle.digest('SHA-512', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+
   return hashHex;
 }
 
 // Map various payment statuses to our standard format
 function mapPaymentStatus(status: string): 'pending' | 'completed' | 'failed' {
   const statusLower = status.toLowerCase();
-  
+
   switch (statusLower) {
     case 'success':
     case 'completed':
@@ -477,7 +513,7 @@ function mapPaymentStatus(status: string): 'pending' | 'completed' | 'failed' {
 // Map PayU specific statuses
 function mapPayUStatus(status: string): 'pending' | 'completed' | 'failed' {
   const statusLower = status.toLowerCase();
-  
+
   switch (statusLower) {
     case 'success':
       return 'completed';
@@ -514,13 +550,13 @@ function mapStripeStatus(status: string): 'pending' | 'completed' | 'failed' {
 // Convert Stripe amount from smallest unit to major unit
 function convertStripeAmountToMajorUnit(amount: number, currency: string): number {
   const upperCurrency = currency.toUpperCase();
-  
+
   // Zero decimal currencies (already in major unit)
   const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND', 'CLP', 'ISK', 'UGX'];
-  
+
   // Three decimal currencies (1000 smallest units = 1 major unit)
   const threeDecimalCurrencies = ['BHD', 'JOD', 'KWD', 'OMR', 'TND'];
-  
+
   if (zeroDecimalCurrencies.includes(upperCurrency)) {
     return amount;
   } else if (threeDecimalCurrencies.includes(upperCurrency)) {
@@ -531,7 +567,10 @@ function convertStripeAmountToMajorUnit(amount: number, currency: string): numbe
 }
 
 // Generate recommendations based on payment status
-function generateRecommendations(status: 'pending' | 'completed' | 'failed', transaction: Record<string, unknown>): string[] {
+function generateRecommendations(
+  status: 'pending' | 'completed' | 'failed',
+  transaction: Record<string, unknown>,
+): string[] {
   const recommendations: string[] = [];
 
   switch (status) {
@@ -556,7 +595,10 @@ function generateRecommendations(status: 'pending' | 'completed' | 'failed', tra
 }
 
 // Generate Stripe-specific recommendations
-function generateStripeRecommendations(status: 'pending' | 'completed' | 'failed', paymentIntent: Stripe.PaymentIntent): string[] {
+function generateStripeRecommendations(
+  status: 'pending' | 'completed' | 'failed',
+  paymentIntent: Stripe.PaymentIntent,
+): string[] {
   const recommendations: string[] = [];
 
   switch (status) {
@@ -606,17 +648,21 @@ function generateStripeRecommendations(status: 'pending' | 'completed' | 'failed
 }
 
 // Log verification attempts
-async function logVerificationAttempt(supabaseAdmin: SupabaseClient, requestId: string, transactionId: string, gateway: string, success: boolean) {
+async function logVerificationAttempt(
+  supabaseAdmin: SupabaseClient,
+  requestId: string,
+  transactionId: string,
+  gateway: string,
+  success: boolean,
+) {
   try {
-    await supabaseAdmin
-      .from('payment_verification_logs')
-      .insert({
-        request_id: requestId,
-        transaction_id: transactionId,
-        gateway: gateway,
-        success: success,
-        created_at: new Date().toISOString()
-      });
+    await supabaseAdmin.from('payment_verification_logs').insert({
+      request_id: requestId,
+      transaction_id: transactionId,
+      gateway: gateway,
+      success: success,
+      created_at: new Date().toISOString(),
+    });
   } catch (error) {
     console.error('Failed to log verification attempt:', error);
     // Don't fail the verification if logging fails

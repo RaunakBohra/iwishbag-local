@@ -1,5 +1,9 @@
 import { useState, useCallback } from 'react';
-import { PaymentError, PaymentErrorContext, PaymentErrorHandler } from '@/utils/paymentErrorHandler';
+import {
+  PaymentError,
+  PaymentErrorContext,
+  PaymentErrorHandler,
+} from '@/utils/paymentErrorHandler';
 import { PaymentGateway } from '@/types/payment';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 
@@ -13,58 +17,59 @@ export const usePaymentErrorHandler = ({ gateway, onErrorLogged }: UsePaymentErr
   const [errorContext, setErrorContext] = useState<PaymentErrorContext | null>(null);
   const supabase = useSupabaseClient();
 
-  const handleError = useCallback(async (
-    error: unknown,
-    context: Partial<PaymentErrorContext> = {}
-  ) => {
-    const fullContext: PaymentErrorContext = {
-      gateway,
-      timestamp: new Date().toISOString(),
-      ...context
-    };
+  const handleError = useCallback(
+    async (error: unknown, context: Partial<PaymentErrorContext> = {}) => {
+      const fullContext: PaymentErrorContext = {
+        gateway,
+        timestamp: new Date().toISOString(),
+        ...context,
+      };
 
-    const parsedError = PaymentErrorHandler.parseError(error, fullContext);
-    
-    // Set current error for UI display
-    setCurrentError(parsedError);
-    setErrorContext(fullContext);
+      const parsedError = PaymentErrorHandler.parseError(error, fullContext);
 
-    // Log error to database
-    try {
-      await logErrorToDatabase(parsedError, fullContext);
-    } catch (logError) {
-      console.error('Failed to log payment error:', logError);
-    }
+      // Set current error for UI display
+      setCurrentError(parsedError);
+      setErrorContext(fullContext);
 
-    // Call callback if provided
-    onErrorLogged?.(parsedError);
+      // Log error to database
+      try {
+        await logErrorToDatabase(parsedError, fullContext);
+      } catch (logError) {
+        console.error('Failed to log payment error:', logError);
+      }
 
-    // Log to console for debugging
-    console.error('Payment Error:', PaymentErrorHandler.formatErrorForLogging(parsedError, fullContext));
+      // Call callback if provided
+      onErrorLogged?.(parsedError);
 
-    return parsedError;
-  }, [gateway, onErrorLogged, supabase]);
+      // Log to console for debugging
+      console.error(
+        'Payment Error:',
+        PaymentErrorHandler.formatErrorForLogging(parsedError, fullContext),
+      );
+
+      return parsedError;
+    },
+    [gateway, onErrorLogged, supabase],
+  );
 
   const logErrorToDatabase = async (error: PaymentError, context: PaymentErrorContext) => {
     try {
-      const { error: insertError } = await supabase
-        .from('payment_error_logs')
-        .insert({
-          error_code: error.code,
-          error_message: error.message,
-          user_message: error.userMessage,
-          severity: error.severity,
-          gateway: context.gateway,
-          transaction_id: context.transactionId,
-          amount: context.amount,
-          currency: context.currency,
-          user_action: context.userAction,
-          should_retry: error.shouldRetry,
-          retry_delay: error.retryDelay,
-          recovery_options: error.recoveryOptions,
-          context: context,
-          created_at: new Date().toISOString()
-        });
+      const { error: insertError } = await supabase.from('payment_error_logs').insert({
+        error_code: error.code,
+        error_message: error.message,
+        user_message: error.userMessage,
+        severity: error.severity,
+        gateway: context.gateway,
+        transaction_id: context.transactionId,
+        amount: context.amount,
+        currency: context.currency,
+        user_action: context.userAction,
+        should_retry: error.shouldRetry,
+        retry_delay: error.retryDelay,
+        recovery_options: error.recoveryOptions,
+        context: context,
+        created_at: new Date().toISOString(),
+      });
 
       if (insertError) {
         console.error('Error logging to database:', insertError);
@@ -108,6 +113,6 @@ export const usePaymentErrorHandler = ({ gateway, onErrorLogged }: UsePaymentErr
     retryLastAction,
     getRetryDelay,
     shouldShowRetryButton,
-    getRecoveryActions
+    getRecoveryActions,
   };
 };

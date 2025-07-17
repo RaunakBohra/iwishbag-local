@@ -1,10 +1,20 @@
-import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useEmailSettings } from "@/hooks/useEmailSettings";
-import { Quote } from "@/types/quote";
+import { useMutation } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useEmailSettings } from '@/hooks/useEmailSettings';
+import { Quote } from '@/types/quote';
 
-type EmailTemplate = 'quote_sent' | 'quote_approved' | 'quote_rejected' | 'order_shipped' | 'order_delivered' | 'contact_form' | 'bank_transfer_details' | 'password_reset' | 'password_reset_success' | 'payment_link';
+type EmailTemplate =
+  | 'quote_sent'
+  | 'quote_approved'
+  | 'quote_rejected'
+  | 'order_shipped'
+  | 'order_delivered'
+  | 'contact_form'
+  | 'bank_transfer_details'
+  | 'password_reset'
+  | 'password_reset_success'
+  | 'payment_link';
 
 interface QuoteEmailData {
   quoteId: string;
@@ -37,7 +47,11 @@ interface PaymentLinkEmailData {
   paymentLink: string;
 }
 
-type EmailData = QuoteEmailData | PasswordResetEmailData | ContactFormEmailData | PaymentLinkEmailData;
+type EmailData =
+  | QuoteEmailData
+  | PasswordResetEmailData
+  | ContactFormEmailData
+  | PaymentLinkEmailData;
 
 interface EmailNotificationOptions {
   to: string;
@@ -48,7 +62,9 @@ interface EmailNotificationOptions {
 
 // Helper function to get access token
 const getAccessToken = async () => {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   return session?.access_token;
 };
 
@@ -60,7 +76,7 @@ export const useEmailNotifications = () => {
     mutationFn: async ({ to, template, data, from }: EmailNotificationOptions) => {
       // Determine email type for settings check
       let emailType: 'quote_notification' | 'order_notification' | undefined;
-      
+
       if (['quote_sent', 'quote_approved', 'quote_rejected'].includes(template)) {
         emailType = 'quote_notification';
       } else if (['order_shipped', 'order_delivered'].includes(template)) {
@@ -74,7 +90,7 @@ export const useEmailNotifications = () => {
       }
 
       const accessToken = await getAccessToken();
-      
+
       if (!accessToken) {
         throw new Error('User not authenticated - cannot send email');
       }
@@ -103,9 +119,9 @@ export const useEmailNotifications = () => {
           to,
           subject,
           html: generateEmailHtml(template, data),
-          from: from || 'noreply@whyteclub.com'
+          from: from || 'noreply@whyteclub.com',
         },
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (error) {
@@ -117,21 +133,21 @@ export const useEmailNotifications = () => {
     onSuccess: (data) => {
       if (data.skipped) {
         toast({
-          title: "Email skipped",
+          title: 'Email skipped',
           description: data.message,
         });
       } else {
         toast({
-          title: "Email sent successfully",
-          description: "The notification email has been sent.",
+          title: 'Email sent successfully',
+          description: 'The notification email has been sent.',
         });
       }
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to send email",
+        title: 'Failed to send email',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
@@ -284,12 +300,16 @@ export const useEmailNotifications = () => {
         content = `<p>You have received an update regarding your quote.</p>`;
     }
 
-    return baseHtml + content + `
+    return (
+      baseHtml +
+      content +
+      `
           <p>Best regards,<br>The WishBag Team</p>
         </div>
       </body>
       </html>
-    `;
+    `
+    );
   };
 
   // Predefined email notification functions
@@ -301,8 +321,8 @@ export const useEmailNotifications = () => {
         quoteId: quote.id,
         customerName: quote.customer_name,
         totalAmount: quote.total_amount,
-        currency: quote.currency
-      }
+        currency: quote.currency,
+      },
     });
   };
 
@@ -314,8 +334,8 @@ export const useEmailNotifications = () => {
         quoteId: quote.id,
         customerName: quote.customer_name,
         totalAmount: quote.total_amount,
-        currency: quote.currency
-      }
+        currency: quote.currency,
+      },
     });
   };
 
@@ -326,12 +346,15 @@ export const useEmailNotifications = () => {
       data: {
         quoteId: quote.id,
         customerName: quote.customer_name,
-        rejectionReason: reason
-      }
+        rejectionReason: reason,
+      },
     });
   };
 
-  const sendOrderShippedEmail = (quote: Quote, trackingInfo: { number: string; carrier: string }) => {
+  const sendOrderShippedEmail = (
+    quote: Quote,
+    trackingInfo: { number: string; carrier: string },
+  ) => {
     return sendEmailMutation.mutate({
       to: quote.email,
       template: 'order_shipped',
@@ -339,8 +362,8 @@ export const useEmailNotifications = () => {
         quoteId: quote.id,
         customerName: quote.customer_name,
         trackingNumber: trackingInfo.number,
-        carrier: trackingInfo.carrier
-      }
+        carrier: trackingInfo.carrier,
+      },
     });
   };
 
@@ -350,16 +373,21 @@ export const useEmailNotifications = () => {
       template: 'order_delivered',
       data: {
         quoteId: quote.id,
-        customerName: quote.customer_name
-      }
+        customerName: quote.customer_name,
+      },
     });
   };
 
-  const sendContactFormEmail = (formData: { name: string; email: string; subject: string; message: string }) => {
+  const sendContactFormEmail = (formData: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+  }) => {
     return sendEmailMutation.mutate({
       to: formData.email,
       template: 'contact_form',
-      data: formData
+      data: formData,
     });
   };
 
@@ -372,8 +400,8 @@ export const useEmailNotifications = () => {
         customerName: quote.customer_name,
         totalAmount: quote.final_total?.toFixed(2) || '0.00',
         currency: quote.currency || 'USD',
-        bankDetails: bankDetails
-      }
+        bankDetails: bankDetails,
+      },
     });
   };
 
@@ -383,8 +411,8 @@ export const useEmailNotifications = () => {
       template: 'password_reset',
       data: {
         resetLink,
-        customerName: email.split('@')[0] // Use email prefix as fallback name
-      }
+        customerName: email.split('@')[0], // Use email prefix as fallback name
+      },
     });
   };
 
@@ -393,8 +421,8 @@ export const useEmailNotifications = () => {
       to: email,
       template: 'password_reset_success',
       data: {
-        customerName: email.split('@')[0] // Use email prefix as fallback name
-      }
+        customerName: email.split('@')[0], // Use email prefix as fallback name
+      },
     });
   };
 
@@ -409,7 +437,7 @@ export const useEmailNotifications = () => {
   }) => {
     try {
       const accessToken = await getAccessToken();
-      
+
       if (!accessToken) {
         throw new Error('User not authenticated - cannot send payment link email');
       }
@@ -417,7 +445,7 @@ export const useEmailNotifications = () => {
       // Use the dedicated payment link email function
       const { data: result, error } = await supabase.functions.invoke('send-payment-link-email', {
         body: options,
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (error) {
@@ -425,7 +453,7 @@ export const useEmailNotifications = () => {
       }
 
       toast({
-        title: "Payment link sent",
+        title: 'Payment link sent',
         description: `Payment link has been emailed to ${options.to}`,
       });
 
@@ -433,9 +461,9 @@ export const useEmailNotifications = () => {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
-        title: "Failed to send payment link",
+        title: 'Failed to send payment link',
         description: errorMessage,
-        variant: "destructive",
+        variant: 'destructive',
       });
       throw error;
     }
@@ -453,6 +481,6 @@ export const useEmailNotifications = () => {
     sendBankTransferEmail,
     sendPasswordResetEmail,
     sendPasswordResetSuccessEmail,
-    sendPaymentLinkEmail
+    sendPaymentLinkEmail,
   };
-}; 
+};

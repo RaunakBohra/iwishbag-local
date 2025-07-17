@@ -1,10 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tables } from "@/integrations/supabase/types";
-import { DualCurrencyDisplay } from "./DualCurrencyDisplay";
-import { useQuoteCurrencyDisplay } from "@/hooks/useCurrencyConversion";
-import { Badge } from "@/components/ui/badge";
-import { getCurrencySymbolFromCountry } from "@/lib/currencyUtils";
-import { useQuoteRoute } from "@/hooks/useQuoteRoute";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tables } from '@/integrations/supabase/types';
+import { DualCurrencyDisplay } from './DualCurrencyDisplay';
+import { useQuoteCurrencyDisplay } from '@/hooks/useCurrencyConversion';
+import { Badge } from '@/components/ui/badge';
+import { getCurrencySymbolFromCountry } from '@/lib/currencyUtils';
+import { useQuoteRoute } from '@/hooks/useQuoteRoute';
 
 interface QuoteItem {
   item_price?: number;
@@ -34,7 +34,7 @@ interface QuoteCalculatedCostsProps {
 export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
   // Use unified route determination - same as customs tiers and shipping routes
   const routeInfo = useQuoteRoute(quote);
-  
+
   // Default to US if route info is not available yet
   const originCountry = routeInfo?.origin || 'US';
   const destinationCountry = routeInfo?.destination || 'US';
@@ -43,7 +43,7 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
   const currencyDisplay = useQuoteCurrencyDisplay({
     originCountry,
     destinationCountry,
-    isAdminView: true
+    isAdminView: true,
   });
 
   if (!quote.final_total) {
@@ -53,7 +53,9 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
           <CardTitle>Calculated Costs</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">No calculation performed yet. Please update the quote to see the cost breakdown.</p>
+          <p className="text-sm text-muted-foreground">
+            No calculation performed yet. Please update the quote to see the cost breakdown.
+          </p>
         </CardContent>
       </Card>
     );
@@ -67,9 +69,9 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
   // Render individual cost rows with dual currency
   const renderRow = (label: string, value: number | null, isDiscount = false) => {
     if (value === null || value === undefined || value === 0) return null;
-    
+
     const sign = isDiscount ? '-' : '';
-    
+
     return (
       <div className="flex justify-between">
         <span>{label}</span>
@@ -107,32 +109,33 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
           <div className="flex justify-between">
             <span className="font-medium">Description</span>
             <span className="font-medium text-right">
-              Amount ({getCurrencySymbolFromCountry(originCountry)}/{getCurrencySymbolFromCountry(destinationCountry)})
+              Amount ({getCurrencySymbolFromCountry(originCountry)}/
+              {getCurrencySymbolFromCountry(destinationCountry)})
             </span>
           </div>
           <div className="border-t my-1"></div>
-          
+
           {/* Item Price */}
-          {originalItemPrice && renderRow("Total Item Price", originalItemPrice)}
-          
+          {originalItemPrice && renderRow('Total Item Price', originalItemPrice)}
+
           {/* Other costs */}
-          {renderRow("Sales Tax", quote.salesTaxPrice)}
-          {renderRow("Merchant Shipping", quote.merchantShippingPrice)}
-          {renderRow("International Shipping", quote.interNationalShipping)}
-          {renderRow("Customs & ECS", quote.customsAndECS)}
-          {renderRow("Domestic Shipping", quote.domesticShipping)}
-          {renderRow("Handling Charge", quote.handlingCharge)}
-          {renderRow("Insurance", quote.insuranceAmount)}
-          {renderRow("Payment Gateway Fee", quote.paymentGatewayFee)}
-          {renderRow("Discount", quote.discount, true)}
+          {renderRow('Sales Tax', quote.salesTaxPrice)}
+          {renderRow('Merchant Shipping', quote.merchantShippingPrice)}
+          {renderRow('International Shipping', quote.interNationalShipping)}
+          {renderRow('Customs & ECS', quote.customsAndECS)}
+          {renderRow('Domestic Shipping', quote.domesticShipping)}
+          {renderRow('Handling Charge', quote.handlingCharge)}
+          {renderRow('Insurance', quote.insuranceAmount)}
+          {renderRow('Payment Gateway Fee', quote.paymentGatewayFee)}
+          {renderRow('Discount', quote.discount, true)}
 
           <div className="border-t my-2"></div>
-          
+
           {/* Subtotal */}
-          {quote.sub_total && renderRow("Subtotal", quote.sub_total)}
-          
+          {quote.sub_total && renderRow('Subtotal', quote.sub_total)}
+
           {/* VAT */}
-          {quote.vat && renderRow("VAT", quote.vat)}
+          {quote.vat && renderRow('VAT', quote.vat)}
 
           <div className="border-t my-2"></div>
 

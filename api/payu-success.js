@@ -6,19 +6,19 @@ export default function handler(req, res) {
     try {
       // Extract all PayU parameters from the POST body
       const params = new URLSearchParams();
-      
+
       // Add all fields from req.body to params
       Object.entries(req.body || {}).forEach(([key, value]) => {
         if (value) {
           params.append(key, String(value));
         }
       });
-      
+
       // Always add gateway parameter
       params.append('gateway', 'payu');
-      
+
       console.log('Redirecting to:', `/payment-success?${params.toString()}`);
-      
+
       // Redirect to the React payment success page with all parameters as GET
       res.redirect(302, `/payment-success?${params.toString()}`);
     } catch (error) {

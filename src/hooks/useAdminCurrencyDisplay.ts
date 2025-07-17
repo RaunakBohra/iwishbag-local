@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useUserProfile } from './useUserProfile';
 import { useAllCountries } from './useAllCountries';
@@ -25,14 +24,19 @@ export const useAdminCurrencyDisplay = () => {
   const getExchangeRate = useMemo(() => {
     return (currency: string) => {
       if (currency === 'USD') return 1;
-      const country = allCountries?.find(c => c.currency === currency);
+      const country = allCountries?.find((c) => c.currency === currency);
       return country?.rate_from_usd || 1;
     };
   }, [allCountries]);
 
   const formatMultiCurrency = (options: AdminCurrencyDisplayOptions): CurrencyDisplay[] => {
-    const { usdAmount, quoteCurrency, customerPreferredCurrency, showAllVariations = true } = options;
-    
+    const {
+      usdAmount,
+      quoteCurrency,
+      customerPreferredCurrency,
+      showAllVariations = true,
+    } = options;
+
     if (!usdAmount) return [];
 
     const displays: CurrencyDisplay[] = [];
@@ -43,7 +47,7 @@ export const useAdminCurrencyDisplay = () => {
       amount: formatAmountForDisplay(usdAmount, 'USD', 1),
       currency: 'USD',
       label: 'USD (Base)',
-      isPrimary: true
+      isPrimary: true,
     });
     addedCurrencies.add('USD');
 
@@ -75,7 +79,11 @@ export const useAdminCurrencyDisplay = () => {
     }
 
     // Add Customer's preferred currency if different
-    if (customerPreferredCurrency && customerPreferredCurrency !== 'USD' && !addedCurrencies.has(customerPreferredCurrency)) {
+    if (
+      customerPreferredCurrency &&
+      customerPreferredCurrency !== 'USD' &&
+      !addedCurrencies.has(customerPreferredCurrency)
+    ) {
       const rate = getExchangeRate(customerPreferredCurrency);
       displays.push({
         amount: formatAmountForDisplay(usdAmount, customerPreferredCurrency, rate),

@@ -1,55 +1,55 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
-const sendResendEmail = async (to, subject, html)=>{
+const sendResendEmail = async (to, subject, html) => {
   const resendApiKey = Deno.env.get('RESEND_API_KEY');
   if (!resendApiKey) {
     console.error('RESEND_API_KEY not configured');
     return {
       success: false,
-      error: 'API key not configured'
+      error: 'API key not configured',
     };
   }
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         from: 'iWishBag <noreply@whyteclub.com>',
         to,
         subject,
-        html
-      })
+        html,
+      }),
     });
     if (!response.ok) {
       const errorData = await response.text();
       console.error('Resend API error:', errorData);
       return {
         success: false,
-        error: errorData
+        error: errorData,
       };
     }
     const result = await response.json();
     console.log('✅ Email sent via Resend:', result);
     return {
       success: true,
-      messageId: result.id
+      messageId: result.id,
     };
   } catch (error) {
     console.error('Failed to send email via Resend:', error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 };
-const getSignupConfirmationEmail = (confirmationUrl)=>{
+const getSignupConfirmationEmail = (confirmationUrl) => {
   return {
     subject: 'Welcome to iWishBag - Confirm Your Email',
     html: `
@@ -139,57 +139,63 @@ const getSignupConfirmationEmail = (confirmationUrl)=>{
         </div>
       </body>
       </html>
-    `
+    `,
   };
 };
-serve(async (req)=>{
-  console.log("🔵 === AUTH HOOK TRIGGERED ===");
+serve(async (req) => {
+  console.log('🔵 === AUTH HOOK TRIGGERED ===');
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
-      headers: corsHeaders
+      headers: corsHeaders,
     });
   }
   try {
     const payload = await req.json();
-    console.log("🔵 Webhook payload:", JSON.stringify(payload, null, 2));
+    console.log('🔵 Webhook payload:', JSON.stringify(payload, null, 2));
     // Handle user signup confirmation
     if (payload.type === 'INSERT' && payload.table === 'users') {
       const user = payload.record;
-      console.log("🔵 New user signup:", user.email);
+      console.log('🔵 New user signup:', user.email);
       // Check if user needs email confirmation
       if (!user.email_confirmed_at && user.confirmation_token) {
-        console.log("🔵 Sending signup confirmation email via Resend...");
+        console.log('🔵 Sending signup confirmation email via Resend...');
         // Build confirmation URL
         const confirmationUrl = `https://whyteclub.com/auth/confirm?token=${user.confirmation_token}&type=signup`;
         const emailTemplate = getSignupConfirmationEmail(confirmationUrl);
         const result = await sendResendEmail(user.email, emailTemplate.subject, emailTemplate.html);
         if (result.success) {
-          console.log("✅ Signup confirmation email sent successfully");
+          console.log('✅ Signup confirmation email sent successfully');
         } else {
-          console.error("❌ Failed to send signup confirmation email:", result.error);
+          console.error('❌ Failed to send signup confirmation email:', result.error);
         }
       }
     }
-    return new Response(JSON.stringify({
-      success: true
-    }), {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+      }),
+      {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   } catch (error) {
-    console.error("❌ Auth hook error:", error);
-    return new Response(JSON.stringify({
-      error: error.message
-    }), {
-      status: 500,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
-    });
+    console.error('❌ Auth hook error:', error);
+    return new Response(
+      JSON.stringify({
+        error: error.message,
+      }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
 });

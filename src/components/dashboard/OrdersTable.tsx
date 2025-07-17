@@ -1,10 +1,17 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { OrderStatusProgress } from "./OrderStatusProgress";
-import { Tables } from "@/integrations/supabase/types";
-import { useQuoteDisplayCurrency } from "@/hooks/useQuoteDisplayCurrency";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { OrderStatusProgress } from './OrderStatusProgress';
+import { Tables } from '@/integrations/supabase/types';
+import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
 
 type Order = Tables<'quotes'>;
 
@@ -14,28 +21,26 @@ interface OrdersTableProps {
 
 const OrderRow = ({ order, onViewOrder }: { order: Order; onViewOrder: (id: string) => void }) => {
   const { formatAmount } = useQuoteDisplayCurrency({ quote: order });
-  
+
   return (
-    <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onViewOrder(order.id)}>
+    <TableRow
+      key={order.id}
+      className="cursor-pointer hover:bg-muted/50"
+      onClick={() => onViewOrder(order.id)}
+    >
       <TableCell>
         {order.order_display_id || order.display_id || `#${order.id.substring(0, 6)}`}
       </TableCell>
-      <TableCell className="font-medium">
-        {order.product_name || 'Multiple Items'}
-      </TableCell>
+      <TableCell className="font-medium">{order.product_name || 'Multiple Items'}</TableCell>
       <TableCell>
         <OrderStatusProgress status={order.status} />
       </TableCell>
+      <TableCell>{order.final_total ? formatAmount(order.final_total) : 'N/A'}</TableCell>
+      <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
       <TableCell>
-        {order.final_total ? formatAmount(order.final_total) : 'N/A'}
-      </TableCell>
-      <TableCell>
-        {new Date(order.created_at).toLocaleDateString()}
-      </TableCell>
-      <TableCell>
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={(e) => {
             e.stopPropagation();
             onViewOrder(order.id);
@@ -77,11 +82,7 @@ export const OrdersTable = ({ orders }: OrdersTableProps) => {
       </TableHeader>
       <TableBody>
         {orders.map((order) => (
-          <OrderRow 
-            key={order.id}
-            order={order}
-            onViewOrder={handleViewOrder}
-          />
+          <OrderRow key={order.id} order={order} onViewOrder={handleViewOrder} />
         ))}
       </TableBody>
     </Table>

@@ -71,10 +71,7 @@ const getGatewayColor = (code: string) => {
   }
 };
 
-export const PaymentMethodDebug: React.FC<PaymentMethodDebugProps> = ({ 
-  country, 
-  currency 
-}) => {
+export const PaymentMethodDebug: React.FC<PaymentMethodDebugProps> = ({ country, currency }) => {
   const { getAvailablePaymentMethods, availableMethods, isLoading } = usePaymentGateways();
 
   if (!country || !currency) {
@@ -109,19 +106,25 @@ export const PaymentMethodDebug: React.FC<PaymentMethodDebugProps> = ({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="text-xs text-gray-600">
-          <p><strong>Country:</strong> {country}</p>
-          <p><strong>Currency:</strong> {currency}</p>
-          <p><strong>Available Methods:</strong> {availableMethods?.length || 0}</p>
+          <p>
+            <strong>Country:</strong> {country}
+          </p>
+          <p>
+            <strong>Currency:</strong> {currency}
+          </p>
+          <p>
+            <strong>Available Methods:</strong> {availableMethods?.length || 0}
+          </p>
         </div>
-        
+
         {isLoading ? (
           <div className="text-sm text-gray-500">Loading payment methods...</div>
         ) : availableMethodsList.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {availableMethodsList.map((method) => (
-              <Badge 
-                key={method.code} 
-                variant="secondary" 
+              <Badge
+                key={method.code}
+                variant="secondary"
                 className={`${getGatewayColor(method.code)} flex items-center gap-1`}
               >
                 {getGatewayIcon(method.code)}
@@ -132,16 +135,16 @@ export const PaymentMethodDebug: React.FC<PaymentMethodDebugProps> = ({
         ) : (
           <Alert>
             <AlertDescription>
-              No payment methods available for {country} with {currency}. 
-              Only bank transfer and COD will be available.
+              No payment methods available for {country} with {currency}. Only bank transfer and COD
+              will be available.
             </AlertDescription>
           </Alert>
         )}
-        
+
         <div className="text-xs text-gray-500 mt-2">
           <p>💡 This shows what payment options will be available at checkout.</p>
         </div>
       </CardContent>
     </Card>
   );
-}; 
+};

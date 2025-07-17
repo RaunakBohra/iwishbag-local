@@ -45,7 +45,7 @@ const defaultPaymentStatuses: PaymentStatusConfig[] = [
     showsInAnalytics: true,
     progressPercentage: 0,
     customerMessage: 'Payment required',
-    cssClass: 'payment-unpaid'
+    cssClass: 'payment-unpaid',
   },
   {
     id: 'partial',
@@ -60,7 +60,7 @@ const defaultPaymentStatuses: PaymentStatusConfig[] = [
     showsInAnalytics: true,
     progressPercentage: 50,
     customerMessage: 'Partial payment received',
-    cssClass: 'payment-partial'
+    cssClass: 'payment-partial',
   },
   {
     id: 'paid',
@@ -75,7 +75,7 @@ const defaultPaymentStatuses: PaymentStatusConfig[] = [
     showsInAnalytics: true,
     progressPercentage: 100,
     customerMessage: 'Payment completed',
-    cssClass: 'payment-paid'
+    cssClass: 'payment-paid',
   },
   {
     id: 'overpaid',
@@ -90,8 +90,8 @@ const defaultPaymentStatuses: PaymentStatusConfig[] = [
     showsInAnalytics: true,
     progressPercentage: 100,
     customerMessage: 'Overpayment received - refund will be processed',
-    cssClass: 'payment-overpaid'
-  }
+    cssClass: 'payment-overpaid',
+  },
 ];
 
 const defaultVerificationStatuses: VerificationStatusConfig[] = [
@@ -107,7 +107,7 @@ const defaultVerificationStatuses: VerificationStatusConfig[] = [
     isTerminal: false,
     allowsApproval: false,
     customerMessage: 'Verification in progress',
-    cssClass: 'verification-pending'
+    cssClass: 'verification-pending',
   },
   {
     id: 'verified',
@@ -121,7 +121,7 @@ const defaultVerificationStatuses: VerificationStatusConfig[] = [
     isTerminal: false,
     allowsApproval: true,
     customerMessage: 'Verification successful',
-    cssClass: 'verification-verified'
+    cssClass: 'verification-verified',
   },
   {
     id: 'confirmed',
@@ -135,7 +135,7 @@ const defaultVerificationStatuses: VerificationStatusConfig[] = [
     isTerminal: true,
     allowsApproval: false,
     customerMessage: 'Verification confirmed',
-    cssClass: 'verification-confirmed'
+    cssClass: 'verification-confirmed',
   },
   {
     id: 'rejected',
@@ -149,8 +149,8 @@ const defaultVerificationStatuses: VerificationStatusConfig[] = [
     isTerminal: true,
     allowsApproval: false,
     customerMessage: 'Verification rejected - please resubmit',
-    cssClass: 'verification-rejected'
-  }
+    cssClass: 'verification-rejected',
+  },
 ];
 
 export const usePaymentStatusManagement = () => {
@@ -158,17 +158,15 @@ export const usePaymentStatusManagement = () => {
   const verificationStatuses = useMemo(() => defaultVerificationStatuses, []);
 
   const getPaymentStatusConfig = (status: string): PaymentStatusConfig | null => {
-    return paymentStatuses.find(s => s.name === status) || null;
+    return paymentStatuses.find((s) => s.name === status) || null;
   };
 
   const getVerificationStatusConfig = (status: string): VerificationStatusConfig | null => {
-    return verificationStatuses.find(s => s.name === status) || null;
+    return verificationStatuses.find((s) => s.name === status) || null;
   };
 
   const getPaymentStatusesForAnalytics = (): string[] => {
-    return paymentStatuses
-      .filter(status => status.showsInAnalytics)
-      .map(status => status.name);
+    return paymentStatuses.filter((status) => status.showsInAnalytics).map((status) => status.name);
   };
 
   const isPaymentComplete = (status: string): boolean => {

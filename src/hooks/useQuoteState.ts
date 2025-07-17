@@ -1,13 +1,13 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { Quote, QuoteStatus, isValidStatusTransition } from "@/types/quote";
-import { useEmailNotifications } from "./useEmailNotifications";
-import { useCartStore, CartItem } from "@/stores/cartStore";
-import { useAuth } from "@/contexts/AuthContext";
-import { Tables } from "@/integrations/supabase/types";
-import { useStatusManagement } from "./useStatusManagement";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Quote, QuoteStatus, isValidStatusTransition } from '@/types/quote';
+import { useEmailNotifications } from './useEmailNotifications';
+import { useCartStore, CartItem } from '@/stores/cartStore';
+import { useAuth } from '@/contexts/AuthContext';
+import { Tables } from '@/integrations/supabase/types';
+import { useStatusManagement } from './useStatusManagement';
 
 type QuoteWithItems = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
@@ -26,14 +26,14 @@ export const useQuoteState = (quoteId: string) => {
   const convertQuoteToCartItem = (quote: QuoteWithItems): CartItem => {
     const firstItem = quote.quote_items?.[0];
     const quoteItems = quote.quote_items || [];
-    
+
     // Calculate total from quote items with proper null checks
     const totalFromItems = quoteItems.reduce((sum, item) => {
       const itemPrice = item.item_price || 0;
       const itemQuantity = item.quantity || 1;
-      return sum + (itemPrice * itemQuantity);
+      return sum + itemPrice * itemQuantity;
     }, 0);
-    
+
     // FIXED: Use proper fallback chain for total price
     let totalPrice = 0;
     if (quote.final_total && quote.final_total > 0) {
@@ -46,10 +46,10 @@ export const useQuoteState = (quoteId: string) => {
       // If no price found, use the first item's price
       totalPrice = firstItem?.item_price || 0;
     }
-    
+
     const quantity = quote.quantity || firstItem?.quantity || 1;
     const itemWeight = firstItem?.item_weight || quote.item_weight || 0;
-    
+
     // Determine purchase country from the product URL or default to US
     let purchaseCountry = 'US'; // Default
     const productUrl = firstItem?.product_url || quote.product_url || '';
@@ -60,7 +60,7 @@ export const useQuoteState = (quoteId: string) => {
     } else if (productUrl.includes('amazon.co.uk')) {
       purchaseCountry = 'GB';
     }
-    
+
     const cartItem = {
       id: quote.id,
       quoteId: quote.id,
@@ -76,15 +76,15 @@ export const useQuoteState = (quoteId: string) => {
       inCart: true,
       isSelected: false,
       createdAt: new Date(quote.created_at),
-      updatedAt: new Date(quote.updated_at)
+      updatedAt: new Date(quote.updated_at),
     };
-    
+
     // FIXED: Final safety check to ensure all numeric values are valid
     return {
       ...cartItem,
       finalTotal: isNaN(cartItem.finalTotal) ? 0 : cartItem.finalTotal,
       quantity: isNaN(cartItem.quantity) ? 1 : cartItem.quantity,
-      itemWeight: isNaN(cartItem.itemWeight) ? 0 : cartItem.itemWeight
+      itemWeight: isNaN(cartItem.itemWeight) ? 0 : cartItem.itemWeight,
     };
   };
 
@@ -99,9 +99,9 @@ export const useQuoteState = (quoteId: string) => {
     if (fetchError) {
       console.error('Error fetching current quote status:', fetchError);
       toast({
-        title: "Error",
-        description: "Failed to fetch quote status",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to fetch quote status',
+        variant: 'destructive',
       });
       return null;
     }
@@ -109,9 +109,9 @@ export const useQuoteState = (quoteId: string) => {
     // Validate status transition
     if (!isValidTransition(currentQuote.status, status, 'quote')) {
       toast({
-        title: "Invalid Status Transition",
+        title: 'Invalid Status Transition',
         description: `Cannot change status from "${currentQuote.status}" to "${status}"`,
-        variant: "destructive",
+        variant: 'destructive',
       });
       return null;
     }
@@ -126,9 +126,9 @@ export const useQuoteState = (quoteId: string) => {
     if (error) {
       console.error('Error updating quote status:', error);
       toast({
-        title: "Error",
-        description: "Failed to update quote status",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update quote status',
+        variant: 'destructive',
       });
       return null;
     }
@@ -138,7 +138,7 @@ export const useQuoteState = (quoteId: string) => {
     queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders'] });
 
     toast({
-      title: "Status Updated",
+      title: 'Status Updated',
       description: `Quote status changed to "${status}"`,
     });
 
@@ -168,10 +168,7 @@ export const useQuoteState = (quoteId: string) => {
         const { removeItem } = useCartStore.getState();
         removeItem(quoteId);
         // Update in_cart flag in DB
-        await supabase
-          .from('quotes')
-          .update({ in_cart: false })
-          .eq('id', quoteId);
+        await supabase.from('quotes').update({ in_cart: false }).eq('id', quoteId);
       }
       // Now update status to rejected
       return await updateQuoteStatus(quoteId, 'rejected');
@@ -186,14 +183,16 @@ export const useQuoteState = (quoteId: string) => {
       // Get quote with items
       const { data: quote, error: fetchError } = await supabase
         .from('quotes')
-        .select(`
+        .select(
+          `
           *,
           quote_items (*),
           shipping_routes!shipping_route_id (
             origin_country,
             destination_country
           )
-        `)
+        `,
+        )
         .eq('id', quoteId)
         .single();
 
@@ -215,26 +214,22 @@ export const useQuoteState = (quoteId: string) => {
       addItem(cartItem);
 
       // Update quote to mark as in cart (don't change status, just add in_cart flag)
-      await supabase
-        .from('quotes')
-        .update({ in_cart: true })
-        .eq('id', quoteId);
+      await supabase.from('quotes').update({ in_cart: true }).eq('id', quoteId);
 
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['quote-detail', quoteId] });
       queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders'] });
 
       toast({
-        title: "Added to Cart",
-        description: "Quote has been added to your cart",
+        title: 'Added to Cart',
+        description: 'Quote has been added to your cart',
       });
-
     } catch (error) {
       console.error('Error adding to cart:', error);
       toast({
-        title: "Error",
-        description: "Failed to add item to cart. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to add item to cart. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsUpdating(false);
@@ -249,27 +244,24 @@ export const useQuoteState = (quoteId: string) => {
       removeItem(quoteId);
 
       // Update quote to remove in_cart flag
-      await supabase
-        .from('quotes')
-        .update({ in_cart: false })
-        .eq('id', quoteId);
-      
+      await supabase.from('quotes').update({ in_cart: false }).eq('id', quoteId);
+
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['quote-detail', quoteId] });
       queryClient.invalidateQueries({ queryKey: ['user-quotes-and-orders'] });
 
       toast({
-        title: "Removed from Cart",
-        description: "Quote has been removed from your cart",
+        title: 'Removed from Cart',
+        description: 'Quote has been removed from your cart',
       });
-      
+
       return true;
     } catch (error) {
       console.error('Error removing from cart:', error);
       toast({
-        title: "Error",
-        description: "Failed to remove item from cart",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to remove item from cart',
+        variant: 'destructive',
       });
       return false;
     } finally {
@@ -288,6 +280,6 @@ export const useQuoteState = (quoteId: string) => {
     addToCart,
     removeFromCart,
     setPaymentMethod,
-    isUpdating
+    isUpdating,
   };
-}; 
+};

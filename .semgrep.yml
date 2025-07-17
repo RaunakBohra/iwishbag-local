@@ -1,0 +1,112 @@
+rules:
+  - id: iwishbag-supabase-service-role-key
+    message: Potential exposure of Supabase service role key
+    pattern: |
+      const $KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: [vuln]
+      technology: [supabase]
+      references:
+        - https://supabase.com/docs/guides/auth/overview#service-role-key
+      confidence: HIGH
+    
+  - id: iwishbag-payment-gateway-secrets
+    message: Potential exposure of payment gateway secrets
+    patterns:
+      - pattern-either:
+          - pattern: |
+              const $KEY = process.env.STRIPE_SECRET_KEY
+          - pattern: |
+              const $KEY = process.env.PAYPAL_CLIENT_SECRET
+          - pattern: |
+              const $KEY = process.env.PAYU_MERCHANT_KEY
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: [vuln]
+      technology: [payment-gateway]
+      confidence: HIGH
+      
+  - id: iwishbag-sql-injection-risk
+    message: Potential SQL injection vulnerability in Supabase query
+    pattern: |
+      supabase.from($TABLE).select($QUERY)
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: [vuln]
+      technology: [supabase]
+      confidence: MEDIUM
+      
+  - id: iwishbag-no-console-log-production
+    message: Console.log should not be used in production code
+    pattern: console.log(...)
+    languages: [typescript, javascript]
+    severity: WARNING
+    paths:
+      exclude:
+        - "src/scripts/**"
+        - "**/*.test.ts"
+        - "**/*.test.tsx"
+    metadata:
+      category: security
+      subcategory: [audit]
+      confidence: HIGH
+
+  - id: iwishbag-weak-crypto
+    message: Weak cryptographic function detected
+    patterns:
+      - pattern-either:
+          - pattern: crypto.createHash("md5")
+          - pattern: crypto.createHash("sha1")
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: [vuln]
+      technology: [crypto]
+      confidence: HIGH
+
+  - id: iwishbag-unsafe-eval
+    message: Unsafe use of eval() detected
+    patterns:
+      - pattern-either:
+          - pattern: eval(...)
+          - pattern: new Function(...)
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: [vuln]
+      confidence: HIGH
+
+  - id: iwishbag-xss-prevention
+    message: Potential XSS vulnerability - ensure proper sanitization
+    pattern: |
+      dangerouslySetInnerHTML={{ __html: $VAR }}
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: [vuln]
+      technology: [react]
+      confidence: MEDIUM
+      
+  - id: iwishbag-unsafe-redirect
+    message: Potential open redirect vulnerability
+    patterns:
+      - pattern-either:
+          - pattern: window.location.href = $URL
+          - pattern: window.location.replace($URL)
+          - pattern: window.location.assign($URL)
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: [vuln]
+      confidence: MEDIUM

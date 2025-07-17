@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createCorsHeaders } from '../_shared/cors.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createCorsHeaders } from '../_shared/cors.ts';
 
 interface PayUSuccessData {
   txnid: string;
@@ -21,10 +21,10 @@ interface PayUSuccessData {
 
 serve(async (req) => {
   const corsHeaders = createCorsHeaders(req);
-  
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   console.log(`🔔 PayU Success Handler - Method: ${req.method}, URL: ${req.url}`);
@@ -36,18 +36,18 @@ serve(async (req) => {
     if (req.method === 'POST') {
       // Handle POST request from PayU (form data)
       console.log('📝 Processing POST request from PayU');
-      
+
       const contentType = req.headers.get('content-type');
       console.log('📝 Content-Type:', contentType);
-      
+
       let formData: FormData;
-      
+
       try {
         if (contentType?.includes('application/x-www-form-urlencoded')) {
           // Handle URL-encoded form data
           const body = await req.text();
           console.log('📝 Raw body:', body);
-          
+
           formData = new FormData();
           const params = new URLSearchParams(body);
           for (const [key, value] of params) {
@@ -60,7 +60,8 @@ serve(async (req) => {
       } catch (parseError) {
         console.error('❌ Error parsing form data:', parseError);
         // Return a basic HTML response for debugging
-        return new Response(`
+        return new Response(
+          `
           <html>
             <body>
               <h1>PayU Callback Received</h1>
@@ -74,12 +75,14 @@ serve(async (req) => {
               </script>
             </body>
           </html>
-        `, {
-          status: 200,
-          headers: { 'Content-Type': 'text/html' }
-        });
+        `,
+          {
+            status: 200,
+            headers: { 'Content-Type': 'text/html' },
+          },
+        );
       }
-      
+
       payuData = {
         txnid: formData.get('txnid')?.toString() || '',
         mihpayid: formData.get('mihpayid')?.toString() || '',
@@ -95,7 +98,7 @@ serve(async (req) => {
         bank_ref_num: formData.get('bank_ref_num')?.toString() || '',
         error_code: formData.get('error_code')?.toString() || '',
         error_Message: formData.get('error_Message')?.toString() || '',
-        gateway: 'payu'
+        gateway: 'payu',
       };
 
       console.log('📝 PayU Success Data:', {
@@ -103,9 +106,8 @@ serve(async (req) => {
         status: payuData.status,
         amount: payuData.amount,
         firstname: payuData.firstname,
-        email: payuData.email?.substring(0, 3) + '***'
+        email: payuData.email?.substring(0, 3) + '***',
       });
-
     } else if (req.method === 'GET') {
       // Handle GET request (from browser navigation or direct access)
       console.log('📝 Processing GET request');
@@ -127,17 +129,19 @@ serve(async (req) => {
         bank_ref_num: searchParams.get('bank_ref_num') || '',
         error_code: searchParams.get('error_code') || '',
         error_Message: searchParams.get('error_Message') || '',
-        gateway: searchParams.get('gateway') || 'payu'
+        gateway: searchParams.get('gateway') || 'payu',
       };
-
     } else {
       console.log('❌ Method not allowed:', req.method);
-      return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+      return new Response('Method not allowed', {
+        status: 405,
+        headers: corsHeaders,
+      });
     }
 
     // Build redirect URL with all payment data
     const redirectUrl = new URL('/payment-success', 'https://whyteclub.com');
-    
+
     // Add all PayU parameters to the redirect URL
     Object.entries(payuData).forEach(([key, value]) => {
       if (value) {
@@ -172,13 +176,12 @@ serve(async (req) => {
       status: 200,
       headers: {
         'Content-Type': 'text/html',
-        ...corsHeaders
-      }
+        ...corsHeaders,
+      },
     });
-
   } catch (error) {
     console.error('❌ PayU Success Handler Error:', error);
-    
+
     // Return HTML error page with redirect
     const errorHtml = `
       <!DOCTYPE html>
@@ -206,8 +209,8 @@ serve(async (req) => {
       status: 200, // Return 200 to avoid PayU retries
       headers: {
         'Content-Type': 'text/html',
-        ...corsHeaders
-      }
+        ...corsHeaders,
+      },
     });
   }
-})
+});

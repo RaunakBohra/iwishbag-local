@@ -1,6 +1,5 @@
-
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface CustomerCodToggleProps {
   customerId: string;
@@ -9,11 +8,11 @@ interface CustomerCodToggleProps {
   isUpdating: boolean;
 }
 
-export const CustomerCodToggle = ({ 
-  customerId, 
-  codEnabled, 
-  onToggle, 
-  isUpdating 
+export const CustomerCodToggle = ({
+  customerId,
+  codEnabled,
+  onToggle,
+  isUpdating,
 }: CustomerCodToggleProps) => {
   return (
     <div className="flex items-center space-x-2">

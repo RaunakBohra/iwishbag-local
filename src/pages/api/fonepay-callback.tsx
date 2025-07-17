@@ -14,12 +14,12 @@ export default function FonepayCallback() {
 
     // The Edge Function will handle verification and redirect
     // This page is just a fallback if something goes wrong
-    
+
     // Check if we have the required parameters
     if (params.PRN) {
       // Payment status
       const isSuccess = params.PS === 'true';
-      
+
       // Redirect based on payment status
       if (isSuccess) {
         navigate(`/payment-success?gateway=fonepay&txn=${params.PRN}&uid=${params.UID}`);

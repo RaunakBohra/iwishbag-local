@@ -1,0 +1,148 @@
+name: Security Scan
+
+on:
+  # Run on pushes to main branch
+  push:
+    branches: [ main ]
+  
+  # Run on pull requests targeting main
+  pull_request:
+    branches: [ main ]
+    
+  # Run weekly security scans
+  schedule:
+    - cron: '0 2 * * 1' # Every Monday at 2 AM UTC
+  
+  # Allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Analysis
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Setup Python for Semgrep
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Dependencies
+        run: |
+          npm ci
+          pip install semgrep
+        
+      - name: Run Dependency Vulnerability Scan
+        run: |
+          echo "🔍 Running comprehensive dependency vulnerability scan..."
+          npx audit-ci --config .audit-ci.jsonc --report-type json --output-file audit-results.json || {
+            echo "❌ Found critical or high severity vulnerabilities in dependencies"
+            exit 1
+          }
+          
+      - name: Run Semgrep SAST Analysis
+        run: |
+          echo "🔍 Running Semgrep static application security testing..."
+          semgrep --config=auto --config=.semgrep.yml --json --output=semgrep-results.json . || {
+            echo "❌ Semgrep found critical security issues"
+            exit 1
+          }
+          
+      - name: Run ESLint Security Rules
+        run: |
+          echo "🔍 Running ESLint with security-focused rules..."
+          npx eslint . --format json --output-file eslint-security-results.json || {
+            echo "⚠️  ESLint found security-related issues"
+            exit 0
+          }
+          
+      - name: Generate Security Report
+        run: |
+          echo "📊 Generating security analysis report..."
+          echo "# Security Analysis Report" > security-report.md
+          echo "Generated on: $(date)" >> security-report.md
+          echo "" >> security-report.md
+          
+          # Add dependency vulnerabilities summary
+          echo "## Dependency Vulnerabilities" >> security-report.md
+          if [ -f audit-results.json ]; then
+            echo "✅ No critical or high severity vulnerabilities found in dependencies" >> security-report.md
+          else
+            echo "❌ Critical vulnerabilities found - see audit-results.json" >> security-report.md
+          fi
+          echo "" >> security-report.md
+          
+          # Add SAST results summary
+          echo "## Static Application Security Testing (SAST)" >> security-report.md
+          if [ -f semgrep-results.json ]; then
+            SEMGREP_ISSUES=$(jq '.results | length' semgrep-results.json 2>/dev/null || echo "0")
+            if [ "$SEMGREP_ISSUES" -eq 0 ]; then
+              echo "✅ No security issues found by Semgrep" >> security-report.md
+            else
+              echo "⚠️  Found $SEMGREP_ISSUES security issues - see semgrep-results.json" >> security-report.md
+            fi
+          else
+            echo "❌ Semgrep scan failed - see workflow logs" >> security-report.md
+          fi
+          echo "" >> security-report.md
+          
+          # Add general recommendations
+          echo "## Security Recommendations" >> security-report.md
+          echo "- Keep dependencies updated regularly" >> security-report.md
+          echo "- Review and address all security findings" >> security-report.md
+          echo "- Follow secure coding practices" >> security-report.md
+          echo "- Implement proper authentication and authorization" >> security-report.md
+          echo "- Use HTTPS for all data transmission" >> security-report.md
+          echo "- Sanitize user inputs to prevent XSS and injection attacks" >> security-report.md
+          
+      - name: Upload Security Scan Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan-results
+          path: |
+            audit-results.json
+            semgrep-results.json
+            eslint-security-results.json
+            security-report.md
+          retention-days: 30
+          
+      - name: Comment Security Report on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('security-report.md')) {
+              const report = fs.readFileSync('security-report.md', 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🔒 Security Analysis Report\n\n${report}`
+              });
+            }
+            
+      - name: Success Notification
+        if: success()
+        run: |
+          echo "✅ Security analysis completed successfully!"
+          echo "🔒 No critical security issues found"
+          echo "📊 Security report generated and uploaded as artifact"
+          
+      - name: Failure Notification
+        if: failure()
+        run: |
+          echo "❌ Security analysis failed!"
+          echo "🔒 Critical security issues detected"
+          echo "📋 Please review the security report and fix the issues"
+          exit 1

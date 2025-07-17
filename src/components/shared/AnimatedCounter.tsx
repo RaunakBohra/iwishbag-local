@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
 interface AnimatedCounterProps {
   end: number;
@@ -12,10 +12,10 @@ interface AnimatedCounterProps {
 export const AnimatedCounter = ({
   end,
   duration = 2000,
-  prefix = "",
-  suffix = "",
-  className = "",
-  startOnView = true
+  prefix = '',
+  suffix = '',
+  className = '',
+  startOnView = true,
 }: AnimatedCounterProps) => {
   const [count, setCount] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
@@ -35,7 +35,7 @@ export const AnimatedCounter = ({
           hasAnimated.current = true;
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     if (countRef.current) {
@@ -73,7 +73,9 @@ export const AnimatedCounter = ({
 
   return (
     <span ref={countRef} className={className}>
-      {prefix}{count.toLocaleString()}{suffix}
+      {prefix}
+      {count.toLocaleString()}
+      {suffix}
     </span>
   );
 };

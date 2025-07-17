@@ -1,6 +1,6 @@
-import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
-import { useStatusManagement } from "@/hooks/useStatusManagement";
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 const statusSteps: Record<string, number> = {
   paid: 25,
@@ -10,14 +10,14 @@ const statusSteps: Record<string, number> = {
 };
 
 const statusLabels: Record<string, string> = {
-    cod_pending: "Awaiting Payment",
-    bank_transfer_pending: "Awaiting Payment",
-    paid: "Paid",
-    ordered: "Processing",
-    shipped: "Shipped",
-    completed: "Completed",
-    cancelled: "Cancelled"
-}
+  cod_pending: 'Awaiting Payment',
+  bank_transfer_pending: 'Awaiting Payment',
+  paid: 'Paid',
+  ordered: 'Processing',
+  shipped: 'Shipped',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
 
 interface OrderStatusProgressProps {
   status: string;
@@ -39,7 +39,7 @@ export const OrderStatusProgress = ({ status }: OrderStatusProgressProps) => {
       </div>
     );
   }
-  
+
   if (isPendingPayment) {
     return (
       <div className="backdrop-blur-xl bg-yellow-50/50 border border-yellow-200/50 rounded-lg p-3">
@@ -51,10 +51,7 @@ export const OrderStatusProgress = ({ status }: OrderStatusProgressProps) => {
   return (
     <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-lg p-4 space-y-2">
       <span className="text-xs text-muted-foreground font-medium">{label}</span>
-      <Progress 
-        value={progressValue} 
-        className={cn("h-3 w-full bg-white/30")} 
-      />
+      <Progress value={progressValue} className={cn('h-3 w-full bg-white/30')} />
     </div>
   );
 };

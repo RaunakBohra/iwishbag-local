@@ -15,41 +15,41 @@ export interface StatusConfig {
   autoExpireHours?: number;
   isTerminal: boolean;
   category: 'quote' | 'order';
-  
+
   // Flow-specific properties
-  triggersEmail?: boolean;           // Should send email when this status is set?
-  emailTemplate?: string;            // Which email template to use
-  requiresAction?: boolean;          // Does this status require admin action?
-  showsInQuotesList?: boolean;      // Show in quotes page?
-  showsInOrdersList?: boolean;      // Show in orders page?
-  canBePaid?: boolean;              // Can quotes with this status be paid?
-  isDefaultQuoteStatus?: boolean;    // Is this the default status for new quotes?
-  
+  triggersEmail?: boolean; // Should send email when this status is set?
+  emailTemplate?: string; // Which email template to use
+  requiresAction?: boolean; // Does this status require admin action?
+  showsInQuotesList?: boolean; // Show in quotes page?
+  showsInOrdersList?: boolean; // Show in orders page?
+  canBePaid?: boolean; // Can quotes with this status be paid?
+  isDefaultQuoteStatus?: boolean; // Is this the default status for new quotes?
+
   // Action permissions (for dynamic behavior)
-  allowEdit?: boolean;              // Can edit quote/order details?
-  allowApproval?: boolean;          // Can approve quote?
-  allowRejection?: boolean;         // Can reject quote?
-  allowCartActions?: boolean;       // Can add to cart/checkout?
-  allowCancellation?: boolean;      // Can cancel quote/order?
-  allowRenewal?: boolean;           // Can renew expired quote?
-  allowShipping?: boolean;          // Can be shipped?
-  allowAddressEdit?: boolean;       // Can edit shipping address?
-  
+  allowEdit?: boolean; // Can edit quote/order details?
+  allowApproval?: boolean; // Can approve quote?
+  allowRejection?: boolean; // Can reject quote?
+  allowCartActions?: boolean; // Can add to cart/checkout?
+  allowCancellation?: boolean; // Can cancel quote/order?
+  allowRenewal?: boolean; // Can renew expired quote?
+  allowShipping?: boolean; // Can be shipped?
+  allowAddressEdit?: boolean; // Can edit shipping address?
+
   // Display and UI properties
-  showInCustomerView?: boolean;     // Show to customers?
-  showInAdminView?: boolean;        // Show to admins?
-  showExpiration?: boolean;         // Show expiration timer?
-  isSuccessful?: boolean;           // Represents successful completion?
-  countsAsOrder?: boolean;          // Count in order statistics?
-  progressPercentage?: number;      // Progress bar percentage (0-100)
-  
+  showInCustomerView?: boolean; // Show to customers?
+  showInAdminView?: boolean; // Show to admins?
+  showExpiration?: boolean; // Show expiration timer?
+  isSuccessful?: boolean; // Represents successful completion?
+  countsAsOrder?: boolean; // Count in order statistics?
+  progressPercentage?: number; // Progress bar percentage (0-100)
+
   // Customer messaging
-  customerMessage?: string;         // Message shown to customers
-  customerActionText?: string;      // Text for customer action buttons
-  
+  customerMessage?: string; // Message shown to customers
+  customerActionText?: string; // Text for customer action buttons
+
   // CSS and styling
-  cssClass?: string;                // CSS class for styling
-  badgeVariant?: string;            // Badge variant for UI
+  cssClass?: string; // CSS class for styling
+  badgeVariant?: string; // Badge variant for UI
 }
 
 export interface StatusWorkflow {
@@ -74,22 +74,26 @@ export const useStatusManagement = () => {
     // This function is no longer needed as the statuses are loaded from the provider
   };
 
-  const saveStatusSettings = async (newQuoteStatuses: StatusConfig[], newOrderStatuses: StatusConfig[]) => {
+  const saveStatusSettings = async (
+    newQuoteStatuses: StatusConfig[],
+    newOrderStatuses: StatusConfig[],
+  ) => {
     try {
       console.log('Saving status settings to database...');
       console.log('Quote statuses to save:', newQuoteStatuses);
       console.log('Order statuses to save:', newOrderStatuses);
 
       // Save quote statuses
-      const { error: quoteError } = await supabase
-        .from('system_settings')
-        .upsert({
+      const { error: quoteError } = await supabase.from('system_settings').upsert(
+        {
           setting_key: 'quote_statuses',
           setting_value: JSON.stringify(newQuoteStatuses),
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'setting_key'
-        });
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'setting_key',
+        },
+      );
 
       if (quoteError) {
         console.error('Error saving quote statuses:', quoteError);
@@ -97,15 +101,16 @@ export const useStatusManagement = () => {
       }
 
       // Save order statuses
-      const { error: orderError } = await supabase
-        .from('system_settings')
-        .upsert({
+      const { error: orderError } = await supabase.from('system_settings').upsert(
+        {
           setting_key: 'order_statuses',
           setting_value: JSON.stringify(newOrderStatuses),
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'setting_key'
-        });
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'setting_key',
+        },
+      );
 
       if (orderError) {
         console.error('Error saving order statuses:', orderError);
@@ -113,18 +118,17 @@ export const useStatusManagement = () => {
       }
 
       toast({
-        title: "Success",
-        description: "Status settings saved successfully"
+        title: 'Success',
+        description: 'Status settings saved successfully',
       });
 
       // Refresh the provider data to pick up the new settings
       await refreshData();
-
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Error saving status settings:', error);
       console.error('Full error object:', error);
-      
+
       // Provide more specific error messages
       let specificErrorMessage = 'Failed to save status settings';
       if ((error as { code?: string }).code === '42501') {
@@ -136,26 +140,33 @@ export const useStatusManagement = () => {
       } else if (errorMessage) {
         specificErrorMessage = errorMessage;
       }
-      
+
       toast({
-        title: "Error",
+        title: 'Error',
         description: specificErrorMessage,
-        variant: "destructive"
+        variant: 'destructive',
       });
       throw error;
     }
   };
 
   // Get status config by name
-  const getStatusConfig = (statusName: string, category: 'quote' | 'order'): StatusConfig | null => {
+  const getStatusConfig = (
+    statusName: string,
+    category: 'quote' | 'order',
+  ): StatusConfig | null => {
     const statuses = category === 'quote' ? quoteStatuses : orderStatuses;
-    return statuses.find(s => s.name === statusName) || null;
+    return statuses.find((s) => s.name === statusName) || null;
   };
 
   // Check if status transition is valid
-  const isValidTransition = (currentStatus: string, newStatus: string, category: 'quote' | 'order'): boolean => {
+  const isValidTransition = (
+    currentStatus: string,
+    newStatus: string,
+    category: 'quote' | 'order',
+  ): boolean => {
     const statuses = category === 'quote' ? quoteStatuses : orderStatuses;
-    const currentConfig = statuses.find(s => s.name === currentStatus);
+    const currentConfig = statuses.find((s) => s.name === currentStatus);
     if (!currentConfig || !currentConfig.isActive) return false;
     return currentConfig.allowedTransitions.includes(newStatus);
   };
@@ -163,7 +174,7 @@ export const useStatusManagement = () => {
   // Get allowed transitions for a status
   const getAllowedTransitions = (statusName: string, category: 'quote' | 'order'): string[] => {
     const statuses = category === 'quote' ? quoteStatuses : orderStatuses;
-    const config = statuses.find(s => s.name === statusName);
+    const config = statuses.find((s) => s.name === statusName);
     return config?.allowedTransitions || [];
   };
 
@@ -172,20 +183,16 @@ export const useStatusManagement = () => {
 
   // NEW: Flow-specific helper functions
   const getDefaultQuoteStatus = (): string => {
-    const defaultStatus = quoteStatuses.find(s => s.isDefaultQuoteStatus);
+    const defaultStatus = quoteStatuses.find((s) => s.isDefaultQuoteStatus);
     return defaultStatus?.name || 'pending';
   };
 
   const getStatusesForQuotesList = (): string[] => {
-    return quoteStatuses
-      .filter(s => s.showsInQuotesList)
-      .map(s => s.name);
+    return quoteStatuses.filter((s) => s.showsInQuotesList).map((s) => s.name);
   };
 
   const getStatusesForOrdersList = (): string[] => {
-    return orderStatuses
-      .filter(s => s.showsInOrdersList)
-      .map(s => s.name);
+    return orderStatuses.filter((s) => s.showsInOrdersList).map((s) => s.name);
   };
 
   const canQuoteBePaid = (status: string): boolean => {
@@ -218,35 +225,41 @@ export const useStatusManagement = () => {
   // DYNAMIC: Find status for pending bank transfers
   const findBankTransferPendingStatus = () => {
     // Look for statuses that indicate awaiting payment
-    return orderStatuses.find(s => 
-      s.name.includes('payment') && s.name.includes('pending') ||
-      s.id === 'payment_pending' ||
-      s.label.toLowerCase().includes('awaiting payment') ||
-      s.customerActionText?.toLowerCase().includes('pay')
-    ) || orderStatuses.find(s => s.name === 'payment_pending');
+    return (
+      orderStatuses.find(
+        (s) =>
+          (s.name.includes('payment') && s.name.includes('pending')) ||
+          s.id === 'payment_pending' ||
+          s.label.toLowerCase().includes('awaiting payment') ||
+          s.customerActionText?.toLowerCase().includes('pay'),
+      ) || orderStatuses.find((s) => s.name === 'payment_pending')
+    );
   };
 
   // DYNAMIC: Find status for COD processing
   const findCODProcessingStatus = () => {
     // Look for processing status
-    return orderStatuses.find(s => 
-      s.name === 'processing' ||
-      s.id === 'processing' ||
-      s.label === 'Processing' ||
-      s.description?.toLowerCase().includes('processing')
-    ) || orderStatuses.find(s => s.name === 'processing');
+    return (
+      orderStatuses.find(
+        (s) =>
+          s.name === 'processing' ||
+          s.id === 'processing' ||
+          s.label === 'Processing' ||
+          s.description?.toLowerCase().includes('processing'),
+      ) || orderStatuses.find((s) => s.name === 'processing')
+    );
   };
 
   // DYNAMIC: Find default order status
   const findDefaultOrderStatus = () => {
     // Look for 'ordered' or similar status
-    return orderStatuses.find(s => 
-      s.name === 'ordered' ||
-      s.id === 'ordered' ||
-      s.countsAsOrder && !s.requiresAction
-    ) || orderStatuses.find(s => s.name === 'ordered');
+    return (
+      orderStatuses.find(
+        (s) => s.name === 'ordered' || s.id === 'ordered' || (s.countsAsOrder && !s.requiresAction),
+      ) || orderStatuses.find((s) => s.name === 'ordered')
+    );
   };
-  
+
   // DYNAMIC: Find status by payment method
   const findStatusForPaymentMethod = (paymentMethod: string): StatusConfig | undefined => {
     switch (paymentMethod) {
@@ -257,7 +270,10 @@ export const useStatusManagement = () => {
       case 'payu':
       case 'stripe':
         // For payment gateway redirects, use processing status until payment is confirmed
-        return orderStatuses.find(s => s.name === 'processing' || s.id === 'processing') || findDefaultOrderStatus();
+        return (
+          orderStatuses.find((s) => s.name === 'processing' || s.id === 'processing') ||
+          findDefaultOrderStatus()
+        );
       default:
         return findDefaultOrderStatus();
     }
@@ -287,6 +303,6 @@ export const useStatusManagement = () => {
     findBankTransferPendingStatus,
     findCODProcessingStatus,
     findDefaultOrderStatus,
-    findStatusForPaymentMethod
+    findStatusForPaymentMethod,
   };
-}; 
+};

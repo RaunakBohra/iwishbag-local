@@ -1,7 +1,12 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { authenticateUser, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
-import { createCorsHeaders } from '../_shared/cors.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  authenticateUser,
+  AuthError,
+  createAuthErrorResponse,
+  validateMethod,
+} from '../_shared/auth.ts';
+import { createCorsHeaders } from '../_shared/cors.ts';
 
 interface PaymentLinkRequest {
   quoteId: string;
@@ -20,27 +25,27 @@ interface PaymentLinkRequest {
 async function generateLinkCode(supabaseAdmin: SupabaseClient): Promise<string> {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let attempts = 0;
-  
+
   while (attempts < 10) {
     let code = '';
     for (let i = 0; i < 8; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    
+
     // Check if code already exists
     const { data: existing } = await supabaseAdmin
       .from('payment_links')
       .select('id')
       .eq('link_code', code)
       .single();
-    
+
     if (!existing) {
       return code;
     }
-    
+
     attempts++;
   }
-  
+
   // Fallback to timestamp-based code
   return `PL${Date.now()}`;
 }
@@ -50,30 +55,30 @@ async function generatePayUInvoiceHash({
   merchantKey,
   salt,
   command,
-  var1
+  var1,
 }: {
-  merchantKey: string,
-  salt: string,
-  command: string,
-  var1: string
+  merchantKey: string;
+  salt: string;
+  command: string;
+  var1: string;
 }): Promise<string> {
   // PayU Invoice hash format: key|command|var1|salt
   const hashString = `${merchantKey}|${command}|${var1}|${salt}`;
-  
+
   const encoder = new TextEncoder();
   const data = encoder.encode(hashString);
   const hashBuffer = await crypto.subtle.digest('SHA-512', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+
   return hashHex;
 }
 
 serve(async (req) => {
   const corsHeaders = createCorsHeaders(req);
-  
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -81,23 +86,30 @@ serve(async (req) => {
     validateMethod(req, ['POST']);
 
     // Authenticate user
-    const { user, supabaseClient } = await authenticateUser(req);
-    
+    const { user } = await authenticateUser(req);
+
     console.log(`🔐 Authenticated user ${user.email} requesting payment link creation`);
 
-    const { quoteId, amount, currency, customerInfo, description, expiryDays = 7 } = await req.json() as PaymentLinkRequest;
+    const {
+      quoteId,
+      amount,
+      currency,
+      customerInfo,
+      description,
+      expiryDays = 7,
+    } = (await req.json()) as PaymentLinkRequest;
 
     // Validate input
     if (!quoteId || !amount || !customerInfo?.email) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // Fetch PayU config
@@ -108,9 +120,9 @@ serve(async (req) => {
       .single();
 
     if (payuGatewayError || !payuGateway) {
-      return new Response(JSON.stringify({ error: 'PayU gateway config missing' }), { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      return new Response(JSON.stringify({ error: 'PayU gateway config missing' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -119,7 +131,7 @@ serve(async (req) => {
     const payuConfig = {
       merchant_key: config.merchant_key,
       salt_key: config.salt_key,
-      api_url: testMode ? 'https://test.payu.in' : 'https://info.payu.in'
+      api_url: testMode ? 'https://test.payu.in' : 'https://info.payu.in',
     };
 
     // Convert amount to INR if needed
@@ -130,14 +142,14 @@ serve(async (req) => {
         .select('rate_from_usd')
         .eq('code', 'IN')
         .single();
-      
+
       const exchangeRate = indiaSettings?.rate_from_usd || 83.0;
       amountInINR = amount * exchangeRate;
     }
 
     // Generate unique invoice ID
     const invoiceId = `INV_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Calculate expiry date
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + expiryDays);
@@ -154,7 +166,7 @@ serve(async (req) => {
       expiryDate: expiryDate.toISOString().split('T')[0], // YYYY-MM-DD format
       templateId: 1, // Default template
       invoiceEmailNotify: 1, // Send email notification
-      invoiceSMSNotify: 0 // Don't send SMS by default
+      invoiceSMSNotify: 0, // Don't send SMS by default
     };
 
     // Generate hash for the request
@@ -164,7 +176,7 @@ serve(async (req) => {
       merchantKey: payuConfig.merchant_key,
       salt: payuConfig.salt_key,
       command,
-      var1
+      var1,
     });
 
     // Make API request to PayU
@@ -172,14 +184,14 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
+        Accept: 'application/json',
       },
       body: new URLSearchParams({
         key: payuConfig.merchant_key,
         command: command,
         var1: var1,
-        hash: hash
-      })
+        hash: hash,
+      }),
     });
 
     const payuResult = await payuResponse.json();
@@ -209,8 +221,8 @@ serve(async (req) => {
           customer_phone: customerInfo.phone,
           metadata: {
             quote_id: quoteId,
-            exchange_rate: currency !== 'INR' ? (amountInINR / amount) : 1
-          }
+            exchange_rate: currency !== 'INR' ? amountInINR / amount : 1,
+          },
         })
         .select()
         .single();
@@ -219,46 +231,54 @@ serve(async (req) => {
         console.error('Error storing payment link:', insertError);
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        linkId: invoiceId,
-        linkCode: paymentLink?.link_code,
-        paymentUrl: payuResult.URL || `${payuConfig.api_url}/invoice/${invoiceId}`,
-        shortUrl: `${Deno.env.get('PUBLIC_URL') || 'https://whyteclub.com'}/pay/${paymentLink?.link_code}`,
-        expiresAt: expiryDate.toISOString(),
-        amountInINR: amountInINR.toFixed(2),
-        originalAmount: amount,
-        originalCurrency: currency,
-        exchangeRate: currency !== 'INR' ? (amountInINR / amount) : 1
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          linkId: invoiceId,
+          linkCode: paymentLink?.link_code,
+          paymentUrl: payuResult.URL || `${payuConfig.api_url}/invoice/${invoiceId}`,
+          shortUrl: `${Deno.env.get('PUBLIC_URL') || 'https://whyteclub.com'}/pay/${paymentLink?.link_code}`,
+          expiresAt: expiryDate.toISOString(),
+          amountInINR: amountInINR.toFixed(2),
+          originalAmount: amount,
+          originalCurrency: currency,
+          exchangeRate: currency !== 'INR' ? amountInINR / amount : 1,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     } else {
       // Error from PayU
       console.error('PayU error:', payuResult);
-      return new Response(JSON.stringify({ 
-        error: 'Failed to create payment link',
-        details: payuResult.msg || 'Unknown error'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to create payment link',
+          details: payuResult.msg || 'Unknown error',
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
-
   } catch (error) {
     console.error('Payment link creation error:', error);
-    
+
     if (error instanceof AuthError) {
       return createAuthErrorResponse(error, corsHeaders);
     }
-    
+
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({
+        error: 'Internal server error',
+        details: error.message,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
     );
   }
-})
+});

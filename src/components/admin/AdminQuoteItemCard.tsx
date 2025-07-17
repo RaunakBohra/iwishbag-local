@@ -1,10 +1,9 @@
-
-import { useState } from "react";
-import { Tables } from "@/integrations/supabase/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ImageUpload } from "@/components/ui/image-upload";
+import { useState } from 'react';
+import { Tables } from '@/integrations/supabase/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 type QuoteItem = Tables<'quote_items'>;
 

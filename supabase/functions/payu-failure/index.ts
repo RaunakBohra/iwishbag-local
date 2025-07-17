@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createCorsHeaders } from '../_shared/cors.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createCorsHeaders } from '../_shared/cors.ts';
 
 interface PayUFailureData {
   txnid: string;
@@ -18,10 +18,10 @@ interface PayUFailureData {
 
 serve(async (req) => {
   const corsHeaders = createCorsHeaders(req);
-  
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   console.log(`🔔 PayU Failure Handler - Method: ${req.method}, URL: ${req.url}`);
@@ -32,7 +32,7 @@ serve(async (req) => {
     if (req.method === 'POST') {
       // Handle POST request from PayU (form data)
       const formData = await req.formData();
-      
+
       payuData = {
         txnid: formData.get('txnid')?.toString() || '',
         mihpayid: formData.get('mihpayid')?.toString() || '',
@@ -45,16 +45,15 @@ serve(async (req) => {
         hash: formData.get('hash')?.toString() || '',
         error_code: formData.get('error_code')?.toString() || '',
         error_Message: formData.get('error_Message')?.toString() || '',
-        gateway: 'payu'
+        gateway: 'payu',
       };
 
       console.log('📝 PayU Failure Data:', {
         txnid: payuData.txnid,
         status: payuData.status,
         error_code: payuData.error_code,
-        error_Message: payuData.error_Message
+        error_Message: payuData.error_Message,
       });
-
     } else if (req.method === 'GET') {
       // Handle GET request (from browser navigation or direct access)
       const url = new URL(req.url);
@@ -72,16 +71,18 @@ serve(async (req) => {
         hash: searchParams.get('hash') || '',
         error_code: searchParams.get('error_code') || '',
         error_Message: searchParams.get('error_Message') || '',
-        gateway: searchParams.get('gateway') || 'payu'
+        gateway: searchParams.get('gateway') || 'payu',
       };
-
     } else {
-      return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+      return new Response('Method not allowed', {
+        status: 405,
+        headers: corsHeaders,
+      });
     }
 
     // Build redirect URL with all payment data
     const redirectUrl = new URL('/payment-failure', 'https://whyteclub.com');
-    
+
     // Add all PayU parameters to the redirect URL
     Object.entries(payuData).forEach(([key, value]) => {
       if (value) {
@@ -116,13 +117,12 @@ serve(async (req) => {
       status: 200,
       headers: {
         'Content-Type': 'text/html',
-        ...corsHeaders
-      }
+        ...corsHeaders,
+      },
     });
-
   } catch (error) {
     console.error('❌ PayU Failure Handler Error:', error);
-    
+
     // Return HTML error page with redirect
     const errorHtml = `
       <!DOCTYPE html>
@@ -150,8 +150,8 @@ serve(async (req) => {
       status: 200, // Return 200 to avoid PayU retries
       headers: {
         'Content-Type': 'text/html',
-        ...corsHeaders
-      }
+        ...corsHeaders,
+      },
     });
   }
-})
+});

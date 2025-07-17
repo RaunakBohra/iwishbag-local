@@ -13,11 +13,11 @@ const EsewaFailure: React.FC = () => {
       try {
         // eSewa sends the response data as URL parameters (encoded)
         const encodedData = searchParams.get('data');
-        
+
         if (!encodedData) {
           setStatus('failed');
           setMessage('Payment was cancelled or failed.');
-          
+
           // Redirect to failure page after a brief delay
           setTimeout(() => {
             navigate('/payment-failure?gateway=esewa&status=cancelled');
@@ -28,16 +28,21 @@ const EsewaFailure: React.FC = () => {
         console.log('📥 eSewa failure callback - data length:', encodedData.length);
 
         // Call our Edge Function to handle the eSewa callback
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/esewa-callback`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain',
-            'Authorization': session?.access_token ? `Bearer ${session.access_token}` : ''
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/esewa-callback`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain',
+              Authorization: session?.access_token ? `Bearer ${session.access_token}` : '',
+            },
+            body: encodedData,
           },
-          body: encodedData
-        });
+        );
 
         const result = await response.json();
 
@@ -45,14 +50,14 @@ const EsewaFailure: React.FC = () => {
           // Even though this is the failure URL, payment might have succeeded
           setStatus('failed');
           setMessage('Payment was successful but routed to failure URL. Redirecting...');
-          
+
           setTimeout(() => {
             navigate('/payment-success?gateway=esewa&status=success');
           }, 2000);
         } else {
           setStatus('failed');
           setMessage(result.message || 'Payment was not completed successfully.');
-          
+
           // Redirect to failure page after a brief delay
           setTimeout(() => {
             navigate('/payment-failure?gateway=esewa&status=failed');
@@ -62,7 +67,7 @@ const EsewaFailure: React.FC = () => {
         console.error('❌ eSewa failure callback processing error:', error);
         setStatus('error');
         setMessage('An error occurred while processing your payment response.');
-        
+
         // Redirect to failure page after a brief delay
         setTimeout(() => {
           navigate('/payment-failure?gateway=esewa&status=error');
@@ -84,12 +89,22 @@ const EsewaFailure: React.FC = () => {
               <p className="text-gray-600">{message}</p>
             </>
           )}
-          
+
           {(status === 'failed' || status === 'error') && (
             <>
               <div className="rounded-full h-12 w-12 bg-red-100 mx-auto mb-4 flex items-center justify-center">
-                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                <svg
+                  className="h-6 w-6 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  ></path>
                 </svg>
               </div>
               <h2 className="text-xl font-semibold text-red-900 mb-2">Payment Not Completed</h2>

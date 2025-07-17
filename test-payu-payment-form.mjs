@@ -2,7 +2,8 @@
 
 // Test PayU payment form data generation
 const SUPABASE_URL = 'https://grgvlrvywsfmnmkxrecd.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZ3Zscnb5d3NmbW5ta3hyZWNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjgzMjgzMTMsImV4cCI6MjA0MzkwNDMxM30.yCgHJQN3Y4rrXJUJZTqFojl8N3lcFXp2xsz84MQO2qU';
+const SUPABASE_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyZ3Zscnb5d3NmbW5ta3hyZWNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjgzMjgzMTMsImV4cCI6MjA0MzkwNDMxM30.yCgHJQN3Y4rrXJUJZTqFojl8N3lcFXp2xsz84MQO2qU';
 
 async function testPayUPaymentForm() {
   console.log('🧪 Testing PayU payment form data generation...\n');
@@ -18,7 +19,7 @@ async function testPayUPaymentForm() {
     failure_url: 'https://whyteclub.com/payment/failure',
     amount: 2069.46, // USD amount from the quote
     currency: 'USD',
-    destination_country: 'IN'
+    destination_country: 'IN',
   };
 
   try {
@@ -29,14 +30,14 @@ async function testPayUPaymentForm() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'x-supabase-gateway': 'payu'
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        'x-supabase-gateway': 'payu',
       },
-      body: JSON.stringify(testData)
+      body: JSON.stringify(testData),
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       console.error('❌ Error:', response.status, result);
       return;
@@ -49,21 +50,32 @@ async function testPayUPaymentForm() {
     console.log('Transaction ID:', result.transactionId);
     console.log('Amount in INR:', result.amountInINR);
     console.log('Exchange Rate:', result.exchangeRate);
-    
+
     if (result.formData) {
       console.log('\n📝 Form Data:');
       console.log('Total fields:', Object.keys(result.formData).length);
-      
+
       // Check required fields
-      const requiredFields = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
-      const missingFields = requiredFields.filter(field => !result.formData[field]);
-      
+      const requiredFields = [
+        'key',
+        'txnid',
+        'amount',
+        'productinfo',
+        'firstname',
+        'email',
+        'phone',
+        'surl',
+        'furl',
+        'hash',
+      ];
+      const missingFields = requiredFields.filter((field) => !result.formData[field]);
+
       if (missingFields.length > 0) {
         console.error('❌ Missing required fields:', missingFields);
       } else {
         console.log('✅ All required fields present');
       }
-      
+
       // Display form data (hide sensitive hash)
       console.log('\nForm fields:');
       Object.entries(result.formData).forEach(([key, value]) => {
@@ -73,10 +85,10 @@ async function testPayUPaymentForm() {
           console.log(`  ${key}: ${value}`);
         }
       });
-      
+
       // Create a test HTML form to verify
       console.log('\n📋 Test HTML form generated at: test-payu-form-generated.html');
-      
+
       const htmlForm = `<!DOCTYPE html>
 <html>
 <head>
@@ -98,24 +110,25 @@ async function testPayUPaymentForm() {
     </div>
     
     <form method="POST" action="${result.url}">
-        ${Object.entries(result.formData).map(([key, value]) => 
-          `<div class="field">
+        ${Object.entries(result.formData)
+          .map(
+            ([key, value]) =>
+              `<div class="field">
             <label>${key}:</label>
             <input type="${key === 'hash' ? 'password' : 'text'}" name="${key}" value="${value}" readonly />
-          </div>`
-        ).join('\n        ')}
+          </div>`,
+          )
+          .join('\n        ')}
         <button type="submit">Submit to PayU (Test Mode)</button>
     </form>
 </body>
 </html>`;
-      
+
       const fs = await import('fs');
       await fs.promises.writeFile('test-payu-form-generated.html', htmlForm);
-      
     } else {
       console.error('❌ No form data in response!');
     }
-    
   } catch (error) {
     console.error('❌ Error:', error);
   }

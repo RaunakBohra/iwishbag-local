@@ -1,20 +1,20 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { 
-  CheckCircle, 
-  XCircle, 
-  DollarSign, 
-  Mail, 
-  Download, 
-  Copy, 
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  CheckCircle,
+  XCircle,
+  DollarSign,
+  Mail,
+  Download,
+  Copy,
   Clock,
   Users,
   Package,
   AlertTriangle,
-  Loader2
-} from "lucide-react";
-import { useState } from "react";
+  Loader2,
+} from 'lucide-react';
+import { useState } from 'react';
 import { Tables } from '@/integrations/supabase/types';
 
 type Quote = Tables<'quotes'>;
@@ -22,19 +22,28 @@ type Quote = Tables<'quotes'>;
 interface QuoteBulkActionsProps {
   selectedCount: number;
   selectedQuotes?: Quote[]; // Add selected quotes for summary
-  onBulkAction: (action: 'approved' | 'cancelled' | 'confirm_payment' | 'email' | 'export' | 'duplicate' | 'priority') => void;
+  onBulkAction: (
+    action:
+      | 'approved'
+      | 'cancelled'
+      | 'confirm_payment'
+      | 'email'
+      | 'export'
+      | 'duplicate'
+      | 'priority',
+  ) => void;
   isProcessing: boolean;
   isUpdatingStatus: boolean;
   activeStatusUpdate: string | null;
 }
 
-export const QuoteBulkActions = ({ 
-  selectedCount, 
-  selectedQuotes = [], 
-  onBulkAction, 
-  isProcessing, 
-  isUpdatingStatus, 
-  activeStatusUpdate 
+export const QuoteBulkActions = ({
+  selectedCount,
+  selectedQuotes = [],
+  onBulkAction,
+  isProcessing,
+  isUpdatingStatus,
+  activeStatusUpdate,
 }: QuoteBulkActionsProps) => {
   const [showSummary, setShowSummary] = useState(false);
 
@@ -44,16 +53,22 @@ export const QuoteBulkActions = ({
 
   // Calculate summary statistics
   const totalValue = selectedQuotes.reduce((sum, quote) => sum + (quote.final_total || 0), 0);
-  const statusBreakdown = selectedQuotes.reduce((acc, quote) => {
-    acc[quote.status] = (acc[quote.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  
-  const priorityBreakdown = selectedQuotes.reduce((acc, quote) => {
-    const priority = quote.priority || 'none';
-    acc[priority] = (acc[priority] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const statusBreakdown = selectedQuotes.reduce(
+    (acc, quote) => {
+      acc[quote.status] = (acc[quote.status] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
+  const priorityBreakdown = selectedQuotes.reduce(
+    (acc, quote) => {
+      const priority = quote.priority || 'none';
+      acc[priority] = (acc[priority] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
   const getStatusIcon = (action: string) => {
     switch (action) {
@@ -77,11 +92,17 @@ export const QuoteBulkActions = ({
   const getActionLabel = (action: string) => {
     switch (action) {
       case 'approved':
-        return isUpdatingStatus && activeStatusUpdate === 'approved' ? 'Approving...' : 'Approve Selected';
+        return isUpdatingStatus && activeStatusUpdate === 'approved'
+          ? 'Approving...'
+          : 'Approve Selected';
       case 'cancelled':
-        return isUpdatingStatus && activeStatusUpdate === 'cancelled' ? 'Rejecting...' : 'Reject Selected';
+        return isUpdatingStatus && activeStatusUpdate === 'cancelled'
+          ? 'Rejecting...'
+          : 'Reject Selected';
       case 'confirm_payment':
-        return isUpdatingStatus && activeStatusUpdate === 'confirm_payment' ? 'Confirming...' : 'Confirm Payment';
+        return isUpdatingStatus && activeStatusUpdate === 'confirm_payment'
+          ? 'Confirming...'
+          : 'Confirm Payment';
       case 'email':
         return 'Send Email';
       case 'export':
@@ -139,7 +160,7 @@ export const QuoteBulkActions = ({
               <Users className="h-5 w-5 text-primary" />
               <span className="font-semibold text-lg">{selectedCount} quotes selected</span>
             </div>
-            
+
             {totalValue > 0 && (
               <div className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-green-600" />
@@ -150,11 +171,7 @@ export const QuoteBulkActions = ({
             )}
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowSummary(!showSummary)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowSummary(!showSummary)}>
             {showSummary ? 'Hide' : 'Show'} Summary
           </Button>
         </div>
@@ -173,7 +190,9 @@ export const QuoteBulkActions = ({
                   {Object.entries(statusBreakdown).map(([status, count]) => (
                     <div key={status} className="flex justify-between text-xs">
                       <span className="capitalize">{status}:</span>
-                      <Badge variant="outline" className="text-xs">{count}</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {count}
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -189,7 +208,9 @@ export const QuoteBulkActions = ({
                   {Object.entries(priorityBreakdown).map(([priority, count]) => (
                     <div key={priority} className="flex justify-between text-xs">
                       <span className="capitalize">{priority}:</span>
-                      <Badge variant="outline" className="text-xs">{count}</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {count}
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -199,9 +220,13 @@ export const QuoteBulkActions = ({
               <div>
                 <h4 className="text-sm font-medium mb-2">Quick Stats</h4>
                 <div className="space-y-1 text-xs text-muted-foreground">
-                  <div>Average Value: ${totalValue > 0 ? (totalValue / selectedCount).toFixed(2) : '0'}</div>
-                  <div>Countries: {new Set(selectedQuotes.map(q => q.destination_country)).size}</div>
-                  <div>Customers: {new Set(selectedQuotes.map(q => q.email)).size}</div>
+                  <div>
+                    Average Value: ${totalValue > 0 ? (totalValue / selectedCount).toFixed(2) : '0'}
+                  </div>
+                  <div>
+                    Countries: {new Set(selectedQuotes.map((q) => q.destination_country)).size}
+                  </div>
+                  <div>Customers: {new Set(selectedQuotes.map((q) => q.email)).size}</div>
                 </div>
               </div>
             </div>
@@ -216,20 +241,37 @@ export const QuoteBulkActions = ({
               key={action}
               variant={getActionVariant(action)}
               size="sm"
-              onClick={() => onBulkAction(action as 'approved' | 'cancelled' | 'confirm_payment' | 'email' | 'export' | 'duplicate' | 'priority')}
+              onClick={() =>
+                onBulkAction(
+                  action as
+                    | 'approved'
+                    | 'cancelled'
+                    | 'confirm_payment'
+                    | 'email'
+                    | 'export'
+                    | 'duplicate'
+                    | 'priority',
+                )
+              }
               disabled={isProcessing || isActionLoading(action)}
               className={[
                 // Common polish for all buttons
-                "rounded-md px-3 py-2 font-medium text-sm transition",
-                "focus-visible:ring-2 focus-visible:ring-primary",
+                'rounded-md px-3 py-2 font-medium text-sm transition',
+                'focus-visible:ring-2 focus-visible:ring-primary',
                 // Outline/ghost/secondary
-                getActionVariant(action) === 'outline' ? "border border-muted bg-white hover:bg-primary/10 text-foreground" : "",
+                getActionVariant(action) === 'outline'
+                  ? 'border border-muted bg-white hover:bg-primary/10 text-foreground'
+                  : '',
                 // Primary
-                getActionVariant(action) === 'default' ? "bg-primary text-white hover:bg-primary/90" : "",
+                getActionVariant(action) === 'default'
+                  ? 'bg-primary text-white hover:bg-primary/90'
+                  : '',
                 // Destructive
-                getActionVariant(action) === 'destructive' ? "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 hover:text-red-900" : "",
+                getActionVariant(action) === 'destructive'
+                  ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 hover:text-red-900'
+                  : '',
                 // Compact on mobile
-                "sm:px-4 sm:py-2",
+                'sm:px-4 sm:py-2',
               ].join(' ')}
             >
               {isActionLoading(action) ? (

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
+import { useEffect, useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface ParallaxSectionProps {
   children: React.ReactNode;
@@ -16,7 +16,7 @@ export const ParallaxSection = ({
   backgroundImage,
   speed = 0.5,
   overlay = true,
-  overlayOpacity = 0.5
+  overlayOpacity = 0.5,
 }: ParallaxSectionProps) => {
   const [scrollY, setScrollY] = useState(0);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -37,7 +37,7 @@ export const ParallaxSection = ({
   }, []);
 
   return (
-    <div ref={sectionRef} className={cn("relative overflow-hidden", className)}>
+    <div ref={sectionRef} className={cn('relative overflow-hidden', className)}>
       {backgroundImage && (
         <>
           <div
@@ -48,10 +48,7 @@ export const ParallaxSection = ({
             }}
           />
           {overlay && (
-            <div 
-              className="absolute inset-0 bg-black" 
-              style={{ opacity: overlayOpacity }}
-            />
+            <div className="absolute inset-0 bg-black" style={{ opacity: overlayOpacity }} />
           )}
         </>
       )}

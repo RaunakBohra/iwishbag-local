@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Wifi, WifiOff } from 'lucide-react';
@@ -23,7 +22,7 @@ export const ConnectionStatus = () => {
 
   useEffect(() => {
     const channel = supabase.channel('connection-test');
-    
+
     channel
       .on('presence', { event: 'sync' }, () => {
         setIsConnected(true);

@@ -8,13 +8,18 @@ interface GuestCurrencySelectorProps {
   className?: string;
 }
 
-export function GuestCurrencySelector({ defaultCurrency, className = '' }: GuestCurrencySelectorProps) {
+export function GuestCurrencySelector({
+  defaultCurrency,
+  className = '',
+}: GuestCurrencySelectorProps) {
   const { guestCurrency, setGuestCurrency } = useGuestCurrency();
-  const [availableCurrencies, setAvailableCurrencies] = useState<Array<{
-    code: string;
-    symbol: string;
-    formatted: string;
-  }>>([]);
+  const [availableCurrencies, setAvailableCurrencies] = useState<
+    Array<{
+      code: string;
+      symbol: string;
+      formatted: string;
+    }>
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load available currencies on mount
@@ -22,15 +27,15 @@ export function GuestCurrencySelector({ defaultCurrency, className = '' }: Guest
     const loadCurrencies = async () => {
       try {
         setIsLoading(true);
-        
+
         // Get all currencies from CurrencyService
         const currencies = await currencyService.getAllCurrencies();
-        
+
         // Format for display
-        const formatted = currencies.map(currency => ({
+        const formatted = currencies.map((currency) => ({
           code: currency.code,
           symbol: currency.symbol,
-          formatted: `${currency.code} - ${currency.symbol}`
+          formatted: `${currency.code} - ${currency.symbol}`,
         }));
 
         setAvailableCurrencies(formatted);
@@ -42,7 +47,7 @@ export function GuestCurrencySelector({ defaultCurrency, className = '' }: Guest
           { code: 'INR', symbol: '₹', formatted: 'INR - ₹' },
           { code: 'NPR', symbol: 'Rs', formatted: 'NPR - Rs' },
           { code: 'EUR', symbol: '€', formatted: 'EUR - €' },
-          { code: 'GBP', symbol: '£', formatted: 'GBP - £' }
+          { code: 'GBP', symbol: '£', formatted: 'GBP - £' },
         ]);
       } finally {
         setIsLoading(false);
@@ -57,7 +62,7 @@ export function GuestCurrencySelector({ defaultCurrency, className = '' }: Guest
     const setDefaultCurrency = async () => {
       if (!guestCurrency && defaultCurrency && availableCurrencies.length > 0) {
         let currencyToSet = defaultCurrency;
-        
+
         // If defaultCurrency looks like a country code (2 letters), get its currency
         if (defaultCurrency.length === 2) {
           try {
@@ -69,8 +74,8 @@ export function GuestCurrencySelector({ defaultCurrency, className = '' }: Guest
             console.warn('Failed to get currency for country:', defaultCurrency, error);
           }
         }
-        
-        const isValidDefault = availableCurrencies.some(c => c.code === currencyToSet);
+
+        const isValidDefault = availableCurrencies.some((c) => c.code === currencyToSet);
         if (isValidDefault) {
           setGuestCurrency(currencyToSet);
         }
@@ -81,7 +86,7 @@ export function GuestCurrencySelector({ defaultCurrency, className = '' }: Guest
   }, [guestCurrency, defaultCurrency, availableCurrencies, setGuestCurrency]);
 
   const currentCurrency = guestCurrency || defaultCurrency || 'USD';
-  const currentCurrencyInfo = availableCurrencies.find(c => c.code === currentCurrency);
+  const _currentCurrencyInfo = availableCurrencies.find((c) => c.code === currentCurrency);
 
   if (isLoading) {
     return (
@@ -117,14 +122,17 @@ export function GuestCurrencySelector({ defaultCurrency, className = '' }: Guest
         </select>
         {/* Custom dropdown arrow */}
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-          <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="h-4 w-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
       </div>
-      <div className="text-xs text-gray-500 hidden sm:block">
-        Display Currency
-      </div>
+      <div className="text-xs text-gray-500 hidden sm:block">Display Currency</div>
     </div>
   );
 }

@@ -5,31 +5,34 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  DollarSign, 
-  Plus, 
-  Upload, 
-  CheckCircle, 
-  AlertCircle, 
-  Clock,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DollarSign,
+  Plus,
+  CheckCircle,
+  AlertCircle,
   CreditCard,
   Banknote,
   Receipt,
   History,
   TrendingUp,
-  TrendingDown,
   RefreshCw,
   Eye,
   X,
@@ -38,23 +41,26 @@ import {
   FileText,
   Loader2,
   Download,
-  Shield,
   Smartphone,
   Hash,
   Info,
   Copy,
-  ExternalLink
-} from "lucide-react";
+  ExternalLink,
+} from 'lucide-react';
 import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
-import { getCurrencySymbol, getCountryCurrency, getDestinationCountryFromQuote, formatAmountForDisplay } from '@/lib/currencyUtils';
+import {
+  getCurrencySymbol,
+  getCountryCurrency,
+  getDestinationCountryFromQuote,
+  formatAmountForDisplay,
+} from '@/lib/currencyUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RefundManagementModal } from './RefundManagementModal';
 import { PaymentProofButton } from '../payment/PaymentProofButton';
-import { PaymentLinkGenerator } from '../payment/PaymentLinkGenerator';
 import { EnhancedPaymentLinkGenerator } from '../payment/EnhancedPaymentLinkGenerator';
 import { DueAmountNotification } from '../payment/DueAmountNotification';
 import { useDueAmountManager } from '@/hooks/useDueAmountManager';
@@ -148,7 +154,17 @@ interface PaymentLink {
 }
 
 // Payment method type
-type PaymentMethodType = 'bank_transfer' | 'cash' | 'upi' | 'payu' | 'stripe' | 'esewa' | 'credit_note' | 'check' | 'wire_transfer' | 'other';
+type PaymentMethodType =
+  | 'bank_transfer'
+  | 'cash'
+  | 'upi'
+  | 'payu'
+  | 'stripe'
+  | 'esewa'
+  | 'credit_note'
+  | 'check'
+  | 'wire_transfer'
+  | 'other';
 
 interface UnifiedPaymentModalProps {
   isOpen: boolean;
@@ -168,7 +184,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const { formatAmount } = useQuoteDisplayCurrency({ quote });
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // Get currency information
   const destinationCountry = quote ? getDestinationCountryFromQuote(quote) : 'US';
   const currency = getCountryCurrency(destinationCountry);
@@ -179,19 +195,19 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     queryKey: ['payment-ledger', quote.id],
     queryFn: async () => {
       console.log('Fetching payment data for quote:', quote.id);
-      
+
       // Try to fetch from payment_ledger table first
       const { data: ledgerData, error: ledgerError } = await supabase
         .from('payment_ledger')
         .select('*')
         .eq('quote_id', quote.id)
         .order('created_at', { ascending: false });
-      
+
       if (ledgerError) {
         console.error('Error fetching payment ledger:', ledgerError);
         // Table might not exist or have different structure
       }
-      
+
       // Also fetch from payment_transactions as additional source
       const { data: transactionData, error: transactionError } = await supabase
         .from('payment_transactions')
@@ -199,26 +215,27 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         .eq('quote_id', quote.id)
         .in('status', ['completed', 'success']) // Only fetch successful payments
         .order('created_at', { ascending: false });
-      
+
       if (transactionError) {
         console.error('Error fetching payment transactions:', transactionError);
       }
-      
+
       console.log('Payment ledger data:', ledgerData);
       console.log('Payment transaction data:', transactionData);
-      
+
       // Combine both sources to get complete payment history
       const combinedData = [];
-      
+
       // Add payment transactions (original payments)
       if (transactionData && transactionData.length > 0) {
-        transactionData.forEach(tx => {
+        transactionData.forEach((tx) => {
           // Check if this payment is already in ledger
-          const existsInLedger = ledgerData?.some(l => 
-            l.reference_number === tx.transaction_id || 
-            (l.payment_type === 'customer_payment' && Math.abs(l.amount - tx.amount) < 0.01)
+          const existsInLedger = ledgerData?.some(
+            (l) =>
+              l.reference_number === tx.transaction_id ||
+              (l.payment_type === 'customer_payment' && Math.abs(l.amount - tx.amount) < 0.01),
           );
-          
+
           if (!existsInLedger) {
             combinedData.push({
               id: tx.id,
@@ -238,22 +255,22 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
               balance_after: 0,
               gateway_code: tx.payment_method,
               created_by: null,
-              gateway_response: tx.gateway_response
+              gateway_response: tx.gateway_response,
             });
           }
         });
       }
-      
+
       // Add all ledger entries (including refunds)
       if (ledgerData && ledgerData.length > 0) {
         combinedData.push(...ledgerData);
       }
-      
+
       // Sort by date (oldest first)
-      combinedData.sort((a, b) => 
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      combinedData.sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
       );
-      
+
       console.log('Combined payment data:', combinedData);
       return combinedData;
     },
@@ -270,22 +287,24 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         .eq('quote_id', quote.id)
         .eq('message_type', 'payment_proof')
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
-      
+
       // Transform messages to proof format
-      return messages?.map(msg => ({
-        id: msg.id,
-        quote_id: msg.quote_id,
-        file_name: msg.attachment_file_name || 'Payment Proof',
-        attachment_url: msg.attachment_url || '',
-        created_at: msg.created_at,
-        verified_at: msg.verified_at,
-        verified_by: msg.verified_by,
-        verified_amount: msg.verified_amount,
-        verification_notes: msg.admin_notes,
-        verification_status: msg.verification_status
-      })) || [];
+      return (
+        messages?.map((msg) => ({
+          id: msg.id,
+          quote_id: msg.quote_id,
+          file_name: msg.attachment_file_name || 'Payment Proof',
+          attachment_url: msg.attachment_url || '',
+          created_at: msg.created_at,
+          verified_at: msg.verified_at,
+          verified_by: msg.verified_by,
+          verified_amount: msg.verified_amount,
+          verification_notes: msg.admin_notes,
+          verification_status: msg.verification_status,
+        })) || []
+      );
     },
     enabled: isOpen && !!quote.id && quote.payment_method === 'bank_transfer',
   });
@@ -295,21 +314,21 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     queryKey: ['payment-links', quote.id],
     queryFn: async () => {
       console.log('🔍 [UnifiedPaymentModal] Fetching payment links for quote:', quote.id);
-      
+
       const { data, error } = await supabase
         .from('payment_links')
         .select('*')
         .eq('quote_id', quote.id)
         .order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error('❌ Error fetching payment links:', error);
         return [];
       }
-      
+
       console.log('✅ Payment links fetched:', data?.length || 0, 'links found');
       console.log('📋 Payment links data:', data);
-      
+
       return data || [];
     },
     enabled: isOpen && !!quote.id,
@@ -322,36 +341,43 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     let totalPayments = 0;
     let totalRefunds = 0;
     const currencyBreakdown: Record<string, { payments: number; refunds: number }> = {};
-    
-    paymentLedger?.forEach(entry => {
+
+    paymentLedger?.forEach((entry) => {
       const type = entry.transaction_type || entry.payment_type;
       const amount = parseFloat(entry.amount) || 0;
       const entryCurrency = entry.currency || currency;
-      
+
       // Initialize currency in breakdown if not present
       if (!currencyBreakdown[entryCurrency]) {
         currencyBreakdown[entryCurrency] = { payments: 0, refunds: 0 };
       }
-      
+
       // Handle different payment types
-      if (type === 'payment' || type === 'customer_payment' || 
-          (entry.status === 'completed' && !type && amount > 0)) {
+      if (
+        type === 'payment' ||
+        type === 'customer_payment' ||
+        (entry.status === 'completed' && !type && amount > 0)
+      ) {
         const absAmount = Math.abs(amount);
         totalPayments += absAmount;
         currencyBreakdown[entryCurrency].payments += absAmount;
-      } else if (type === 'refund' || type === 'partial_refund' || 
-                 type === 'credit_note' || amount < 0) {
+      } else if (
+        type === 'refund' ||
+        type === 'partial_refund' ||
+        type === 'credit_note' ||
+        amount < 0
+      ) {
         const absAmount = Math.abs(amount);
         totalRefunds += absAmount;
         currencyBreakdown[entryCurrency].refunds += absAmount;
       }
     });
-    
+
     const totalPaid = totalPayments - totalRefunds;
 
     const finalTotal = parseFloat(quote.final_total) || 0;
     const remaining = finalTotal - totalPaid;
-    
+
     // Determine payment status with refund states
     let status = 'unpaid';
     if (totalPayments === 0) {
@@ -365,7 +391,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     } else if (totalPaid > 0) {
       status = 'partial';
     }
-    
+
     const isOverpaid = totalPaid > finalTotal;
     const hasRefunds = totalRefunds > 0;
     const hasMultipleCurrencies = Object.keys(currencyBreakdown).length > 1;
@@ -415,7 +441,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const [previewImageError, setPreviewImageError] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [_showPreviewModal, _setShowPreviewModal] = useState(false);
   const [dueAmountInfo, setDueAmountInfo] = useState<DueAmountInfo | null>(null);
 
   // Due amount management
@@ -426,33 +452,33 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     onDueAmountDetected: (dueInfo) => {
       setDueAmountInfo(dueInfo);
     },
-    onPaymentLinkCreated: (link) => {
+    onPaymentLinkCreated: (_link) => {
       toast({
-        title: "Payment Link Created",
-        description: "Payment link has been generated and sent to customer.",
+        title: 'Payment Link Created',
+        description: 'Payment link has been generated and sent to customer.',
       });
-    }
+    },
   });
 
   // Real-time payment status synchronization
   const { isMonitoring, checkPaymentStatus } = usePaymentStatusSync({
     quoteId: quote.id,
     enabled: isOpen,
-    onPaymentConfirmed: (transaction) => {
+    onPaymentConfirmed: (_transaction) => {
       toast({
-        title: "Payment Confirmed",
-        description: `Payment confirmed for ${formatAmountForDisplay(transaction.amount, currency)}`,
+        title: 'Payment Confirmed',
+        description: `Payment confirmed for ${formatAmountForDisplay(_transaction.amount, currency)}`,
       });
       // Switch to history tab to show the updated payment
       setActiveTab('history');
     },
-    onPaymentFailed: (transaction) => {
+    onPaymentFailed: (_transaction) => {
       toast({
-        title: "Payment Failed",
-        description: "Payment attempt failed. Customer may need to try again.",
-        variant: "destructive",
+        title: 'Payment Failed',
+        description: 'Payment attempt failed. Customer may need to try again.',
+        variant: 'destructive',
       });
-    }
+    },
   });
 
   // Monitor quote changes for due amount detection
@@ -483,7 +509,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     const orderTotal = paymentSummary?.finalTotal || 0;
     const newAmount = parseFloat(verifyAmount) || 0;
     const newTotal = currentPaid + newAmount;
-    
+
     let newStatus = 'unpaid';
     if (newTotal >= orderTotal) {
       newStatus = newTotal > orderTotal ? 'overpaid' : 'paid';
@@ -497,7 +523,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       newAmount: newAmount || 0,
       newTotal: newTotal || 0,
       newStatus,
-      overpayment: newTotal > orderTotal ? newTotal - orderTotal : 0
+      overpayment: newTotal > orderTotal ? newTotal - orderTotal : 0,
     };
   };
 
@@ -506,17 +532,17 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     const amount = parseFloat(paymentAmount);
     if (isNaN(amount) || amount <= 0) {
       toast({
-        title: "Invalid Amount",
-        description: "Please enter a valid payment amount.",
-        variant: "destructive",
+        title: 'Invalid Amount',
+        description: 'Please enter a valid payment amount.',
+        variant: 'destructive',
       });
       return;
     }
 
     setIsRecording(true);
-    
+
     try {
-      const { data, error } = await supabase.rpc('record_payment_with_ledger_and_triggers', {
+      const { data: _data, error } = await supabase.rpc('record_payment_with_ledger_and_triggers', {
         p_quote_id: quote.id,
         p_amount: amount,
         p_currency: paymentCurrency, // Use selected payment currency
@@ -524,13 +550,13 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         p_transaction_reference: transactionId || `MANUAL-${Date.now()}`,
         p_notes: paymentNotes,
         p_recorded_by: (await supabase.auth.getUser()).data.user?.id || null,
-        p_payment_date: paymentDate
+        p_payment_date: paymentDate,
       });
 
       if (error) throw error;
 
       toast({
-        title: "Payment Recorded",
+        title: 'Payment Recorded',
         description: `Successfully recorded ${formatAmountForDisplay(amount, paymentCurrency)} payment.`,
       });
 
@@ -539,21 +565,21 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       setPaymentCurrency(currency); // Reset to quote currency
       setTransactionId('');
       setPaymentNotes('');
-      
+
       // Refresh data
       queryClient.invalidateQueries({ queryKey: ['payment-ledger', quote.id] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
-      
+
       // Switch to history tab
       setActiveTab('history');
     } catch (error) {
       console.error('Error recording payment:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to record payment';
       toast({
-        title: "Error",
-        description: errorMessage + ".",
-        variant: "destructive",
+        title: 'Error',
+        description: errorMessage + '.',
+        variant: 'destructive',
       });
     } finally {
       setIsRecording(false);
@@ -564,9 +590,9 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const handleVerifyProof = async () => {
     if (!verifyProofId || !verifyAmount) {
       toast({
-        title: "Missing Information",
-        description: "Please select a proof and enter the amount.",
-        variant: "destructive",
+        title: 'Missing Information',
+        description: 'Please select a proof and enter the amount.',
+        variant: 'destructive',
       });
       return;
     }
@@ -574,9 +600,9 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     const amount = parseFloat(verifyAmount);
     if (isNaN(amount) || amount <= 0) {
       toast({
-        title: "Invalid Amount",
-        description: "Please enter a valid amount.",
-        variant: "destructive",
+        title: 'Invalid Amount',
+        description: 'Please enter a valid amount.',
+        variant: 'destructive',
       });
       return;
     }
@@ -585,16 +611,19 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
     try {
       // Record the payment using quote currency (payment proofs should match quote currency)
-      const { error: paymentError } = await supabase.rpc('record_payment_with_ledger_and_triggers', {
-        p_quote_id: quote.id,
-        p_amount: amount,
-        p_currency: currency, // Use quote currency for payment proofs
-        p_payment_method: 'bank_transfer',
-        p_transaction_reference: `PROOF-${verifyProofId}`,
-        p_notes: verifyNotes || 'Payment verified from uploaded proof',
-        p_recorded_by: (await supabase.auth.getUser()).data.user?.id || null,
-        p_payment_date: new Date().toISOString().split('T')[0]
-      });
+      const { error: paymentError } = await supabase.rpc(
+        'record_payment_with_ledger_and_triggers',
+        {
+          p_quote_id: quote.id,
+          p_amount: amount,
+          p_currency: currency, // Use quote currency for payment proofs
+          p_payment_method: 'bank_transfer',
+          p_transaction_reference: `PROOF-${verifyProofId}`,
+          p_notes: verifyNotes || 'Payment verified from uploaded proof',
+          p_recorded_by: (await supabase.auth.getUser()).data.user?.id || null,
+          p_payment_date: new Date().toISOString().split('T')[0],
+        },
+      );
 
       if (paymentError) throw paymentError;
 
@@ -606,14 +635,14 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
           verified_by: (await supabase.auth.getUser()).data.user?.id,
           verified_amount: amount,
           verification_notes: verifyNotes,
-          verification_status: 'verified'
+          verification_status: 'verified',
         })
         .eq('id', verifyProofId);
 
       if (proofError) throw proofError;
 
       toast({
-        title: "Payment Verified",
+        title: 'Payment Verified',
         description: `Successfully verified payment of ${formatAmountForDisplay(amount, currency)}.`,
       });
 
@@ -621,21 +650,21 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       setVerifyProofId(null);
       setVerifyAmount('');
       setVerifyNotes('');
-      
+
       // Refresh data
       queryClient.invalidateQueries({ queryKey: ['payment-ledger', quote.id] });
       queryClient.invalidateQueries({ queryKey: ['payment-proofs', quote.id] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      
+
       // Switch to history tab
       setActiveTab('history');
     } catch (error) {
       console.error('Error verifying payment:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to verify payment';
       toast({
-        title: "Error",
-        description: errorMessage + ".",
-        variant: "destructive",
+        title: 'Error',
+        description: errorMessage + '.',
+        variant: 'destructive',
       });
     } finally {
       setIsVerifying(false);
@@ -646,9 +675,9 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const handleRejectProof = async () => {
     if (!verifyProofId || !rejectionReason) {
       toast({
-        title: "Missing Information",
-        description: "Please select a proof and provide a rejection reason.",
-        variant: "destructive",
+        title: 'Missing Information',
+        description: 'Please select a proof and provide a rejection reason.',
+        variant: 'destructive',
       });
       return;
     }
@@ -663,7 +692,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
           verified_at: new Date().toISOString(),
           verified_by: (await supabase.auth.getUser()).data.user?.id,
           verification_status: 'rejected',
-          admin_notes: rejectionReason
+          admin_notes: rejectionReason,
         })
         .eq('id', verifyProofId);
 
@@ -671,41 +700,38 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
       // Send rejection notification to customer
       const { data: user } = await supabase.auth.getUser();
-      const proofMessage = paymentProofs?.find(p => p.id === verifyProofId);
-      
+      const proofMessage = paymentProofs?.find((p) => p.id === verifyProofId);
+
       if (proofMessage && user.user) {
-        await supabase
-          .from('messages')
-          .insert({
-            sender_id: user.user.id,
-            recipient_id: proofMessage.sender_id,
-            quote_id: quote.id,
-            subject: 'Payment Proof Rejected',
-            content: `Your payment proof has been rejected. Reason: ${rejectionReason}\n\nPlease submit a new payment proof or contact support for assistance.`,
-            message_type: 'payment_verification_result'
-          });
+        await supabase.from('messages').insert({
+          sender_id: user.user.id,
+          recipient_id: proofMessage.sender_id,
+          quote_id: quote.id,
+          subject: 'Payment Proof Rejected',
+          content: `Your payment proof has been rejected. Reason: ${rejectionReason}\n\nPlease submit a new payment proof or contact support for assistance.`,
+          message_type: 'payment_verification_result',
+        });
       }
 
       toast({
-        title: "Proof Rejected",
-        description: "Payment proof has been rejected and customer notified.",
+        title: 'Proof Rejected',
+        description: 'Payment proof has been rejected and customer notified.',
       });
 
       // Reset form
       setVerifyProofId(null);
       setRejectionReason('');
       setVerifyNotes('');
-      
+
       // Refresh data
       queryClient.invalidateQueries({ queryKey: ['payment-proofs', quote.id] });
-      
     } catch (error) {
       console.error('Error rejecting proof:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to reject proof';
       toast({
-        title: "Error",
-        description: errorMessage + ".",
-        variant: "destructive",
+        title: 'Error',
+        description: errorMessage + '.',
+        variant: 'destructive',
       });
     } finally {
       setIsRejecting(false);
@@ -716,9 +742,9 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const handleExportPaymentHistory = () => {
     if (!paymentLedger || paymentLedger.length === 0) {
       toast({
-        title: "No Data",
-        description: "No payment history to export.",
-        variant: "destructive",
+        title: 'No Data',
+        description: 'No payment history to export.',
+        variant: 'destructive',
       });
       return;
     }
@@ -735,11 +761,11 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         'Balance After',
         'Reference',
         'Notes',
-        'Recorded By'
+        'Recorded By',
       ];
 
       // Prepare CSV rows
-      const rows = paymentLedger.map(entry => [
+      const rows = paymentLedger.map((entry) => [
         format(new Date(entry.created_at || entry.payment_date), 'yyyy-MM-dd HH:mm:ss'),
         entry.transaction_type || entry.payment_type || 'payment',
         entry.payment_method || '-',
@@ -749,7 +775,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         entry.balance_after?.toFixed(2) || '0.00',
         entry.reference_number || entry.gateway_transaction_id || '-',
         entry.notes?.replace(/,/g, ';') || '-',
-        entry.created_by_profile?.full_name || entry.created_by_profile?.email || 'System'
+        entry.created_by_profile?.full_name || entry.created_by_profile?.email || 'System',
       ]);
 
       // Create CSV content
@@ -759,7 +785,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         `Total Amount: ${currency} ${quote.final_total?.toFixed(2)}`,
         '',
         headers.join(','),
-        ...rows.map(row => row.join(','))
+        ...rows.map((row) => row.join(',')),
       ].join('\n');
 
       // Create and download file
@@ -770,15 +796,15 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       link.click();
 
       toast({
-        title: "Export Successful",
-        description: "Payment history exported to CSV.",
+        title: 'Export Successful',
+        description: 'Payment history exported to CSV.',
       });
     } catch (error) {
       console.error('Export error:', error);
       toast({
-        title: "Export Failed",
-        description: "Failed to export payment history.",
-        variant: "destructive",
+        title: 'Export Failed',
+        description: 'Failed to export payment history.',
+        variant: 'destructive',
       });
     }
   };
@@ -786,28 +812,28 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   // Determine which tabs to show based on payment status and method
   const availableTabs = useMemo(() => {
     const tabs: TabValue[] = ['overview', 'history'];
-    
+
     // Show record tab for unpaid or partially paid
     if (paymentSummary.status !== 'paid' || paymentSummary.isOverpaid) {
       tabs.splice(1, 0, 'record');
     }
-    
+
     // Show verify tab for bank transfers with unverified proofs
-    if (quote.payment_method === 'bank_transfer' && paymentProofs?.some(p => !p.verified_at)) {
+    if (quote.payment_method === 'bank_transfer' && paymentProofs?.some((p) => !p.verified_at)) {
       tabs.splice(tabs.indexOf('record') + 1, 0, 'verify');
     }
-    
+
     // Show refund tab for paid or overpaid
     if (paymentSummary.totalPaid > 0) {
       tabs.push('refund');
     }
-    
+
     return tabs;
   }, [paymentSummary, quote.payment_method, paymentProofs]);
 
   const getPaymentMethodIcon = (method: string | null | undefined) => {
     if (!method) return <DollarSign className="w-5 h-5" />;
-    
+
     switch (method.toLowerCase()) {
       case 'bank_transfer':
       case 'wire_transfer':
@@ -833,12 +859,18 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'paid': return 'text-green-600 bg-green-50';
-      case 'partial': return 'text-orange-600 bg-orange-50';
-      case 'unpaid': return 'text-red-600 bg-red-50';
-      case 'partially_refunded': return 'text-purple-600 bg-purple-50';
-      case 'fully_refunded': return 'text-gray-600 bg-gray-50';
-      default: return 'text-gray-600 bg-gray-50';
+      case 'paid':
+        return 'text-green-600 bg-green-50';
+      case 'partial':
+        return 'text-orange-600 bg-orange-50';
+      case 'unpaid':
+        return 'text-red-600 bg-red-50';
+      case 'partially_refunded':
+        return 'text-purple-600 bg-purple-50';
+      case 'fully_refunded':
+        return 'text-gray-600 bg-gray-50';
+      default:
+        return 'text-gray-600 bg-gray-50';
     }
   };
 
@@ -878,8 +910,17 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="w-full">
-            <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${availableTabs.length}, 1fr)` }}>
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as TabValue)}
+            className="w-full"
+          >
+            <TabsList
+              className="grid w-full"
+              style={{
+                gridTemplateColumns: `repeat(${availableTabs.length}, 1fr)`,
+              }}
+            >
               {availableTabs.includes('overview') && (
                 <TabsTrigger value="overview">
                   <TrendingUp className="w-4 h-4 mr-2" />
@@ -916,28 +957,31 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-4">
                 {/* Due Amount Notification */}
-                {dueAmountInfo && (dueAmountInfo.hasDueAmount || dueAmountInfo.changeType !== 'none') && (
-                  <DueAmountNotification
-                    dueInfo={dueAmountInfo}
-                    currency={currency}
-                    currencySymbol={currencySymbol}
-                    quote={quote}
-                    onPaymentLinkCreated={(link) => {
-                      toast({
-                        title: "Payment Link Created",
-                        description: "Payment link has been generated and copied to clipboard.",
-                      });
-                      // Refresh payment data
-                      queryClient.invalidateQueries({ queryKey: ['payment-ledger', quote.id] });
-                    }}
-                    showActions={true}
-                  />
-                )}
+                {dueAmountInfo &&
+                  (dueAmountInfo.hasDueAmount || dueAmountInfo.changeType !== 'none') && (
+                    <DueAmountNotification
+                      dueInfo={dueAmountInfo}
+                      currency={currency}
+                      currencySymbol={currencySymbol}
+                      quote={quote}
+                      onPaymentLinkCreated={(_link) => {
+                        toast({
+                          title: 'Payment Link Created',
+                          description: 'Payment link has been generated and copied to clipboard.',
+                        });
+                        // Refresh payment data
+                        queryClient.invalidateQueries({
+                          queryKey: ['payment-ledger', quote.id],
+                        });
+                      }}
+                      showActions={true}
+                    />
+                  )}
 
                 {/* Payment Summary Card */}
                 <div className="rounded-lg border bg-card p-6">
                   <h3 className="text-lg font-semibold mb-4">Payment Summary</h3>
-                  
+
                   {/* Progress Bar */}
                   <div className="mb-6">
                     <div className="flex justify-between text-sm mb-2">
@@ -945,14 +989,18 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       <span>{Math.min(100, Math.round(paymentSummary.percentagePaid))}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
+                      <div
                         className={cn(
-                          "h-3 rounded-full transition-all",
-                          paymentSummary.isOverpaid ? "bg-blue-600" : 
-                          paymentSummary.status === 'paid' ? "bg-green-600" : 
-                          "bg-orange-600"
+                          'h-3 rounded-full transition-all',
+                          paymentSummary.isOverpaid
+                            ? 'bg-blue-600'
+                            : paymentSummary.status === 'paid'
+                              ? 'bg-green-600'
+                              : 'bg-orange-600',
                         )}
-                        style={{ width: `${Math.min(100, paymentSummary.percentagePaid)}%` }}
+                        style={{
+                          width: `${Math.min(100, paymentSummary.percentagePaid)}%`,
+                        }}
                       />
                     </div>
                   </div>
@@ -964,7 +1012,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       <p className="text-sm text-muted-foreground">Order Total</p>
                       <p className="text-lg font-bold">{formatAmount(paymentSummary.finalTotal)}</p>
                     </div>
-                    
+
                     {/* Total Payments */}
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">Total Payments</p>
@@ -972,7 +1020,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         {formatAmountForDisplay(paymentSummary.totalPayments, currency)}
                       </p>
                     </div>
-                    
+
                     {/* Total Refunds (only show if > 0) */}
                     {paymentSummary.totalRefunds > 0 && (
                       <div className="flex items-center justify-between">
@@ -982,7 +1030,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         </p>
                       </div>
                     )}
-                    
+
                     {/* Separator for totals */}
                     {(paymentSummary.totalPayments > 0 || paymentSummary.totalRefunds > 0) && (
                       <div className="border-t pt-3">
@@ -994,54 +1042,63 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Currency Breakdown - Show if multiple currencies */}
                     {paymentSummary.hasMultipleCurrencies && (
                       <div className="bg-blue-50 p-3 rounded-lg">
-                        <p className="text-sm font-medium text-blue-800 mb-2">Multi-Currency Breakdown</p>
+                        <p className="text-sm font-medium text-blue-800 mb-2">
+                          Multi-Currency Breakdown
+                        </p>
                         <div className="space-y-1 text-sm">
-                          {Object.entries(paymentSummary.currencyBreakdown).map(([curr, amounts]) => {
-                            const netAmount = amounts.payments - amounts.refunds;
-                            if (netAmount === 0) return null;
-                            return (
-                              <div key={curr} className="flex justify-between">
-                                <span className="text-blue-700">{curr}:</span>
-                                <span className={cn(
-                                  "font-medium",
-                                  netAmount > 0 ? "text-green-700" : "text-red-700"
-                                )}>
-                                  {getCurrencySymbol(curr)}{Math.abs(netAmount).toFixed(2)}
-                                  {curr !== currency && (
-                                    <Badge variant="outline" className="ml-1 text-xs py-0">
-                                      {curr}
-                                    </Badge>
-                                  )}
-                                </span>
-                              </div>
-                            );
-                          })}
+                          {Object.entries(paymentSummary.currencyBreakdown).map(
+                            ([curr, amounts]) => {
+                              const netAmount = amounts.payments - amounts.refunds;
+                              if (netAmount === 0) return null;
+                              return (
+                                <div key={curr} className="flex justify-between">
+                                  <span className="text-blue-700">{curr}:</span>
+                                  <span
+                                    className={cn(
+                                      'font-medium',
+                                      netAmount > 0 ? 'text-green-700' : 'text-red-700',
+                                    )}
+                                  >
+                                    {getCurrencySymbol(curr)}
+                                    {Math.abs(netAmount).toFixed(2)}
+                                    {curr !== currency && (
+                                      <Badge variant="outline" className="ml-1 text-xs py-0">
+                                        {curr}
+                                      </Badge>
+                                    )}
+                                  </span>
+                                </div>
+                              );
+                            },
+                          )}
                         </div>
                         {paymentSummary.hasMultipleCurrencies && (
                           <Alert variant="default" className="mt-2">
                             <Info className="h-4 w-4" />
                             <AlertDescription className="text-xs">
-                              Multiple currencies detected. Refunds must be processed in the original payment currency.
+                              Multiple currencies detected. Refunds must be processed in the
+                              original payment currency.
                             </AlertDescription>
                           </Alert>
                         )}
                       </div>
                     )}
-                    
+
                     {/* Balance Due (only show if customer underpaid, not after refunds) */}
-                    {paymentSummary.remaining > 0 && paymentSummary.totalPayments < paymentSummary.finalTotal && (
-                      <div className="flex items-center justify-between bg-orange-50 p-3 rounded-lg">
-                        <p className="text-sm font-medium text-orange-800">Balance Due</p>
-                        <p className="text-xl font-bold text-orange-600">
-                          {formatAmountForDisplay(paymentSummary.remaining, currency)}
-                        </p>
-                      </div>
-                    )}
-                    
+                    {paymentSummary.remaining > 0 &&
+                      paymentSummary.totalPayments < paymentSummary.finalTotal && (
+                        <div className="flex items-center justify-between bg-orange-50 p-3 rounded-lg">
+                          <p className="text-sm font-medium text-orange-800">Balance Due</p>
+                          <p className="text-xl font-bold text-orange-600">
+                            {formatAmountForDisplay(paymentSummary.remaining, currency)}
+                          </p>
+                        </div>
+                      )}
+
                     {/* Overpayment (only show if overpaid) */}
                     {paymentSummary.isOverpaid && (
                       <div className="flex items-center justify-between bg-blue-50 p-3 rounded-lg">
@@ -1057,15 +1114,20 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
                   {/* Status and Quick Actions */}
                   <div className="flex items-center justify-between">
-                    <Badge className={cn("text-sm px-3 py-1", getStatusColor(paymentSummary.status))}>
-                      {paymentSummary.status === 'paid' ? 'Fully Paid' : 
-                       paymentSummary.status === 'partial' ? 'Partially Paid' :
-                       paymentSummary.status === 'partially_refunded' ? 
-                         `Partially Refunded (${currencySymbol}${paymentSummary.totalRefunds.toFixed(2)})` :
-                       paymentSummary.status === 'fully_refunded' ? 'Fully Refunded' : 
-                       'Unpaid'}
+                    <Badge
+                      className={cn('text-sm px-3 py-1', getStatusColor(paymentSummary.status))}
+                    >
+                      {paymentSummary.status === 'paid'
+                        ? 'Fully Paid'
+                        : paymentSummary.status === 'partial'
+                          ? 'Partially Paid'
+                          : paymentSummary.status === 'partially_refunded'
+                            ? `Partially Refunded (${currencySymbol}${paymentSummary.totalRefunds.toFixed(2)})`
+                            : paymentSummary.status === 'fully_refunded'
+                              ? 'Fully Refunded'
+                              : 'Unpaid'}
                     </Badge>
-                    
+
                     <div className="flex items-center gap-2">
                       {isMonitoring && (
                         <Badge variant="outline" className="text-xs">
@@ -1074,13 +1136,10 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         </Badge>
                       )}
                     </div>
-                    
+
                     <div className="flex gap-2">
                       {paymentSummary.status !== 'paid' && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => setActiveTab('record')}
-                        >
+                        <Button size="sm" onClick={() => setActiveTab('record')}>
                           <Plus className="w-4 h-4 mr-1" />
                           Record Payment
                         </Button>
@@ -1092,20 +1151,39 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           currency="USD"
                           quote={quote}
                           customerInfo={{
-                            name: quote.shipping_address?.fullName || quote.shipping_address?.name || quote.profiles?.full_name || quote.customer_name || '',
-                            email: quote.shipping_address?.email || quote.profiles?.email || quote.email || '',
-                            phone: quote.shipping_address?.phone || quote.profiles?.phone || quote.customer_phone || ''
+                            name:
+                              quote.shipping_address?.fullName ||
+                              quote.shipping_address?.name ||
+                              quote.profiles?.full_name ||
+                              quote.customer_name ||
+                              '',
+                            email:
+                              quote.shipping_address?.email ||
+                              quote.profiles?.email ||
+                              quote.email ||
+                              '',
+                            phone:
+                              quote.shipping_address?.phone ||
+                              quote.profiles?.phone ||
+                              quote.customer_phone ||
+                              '',
                           }}
                           onLinkCreated={(link) => {
                             toast({
-                              title: "Enhanced Payment Link Created",
+                              title: 'Enhanced Payment Link Created',
                               description: `${link.apiVersion?.includes('rest') ? 'Advanced' : 'Legacy'} payment link for ${formatAmountForDisplay(paymentSummary.remaining, currency)} has been created.`,
                             });
                             // Refresh payment data after link creation
-                            queryClient.invalidateQueries({ queryKey: ['payment-ledger', quote.id] });
-                            queryClient.invalidateQueries({ queryKey: ['payment-links', quote.id] });
+                            queryClient.invalidateQueries({
+                              queryKey: ['payment-ledger', quote.id],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: ['payment-links', quote.id],
+                            });
                             // Force immediate refetch
-                            queryClient.refetchQueries({ queryKey: ['payment-links', quote.id] });
+                            queryClient.refetchQueries({
+                              queryKey: ['payment-links', quote.id],
+                            });
                           }}
                         />
                       )}
@@ -1136,12 +1214,15 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
               <TabsContent value="record" className="space-y-4">
                 <div className="rounded-lg border bg-card p-6">
                   <h3 className="text-lg font-semibold mb-4">Record New Payment</h3>
-                  
+
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="payment-method">Payment Method</Label>
-                        <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as PaymentMethodType)}>
+                        <Select
+                          value={paymentMethod}
+                          onValueChange={(value) => setPaymentMethod(value as PaymentMethodType)}
+                        >
                           <SelectTrigger id="payment-method">
                             <SelectValue />
                           </SelectTrigger>
@@ -1195,7 +1276,9 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           <Alert variant="destructive" className="mt-2">
                             <AlertCircle className="h-4 w-4" />
                             <AlertDescription className="text-xs">
-                              <strong>Warning:</strong> Payment currency ({paymentCurrency}) differs from quote currency ({currency}). Ensure this is correct to avoid refund issues.
+                              <strong>Warning:</strong> Payment currency ({paymentCurrency}) differs
+                              from quote currency ({currency}). Ensure this is correct to avoid
+                              refund issues.
                             </AlertDescription>
                           </Alert>
                         )}
@@ -1230,14 +1313,16 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           className="pl-10"
                         />
                       </div>
-                      {parseFloat(paymentAmount) > paymentSummary.remaining && paymentSummary.remaining > 0 && (
-                        <Alert className="mt-2">
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertDescription>
-                            This payment exceeds the remaining balance. The order will be marked as overpaid.
-                          </AlertDescription>
-                        </Alert>
-                      )}
+                      {parseFloat(paymentAmount) > paymentSummary.remaining &&
+                        paymentSummary.remaining > 0 && (
+                          <Alert className="mt-2">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                              This payment exceeds the remaining balance. The order will be marked
+                              as overpaid.
+                            </AlertDescription>
+                          </Alert>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -1251,7 +1336,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       />
                     </div>
 
-                    <Button 
+                    <Button
                       onClick={handleRecordPayment}
                       disabled={isRecording || !paymentAmount || parseFloat(paymentAmount) <= 0}
                       className="w-full"
@@ -1276,285 +1361,336 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
               <TabsContent value="verify" className="space-y-4">
                 <div className="rounded-lg border bg-card p-6">
                   <h3 className="text-lg font-semibold mb-4">Verify Payment Proofs</h3>
-                  
+
                   {/* Gateway-specific info */}
                   {quote.payment_method && (
                     <Alert className="mb-4">
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription className="text-sm">
-                        {quote.payment_method === 'bank_transfer' && 
-                          "Review bank transfer receipts uploaded by the customer. Verify the transaction details match the order amount."
-                        }
-                        {quote.payment_method === 'upi' && 
-                          "Verify UPI transaction screenshots. Check the transaction ID and amount."
-                        }
-                        {quote.payment_method === 'esewa' && 
-                          "Verify eSewa payment confirmation. Cross-check with your eSewa merchant account."
-                        }
-                        {['payu', 'stripe'].includes(quote.payment_method) && 
-                          "For online payments, verify the transaction in your payment gateway dashboard before recording manually."
-                        }
+                        {quote.payment_method === 'bank_transfer' &&
+                          'Review bank transfer receipts uploaded by the customer. Verify the transaction details match the order amount.'}
+                        {quote.payment_method === 'upi' &&
+                          'Verify UPI transaction screenshots. Check the transaction ID and amount.'}
+                        {quote.payment_method === 'esewa' &&
+                          'Verify eSewa payment confirmation. Cross-check with your eSewa merchant account.'}
+                        {['payu', 'stripe'].includes(quote.payment_method) &&
+                          'For online payments, verify the transaction in your payment gateway dashboard before recording manually.'}
                       </AlertDescription>
                     </Alert>
                   )}
-                  
+
                   {proofsLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-6 h-6 animate-spin" />
                     </div>
-                  ) : paymentProofs && paymentProofs.filter(p => !p.verified_at).length > 0 ? (
+                  ) : paymentProofs && paymentProofs.filter((p) => !p.verified_at).length > 0 ? (
                     <div className="space-y-4">
                       {/* Unverified Proofs */}
                       <div className="space-y-3">
-                        {paymentProofs.filter(p => !p.verified_at).map((proof) => (
-                          <div 
-                            key={proof.id}
-                            className={cn(
-                              "p-4 border rounded-lg cursor-pointer transition-colors",
-                              verifyProofId === proof.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"
-                            )}
-                            onClick={() => {
-                              setVerifyProofId(proof.id);
-                              setVerifyAmount(quote.final_total?.toString() || '');
-                            }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Receipt className="w-5 h-5 text-muted-foreground" />
-                                <div>
-                                  <p className="font-medium">
-                                    {proof.file_name || `Proof ${proof.id.slice(0, 8)}`}
-                                  </p>
-                                  <p className="text-sm text-muted-foreground">
-                                    Uploaded {format(new Date(proof.created_at), 'MMM dd, yyyy HH:mm')}
-                                  </p>
+                        {paymentProofs
+                          .filter((p) => !p.verified_at)
+                          .map((proof) => (
+                            <div
+                              key={proof.id}
+                              className={cn(
+                                'p-4 border rounded-lg cursor-pointer transition-colors',
+                                verifyProofId === proof.id
+                                  ? 'border-primary bg-primary/5'
+                                  : 'hover:bg-muted/50',
+                              )}
+                              onClick={() => {
+                                setVerifyProofId(proof.id);
+                                setVerifyAmount(quote.final_total?.toString() || '');
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <Receipt className="w-5 h-5 text-muted-foreground" />
+                                  <div>
+                                    <p className="font-medium">
+                                      {proof.file_name || `Proof ${proof.id.slice(0, 8)}`}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      Uploaded{' '}
+                                      {format(new Date(proof.created_at), 'MMM dd, yyyy HH:mm')}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(proof.attachment_url, '_blank');
+                                    }}
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  {verifyProofId === proof.id && (
+                                    <CheckCircle className="w-5 h-5 text-primary" />
+                                  )}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(proof.attachment_url, '_blank');
-                                  }}
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                {verifyProofId === proof.id && (
-                                  <CheckCircle className="w-5 h-5 text-primary" />
-                                )}
-                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
                       </div>
 
                       {/* Enhanced Verification Form */}
-                      {verifyProofId && (() => {
-                        const selectedProof = paymentProofs?.find(p => p.id === verifyProofId);
-                        const balance = calculatePaymentBalance();
-                        
-                        return (
-                          <>
-                            <Separator />
-                            
-                            {/* Image Preview Section */}
-                            {selectedProof && (
-                              <div className="bg-gray-50 rounded-lg p-4 relative">
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="font-medium text-sm">Payment Proof Preview</h4>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => downloadFile(selectedProof.attachment_url, selectedProof.file_name || 'payment-proof')}
-                                    >
-                                      <Download className="w-4 h-4" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => window.open(selectedProof.attachment_url, '_blank')}
-                                    >
-                                      <Eye className="w-4 h-4" />
-                                    </Button>
+                      {verifyProofId &&
+                        (() => {
+                          const selectedProof = paymentProofs?.find((p) => p.id === verifyProofId);
+                          const balance = calculatePaymentBalance();
+
+                          return (
+                            <>
+                              <Separator />
+
+                              {/* Image Preview Section */}
+                              {selectedProof && (
+                                <div className="bg-gray-50 rounded-lg p-4 relative">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-medium text-sm">Payment Proof Preview</h4>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          downloadFile(
+                                            selectedProof.attachment_url,
+                                            selectedProof.file_name || 'payment-proof',
+                                          )
+                                        }
+                                      >
+                                        <Download className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          window.open(selectedProof.attachment_url, '_blank')
+                                        }
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+
+                                  <div className="min-h-[200px] max-h-[300px] flex items-center justify-center bg-white rounded border">
+                                    {selectedProof.file_name && isImage(selectedProof.file_name) ? (
+                                      <div className="w-full h-full flex items-center justify-center">
+                                        {previewImageLoading && (
+                                          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                                        )}
+                                        {previewImageError ? (
+                                          <div className="text-center text-gray-500">
+                                            <AlertCircle className="h-10 w-10 mx-auto mb-2" />
+                                            <p className="text-sm">Unable to load preview</p>
+                                          </div>
+                                        ) : (
+                                          <img
+                                            src={selectedProof.attachment_url}
+                                            alt="Payment proof"
+                                            className="max-w-full max-h-full object-contain rounded"
+                                            onLoad={() => setPreviewImageLoading(false)}
+                                            onError={() => {
+                                              setPreviewImageLoading(false);
+                                              setPreviewImageError(true);
+                                            }}
+                                            style={{
+                                              display: previewImageLoading ? 'none' : 'block',
+                                            }}
+                                          />
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="text-center text-gray-500">
+                                        <FileText className="h-10 w-10 mx-auto mb-2" />
+                                        <p className="text-sm">{selectedProof.file_name}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          Click eye icon to view
+                                        </p>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
-                                
-                                <div className="min-h-[200px] max-h-[300px] flex items-center justify-center bg-white rounded border">
-                                  {selectedProof.file_name && isImage(selectedProof.file_name) ? (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                      {previewImageLoading && <Loader2 className="h-8 w-8 animate-spin text-gray-400" />}
-                                      {previewImageError ? (
-                                        <div className="text-center text-gray-500">
-                                          <AlertCircle className="h-10 w-10 mx-auto mb-2" />
-                                          <p className="text-sm">Unable to load preview</p>
-                                        </div>
-                                      ) : (
-                                        <img
-                                          src={selectedProof.attachment_url}
-                                          alt="Payment proof"
-                                          className="max-w-full max-h-full object-contain rounded"
-                                          onLoad={() => setPreviewImageLoading(false)}
-                                          onError={() => {
-                                            setPreviewImageLoading(false);
-                                            setPreviewImageError(true);
-                                          }}
-                                          style={{ display: previewImageLoading ? 'none' : 'block' }}
-                                        />
-                                      )}
+                              )}
+
+                              {/* Payment Balance Calculation */}
+                              <Alert className="border-blue-200 bg-blue-50">
+                                <Info className="h-4 w-4" />
+                                <AlertDescription>
+                                  <div className="space-y-1 text-sm">
+                                    <div className="flex justify-between">
+                                      <span>Order Total:</span>
+                                      <span className="font-medium">
+                                        {currencySymbol}
+                                        {balance.orderTotal.toFixed(2)}
+                                      </span>
                                     </div>
+                                    <div className="flex justify-between">
+                                      <span>Already Paid:</span>
+                                      <span className="font-medium">
+                                        {currencySymbol}
+                                        {balance.currentPaid.toFixed(2)}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>New Amount:</span>
+                                      <span className="font-medium">
+                                        {currencySymbol}
+                                        {balance.newAmount.toFixed(2)}
+                                      </span>
+                                    </div>
+                                    <Separator className="my-1" />
+                                    <div className="flex justify-between font-semibold">
+                                      <span>Total After:</span>
+                                      <span
+                                        className={cn(
+                                          balance.newTotal > balance.orderTotal
+                                            ? 'text-purple-600'
+                                            : balance.newTotal === balance.orderTotal
+                                              ? 'text-green-600'
+                                              : 'text-orange-600',
+                                        )}
+                                      >
+                                        {currencySymbol}
+                                        {balance.newTotal.toFixed(2)} ({balance.newStatus})
+                                      </span>
+                                    </div>
+                                    {balance.overpayment > 0 && (
+                                      <div className="text-purple-600 text-xs">
+                                        Overpayment: {currencySymbol}
+                                        {balance.overpayment.toFixed(2)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </AlertDescription>
+                              </Alert>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="verify-amount">
+                                    Verified Amount ({currencySymbol})
+                                  </Label>
+                                  <div className="relative">
+                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                      id="verify-amount"
+                                      type="text"
+                                      placeholder="0.00"
+                                      value={verifyAmount}
+                                      onChange={(e) => {
+                                        const value = e.target.value;
+                                        if (/^\d*\.?\d*$/.test(value) || value === '') {
+                                          setVerifyAmount(value);
+                                        }
+                                      }}
+                                      className="pl-10"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="rejection-reason">Rejection Reason</Label>
+                                  <Select
+                                    value={rejectionReason}
+                                    onValueChange={setRejectionReason}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select if rejecting..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="invalid_amount">
+                                        Amount doesn't match
+                                      </SelectItem>
+                                      <SelectItem value="unclear_proof">
+                                        Proof unclear/unreadable
+                                      </SelectItem>
+                                      <SelectItem value="wrong_account">
+                                        Wrong bank account
+                                      </SelectItem>
+                                      <SelectItem value="duplicate">
+                                        Duplicate submission
+                                      </SelectItem>
+                                      <SelectItem value="insufficient_details">
+                                        Missing transaction details
+                                      </SelectItem>
+                                      <SelectItem value="other">Other reason</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="verify-notes">Admin Notes</Label>
+                                <Textarea
+                                  id="verify-notes"
+                                  placeholder="Add verification notes or detailed rejection reason..."
+                                  value={verifyNotes}
+                                  onChange={(e) => setVerifyNotes(e.target.value)}
+                                  rows={2}
+                                />
+                              </div>
+
+                              {/* Keyboard shortcuts reminder */}
+                              <Alert className="border-gray-200">
+                                <Info className="h-4 w-4" />
+                                <AlertDescription className="text-xs">
+                                  <kbd className="font-mono bg-gray-100 px-1 rounded mr-2">
+                                    Ctrl+Enter
+                                  </kbd>
+                                  to approve •
+                                  <kbd className="font-mono bg-gray-100 px-1 rounded mx-2">
+                                    Ctrl+R
+                                  </kbd>
+                                  to reject
+                                </AlertDescription>
+                              </Alert>
+
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={handleVerifyProof}
+                                  disabled={
+                                    isVerifying || !verifyAmount || parseFloat(verifyAmount) <= 0
+                                  }
+                                  className="flex-1 bg-green-600 hover:bg-green-700"
+                                >
+                                  {isVerifying ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                      Verifying...
+                                    </>
                                   ) : (
-                                    <div className="text-center text-gray-500">
-                                      <FileText className="h-10 w-10 mx-auto mb-2" />
-                                      <p className="text-sm">{selectedProof.file_name}</p>
-                                      <p className="text-xs text-muted-foreground">Click eye icon to view</p>
-                                    </div>
+                                    <>
+                                      <CheckCircle className="w-4 h-4 mr-2" />
+                                      Verify & Record Payment
+                                    </>
                                   )}
-                                </div>
-                              </div>
-                            )}
+                                </Button>
 
-                            {/* Payment Balance Calculation */}
-                            <Alert className="border-blue-200 bg-blue-50">
-                              <Info className="h-4 w-4" />
-                              <AlertDescription>
-                                <div className="space-y-1 text-sm">
-                                  <div className="flex justify-between">
-                                    <span>Order Total:</span>
-                                    <span className="font-medium">{currencySymbol}{balance.orderTotal.toFixed(2)}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Already Paid:</span>
-                                    <span className="font-medium">{currencySymbol}{balance.currentPaid.toFixed(2)}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>New Amount:</span>
-                                    <span className="font-medium">{currencySymbol}{balance.newAmount.toFixed(2)}</span>
-                                  </div>
-                                  <Separator className="my-1" />
-                                  <div className="flex justify-between font-semibold">
-                                    <span>Total After:</span>
-                                    <span className={cn(
-                                      balance.newTotal > balance.orderTotal ? 'text-purple-600' :
-                                      balance.newTotal === balance.orderTotal ? 'text-green-600' :
-                                      'text-orange-600'
-                                    )}>
-                                      {currencySymbol}{balance.newTotal.toFixed(2)} ({balance.newStatus})
-                                    </span>
-                                  </div>
-                                  {balance.overpayment > 0 && (
-                                    <div className="text-purple-600 text-xs">
-                                      Overpayment: {currencySymbol}{balance.overpayment.toFixed(2)}
-                                    </div>
+                                <Button
+                                  onClick={handleRejectProof}
+                                  disabled={isRejecting || !rejectionReason}
+                                  variant="outline"
+                                  className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                                >
+                                  {isRejecting ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                      Rejecting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <X className="w-4 h-4 mr-2" />
+                                      Reject Proof
+                                    </>
                                   )}
-                                </div>
-                              </AlertDescription>
-                            </Alert>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="verify-amount">Verified Amount ({currencySymbol})</Label>
-                                <div className="relative">
-                                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    id="verify-amount"
-                                    type="text"
-                                    placeholder="0.00"
-                                    value={verifyAmount}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      if (/^\d*\.?\d*$/.test(value) || value === '') {
-                                        setVerifyAmount(value);
-                                      }
-                                    }}
-                                    className="pl-10"
-                                  />
-                                </div>
+                                </Button>
                               </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="rejection-reason">Rejection Reason</Label>
-                                <Select value={rejectionReason} onValueChange={setRejectionReason}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select if rejecting..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="invalid_amount">Amount doesn't match</SelectItem>
-                                    <SelectItem value="unclear_proof">Proof unclear/unreadable</SelectItem>
-                                    <SelectItem value="wrong_account">Wrong bank account</SelectItem>
-                                    <SelectItem value="duplicate">Duplicate submission</SelectItem>
-                                    <SelectItem value="insufficient_details">Missing transaction details</SelectItem>
-                                    <SelectItem value="other">Other reason</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="verify-notes">Admin Notes</Label>
-                              <Textarea
-                                id="verify-notes"
-                                placeholder="Add verification notes or detailed rejection reason..."
-                                value={verifyNotes}
-                                onChange={(e) => setVerifyNotes(e.target.value)}
-                                rows={2}
-                              />
-                            </div>
-
-                            {/* Keyboard shortcuts reminder */}
-                            <Alert className="border-gray-200">
-                              <Info className="h-4 w-4" />
-                              <AlertDescription className="text-xs">
-                                <kbd className="font-mono bg-gray-100 px-1 rounded mr-2">Ctrl+Enter</kbd>
-                                to approve • 
-                                <kbd className="font-mono bg-gray-100 px-1 rounded mx-2">Ctrl+R</kbd>
-                                to reject
-                              </AlertDescription>
-                            </Alert>
-
-                            <div className="flex gap-2">
-                              <Button 
-                                onClick={handleVerifyProof}
-                                disabled={isVerifying || !verifyAmount || parseFloat(verifyAmount) <= 0}
-                                className="flex-1 bg-green-600 hover:bg-green-700"
-                              >
-                                {isVerifying ? (
-                                  <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Verifying...
-                                  </>
-                                ) : (
-                                  <>
-                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                    Verify & Record Payment
-                                  </>
-                                )}
-                              </Button>
-
-                              <Button 
-                                onClick={handleRejectProof}
-                                disabled={isRejecting || !rejectionReason}
-                                variant="outline"
-                                className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
-                              >
-                                {isRejecting ? (
-                                  <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Rejecting...
-                                  </>
-                                ) : (
-                                  <>
-                                    <X className="w-4 h-4 mr-2" />
-                                    Reject Proof
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                          </>
-                        );
-                      })()}
+                            </>
+                          );
+                        })()}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
@@ -1594,7 +1730,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       </Button>
                     </div>
                   </div>
-                  
+
                   {ledgerLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-6 h-6 animate-spin" />
@@ -1604,9 +1740,9 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       <History className="w-12 h-12 mx-auto mb-3 opacity-50" />
                       <p>No payment history found</p>
                       <p className="text-xs mt-2">Quote ID: {quote.id}</p>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
+                      <Button
+                        size="sm"
+                        variant="outline"
                         className="mt-4"
                         onClick={async () => {
                           console.log('Manually checking payment data...');
@@ -1614,13 +1750,19 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                             .from('payment_ledger')
                             .select('*')
                             .eq('quote_id', quote.id);
-                          console.log('Direct ledger query:', { data: ledger, error: ledgerErr });
-                          
+                          console.log('Direct ledger query:', {
+                            data: ledger,
+                            error: ledgerErr,
+                          });
+
                           const { data: transactions, error: txErr } = await supabase
                             .from('payment_transactions')
                             .select('*')
                             .eq('quote_id', quote.id);
-                          console.log('Direct transactions query:', { data: transactions, error: txErr });
+                          console.log('Direct transactions query:', {
+                            data: transactions,
+                            error: txErr,
+                          });
                         }}
                       >
                         Debug: Check Payment Data
@@ -1630,45 +1772,60 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                     <div className="relative">
                       {/* Timeline Line */}
                       <div className="absolute left-9 top-0 bottom-0 w-0.5 bg-border" />
-                      
+
                       {/* Timeline Items */}
                       <div className="space-y-6">
                         {paymentLedger.map((entry, index) => {
                           const type = entry.transaction_type || entry.payment_type;
-                          const isPayment = type === 'payment' || type === 'customer_payment' || 
-                                           (entry.status === 'completed' && !type);
+                          const isPayment =
+                            type === 'payment' ||
+                            type === 'customer_payment' ||
+                            (entry.status === 'completed' && !type);
                           const isRefund = type === 'refund' || type === 'partial_refund';
-                          const isFirst = index === 0;
-                          const isLast = index === paymentLedger.length - 1;
+                          const _isFirst = index === 0;
+                          const _isLast = index === paymentLedger.length - 1;
                           const entryAmount = parseFloat(entry.amount) || 0;
-                          
+
                           return (
                             <div key={entry.id} className="relative flex items-start gap-4">
                               {/* Timeline Dot */}
-                              <div className={cn(
-                                "relative z-10 flex h-10 w-10 items-center justify-center rounded-full",
-                                isPayment ? "bg-green-100 text-green-600" :
-                                isRefund ? "bg-red-100 text-red-600" :
-                                "bg-gray-100 text-gray-600"
-                              )}>
-                                {isPayment ? <DollarSign className="h-5 w-5" /> :
-                                 isRefund ? <RefreshCw className="h-5 w-5" /> :
-                                 <FileText className="h-5 w-5" />}
+                              <div
+                                className={cn(
+                                  'relative z-10 flex h-10 w-10 items-center justify-center rounded-full',
+                                  isPayment
+                                    ? 'bg-green-100 text-green-600'
+                                    : isRefund
+                                      ? 'bg-red-100 text-red-600'
+                                      : 'bg-gray-100 text-gray-600',
+                                )}
+                              >
+                                {isPayment ? (
+                                  <DollarSign className="h-5 w-5" />
+                                ) : isRefund ? (
+                                  <RefreshCw className="h-5 w-5" />
+                                ) : (
+                                  <FileText className="h-5 w-5" />
+                                )}
                               </div>
-                              
+
                               {/* Content */}
                               <div className="flex-1 pb-6">
                                 <div className="rounded-lg border bg-background p-4 shadow-sm">
                                   <div className="flex items-start justify-between mb-2">
                                     <div>
                                       <h4 className="font-medium">
-                                        {isPayment ? 'Payment Received' :
-                                         isRefund ? 'Refund Processed' :
-                                         'Transaction'}
+                                        {isPayment
+                                          ? 'Payment Received'
+                                          : isRefund
+                                            ? 'Refund Processed'
+                                            : 'Transaction'}
                                       </h4>
                                       <p className="text-sm text-muted-foreground mt-1">
-                                        {entry.payment_method?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                        {entry.gateway_code && ` via ${entry.gateway_code.toUpperCase()}`}
+                                        {entry.payment_method
+                                          ?.replace(/_/g, ' ')
+                                          .replace(/\b\w/g, (l) => l.toUpperCase())}
+                                        {entry.gateway_code &&
+                                          ` via ${entry.gateway_code.toUpperCase()}`}
                                         {entry.currency && entry.currency !== currency && (
                                           <Badge variant="outline" className="ml-2 text-xs py-0">
                                             {entry.currency} Payment
@@ -1677,26 +1834,34 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                       </p>
                                     </div>
                                     <div className="text-right">
-                                      <p className={cn(
-                                        "font-semibold",
-                                        isPayment ? "text-green-600" : 
-                                        isRefund ? "text-red-600" :
-                                        "text-gray-600"
-                                      )}>
+                                      <p
+                                        className={cn(
+                                          'font-semibold',
+                                          isPayment
+                                            ? 'text-green-600'
+                                            : isRefund
+                                              ? 'text-red-600'
+                                              : 'text-gray-600',
+                                        )}
+                                      >
                                         {isPayment ? '+' : isRefund ? '-' : ''}
-                                        {getCurrencySymbol(entry.currency || currency)}{Math.abs(entryAmount).toFixed(2)}
+                                        {getCurrencySymbol(entry.currency || currency)}
+                                        {Math.abs(entryAmount).toFixed(2)}
                                         {entry.currency && entry.currency !== currency && (
-                                          <span className="text-xs text-orange-600 ml-1">({entry.currency})</span>
+                                          <span className="text-xs text-orange-600 ml-1">
+                                            ({entry.currency})
+                                          </span>
                                         )}
                                       </p>
                                       {entry.balance_after !== undefined && (
                                         <p className="text-xs text-muted-foreground mt-1">
-                                          Balance: {currencySymbol}{(parseFloat(entry.balance_after) || 0).toFixed(2)}
+                                          Balance: {currencySymbol}
+                                          {(parseFloat(entry.balance_after) || 0).toFixed(2)}
                                         </p>
                                       )}
                                     </div>
                                   </div>
-                                  
+
                                   {/* Additional Details */}
                                   <div className="mt-3 space-y-1 text-xs text-muted-foreground">
                                     {entry.reference_number && (
@@ -1713,12 +1878,19 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                     )}
                                     <div className="flex items-center gap-2">
                                       <Calendar className="h-3 w-3" />
-                                      <span>{format(new Date(entry.created_at), 'MMM dd, yyyy HH:mm')}</span>
+                                      <span>
+                                        {format(new Date(entry.created_at), 'MMM dd, yyyy HH:mm')}
+                                      </span>
                                     </div>
                                     {entry.created_by && (
                                       <div className="flex items-center gap-2">
                                         <User className="h-3 w-3" />
-                                        <span>by {entry.created_by.full_name || entry.created_by.email || 'System'}</span>
+                                        <span>
+                                          by{' '}
+                                          {entry.created_by.full_name ||
+                                            entry.created_by.email ||
+                                            'System'}
+                                        </span>
                                       </div>
                                     )}
                                   </div>
@@ -1727,7 +1899,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                             </div>
                           );
                         })}
-                        
+
                         {/* Order Created Marker */}
                         <div className="relative flex items-start gap-4">
                           <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -1737,7 +1909,8 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                             <div className="rounded-lg border bg-background p-4 shadow-sm">
                               <h4 className="font-medium">Order Created</h4>
                               <p className="text-sm text-muted-foreground mt-1">
-                                Quote #{quote.display_id} - Total: {formatAmount(quote.final_total || 0)}
+                                Quote #{quote.display_id} - Total:{' '}
+                                {formatAmount(quote.final_total || 0)}
                               </p>
                               {quote.created_at && (
                                 <p className="text-xs text-muted-foreground mt-2">
@@ -1750,7 +1923,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Summary Stats */}
                   {paymentLedger && paymentLedger.length > 0 && (
                     <div className="mt-6 pt-6 border-t">
@@ -1769,9 +1942,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Transactions</p>
-                          <p className="text-lg font-semibold">
-                            {paymentLedger.length}
-                          </p>
+                          <p className="text-lg font-semibold">{paymentLedger.length}</p>
                         </div>
                       </div>
                     </div>
@@ -1786,7 +1957,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       {paymentLinks?.length || 0} Links
                     </Badge>
                   </div>
-                  
+
                   {linksLoading ? (
                     <div className="space-y-3">
                       {Array.from({ length: 2 }).map((_, i) => (
@@ -1800,27 +1971,41 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                   ) : paymentLinks && paymentLinks.length > 0 ? (
                     <div className="space-y-3">
                       {paymentLinks.map((link) => (
-                        <div key={link.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                        <div
+                          key={link.id}
+                          className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
+                        >
                           <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "w-2 h-2 rounded-full",
-                              link.status === 'active' ? "bg-green-500" : 
-                              link.status === 'completed' ? "bg-blue-500" : 
-                              link.status === 'expired' ? "bg-orange-500" :
-                              "bg-gray-400"
-                            )} />
+                            <div
+                              className={cn(
+                                'w-2 h-2 rounded-full',
+                                link.status === 'active'
+                                  ? 'bg-green-500'
+                                  : link.status === 'completed'
+                                    ? 'bg-blue-500'
+                                    : link.status === 'expired'
+                                      ? 'bg-orange-500'
+                                      : 'bg-gray-400',
+                              )}
+                            />
                             <div>
                               <div className="flex items-center gap-2">
                                 <p className="text-sm font-medium">
-                                  {formatAmountForDisplay(link.amount, link.currency)} 
+                                  {formatAmountForDisplay(link.amount, link.currency)}
                                 </p>
                                 {link.api_version === 'v2_rest' && (
-                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs bg-green-50 text-green-700"
+                                  >
                                     Enhanced
                                   </Badge>
                                 )}
                                 {link.api_version === 'v1_legacy' && (
-                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs bg-blue-50 text-blue-700"
+                                  >
                                     Legacy
                                   </Badge>
                                 )}
@@ -1831,22 +2016,31 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                               <p className="text-xs text-muted-foreground">
                                 Created {format(new Date(link.created_at), 'MMM dd, yyyy HH:mm')}
                                 {link.expires_at && (
-                                  <span> • Expires {format(new Date(link.expires_at), 'MMM dd, yyyy')}</span>
+                                  <span>
+                                    {' '}
+                                    • Expires {format(new Date(link.expires_at), 'MMM dd, yyyy')}
+                                  </span>
                                 )}
                               </p>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-2">
-                            <Badge variant={
-                              link.status === 'active' ? 'default' : 
-                              link.status === 'completed' ? 'outline' : 
-                              link.status === 'expired' ? 'secondary' :
-                              'secondary'
-                            } className="text-xs">
+                            <Badge
+                              variant={
+                                link.status === 'active'
+                                  ? 'default'
+                                  : link.status === 'completed'
+                                    ? 'outline'
+                                    : link.status === 'expired'
+                                      ? 'secondary'
+                                      : 'secondary'
+                              }
+                              className="text-xs"
+                            >
                               {link.status}
                             </Badge>
-                            
+
                             {link.payment_url && (
                               <Button
                                 variant="ghost"
@@ -1854,18 +2048,18 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                 onClick={() => {
                                   navigator.clipboard.writeText(link.payment_url);
                                   toast({
-                                    title: "Link Copied!",
-                                    description: "Payment link has been copied to clipboard",
+                                    title: 'Link Copied!',
+                                    description: 'Payment link has been copied to clipboard',
                                   });
                                 }}
                               >
                                 <Copy className="h-3 w-3" />
                               </Button>
                             )}
-                            
+
                             {link.payment_url && (
                               <Button
-                                variant="ghost" 
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => window.open(link.payment_url, '_blank')}
                               >
@@ -1890,25 +2084,24 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
               <TabsContent value="refund" className="space-y-4">
                 <div className="rounded-lg border bg-card p-6">
                   <h3 className="text-lg font-semibold mb-4">Process Refund</h3>
-                  
+
                   {paymentSummary.totalPaid > 0 ? (
                     <div className="space-y-4">
                       <Alert>
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>
-                          Total paid amount: {formatAmountForDisplay(paymentSummary.totalPaid, currency)}
+                          Total paid amount:{' '}
+                          {formatAmountForDisplay(paymentSummary.totalPaid, currency)}
                           {paymentSummary.isOverpaid && (
                             <span className="block mt-1 text-blue-600">
-                              Overpaid by: {formatAmountForDisplay(paymentSummary.overpaidAmount, currency)}
+                              Overpaid by:{' '}
+                              {formatAmountForDisplay(paymentSummary.overpaidAmount, currency)}
                             </span>
                           )}
                         </AlertDescription>
                       </Alert>
-                      
-                      <Button 
-                        onClick={() => setShowRefundModal(true)}
-                        className="w-full"
-                      >
+
+                      <Button onClick={() => setShowRefundModal(true)} className="w-full">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Open Refund Manager
                       </Button>
@@ -1927,14 +2120,101 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       </Dialog>
 
       {/* Child Modals */}
-      {showRefundModal && (() => {
-        console.log('Refund Modal Debug:', {
-          showRefundModal: showRefundModal,
-          paymentLedger: paymentLedger,
-          paymentLedgerLength: paymentLedger?.length || 0
-        });
-        
-        if (!paymentLedger || paymentLedger.length === 0) {
+      {showRefundModal &&
+        (() => {
+          console.log('Refund Modal Debug:', {
+            showRefundModal: showRefundModal,
+            paymentLedger: paymentLedger,
+            paymentLedgerLength: paymentLedger?.length || 0,
+          });
+
+          if (!paymentLedger || paymentLedger.length === 0) {
+            return (
+              <RefundManagementModal
+                isOpen={showRefundModal}
+                onClose={() => setShowRefundModal(false)}
+                quote={{
+                  id: quote.id,
+                  final_total: quote.final_total || 0,
+                  amount_paid: paymentSummary.totalPaid,
+                  currency: currency,
+                  payment_method: quote.payment_method || '',
+                }}
+                payments={[]}
+              />
+            );
+          }
+
+          const eligiblePayments = paymentLedger
+            .filter((p) => {
+              const type = p.transaction_type || p.payment_type;
+              const isPayment =
+                type === 'payment' ||
+                type === 'customer_payment' ||
+                type === 'manual_payment' ||
+                (p.status === 'completed' && p.amount > 0);
+              console.log('Payment eligibility check:', {
+                id: p.id,
+                type: type,
+                status: p.status,
+                amount: p.amount,
+                isPayment: isPayment,
+              });
+              return isPayment;
+            })
+            .map((p) => {
+              // Check if this is a PayU payment by multiple methods
+              const isPayU =
+                p.gateway_code === 'payu' ||
+                p.payment_method === 'payu' ||
+                p.payment_method?.toLowerCase() === 'payu' ||
+                (p.gateway_response &&
+                  typeof p.gateway_response === 'object' &&
+                  p.gateway_response.key?.includes('JP'));
+
+              // Check if this is a PayPal payment
+              const isPayPal =
+                p.gateway_code === 'paypal' ||
+                p.payment_method === 'paypal' ||
+                p.payment_method?.toLowerCase() === 'paypal' ||
+                (p.gateway_response &&
+                  typeof p.gateway_response === 'object' &&
+                  p.gateway_response.id &&
+                  p.gateway_response.status);
+
+              const payment = {
+                id: p.id,
+                amount: Math.abs(p.amount || 0),
+                currency: p.currency || currency, // Use payment currency if available, fallback to quote currency
+                method: p.payment_method || '',
+                gateway: p.gateway_code || p.payment_method || '',
+                reference:
+                  p.gateway_transaction_id ||
+                  p.reference_number ||
+                  p.transaction_id ||
+                  p.gateway_response?.payu_id || // PayU specific - this is the mihpayid
+                  p.gateway_response?.mihpayid || // PayU fallback
+                  p.gateway_response?.gateway_transaction_id ||
+                  '',
+                date: new Date(p.payment_date || p.created_at),
+                canRefund: isPayU || isPayPal || p.payment_method === 'bank_transfer', // PayU, PayPal and bank transfers can be refunded
+              };
+              console.log('Mapped payment for refund:', {
+                ...payment,
+                original_gateway_code: p.gateway_code,
+                original_payment_method: p.payment_method,
+                original_reference_number: p.reference_number,
+                original_gateway_transaction_id: p.gateway_transaction_id,
+                original_transaction_id: p.transaction_id,
+                gateway_response: p.gateway_response,
+                isPayU: isPayU,
+                isPayPal: isPayPal,
+              });
+              return payment;
+            });
+
+          console.log('Eligible payments for refund:', eligiblePayments);
+
           return (
             <RefundManagementModal
               isOpen={showRefundModal}
@@ -1944,86 +2224,12 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                 final_total: quote.final_total || 0,
                 amount_paid: paymentSummary.totalPaid,
                 currency: currency,
-                payment_method: quote.payment_method || ''
+                payment_method: quote.payment_method || '',
               }}
-              payments={[]}
+              payments={eligiblePayments}
             />
           );
-        }
-        
-        const eligiblePayments = paymentLedger
-          .filter(p => {
-            const type = p.transaction_type || p.payment_type;
-            const isPayment = type === 'payment' || type === 'customer_payment' || 
-                            type === 'manual_payment' ||
-                            (p.status === 'completed' && p.amount > 0);
-            console.log('Payment eligibility check:', {
-              id: p.id,
-              type: type,
-              status: p.status,
-              amount: p.amount,
-              isPayment: isPayment
-            });
-            return isPayment;
-          })
-          .map(p => {
-            // Check if this is a PayU payment by multiple methods
-            const isPayU = p.gateway_code === 'payu' || 
-                          p.payment_method === 'payu' || 
-                          p.payment_method?.toLowerCase() === 'payu' ||
-                          (p.gateway_response && typeof p.gateway_response === 'object' && p.gateway_response.key?.includes('JP'));
-            
-            // Check if this is a PayPal payment
-            const isPayPal = p.gateway_code === 'paypal' || 
-                            p.payment_method === 'paypal' || 
-                            p.payment_method?.toLowerCase() === 'paypal' ||
-                            (p.gateway_response && typeof p.gateway_response === 'object' && p.gateway_response.id && p.gateway_response.status);
-                          
-            const payment = {
-              id: p.id,
-              amount: Math.abs(p.amount || 0),
-              currency: p.currency || currency, // Use payment currency if available, fallback to quote currency
-              method: p.payment_method || '',
-              gateway: p.gateway_code || p.payment_method || '',
-              reference: p.gateway_transaction_id || p.reference_number || p.transaction_id || 
-                        (p.gateway_response?.payu_id) || // PayU specific - this is the mihpayid
-                        (p.gateway_response?.mihpayid) || // PayU fallback
-                        (p.gateway_response?.gateway_transaction_id) || '',
-              date: new Date(p.payment_date || p.created_at),
-              canRefund: isPayU || isPayPal || p.payment_method === 'bank_transfer' // PayU, PayPal and bank transfers can be refunded
-            };
-            console.log('Mapped payment for refund:', {
-              ...payment,
-              original_gateway_code: p.gateway_code,
-              original_payment_method: p.payment_method,
-              original_reference_number: p.reference_number,
-              original_gateway_transaction_id: p.gateway_transaction_id,
-              original_transaction_id: p.transaction_id,
-              gateway_response: p.gateway_response,
-              isPayU: isPayU,
-              isPayPal: isPayPal
-            });
-            return payment;
-          });
-        
-        console.log('Eligible payments for refund:', eligiblePayments);
-        
-        return (
-          <RefundManagementModal
-            isOpen={showRefundModal}
-            onClose={() => setShowRefundModal(false)}
-            quote={{
-              id: quote.id,
-              final_total: quote.final_total || 0,
-              amount_paid: paymentSummary.totalPaid,
-              currency: currency,
-              payment_method: quote.payment_method || ''
-            }}
-            payments={eligiblePayments}
-          />
-        );
-      })()}
-
+        })()}
     </>
   );
 };

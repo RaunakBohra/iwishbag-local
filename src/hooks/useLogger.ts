@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  logger, 
-  LogCategory, 
+import {
+  logger,
+  LogCategory,
   LogContext,
   ChildLogger,
   logPerformanceStart,
-  logPerformanceEnd
+  logPerformanceEnd,
 } from '@/services/LoggingService';
 
 interface UseLoggerOptions {
@@ -38,8 +38,8 @@ export function useLogger(options: UseLoggerOptions = {}) {
       ...options.additionalContext,
       metadata: {
         componentName: options.componentName,
-        ...options.additionalContext?.metadata
-      }
+        ...options.additionalContext?.metadata,
+      },
     };
 
     if (!componentLogger.current) {
@@ -54,75 +54,84 @@ export function useLogger(options: UseLoggerOptions = {}) {
     if (import.meta.env.DEV && options.componentName) {
       childLogger.debug(
         options.category || LogCategory.SYSTEM_HEALTH,
-        `Component mounted: ${options.componentName}`
+        `Component mounted: ${options.componentName}`,
       );
 
       return () => {
         childLogger.debug(
           options.category || LogCategory.SYSTEM_HEALTH,
-          `Component unmounted: ${options.componentName}`
+          `Component unmounted: ${options.componentName}`,
         );
       };
     }
   }, []);
 
   // Performance tracking helpers
-  const trackPerformance = useMemo(() => ({
-    start: (markName: string) => {
-      const fullMarkName = options.componentName 
-        ? `${options.componentName}.${markName}`
-        : markName;
-      logPerformanceStart(fullMarkName);
-    },
-    
-    end: (markName: string, additionalContext?: LogContext) => {
-      const fullMarkName = options.componentName 
-        ? `${options.componentName}.${markName}`
-        : markName;
-      
-      logPerformanceEnd(
-        fullMarkName, 
-        options.category || LogCategory.PERFORMANCE,
-        {
+  const trackPerformance = useMemo(
+    () => ({
+      start: (markName: string) => {
+        const fullMarkName = options.componentName
+          ? `${options.componentName}.${markName}`
+          : markName;
+        logPerformanceStart(fullMarkName);
+      },
+
+      end: (markName: string, additionalContext?: LogContext) => {
+        const fullMarkName = options.componentName
+          ? `${options.componentName}.${markName}`
+          : markName;
+
+        logPerformanceEnd(fullMarkName, options.category || LogCategory.PERFORMANCE, {
           userId: user?.id,
           sessionId: sessionIdRef.current,
-          ...additionalContext
-        }
-      );
-    }
-  }), [options.componentName, options.category, user?.id]);
+          ...additionalContext,
+        });
+      },
+    }),
+    [options.componentName, options.category, user?.id],
+  );
 
   // API logging helpers
-  const logApi = useMemo(() => ({
-    request: (method: string, url: string, data?: unknown) => {
-      return logger.logApiRequest(method, url, {
-        userId: user?.id,
-        sessionId: sessionIdRef.current,
-        ...options.additionalContext
-      }, data);
-    },
-    
-    response: (requestId: string, status: number, duration: number, data?: unknown) => {
-      logger.logApiResponse(requestId, status, duration, {
-        userId: user?.id,
-        sessionId: sessionIdRef.current,
-        ...options.additionalContext
-      }, data);
-    }
-  }), [user?.id, options.additionalContext]);
+  const logApi = useMemo(
+    () => ({
+      request: (method: string, url: string, data?: unknown) => {
+        return logger.logApiRequest(
+          method,
+          url,
+          {
+            userId: user?.id,
+            sessionId: sessionIdRef.current,
+            ...options.additionalContext,
+          },
+          data,
+        );
+      },
+
+      response: (requestId: string, status: number, duration: number, data?: unknown) => {
+        logger.logApiResponse(
+          requestId,
+          status,
+          duration,
+          {
+            userId: user?.id,
+            sessionId: sessionIdRef.current,
+            ...options.additionalContext,
+          },
+          data,
+        );
+      },
+    }),
+    [user?.id, options.additionalContext],
+  );
 
   // User action logging
   const logUserAction = (action: string, details?: Record<string, unknown>) => {
-    childLogger.info(
-      options.category || LogCategory.SYSTEM_HEALTH,
-      `User action: ${action}`,
-      {
-        metadata: {
-          action,
-          ...details
-        }
-      }
-    );
+    childLogger.info(options.category || LogCategory.SYSTEM_HEALTH, `User action: ${action}`, {
+      metadata: {
+        action,
+        ...details,
+      },
+    });
   };
 
   // Error boundary logging
@@ -134,9 +143,9 @@ export function useLogger(options: UseLoggerOptions = {}) {
       {
         metadata: {
           componentStack: errorInfo.componentStack,
-          errorBoundary: true
-        }
-      }
+          errorBoundary: true,
+        },
+      },
     );
   };
 
@@ -147,19 +156,19 @@ export function useLogger(options: UseLoggerOptions = {}) {
     warn: childLogger.warn.bind(childLogger),
     error: childLogger.error.bind(childLogger),
     critical: childLogger.critical.bind(childLogger),
-    
+
     // Specialized helpers
     trackPerformance,
     logApi,
     logUserAction,
     logErrorBoundary,
-    
+
     // Context
     sessionId: sessionIdRef.current,
     userId: user?.id,
-    
+
     // Direct access to child logger
-    logger: childLogger
+    logger: childLogger,
   };
 }
 
@@ -169,14 +178,14 @@ export function useLogger(options: UseLoggerOptions = {}) {
 export function useFormLogger(formName: string) {
   const { logUserAction, error, trackPerformance } = useLogger({
     category: LogCategory.USER_AUTHENTICATION,
-    componentName: formName
+    componentName: formName,
   });
 
   const logFormSubmit = (data: Record<string, unknown>) => {
     trackPerformance.start('formSubmit');
     logUserAction('form_submit', {
       formName,
-      fields: Object.keys(data)
+      fields: Object.keys(data),
     });
   };
 
@@ -184,29 +193,24 @@ export function useFormLogger(formName: string) {
     trackPerformance.end('formSubmit');
     logUserAction('form_success', {
       formName,
-      hasResult: !!result
+      hasResult: !!result,
     });
   };
 
   const logFormError = (err: Error, data?: Record<string, unknown>) => {
     trackPerformance.end('formSubmit');
-    error(
-      LogCategory.USER_AUTHENTICATION,
-      `Form submission failed: ${formName}`,
-      err,
-      {
-        metadata: {
-          formName,
-          fields: data ? Object.keys(data) : undefined
-        }
-      }
-    );
+    error(LogCategory.USER_AUTHENTICATION, `Form submission failed: ${formName}`, err, {
+      metadata: {
+        formName,
+        fields: data ? Object.keys(data) : undefined,
+      },
+    });
   };
 
   return {
     logFormSubmit,
     logFormSuccess,
-    logFormError
+    logFormError,
   };
 }
 
@@ -216,42 +220,33 @@ export function useFormLogger(formName: string) {
 export function usePaymentLogger(paymentId?: string) {
   const baseLogger = useLogger({
     category: LogCategory.PAYMENT_PROCESSING,
-    additionalContext: { paymentId }
+    additionalContext: { paymentId },
   });
 
   const logPaymentEvent = (event: string, details: Record<string, unknown>) => {
-    baseLogger.info(
-      LogCategory.PAYMENT_PROCESSING,
-      `Payment event: ${event}`,
-      {
-        paymentId,
-        metadata: {
-          event,
-          ...details
-        }
-      }
-    );
+    baseLogger.info(LogCategory.PAYMENT_PROCESSING, `Payment event: ${event}`, {
+      paymentId,
+      metadata: {
+        event,
+        ...details,
+      },
+    });
   };
 
   const logPaymentError = (event: string, err: Error, details?: Record<string, unknown>) => {
-    baseLogger.error(
-      LogCategory.PAYMENT_PROCESSING,
-      `Payment error: ${event}`,
-      err,
-      {
-        paymentId,
-        metadata: {
-          event,
-          ...details
-        }
-      }
-    );
+    baseLogger.error(LogCategory.PAYMENT_PROCESSING, `Payment error: ${event}`, err, {
+      paymentId,
+      metadata: {
+        event,
+        ...details,
+      },
+    });
   };
 
   return {
     ...baseLogger,
     logPaymentEvent,
-    logPaymentError
+    logPaymentError,
   };
 }
 
@@ -261,59 +256,46 @@ export function usePaymentLogger(paymentId?: string) {
 export function useQuoteLogger(quoteId?: string) {
   const baseLogger = useLogger({
     category: LogCategory.QUOTE_CALCULATION,
-    additionalContext: { quoteId }
+    additionalContext: { quoteId },
   });
 
   const logCalculationStart = (params: Record<string, unknown>) => {
     baseLogger.trackPerformance.start('quoteCalculation');
-    baseLogger.info(
-      LogCategory.QUOTE_CALCULATION,
-      'Quote calculation started',
-      {
-        quoteId,
-        metadata: {
-          originCountry: params.originCountry,
-          destinationCountry: params.destinationCountry,
-          itemCount: params.itemCount,
-          currency: params.currency
-        }
-      }
-    );
+    baseLogger.info(LogCategory.QUOTE_CALCULATION, 'Quote calculation started', {
+      quoteId,
+      metadata: {
+        originCountry: params.originCountry,
+        destinationCountry: params.destinationCountry,
+        itemCount: params.itemCount,
+        currency: params.currency,
+      },
+    });
   };
 
   const logCalculationComplete = (result: Record<string, unknown>) => {
     baseLogger.trackPerformance.end('quoteCalculation');
-    baseLogger.info(
-      LogCategory.QUOTE_CALCULATION,
-      'Quote calculation completed',
-      {
-        quoteId,
-        metadata: {
-          finalTotal: result.finalTotal,
-          success: result.success,
-          duration: result.duration
-        }
-      }
-    );
+    baseLogger.info(LogCategory.QUOTE_CALCULATION, 'Quote calculation completed', {
+      quoteId,
+      metadata: {
+        finalTotal: result.finalTotal,
+        success: result.success,
+        duration: result.duration,
+      },
+    });
   };
 
   const logCalculationError = (err: Error, params?: Record<string, unknown>) => {
     baseLogger.trackPerformance.end('quoteCalculation');
-    baseLogger.error(
-      LogCategory.QUOTE_CALCULATION,
-      'Quote calculation failed',
-      err,
-      {
-        quoteId,
-        metadata: params
-      }
-    );
+    baseLogger.error(LogCategory.QUOTE_CALCULATION, 'Quote calculation failed', err, {
+      quoteId,
+      metadata: params,
+    });
   };
 
   return {
     ...baseLogger,
     logCalculationStart,
     logCalculationComplete,
-    logCalculationError
+    logCalculationError,
   };
 }

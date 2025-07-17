@@ -13,7 +13,7 @@ const execAsync = promisify(exec);
 // Configuration
 const REQUIRED_TABLES = [
   'quotes',
-  'user_addresses', 
+  'user_addresses',
   'payment_transactions',
   'payment_documents',
   'quote_documents',
@@ -21,31 +21,43 @@ const REQUIRED_TABLES = [
   'payment_ledger',
   'quote_statuses',
   'system_settings',
-  'profiles'
+  'profiles',
 ];
 
 const REQUIRED_COLUMNS = {
-  quotes: ['destination_country', 'origin_country', 'customer_name', 'breakdown', 'payment_details'],
+  quotes: [
+    'destination_country',
+    'origin_country',
+    'customer_name',
+    'breakdown',
+    'payment_details',
+  ],
   user_addresses: ['destination_country', 'phone', 'recipient_name', 'nickname'],
   payment_transactions: ['paypal_capture_id', 'paypal_payer_email', 'paypal_payer_id'],
   payment_documents: ['id', 'quote_id', 'user_id', 'verified', 'document_url'],
   quote_documents: ['id', 'quote_id', 'document_type', 'file_name', 'file_url', 'uploaded_by'],
-  shipping_routes: ['id', 'origin_country', 'destination_country', 'base_shipping_cost', 'is_active']
+  shipping_routes: [
+    'id',
+    'origin_country',
+    'destination_country',
+    'base_shipping_cost',
+    'is_active',
+  ],
 };
 
 const REQUIRED_FUNCTIONS = [
   'handle_new_user',
-  'process_stripe_payment_success', 
+  'process_stripe_payment_success',
   'process_paypal_payment_atomic',
   'update_updated_at_column',
-  'is_admin'
+  'is_admin',
 ];
 
 console.log('🔍 Starting Schema Sync Validation...\n');
 
 async function checkLocalDatabase() {
   console.log('📊 Checking local database schema...');
-  
+
   try {
     // Check if local database is running by testing connection
     await execAsync(`
@@ -76,7 +88,7 @@ async function checkLocalDatabase() {
 
 async function validateRequiredTables() {
   console.log('\n📋 Validating required tables exist...');
-  
+
   for (const table of REQUIRED_TABLES) {
     try {
       const { stdout } = await execAsync(`
@@ -85,7 +97,7 @@ async function validateRequiredTables() {
           WHERE table_schema = 'public' AND table_name = '${table}';
         " 2>/dev/null
       `);
-      
+
       if (!stdout.includes(table)) {
         console.error(`❌ Missing table: ${table}`);
         return false;
@@ -103,7 +115,7 @@ async function validateRequiredTables() {
 
 async function validateRequiredColumns() {
   console.log('\n🏗️ Validating required columns...');
-  
+
   for (const [table, columns] of Object.entries(REQUIRED_COLUMNS)) {
     for (const column of columns) {
       try {
@@ -113,7 +125,7 @@ async function validateRequiredColumns() {
             WHERE table_name = '${table}' AND column_name = '${column}';
           " 2>/dev/null
         `);
-        
+
         if (!stdout.includes(column)) {
           console.error(`❌ Missing column: ${table}.${column}`);
           return false;
@@ -132,7 +144,7 @@ async function validateRequiredColumns() {
 
 async function validateRequiredFunctions() {
   console.log('\n⚙️ Validating required functions...');
-  
+
   for (const functionName of REQUIRED_FUNCTIONS) {
     try {
       const { stdout } = await execAsync(`
@@ -141,7 +153,7 @@ async function validateRequiredFunctions() {
           WHERE routine_schema = 'public' AND routine_name = '${functionName}';
         " 2>/dev/null
       `);
-      
+
       if (!stdout.includes(functionName)) {
         console.error(`❌ Missing function: ${functionName}`);
         return false;
@@ -159,17 +171,17 @@ async function validateRequiredFunctions() {
 
 async function checkComponentImports() {
   console.log('\n🧩 Checking component imports...');
-  
+
   try {
     // Run TypeScript compilation to catch missing imports
-    const { stdout, stderr } = await execAsync('npx tsc --noEmit --project tsconfig.json');
-    
+    const { stderr } = await execAsync('npx tsc --noEmit --project tsconfig.json');
+
     if (stderr && stderr.includes('Cannot find name')) {
       console.error('❌ TypeScript compilation found missing imports:');
       console.error(stderr);
       return false;
     }
-    
+
     console.log('✅ All component imports are valid');
     return true;
   } catch (error) {
@@ -178,7 +190,7 @@ async function checkComponentImports() {
       console.error(error.message);
       return false;
     }
-    
+
     // Other TypeScript errors (not import-related) are acceptable
     console.log('⚠️ TypeScript compilation has warnings (not import-related)');
     return true;
@@ -187,21 +199,21 @@ async function checkComponentImports() {
 
 async function main() {
   console.log('🚀 iwishBag Schema Sync Validation\n');
-  
+
   const checks = [
     { name: 'Local Database Schema', check: checkLocalDatabase },
     { name: 'Required Tables', check: validateRequiredTables },
     { name: 'Required Columns', check: validateRequiredColumns },
     { name: 'Required Functions', check: validateRequiredFunctions },
-    { name: 'Component Imports', check: checkComponentImports }
+    { name: 'Component Imports', check: checkComponentImports },
   ];
-  
+
   let allPassed = true;
-  
+
   for (const { name, check } of checks) {
     console.log(`\n--- ${name} ---`);
     const passed = await check();
-    
+
     if (!passed) {
       allPassed = false;
       console.error(`❌ ${name} validation failed\n`);
@@ -209,9 +221,9 @@ async function main() {
       console.log(`✅ ${name} validation passed\n`);
     }
   }
-  
+
   console.log('\n' + '='.repeat(50));
-  
+
   if (allPassed) {
     console.log('🎉 All schema validation checks passed!');
     console.log('✅ Safe to deploy or continue development');

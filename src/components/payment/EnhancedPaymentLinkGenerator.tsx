@@ -23,18 +23,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Link, 
-  Loader2, 
-  Copy, 
-  ExternalLink, 
-  Plus, 
-  Trash2, 
-  Settings, 
+import {
+  Link,
+  Loader2,
+  Copy,
+  ExternalLink,
+  Plus,
+  Trash2,
+  Settings,
   Eye,
   Zap,
   Shield,
-  Smartphone
+  Smartphone,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -125,14 +125,14 @@ export function EnhancedPaymentLinkGenerator({
   const [open, setOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
-  
+
   // Helper function to get customer info with fallbacks
   const getCustomerInfo = () => {
     // Try to extract from quote data first (for most complete information)
     const shipping = quote?.shipping_address;
     const user = quote?.user;
     const profiles = quote?.profiles; // From the profile join
-    
+
     // Debug: Log the quote structure to understand the data better
     console.log('🔍 [EnhancedPaymentLinkGenerator] Quote structure for customer info extraction:');
     console.log('  - Has shipping address:', !!shipping);
@@ -149,74 +149,98 @@ export function EnhancedPaymentLinkGenerator({
     console.log('  - Customer name (direct):', quote?.customer_name);
     console.log('  - Customer phone (direct):', quote?.customer_phone);
     console.log('  - Email (direct):', quote?.email);
-    
+
     // Build customer info with comprehensive fallbacks
     // Priority: profiles (most complete) -> shipping address -> user -> quote direct fields -> customerInfo prop
     const extractedInfo = {
-      name: profiles?.full_name || shipping?.fullName || shipping?.name || user?.full_name || quote?.customer_name || customerInfo?.name || '',
-      email: profiles?.email || shipping?.email || user?.email || quote?.email || customerInfo?.email || '',
-      phone: profiles?.phone || shipping?.phone || user?.phone || quote?.customer_phone || customerInfo?.phone || ''
+      name:
+        profiles?.full_name ||
+        shipping?.fullName ||
+        shipping?.name ||
+        user?.full_name ||
+        quote?.customer_name ||
+        customerInfo?.name ||
+        '',
+      email:
+        profiles?.email ||
+        shipping?.email ||
+        user?.email ||
+        quote?.email ||
+        customerInfo?.email ||
+        '',
+      phone:
+        profiles?.phone ||
+        shipping?.phone ||
+        user?.phone ||
+        quote?.customer_phone ||
+        customerInfo?.phone ||
+        '',
     };
-    
-    console.log('🎯 [EnhancedPaymentLinkGenerator] Extracted info before fallback to customerInfo:', extractedInfo);
-    
+
+    console.log(
+      '🎯 [EnhancedPaymentLinkGenerator] Extracted info before fallback to customerInfo:',
+      extractedInfo,
+    );
+
     // Use customerInfo as final fallback only if extracted info is incomplete
     return {
       name: extractedInfo.name || customerInfo?.name || '',
       email: extractedInfo.email || customerInfo?.email || '',
-      phone: extractedInfo.phone || customerInfo?.phone || ''
+      phone: extractedInfo.phone || customerInfo?.phone || '',
     };
   };
 
   // Helper function to generate smart description
   const generateDescription = () => {
     if (!quote) return `Payment for Order ${quoteId}`;
-    
+
     const orderId = quote.order_display_id || quote.display_id || quoteId;
     const productName = quote.product_name;
     const dueAmount = quote.final_total - (quote.amount_paid || 0);
     const isPartialPayment = dueAmount < quote.final_total && dueAmount > 0;
-    
+
     if (productName) {
       if (isPartialPayment) {
         return `Outstanding payment for ${productName} - Order ${orderId}`;
       }
       return `Payment for ${productName} - Order ${orderId}`;
     }
-    
+
     if (isPartialPayment) {
       return `Outstanding balance for Order ${orderId}`;
     }
-    
+
     return `Payment for Order ${orderId}`;
   };
 
   // Helper function to determine smart expiry
   const getSmartExpiryDays = () => {
     if (!quote) return '7';
-    
+
     // If quote is approved recently, give shorter expiry
     const approvedAt = quote.approved_at;
     if (approvedAt) {
-      const daysSinceApproval = Math.floor((Date.now() - new Date(approvedAt).getTime()) / (1000 * 60 * 60 * 24));
+      const daysSinceApproval = Math.floor(
+        (Date.now() - new Date(approvedAt).getTime()) / (1000 * 60 * 60 * 24),
+      );
       if (daysSinceApproval <= 1) return '3'; // Recently approved, urgent
       if (daysSinceApproval <= 7) return '7'; // Normal timeframe
       return '14'; // Older quotes get more time
     }
-    
+
     // For high priority quotes, shorter expiry
     if (quote.priority === 'high') return '3';
     if (quote.priority === 'urgent') return '1';
-    
+
     return '7';
   };
 
   // Helper function to suggest custom fields based on quote
   const getSuggestedCustomFields = () => {
     if (!quote) return [];
-    
+
     const suggestions: CustomField[] = [];
-    
+
     // If international shipping, suggest delivery preferences
     if (quote.destination_country !== quote.origin_country) {
       suggestions.push({
@@ -225,10 +249,10 @@ export function EnhancedPaymentLinkGenerator({
         label: 'Delivery Preference',
         required: false,
         options: ['Standard Delivery', 'Express Delivery', 'Hold at Customs'],
-        placeholder: 'Select preference'
+        placeholder: 'Select preference',
       });
     }
-    
+
     // If high value order, suggest ID verification
     if (quote.final_total > 500) {
       suggestions.push({
@@ -236,10 +260,10 @@ export function EnhancedPaymentLinkGenerator({
         type: 'text',
         label: 'ID Number (for high-value orders)',
         required: false,
-        placeholder: 'Enter ID number for verification'
+        placeholder: 'Enter ID number for verification',
       });
     }
-    
+
     // For certain destinations, suggest alternative contact
     if (['NP', 'BD', 'LK'].includes(quote.destination_country)) {
       suggestions.push({
@@ -247,10 +271,10 @@ export function EnhancedPaymentLinkGenerator({
         type: 'phone',
         label: 'Alternative Contact Number',
         required: false,
-        placeholder: 'Backup contact number'
+        placeholder: 'Backup contact number',
       });
     }
-    
+
     return suggestions;
   };
 
@@ -279,15 +303,15 @@ export function EnhancedPaymentLinkGenerator({
       console.log('  - Quote customer_phone:', quote?.customer_phone);
       console.log('  - Quote email:', quote?.email);
       console.log('  - CustomerInfo prop:', customerInfo);
-      
+
       const customer = getCustomerInfo();
-      
+
       // Log the final customer info for debugging
       console.log('🎯 [EnhancedPaymentLinkGenerator] Final customer info extracted:');
       console.log('  - Name:', customer.name);
-      console.log('  - Email:', customer.email); 
+      console.log('  - Email:', customer.email);
       console.log('  - Phone:', customer.phone);
-      
+
       setFormData({
         name: customer.name,
         email: customer.email,
@@ -299,7 +323,7 @@ export function EnhancedPaymentLinkGenerator({
         partialPaymentAllowed: false,
         apiMethod: 'rest',
       });
-      
+
       console.log('✅ [EnhancedPaymentLinkGenerator] Form data updated');
     }
   }, [open, quote, customerInfo]);
@@ -307,10 +331,10 @@ export function EnhancedPaymentLinkGenerator({
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [createdLink, setCreatedLink] = useState<PaymentLinkResponse | null>(null);
   const [showSuggestedFields, setShowSuggestedFields] = useState(false);
-  
+
   // Get suggested custom fields
   const suggestedFields = getSuggestedCustomFields();
-  
+
   // Smart amount analysis
   const getAmountInfo = () => {
     if (!quote) {
@@ -319,24 +343,24 @@ export function EnhancedPaymentLinkGenerator({
         totalAmount: amount,
         paidAmount: 0,
         dueAmount: amount,
-        paymentStatus: 'unknown'
+        paymentStatus: 'unknown',
       };
     }
-    
+
     const totalAmount = quote.final_total || 0;
     const paidAmount = quote.amount_paid || 0;
     const dueAmount = totalAmount - paidAmount;
     const isDueAmount = paidAmount > 0 && dueAmount > 0;
-    
+
     return {
       isDueAmount,
       totalAmount,
       paidAmount,
       dueAmount,
-      paymentStatus: quote.payment_status || 'pending'
+      paymentStatus: quote.payment_status || 'pending',
     };
   };
-  
+
   const amountInfo = getAmountInfo();
 
   // Add custom field
@@ -346,7 +370,7 @@ export function EnhancedPaymentLinkGenerator({
       type: 'text',
       label: 'Custom Field',
       required: false,
-      placeholder: 'Enter value...'
+      placeholder: 'Enter value...',
     };
     setCustomFields([...customFields, newField]);
   };
@@ -354,7 +378,7 @@ export function EnhancedPaymentLinkGenerator({
   // Add suggested field
   const addSuggestedField = (field: CustomField) => {
     // Check if field already exists
-    if (customFields.some(f => f.name === field.name)) {
+    if (customFields.some((f) => f.name === field.name)) {
       toast({
         title: 'Field already added',
         description: 'This field is already in your custom fields list.',
@@ -362,7 +386,7 @@ export function EnhancedPaymentLinkGenerator({
       });
       return;
     }
-    
+
     setCustomFields([...customFields, { ...field }]);
     toast({
       title: 'Field added',
@@ -377,8 +401,8 @@ export function EnhancedPaymentLinkGenerator({
 
   // Update custom field
   const updateCustomField = (index: number, updates: Partial<CustomField>) => {
-    const updated = customFields.map((field, i) => 
-      i === index ? { ...field, ...updates } : field
+    const updated = customFields.map((field, i) =>
+      i === index ? { ...field, ...updates } : field,
     );
     setCustomFields(updated);
   };
@@ -402,19 +426,20 @@ export function EnhancedPaymentLinkGenerator({
       customFields,
       template: formData.template,
       partialPaymentAllowed: formData.partialPaymentAllowed,
-      apiMethod: formData.apiMethod
+      apiMethod: formData.apiMethod,
     };
 
     console.log('🚀 [EnhancedPaymentLinkGenerator] Creating payment link with data:', requestBody);
 
     try {
       // Determine which edge function to call based on gateway
-      const functionName = formData.gateway === 'paypal' 
-        ? 'create-paypal-payment-link' 
-        : 'create-payu-payment-link-v2';
+      const functionName =
+        formData.gateway === 'paypal'
+          ? 'create-paypal-payment-link'
+          : 'create-payu-payment-link-v2';
 
       const { data, error } = await supabase.functions.invoke(functionName, {
-        body: requestBody
+        body: requestBody,
       });
 
       console.log('📡 [EnhancedPaymentLinkGenerator] Payment link API response:', { data, error });
@@ -429,7 +454,7 @@ export function EnhancedPaymentLinkGenerator({
         setCreatedLink(data);
         onLinkCreated?.(data);
         toast({
-          title: "Payment Link Created!",
+          title: 'Payment Link Created!',
           description: `${data.apiVersion === 'v2_rest' ? 'Enhanced' : 'Legacy'} payment link generated successfully.`,
         });
       } else {
@@ -439,9 +464,9 @@ export function EnhancedPaymentLinkGenerator({
     } catch (error: unknown) {
       console.error('💥 [EnhancedPaymentLinkGenerator] Payment link creation error:', error);
       toast({
-        title: "Failed to create payment link",
-        description: (error instanceof Error ? error.message : 'Unknown error occurred'),
-        variant: "destructive",
+        title: 'Failed to create payment link',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
       });
     } finally {
       setIsCreating(false);
@@ -486,16 +511,26 @@ export function EnhancedPaymentLinkGenerator({
 
   const getApiMethodBadge = (method: string) => {
     if (method === 'rest') {
-      return <Badge variant="default" className="bg-green-100 text-green-800"><Zap className="w-3 h-3 mr-1" />Enhanced</Badge>;
+      return (
+        <Badge variant="default" className="bg-green-100 text-green-800">
+          <Zap className="w-3 h-3 mr-1" />
+          Enhanced
+        </Badge>
+      );
     }
-    return <Badge variant="secondary"><Shield className="w-3 h-3 mr-1" />Legacy</Badge>;
+    return (
+      <Badge variant="secondary">
+        <Shield className="w-3 h-3 mr-1" />
+        Legacy
+      </Badge>
+    );
   };
 
   const getTemplateBadge = (template: string) => {
     const badges = {
       default: <Badge variant="outline">Default</Badge>,
       minimal: <Badge variant="outline">Minimal</Badge>,
-      branded: <Badge variant="outline">Branded</Badge>
+      branded: <Badge variant="outline">Branded</Badge>,
     };
     return badges[template as keyof typeof badges] || badges.default;
   };
@@ -522,19 +557,23 @@ export function EnhancedPaymentLinkGenerator({
                 </Badge>
                 {amountInfo.isDueAmount && (
                   <Badge variant="secondary" className="text-xs">
-                    Outstanding: {currency} {amountInfo.dueAmount.toFixed(2)} of {amountInfo.totalAmount.toFixed(2)}
+                    Outstanding: {currency} {amountInfo.dueAmount.toFixed(2)} of{' '}
+                    {amountInfo.totalAmount.toFixed(2)}
                   </Badge>
                 )}
                 {quote.product_name && (
                   <Badge variant="outline" className="text-xs">
-                    {quote.product_name.length > 30 ? `${quote.product_name.slice(0, 30)}...` : quote.product_name}
+                    {quote.product_name.length > 30
+                      ? `${quote.product_name.slice(0, 30)}...`
+                      : quote.product_name}
                   </Badge>
                 )}
-                {quote.destination_country && quote.destination_country !== quote.origin_country && (
-                  <Badge variant="outline" className="text-xs">
-                    Ship to: {quote.destination_country}
-                  </Badge>
-                )}
+                {quote.destination_country &&
+                  quote.destination_country !== quote.origin_country && (
+                    <Badge variant="outline" className="text-xs">
+                      Ship to: {quote.destination_country}
+                    </Badge>
+                  )}
               </div>
             )}
           </DialogDescription>
@@ -564,12 +603,27 @@ export function EnhancedPaymentLinkGenerator({
                               Information Auto-filled from Order
                             </p>
                             <div className="text-xs text-green-700 space-y-1">
-                              <p>✓ Customer details from {quote.shipping_address ? 'shipping address' : 'user profile'}</p>
-                              <p>✓ Smart description based on product: {quote.product_name || 'order details'}</p>
-                              <p>✓ Expiry optimized for {quote.priority || 'normal'} priority order</p>
-                              <p>✓ Form data: Name="{formData.name}", Email="{formData.email}", Phone="{formData.phone}"</p>
+                              <p>
+                                ✓ Customer details from{' '}
+                                {quote.shipping_address ? 'shipping address' : 'user profile'}
+                              </p>
+                              <p>
+                                ✓ Smart description based on product:{' '}
+                                {quote.product_name || 'order details'}
+                              </p>
+                              <p>
+                                ✓ Expiry optimized for {quote.priority || 'normal'} priority order
+                              </p>
+                              <p>
+                                ✓ Form data: Name="{formData.name}", Email="
+                                {formData.email}", Phone="{formData.phone}"
+                              </p>
                               {amountInfo.isDueAmount && (
-                                <p>✓ Amount set to outstanding balance (${currency} {amount.toFixed(2)} of ${amountInfo.totalAmount.toFixed(2)})</p>
+                                <p>
+                                  ✓ Amount set to outstanding balance ($
+                                  {currency} {amount.toFixed(2)} of $
+                                  {amountInfo.totalAmount.toFixed(2)})
+                                </p>
                               )}
                             </div>
                           </div>
@@ -583,7 +637,9 @@ export function EnhancedPaymentLinkGenerator({
                       <Label htmlFor="gateway">Payment Gateway</Label>
                       <Select
                         value={formData.gateway}
-                        onValueChange={(value: 'payu' | 'paypal') => setFormData({ ...formData, gateway: value })}
+                        onValueChange={(value: 'payu' | 'paypal') =>
+                          setFormData({ ...formData, gateway: value })
+                        }
                       >
                         <SelectTrigger id="gateway">
                           <SelectValue />
@@ -594,10 +650,9 @@ export function EnhancedPaymentLinkGenerator({
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        {formData.gateway === 'payu' 
+                        {formData.gateway === 'payu'
                           ? 'Best for Indian customers with INR payments'
-                          : 'Best for international customers with USD/EUR payments'
-                        }
+                          : 'Best for international customers with USD/EUR payments'}
                       </p>
                     </div>
 
@@ -606,7 +661,9 @@ export function EnhancedPaymentLinkGenerator({
                         <Label htmlFor="api-method">API Method</Label>
                         <Select
                           value={formData.apiMethod}
-                          onValueChange={(value: 'rest' | 'legacy') => setFormData({ ...formData, apiMethod: value })}
+                          onValueChange={(value: 'rest' | 'legacy') =>
+                            setFormData({ ...formData, apiMethod: value })
+                          }
                         >
                           <SelectTrigger id="api-method">
                             <SelectValue />
@@ -627,10 +684,9 @@ export function EnhancedPaymentLinkGenerator({
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-muted-foreground">
-                          {formData.apiMethod === 'rest' 
-                            ? 'Uses PayU\'s latest REST API with enhanced features'
-                            : 'Uses traditional create_invoice API (fallback)'
-                          }
+                          {formData.apiMethod === 'rest'
+                            ? "Uses PayU's latest REST API with enhanced features"
+                            : 'Uses traditional create_invoice API (fallback)'}
                         </p>
                       </div>
                     )}
@@ -694,7 +750,12 @@ export function EnhancedPaymentLinkGenerator({
                       <Textarea
                         id="description"
                         value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            description: e.target.value,
+                          })
+                        }
                         placeholder="Payment for order..."
                         rows={2}
                       />
@@ -720,8 +781,11 @@ export function EnhancedPaymentLinkGenerator({
                           </div>
                           <Switch
                             checked={formData.partialPaymentAllowed}
-                            onCheckedChange={(checked) => 
-                              setFormData({ ...formData, partialPaymentAllowed: checked })
+                            onCheckedChange={(checked) =>
+                              setFormData({
+                                ...formData,
+                                partialPaymentAllowed: checked,
+                              })
                             }
                           />
                         </div>
@@ -736,7 +800,9 @@ export function EnhancedPaymentLinkGenerator({
                       <CardContent>
                         <Select
                           value={formData.template}
-                          onValueChange={(value: 'default' | 'minimal' | 'branded') => setFormData({ ...formData, template: value })}
+                          onValueChange={(value: 'default' | 'minimal' | 'branded') =>
+                            setFormData({ ...formData, template: value })
+                          }
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -788,41 +854,49 @@ export function EnhancedPaymentLinkGenerator({
                     </div>
 
                     {/* Suggested Fields */}
-                    {showSuggestedFields && suggestedFields.length > 0 && formData.apiMethod === 'rest' && (
-                      <Card className="bg-blue-50 border-blue-200">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm flex items-center gap-2">
-                            <Settings className="w-4 h-4" />
-                            Suggested Fields for This Order
-                          </CardTitle>
-                          <CardDescription className="text-xs">
-                            Based on order details, we suggest these fields to improve customer experience
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                          {suggestedFields.map((field, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
-                              <div className="space-y-1">
-                                <div className="text-sm font-medium">{field.label}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {field.type} field • {field.required ? 'Required' : 'Optional'}
-                                  {field.options && ` • ${field.options.length} options`}
-                                </div>
-                              </div>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => addSuggestedField(field)}
-                                disabled={customFields.some(f => f.name === field.name)}
+                    {showSuggestedFields &&
+                      suggestedFields.length > 0 &&
+                      formData.apiMethod === 'rest' && (
+                        <Card className="bg-blue-50 border-blue-200">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm flex items-center gap-2">
+                              <Settings className="w-4 h-4" />
+                              Suggested Fields for This Order
+                            </CardTitle>
+                            <CardDescription className="text-xs">
+                              Based on order details, we suggest these fields to improve customer
+                              experience
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            {suggestedFields.map((field, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-2 bg-white rounded border"
                               >
-                                {customFields.some(f => f.name === field.name) ? 'Added' : 'Add'}
-                              </Button>
-                            </div>
-                          ))}
-                        </CardContent>
-                      </Card>
-                    )}
+                                <div className="space-y-1">
+                                  <div className="text-sm font-medium">{field.label}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {field.type} field • {field.required ? 'Required' : 'Optional'}
+                                    {field.options && ` • ${field.options.length} options`}
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => addSuggestedField(field)}
+                                  disabled={customFields.some((f) => f.name === field.name)}
+                                >
+                                  {customFields.some((f) => f.name === field.name)
+                                    ? 'Added'
+                                    : 'Add'}
+                                </Button>
+                              </div>
+                            ))}
+                          </CardContent>
+                        </Card>
+                      )}
 
                     {formData.apiMethod === 'legacy' && (
                       <Card className="bg-amber-50 border-amber-200">
@@ -864,7 +938,11 @@ export function EnhancedPaymentLinkGenerator({
                               <Label className="text-xs">Field Name</Label>
                               <Input
                                 value={field.name}
-                                onChange={(e) => updateCustomField(index, { name: e.target.value })}
+                                onChange={(e) =>
+                                  updateCustomField(index, {
+                                    name: e.target.value,
+                                  })
+                                }
                                 placeholder="field_name"
                                 className="h-8"
                               />
@@ -873,7 +951,15 @@ export function EnhancedPaymentLinkGenerator({
                               <Label className="text-xs">Field Type</Label>
                               <Select
                                 value={field.type}
-                                onValueChange={(value: 'text' | 'number' | 'email' | 'phone' | 'date' | 'dropdown') => updateCustomField(index, { type: value })}
+                                onValueChange={(
+                                  value:
+                                    | 'text'
+                                    | 'number'
+                                    | 'email'
+                                    | 'phone'
+                                    | 'date'
+                                    | 'dropdown',
+                                ) => updateCustomField(index, { type: value })}
                               >
                                 <SelectTrigger className="h-8">
                                   <SelectValue />
@@ -895,7 +981,11 @@ export function EnhancedPaymentLinkGenerator({
                               <Label className="text-xs">Display Label</Label>
                               <Input
                                 value={field.label}
-                                onChange={(e) => updateCustomField(index, { label: e.target.value })}
+                                onChange={(e) =>
+                                  updateCustomField(index, {
+                                    label: e.target.value,
+                                  })
+                                }
                                 placeholder="Field Label"
                                 className="h-8"
                               />
@@ -904,7 +994,11 @@ export function EnhancedPaymentLinkGenerator({
                               <Label className="text-xs">Placeholder</Label>
                               <Input
                                 value={field.placeholder || ''}
-                                onChange={(e) => updateCustomField(index, { placeholder: e.target.value })}
+                                onChange={(e) =>
+                                  updateCustomField(index, {
+                                    placeholder: e.target.value,
+                                  })
+                                }
                                 placeholder="Enter placeholder..."
                                 className="h-8"
                               />
@@ -915,7 +1009,11 @@ export function EnhancedPaymentLinkGenerator({
                             <div className="flex items-center space-x-2">
                               <Switch
                                 checked={field.required}
-                                onCheckedChange={(checked) => updateCustomField(index, { required: checked })}
+                                onCheckedChange={(checked) =>
+                                  updateCustomField(index, {
+                                    required: checked,
+                                  })
+                                }
                               />
                               <Label className="text-xs">Required</Label>
                             </div>
@@ -926,9 +1024,14 @@ export function EnhancedPaymentLinkGenerator({
                               <Label className="text-xs">Options (comma-separated)</Label>
                               <Input
                                 value={field.options?.join(', ') || ''}
-                                onChange={(e) => updateCustomField(index, { 
-                                  options: e.target.value.split(',').map(s => s.trim()).filter(s => s)
-                                })}
+                                onChange={(e) =>
+                                  updateCustomField(index, {
+                                    options: e.target.value
+                                      .split(',')
+                                      .map((s) => s.trim())
+                                      .filter((s) => s),
+                                  })
+                                }
                                 placeholder="Option 1, Option 2, Option 3"
                                 className="h-8"
                               />
@@ -948,9 +1051,7 @@ export function EnhancedPaymentLinkGenerator({
                         <Eye className="w-4 h-4" />
                         Payment Link Preview
                       </CardTitle>
-                      <CardDescription>
-                        Review your payment link configuration
-                      </CardDescription>
+                      <CardDescription>Review your payment link configuration</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-2 gap-4 text-sm">
@@ -967,7 +1068,8 @@ export function EnhancedPaymentLinkGenerator({
                           <strong>Expires:</strong> {formData.expiryDays} days
                         </div>
                         <div>
-                          <strong>Partial Payment:</strong> {formData.partialPaymentAllowed ? 'Allowed' : 'Not allowed'}
+                          <strong>Partial Payment:</strong>{' '}
+                          {formData.partialPaymentAllowed ? 'Allowed' : 'Not allowed'}
                         </div>
                         <div>
                           <strong>Custom Fields:</strong> {customFields.length} field(s)
@@ -982,7 +1084,8 @@ export function EnhancedPaymentLinkGenerator({
                               <div key={index} className="text-xs bg-gray-50 p-2 rounded">
                                 <span className="font-medium">{field.label}</span>
                                 <span className="text-muted-foreground ml-2">
-                                  ({field.type}{field.required ? ', required' : ''})
+                                  ({field.type}
+                                  {field.required ? ', required' : ''})
                                 </span>
                               </div>
                             ))}
@@ -1025,22 +1128,27 @@ export function EnhancedPaymentLinkGenerator({
                 <h4 className="font-medium text-green-900">Payment Link Created!</h4>
                 {getApiMethodBadge(createdLink.apiVersion?.includes('rest') ? 'rest' : 'legacy')}
                 {createdLink.fallbackUsed && (
-                  <Badge variant="outline" className="text-orange-600">Fallback Used</Badge>
+                  <Badge variant="outline" className="text-orange-600">
+                    Fallback Used
+                  </Badge>
                 )}
               </div>
               <p className="text-sm text-green-700">
-                {createdLink.apiVersion?.includes('rest') 
+                {createdLink.apiVersion?.includes('rest')
                   ? 'Enhanced payment link with advanced features created successfully.'
-                  : 'Legacy payment link created successfully.'
-                }
+                  : 'Legacy payment link created successfully.'}
               </p>
               {createdLink.features && (
                 <div className="mt-2 flex gap-2">
                   {createdLink.features.customFields && (
-                    <Badge variant="outline" className="text-xs">Custom Fields</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      Custom Fields
+                    </Badge>
                   )}
                   {createdLink.features.partialPayment && (
-                    <Badge variant="outline" className="text-xs">Partial Payment</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      Partial Payment
+                    </Badge>
                   )}
                 </div>
               )}
@@ -1090,7 +1198,9 @@ export function EnhancedPaymentLinkGenerator({
                 <div className="text-sm space-y-1 text-muted-foreground">
                   <p>Amount: ₹{createdLink.amountInINR} INR</p>
                   {createdLink.originalCurrency !== 'INR' && (
-                    <p>Original: {createdLink.originalCurrency} {createdLink.originalAmount}</p>
+                    <p>
+                      Original: {createdLink.originalCurrency} {createdLink.originalAmount}
+                    </p>
                   )}
                   <p>Expires: {new Date(createdLink.expiresAt).toLocaleDateString()}</p>
                   <p>Link Code: {createdLink.linkCode}</p>

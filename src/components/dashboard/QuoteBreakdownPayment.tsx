@@ -1,5 +1,4 @@
-
-import React from "react";
+import React from 'react';
 
 export const QuoteBreakdownPayment: React.FC = () => {
   // This component's logic has been moved to the main /checkout page.

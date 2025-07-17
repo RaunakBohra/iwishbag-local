@@ -5,17 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { 
-  QrCode, 
-  Smartphone, 
-  Download, 
-  Copy, 
-  CheckCircle, 
+import {
+  QrCode,
+  Smartphone,
+  Download,
+  Copy,
+  CheckCircle,
   AlertTriangle,
   Clock,
   RefreshCw,
   ExternalLink,
-  X
+  X,
 } from 'lucide-react';
 import { PaymentGateway } from '@/types/payment';
 import { useToast } from '@/components/ui/use-toast';
@@ -41,10 +41,10 @@ const GATEWAY_INSTRUCTIONS = {
       'Tap on "Scan QR" or "Pay with QR"',
       'Scan the QR code displayed on screen',
       'Review payment details and confirm',
-      'Enter your eSewa PIN to complete payment'
+      'Enter your eSewa PIN to complete payment',
     ],
     appStoreUrl: 'https://play.google.com/store/apps/details?id=com.esewa.android',
-    appStoreName: 'Google Play Store'
+    appStoreName: 'Google Play Store',
   },
   khalti: {
     name: 'Khalti',
@@ -53,10 +53,10 @@ const GATEWAY_INSTRUCTIONS = {
       'Tap on "Scan QR" or "Pay with QR"',
       'Scan the QR code displayed on screen',
       'Review payment details and confirm',
-      'Enter your Khalti PIN to complete payment'
+      'Enter your Khalti PIN to complete payment',
     ],
     appStoreUrl: 'https://play.google.com/store/apps/details?id=com.khalti.customer',
-    appStoreName: 'Google Play Store'
+    appStoreName: 'Google Play Store',
   },
   fonepay: {
     name: 'Fonepay',
@@ -65,11 +65,11 @@ const GATEWAY_INSTRUCTIONS = {
       'Tap on "Scan QR" or "Pay with QR"',
       'Scan the QR code displayed on screen',
       'Review payment details and confirm',
-      'Enter your Fonepay PIN to complete payment'
+      'Enter your Fonepay PIN to complete payment',
     ],
     appStoreUrl: 'https://play.google.com/store/apps/details?id=com.fonepay.customer',
-    appStoreName: 'Google Play Store'
-  }
+    appStoreName: 'Google Play Store',
+  },
 };
 
 export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
@@ -81,7 +81,7 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
   currency,
   transactionId,
   onPaymentComplete,
-  onPaymentFailed
+  onPaymentFailed,
 }) => {
   const { toast } = useToast();
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
@@ -96,7 +96,7 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
 
     // Start timer
     const timer = setInterval(() => {
-      setTimeElapsed(prev => prev + 1);
+      setTimeElapsed((prev) => prev + 1);
     }, 1000);
 
     // Check payment status every 10 seconds
@@ -126,7 +126,7 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
 
   const checkPaymentStatus = async () => {
     if (paymentStatus !== 'pending') return;
-    
+
     // Add null check for transactionId
     if (!transactionId) {
       console.error('No transaction ID provided');
@@ -136,7 +136,9 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
     setIsCheckingPayment(true);
     try {
       // Call the Supabase function to check payment status
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
 
       if (!accessToken) {
@@ -147,13 +149,13 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
       if (!supabaseUrl) {
         throw new Error('Supabase URL is not configured');
       }
-      
+
       const functionUrl = `${supabaseUrl}/functions/v1/check-payment-status/${transactionId}`;
 
       const response = await fetch(functionUrl, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
       });
@@ -163,7 +165,7 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
       }
 
       const data = await response.json();
-      
+
       if (data && data.success) {
         if (data.status === 'completed') {
           setPaymentStatus('completed');
@@ -191,8 +193,9 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
       });
       return;
     }
-    
-    navigator.clipboard.writeText(transactionId)
+
+    navigator.clipboard
+      .writeText(transactionId)
       .then(() => {
         toast({
           title: 'Transaction ID copied',
@@ -271,11 +274,7 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
             </CardHeader>
             <CardContent className="text-center">
               <div className="bg-gray-50 p-4 rounded-lg inline-block">
-                <img 
-                  src={qrCodeUrl} 
-                  alt="Payment QR Code" 
-                  className="w-48 h-48 mx-auto"
-                />
+                <img src={qrCodeUrl} alt="Payment QR Code" className="w-48 h-48 mx-auto" />
               </div>
               <p className="text-sm text-muted-foreground mt-2">
                 Scan this QR code with your {instructions.name} app
@@ -332,11 +331,17 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
                   <span className="text-sm">Time Elapsed:</span>
                   <span className="text-sm font-medium">{formatTime(timeElapsed)}</span>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Status:</span>
-                  <Badge 
-                    variant={paymentStatus === 'completed' ? 'default' : paymentStatus === 'failed' ? 'destructive' : 'secondary'}
+                  <Badge
+                    variant={
+                      paymentStatus === 'completed'
+                        ? 'default'
+                        : paymentStatus === 'failed'
+                          ? 'destructive'
+                          : 'secondary'
+                    }
                     className="flex items-center gap-1"
                   >
                     {paymentStatus === 'completed' && <CheckCircle className="h-3 w-3" />}
@@ -347,13 +352,15 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
                 </div>
 
                 {paymentStatus === 'pending' && (
-                  <Button 
-                    onClick={handleRefresh} 
+                  <Button
+                    onClick={handleRefresh}
                     disabled={isCheckingPayment}
                     className="w-full"
                     variant="outline"
                   >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isCheckingPayment ? 'animate-spin' : ''}`} />
+                    <RefreshCw
+                      className={`h-4 w-4 mr-2 ${isCheckingPayment ? 'animate-spin' : ''}`}
+                    />
                     {isCheckingPayment ? 'Checking...' : 'Check Payment Status'}
                   </Button>
                 )}
@@ -379,12 +386,12 @@ export const QRPaymentModal: React.FC<QRPaymentModalProps> = ({
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Important:</strong> Do not close this window until payment is completed. 
-              If you encounter any issues, contact support with your transaction ID.
+              <strong>Important:</strong> Do not close this window until payment is completed. If
+              you encounter any issues, contact support with your transaction ID.
             </AlertDescription>
           </Alert>
         </div>
       </DialogContent>
     </Dialog>
   );
-}; 
+};

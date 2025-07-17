@@ -1,8 +1,7 @@
-
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import { User, Conversation } from "./types";
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { User, Conversation } from './types';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -12,7 +11,13 @@ interface ConversationListProps {
   isLoading: boolean;
 }
 
-export const ConversationList = ({ conversations, users, currentUserId, onSelectConversation, isLoading }: ConversationListProps) => {
+export const ConversationList = ({
+  conversations,
+  users,
+  currentUserId,
+  onSelectConversation,
+  isLoading,
+}: ConversationListProps) => {
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -36,7 +41,7 @@ export const ConversationList = ({ conversations, users, currentUserId, onSelect
   return (
     <div className="space-y-1">
       {conversations.map((convo) => {
-        const user = users.find(u => u.id === convo.userId);
+        const user = users.find((u) => u.id === convo.userId);
         if (!user) return null;
 
         const lastMessage = convo.lastMessage;
@@ -47,8 +52,8 @@ export const ConversationList = ({ conversations, users, currentUserId, onSelect
             key={convo.userId}
             onClick={() => onSelectConversation(convo.userId)}
             className={cn(
-              "flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-colors hover:bg-muted",
-              isUnread && "bg-primary/10"
+              'flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-colors hover:bg-muted',
+              isUnread && 'bg-primary/10',
             )}
           >
             <Avatar>
@@ -56,14 +61,12 @@ export const ConversationList = ({ conversations, users, currentUserId, onSelect
             </Avatar>
             <div className="flex-1 truncate">
               <div className="flex justify-between items-center">
-                <p className={cn("font-semibold", isUnread && "text-primary")}>{user.email}</p>
+                <p className={cn('font-semibold', isUnread && 'text-primary')}>{user.email}</p>
                 <span className="text-xs text-muted-foreground">
                   {new Date(lastMessage.created_at).toLocaleDateString()}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground truncate">
-                {lastMessage.content}
-              </p>
+              <p className="text-sm text-muted-foreground truncate">{lastMessage.content}</p>
             </div>
           </div>
         );

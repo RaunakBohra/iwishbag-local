@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>eSewa Form Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            margin: 10px 0; 
+            background: #f9f9f9;
+        }
+        button { 
+            padding: 10px 20px; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f0f0f0; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>eSewa Form Debug Tests</h1>
+    <p>This page tests different form submission methods to identify the 405 error cause.</p>
+    
+    <div class="test-section">
+        <h3>Test 1: Direct Form (Working Reference)</h3>
+        <p>This creates a form exactly like the working test-esewa-v2.html</p>
+        <button onclick="testDirectForm()">Test Direct Form</button>
+        <div id="result1"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Hidden Form (Checkout Style)</h3>
+        <p>This replicates how the checkout creates and submits forms</p>
+        <button onclick="testHiddenForm()">Test Hidden Form</button>
+        <div id="result2"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: Form with Manual Submit</h3>
+        <p>This creates a form with a manual submit button</p>
+        <button onclick="testManualForm()">Create Manual Form</button>
+        <div id="result3"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 4: Debug Form Properties</h3>
+        <p>This analyzes form properties before submission</p>
+        <button onclick="debugFormProperties()">Debug Form Properties</button>
+        <div id="result4"></div>
+    </div>
+
+    <script>
+        function createTestFormData() {
+            const currentTime = new Date();
+            const transactionUuid = currentTime.toISOString().slice(2, 10).replace(/-/g, '') + '-' + 
+                                  currentTime.getHours() + currentTime.getMinutes() + currentTime.getSeconds();
+            
+            return {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: transactionUuid,
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code',
+                signature: 'test_signature_placeholder'
+            };
+        }
+        
+        function testDirectForm() {
+            const resultDiv = document.getElementById('result1');
+            resultDiv.innerHTML = '<p class="info">Creating direct form...</p>';
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.target = '_blank';
+            
+            const formData = createTestFormData();
+            
+            Object.entries(formData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <p>✅ Direct form created successfully</p>
+                    <p><strong>Method:</strong> ${form.method}</p>
+                    <p><strong>Action:</strong> ${form.action}</p>
+                    <p><strong>Target:</strong> ${form.target}</p>
+                    <p><strong>Fields:</strong> ${form.elements.length}</p>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                try {
+                    form.submit();
+                    resultDiv.innerHTML += '<p class="success">✅ Form submitted successfully</p>';
+                } catch (error) {
+                    resultDiv.innerHTML += '<p class="error">❌ Form submission failed: ' + error.message + '</p>';
+                }
+            }, 2000);
+        }
+        
+        function testHiddenForm() {
+            const resultDiv = document.getElementById('result2');
+            resultDiv.innerHTML = '<p class="info">Creating hidden form...</p>';
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.target = '_blank';
+            form.style.display = 'none';
+            
+            const formData = createTestFormData();
+            
+            Object.entries(formData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <p>✅ Hidden form created successfully</p>
+                    <p><strong>Method:</strong> ${form.method}</p>
+                    <p><strong>Action:</strong> ${form.action}</p>
+                    <p><strong>Target:</strong> ${form.target}</p>
+                    <p><strong>Display:</strong> ${form.style.display}</p>
+                    <p><strong>Fields:</strong> ${form.elements.length}</p>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                try {
+                    form.submit();
+                    resultDiv.innerHTML += '<p class="success">✅ Hidden form submitted successfully</p>';
+                } catch (error) {
+                    resultDiv.innerHTML += '<p class="error">❌ Hidden form submission failed: ' + error.message + '</p>';
+                }
+            }, 2000);
+        }
+        
+        function testManualForm() {
+            const resultDiv = document.getElementById('result3');
+            resultDiv.innerHTML = '<p class="info">Creating manual form...</p>';
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.target = '_blank';
+            
+            const formData = createTestFormData();
+            
+            Object.entries(formData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            
+            const submitButton = document.createElement('button');
+            submitButton.type = 'submit';
+            submitButton.textContent = 'Submit to eSewa';
+            submitButton.style.padding = '10px 20px';
+            submitButton.style.backgroundColor = '#28a745';
+            submitButton.style.color = 'white';
+            submitButton.style.border = 'none';
+            submitButton.style.cursor = 'pointer';
+            
+            form.appendChild(submitButton);
+            
+            form.addEventListener('submit', function(e) {
+                console.log('Form submit event triggered');
+                console.log('Form method:', form.method);
+                console.log('Form action:', form.action);
+                console.log('Form target:', form.target);
+                resultDiv.innerHTML += '<p class="info">Form submit event triggered</p>';
+            });
+            
+            document.body.appendChild(form);
+            resultDiv.appendChild(form);
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <p>✅ Manual form created successfully</p>
+                    <p><strong>Method:</strong> ${form.method}</p>
+                    <p><strong>Action:</strong> ${form.action}</p>
+                    <p><strong>Target:</strong> ${form.target}</p>
+                    <p><strong>Fields:</strong> ${form.elements.length}</p>
+                    <p>Click the submit button below to test:</p>
+                </div>
+            `;
+            
+            resultDiv.appendChild(form);
+        }
+        
+        function debugFormProperties() {
+            const resultDiv = document.getElementById('result4');
+            resultDiv.innerHTML = '<p class="info">Analyzing form properties...</p>';
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.target = '_blank';
+            
+            const formData = createTestFormData();
+            
+            Object.entries(formData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            
+            // Analyze form properties
+            const analysis = {
+                'form.method': form.method,
+                'form.getAttribute("method")': form.getAttribute('method'),
+                'form.action': form.action,
+                'form.target': form.target,
+                'form.elements.length': form.elements.length,
+                'form.enctype': form.enctype,
+                'form.encoding': form.encoding,
+                'form.acceptCharset': form.acceptCharset,
+                'form.noValidate': form.noValidate
+            };
+            
+            let analysisHTML = '<div class="success"><h4>Form Properties Analysis:</h4>';
+            for (const [key, value] of Object.entries(analysis)) {
+                analysisHTML += `<p><strong>${key}:</strong> ${value}</p>`;
+            }
+            analysisHTML += '</div>';
+            
+            // Form data analysis
+            analysisHTML += '<div class="info"><h4>Form Data:</h4><pre>';
+            for (let i = 0; i < form.elements.length; i++) {
+                const element = form.elements[i];
+                analysisHTML += `${element.name}: ${element.value}\n`;
+            }
+            analysisHTML += '</pre></div>';
+            
+            resultDiv.innerHTML = analysisHTML;
+            
+            // Test form submission after analysis
+            setTimeout(() => {
+                try {
+                    console.log('About to submit form with method:', form.method);
+                    form.submit();
+                    resultDiv.innerHTML += '<p class="success">✅ Form submitted for analysis</p>';
+                } catch (error) {
+                    resultDiv.innerHTML += '<p class="error">❌ Form submission failed: ' + error.message + '</p>';
+                }
+            }, 3000);
+        }
+        
+        // Add console logging for debugging
+        console.log('eSewa Form Debug page loaded');
+        console.log('Current URL:', window.location.href);
+        console.log('User Agent:', navigator.userAgent);
+    </script>
+</body>
+</html>

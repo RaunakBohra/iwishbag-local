@@ -1,31 +1,22 @@
-import { useState, useEffect, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, Package, ArrowRight, Save, Search, SortAsc, SortDesc, Trash2, X } from "lucide-react";
-import { useUserCurrency } from "@/hooks/useUserCurrency";
-import { useQuoteDisplayCurrency } from "@/hooks/useQuoteDisplayCurrency";
-import { Link } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { ShoppingCart, Package, ArrowRight, Save, Trash2 } from 'lucide-react';
+import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { Badge } from '@/components/ui/badge';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { QuoteItem } from "@/types/quote";
-import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
-import { Database } from "@/lib/database.types";
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/hooks/use-toast';
 import { Tables } from '@/integrations/supabase/types';
 import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/stores/cartStore';
 
-type SortOption = "date-desc" | "date-asc" | "price-desc" | "price-asc" | "name-asc" | "name-desc";
+type SortOption = 'date-desc' | 'date-asc' | 'price-desc' | 'price-asc' | 'name-asc' | 'name-desc';
 
 // Mock quote type for cart display
 interface MockQuote {
@@ -45,13 +36,15 @@ const CartItemPrice = ({ item, quantity }: { item: CartItem; quantity: number })
     origin_country: item.purchaseCountryCode || item.countryCode,
     destination_country: item.destinationCountryCode || item.countryCode,
     shipping_address: {
-      destination_country: item.destinationCountryCode || item.countryCode
-    }
+      destination_country: item.destinationCountryCode || item.countryCode,
+    },
   };
-  
+
   // Use the quote display currency hook
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as Tables<'quotes'> });
-  
+  const { formatAmount } = useQuoteDisplayCurrency({
+    quote: mockQuote as Tables<'quotes'>,
+  });
+
   return <>{formatAmount(item.finalTotal * quantity)}</>;
 };
 
@@ -59,37 +52,38 @@ const CartItemPrice = ({ item, quantity }: { item: CartItem; quantity: number })
 const CartTotal = ({ items }: { items: CartItem[] }) => {
   // Use the first item to determine the quote format (all items should have same destination)
   const firstItem = items[0];
-  
+
   // Create mock quote with default values to ensure hook is always called consistently
   const mockQuote: MockQuote = {
     id: firstItem?.quoteId || 'default',
     origin_country: firstItem?.purchaseCountryCode || firstItem?.countryCode || 'US',
     destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US',
     shipping_address: {
-      destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US'
-    }
+      destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US',
+    },
   };
-  
+
   // Use the quote display currency hook
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as Tables<'quotes'> });
-  
+  const { formatAmount } = useQuoteDisplayCurrency({
+    quote: mockQuote as Tables<'quotes'>,
+  });
+
   if (!firstItem) return <>$0.00</>;
-  
+
   // Calculate total from all items
   const totalAmount = items.reduce((sum, item) => sum + item.finalTotal * item.quantity, 0);
-  
+
   return <>{formatAmount(totalAmount)}</>;
 };
-
 
 // Remove unused interface and type as they are not used in the component
 
 export const CartDrawer = () => {
   const { user } = useAuth();
-  const { formatAmount: formatUserAmount } = useUserCurrency();
+  const { formatAmount: _formatUserAmount } = useUserCurrency();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
+  const _queryClient = useQueryClient();
+
   // Use the new cart store with FIXED calculations
   const {
     items: cartItems,
@@ -98,25 +92,25 @@ export const CartDrawer = () => {
     isLoading: cartLoading,
     error: cartError,
     hasLoadedFromServer,
-    cartTotal,
-    cartWeight,
-    selectedItemsTotal,
-    selectedItemsWeight,
-    itemCount,
-    savedItemCount,
-    selectedItemCount,
+    cartTotal: _cartTotal,
+    cartWeight: _cartWeight,
+    selectedItemsTotal: _selectedItemsTotal,
+    selectedItemsWeight: _selectedItemsWeight,
+    itemCount: _itemCount,
+    savedItemCount: _savedItemCount,
+    selectedItemCount: _selectedItemCount,
     selectedCartItemCount, // NEW: Selected cart items count
-    formattedCartTotal,
-    formattedSelectedTotal,
-    formattedSelectedCartTotal, // NEW: Formatted selected cart total
+    formattedCartTotal: _formattedCartTotal,
+    formattedSelectedTotal: _formattedSelectedTotal,
+    formattedSelectedCartTotal: _formattedSelectedCartTotal, // NEW: Formatted selected cart total
     hasSelectedItems,
     hasCartItems,
     hasSavedItems,
-    isAllSelected,
-    isAllCartSelected,
+    isAllSelected: _isAllSelected,
+    isAllCartSelected: _isAllCartSelected,
     handleSelectAllCart,
-    isAllSavedSelected,
-    handleSelectAllSaved,
+    isAllSavedSelected: _isAllSavedSelected,
+    handleSelectAllSaved: _handleSelectAllSaved,
     removeItem,
     updateQuantity,
     moveToSaved,
@@ -125,18 +119,18 @@ export const CartDrawer = () => {
     handleBulkDelete,
     handleBulkMoveToSaved,
     handleBulkMoveToCart,
-    clearSelection,
-    loadFromServer
+    clearSelection: _clearSelection,
+    loadFromServer,
   } = useCart();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("cart");
+  const [activeTab, setActiveTab] = useState('cart');
   const [showBulkSaveConfirm, setShowBulkSaveConfirm] = useState(false);
   const [showBulkMoveConfirm, setShowBulkMoveConfirm] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("date-desc");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [sortBy, _setSortBy] = useState<SortOption>('date-desc');
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
@@ -176,52 +170,52 @@ export const CartDrawer = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const clearSearch = useCallback(() => {
-    setSearchQuery("");
-    setDebouncedSearchQuery("");
+  const _clearSearch = useCallback(() => {
+    setSearchQuery('');
+    setDebouncedSearchQuery('');
   }, []);
 
   // Filter and sort items
-  const filteredCartItems = cartItems.filter(item =>
-    item.productName.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+  const filteredCartItems = cartItems.filter((item) =>
+    item.productName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
   );
 
-  const filteredSavedItems = savedItems.filter(item =>
-    item.productName.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+  const filteredSavedItems = savedItems.filter((item) =>
+    item.productName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
   );
 
-  const sortedCartItems = [...filteredCartItems].sort((a, b) => {
+  const _sortedCartItems = [...filteredCartItems].sort((a, b) => {
     switch (sortBy) {
-      case "date-desc":
+      case 'date-desc':
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      case "date-asc":
+      case 'date-asc':
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      case "price-desc":
+      case 'price-desc':
         return b.finalTotal - a.finalTotal;
-      case "price-asc":
+      case 'price-asc':
         return a.finalTotal - b.finalTotal;
-      case "name-asc":
+      case 'name-asc':
         return a.productName.localeCompare(b.productName);
-      case "name-desc":
+      case 'name-desc':
         return b.productName.localeCompare(a.productName);
       default:
         return 0;
     }
   });
 
-  const sortedSavedItems = [...filteredSavedItems].sort((a, b) => {
+  const _sortedSavedItems = [...filteredSavedItems].sort((a, b) => {
     switch (sortBy) {
-      case "date-desc":
+      case 'date-desc':
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      case "date-asc":
+      case 'date-asc':
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      case "price-desc":
+      case 'price-desc':
         return b.finalTotal - a.finalTotal;
-      case "price-asc":
+      case 'price-asc':
         return a.finalTotal - b.finalTotal;
-      case "name-asc":
+      case 'name-asc':
         return a.productName.localeCompare(b.productName);
-      case "name-desc":
+      case 'name-desc':
         return b.productName.localeCompare(a.productName);
       default:
         return 0;
@@ -233,14 +227,14 @@ export const CartDrawer = () => {
     try {
       await removeItem(itemId);
       toast({
-        title: "Item removed",
-        description: "Item has been removed from your cart.",
+        title: 'Item removed',
+        description: 'Item has been removed from your cart.',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
-        title: "Error",
-        description: "Failed to remove item from cart.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to remove item from cart.',
+        variant: 'destructive',
       });
     }
   };
@@ -249,14 +243,14 @@ export const CartDrawer = () => {
     try {
       moveToSaved(itemId);
       toast({
-        title: "Item saved",
-        description: "Item has been saved for later.",
+        title: 'Item saved',
+        description: 'Item has been saved for later.',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
-        title: "Error",
-        description: "Failed to save item for later.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to save item for later.',
+        variant: 'destructive',
       });
     }
   };
@@ -265,14 +259,14 @@ export const CartDrawer = () => {
     try {
       moveToCart(itemId);
       toast({
-        title: "Item moved",
-        description: "Item has been moved to your cart.",
+        title: 'Item moved',
+        description: 'Item has been moved to your cart.',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
-        title: "Error",
-        description: "Failed to move item to cart.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to move item to cart.',
+        variant: 'destructive',
       });
     }
   };
@@ -281,14 +275,14 @@ export const CartDrawer = () => {
     try {
       updateQuantity(itemId, newQuantity);
       toast({
-        title: "Quantity updated",
-        description: "Item quantity has been updated.",
+        title: 'Quantity updated',
+        description: 'Item quantity has been updated.',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
-        title: "Error",
-        description: "Failed to update quantity.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update quantity.',
+        variant: 'destructive',
       });
     }
   };
@@ -301,8 +295,8 @@ export const CartDrawer = () => {
     handleBulkMoveToSaved();
     setShowBulkSaveConfirm(false);
     toast({
-      title: "Items saved",
-      description: "Selected items have been saved for later.",
+      title: 'Items saved',
+      description: 'Selected items have been saved for later.',
     });
   };
 
@@ -310,8 +304,8 @@ export const CartDrawer = () => {
     handleBulkMoveToCart();
     setShowBulkMoveConfirm(false);
     toast({
-      title: "Items moved",
-      description: "Selected items have been moved to your cart.",
+      title: 'Items moved',
+      description: 'Selected items have been moved to your cart.',
     });
   };
 
@@ -320,37 +314,37 @@ export const CartDrawer = () => {
       await handleBulkDelete();
       setShowBulkDeleteConfirm(false);
       toast({
-        title: "Items deleted",
-        description: "Selected items have been deleted.",
+        title: 'Items deleted',
+        description: 'Selected items have been deleted.',
       });
-    } catch (error) {
-      console.error('Error bulk deleting items:', error);
+    } catch (_error) {
+      console.error('Error bulk deleting items:', _error);
       toast({
-        title: "Error",
-        description: "Failed to delete items. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to delete items. Please try again.',
+        variant: 'destructive',
       });
     }
   };
 
   // Helper functions to get selected items
   const getSelectedCartItems = () => {
-    return cartItems.filter(item => selectedItems.includes(item.id));
+    return cartItems.filter((item) => selectedItems.includes(item.id));
   };
 
   const getSelectedSavedItems = () => {
-    return savedItems.filter(item => selectedItems.includes(item.id));
+    return savedItems.filter((item) => selectedItems.includes(item.id));
   };
-  
+
   // Helper to get all selected items (both cart and saved)
   const getAllSelectedItems = () => {
-    return [...cartItems, ...savedItems].filter(item => selectedItems.includes(item.id));
+    return [...cartItems, ...savedItems].filter((item) => selectedItems.includes(item.id));
   };
 
   const handleCheckout = async () => {
     if (!hasSelectedItems && hasCartItems) {
       // Auto-select all cart items if none are selected
-      cartItems.forEach(item => {
+      cartItems.forEach((item) => {
         if (!selectedItems.includes(item.id)) {
           toggleSelection(item.id);
         }
@@ -360,35 +354,35 @@ export const CartDrawer = () => {
 
     if (!hasSelectedItems) {
       toast({
-        title: "No items selected",
-        description: "Please select items to checkout.",
-        variant: "destructive",
+        title: 'No items selected',
+        description: 'Please select items to checkout.',
+        variant: 'destructive',
       });
       return;
     }
 
     setIsCheckingOut(true);
     try {
-      const selectedCartItems = cartItems.filter(item => selectedItems.includes(item.id));
+      const selectedCartItems = cartItems.filter((item) => selectedItems.includes(item.id));
       if (selectedCartItems.length === 0) {
         toast({
-          title: "No cart items selected",
-          description: "Please select items from your cart to checkout.",
-          variant: "destructive",
+          title: 'No cart items selected',
+          description: 'Please select items from your cart to checkout.',
+          variant: 'destructive',
         });
         return;
       }
 
-      const quoteIds = selectedCartItems.map(item => item.quoteId);
+      const quoteIds = selectedCartItems.map((item) => item.quoteId);
       const params = new URLSearchParams();
       params.set('quotes', quoteIds.join(','));
-      
+
       window.location.href = `/checkout?${params.toString()}`;
-    } catch (error) {
+    } catch (_error) {
       toast({
-        title: "Error",
-        description: "Failed to proceed to checkout.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to proceed to checkout.',
+        variant: 'destructive',
       });
     } finally {
       setIsCheckingOut(false);
@@ -401,12 +395,10 @@ export const CartDrawer = () => {
         <div className="flex flex-col items-center justify-center h-32 space-y-4">
           <div className="text-center">
             <h3 className="text-lg font-medium text-destructive">Error loading cart</h3>
-            <p className="text-sm text-muted-foreground">
-              {cartError}
-            </p>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <p className="text-sm text-muted-foreground">{cartError}</p>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => user && loadFromServer(user.id)}
               className="mt-2"
             >
@@ -466,7 +458,9 @@ export const CartDrawer = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
+                        onClick={() =>
+                          handleQuantityChange(item.id, Math.max(1, item.quantity - 1))
+                        }
                       >
                         -
                       </Button>
@@ -504,7 +498,8 @@ export const CartDrawer = () => {
                     <CartItemPrice item={item} quantity={item.quantity} />
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.destinationCountryCode || item.countryCode}
+                    {(item.itemWeight * item.quantity).toFixed(2)}kg •{' '}
+                    {item.destinationCountryCode || item.countryCode}
                   </div>
                 </div>
               </div>
@@ -552,7 +547,9 @@ export const CartDrawer = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
+                        onClick={() =>
+                          handleQuantityChange(item.id, Math.max(1, item.quantity - 1))
+                        }
                       >
                         -
                       </Button>
@@ -590,7 +587,8 @@ export const CartDrawer = () => {
                     <CartItemPrice item={item} quantity={item.quantity} />
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {(item.itemWeight * item.quantity).toFixed(2)}kg • {item.destinationCountryCode || item.countryCode}
+                    {(item.itemWeight * item.quantity).toFixed(2)}kg •{' '}
+                    {item.destinationCountryCode || item.countryCode}
                   </div>
                 </div>
               </div>
@@ -609,7 +607,10 @@ export const CartDrawer = () => {
             <ShoppingCart className="h-5 w-5" />
             {cartItems && cartItems.length > 0 && (
               <div className="absolute -top-1 -right-1">
-                <Badge variant="destructive" className="h-5 w-5 justify-center p-0 rounded-full text-xs">
+                <Badge
+                  variant="destructive"
+                  className="h-5 w-5 justify-center p-0 rounded-full text-xs"
+                >
                   {cartItems.length}
                 </Badge>
               </div>
@@ -624,26 +625,18 @@ export const CartDrawer = () => {
           <div className="flex-1 flex flex-col min-h-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-shrink-0">
               <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
-                <TabsTrigger value="cart">
-                  Cart ({cartItems?.length || 0})
-                </TabsTrigger>
-                <TabsTrigger value="saved">
-                  Saved ({savedItems?.length || 0})
-                </TabsTrigger>
+                <TabsTrigger value="cart">Cart ({cartItems?.length || 0})</TabsTrigger>
+                <TabsTrigger value="saved">Saved ({savedItems?.length || 0})</TabsTrigger>
               </TabsList>
             </Tabs>
             {activeTab === 'cart' && (
               <div className="flex-1 flex flex-col min-h-0 mt-4">
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                  {renderCartContent()}
-                </div>
+                <div className="flex-1 min-h-0 overflow-y-auto">{renderCartContent()}</div>
               </div>
             )}
             {activeTab === 'saved' && (
               <div className="flex-1 flex flex-col min-h-0 mt-4">
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                  {renderSavedContent()}
-                </div>
+                <div className="flex-1 min-h-0 overflow-y-auto">{renderSavedContent()}</div>
               </div>
             )}
             {/* Sticky Action Buttons */}
@@ -652,14 +645,16 @@ export const CartDrawer = () => {
                 <>
                   {/* Total Display */}
                   <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                    <span className="font-medium">Total ({getAllSelectedItems().length} items):</span>
+                    <span className="font-medium">
+                      Total ({getAllSelectedItems().length} items):
+                    </span>
                     <span className="font-bold text-lg">
                       <CartTotal items={getAllSelectedItems()} />
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleCheckout} 
+                    <Button
+                      onClick={handleCheckout}
                       disabled={isCheckingOut || !hasSelectedItems}
                       className="flex-1"
                     >
@@ -675,8 +670,8 @@ export const CartDrawer = () => {
                         </>
                       )}
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => {
                         setIsOpen(false);
                         window.location.href = '/cart';
@@ -689,8 +684,8 @@ export const CartDrawer = () => {
                 </>
               )}
               {!hasCartItems && hasSavedItems && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setIsOpen(false);
                     window.location.href = '/cart';
@@ -737,4 +732,4 @@ export const CartDrawer = () => {
       />
     </>
   );
-}; 
+};

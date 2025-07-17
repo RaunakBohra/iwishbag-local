@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,12 +35,12 @@ export const PaymentGatewayTester = () => {
   const [testResults, setTestResults] = useState<TestResults>({});
   const [testing, setTesting] = useState(false);
 
-  const { 
-    availableMethods, 
-    methodsLoading, 
+  const {
+    availableMethods,
+    methodsLoading,
     getPaymentMethodDisplay,
     getRecommendedPaymentMethodSync,
-    createPayment
+    _createPayment,
   } = usePaymentGateways(selectedCurrency, selectedCountry);
 
   const testCountries = [
@@ -44,7 +50,7 @@ export const PaymentGatewayTester = () => {
     { code: 'CA', name: 'Canada', currency: 'CAD' },
     { code: 'GB', name: 'United Kingdom', currency: 'GBP' },
     { code: 'AU', name: 'Australia', currency: 'AUD' },
-    { code: 'DE', name: 'Germany', currency: 'EUR' }
+    { code: 'DE', name: 'Germany', currency: 'EUR' },
   ];
 
   const runTests = async () => {
@@ -58,10 +64,10 @@ export const PaymentGatewayTester = () => {
         .select('*')
         .eq('code', 'paypal')
         .single();
-      
+
       results.paypalExists = !!paypalGateway;
       results.paypalConfig = paypalGateway?.config;
-    } catch (error) {
+    } catch (_error) {
       results.paypalExists = false;
     }
 
@@ -70,23 +76,26 @@ export const PaymentGatewayTester = () => {
       const { data: countries } = await supabase
         .from('country_settings')
         .select('code, default_gateway, available_gateways')
-        .in('code', testCountries.map(c => c.code));
-      
+        .in(
+          'code',
+          testCountries.map((c) => c.code),
+        );
+
       results.countryConfigs = countries;
-    } catch (error) {
+    } catch (_error) {
       results.countryConfigs = [];
     }
 
     // Test 3: Check profile column
     try {
-      const { data: profile } = await supabase
+      const { data: _profile } = await supabase
         .from('profiles')
         .select('preferred_payment_gateway')
         .limit(1)
         .single();
-      
+
       results.profileColumnExists = true;
-    } catch (error) {
+    } catch (_error) {
       results.profileColumnExists = false;
     }
 
@@ -94,7 +103,7 @@ export const PaymentGatewayTester = () => {
     results.paymentTest = {
       availableMethods: availableMethods || [],
       recommendedMethod: getRecommendedPaymentMethodSync(),
-      methodCount: availableMethods?.length || 0
+      methodCount: availableMethods?.length || 0,
     };
 
     setTestResults(results);
@@ -102,9 +111,11 @@ export const PaymentGatewayTester = () => {
   };
 
   const getStatusIcon = (status: boolean) => {
-    return status ? 
-      <CheckCircle className="h-4 w-4 text-green-600" /> : 
-      <XCircle className="h-4 w-4 text-red-600" />;
+    return status ? (
+      <CheckCircle className="h-4 w-4 text-green-600" />
+    ) : (
+      <XCircle className="h-4 w-4 text-red-600" />
+    );
   };
 
   return (
@@ -126,7 +137,7 @@ export const PaymentGatewayTester = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {testCountries.map(country => (
+                  {testCountries.map((country) => (
                     <SelectItem key={country.code} value={country.code}>
                       <div className="flex items-center gap-2">
                         <Globe className="h-4 w-4" />
@@ -137,7 +148,7 @@ export const PaymentGatewayTester = () => {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium mb-2 block">Test Currency</label>
               <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
@@ -145,7 +156,7 @@ export const PaymentGatewayTester = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {testCountries.map(country => (
+                  {testCountries.map((country) => (
                     <SelectItem key={country.currency} value={country.currency}>
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4" />
@@ -165,15 +176,17 @@ export const PaymentGatewayTester = () => {
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <div className="flex flex-wrap gap-2">
-                {availableMethods?.map(method => {
+                {availableMethods?.map((method) => {
                   const display = getPaymentMethodDisplay(method);
                   return (
-                    <Badge 
-                      key={method} 
-                      variant={getRecommendedPaymentMethodSync() === method ? "default" : "secondary"}
+                    <Badge
+                      key={method}
+                      variant={
+                        getRecommendedPaymentMethodSync() === method ? 'default' : 'secondary'
+                      }
                     >
                       {display.name}
-                      {getRecommendedPaymentMethodSync() === method && " (Recommended)"}
+                      {getRecommendedPaymentMethodSync() === method && ' (Recommended)'}
                     </Badge>
                   );
                 }) || <span className="text-sm text-gray-500">No methods available</span>}
@@ -182,11 +195,7 @@ export const PaymentGatewayTester = () => {
           </div>
 
           {/* Run Tests Button */}
-          <Button 
-            onClick={runTests} 
-            disabled={testing}
-            className="w-full"
-          >
+          <Button onClick={runTests} disabled={testing} className="w-full">
             {testing ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -201,18 +210,18 @@ export const PaymentGatewayTester = () => {
           {Object.keys(testResults).length > 0 && (
             <div className="space-y-3 pt-4 border-t">
               <h3 className="font-medium">Test Results:</h3>
-              
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <span className="text-sm">PayPal Gateway Exists</span>
                   {getStatusIcon(testResults.paypalExists)}
                 </div>
-                
+
                 <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <span className="text-sm">Profile Column Exists</span>
                   {getStatusIcon(testResults.profileColumnExists)}
                 </div>
-                
+
                 <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <span className="text-sm">Countries Configured</span>
                   <Badge variant="outline">
@@ -225,8 +234,14 @@ export const PaymentGatewayTester = () => {
                     <span className="text-sm font-medium">PayPal Configuration:</span>
                     <div className="text-xs mt-1">
                       <p>Environment: {testResults.paypalConfig.environment}</p>
-                      <p>Sandbox Client ID: {testResults.paypalConfig.client_id_sandbox ? '✓ Set' : '✗ Not set'}</p>
-                      <p>Sandbox Secret: {testResults.paypalConfig.client_secret_sandbox ? '✓ Set' : '✗ Not set'}</p>
+                      <p>
+                        Sandbox Client ID:{' '}
+                        {testResults.paypalConfig.client_id_sandbox ? '✓ Set' : '✗ Not set'}
+                      </p>
+                      <p>
+                        Sandbox Secret:{' '}
+                        {testResults.paypalConfig.client_secret_sandbox ? '✓ Set' : '✗ Not set'}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -237,7 +252,7 @@ export const PaymentGatewayTester = () => {
                     <div className="text-xs mt-1 space-y-1">
                       {testResults.countryConfigs.map((country) => (
                         <div key={country.code}>
-                          {country.code}: {country.default_gateway} 
+                          {country.code}: {country.default_gateway}
                           <span className="text-gray-500 ml-1">
                             ({country.available_gateways?.length || 0} available)
                           </span>

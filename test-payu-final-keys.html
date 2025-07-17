@@ -1,224 +1,244 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
+  <head>
     <title>PayU Test with Your Actual Keys</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-            background: #f5f5f5;
-        }
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        button {
-            background: #4CAF50;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 10px 0;
-            width: 100%;
-        }
-        button:hover { background: #45a049; }
-        .log {
-            background: #f8f8f8;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
-            font-family: monospace;
-            font-size: 12px;
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-        }
-        .info {
-            background: #e3f2fd;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
-            border-left: 4px solid #2196F3;
-        }
-        .success { background: #e8f5e8; border-left-color: #4CAF50; }
-        .credentials {
-            background: #fff3cd;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
-            border-left: 4px solid #ff9800;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+        background: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      button {
+        background: #4caf50;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin: 10px 0;
+        width: 100%;
+      }
+      button:hover {
+        background: #45a049;
+      }
+      .log {
+        background: #f8f8f8;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+      }
+      .info {
+        background: #e3f2fd;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+        border-left: 4px solid #2196f3;
+      }
+      .success {
+        background: #e8f5e8;
+        border-left-color: #4caf50;
+      }
+      .credentials {
+        background: #fff3cd;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+        border-left: 4px solid #ff9800;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>PayU Test with Your Actual Keys</h1>
-        
-        <div class="credentials">
-            <h3>🔑 Your Actual PayU Test Credentials</h3>
-            <p><strong>Merchant Key:</strong> u7Ui5I</p>
-            <p><strong>Merchant ID:</strong> 8725115</p>
-            <p><strong>Environment:</strong> test</p>
-            <p><strong>Salt Key:</strong> VIen2EwWiQbvsILF4Wt9p9Gh5ixOpSMe</p>
-        </div>
+      <h1>PayU Test with Your Actual Keys</h1>
 
-        <div class="info">
-            <h3>🎯 Final Test</h3>
-            <p>This test uses your actual PayU test credentials from your account.</p>
-            <p>If this works, your PayU integration should work perfectly in your app!</p>
-        </div>
+      <div class="credentials">
+        <h3>🔑 Your Actual PayU Test Credentials</h3>
+        <p><strong>Merchant Key:</strong> u7Ui5I</p>
+        <p><strong>Merchant ID:</strong> 8725115</p>
+        <p><strong>Environment:</strong> test</p>
+        <p><strong>Salt Key:</strong> VIen2EwWiQbvsILF4Wt9p9Gh5ixOpSMe</p>
+      </div>
 
-        <button onclick="testPayUWithActualKeys()">🚀 Test PayU with Your Actual Keys</button>
-        
-        <div id="logOutput" class="log"></div>
+      <div class="info">
+        <h3>🎯 Final Test</h3>
+        <p>This test uses your actual PayU test credentials from your account.</p>
+        <p>If this works, your PayU integration should work perfectly in your app!</p>
+      </div>
 
-        <div class="info success">
-            <h3>✅ Expected Result</h3>
-            <p>PayU should accept these credentials and show the payment page.</p>
-        </div>
+      <button onclick="testPayUWithActualKeys()">🚀 Test PayU with Your Actual Keys</button>
+
+      <div id="logOutput" class="log"></div>
+
+      <div class="info success">
+        <h3>✅ Expected Result</h3>
+        <p>PayU should accept these credentials and show the payment page.</p>
+      </div>
     </div>
 
     <script>
-        // Your actual PayU test credentials
-        const PAYU_CONFIG = {
-            merchant_key: 'u7Ui5I',
-            merchant_id: '8725115',
-            salt_key: 'VIen2EwWiQbvsILF4Wt9p9Gh5ixOpSMe',
-            environment: 'test'
+      // Your actual PayU test credentials
+      const PAYU_CONFIG = {
+        merchant_key: 'u7Ui5I',
+        merchant_id: '8725115',
+        salt_key: 'VIen2EwWiQbvsILF4Wt9p9Gh5ixOpSMe',
+        environment: 'test',
+      };
+
+      function log(message) {
+        const logDiv = document.getElementById('logOutput');
+        const timestamp = new Date().toLocaleTimeString();
+        logDiv.innerHTML += '[' + timestamp + '] ' + message + '<br>';
+        logDiv.scrollTop = logDiv.scrollHeight;
+        console.log(message);
+      }
+
+      // Generate PayU hash with your actual salt
+      async function generatePayUHash(data) {
+        const hashString = [
+          data.key,
+          data.txnid,
+          data.amount,
+          data.productinfo,
+          data.firstname,
+          data.email,
+          data.udf1 || '',
+          data.udf2 || '',
+          data.udf3 || '',
+          data.udf4 || '',
+          data.udf5 || '',
+          '',
+          '',
+          '',
+          '',
+          '', // 5 empty fields
+          PAYU_CONFIG.salt_key,
+        ].join('|');
+
+        log('🔐 Hash string: ' + hashString);
+
+        const encoder = new TextEncoder();
+        const data_encoded = encoder.encode(hashString);
+        const hashBuffer = await crypto.subtle.digest('SHA-512', data_encoded);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+
+        log('✅ Hash generated: ' + hashHex.substring(0, 30) + '...');
+        return hashHex;
+      }
+
+      async function testPayUWithActualKeys() {
+        log('🧪 Testing PayU with your actual credentials...');
+        log('🔑 Merchant Key: ' + PAYU_CONFIG.merchant_key);
+        log('🔑 Merchant ID: ' + PAYU_CONFIG.merchant_id);
+        log('🔑 Environment: ' + PAYU_CONFIG.environment);
+
+        const txnid = 'PAYU_ACTUAL_TEST_' + Date.now();
+        const productinfo = 'Test Product with Actual Keys (' + txnid + ')';
+
+        // Create form data with your actual keys
+        const formData = {
+          key: PAYU_CONFIG.merchant_key,
+          txnid: txnid,
+          amount: '100.00',
+          productinfo: productinfo,
+          firstname: 'Test Customer',
+          email: 'test@example.com',
+          phone: '9999999999',
+          surl: 'https://example.com/success',
+          furl: 'https://example.com/failure',
+          udf1: '',
+          udf2: '',
+          udf3: '',
+          udf4: '',
+          udf5: '',
         };
 
-        function log(message) {
-            const logDiv = document.getElementById('logOutput');
-            const timestamp = new Date().toLocaleTimeString();
-            logDiv.innerHTML += '[' + timestamp + '] ' + message + '<br>';
-            logDiv.scrollTop = logDiv.scrollHeight;
-            console.log(message);
+        log('📝 Form data prepared:');
+        log('- Key: ' + formData.key);
+        log('- Transaction ID: ' + formData.txnid);
+        log('- Amount: ' + formData.amount);
+
+        // Generate hash with your actual salt
+        log('🔐 Generating hash with your actual salt...');
+        const hash = await generatePayUHash(formData);
+        formData.hash = hash;
+
+        // Validate required fields
+        const requiredFields = [
+          'key',
+          'txnid',
+          'amount',
+          'productinfo',
+          'firstname',
+          'email',
+          'phone',
+          'surl',
+          'furl',
+          'hash',
+        ];
+        const missingFields = requiredFields.filter((field) => !formData[field]);
+
+        if (missingFields.length > 0) {
+          log('❌ Missing required fields: ' + missingFields.join(', '));
+          return;
+        } else {
+          log('✅ All required fields present');
         }
 
-        // Generate PayU hash with your actual salt
-        async function generatePayUHash(data) {
-            const hashString = [
-                data.key,
-                data.txnid,
-                data.amount,
-                data.productinfo,
-                data.firstname,
-                data.email,
-                data.udf1 || '',
-                data.udf2 || '',
-                data.udf3 || '',
-                data.udf4 || '',
-                data.udf5 || '',
-                '', '', '', '', '', // 5 empty fields
-                PAYU_CONFIG.salt_key
-            ].join('|');
-            
-            log('🔐 Hash string: ' + hashString);
-            
-            const encoder = new TextEncoder();
-            const data_encoded = encoder.encode(hashString);
-            const hashBuffer = await crypto.subtle.digest('SHA-512', data_encoded);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            
-            log('✅ Hash generated: ' + hashHex.substring(0, 30) + '...');
-            return hashHex;
-        }
+        // Create and submit form
+        log('📋 Creating form for PayU submission...');
 
-        async function testPayUWithActualKeys() {
-            log('🧪 Testing PayU with your actual credentials...');
-            log('🔑 Merchant Key: ' + PAYU_CONFIG.merchant_key);
-            log('🔑 Merchant ID: ' + PAYU_CONFIG.merchant_id);
-            log('🔑 Environment: ' + PAYU_CONFIG.environment);
-            
-            const txnid = 'PAYU_ACTUAL_TEST_' + Date.now();
-            const productinfo = 'Test Product with Actual Keys (' + txnid + ')';
-            
-            // Create form data with your actual keys
-            const formData = {
-                key: PAYU_CONFIG.merchant_key,
-                txnid: txnid,
-                amount: '100.00',
-                productinfo: productinfo,
-                firstname: 'Test Customer',
-                email: 'test@example.com',
-                phone: '9999999999',
-                surl: 'https://example.com/success',
-                furl: 'https://example.com/failure',
-                udf1: '',
-                udf2: '',
-                udf3: '',
-                udf4: '',
-                udf5: ''
-            };
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'https://test.payu.in/_payment';
+        form.target = '_blank'; // Open in new tab
+        form.style.display = 'none';
 
-            log('📝 Form data prepared:');
-            log('- Key: ' + formData.key);
-            log('- Transaction ID: ' + formData.txnid);
-            log('- Amount: ' + formData.amount);
+        // Add all form fields
+        Object.entries(formData).forEach(([key, value]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = value;
+          form.appendChild(input);
+        });
 
-            // Generate hash with your actual salt
-            log('🔐 Generating hash with your actual salt...');
-            const hash = await generatePayUHash(formData);
-            formData.hash = hash;
+        document.body.appendChild(form);
 
-            // Validate required fields
-            const requiredFields = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
-            const missingFields = requiredFields.filter(field => !formData[field]);
-            
-            if (missingFields.length > 0) {
-                log('❌ Missing required fields: ' + missingFields.join(', '));
-                return;
-            } else {
-                log('✅ All required fields present');
-            }
+        log('✅ Form created with ' + form.elements.length + ' fields');
+        log('🚀 Submitting to PayU with your actual keys...');
+        log('👀 Check the new tab for PayU response');
 
-            // Create and submit form
-            log('📋 Creating form for PayU submission...');
-            
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = 'https://test.payu.in/_payment';
-            form.target = '_blank'; // Open in new tab
-            form.style.display = 'none';
+        // Submit form
+        form.submit();
 
-            // Add all form fields
-            Object.entries(formData).forEach(([key, value]) => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = key;
-                input.value = value;
-                form.appendChild(input);
-            });
+        // Show success message
+        setTimeout(() => {
+          log('✅ Form submitted successfully!');
+          log('📋 If PayU shows payment page, your integration is working!');
+        }, 1000);
+      }
 
-            document.body.appendChild(form);
-            
-            log('✅ Form created with ' + form.elements.length + ' fields');
-            log('🚀 Submitting to PayU with your actual keys...');
-            log('👀 Check the new tab for PayU response');
-            
-            // Submit form
-            form.submit();
-            
-            // Show success message
-            setTimeout(() => {
-                log('✅ Form submitted successfully!');
-                log('📋 If PayU shows payment page, your integration is working!');
-            }, 1000);
-        }
-
-        // Initialize
-        window.onload = function() {
-            log('🎯 PayU test with your actual keys loaded');
-            log('🔑 Using your merchant key: ' + PAYU_CONFIG.merchant_key);
-            log('👆 Click the button above to test');
-        };
+      // Initialize
+      window.onload = function () {
+        log('🎯 PayU test with your actual keys loaded');
+        log('🔑 Using your merchant key: ' + PAYU_CONFIG.merchant_key);
+        log('👆 Click the button above to test');
+      };
     </script>
-</body>
+  </body>
 </html>

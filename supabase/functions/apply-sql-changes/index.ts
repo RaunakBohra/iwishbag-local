@@ -1,17 +1,23 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { authenticateUser, requireAdmin, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts'
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  authenticateUser,
+  requireAdmin,
+  AuthError,
+  createAuthErrorResponse,
+  validateMethod,
+} from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
   'Access-Control-Allow-Headers': 'authorization, content-type',
   'Access-Control-Allow-Methods': 'POST',
   'Access-Control-Max-Age': '86400',
-}
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -31,12 +37,12 @@ serve(async (req) => {
       {
         auth: {
           autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
+          persistSession: false,
+        },
+      },
+    );
 
-    console.log('🚀 Applying PayPal integration changes...')
+    console.log('🚀 Applying PayPal integration changes...');
 
     // SQL commands to execute
     const sqlCommands = [
@@ -71,8 +77,8 @@ serve(async (req) => {
       // Add gateway configuration columns to country_settings
       `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS available_gateways TEXT[] DEFAULT ARRAY['bank_transfer']`,
       `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS default_gateway TEXT DEFAULT 'bank_transfer'`,
-      `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS gateway_config JSONB DEFAULT '{}'`
-    ]
+      `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS gateway_config JSONB DEFAULT '{}'`,
+    ];
 
     const countryUpdates = [
       // Update US
@@ -82,7 +88,7 @@ serve(async (req) => {
            gateway_config = '{"paypal_priority": 1, "stripe_priority": 2, "preferred_for_amount_above": 50.00}'
        WHERE code = 'US'`,
 
-      // Update India  
+      // Update India
       `UPDATE public.country_settings 
        SET available_gateways = ARRAY['payu', 'paypal', 'razorpay', 'upi', 'bank_transfer'],
            default_gateway = 'payu',
@@ -94,44 +100,48 @@ serve(async (req) => {
        SET available_gateways = ARRAY['paypal', 'esewa', 'khalti', 'fonepay', 'bank_transfer'],
            default_gateway = 'paypal',
            gateway_config = '{"paypal_priority": 1, "esewa_priority": 2, "khalti_priority": 3, "fonepay_priority": 4, "preferred_for_amount_above": 100.00}'
-       WHERE code = 'NP'`
-    ]
+       WHERE code = 'NP'`,
+    ];
 
     // Execute SQL commands
-    let successCount = 0
-    let errorCount = 0
-    
+    let successCount = 0;
+    let errorCount = 0;
+
     for (const sql of sqlCommands) {
       try {
-        console.log(`📝 Executing: ${sql.substring(0, 50)}...`)
-        const { error } = await supabaseServiceClient.rpc('exec_sql', { sql_query: sql })
+        console.log(`📝 Executing: ${sql.substring(0, 50)}...`);
+        const { error } = await supabaseServiceClient.rpc('exec_sql', {
+          sql_query: sql,
+        });
         if (error) {
-          console.error(`❌ Error:`, error)
-          errorCount++
+          console.error(`❌ Error:`, error);
+          errorCount++;
         } else {
-          console.log(`✅ Success`)
-          successCount++
+          console.log(`✅ Success`);
+          successCount++;
         }
       } catch (err) {
-        console.error(`❌ Exception:`, err)
-        errorCount++
+        console.error(`❌ Exception:`, err);
+        errorCount++;
       }
     }
 
     for (const sql of countryUpdates) {
       try {
-        console.log(`📝 Executing country update...`)
-        const { error } = await supabaseServiceClient.rpc('exec_sql', { sql_query: sql })
+        console.log(`📝 Executing country update...`);
+        const { error } = await supabaseServiceClient.rpc('exec_sql', {
+          sql_query: sql,
+        });
         if (error) {
-          console.error(`❌ Error:`, error)
-          errorCount++
+          console.error(`❌ Error:`, error);
+          errorCount++;
         } else {
-          console.log(`✅ Success`)
-          successCount++
+          console.log(`✅ Success`);
+          successCount++;
         }
       } catch (err) {
-        console.error(`❌ Exception:`, err)
-        errorCount++
+        console.error(`❌ Exception:`, err);
+        errorCount++;
       }
     }
 
@@ -140,12 +150,12 @@ serve(async (req) => {
       .from('payment_gateways')
       .select('*')
       .eq('code', 'paypal')
-      .single()
+      .single();
 
     const { data: countries } = await supabaseServiceClient
       .from('country_settings')
       .select('code, default_gateway, available_gateways')
-      .in('code', ['US', 'IN', 'NP'])
+      .in('code', ['US', 'IN', 'NP']);
 
     return new Response(
       JSON.stringify({
@@ -155,36 +165,35 @@ serve(async (req) => {
           successful_operations: successCount,
           failed_operations: errorCount,
           paypal_gateway_added: !!paypalGateway,
-          countries_updated: countries?.length || 0
+          countries_updated: countries?.length || 0,
         },
         data: {
           paypal_gateway: paypalGateway,
-          updated_countries: countries
-        }
+          updated_countries: countries,
+        },
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       },
-    )
-
+    );
   } catch (error) {
-    console.error('❌ PayPal integration failed:', error)
-    
+    console.error('❌ PayPal integration failed:', error);
+
     if (error instanceof AuthError) {
       return createAuthErrorResponse(error, corsHeaders);
     }
-    
+
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message,
-        message: 'PayPal integration changes failed'
+        message: 'PayPal integration changes failed',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       },
-    )
+    );
   }
-})
+});

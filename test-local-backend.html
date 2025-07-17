@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Local Backend</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Test Local Backend - eSewa</h1>
+    
+    <div class="section">
+        <h3>Local Backend Test</h3>
+        <button onclick="testLocalBackend()">Test Local create-payment</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function testLocalBackend() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing local backend...</p>';
+            
+            try {
+                // Test local backend
+                const response = await fetch('http://127.0.0.1:54321/functions/v1/create-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+                    },
+                    body: JSON.stringify({
+                        quoteIds: ['550e8400-e29b-41d4-a716-446655440000'],
+                        gateway: 'esewa',
+                        amount: 100,
+                        currency: 'NPR',
+                        success_url: 'http://localhost:5173/payment-callback/esewa-success',
+                        cancel_url: 'http://localhost:5173/payment-callback/esewa-failure',
+                        customerInfo: {
+                            name: 'Test Customer',
+                            email: 'test@example.com',
+                            phone: '9806800001'
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('Backend response:', data);
+                
+                if (data.success && data.formData && data.url) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Backend Success!</h4>
+                            <p><strong>URL:</strong> ${data.url}</p>
+                            <p><strong>Method:</strong> ${data.method}</p>
+                            <p><strong>Transaction ID:</strong> ${data.transactionId}</p>
+                        </div>
+                        
+                        <h4>Form Data:</h4>
+                        <pre>${JSON.stringify(data.formData, null, 2)}</pre>
+                        
+                        <h4>Validation:</h4>
+                        <ul>
+                            <li>✅ URL: ${data.url}</li>
+                            <li>✅ Method: ${data.method}</li>
+                            <li>✅ signed_field_names: ${data.formData.signed_field_names}</li>
+                            <li>✅ signature: ${data.formData.signature ? 'Present' : 'Missing'}</li>
+                            <li>✅ transaction_uuid: ${data.formData.transaction_uuid}</li>
+                            <li>✅ product_code: ${data.formData.product_code}</li>
+                            <li>✅ total_amount: ${data.formData.total_amount}</li>
+                        </ul>
+                    `;
+                    
+                    // Test form submission
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = data.url;
+                    form.target = '_blank';
+                    
+                    Object.entries(data.formData).forEach(([key, value]) => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.value = String(value);
+                        form.appendChild(input);
+                    });
+                    
+                    const submitBtn = document.createElement('button');
+                    submitBtn.type = 'submit';
+                    submitBtn.textContent = 'Test eSewa Payment (Backend Generated)';
+                    submitBtn.style.padding = '10px 20px';
+                    submitBtn.style.backgroundColor = '#28a745';
+                    submitBtn.style.color = 'white';
+                    submitBtn.style.border = 'none';
+                    submitBtn.style.cursor = 'pointer';
+                    submitBtn.style.borderRadius = '4px';
+                    submitBtn.style.margin = '10px 0';
+                    
+                    form.appendChild(submitBtn);
+                    resultDiv.appendChild(form);
+                    
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Backend Error</h4>
+                            <p><strong>Error:</strong> ${data.error || 'Unknown error'}</p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Request Failed</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

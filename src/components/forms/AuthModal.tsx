@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -10,30 +10,37 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Checkbox } from "@/components/ui/checkbox";
-import { User, UserPlus, Loader2, Eye, EyeOff } from "lucide-react";
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Checkbox } from '@/components/ui/checkbox';
+import { User, UserPlus, Loader2, Eye, EyeOff } from 'lucide-react';
 
 // Reuse the existing validation schemas
 const signInSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(1, { message: "Password is required." }),
+  email: z.string().email({ message: 'Please enter a valid email address.' }),
+  password: z.string().min(1, { message: 'Password is required.' }),
 });
 
 const signUpSchema = z.object({
-  name: z.string().min(1, { message: "Name is required." }),
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  phone: z.string().min(8, { message: "Please enter a valid phone number (minimum 8 digits)." }),
-  password: z.string()
+  name: z.string().min(1, { message: 'Name is required.' }),
+  email: z.string().email({ message: 'Please enter a valid email address.' }),
+  phone: z.string().min(8, {
+    message: 'Please enter a valid phone number (minimum 8 digits).',
+  }),
+  password: z
+    .string()
     .min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number')
     .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
-  terms: z.literal(true, { errorMap: () => ({ message: "You must agree to the terms and conditions." }) }),
+  terms: z.literal(true, {
+    errorMap: () => ({
+      message: 'You must agree to the terms and conditions.',
+    }),
+  }),
 });
 
 interface AuthModalProps {
@@ -43,29 +50,24 @@ interface AuthModalProps {
   onSwitchMode?: (mode: 'signin' | 'signup') => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ 
-  mode, 
-  onSuccess, 
-  onBack,
-  onSwitchMode 
-}) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ mode, onSuccess, onBack, onSwitchMode }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: '', password: '' },
   });
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { 
-      name: "", 
-      email: "", 
-      phone: "", 
-      password: "", 
-      terms: false 
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      password: '',
+      terms: false,
     },
   });
 
@@ -76,7 +78,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (password.match(/[A-Z]/)) strength++;
     if (password.match(/[0-9]/)) strength++;
     if (password.match(/[^A-Za-z0-9]/)) strength++;
-    
+
     if (strength <= 2) return { text: 'Weak', color: 'text-red-500', bg: 'bg-red-500' };
     if (strength <= 4) return { text: 'Medium', color: 'text-yellow-500', bg: 'bg-yellow-500' };
     return { text: 'Strong', color: 'text-green-500', bg: 'bg-green-500' };
@@ -88,17 +90,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       email: values.email,
       password: values.password,
     });
-    
+
     if (error) {
       toast({
-        title: "Error signing in",
+        title: 'Error signing in',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } else {
       toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in.",
+        title: 'Welcome back!',
+        description: 'You have successfully signed in.',
       });
       onSuccess?.();
     }
@@ -107,9 +109,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleSignUp = async (values: z.infer<typeof signUpSchema>) => {
     setLoading(true);
-    
+
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
@@ -117,32 +119,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           emailRedirectTo: `${window.location.origin}/auth/confirm`,
         },
       });
-      
+
       if (error) {
-        toast({ 
-          title: "Error signing up", 
-          description: error.message, 
-          variant: "destructive" 
+        toast({
+          title: 'Error signing up',
+          description: error.message,
+          variant: 'destructive',
         });
         return;
       }
 
       // Supabase will handle email confirmation automatically
-      toast({ 
-        title: "Welcome to iWishBag!", 
-        description: "Please check your email to confirm your account. You'll be able to sign in after email verification.",
-        duration: 8000
+      toast({
+        title: 'Welcome to iWishBag!',
+        description:
+          "Please check your email to confirm your account. You'll be able to sign in after email verification.",
+        duration: 8000,
       });
-      
+
       // Switch to sign in mode after successful signup
       onSwitchMode?.('signin');
-      
     } catch (err) {
       console.error('Unexpected signup error:', err);
-      toast({ 
-        title: "Error signing up", 
-        description: "An unexpected error occurred. Please try again.", 
-        variant: "destructive" 
+      toast({
+        title: 'Error signing up',
+        description: 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -151,17 +153,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleSignInWithGoogle = async () => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({ 
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.href // Return to current page after auth
-      }
+        redirectTo: window.location.href, // Return to current page after auth
+      },
     });
     if (error) {
-      toast({ 
-        title: "Google sign-in error", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: 'Google sign-in error',
+        description: error.message,
+        variant: 'destructive',
       });
     }
     setLoading(false);
@@ -174,7 +176,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <User className="h-5 w-5" />
           <h3 className="text-lg font-semibold">Sign In</h3>
         </div>
-        
+
         <Form {...signInForm}>
           <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="space-y-4">
             <FormField
@@ -184,9 +186,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="email" 
-                      placeholder="you@example.com" 
+                    <Input
+                      type="email"
+                      placeholder="you@example.com"
                       {...field}
                       disabled={loading}
                     />
@@ -202,23 +204,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="password" 
-                      {...field}
-                      disabled={loading}
-                    />
+                    <Input type="password" {...field} disabled={loading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
             <div className="space-y-3">
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={loading}
-              >
+              <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -228,18 +222,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   'Sign In'
                 )}
               </Button>
-              
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full" 
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
                 onClick={handleSignInWithGoogle}
                 disabled={loading}
               >
                 Sign in with Google
               </Button>
             </div>
-            
+
             <div className="flex items-center justify-between text-sm">
               <button
                 type="button"
@@ -269,7 +263,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <UserPlus className="h-5 w-5" />
         <h3 className="text-lg font-semibold">Create Account</h3>
       </div>
-      
+
       <Form {...signUpForm}>
         <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
           <FormField
@@ -279,11 +273,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <FormItem>
                 <FormLabel>Full Name</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="John Doe" 
-                    {...field}
-                    disabled={loading}
-                  />
+                  <Input placeholder="John Doe" {...field} disabled={loading} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -296,12 +286,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input 
-                    type="email" 
-                    placeholder="you@example.com" 
-                    {...field}
-                    disabled={loading}
-                  />
+                  <Input type="email" placeholder="you@example.com" {...field} disabled={loading} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -314,11 +299,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <FormItem>
                 <FormLabel>Phone Number</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="+1234567890" 
-                    {...field}
-                    disabled={loading}
-                  />
+                  <Input placeholder="+1234567890" {...field} disabled={loading} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -335,7 +316,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <FormLabel>Password</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Input 
+                      <Input
                         type={showPassword ? 'text' : 'password'}
                         {...field}
                         disabled={loading}
@@ -347,7 +328,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                         disabled={loading}
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </FormControl>
@@ -357,9 +342,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         <span>Password strength:</span>
                         <span className={passwordStrength.color}>{passwordStrength.text}</span>
                         <div className="flex-1 bg-gray-200 rounded-full h-1.5 ml-2">
-                          <div 
+                          <div
                             className={`h-1.5 rounded-full transition-all duration-300 ${passwordStrength.bg}`}
-                            style={{ width: `${Math.min((passwordStrength.text === 'Weak' ? 33 : passwordStrength.text === 'Medium' ? 66 : 100), 100)}%` }}
+                            style={{
+                              width: `${Math.min(passwordStrength.text === 'Weak' ? 33 : passwordStrength.text === 'Medium' ? 66 : 100, 100)}%`,
+                            }}
                           />
                         </div>
                       </div>
@@ -391,13 +378,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </FormItem>
             )}
           />
-          
+
           <div className="space-y-3">
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -408,7 +391,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               )}
             </Button>
           </div>
-          
+
           <div className="flex items-center justify-between text-sm">
             <button
               type="button"

@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui/button";
-import { Minus, Plus, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Button } from '@/components/ui/button';
+import { Minus, Plus, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 interface QuantityAdjusterProps {
   initialQuantity: number;
@@ -27,7 +27,7 @@ export const QuantityAdjuster = ({
       const newQuantity = quantity - 1;
       await onQuantityChange(newQuantity);
       setQuantity(newQuantity);
-    } catch (error) {
+    } catch (_error) {
       // Revert to previous quantity on error
       setQuantity(quantity);
     } finally {
@@ -42,7 +42,7 @@ export const QuantityAdjuster = ({
       const newQuantity = quantity + 1;
       await onQuantityChange(newQuantity);
       setQuantity(newQuantity);
-    } catch (error) {
+    } catch (_error) {
       // Revert to previous quantity on error
       setQuantity(quantity);
     } finally {
@@ -59,11 +59,7 @@ export const QuantityAdjuster = ({
         disabled={quantity <= minQuantity || disabled || isLoading}
         className="h-8 w-8"
       >
-        {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Minus className="h-4 w-4" />
-        )}
+        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Minus className="h-4 w-4" />}
       </Button>
       <span className="w-8 text-center">{quantity}</span>
       <Button
@@ -73,12 +69,8 @@ export const QuantityAdjuster = ({
         disabled={quantity >= maxQuantity || disabled || isLoading}
         className="h-8 w-8"
       >
-        {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Plus className="h-4 w-4" />
-        )}
+        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
       </Button>
     </div>
   );
-}; 
+};

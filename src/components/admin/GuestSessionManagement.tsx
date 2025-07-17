@@ -14,19 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  AlertTriangle,
-  Clock,
-  Database,
-  Play,
-  Settings,
-  Shield,
-  Trash2,
-  Users,
-  BarChart3,
-  CheckCircle,
-  XCircle
-} from 'lucide-react';
+import { Clock, Database, Play, Settings, Shield, BarChart3 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { guestCheckoutService } from '@/services/GuestCheckoutService';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,15 +29,6 @@ interface RetentionSettings {
   cleanup_batch_size: number;
   cleanup_notifications: boolean;
   cleanup_log_retention_days: number;
-}
-
-interface CleanupStats {
-  expiredDeleted: number;
-  failedDeleted: number;
-  completedAnonymized: number;
-  anonymizedDeleted: number;
-  totalProcessed: number;
-  durationMs: number;
 }
 
 interface SessionStats {
@@ -84,9 +63,9 @@ const GuestSessionManagement: React.FC = () => {
     anonymization_enabled: true,
     cleanup_batch_size: 1000,
     cleanup_notifications: true,
-    cleanup_log_retention_days: 30
+    cleanup_log_retention_days: 30,
   });
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isRunningCleanup, setIsRunningCleanup] = useState(false);
@@ -98,7 +77,7 @@ const GuestSessionManagement: React.FC = () => {
     loadSettings();
     loadCleanupHistory();
     loadSessionStats();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadSettings = async () => {
     try {
@@ -114,27 +93,27 @@ const GuestSessionManagement: React.FC = () => {
           'guest_session_anonymization_enabled',
           'guest_session_cleanup_batch_size',
           'guest_session_cleanup_notifications',
-          'guest_session_cleanup_log_retention_days'
+          'guest_session_cleanup_log_retention_days',
         ]);
 
       if (error) throw error;
 
       const settingsMap = data?.reduce<Partial<RetentionSettings>>((acc, setting) => {
         const key = setting.setting_key.replace('guest_session_', '') as keyof RetentionSettings;
-        acc[key] = 
+        acc[key] =
           setting.setting_key.includes('enabled') || setting.setting_key.includes('notifications')
             ? setting.setting_value === 'true'
             : parseInt(setting.setting_value);
         return acc;
       }, {});
 
-      setSettings(prev => ({ ...prev, ...settingsMap }));
+      setSettings((prev) => ({ ...prev, ...settingsMap }));
     } catch (error) {
       console.error('Error loading settings:', error);
       toast({
         title: 'Error',
         description: 'Failed to load retention settings',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -147,14 +126,14 @@ const GuestSessionManagement: React.FC = () => {
       const updates = Object.entries(settings).map(([key, value]) => ({
         setting_key: `guest_session_${key}`,
         setting_value: value.toString(),
-        description: getSettingDescription(key)
+        description: getSettingDescription(key),
       }));
 
       for (const update of updates) {
         const { error } = await supabase
           .from('system_settings')
           .upsert(update, { onConflict: 'setting_key' });
-        
+
         if (error) throw error;
       }
 
@@ -167,7 +146,7 @@ const GuestSessionManagement: React.FC = () => {
       toast({
         title: 'Error',
         description: 'Failed to save retention settings',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsSaving(false);
@@ -178,13 +157,13 @@ const GuestSessionManagement: React.FC = () => {
     setIsRunningCleanup(true);
     try {
       const result = await guestCheckoutService.enhancedCleanup('admin_manual');
-      
+
       if (result.success && result.stats) {
         toast({
           title: 'Cleanup Completed',
           description: `Processed ${result.stats.totalProcessed} sessions in ${result.stats.durationMs}ms`,
         });
-        
+
         // Reload history and stats
         loadCleanupHistory();
         loadSessionStats();
@@ -196,7 +175,7 @@ const GuestSessionManagement: React.FC = () => {
       toast({
         title: 'Cleanup Failed',
         description: 'Failed to run session cleanup',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsRunningCleanup(false);
@@ -223,11 +202,14 @@ const GuestSessionManagement: React.FC = () => {
 
       if (error) throw error;
 
-      const stats = data?.reduce<SessionStats>((acc, session) => {
-        acc[session.status] = (acc[session.status] || 0) + 1;
-        acc.total = (acc.total || 0) + 1;
-        return acc;
-      }, { total: 0 });
+      const stats = data?.reduce<SessionStats>(
+        (acc, session) => {
+          acc[session.status] = (acc[session.status] || 0) + 1;
+          acc.total = (acc.total || 0) + 1;
+          return acc;
+        },
+        { total: 0 },
+      );
 
       setSessionStats(stats);
     } catch (error) {
@@ -237,15 +219,15 @@ const GuestSessionManagement: React.FC = () => {
 
   const getSettingDescription = (key: string): string => {
     const descriptions: Record<string, string> = {
-      'expired_retention_days': 'Days to keep expired/cancelled guest sessions before deletion',
-      'failed_retention_days': 'Days to keep failed payment guest sessions before deletion',
-      'completed_retention_days': 'Days to keep completed guest sessions before anonymization',
-      'anonymized_retention_days': 'Days to keep anonymized guest session data before deletion',
-      'auto_cleanup_enabled': 'Enable automatic cleanup of old guest sessions',
-      'anonymization_enabled': 'Enable anonymization of old completed sessions (removes PII)',
-      'cleanup_batch_size': 'Number of sessions to process in each cleanup batch',
-      'cleanup_notifications': 'Send notifications when cleanup operations complete',
-      'cleanup_log_retention_days': 'Days to keep cleanup operation logs'
+      expired_retention_days: 'Days to keep expired/cancelled guest sessions before deletion',
+      failed_retention_days: 'Days to keep failed payment guest sessions before deletion',
+      completed_retention_days: 'Days to keep completed guest sessions before anonymization',
+      anonymized_retention_days: 'Days to keep anonymized guest session data before deletion',
+      auto_cleanup_enabled: 'Enable automatic cleanup of old guest sessions',
+      anonymization_enabled: 'Enable anonymization of old completed sessions (removes PII)',
+      cleanup_batch_size: 'Number of sessions to process in each cleanup batch',
+      cleanup_notifications: 'Send notifications when cleanup operations complete',
+      cleanup_log_retention_days: 'Days to keep cleanup operation logs',
     };
     return descriptions[key] || '';
   };
@@ -305,7 +287,9 @@ const GuestSessionManagement: React.FC = () => {
                 <div className="text-sm text-muted-foreground">Total Sessions</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{sessionStats.completed || 0}</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {sessionStats.completed || 0}
+                </div>
                 <div className="text-sm text-muted-foreground">Completed</div>
               </div>
               <div className="text-center">
@@ -317,7 +301,9 @@ const GuestSessionManagement: React.FC = () => {
                 <div className="text-sm text-muted-foreground">Expired</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-600">{sessionStats.cancelled || 0}</div>
+                <div className="text-2xl font-bold text-gray-600">
+                  {sessionStats.cancelled || 0}
+                </div>
                 <div className="text-sm text-muted-foreground">Cancelled</div>
               </div>
             </div>
@@ -338,7 +324,7 @@ const GuestSessionManagement: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <Label className="text-base font-semibold">Retention Periods (Days)</Label>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="expired_retention">Expired/Cancelled Sessions</Label>
                 <Input
@@ -346,10 +332,12 @@ const GuestSessionManagement: React.FC = () => {
                   type="number"
                   min="1"
                   value={settings.expired_retention_days}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings(prev => ({ 
-                    ...prev, 
-                    expired_retention_days: parseInt(e.target.value) || 7 
-                  }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      expired_retention_days: parseInt(e.target.value) || 7,
+                    }))
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   Delete sessions that expired or were cancelled
@@ -363,10 +351,12 @@ const GuestSessionManagement: React.FC = () => {
                   type="number"
                   min="1"
                   value={settings.failed_retention_days}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings(prev => ({ 
-                    ...prev, 
-                    failed_retention_days: parseInt(e.target.value) || 30 
-                  }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      failed_retention_days: parseInt(e.target.value) || 30,
+                    }))
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   Delete sessions where payment attempts failed
@@ -382,10 +372,12 @@ const GuestSessionManagement: React.FC = () => {
                   type="number"
                   min="1"
                   value={settings.completed_retention_days}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings(prev => ({ 
-                    ...prev, 
-                    completed_retention_days: parseInt(e.target.value) || 90 
-                  }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      completed_retention_days: parseInt(e.target.value) || 90,
+                    }))
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   Remove PII from successful sessions (keeps analytics)
@@ -399,10 +391,12 @@ const GuestSessionManagement: React.FC = () => {
                   type="number"
                   min="1"
                   value={settings.anonymized_retention_days}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings(prev => ({ 
-                    ...prev, 
-                    anonymized_retention_days: parseInt(e.target.value) || 365 
-                  }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      anonymized_retention_days: parseInt(e.target.value) || 365,
+                    }))
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   Delete anonymized sessions completely
@@ -416,7 +410,7 @@ const GuestSessionManagement: React.FC = () => {
           {/* Settings Toggles */}
           <div className="space-y-4">
             <Label className="text-base font-semibold">Cleanup Settings</Label>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -428,10 +422,12 @@ const GuestSessionManagement: React.FC = () => {
                 <Switch
                   id="auto_cleanup"
                   checked={settings.auto_cleanup_enabled}
-                  onCheckedChange={(checked) => setSettings(prev => ({ 
-                    ...prev, 
-                    auto_cleanup_enabled: checked 
-                  }))}
+                  onCheckedChange={(checked) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      auto_cleanup_enabled: checked,
+                    }))
+                  }
                 />
               </div>
 
@@ -445,10 +441,12 @@ const GuestSessionManagement: React.FC = () => {
                 <Switch
                   id="anonymization"
                   checked={settings.anonymization_enabled}
-                  onCheckedChange={(checked) => setSettings(prev => ({ 
-                    ...prev, 
-                    anonymization_enabled: checked 
-                  }))}
+                  onCheckedChange={(checked) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      anonymization_enabled: checked,
+                    }))
+                  }
                 />
               </div>
             </div>
@@ -462,10 +460,12 @@ const GuestSessionManagement: React.FC = () => {
                   min="100"
                   max="10000"
                   value={settings.cleanup_batch_size}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings(prev => ({ 
-                    ...prev, 
-                    cleanup_batch_size: parseInt(e.target.value) || 1000 
-                  }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      cleanup_batch_size: parseInt(e.target.value) || 1000,
+                    }))
+                  }
                 />
               </div>
 
@@ -476,10 +476,12 @@ const GuestSessionManagement: React.FC = () => {
                   type="number"
                   min="7"
                   value={settings.cleanup_log_retention_days}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings(prev => ({ 
-                    ...prev, 
-                    cleanup_log_retention_days: parseInt(e.target.value) || 30 
-                  }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      cleanup_log_retention_days: parseInt(e.target.value) || 30,
+                    }))
+                  }
                 />
               </div>
             </div>
@@ -513,9 +515,7 @@ const GuestSessionManagement: React.FC = () => {
               <TableBody>
                 {cleanupHistory.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell>
-                      {new Date(log.created_at).toLocaleDateString()}
-                    </TableCell>
+                    <TableCell>{new Date(log.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{log.triggered_by}</Badge>
                     </TableCell>

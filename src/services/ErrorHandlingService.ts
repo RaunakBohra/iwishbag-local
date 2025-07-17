@@ -10,49 +10,49 @@ export enum QuoteCalculationErrorCode {
   INVALID_NUMERIC_VALUE = 'INVALID_NUMERIC_VALUE',
   NEGATIVE_VALUE = 'NEGATIVE_VALUE',
   INVALID_EXCHANGE_RATE = 'INVALID_EXCHANGE_RATE',
-  
+
   // Calculation Errors
   CALCULATION_FAILED = 'CALCULATION_FAILED',
   TOTAL_TOO_HIGH = 'TOTAL_TOO_HIGH',
   NEGATIVE_TOTAL = 'NEGATIVE_TOTAL',
   INVALID_CALCULATION_RESULT = 'INVALID_CALCULATION_RESULT',
-  
+
   // API/Network Errors
   SHIPPING_COST_API_ERROR = 'SHIPPING_COST_API_ERROR',
   EXCHANGE_RATE_API_ERROR = 'EXCHANGE_RATE_API_ERROR',
   DATABASE_ERROR = 'DATABASE_ERROR',
   NETWORK_ERROR = 'NETWORK_ERROR',
   TIMEOUT_ERROR = 'TIMEOUT_ERROR',
-  
+
   // Cache Errors
   CACHE_ERROR = 'CACHE_ERROR',
   CACHE_CORRUPTION = 'CACHE_CORRUPTION',
-  
+
   // System Errors
   MEMORY_ERROR = 'MEMORY_ERROR',
   SYSTEM_ERROR = 'SYSTEM_ERROR',
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
-  
+
   // **NEW: Business-Critical Monitoring Errors**
   // Performance Monitoring
   CALCULATION_TIMEOUT = 'CALCULATION_TIMEOUT',
   SLOW_CALCULATION = 'SLOW_CALCULATION',
   HIGH_ERROR_RATE = 'HIGH_ERROR_RATE',
-  
+
   // Business Logic Errors
   PRICE_DEVIATION_EXTREME = 'PRICE_DEVIATION_EXTREME',
   CURRENCY_CONVERSION_FAILED = 'CURRENCY_CONVERSION_FAILED',
   SHIPPING_CALCULATION_ANOMALY = 'SHIPPING_CALCULATION_ANOMALY',
-  
+
   // Service Degradation
   SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
   FALLBACK_USED = 'FALLBACK_USED',
   CIRCUIT_BREAKER_OPEN = 'CIRCUIT_BREAKER_OPEN',
-  
+
   // Business Metrics
   CONVERSION_RATE_DROP = 'CONVERSION_RATE_DROP',
   ABANDONMENT_RATE_HIGH = 'ABANDONMENT_RATE_HIGH',
-  AVERAGE_QUOTE_TIME_HIGH = 'AVERAGE_QUOTE_TIME_HIGH'
+  AVERAGE_QUOTE_TIME_HIGH = 'AVERAGE_QUOTE_TIME_HIGH',
 }
 
 export interface QuoteCalculationError {
@@ -141,6 +141,36 @@ export interface AlertConfig {
   action: 'email' | 'sms' | 'webhook' | 'log';
 }
 
+// **NEW: Alert Interface**
+export interface Alert {
+  id: string;
+  timestamp: string;
+  severity: 'critical' | 'warning' | 'info';
+  errorCode: QuoteCalculationErrorCode;
+  message: string;
+  context?: Record<string, unknown>;
+}
+
+// **NEW: Performance Metrics Interface**
+export interface PerformanceMetrics {
+  totalCalculations: number;
+  successRate: number;
+  averageCalculationTime: number;
+  errorRate: number;
+  slowCalculations: number;
+  anomalousCalculations: number;
+  topErrors: Array<{ code: string; count: number }>;
+}
+
+// **NEW: Alert Summary Interface**
+export interface AlertSummary {
+  totalAlerts: number;
+  criticalAlerts: number;
+  warningAlerts: number;
+  recentAlerts: Alert[];
+  topAlertCodes: Array<{ code: string; count: number }>;
+}
+
 // **NEW: Business Metrics Interface**
 export interface BusinessMetrics {
   quotesGenerated: number;
@@ -153,6 +183,7 @@ export interface BusinessMetrics {
     start: Date;
     end: Date;
   };
+  topCountries: Array<{ country: string; count: number }>;
 }
 
 /**
@@ -163,7 +194,7 @@ export class ErrorHandlingService {
   private errorLog: QuoteCalculationError[] = [];
   private config: ErrorHandlingConfig;
   private retryCounters = new Map<string, number>();
-  
+
   // **NEW: Monitoring Properties**
   private metricsLog: QuoteCalculationMetrics[] = [];
   private activeCalculations = new Map<string, QuoteCalculationMetrics>();
@@ -184,15 +215,15 @@ export class ErrorHandlingService {
       performanceThresholds: {
         slowCalculationMs: 5000, // 5 seconds
         timeoutMs: 30000, // 30 seconds
-        errorRatePercent: 5 // 5% error rate threshold
+        errorRatePercent: 5, // 5% error rate threshold
       },
       alerting: {
         enableAlerts: true,
         criticalThreshold: 10, // 10% critical error rate
-        warningThreshold: 5 // 5% warning error rate
-      }
+        warningThreshold: 5, // 5% warning error rate
+      },
     };
-    
+
     // **NEW: Initialize Alert Configurations**
     this.initializeAlertConfigs();
   }
@@ -212,7 +243,7 @@ export class ErrorHandlingService {
     message: string,
     details?: Record<string, unknown>,
     context?: QuoteCalculationError['context'],
-    field?: string
+    field?: string,
   ): QuoteCalculationError {
     const error: QuoteCalculationError = {
       code,
@@ -222,7 +253,7 @@ export class ErrorHandlingService {
       timestamp: new Date(),
       context,
       severity: this.determineSeverity(code),
-      recoveryActions: this.generateRecoveryActions(code, context)
+      recoveryActions: this.generateRecoveryActions(code, context),
     };
 
     if (this.config.logErrors) {
@@ -255,7 +286,7 @@ export class ErrorHandlingService {
             return {
               handled: true,
               recovery: 'automatic',
-              userMessage: `Recovered from error: ${action.description}`
+              userMessage: `Recovered from error: ${action.description}`,
             };
           } catch (recoveryError) {
             console.warn(`[ErrorHandlingService] Auto-recovery failed:`, recoveryError);
@@ -269,7 +300,7 @@ export class ErrorHandlingService {
 
     return {
       handled: false,
-      userMessage
+      userMessage,
     };
   }
 
@@ -287,7 +318,7 @@ export class ErrorHandlingService {
       case QuoteCalculationErrorCode.HIGH_ERROR_RATE:
       case QuoteCalculationErrorCode.CIRCUIT_BREAKER_OPEN:
         return 'critical';
-      
+
       // High - Business impact, needs attention
       case QuoteCalculationErrorCode.CALCULATION_FAILED:
       case QuoteCalculationErrorCode.INVALID_EXCHANGE_RATE:
@@ -296,7 +327,7 @@ export class ErrorHandlingService {
       case QuoteCalculationErrorCode.CURRENCY_CONVERSION_FAILED:
       case QuoteCalculationErrorCode.CONVERSION_RATE_DROP:
         return 'high';
-      
+
       // Medium - Performance/reliability impact
       case QuoteCalculationErrorCode.SHIPPING_COST_API_ERROR:
       case QuoteCalculationErrorCode.EXCHANGE_RATE_API_ERROR:
@@ -307,7 +338,7 @@ export class ErrorHandlingService {
       case QuoteCalculationErrorCode.ABANDONMENT_RATE_HIGH:
       case QuoteCalculationErrorCode.AVERAGE_QUOTE_TIME_HIGH:
         return 'medium';
-      
+
       // Low - Minor issues, informational
       default:
         return 'low';
@@ -319,7 +350,7 @@ export class ErrorHandlingService {
    */
   private generateRecoveryActions(
     code: QuoteCalculationErrorCode,
-    context?: QuoteCalculationError['context']
+    context?: QuoteCalculationError['context'],
   ): RecoveryAction[] {
     const actions: RecoveryAction[] = [];
 
@@ -331,8 +362,8 @@ export class ErrorHandlingService {
           description: 'Retry the calculation',
           automatic: true,
           action: async () => {
-            await new Promise(resolve => setTimeout(resolve, this.config.retryDelay));
-          }
+            await new Promise((resolve) => setTimeout(resolve, this.config.retryDelay));
+          },
         });
         break;
 
@@ -340,7 +371,7 @@ export class ErrorHandlingService {
         actions.push({
           type: 'fallback',
           description: 'Use fallback shipping calculation',
-          automatic: true
+          automatic: true,
         });
         break;
 
@@ -348,21 +379,21 @@ export class ErrorHandlingService {
         actions.push({
           type: 'fallback',
           description: 'Use cached exchange rate',
-          automatic: true
+          automatic: true,
         });
         break;
 
       case QuoteCalculationErrorCode.INVALID_EXCHANGE_RATE:
         actions.push({
           type: 'contact_admin',
-          description: 'Contact administrator to update exchange rates'
+          description: 'Contact administrator to update exchange rates',
         });
         break;
 
       case QuoteCalculationErrorCode.MISSING_COUNTRY_SETTINGS:
         actions.push({
           type: 'contact_admin',
-          description: 'Contact administrator to configure country settings'
+          description: 'Contact administrator to configure country settings',
         });
         break;
 
@@ -370,14 +401,14 @@ export class ErrorHandlingService {
         actions.push({
           type: 'retry',
           description: 'Retry with validated inputs',
-          automatic: false
+          automatic: false,
         });
         break;
 
       default:
         actions.push({
           type: 'manual',
-          description: 'Please check your input values and try again'
+          description: 'Please check your input values and try again',
         });
     }
 
@@ -389,44 +420,70 @@ export class ErrorHandlingService {
    */
   private generateUserMessage(error: QuoteCalculationError): string {
     const baseMessages: Record<QuoteCalculationErrorCode, string> = {
-      [QuoteCalculationErrorCode.MISSING_ITEMS]: 'Please add at least one item to calculate the quote.',
+      [QuoteCalculationErrorCode.MISSING_ITEMS]:
+        'Please add at least one item to calculate the quote.',
       [QuoteCalculationErrorCode.MISSING_ORIGIN_COUNTRY]: 'Please select an origin country.',
-      [QuoteCalculationErrorCode.MISSING_DESTINATION_COUNTRY]: 'Please select a destination country.',
-      [QuoteCalculationErrorCode.MISSING_COUNTRY_SETTINGS]: 'Country settings are not configured. Please contact support.',
+      [QuoteCalculationErrorCode.MISSING_DESTINATION_COUNTRY]:
+        'Please select a destination country.',
+      [QuoteCalculationErrorCode.MISSING_COUNTRY_SETTINGS]:
+        'Country settings are not configured. Please contact support.',
       [QuoteCalculationErrorCode.INVALID_ITEM_PRICE]: 'Please enter a valid price for all items.',
       [QuoteCalculationErrorCode.INVALID_ITEM_WEIGHT]: 'Please enter a valid weight for all items.',
-      [QuoteCalculationErrorCode.INVALID_ITEM_QUANTITY]: 'Please enter a valid quantity for all items.',
+      [QuoteCalculationErrorCode.INVALID_ITEM_QUANTITY]:
+        'Please enter a valid quantity for all items.',
       [QuoteCalculationErrorCode.INVALID_NUMERIC_VALUE]: 'Please enter valid numeric values.',
       [QuoteCalculationErrorCode.NEGATIVE_VALUE]: 'Values cannot be negative (except discount).',
-      [QuoteCalculationErrorCode.INVALID_EXCHANGE_RATE]: 'Exchange rate configuration issue. Please contact support.',
-      [QuoteCalculationErrorCode.CALCULATION_FAILED]: 'Quote calculation failed. Please check your inputs and try again.',
-      [QuoteCalculationErrorCode.TOTAL_TOO_HIGH]: 'Calculated total seems unreasonably high. Please verify your inputs.',
-      [QuoteCalculationErrorCode.NEGATIVE_TOTAL]: 'Calculated total is negative. Please check your discount amount.',
-      [QuoteCalculationErrorCode.INVALID_CALCULATION_RESULT]: 'Invalid calculation result. Please try again.',
-      [QuoteCalculationErrorCode.SHIPPING_COST_API_ERROR]: 'Unable to fetch shipping costs. Using estimated rates.',
-      [QuoteCalculationErrorCode.EXCHANGE_RATE_API_ERROR]: 'Unable to fetch current exchange rates. Using cached rates.',
-      [QuoteCalculationErrorCode.DATABASE_ERROR]: 'Database connection issue. Please try again in a moment.',
-      [QuoteCalculationErrorCode.NETWORK_ERROR]: 'Network connection issue. Please check your internet connection.',
+      [QuoteCalculationErrorCode.INVALID_EXCHANGE_RATE]:
+        'Exchange rate configuration issue. Please contact support.',
+      [QuoteCalculationErrorCode.CALCULATION_FAILED]:
+        'Quote calculation failed. Please check your inputs and try again.',
+      [QuoteCalculationErrorCode.TOTAL_TOO_HIGH]:
+        'Calculated total seems unreasonably high. Please verify your inputs.',
+      [QuoteCalculationErrorCode.NEGATIVE_TOTAL]:
+        'Calculated total is negative. Please check your discount amount.',
+      [QuoteCalculationErrorCode.INVALID_CALCULATION_RESULT]:
+        'Invalid calculation result. Please try again.',
+      [QuoteCalculationErrorCode.SHIPPING_COST_API_ERROR]:
+        'Unable to fetch shipping costs. Using estimated rates.',
+      [QuoteCalculationErrorCode.EXCHANGE_RATE_API_ERROR]:
+        'Unable to fetch current exchange rates. Using cached rates.',
+      [QuoteCalculationErrorCode.DATABASE_ERROR]:
+        'Database connection issue. Please try again in a moment.',
+      [QuoteCalculationErrorCode.NETWORK_ERROR]:
+        'Network connection issue. Please check your internet connection.',
       [QuoteCalculationErrorCode.TIMEOUT_ERROR]: 'Request timed out. Please try again.',
       [QuoteCalculationErrorCode.CACHE_ERROR]: 'Cache error occurred. Data has been refreshed.',
-      [QuoteCalculationErrorCode.CACHE_CORRUPTION]: 'Cache corruption detected. Cache has been cleared.',
+      [QuoteCalculationErrorCode.CACHE_CORRUPTION]:
+        'Cache corruption detected. Cache has been cleared.',
       [QuoteCalculationErrorCode.MEMORY_ERROR]: 'System memory issue. Please refresh the page.',
       [QuoteCalculationErrorCode.SYSTEM_ERROR]: 'System error occurred. Please contact support.',
       [QuoteCalculationErrorCode.UNKNOWN_ERROR]: 'An unexpected error occurred. Please try again.',
-      
+
       // **NEW: Monitoring-specific error messages**
-      [QuoteCalculationErrorCode.CALCULATION_TIMEOUT]: 'Quote calculation is taking longer than expected. Please try again.',
-      [QuoteCalculationErrorCode.SLOW_CALCULATION]: 'Quote calculation is processing slower than usual. Please wait.',
-      [QuoteCalculationErrorCode.HIGH_ERROR_RATE]: 'System experiencing high error rates. Please contact support.',
-      [QuoteCalculationErrorCode.PRICE_DEVIATION_EXTREME]: 'Calculated price seems unusual. Please verify your inputs.',
-      [QuoteCalculationErrorCode.CURRENCY_CONVERSION_FAILED]: 'Currency conversion failed. Using fallback rates.',
-      [QuoteCalculationErrorCode.SHIPPING_CALCULATION_ANOMALY]: 'Shipping calculation shows unusual values. Please review.',
-      [QuoteCalculationErrorCode.SERVICE_UNAVAILABLE]: 'Quote calculation service is temporarily unavailable. Please try again later.',
-      [QuoteCalculationErrorCode.FALLBACK_USED]: 'Using backup calculation method. Results may vary slightly.',
-      [QuoteCalculationErrorCode.CIRCUIT_BREAKER_OPEN]: 'Service temporarily disabled for maintenance. Please try again later.',
-      [QuoteCalculationErrorCode.CONVERSION_RATE_DROP]: 'System notice: Conversion rates are being monitored.',
-      [QuoteCalculationErrorCode.ABANDONMENT_RATE_HIGH]: 'System notice: Processing optimization in progress.',
-      [QuoteCalculationErrorCode.AVERAGE_QUOTE_TIME_HIGH]: 'System notice: Quote processing time is being optimized.'
+      [QuoteCalculationErrorCode.CALCULATION_TIMEOUT]:
+        'Quote calculation is taking longer than expected. Please try again.',
+      [QuoteCalculationErrorCode.SLOW_CALCULATION]:
+        'Quote calculation is processing slower than usual. Please wait.',
+      [QuoteCalculationErrorCode.HIGH_ERROR_RATE]:
+        'System experiencing high error rates. Please contact support.',
+      [QuoteCalculationErrorCode.PRICE_DEVIATION_EXTREME]:
+        'Calculated price seems unusual. Please verify your inputs.',
+      [QuoteCalculationErrorCode.CURRENCY_CONVERSION_FAILED]:
+        'Currency conversion failed. Using fallback rates.',
+      [QuoteCalculationErrorCode.SHIPPING_CALCULATION_ANOMALY]:
+        'Shipping calculation shows unusual values. Please review.',
+      [QuoteCalculationErrorCode.SERVICE_UNAVAILABLE]:
+        'Quote calculation service is temporarily unavailable. Please try again later.',
+      [QuoteCalculationErrorCode.FALLBACK_USED]:
+        'Using backup calculation method. Results may vary slightly.',
+      [QuoteCalculationErrorCode.CIRCUIT_BREAKER_OPEN]:
+        'Service temporarily disabled for maintenance. Please try again later.',
+      [QuoteCalculationErrorCode.CONVERSION_RATE_DROP]:
+        'System notice: Conversion rates are being monitored.',
+      [QuoteCalculationErrorCode.ABANDONMENT_RATE_HIGH]:
+        'System notice: Processing optimization in progress.',
+      [QuoteCalculationErrorCode.AVERAGE_QUOTE_TIME_HIGH]:
+        'System notice: Quote processing time is being optimized.',
     };
 
     let message = baseMessages[error.code] || baseMessages[QuoteCalculationErrorCode.UNKNOWN_ERROR];
@@ -456,9 +513,14 @@ export class ErrorHandlingService {
     }
 
     // Log to console with proper formatting
-    const logLevel = error.severity === 'critical' ? 'error' : 
-                    error.severity === 'high' ? 'error' :
-                    error.severity === 'medium' ? 'warn' : 'info';
+    const logLevel =
+      error.severity === 'critical'
+        ? 'error'
+        : error.severity === 'high'
+          ? 'error'
+          : error.severity === 'medium'
+            ? 'warn'
+            : 'info';
 
     console[logLevel](`[QuoteCalculation${error.severity.toUpperCase()}]`, {
       code: error.code,
@@ -466,7 +528,7 @@ export class ErrorHandlingService {
       field: error.field,
       context: error.context,
       details: error.details,
-      timestamp: error.timestamp
+      timestamp: error.timestamp,
     });
 
     // In production, you would send this to your monitoring service
@@ -479,7 +541,7 @@ export class ErrorHandlingService {
   async withRetry<T>(
     operation: () => Promise<T>,
     operationId: string,
-    context?: QuoteCalculationError['context']
+    context?: QuoteCalculationError['context'],
   ): Promise<T> {
     const maxRetries = this.config.maxRetries;
     let lastError: Error | unknown;
@@ -487,31 +549,34 @@ export class ErrorHandlingService {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const result = await operation();
-        
+
         // Reset retry counter on success
         this.retryCounters.delete(operationId);
-        
+
         return result;
       } catch (error) {
         lastError = error;
-        
+
         if (attempt === maxRetries) {
           // Max retries reached
           const calculationError = this.createError(
             QuoteCalculationErrorCode.CALCULATION_FAILED,
             `Operation failed after ${maxRetries} attempts: ${error.message}`,
             { originalError: error, attempts: maxRetries },
-            context
+            context,
           );
-          
+
           throw calculationError;
         }
 
         // Wait before retrying (exponential backoff)
         const delay = this.config.retryDelay * Math.pow(2, attempt - 1);
-        console.warn(`[ErrorHandlingService] Attempt ${attempt} failed, retrying in ${delay}ms:`, error.message);
-        
-        await new Promise(resolve => setTimeout(resolve, delay));
+        console.warn(
+          `[ErrorHandlingService] Attempt ${attempt} failed, retrying in ${delay}ms:`,
+          error.message,
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
 
@@ -526,18 +591,24 @@ export class ErrorHandlingService {
     const oneHourAgo = now - 60 * 60 * 1000;
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
 
-    const recentErrors = this.errorLog.filter(e => e.timestamp.getTime() > oneHourAgo);
-    const dailyErrors = this.errorLog.filter(e => e.timestamp.getTime() > oneDayAgo);
+    const recentErrors = this.errorLog.filter((e) => e.timestamp.getTime() > oneHourAgo);
+    const dailyErrors = this.errorLog.filter((e) => e.timestamp.getTime() > oneDayAgo);
 
-    const errorsByCode = this.errorLog.reduce((acc, error) => {
-      acc[error.code] = (acc[error.code] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const errorsByCode = this.errorLog.reduce(
+      (acc, error) => {
+        acc[error.code] = (acc[error.code] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
-    const errorsBySeverity = this.errorLog.reduce((acc, error) => {
-      acc[error.severity] = (acc[error.severity] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const errorsBySeverity = this.errorLog.reduce(
+      (acc, error) => {
+        acc[error.severity] = (acc[error.severity] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return {
       totalErrors: this.errorLog.length,
@@ -545,7 +616,7 @@ export class ErrorHandlingService {
       dailyErrors: dailyErrors.length,
       errorsByCode,
       errorsBySeverity,
-      lastError: this.errorLog[this.errorLog.length - 1]
+      lastError: this.errorLog[this.errorLog.length - 1],
     };
   }
 
@@ -583,7 +654,7 @@ export class ErrorHandlingService {
       threshold: 1, // Alert on first occurrence
       timeWindow: 5,
       description: 'Quote calculation timeout detected',
-      action: 'email'
+      action: 'email',
     });
 
     this.alertConfigs.set(QuoteCalculationErrorCode.SERVICE_UNAVAILABLE, {
@@ -591,7 +662,7 @@ export class ErrorHandlingService {
       threshold: 1,
       timeWindow: 5,
       description: 'Quote calculation service unavailable',
-      action: 'email'
+      action: 'email',
     });
 
     this.alertConfigs.set(QuoteCalculationErrorCode.HIGH_ERROR_RATE, {
@@ -599,7 +670,7 @@ export class ErrorHandlingService {
       threshold: 1,
       timeWindow: 10,
       description: 'High error rate in quote calculations',
-      action: 'email'
+      action: 'email',
     });
 
     this.alertConfigs.set(QuoteCalculationErrorCode.CALCULATION_FAILED, {
@@ -607,7 +678,7 @@ export class ErrorHandlingService {
       threshold: 3, // Alert after 3 failures
       timeWindow: 10,
       description: 'Multiple quote calculation failures detected',
-      action: 'webhook'
+      action: 'webhook',
     });
 
     this.alertConfigs.set(QuoteCalculationErrorCode.CIRCUIT_BREAKER_OPEN, {
@@ -615,7 +686,7 @@ export class ErrorHandlingService {
       threshold: 1,
       timeWindow: 5,
       description: 'Circuit breaker activated - service protection engaged',
-      action: 'email'
+      action: 'email',
     });
 
     this.alertConfigs.set(QuoteCalculationErrorCode.DATABASE_ERROR, {
@@ -623,7 +694,7 @@ export class ErrorHandlingService {
       threshold: 2,
       timeWindow: 5,
       description: 'Database connectivity issues affecting quote calculations',
-      action: 'webhook'
+      action: 'webhook',
     });
 
     this.alertConfigs.set(QuoteCalculationErrorCode.SHIPPING_COST_API_ERROR, {
@@ -631,7 +702,7 @@ export class ErrorHandlingService {
       threshold: 3,
       timeWindow: 10,
       description: 'Shipping cost API failures impacting calculations',
-      action: 'webhook'
+      action: 'webhook',
     });
 
     // Warning alerts - monitor closely
@@ -640,7 +711,7 @@ export class ErrorHandlingService {
       threshold: 5, // Alert after 5 occurrences
       timeWindow: 15,
       description: 'Slow quote calculations detected',
-      action: 'log'
+      action: 'log',
     });
 
     this.alertConfigs.set(QuoteCalculationErrorCode.FALLBACK_USED, {
@@ -648,7 +719,7 @@ export class ErrorHandlingService {
       threshold: 10,
       timeWindow: 30,
       description: 'Frequent fallback usage in calculations',
-      action: 'log'
+      action: 'log',
     });
 
     this.alertConfigs.set(QuoteCalculationErrorCode.PRICE_DEVIATION_EXTREME, {
@@ -656,7 +727,7 @@ export class ErrorHandlingService {
       threshold: 3,
       timeWindow: 60,
       description: 'Extreme price deviations detected in calculations',
-      action: 'email'
+      action: 'email',
     });
 
     this.alertConfigs.set(QuoteCalculationErrorCode.CONVERSION_RATE_DROP, {
@@ -664,7 +735,7 @@ export class ErrorHandlingService {
       threshold: 1,
       timeWindow: 30,
       description: 'Significant drop in quote-to-order conversion rate',
-      action: 'webhook'
+      action: 'webhook',
     });
 
     this.alertConfigs.set(QuoteCalculationErrorCode.ABANDONMENT_RATE_HIGH, {
@@ -672,7 +743,7 @@ export class ErrorHandlingService {
       threshold: 1,
       timeWindow: 30,
       description: 'High quote abandonment rate detected',
-      action: 'webhook'
+      action: 'webhook',
     });
   }
 
@@ -681,7 +752,7 @@ export class ErrorHandlingService {
    */
   startCalculationTracking(
     calculationId: string,
-    context: QuoteCalculationMetrics['context']
+    context: QuoteCalculationMetrics['context'],
   ): void {
     if (!this.config.enableMetrics) return;
 
@@ -694,12 +765,12 @@ export class ErrorHandlingService {
         calculationTime: 0,
         apiCalls: 0,
         cacheHits: 0,
-        cacheMisses: 0
+        cacheMisses: 0,
       },
       businessMetrics: {
         quoteValue: context.totalValue,
-        isAnomalous: false
-      }
+        isAnomalous: false,
+      },
     };
 
     this.activeCalculations.set(calculationId, metrics);
@@ -717,7 +788,7 @@ export class ErrorHandlingService {
       apiCalls?: number;
       cacheHits?: number;
       cacheMisses?: number;
-    }
+    },
   ): void {
     if (!this.config.enableMetrics) return;
 
@@ -732,18 +803,18 @@ export class ErrorHandlingService {
     metrics.duration = duration;
     metrics.success = success;
     metrics.performance.calculationTime = duration;
-    
+
     if (result) {
       metrics.errorCode = result.errorCode;
       metrics.performance.apiCalls = result.apiCalls || 0;
       metrics.performance.cacheHits = result.cacheHits || 0;
       metrics.performance.cacheMisses = result.cacheMisses || 0;
-      
+
       if (result.finalTotal) {
         metrics.businessMetrics.quoteValue = result.finalTotal;
         metrics.businessMetrics.priceDeviation = this.calculatePriceDeviation(
           result.finalTotal,
-          metrics.context.totalValue
+          metrics.context.totalValue,
         );
         metrics.businessMetrics.isAnomalous = this.isCalculationAnomalous(metrics);
       }
@@ -792,8 +863,11 @@ export class ErrorHandlingService {
       const slowCalcError = this.createError(
         QuoteCalculationErrorCode.SLOW_CALCULATION,
         `Quote calculation took ${Math.round(duration)}ms (threshold: ${this.config.performanceThresholds.slowCalculationMs}ms)`,
-        { duration, threshold: this.config.performanceThresholds.slowCalculationMs },
-        metrics.context
+        {
+          duration,
+          threshold: this.config.performanceThresholds.slowCalculationMs,
+        },
+        metrics.context,
       );
       this.handleError(slowCalcError);
     }
@@ -804,7 +878,7 @@ export class ErrorHandlingService {
         QuoteCalculationErrorCode.CALCULATION_TIMEOUT,
         `Quote calculation timed out after ${Math.round(duration)}ms`,
         { duration, threshold: this.config.performanceThresholds.timeoutMs },
-        metrics.context
+        metrics.context,
       );
       this.handleError(timeoutError);
     }
@@ -823,7 +897,7 @@ export class ErrorHandlingService {
    */
   private isCalculationAnomalous(metrics: QuoteCalculationMetrics): boolean {
     const { priceDeviation } = metrics.businessMetrics;
-    
+
     // Consider anomalous if:
     // - Price deviation > 100% (doubled)
     // - Calculation time > 10 seconds
@@ -842,16 +916,14 @@ export class ErrorHandlingService {
     if (!this.config.alerting.enableAlerts) return;
 
     const now = Date.now();
-    
+
     // Check error rate in last hour
     const oneHourAgo = now - 60 * 60 * 1000;
-    const recentCalculations = this.metricsLog.filter(m => 
-      m.startTime > oneHourAgo && m.endTime
-    );
-    
+    const recentCalculations = this.metricsLog.filter((m) => m.startTime > oneHourAgo && m.endTime);
+
     if (recentCalculations.length === 0) return;
 
-    const failedCalculations = recentCalculations.filter(m => !m.success);
+    const failedCalculations = recentCalculations.filter((m) => !m.success);
     const errorRate = (failedCalculations.length / recentCalculations.length) * 100;
 
     // Check critical error rate threshold
@@ -859,12 +931,12 @@ export class ErrorHandlingService {
       const highErrorRateError = this.createError(
         QuoteCalculationErrorCode.HIGH_ERROR_RATE,
         `Critical error rate detected: ${errorRate.toFixed(2)}% (threshold: ${this.config.alerting.criticalThreshold}%)`,
-        { 
-          errorRate, 
+        {
+          errorRate,
           threshold: this.config.alerting.criticalThreshold,
           totalCalculations: recentCalculations.length,
-          failedCalculations: failedCalculations.length
-        }
+          failedCalculations: failedCalculations.length,
+        },
       );
       this.handleError(highErrorRateError);
     }
@@ -878,12 +950,12 @@ export class ErrorHandlingService {
    */
   private checkErrorCodeAlerts(): void {
     const now = Date.now();
-    
+
     // Group errors by code and time window
     this.alertConfigs.forEach((config, errorCode) => {
-      const timeWindowStart = now - (config.timeWindow * 60 * 1000);
+      const timeWindowStart = now - config.timeWindow * 60 * 1000;
       const recentErrors = this.errorLog.filter(
-        error => error.code === errorCode && error.timestamp.getTime() > timeWindowStart
+        (error) => error.code === errorCode && error.timestamp.getTime() > timeWindowStart,
       );
 
       if (recentErrors.length >= config.threshold) {
@@ -892,7 +964,7 @@ export class ErrorHandlingService {
           config,
           errorCount: recentErrors.length,
           timeWindow: config.timeWindow,
-          recentErrors
+          recentErrors,
         });
       }
     });
@@ -922,8 +994,8 @@ export class ErrorHandlingService {
       details: {
         firstOccurrence: recentErrors[0]?.timestamp,
         lastOccurrence: recentErrors[recentErrors.length - 1]?.timestamp,
-        affectedContexts: this.extractUniqueContexts(recentErrors)
-      }
+        affectedContexts: this.extractUniqueContexts(recentErrors),
+      },
     };
 
     // Dispatch based on configured action
@@ -931,19 +1003,19 @@ export class ErrorHandlingService {
       case 'log':
         this.logAlert(alertMessage);
         break;
-      
+
       case 'email':
         this.sendEmailAlert(alertMessage);
         break;
-      
+
       case 'webhook':
         this.sendWebhookAlert(alertMessage);
         break;
-      
+
       case 'sms':
         this.sendSmsAlert(alertMessage);
         break;
-      
+
       default:
         this.logAlert(alertMessage);
     }
@@ -953,14 +1025,15 @@ export class ErrorHandlingService {
    * Log alert to console and potentially to a dedicated alert log
    */
   private logAlert(alertMessage: any): void {
-    const logPrefix = alertMessage.severity === 'critical' ? '🚨 CRITICAL ALERT' : '⚠️ WARNING ALERT';
-    
+    const logPrefix =
+      alertMessage.severity === 'critical' ? '🚨 CRITICAL ALERT' : '⚠️ WARNING ALERT';
+
     console.error(`${logPrefix}: ${alertMessage.description}`);
     console.error('Alert Details:', {
       code: alertMessage.errorCode,
       count: alertMessage.errorCount,
       timeWindow: alertMessage.timeWindow,
-      timestamp: alertMessage.timestamp
+      timestamp: alertMessage.timestamp,
     });
 
     // In production, this would write to a dedicated alert log file or service
@@ -981,7 +1054,7 @@ export class ErrorHandlingService {
     console.error('📧 EMAIL ALERT would be sent to:', {
       to: 'alerts@iwishbag.com',
       subject: `[${alertMessage.severity.toUpperCase()}] ${alertMessage.description}`,
-      body: JSON.stringify(alertMessage, null, 2)
+      body: JSON.stringify(alertMessage, null, 2),
     });
   }
 
@@ -997,7 +1070,7 @@ export class ErrorHandlingService {
       url: 'https://monitoring.iwishbag.com/alerts',
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: alertMessage
+      body: alertMessage,
     });
 
     // Simulate webhook call for local development
@@ -1016,7 +1089,7 @@ export class ErrorHandlingService {
     // In production, this would integrate with an SMS service like Twilio
     console.error('📱 SMS ALERT would be sent:', {
       to: '+1234567890',
-      message: `${alertMessage.severity.toUpperCase()}: ${alertMessage.description} - ${alertMessage.errorCount} errors in ${alertMessage.timeWindow}`
+      message: `${alertMessage.severity.toUpperCase()}: ${alertMessage.description} - ${alertMessage.errorCount} errors in ${alertMessage.timeWindow}`,
     });
   }
 
@@ -1038,15 +1111,15 @@ export class ErrorHandlingService {
    */
   private extractUniqueContexts(errors: QuoteCalculationError[]): any[] {
     const uniqueContexts = new Map<string, any>();
-    
-    errors.forEach(error => {
+
+    errors.forEach((error) => {
       if (error.context) {
         const key = `${error.context.originCountry}-${error.context.destinationCountry}-${error.context.currency}`;
         uniqueContexts.set(key, {
           originCountry: error.context.originCountry,
           destinationCountry: error.context.destinationCountry,
           currency: error.context.currency,
-          userCount: new Set(errors.map(e => e.context?.userId).filter(Boolean)).size
+          userCount: new Set(errors.map((e) => e.context?.userId).filter(Boolean)).size,
         });
       }
     });
@@ -1055,16 +1128,16 @@ export class ErrorHandlingService {
   }
 
   // Alert history storage
-  private alertHistory: any[] = [];
+  private alertHistory: Alert[] = [];
   private readonly MAX_ALERT_HISTORY = 1000;
 
   /**
    * Store alert in history for monitoring dashboard
    */
-  private storeAlertHistory(alertMessage: any): void {
+  private storeAlertHistory(alertMessage: Omit<Alert, 'id'>): void {
     this.alertHistory.push({
       ...alertMessage,
-      id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     });
 
     // Keep only recent alerts
@@ -1076,9 +1149,9 @@ export class ErrorHandlingService {
   /**
    * Get alert history for monitoring dashboard
    */
-  getAlertHistory(severity?: 'critical' | 'warning' | 'info'): any[] {
+  getAlertHistory(severity?: 'critical' | 'warning' | 'info'): Alert[] {
     if (severity) {
-      return this.alertHistory.filter(alert => alert.severity === severity);
+      return this.alertHistory.filter((alert) => alert.severity === severity);
     }
     return [...this.alertHistory];
   }
@@ -1086,31 +1159,19 @@ export class ErrorHandlingService {
   /**
    * Get recent alerts (last 24 hours)
    */
-  getRecentAlerts(hoursBack: number = 24): any[] {
-    const cutoffTime = Date.now() - (hoursBack * 60 * 60 * 1000);
-    return this.alertHistory.filter(alert => 
-      new Date(alert.timestamp).getTime() > cutoffTime
-    );
+  getRecentAlerts(hoursBack: number = 24): Alert[] {
+    const cutoffTime = Date.now() - hoursBack * 60 * 60 * 1000;
+    return this.alertHistory.filter((alert) => new Date(alert.timestamp).getTime() > cutoffTime);
   }
 
   /**
    * Get performance metrics summary
    */
-  getPerformanceMetrics(timeWindowMinutes: number = 60): {
-    totalCalculations: number;
-    successRate: number;
-    averageCalculationTime: number;
-    errorRate: number;
-    slowCalculations: number;
-    anomalousCalculations: number;
-    topErrors: Array<{ code: string; count: number }>;
-  } {
+  getPerformanceMetrics(timeWindowMinutes: number = 60): PerformanceMetrics {
     const now = Date.now();
-    const windowStart = now - (timeWindowMinutes * 60 * 1000);
-    
-    const recentMetrics = this.metricsLog.filter(m => 
-      m.startTime > windowStart && m.endTime
-    );
+    const windowStart = now - timeWindowMinutes * 60 * 1000;
+
+    const recentMetrics = this.metricsLog.filter((m) => m.startTime > windowStart && m.endTime);
 
     if (recentMetrics.length === 0) {
       return {
@@ -1120,30 +1181,31 @@ export class ErrorHandlingService {
         errorRate: 0,
         slowCalculations: 0,
         anomalousCalculations: 0,
-        topErrors: []
+        topErrors: [],
       };
     }
 
-    const successfulCalculations = recentMetrics.filter(m => m.success);
-    const failedCalculations = recentMetrics.filter(m => !m.success);
-    const slowCalculations = recentMetrics.filter(m => 
-      m.duration && m.duration > this.config.performanceThresholds.slowCalculationMs
+    const successfulCalculations = recentMetrics.filter((m) => m.success);
+    const failedCalculations = recentMetrics.filter((m) => !m.success);
+    const slowCalculations = recentMetrics.filter(
+      (m) => m.duration && m.duration > this.config.performanceThresholds.slowCalculationMs,
     );
-    const anomalousCalculations = recentMetrics.filter(m => 
-      m.businessMetrics.isAnomalous
-    );
+    const anomalousCalculations = recentMetrics.filter((m) => m.businessMetrics.isAnomalous);
 
     // Calculate average calculation time
     const totalTime = recentMetrics.reduce((sum, m) => sum + (m.duration || 0), 0);
     const averageCalculationTime = totalTime / recentMetrics.length;
 
     // Get top error codes
-    const errorCounts = failedCalculations.reduce((acc, m) => {
-      if (m.errorCode) {
-        acc[m.errorCode] = (acc[m.errorCode] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
+    const errorCounts = failedCalculations.reduce(
+      (acc, m) => {
+        if (m.errorCode) {
+          acc[m.errorCode] = (acc[m.errorCode] || 0) + 1;
+        }
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     const topErrors = Object.entries(errorCounts)
       .sort(([, a], [, b]) => b - a)
@@ -1157,7 +1219,7 @@ export class ErrorHandlingService {
       errorRate: (failedCalculations.length / recentMetrics.length) * 100,
       slowCalculations: slowCalculations.length,
       anomalousCalculations: anomalousCalculations.length,
-      topErrors
+      topErrors,
     };
   }
 
@@ -1168,25 +1230,25 @@ export class ErrorHandlingService {
     const now = Date.now();
     const cacheValidityMs = 5 * 60 * 1000; // 5 minutes
 
-    if (!forceRefresh && 
-        this.businessMetricsCache && 
-        (now - this.lastBusinessMetricsUpdate) < cacheValidityMs) {
+    if (
+      !forceRefresh &&
+      this.businessMetricsCache &&
+      now - this.lastBusinessMetricsUpdate < cacheValidityMs
+    ) {
       return this.businessMetricsCache;
     }
 
     // Calculate business metrics from recent data
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
-    const recentMetrics = this.metricsLog.filter(m => 
-      m.startTime > oneDayAgo && m.endTime
-    );
+    const recentMetrics = this.metricsLog.filter((m) => m.startTime > oneDayAgo && m.endTime);
 
     const quotesGenerated = recentMetrics.length;
-    const quotesApproved = recentMetrics.filter(m => m.success).length;
+    const quotesApproved = recentMetrics.filter((m) => m.success).length;
     const totalTime = recentMetrics.reduce((sum, m) => sum + (m.duration || 0), 0);
     const averageQuoteTime = quotesGenerated > 0 ? totalTime / quotesGenerated : 0;
-    const errorRate = quotesGenerated > 0 ? 
-      ((quotesGenerated - quotesApproved) / quotesGenerated) * 100 : 0;
-    
+    const errorRate =
+      quotesGenerated > 0 ? ((quotesGenerated - quotesApproved) / quotesGenerated) * 100 : 0;
+
     // For conversion and abandonment rates, we'd need additional data
     // For now, we'll use placeholder calculations
     const conversionRate = quotesGenerated > 0 ? (quotesApproved / quotesGenerated) * 100 : 0;
@@ -1201,8 +1263,8 @@ export class ErrorHandlingService {
       abandonmentRate,
       timeWindow: {
         start: new Date(oneDayAgo),
-        end: new Date(now)
-      }
+        end: new Date(now),
+      },
     };
 
     this.lastBusinessMetricsUpdate = now;
@@ -1222,7 +1284,10 @@ export class ErrorHandlingService {
   /**
    * Test alert system with a specific error code
    */
-  testAlert(errorCode: QuoteCalculationErrorCode, context?: QuoteCalculationError['context']): void {
+  testAlert(
+    errorCode: QuoteCalculationErrorCode,
+    context?: QuoteCalculationError['context'],
+  ): void {
     const testError = this.createError(
       errorCode,
       `Test alert for ${errorCode}`,
@@ -1233,8 +1298,8 @@ export class ErrorHandlingService {
         currency: 'USD',
         itemCount: 1,
         userId: 'test-user',
-        sessionId: 'test-session'
-      }
+        sessionId: 'test-session',
+      },
     );
 
     this.handleError(testError);
@@ -1257,7 +1322,9 @@ export class ErrorHandlingService {
   /**
    * Get current alert configuration
    */
-  getAlertConfig(errorCode?: QuoteCalculationErrorCode): Map<QuoteCalculationErrorCode, AlertConfig> | AlertConfig | undefined {
+  getAlertConfig(
+    errorCode?: QuoteCalculationErrorCode,
+  ): Map<QuoteCalculationErrorCode, AlertConfig> | AlertConfig | undefined {
     if (errorCode) {
       return this.alertConfigs.get(errorCode);
     }
@@ -1275,22 +1342,19 @@ export class ErrorHandlingService {
   /**
    * Get alert summary for monitoring dashboard
    */
-  getAlertSummary(): {
-    totalAlerts: number;
-    criticalAlerts: number;
-    warningAlerts: number;
-    recentAlerts: any[];
-    topAlertCodes: Array<{ code: string; count: number }>;
-  } {
+  getAlertSummary(): AlertSummary {
     const recentAlerts = this.getRecentAlerts(24);
-    const criticalAlerts = recentAlerts.filter(a => a.severity === 'critical');
-    const warningAlerts = recentAlerts.filter(a => a.severity === 'warning');
+    const criticalAlerts = recentAlerts.filter((a) => a.severity === 'critical');
+    const warningAlerts = recentAlerts.filter((a) => a.severity === 'warning');
 
     // Count alerts by error code
-    const alertCounts = recentAlerts.reduce((acc, alert) => {
-      acc[alert.errorCode] = (acc[alert.errorCode] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const alertCounts = recentAlerts.reduce(
+      (acc, alert) => {
+        acc[alert.errorCode] = (acc[alert.errorCode] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     const topAlertCodes = Object.entries(alertCounts)
       .sort(([, a], [, b]) => b - a)
@@ -1302,7 +1366,7 @@ export class ErrorHandlingService {
       criticalAlerts: criticalAlerts.length,
       warningAlerts: warningAlerts.length,
       recentAlerts: recentAlerts.slice(0, 10), // Last 10 alerts
-      topAlertCodes
+      topAlertCodes,
     };
   }
 }
@@ -1314,38 +1378,38 @@ export const errorHandlingService = ErrorHandlingService.getInstance();
 export const createValidationError = (
   field: string,
   message: string,
-  value?: unknown
+  value?: unknown,
 ): QuoteCalculationError => {
   return errorHandlingService.createError(
     QuoteCalculationErrorCode.INVALID_NUMERIC_VALUE,
     message,
     { field, value },
     undefined,
-    field
+    field,
   );
 };
 
 export const createCalculationError = (
   message: string,
   details?: Record<string, unknown>,
-  context?: QuoteCalculationError['context']
+  context?: QuoteCalculationError['context'],
 ): QuoteCalculationError => {
   return errorHandlingService.createError(
     QuoteCalculationErrorCode.CALCULATION_FAILED,
     message,
     details,
-    context
+    context,
   );
 };
 
 export const createNetworkError = (
   message: string,
-  details?: Record<string, unknown>
+  details?: Record<string, unknown>,
 ): QuoteCalculationError => {
   return errorHandlingService.createError(
     QuoteCalculationErrorCode.NETWORK_ERROR,
     message,
-    details
+    details,
   );
 };
 
@@ -1362,7 +1426,7 @@ export const startQuoteCalculationMonitoring = (
   itemCount: number,
   totalValue: number,
   userId?: string,
-  sessionId?: string
+  sessionId?: string,
 ): void => {
   errorHandlingService.startCalculationTracking(calculationId, {
     originCountry,
@@ -1371,7 +1435,7 @@ export const startQuoteCalculationMonitoring = (
     itemCount,
     totalValue,
     userId,
-    sessionId
+    sessionId,
   });
 };
 
@@ -1385,14 +1449,14 @@ export const completeQuoteCalculationMonitoring = (
   errorCode?: QuoteCalculationErrorCode,
   apiCalls?: number,
   cacheHits?: number,
-  cacheMisses?: number
+  cacheMisses?: number,
 ): void => {
   errorHandlingService.completeCalculationTracking(calculationId, success, {
     finalTotal,
     errorCode,
     apiCalls,
     cacheHits,
-    cacheMisses
+    cacheMisses,
   });
 };
 
@@ -1401,7 +1465,7 @@ export const completeQuoteCalculationMonitoring = (
  */
 export const recordQuoteCalculationApiCall = (
   calculationId: string,
-  cacheHit: boolean = false
+  cacheHit: boolean = false,
 ): void => {
   errorHandlingService.recordApiCall(calculationId, cacheHit);
 };
@@ -1413,7 +1477,7 @@ export const createPerformanceError = (
   code: QuoteCalculationErrorCode,
   message: string,
   performanceData: Record<string, unknown>,
-  context?: QuoteCalculationError['context']
+  context?: QuoteCalculationError['context'],
 ): QuoteCalculationError => {
   return errorHandlingService.createError(code, message, performanceData, context);
 };
@@ -1424,7 +1488,7 @@ export const createPerformanceError = (
 export const createBusinessMetricAlert = (
   code: QuoteCalculationErrorCode,
   message: string,
-  metricData: Record<string, unknown>
+  metricData: Record<string, unknown>,
 ): QuoteCalculationError => {
   return errorHandlingService.createError(code, message, metricData);
 };
@@ -1453,8 +1517,8 @@ export const getAlertSummary = () => {
 };
 
 export const updateAlertConfiguration = (
-  errorCode: QuoteCalculationErrorCode, 
-  config: Partial<AlertConfig>
+  errorCode: QuoteCalculationErrorCode,
+  config: Partial<AlertConfig>,
 ): void => {
   errorHandlingService.updateAlertConfig(errorCode, config);
 };

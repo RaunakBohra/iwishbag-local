@@ -1,4 +1,10 @@
-import { getCountryCurrency, getCurrencySymbol, convertCurrency, getExchangeRate, ExchangeRateResult } from './currencyUtils';
+import {
+  getCountryCurrency,
+  getCurrencySymbol,
+  convertCurrency,
+  getExchangeRate,
+  ExchangeRateResult,
+} from './currencyUtils';
 import { currencyService } from '@/services/CurrencyService';
 
 export interface PriceOptions {
@@ -34,7 +40,8 @@ export interface DualPriceResult {
 
 export class PriceFormatter {
   private static instance: PriceFormatter;
-  private exchangeRateCache: Map<string, { rate: ExchangeRateResult; timestamp: number }> = new Map();
+  private exchangeRateCache: Map<string, { rate: ExchangeRateResult; timestamp: number }> =
+    new Map();
   private readonly CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
   private constructor() {}
@@ -50,11 +57,14 @@ export class PriceFormatter {
     return `${fromCountry}-${toCountry}`;
   }
 
-  private async getCachedExchangeRate(fromCountry: string, toCountry: string): Promise<ExchangeRateResult> {
+  private async getCachedExchangeRate(
+    fromCountry: string,
+    toCountry: string,
+  ): Promise<ExchangeRateResult> {
     const cacheKey = this.getCacheKey(fromCountry, toCountry);
     const cached = this.exchangeRateCache.get(cacheKey);
-    
-    if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
+
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
       return cached.rate;
     }
 
@@ -74,20 +84,23 @@ export class PriceFormatter {
     if (options.userPreferredCurrency) {
       return options.userPreferredCurrency;
     }
-    
+
     if (options.destinationCountry) {
       return getCountryCurrency(options.destinationCountry);
     }
-    
+
     return getCountryCurrency(options.originCountry);
   }
 
-  async formatPrice(amount: number | null | undefined, options: PriceOptions): Promise<PriceResult> {
+  async formatPrice(
+    amount: number | null | undefined,
+    options: PriceOptions,
+  ): Promise<PriceResult> {
     if (amount === null || amount === undefined) {
       return {
         formatted: 'N/A',
         currency: 'USD',
-        amount: 0
+        amount: 0,
       };
     }
 
@@ -100,7 +113,7 @@ export class PriceFormatter {
         formatted: this.formatCurrencyAmount(amount, originCurrency),
         currency: originCurrency,
         amount,
-        exchangeRate: 1
+        exchangeRate: 1,
       };
     }
 
@@ -111,14 +124,15 @@ export class PriceFormatter {
     if (!exchangeRate) {
       // Determine destination country for exchange rate lookup
       const destinationCountry = options.destinationCountry || options.originCountry;
-      
+
       // Find the country code for the display currency
       // Use CurrencyService for reverse lookup (currency to country mapping)
-      const displayCountry = await currencyService.getCountryForCurrency(displayCurrency) || destinationCountry;
+      const displayCountry =
+        (await currencyService.getCountryForCurrency(displayCurrency)) || destinationCountry;
 
       const rateResult = await this.getCachedExchangeRate(options.originCountry, displayCountry);
       exchangeRate = rateResult.rate;
-      
+
       if (options.showWarnings && rateResult.warning) {
         warning = rateResult.warning;
       }
@@ -131,16 +145,19 @@ export class PriceFormatter {
       currency: displayCurrency,
       amount: convertedAmount,
       exchangeRate,
-      warning
+      warning,
     };
   }
 
-  async formatDualPrice(amount: number | null | undefined, options: DualPriceOptions): Promise<DualPriceResult> {
+  async formatDualPrice(
+    amount: number | null | undefined,
+    options: DualPriceOptions,
+  ): Promise<DualPriceResult> {
     if (amount === null || amount === undefined) {
       return {
         origin: { formatted: 'N/A', currency: 'USD', amount: 0 },
         destination: { formatted: 'N/A', currency: 'USD', amount: 0 },
-        display: 'N/A'
+        display: 'N/A',
       };
     }
 
@@ -152,7 +169,7 @@ export class PriceFormatter {
       formatted: this.formatCurrencyAmount(amount, originCurrency),
       currency: originCurrency,
       amount,
-      exchangeRate: 1
+      exchangeRate: 1,
     };
 
     // Same currency
@@ -161,7 +178,7 @@ export class PriceFormatter {
         origin: originResult,
         destination: originResult,
         display: originResult.formatted,
-        exchangeRate: 1
+        exchangeRate: 1,
       };
     }
 
@@ -170,9 +187,12 @@ export class PriceFormatter {
     let warning: string | undefined;
 
     if (!exchangeRate) {
-      const rateResult = await this.getCachedExchangeRate(options.originCountry, options.destinationCountry);
+      const rateResult = await this.getCachedExchangeRate(
+        options.originCountry,
+        options.destinationCountry,
+      );
       exchangeRate = rateResult.rate;
-      
+
       if (options.showWarnings && rateResult.warning) {
         warning = rateResult.warning;
       }
@@ -183,7 +203,7 @@ export class PriceFormatter {
       formatted: this.formatCurrencyAmount(convertedAmount, destinationCurrency),
       currency: destinationCurrency,
       amount: convertedAmount,
-      exchangeRate
+      exchangeRate,
     };
 
     // Combined display: "$100 (₹8,300)"
@@ -194,7 +214,7 @@ export class PriceFormatter {
       destination: destinationResult,
       display,
       exchangeRate,
-      warning
+      warning,
     };
   }
 

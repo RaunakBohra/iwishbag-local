@@ -23,22 +23,25 @@ export function PayUDebugInstructions() {
 
         <div className="space-y-3">
           <div className="flex items-start gap-3">
-            <Badge variant="outline" className="mt-0.5">1</Badge>
+            <Badge variant="outline" className="mt-0.5">
+              1
+            </Badge>
             <div>
               <h4 className="font-medium">Attempt a PayU Payment</h4>
               <p className="text-sm text-muted-foreground">
-                Try to make a payment with PayU. The debug data will be stored even if the payment fails.
+                Try to make a payment with PayU. The debug data will be stored even if the payment
+                fails.
               </p>
             </div>
           </div>
 
           <div className="flex items-start gap-3">
-            <Badge variant="outline" className="mt-0.5">2</Badge>
+            <Badge variant="outline" className="mt-0.5">
+              2
+            </Badge>
             <div>
               <h4 className="font-medium">Check Console Logs</h4>
-              <p className="text-sm text-muted-foreground">
-                Open browser console (F12) and run:
-              </p>
+              <p className="text-sm text-muted-foreground">Open browser console (F12) and run:</p>
               <code className="block bg-gray-100 p-2 rounded mt-1 text-sm">
                 PayUDebugger.displayInConsole()
               </code>
@@ -46,23 +49,37 @@ export function PayUDebugInstructions() {
           </div>
 
           <div className="flex items-start gap-3">
-            <Badge variant="outline" className="mt-0.5">3</Badge>
+            <Badge variant="outline" className="mt-0.5">
+              3
+            </Badge>
             <div>
               <h4 className="font-medium">Visit Debug Page</h4>
               <p className="text-sm text-muted-foreground">
-                Go to <a href="/admin/debug/payu" className="text-blue-600 hover:underline">/admin/debug/payu</a> to view a formatted view of the logs.
+                Go to{' '}
+                <a href="/admin/debug/payu" className="text-blue-600 hover:underline">
+                  /admin/debug/payu
+                </a>{' '}
+                to view a formatted view of the logs.
               </p>
             </div>
           </div>
 
           <div className="flex items-start gap-3">
-            <Badge variant="outline" className="mt-0.5">4</Badge>
+            <Badge variant="outline" className="mt-0.5">
+              4
+            </Badge>
             <div>
               <h4 className="font-medium">Check What's Logged</h4>
               <ul className="text-sm text-muted-foreground mt-1 space-y-1">
-                <li>• <strong>Response:</strong> What the backend sent to frontend</li>
-                <li>• <strong>Submission:</strong> What form data was sent to PayU</li>
-                <li>• <strong>Error:</strong> Any validation or processing errors</li>
+                <li>
+                  • <strong>Response:</strong> What the backend sent to frontend
+                </li>
+                <li>
+                  • <strong>Submission:</strong> What form data was sent to PayU
+                </li>
+                <li>
+                  • <strong>Error:</strong> Any validation or processing errors
+                </li>
               </ul>
             </div>
           </div>

@@ -1,80 +1,63 @@
 // src/pages/Checkout.tsx
-import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  ShoppingCart, 
-  MapPin, 
-  CreditCard, 
-  Banknote, 
-  Landmark, 
-  Loader2, 
-  CheckCircle2,
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  ShoppingCart,
+  MapPin,
+  CreditCard,
+  Loader2,
   Shield,
-  Lock,
   Truck,
-  Clock,
-  AlertCircle,
   Plus,
   Edit3,
   User,
-  Mail,
-  Phone
-} from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { Tables } from "@/integrations/supabase/types";
-import { useUserProfile } from "@/hooks/useUserProfile";
-import { useUserCurrency } from "@/hooks/useUserCurrency";
-import { useQuoteDisplayCurrency } from "@/hooks/useQuoteDisplayCurrency";
-import { useCart } from "@/hooks/useCart";
-import { CartItem } from "@/stores/cartStore";
-import { usePaymentGateways } from "@/hooks/usePaymentGateways";
-import { useAllCountries } from "@/hooks/useAllCountries";
-import { currencyService } from "@/services/CurrencyService";
-import { PaymentMethodSelector } from "@/components/payment/PaymentMethodSelector";
-import { StripePaymentForm } from "@/components/payment/StripePaymentForm";
-import { useStatusManagement } from "@/hooks/useStatusManagement";
-import { QRPaymentModal } from "@/components/payment/QRPaymentModal";
-import { PaymentStatusTracker } from "@/components/payment/PaymentStatusTracker";
-import { PaymentGateway, PaymentRequest } from "@/types/payment";
-import { PayUDebugger, validatePayUFormData } from "@/utils/payuDebug";
-import { PayUFormData } from "@/utils/payuFormSubmitter";
-import { cn } from "@/lib/utils";
-import { 
-  quoteAddressToCheckoutForm, 
-  checkoutFormToQuoteAddress, 
-  createGuestAddress,
+  Phone,
+} from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { Tables } from '@/integrations/supabase/types';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { useCart } from '@/hooks/useCart';
+import { CartItem } from '@/stores/cartStore';
+import { usePaymentGateways } from '@/hooks/usePaymentGateways';
+import { useAllCountries } from '@/hooks/useAllCountries';
+import { currencyService } from '@/services/CurrencyService';
+import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
+import { StripePaymentForm } from '@/components/payment/StripePaymentForm';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { QRPaymentModal } from '@/components/payment/QRPaymentModal';
+import { PaymentStatusTracker } from '@/components/payment/PaymentStatusTracker';
+import { PaymentGateway, PaymentRequest } from '@/types/payment';
+import {
+  quoteAddressToCheckoutForm,
+  checkoutFormToQuoteAddress,
   isAddressComplete,
-  extractQuoteShippingAddress 
-} from "@/lib/addressUtils";
-import { formatAmountForDisplay } from "@/lib/currencyUtils";
-import { useAddressSynchronization } from "@/hooks/useAddressSynchronization";
-import { checkoutSessionService } from "@/services/CheckoutSessionService";
-import { useEmailNotifications } from "@/hooks/useEmailNotifications";
-import { formatBankDetailsForEmail } from "@/lib/bankDetailsFormatter";
+  extractQuoteShippingAddress,
+} from '@/lib/addressUtils';
+import { formatAmountForDisplay } from '@/lib/currencyUtils';
+import { checkoutSessionService } from '@/services/CheckoutSessionService';
+import { useEmailNotifications } from '@/hooks/useEmailNotifications';
+import { formatBankDetailsForEmail } from '@/lib/bankDetailsFormatter';
 
 type QuoteType = Tables<'quotes'>;
-type ProfileType = Tables<'profiles'>;
 
 // Declare Airwallex SDK types
 declare global {
   interface Window {
     AirwallexComponentsSDK?: {
-      init: (config: {
-        env: 'demo' | 'prod' | 'staging';
-        enabledElements: string[];
-      }) => Promise<{
+      init: (config: { env: 'demo' | 'prod' | 'staging'; enabledElements: string[] }) => Promise<{
         payments: {
           redirectToCheckout: (params: {
             env: 'demo' | 'prod' | 'staging';
@@ -107,59 +90,75 @@ interface AddressFormData {
 }
 
 // Component to display checkout item price with proper currency conversion
-const CheckoutItemPrice = ({ item, displayCurrency }: { item: CartItem; displayCurrency?: string }) => {
+const CheckoutItemPrice = ({
+  item,
+  displayCurrency,
+}: {
+  item: CartItem;
+  displayCurrency?: string;
+}) => {
   // Always call hooks at the top
-  const { data: userProfile } = useUserProfile();
-  
+  const { data: _userProfile } = useUserProfile();
+
   // Create mock quote for hook with correct field mappings
   const mockQuote = {
     id: item.quoteId,
     origin_country: item.purchaseCountryCode || item.countryCode, // Where buying from
     destination_country: item.destinationCountryCode || item.countryCode, // Where shipping to
     shipping_address: {
-      destination_country: item.destinationCountryCode || item.countryCode
-    }
+      destination_country: item.destinationCountryCode || item.countryCode,
+    },
   };
-  
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as QuoteType });
-  
+
+  const { formatAmount } = useQuoteDisplayCurrency({
+    quote: mockQuote as QuoteType,
+  });
+
   // If displayCurrency is provided (for guest checkout), use that currency directly
   if (displayCurrency) {
     return <>{formatAmountForDisplay(item.finalTotal, displayCurrency, 1)}</>;
   }
-  
+
   // For authenticated users, use the existing quote display currency logic
   return <>{formatAmount(item.finalTotal)}</>;
 };
 
 // Component to display checkout total with proper currency conversion
-const CheckoutTotal = ({ items, displayCurrency }: { items: CartItem[]; displayCurrency?: string }) => {
+const CheckoutTotal = ({
+  items,
+  displayCurrency,
+}: {
+  items: CartItem[];
+  displayCurrency?: string;
+}) => {
   // Use the first item to determine the quote format (all items should have same destination)
   const firstItem = items[0];
-  
+
   // Create mock quote for hook with correct field mappings - provide default values to ensure hook is always called consistently
   const mockQuote = {
     id: firstItem?.quoteId || 'default',
     origin_country: firstItem?.purchaseCountryCode || firstItem?.countryCode || 'US',
     destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US',
     shipping_address: {
-      destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US'
-    }
+      destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US',
+    },
   };
-  
+
   // Always call hooks at the top with consistent parameters
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: mockQuote as QuoteType });
-  
+  const { formatAmount } = useQuoteDisplayCurrency({
+    quote: mockQuote as QuoteType,
+  });
+
   if (!firstItem) return <>$0.00</>;
-  
+
   // Calculate total from all items
   const totalAmount = items.reduce((sum, item) => sum + item.finalTotal, 0);
-  
+
   // If displayCurrency is provided (for guest checkout), use that currency directly
   if (displayCurrency) {
     return <>{formatAmountForDisplay(totalAmount, displayCurrency, 1)}</>;
   }
-  
+
   // For authenticated users, use the existing quote display currency logic
   return <>{formatAmount(totalAmount)}</>;
 };
@@ -170,28 +169,28 @@ export default function Checkout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  
+
   // Cart store with enforced loading
-  const { 
-    items: cartItems, 
-    selectedItems, 
-    selectedItemsTotal, 
-    formattedSelectedTotal,
-    getSelectedCartItems,
+  const {
+    items: cartItems,
+    selectedItems: _selectedItems,
+    selectedItemsTotal: _selectedItemsTotal,
+    formattedSelectedTotal: _formattedSelectedTotal,
+    getSelectedCartItems: _getSelectedCartItems,
     isLoading: cartLoading,
     hasLoadedFromServer,
-    loadFromServer
+    loadFromServer,
   } = useCart();
-  
+
   // Get selected quote IDs from URL params
   const selectedQuoteIds = searchParams.get('quotes')?.split(',') || [];
-  
+
   // Check if this is a guest checkout
   const guestQuoteId = searchParams.get('quote');
   const isGuestCheckout = !!guestQuoteId;
 
   // State
-  const [selectedAddress, setSelectedAddress] = useState<string>("");
+  const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentGateway>('bank_transfer');
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -214,29 +213,29 @@ export default function Checkout() {
     recipient_name: '',
     phone: '',
     is_default: false,
-    save_to_profile: true // Default to true for better UX
+    save_to_profile: true, // Default to true for better UX
   });
 
   // Guest checkout mode: 'guest', 'signup', 'signin'
   const [checkoutMode, setCheckoutMode] = useState<'guest' | 'signup' | 'signin'>('guest');
-  
+
   // Account creation fields (only used for signup/signin)
   const [accountData, setAccountData] = useState({
     fullName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
-  
+
   // Guest contact info (for guest checkout)
   const [guestContact, setGuestContact] = useState({
     email: '',
-    fullName: ''
+    fullName: '',
   });
 
   // Guest currency selection (defaults to destination country currency)
   const [guestSelectedCurrency, setGuestSelectedCurrency] = useState<string>('');
-  
+
   // Guest checkout session token (for temporary data storage)
   const [guestSessionToken, setGuestSessionToken] = useState<string>('');
 
@@ -251,14 +250,14 @@ export default function Checkout() {
     queryKey: ['available-currencies-service'],
     queryFn: async () => {
       const currencies = await currencyService.getAllCurrencies();
-      return currencies.map(currency => ({
+      return currencies.map((currency) => ({
         code: currency.code,
         name: currency.name,
         symbol: currency.symbol,
-        formatted: `${currency.name} (${currency.code})`
+        formatted: `${currency.name} (${currency.code})`,
       }));
     },
-    enabled: isGuestCheckout
+    enabled: isGuestCheckout,
   });
 
   // Fetch guest quote if this is a guest checkout
@@ -266,13 +265,15 @@ export default function Checkout() {
     queryKey: ['guest-quote', guestQuoteId],
     queryFn: async () => {
       if (!guestQuoteId) return null;
-      
+
       const { data, error } = await supabase
         .from('quotes')
-        .select(`
+        .select(
+          `
           *,
           quote_items (*)
-        `)
+        `,
+        )
         .eq('id', guestQuoteId)
         .single();
 
@@ -296,61 +297,77 @@ export default function Checkout() {
 
   // Get selected cart items based on quote IDs
   // If no URL parameters, use all cart items (for direct navigation to /checkout)
-  const selectedCartItems = isGuestCheckout 
-    ? (guestQuote ? [{
-        quoteId: guestQuote.id,
-        productName: guestQuote.quote_items?.[0]?.product_name || "Product",
-        quantity: guestQuote.quote_items?.reduce((sum, item) => sum + item.quantity, 0) || 1,
-        finalTotal: guestQuote.final_total || 0,
-        countryCode: guestQuote.destination_country || "Unknown",
-        purchaseCountryCode: guestQuote.destination_country || "Unknown",
-        destinationCountryCode: (() => {
-          // Extract destination from shipping address for guest quotes
-          if (guestQuote.shipping_address) {
-            try {
-              const addr = typeof guestQuote.shipping_address === 'string' 
-                ? JSON.parse(guestQuote.shipping_address) 
-                : guestQuote.shipping_address;
-              return addr?.destination_country || addr?.countryCode || addr?.country || guestQuote.destination_country || "Unknown";
-            } catch (e) {
-              return guestQuote.destination_country || "Unknown";
-            }
-          }
-          return guestQuote.destination_country || "Unknown";
-        })()
-      }] : [])
-    : selectedQuoteIds.length > 0 
-    ? cartItems.filter(item => selectedQuoteIds.includes(item.quoteId))
-    : cartItems; // Use all cart items when no specific quotes are selected
+  const selectedCartItems = isGuestCheckout
+    ? guestQuote
+      ? [
+          {
+            quoteId: guestQuote.id,
+            productName: guestQuote.quote_items?.[0]?.product_name || 'Product',
+            quantity: guestQuote.quote_items?.reduce((sum, item) => sum + item.quantity, 0) || 1,
+            finalTotal: guestQuote.final_total || 0,
+            countryCode: guestQuote.destination_country || 'Unknown',
+            purchaseCountryCode: guestQuote.destination_country || 'Unknown',
+            destinationCountryCode: (() => {
+              // Extract destination from shipping address for guest quotes
+              if (guestQuote.shipping_address) {
+                try {
+                  const addr =
+                    typeof guestQuote.shipping_address === 'string'
+                      ? JSON.parse(guestQuote.shipping_address)
+                      : guestQuote.shipping_address;
+                  return (
+                    addr?.destination_country ||
+                    addr?.countryCode ||
+                    addr?.country ||
+                    guestQuote.destination_country ||
+                    'Unknown'
+                  );
+                } catch (e) {
+                  return guestQuote.destination_country || 'Unknown';
+                }
+              }
+              return guestQuote.destination_country || 'Unknown';
+            })(),
+          },
+        ]
+      : []
+    : selectedQuoteIds.length > 0
+      ? cartItems.filter((item) => selectedQuoteIds.includes(item.quoteId))
+      : cartItems; // Use all cart items when no specific quotes are selected
 
   // Get the shipping country from selected items
   // All quotes in checkout should have the same destination country
-  const shippingCountry = selectedCartItems.length > 0 
-    ? (selectedCartItems[0].destinationCountryCode || 
-       selectedCartItems[0].countryCode || 
-       selectedCartItems[0].purchaseCountryCode) 
-    : null;
-  
+  const shippingCountry =
+    selectedCartItems.length > 0
+      ? selectedCartItems[0].destinationCountryCode ||
+        selectedCartItems[0].countryCode ||
+        selectedCartItems[0].purchaseCountryCode
+      : null;
+
   // Get default currency for guest checkout using CurrencyService
   const { data: defaultGuestCurrency } = useQuery({
-    queryKey: ['default-guest-currency', selectedCartItems[0]?.destinationCountryCode || selectedCartItems[0]?.countryCode],
+    queryKey: [
+      'default-guest-currency',
+      selectedCartItems[0]?.destinationCountryCode || selectedCartItems[0]?.countryCode,
+    ],
     queryFn: async () => {
       if (!isGuestCheckout || !guestQuote || selectedCartItems.length === 0) {
         return undefined;
       }
-      
-      const countryCode = selectedCartItems[0].destinationCountryCode || selectedCartItems[0].countryCode || 'US';
+
+      const countryCode =
+        selectedCartItems[0].destinationCountryCode || selectedCartItems[0].countryCode || 'US';
       return await currencyService.getCurrencyForCountry(countryCode);
     },
-    enabled: isGuestCheckout && !!guestQuote && selectedCartItems.length > 0
+    enabled: isGuestCheckout && !!guestQuote && selectedCartItems.length > 0,
   });
-  
+
   // Now that defaultGuestCurrency is available, define guestCurrency with fallback
   // Always provide a valid currency for guest checkout to ensure payment methods load
-  const guestCurrency = isGuestCheckout 
-    ? (guestSelectedCurrency || defaultGuestCurrency || 'USD')
+  const guestCurrency = isGuestCheckout
+    ? guestSelectedCurrency || defaultGuestCurrency || 'USD'
     : undefined;
-  
+
   // Payment gateway hook with currency override for guests
   const {
     availableMethods,
@@ -361,7 +378,7 @@ export default function Checkout() {
     isCreatingPayment,
     validatePaymentRequest,
     isMobileOnlyPayment,
-    requiresQRCode
+    requiresQRCode,
   } = usePaymentGateways(guestCurrency, shippingCountry);
 
   // Debug logging for guest checkout payment state (development only)
@@ -377,36 +394,45 @@ export default function Checkout() {
         selectedCartItems: selectedCartItems.length,
         guestQuote: !!guestQuote,
         destinationCountry: selectedCartItems[0]?.destinationCountryCode,
-        '🔍 Hook Result': { availableMethods, methodsLoading }
+        '🔍 Hook Result': { availableMethods, methodsLoading },
       });
     }
-  }, [isGuestCheckout, guestCurrency, guestSelectedCurrency, defaultGuestCurrency, availableMethods, methodsLoading, shippingCountry, selectedCartItems, guestQuote]);
-  
+  }, [
+    isGuestCheckout,
+    guestCurrency,
+    guestSelectedCurrency,
+    defaultGuestCurrency,
+    availableMethods,
+    methodsLoading,
+    shippingCountry,
+    selectedCartItems,
+    guestQuote,
+  ]);
+
   // Set recommended payment method when available methods load
   useEffect(() => {
     if (availableMethods && availableMethods.length > 0) {
       const recommended = getRecommendedPaymentMethod();
-      
+
       // Check if current payment method is still available
       if (availableMethods.includes(paymentMethod)) {
         // Current method is still available, keep it
         return;
       }
-      
+
       // Current method is not available, set to recommended
       setPaymentMethod(recommended);
     }
   }, [availableMethods, getRecommendedPaymentMethod, paymentMethod]);
-  
+
   // Determine the currency for payment - defined here so it's available throughout the component
-  const paymentCurrency = isGuestCheckout 
-    ? (guestSelectedCurrency || defaultGuestCurrency || 'USD')
-    : (userProfile?.preferred_display_currency || 'USD');
-  
+  const paymentCurrency = isGuestCheckout
+    ? guestSelectedCurrency || defaultGuestCurrency || 'USD'
+    : userProfile?.preferred_display_currency || 'USD';
+
   // Get purchase country for route display (where we buy from)
-  const purchaseCountry = selectedCartItems.length > 0 
-    ? selectedCartItems[0].purchaseCountryCode 
-    : null;
+  const purchaseCountry =
+    selectedCartItems.length > 0 ? selectedCartItems[0].purchaseCountryCode : null;
 
   // Pre-fill guest contact info and address from quote if available
   useEffect(() => {
@@ -414,7 +440,7 @@ export default function Checkout() {
       // Set guest contact info
       setGuestContact({
         email: guestQuote.email || '',
-        fullName: guestQuote.customer_name || ''
+        fullName: guestQuote.customer_name || '',
       });
 
       // Set default currency based on destination country if not already set
@@ -425,15 +451,16 @@ export default function Checkout() {
       // Extract and set shipping address if available
       const quoteAddress = extractQuoteShippingAddress(guestQuote.shipping_address);
       const checkoutAddress = quoteAddressToCheckoutForm(quoteAddress);
-      
+
       if (checkoutAddress && isAddressComplete(checkoutAddress)) {
         // Set the address form data
         setAddressFormData({
           ...checkoutAddress,
           country: shippingCountry || checkoutAddress.country,
-          destination_country: shippingCountry || checkoutAddress.destination_country || checkoutAddress.country
+          destination_country:
+            shippingCountry || checkoutAddress.destination_country || checkoutAddress.country,
         });
-        
+
         // Mark as having a guest address
         setSelectedAddress('guest-address-loaded');
         setShowAddressForm(false); // Don't show the form if we have a complete address
@@ -444,10 +471,10 @@ export default function Checkout() {
   // Update address form country when shippingCountry changes
   useEffect(() => {
     if (shippingCountry) {
-      setAddressFormData(prev => ({
+      setAddressFormData((prev) => ({
         ...prev,
         country: shippingCountry,
-        destination_country: shippingCountry
+        destination_country: shippingCountry,
       }));
     }
   }, [shippingCountry]);
@@ -457,7 +484,7 @@ export default function Checkout() {
     queryKey: ['user_addresses', user?.id, shippingCountry],
     queryFn: async () => {
       if (!user || !shippingCountry) return [];
-      
+
       // Try filtering by destination_country first, fallback to country field
       let { data, error } = await supabase
         .from('user_addresses')
@@ -476,7 +503,7 @@ export default function Checkout() {
           .eq('country', shippingCountry)
           .order('is_default', { ascending: false })
           .order('created_at', { ascending: false });
-        
+
         if (fallbackResult.data && fallbackResult.data.length > 0) {
           data = fallbackResult.data;
           error = fallbackResult.error;
@@ -500,7 +527,7 @@ export default function Checkout() {
         setSelectedAddress(addresses[0].id);
       } else {
         // Otherwise, select the default one or the first one
-        const defaultAddr = addresses.find(addr => addr.is_default);
+        const defaultAddr = addresses.find((addr) => addr.is_default);
         setSelectedAddress(defaultAddr ? defaultAddr.id : addresses[0].id);
       }
     }
@@ -508,41 +535,51 @@ export default function Checkout() {
 
   // Mutations
   const updateQuotesMutation = useMutation({
-    mutationFn: async ({ ids, status, method, paymentStatus }: { ids: string[], status: string, method: string, paymentStatus?: string }) => {
-      const updateData: Partial<QuoteType> = { 
-        status, 
-        payment_method: method, 
-        in_cart: false 
+    mutationFn: async ({
+      ids,
+      status,
+      method,
+      paymentStatus,
+    }: {
+      ids: string[];
+      status: string;
+      method: string;
+      paymentStatus?: string;
+    }) => {
+      const updateData: Partial<QuoteType> = {
+        status,
+        payment_method: method,
+        in_cart: false,
       };
-      
+
       // Set payment status for non-redirect payment methods
       if (paymentStatus) {
         updateData.payment_status = paymentStatus;
       }
-      
+
       const { data, error } = await supabase
         .from('quotes')
         .update(updateData)
         .in('id', ids)
         .select();
-      
+
       if (error) throw new Error(error.message);
       return data;
     },
     onSuccess: (data) => {
       if (data && data.length > 0) {
         queryClient.invalidateQueries({ queryKey: ['quotes'] });
-        queryClient.invalidateQueries({ queryKey: ['admin-quotes']});
-        queryClient.invalidateQueries({ queryKey: ['admin-orders']});
+        queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
+        queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
         // Use the first quote ID for order confirmation page
         navigate(`/order-confirmation/${data[0].id}`);
       }
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Error", 
-        description: error.message, 
-        variant: "destructive"
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
       });
     },
   });
@@ -550,18 +587,18 @@ export default function Checkout() {
   const addAddressMutation = useMutation({
     mutationFn: async (addressData: AddressFormData) => {
       if (!user) throw new Error('User not authenticated');
-      
+
       const { data, error } = await supabase
         .from('user_addresses')
         .insert({
           user_id: user.id,
           ...addressData,
           destination_country: shippingCountry, // Ensure destination_country is set
-          country: shippingCountry
+          country: shippingCountry,
         })
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -580,15 +617,15 @@ export default function Checkout() {
         recipient_name: '',
         phone: '',
         is_default: false,
-        save_to_profile: true // Default to true for better UX
+        save_to_profile: true, // Default to true for better UX
       });
-      toast({ title: "Success", description: "Address added successfully." });
+      toast({ title: 'Success', description: 'Address added successfully.' });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Error", 
-        description: error.message, 
-        variant: "destructive"
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
       });
     },
   });
@@ -600,41 +637,49 @@ export default function Checkout() {
       console.warn('Invalid cart item data:', item);
       return total;
     }
-    return total + ((item.finalTotal || 0) * (item.quantity || 1));
+    return total + (item.finalTotal || 0) * (item.quantity || 1);
   }, 0);
 
   const cartQuoteIds = selectedCartItems
-    .filter(item => item && item.quoteId) // Filter out items without quoteId
-    .map(item => item.quoteId);
-
+    .filter((item) => item && item.quoteId) // Filter out items without quoteId
+    .map((item) => item.quoteId);
 
   // Validation
-  const hasValidGuestAddress = isGuestCheckout && 
-    (selectedAddress === 'guest-address' || selectedAddress === 'guest-address-loaded') && 
+  const hasValidGuestAddress =
+    isGuestCheckout &&
+    (selectedAddress === 'guest-address' || selectedAddress === 'guest-address-loaded') &&
     isAddressComplete(addressFormData);
-  
-  const hasValidTempAddress = !isGuestCheckout && 
-    selectedAddress === 'temp-address' && 
-    isAddressComplete(addressFormData);
-  
-  const canPlaceOrder = (selectedAddress || hasValidGuestAddress || hasValidTempAddress) && paymentMethod && selectedCartItems.length > 0 && 
-    (!isGuestCheckout || (
-      checkoutMode === 'guest' 
-        ? (guestContact.email && guestContact.fullName)
+
+  const hasValidTempAddress =
+    !isGuestCheckout && selectedAddress === 'temp-address' && isAddressComplete(addressFormData);
+
+  const canPlaceOrder =
+    (selectedAddress || hasValidGuestAddress || hasValidTempAddress) &&
+    paymentMethod &&
+    selectedCartItems.length > 0 &&
+    (!isGuestCheckout ||
+      (checkoutMode === 'guest'
+        ? guestContact.email && guestContact.fullName
         : checkoutMode === 'signin'
-        ? (accountData.email && accountData.password)
-        : (accountData.email && accountData.password && accountData.fullName && 
-           accountData.password === accountData.confirmPassword)
-    ));
+          ? accountData.email && accountData.password
+          : accountData.email &&
+            accountData.password &&
+            accountData.fullName &&
+            accountData.password === accountData.confirmPassword));
 
   const handleAddAddress = async () => {
-    if (!addressFormData.recipient_name || !addressFormData.address_line1 || 
-        !addressFormData.city || !addressFormData.state_province_region || 
-        !addressFormData.postal_code || !addressFormData.country) {
-      toast({ 
-        title: "Missing Information", 
-        description: "Please fill in all required fields.", 
-        variant: "destructive"
+    if (
+      !addressFormData.recipient_name ||
+      !addressFormData.address_line1 ||
+      !addressFormData.city ||
+      !addressFormData.state_province_region ||
+      !addressFormData.postal_code ||
+      !addressFormData.country
+    ) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
       });
       return;
     }
@@ -644,9 +689,9 @@ export default function Checkout() {
       // For now, just close the form and mark address as "provided"
       setShowAddressForm(false);
       setSelectedAddress('guest-address'); // Use a placeholder ID
-      toast({ 
-        title: "Address Added", 
-        description: "Address will be saved when you complete your order." 
+      toast({
+        title: 'Address Added',
+        description: 'Address will be saved when you complete your order.',
       });
       return;
     }
@@ -658,9 +703,9 @@ export default function Checkout() {
       // Just use the address for this order without saving it
       setShowAddressForm(false);
       setSelectedAddress('temp-address'); // Use a temporary placeholder ID
-      toast({ 
-        title: "Address Added", 
-        description: "Address added for this order only." 
+      toast({
+        title: 'Address Added',
+        description: 'Address added for this order only.',
       });
     }
   };
@@ -670,34 +715,47 @@ export default function Checkout() {
   };
 
   const handlePaymentSuccess = (data: { id: string }) => {
-    toast({ title: "Payment Successful", description: "Your payment has been processed successfully." });
+    toast({
+      title: 'Payment Successful',
+      description: 'Your payment has been processed successfully.',
+    });
     navigate(`/order-confirmation/${data.id}`);
   };
 
   const handleQRPaymentComplete = () => {
     setShowQRModal(false);
-    toast({ title: "Payment Successful", description: "Your payment has been processed successfully." });
+    toast({
+      title: 'Payment Successful',
+      description: 'Your payment has been processed successfully.',
+    });
     navigate('/dashboard/orders');
   };
 
   const handleQRPaymentFailed = () => {
     setShowQRModal(false);
-    toast({ 
-      title: "Payment Failed", 
-      description: "There was an issue processing your payment. Please try again.", 
-      variant: "destructive"
+    toast({
+      title: 'Payment Failed',
+      description: 'There was an issue processing your payment. Please try again.',
+      variant: 'destructive',
     });
   };
 
-
   const handlePlaceOrder = async () => {
     if (!paymentMethod) {
-      toast({ title: "Payment Error", description: "Please select a payment method.", variant: "destructive" });
+      toast({
+        title: 'Payment Error',
+        description: 'Please select a payment method.',
+        variant: 'destructive',
+      });
       return;
     }
 
     if (isMobileOnlyPayment(paymentMethod) && !requiresQRCode(paymentMethod)) {
-      toast({ title: "Device Incompatible", description: "This payment method can only be used on a mobile device.", variant: "destructive" });
+      toast({
+        title: 'Device Incompatible',
+        description: 'This payment method can only be used on a mobile device.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -705,28 +763,48 @@ export default function Checkout() {
     if (isGuestCheckout) {
       if (checkoutMode === 'guest') {
         if (!guestContact.email || !guestContact.fullName) {
-          toast({ title: "Missing Information", description: "Please fill in your contact details.", variant: "destructive" });
+          toast({
+            title: 'Missing Information',
+            description: 'Please fill in your contact details.',
+            variant: 'destructive',
+          });
           return;
         }
-        
+
         // Validate shipping address
         if (!isAddressComplete(addressFormData)) {
-          toast({ title: "Missing Shipping Address", description: "Please provide a complete shipping address.", variant: "destructive" });
+          toast({
+            title: 'Missing Shipping Address',
+            description: 'Please provide a complete shipping address.',
+            variant: 'destructive',
+          });
           return;
         }
       } else if (checkoutMode === 'signin') {
         if (!accountData.email || !accountData.password) {
-          toast({ title: "Missing Information", description: "Please fill in email and password.", variant: "destructive" });
+          toast({
+            title: 'Missing Information',
+            description: 'Please fill in email and password.',
+            variant: 'destructive',
+          });
           return;
         }
       } else if (checkoutMode === 'signup') {
         if (!accountData.email || !accountData.password || !accountData.fullName) {
-          toast({ title: "Missing Information", description: "Please fill in all account details.", variant: "destructive" });
+          toast({
+            title: 'Missing Information',
+            description: 'Please fill in all account details.',
+            variant: 'destructive',
+          });
           return;
         }
-        
+
         if (accountData.password !== accountData.confirmPassword) {
-          toast({ title: "Password Mismatch", description: "Passwords do not match.", variant: "destructive" });
+          toast({
+            title: 'Password Mismatch',
+            description: 'Passwords do not match.',
+            variant: 'destructive',
+          });
           return;
         }
       }
@@ -734,10 +812,10 @@ export default function Checkout() {
 
     // Validate total amount before creating payment request
     if (!totalAmount || totalAmount <= 0 || isNaN(totalAmount) || !isFinite(totalAmount)) {
-      toast({ 
-        title: "Invalid Amount", 
-        description: "The total amount is invalid. Please check your cart items.", 
-        variant: "destructive" 
+      toast({
+        title: 'Invalid Amount',
+        description: 'The total amount is invalid. Please check your cart items.',
+        variant: 'destructive',
       });
       setIsProcessing(false);
       return;
@@ -751,23 +829,27 @@ export default function Checkout() {
       success_url: `${window.location.origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${window.location.origin}/checkout?quotes=${cartQuoteIds.join(',')}`,
       customerInfo: {
-        name: isGuestCheckout 
-          ? (addressFormData.recipient_name || guestContact.fullName)
-          : (addressFormData.recipient_name || userProfile?.full_name || ''),
-        email: isGuestCheckout ? guestContact.email : (user?.email || ''),
+        name: isGuestCheckout
+          ? addressFormData.recipient_name || guestContact.fullName
+          : addressFormData.recipient_name || userProfile?.full_name || '',
+        email: isGuestCheckout ? guestContact.email : user?.email || '',
         phone: addressFormData.phone || '',
-        address: addressFormData.address_line1
+        address: addressFormData.address_line1,
       },
       metadata: {
         // Include guest session token for webhook processing
         guest_session_token: isGuestCheckout ? guestSessionToken : undefined,
-        checkout_type: isGuestCheckout ? 'guest' : 'authenticated'
-      }
+        checkout_type: isGuestCheckout ? 'guest' : 'authenticated',
+      },
     };
 
     const { isValid, errors } = validatePaymentRequest(paymentRequest);
     if (!isValid) {
-      toast({ title: "Payment Request Invalid", description: errors.join(', '), variant: "destructive" });
+      toast({
+        title: 'Payment Request Invalid',
+        description: errors.join(', '),
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -779,10 +861,9 @@ export default function Checkout() {
         try {
           const userId: string | null = null;
 
-
           if (checkoutMode === 'guest') {
             // Pure guest checkout - store details temporarily without updating quote
-            
+
             // Prepare shipping address for session storage
             const shippingAddressForSession = {
               streetAddress: addressFormData.address_line1,
@@ -792,7 +873,7 @@ export default function Checkout() {
               country: addressFormData.country,
               destination_country: addressFormData.destination_country || addressFormData.country,
               fullName: addressFormData.recipient_name || guestContact.fullName,
-              phone: addressFormData.phone
+              phone: addressFormData.phone,
             };
 
             // Create or update guest checkout session instead of updating quote
@@ -806,7 +887,7 @@ export default function Checkout() {
                 shipping_address: shippingAddressForSession,
                 payment_currency: paymentCurrency,
                 payment_method: paymentMethod,
-                payment_amount: totalAmount
+                payment_amount: totalAmount,
               });
             } else {
               // Create new session
@@ -817,9 +898,9 @@ export default function Checkout() {
                 shipping_address: shippingAddressForSession,
                 payment_currency: paymentCurrency,
                 payment_method: paymentMethod,
-                payment_amount: totalAmount
+                payment_amount: totalAmount,
               });
-              
+
               // Store session token for future updates
               if (sessionResult.success && sessionResult.session) {
                 setGuestSessionToken(sessionResult.session.session_token);
@@ -830,32 +911,34 @@ export default function Checkout() {
               throw new Error(sessionResult.error || 'Failed to create checkout session');
             }
 
-            toast({ 
-              title: "Processing Order", 
-              description: "Processing your order as a guest. Your quote remains available to others until payment is confirmed." 
+            toast({
+              title: 'Processing Order',
+              description:
+                'Processing your order as a guest. Your quote remains available to others until payment is confirmed.',
             });
-
           } else {
             // For signin/signup modes, this shouldn't be reached
-            toast({ 
-              title: "Action Required", 
-              description: checkoutMode === 'signin' 
-                ? "Please use the 'Sign In' button above first." 
-                : "Please use the 'Create Account' button above first.", 
-              variant: "destructive" 
+            toast({
+              title: 'Action Required',
+              description:
+                checkoutMode === 'signin'
+                  ? "Please use the 'Sign In' button above first."
+                  : "Please use the 'Create Account' button above first.",
+              variant: 'destructive',
             });
             setIsProcessing(false);
             return;
           }
-
-
         } catch (error) {
           console.error('Guest checkout failed:', error);
-          const errorMessage = error instanceof Error ? error.message : 'An error occurred during checkout. Please try again.';
-          toast({ 
-            title: "Checkout Failed", 
-            description: errorMessage, 
-            variant: "destructive" 
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : 'An error occurred during checkout. Please try again.';
+          toast({
+            title: 'Checkout Failed',
+            description: errorMessage,
+            variant: 'destructive',
           });
           setIsProcessing(false);
           return;
@@ -866,12 +949,12 @@ export default function Checkout() {
       if (!isGuestCheckout) {
         try {
           let authSessionToken = null;
-          
+
           // If using temporary address, store it in session instead of updating quotes immediately
           if (selectedAddress === 'temp-address') {
             const temporaryShippingAddress = checkoutFormToQuoteAddress({
               ...addressFormData,
-              recipient_name: addressFormData.recipient_name || userProfile?.full_name || ''
+              recipient_name: addressFormData.recipient_name || userProfile?.full_name || '',
             });
 
             // Create authenticated checkout session to store temporary data
@@ -881,7 +964,7 @@ export default function Checkout() {
               temporary_shipping_address: temporaryShippingAddress,
               payment_currency: paymentCurrency,
               payment_method: paymentMethod,
-              payment_amount: totalAmount
+              payment_amount: totalAmount,
             });
 
             if (!sessionResult.success) {
@@ -896,7 +979,7 @@ export default function Checkout() {
               user_id: user!.id,
               payment_currency: paymentCurrency,
               payment_method: paymentMethod,
-              payment_amount: totalAmount
+              payment_amount: totalAmount,
             });
 
             if (!sessionResult.success) {
@@ -910,21 +993,22 @@ export default function Checkout() {
           paymentRequest.metadata = {
             ...paymentRequest.metadata,
             auth_session_token: authSessionToken,
-            checkout_type: 'authenticated'
+            checkout_type: 'authenticated',
           };
 
-          toast({ 
-            title: "Processing Order", 
-            description: "Processing your order. Your quotes will be updated upon payment confirmation." 
+          toast({
+            title: 'Processing Order',
+            description:
+              'Processing your order. Your quotes will be updated upon payment confirmation.',
           });
-
         } catch (error) {
           console.error('Authenticated checkout session failed:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Failed to create checkout session';
-          toast({ 
-            title: "Checkout Failed", 
-            description: errorMessage, 
-            variant: "destructive" 
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to create checkout session';
+          toast({
+            title: 'Checkout Failed',
+            description: errorMessage,
+            variant: 'destructive',
           });
           setIsProcessing(false);
           return;
@@ -949,15 +1033,15 @@ export default function Checkout() {
           client_secret: paymentResponse.client_secret,
           transactionId: paymentResponse.transactionId,
           airwallexData: paymentResponse.airwallexData,
-          fullResponse: paymentResponse
+          fullResponse: paymentResponse,
         });
-        
+
         // Payment data is now stored in the redirectToCheckout handlers
-        
+
         // Check if we have airwallexData with the required fields
         if (paymentResponse.airwallexData) {
           const { intent_id, client_secret, currency, env } = paymentResponse.airwallexData;
-          
+
           // Load Airwallex SDK if not already loaded
           if (!window.AirwallexComponentsSDK) {
             const script = document.createElement('script');
@@ -968,12 +1052,12 @@ export default function Checkout() {
               try {
                 const { payments } = await window.AirwallexComponentsSDK.init({
                   env: env || 'demo',
-                  enabledElements: ['payments']
+                  enabledElements: ['payments'],
                 });
-                
+
                 // Get country code from shipping address or default
                 const countryCode = addressFormData?.country || 'US';
-                
+
                 // Store complete payment data for success page
                 const airwallexPaymentData = {
                   paymentIntentId: intent_id,
@@ -981,10 +1065,13 @@ export default function Checkout() {
                   amount: paymentRequest.amount || totalAmount, // Use the actual amount from payment request
                   currency: currency || paymentRequest.currency || 'USD',
                   quoteIds: paymentRequest.quoteIds,
-                  timestamp: Date.now()
+                  timestamp: Date.now(),
                 };
-                sessionStorage.setItem('airwallex_payment_pending', JSON.stringify(airwallexPaymentData));
-                
+                sessionStorage.setItem(
+                  'airwallex_payment_pending',
+                  JSON.stringify(airwallexPaymentData),
+                );
+
                 // Redirect to Airwallex hosted payment page
                 payments.redirectToCheckout({
                   env: env || 'demo',
@@ -994,24 +1081,24 @@ export default function Checkout() {
                   currency: currency,
                   country_code: countryCode,
                   successUrl: window.location.origin + '/payment-success?gateway=airwallex',
-                  failUrl: window.location.origin + '/payment-failure?gateway=airwallex'
+                  failUrl: window.location.origin + '/payment-failure?gateway=airwallex',
                 });
               } catch (error) {
                 console.error('Airwallex SDK initialization failed:', error);
-                toast({ 
-                  title: "Payment Error", 
-                  description: "Failed to initialize Airwallex payment. Please try again.", 
-                  variant: "destructive" 
+                toast({
+                  title: 'Payment Error',
+                  description: 'Failed to initialize Airwallex payment. Please try again.',
+                  variant: 'destructive',
                 });
                 setIsProcessing(false);
               }
             };
             script.onerror = () => {
               console.error('Failed to load Airwallex SDK');
-              toast({ 
-                title: "Payment Error", 
-                description: "Failed to load payment provider. Please try again.", 
-                variant: "destructive" 
+              toast({
+                title: 'Payment Error',
+                description: 'Failed to load payment provider. Please try again.',
+                variant: 'destructive',
               });
               setIsProcessing(false);
             };
@@ -1021,12 +1108,12 @@ export default function Checkout() {
             try {
               const { payments } = await window.AirwallexComponentsSDK.init({
                 env: env || 'demo',
-                enabledElements: ['payments']
+                enabledElements: ['payments'],
               });
-              
+
               // Get country code from shipping address or default
               const countryCode = addressFormData?.country || 'US';
-              
+
               // Store complete payment data for success page
               const airwallexPaymentData = {
                 paymentIntentId: intent_id,
@@ -1034,10 +1121,13 @@ export default function Checkout() {
                 amount: paymentRequest.amount || totalAmount, // Use the actual amount from payment request
                 currency: currency || paymentRequest.currency || 'USD',
                 quoteIds: paymentRequest.quoteIds,
-                timestamp: Date.now()
+                timestamp: Date.now(),
               };
-              sessionStorage.setItem('airwallex_payment_pending', JSON.stringify(airwallexPaymentData));
-              
+              sessionStorage.setItem(
+                'airwallex_payment_pending',
+                JSON.stringify(airwallexPaymentData),
+              );
+
               // Redirect to Airwallex hosted payment page
               payments.redirectToCheckout({
                 env: env || 'demo',
@@ -1047,14 +1137,14 @@ export default function Checkout() {
                 currency: currency,
                 country_code: countryCode,
                 successUrl: window.location.origin + '/payment-success?gateway=airwallex',
-                failUrl: window.location.origin + '/payment-failure?gateway=airwallex'
+                failUrl: window.location.origin + '/payment-failure?gateway=airwallex',
               });
             } catch (error) {
               console.error('Airwallex redirect failed:', error);
-              toast({ 
-                title: "Payment Error", 
-                description: "Failed to redirect to payment page. Please try again.", 
-                variant: "destructive" 
+              toast({
+                title: 'Payment Error',
+                description: 'Failed to redirect to payment page. Please try again.',
+                variant: 'destructive',
               });
               setIsProcessing(false);
             }
@@ -1062,38 +1152,44 @@ export default function Checkout() {
         } else {
           // Fallback error if airwallexData is missing
           console.error('Airwallex payment response missing required data');
-          toast({ 
-            title: "Payment Error", 
-            description: "Payment configuration error. Please try again.", 
-            variant: "destructive" 
+          toast({
+            title: 'Payment Error',
+            description: 'Payment configuration error. Please try again.',
+            variant: 'destructive',
           });
           setIsProcessing(false);
         }
       } else if (requiresQRCode(paymentMethod) && paymentResponse.qrCode) {
         // QR-based payments (Khalti, eSewa, Fonepay)
         console.log('🎯 QR payment initiated:', paymentMethod);
-        
+
         // Update quote status to processing for QR payments
         const statusConfig = findStatusForPaymentMethod(paymentMethod);
         const processingStatus = statusConfig?.name || 'processing';
-        
+
         console.log(`Setting ${paymentMethod} quotes to ${processingStatus} status for QR payment`);
-        
-        await updateQuotesMutation.mutateAsync({ 
-          ids: cartQuoteIds, 
-          status: processingStatus, 
+
+        await updateQuotesMutation.mutateAsync({
+          ids: cartQuoteIds,
+          status: processingStatus,
           method: paymentMethod,
-          paymentStatus: 'unpaid' // Will be updated to 'paid' by webhook
+          paymentStatus: 'unpaid', // Will be updated to 'paid' by webhook
         });
-        
+
         // Show QR modal
         setQrPaymentData({
-          qrCodeUrl: paymentResponse.qrCode || paymentResponse.qr_code || paymentResponse.qrCodeUrl || paymentResponse.url || '',
-          transactionId: paymentResponse.transactionId || `${paymentMethod.toUpperCase()}_${Date.now()}`,
-          gateway: paymentMethod
+          qrCodeUrl:
+            paymentResponse.qrCode ||
+            paymentResponse.qr_code ||
+            paymentResponse.qrCodeUrl ||
+            paymentResponse.url ||
+            '',
+          transactionId:
+            paymentResponse.transactionId || `${paymentMethod.toUpperCase()}_${Date.now()}`,
+          gateway: paymentMethod,
         });
         setShowQRModal(true);
-        
+
         if (paymentMethod === 'khalti') {
           // For Khalti, redirect to payment URL for better UX
           window.location.href = paymentResponse.url;
@@ -1107,39 +1203,45 @@ export default function Checkout() {
         if (paymentMethod === 'payu' || paymentMethod === 'esewa') {
           const statusConfig = findStatusForPaymentMethod(paymentMethod);
           const processingStatus = statusConfig?.name || 'processing';
-          
-          console.log(`Setting ${paymentMethod} quotes to ${processingStatus} status before redirect`);
-          
-          await updateQuotesMutation.mutateAsync({ 
-            ids: cartQuoteIds, 
-            status: processingStatus, 
+
+          console.log(
+            `Setting ${paymentMethod} quotes to ${processingStatus} status before redirect`,
+          );
+
+          await updateQuotesMutation.mutateAsync({
+            ids: cartQuoteIds,
+            status: processingStatus,
             method: paymentMethod,
-            paymentStatus: 'unpaid' // Will be updated to 'paid' by webhook/success page
+            paymentStatus: 'unpaid', // Will be updated to 'paid' by webhook/success page
           });
         }
-        
+
         if (paymentMethod === 'payu') {
           // Direct PayU form submission (same as working test page)
           console.log('🔧 PayU: Direct form submission approach');
-          
+
           const payuConfig = {
             merchant_key: 'u7Ui5I',
             merchant_id: '8725115',
             salt_key: 'VIen2EwWiQbvsILF4Wt9p9Gh5ixOpSMe',
-            environment: 'test'
+            environment: 'test',
           };
-          
+
           const txnid = 'PAYU_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
           const productinfo = 'iWishBag Order (' + txnid + ')';
-          
+
           // Create form data exactly like test page
           const formData = {
             key: payuConfig.merchant_key,
             txnid: txnid,
             amount: totalAmount.toFixed(2),
             productinfo: productinfo,
-            firstname: isGuestCheckout ? (guestContact.fullName || 'Test Customer') : (userProfile?.full_name || 'Test Customer'),
-            email: isGuestCheckout ? guestContact.email || 'test@example.com' : (user?.email || 'test@example.com'),
+            firstname: isGuestCheckout
+              ? guestContact.fullName || 'Test Customer'
+              : userProfile?.full_name || 'Test Customer',
+            email: isGuestCheckout
+              ? guestContact.email || 'test@example.com'
+              : user?.email || 'test@example.com',
             phone: addressFormData.phone || '9999999999',
             surl: window.location.origin + '/payment-success?gateway=payu',
             furl: window.location.origin + '/payment-failure?gateway=payu',
@@ -1147,7 +1249,7 @@ export default function Checkout() {
             udf2: '',
             udf3: '',
             udf4: '',
-            udf5: ''
+            udf5: '',
           };
 
           // Generate hash exactly like test page
@@ -1164,18 +1266,22 @@ export default function Checkout() {
               data.udf3 || '',
               data.udf4 || '',
               data.udf5 || '',
-              '', '', '', '', '', // 5 empty fields
-              payuConfig.salt_key
+              '',
+              '',
+              '',
+              '',
+              '', // 5 empty fields
+              payuConfig.salt_key,
             ].join('|');
-            
+
             console.log('🔐 Hash string: ' + hashString);
-            
+
             const encoder = new TextEncoder();
             const data_encoded = encoder.encode(hashString);
             const hashBuffer = await crypto.subtle.digest('SHA-512', data_encoded);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            
+            const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+
             console.log('✅ Hash generated: ' + hashHex.substring(0, 30) + '...');
             return hashHex;
           };
@@ -1191,9 +1297,20 @@ export default function Checkout() {
           formData.hash = hash;
 
           // Validate required fields
-          const requiredFields = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
-          const missingFields = requiredFields.filter(field => !formData[field]);
-          
+          const requiredFields = [
+            'key',
+            'txnid',
+            'amount',
+            'productinfo',
+            'firstname',
+            'email',
+            'phone',
+            'surl',
+            'furl',
+            'hash',
+          ];
+          const missingFields = requiredFields.filter((field) => !formData[field]);
+
           if (missingFields.length > 0) {
             console.log('❌ Missing required fields: ' + missingFields.join(', '));
             return;
@@ -1203,7 +1320,7 @@ export default function Checkout() {
 
           // Create and submit form exactly like test page
           console.log('📋 Creating form for PayU submission...');
-          
+
           const form = document.createElement('form');
           form.method = 'POST';
           form.action = 'https://test.payu.in/_payment';
@@ -1220,42 +1337,158 @@ export default function Checkout() {
           });
 
           document.body.appendChild(form);
-          
+
           console.log('✅ Form created with ' + form.elements.length + ' fields');
           console.log('🚀 Submitting to PayU...');
-          
+
           // Submit form immediately
           form.submit();
         } else if (paymentMethod === 'esewa') {
           // For eSewa, use form POST submission (similar to PayU)
+          console.log('🔍 eSewa payment response:', paymentResponse);
+          console.log('🔍 Has formData?', !!paymentResponse.formData);
+          console.log('🔍 Has URL?', !!paymentResponse.url);
+          console.log('🔍 Method?', paymentResponse.method);
+          console.log('🔍 Full response:', JSON.stringify(paymentResponse, null, 2));
+
           if (paymentResponse.formData && paymentResponse.url) {
             console.log('📋 Creating form for eSewa submission...');
-            
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = paymentResponse.url;
-            form.target = '_self';
-            form.style.display = 'none';
+            console.log('📋 Form action URL:', paymentResponse.url);
+            console.log('📋 Form data:', paymentResponse.formData);
+            console.log('✅ Condition met: formData and URL exist, proceeding to new window...');
 
-            // Add all form fields from Edge Function response
-            Object.entries(paymentResponse.formData).forEach(([key, value]) => {
-              const input = document.createElement('input');
-              input.type = 'hidden';
-              input.name = key;
-              input.value = String(value);
-              form.appendChild(input);
-              console.log(`📝 eSewa form field: ${key} = ${value}`);
-            });
+            // Enhanced validation to match working test HTML
+            const requiredFields = [
+              'amount',
+              'tax_amount',
+              'total_amount',
+              'transaction_uuid',
+              'product_code',
+              'product_service_charge',
+              'product_delivery_charge',
+              'success_url',
+              'failure_url',
+              'signed_field_names',
+              'signature',
+            ];
+            const missingFields = requiredFields.filter(
+              (field) => !paymentResponse.formData[field],
+            );
 
-            document.body.appendChild(form);
-            
-            console.log('✅ eSewa form created with ' + form.elements.length + ' fields');
-            console.log('🚀 Submitting to eSewa...');
-            
-            // Submit form immediately
-            form.submit();
+            if (missingFields.length > 0) {
+              console.error('❌ Missing required fields:', missingFields);
+              throw new Error(`Missing required eSewa fields: ${missingFields.join(', ')}`);
+            }
+            console.log('✅ All required fields present');
+
+            // Validate signature format (should be base64)
+            if (
+              !paymentResponse.formData.signature ||
+              paymentResponse.formData.signature.length < 10
+            ) {
+              console.error('❌ Invalid signature:', paymentResponse.formData.signature);
+              throw new Error('Invalid eSewa signature format');
+            }
+            console.log('✅ Signature validation passed');
+
+            // Validate signed_field_names format (should match working test)
+            if (
+              paymentResponse.formData.signed_field_names !==
+              'total_amount,transaction_uuid,product_code'
+            ) {
+              console.error(
+                '❌ Invalid signed_field_names format:',
+                paymentResponse.formData.signed_field_names,
+              );
+              throw new Error('Invalid eSewa signed_field_names format');
+            }
+            console.log('✅ signed_field_names validation passed');
+
+            // Safety check: Fix URL corruption if detected
+            let cleanUrl = paymentResponse.url;
+            if (cleanUrl.includes('e  pay') || cleanUrl.includes('e%20%20pay')) {
+              console.warn('⚠️ URL corruption detected, fixing...');
+              cleanUrl = cleanUrl.replace(/e\s+pay/g, 'epay').replace(/e%20%20pay/g, 'epay');
+              console.log('🔧 Fixed URL:', cleanUrl);
+            }
+
+            // Validate URL format
+            const expectedTestUrl = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            const expectedLiveUrl = 'https://epay.esewa.com.np/api/epay/main/v2/form';
+            if (cleanUrl !== expectedTestUrl && cleanUrl !== expectedLiveUrl) {
+              console.error('❌ Unexpected eSewa URL:', cleanUrl);
+              console.error('❌ Expected:', expectedTestUrl, 'or', expectedLiveUrl);
+              throw new Error('Invalid eSewa URL format');
+            }
+            console.log('✅ URL validation passed, proceeding to new window creation...');
+
+            // Use immediate form submission with new window approach to bypass React interference
+            console.log('🚀 Using new window approach to bypass React interference...');
+
+            // Create form HTML exactly like working test
+            const formHTML = `
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>eSewa Payment</title>
+                <style>
+                  body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                  .loading { font-size: 18px; color: #666; }
+                </style>
+              </head>
+              <body>
+                <div class="loading">Redirecting to eSewa...</div>
+                <form id="esewaForm" method="POST" action="${cleanUrl}" style="display: none;">
+                  ${Object.entries(paymentResponse.formData)
+                    .map(
+                      ([key, value]) =>
+                        `<input type="hidden" name="${key}" value="${String(value)}" />`,
+                    )
+                    .join('')}
+                </form>
+                <script>
+                  console.log('eSewa form created in new window');
+                  console.log('Method:', document.getElementById('esewaForm').method);
+                  console.log('Action:', document.getElementById('esewaForm').action);
+                  
+                  // Log all form fields for debugging
+                  const form = document.getElementById('esewaForm');
+                  console.log('Form fields:');
+                  for (let i = 0; i < form.elements.length; i++) {
+                    const element = form.elements[i];
+                    console.log('  ' + element.name + ': ' + element.value);
+                  }
+                  
+                  // Submit form immediately
+                  setTimeout(() => {
+                    console.log('Submitting eSewa form...');
+                    document.getElementById('esewaForm').submit();
+                  }, 500);
+                </script>
+              </body>
+              </html>
+            `;
+
+            // Open new window and write the form
+            console.log('🪟 Attempting to open new window...');
+            const paymentWindow = window.open('', '_blank', 'width=800,height=600');
+            if (paymentWindow) {
+              console.log('✅ New window opened successfully');
+              paymentWindow.document.write(formHTML);
+              paymentWindow.document.close();
+              console.log('✅ eSewa payment window created successfully');
+            } else {
+              console.error('❌ Failed to open payment window (pop-up blocked?)');
+              toast({
+                title: 'Pop-up Blocked',
+                description: 'Please allow pop-ups for this site to complete payment.',
+                variant: 'destructive',
+              });
+            }
           } else {
-            console.error('❌ eSewa formData missing, falling back to direct redirect');
+            console.error('❌ eSewa formData or URL missing, falling back to direct redirect');
+            console.error('❌ formData:', paymentResponse.formData);
+            console.error('❌ url:', paymentResponse.url);
             window.location.href = paymentResponse.url;
           }
         } else {
@@ -1266,83 +1499,99 @@ export default function Checkout() {
         // For non-redirect payments, show status tracker
         setCurrentTransactionId(paymentResponse.transactionId);
         setShowPaymentStatus(true);
-        toast({ title: "Payment Initiated", description: "Your payment is being processed." });
+        toast({
+          title: 'Payment Initiated',
+          description: 'Your payment is being processed.',
+        });
       } else {
         // This case would be for non-redirect flows like COD or Bank Transfer
-        toast({ title: "Order Submitted", description: "Your order has been received." });
-        
+        toast({
+          title: 'Order Submitted',
+          description: 'Your order has been received.',
+        });
+
         // DYNAMIC: Set appropriate status based on payment method using configuration
         const statusConfig = findStatusForPaymentMethod(paymentMethod);
         const orderStatus = statusConfig?.name || 'ordered'; // Fallback to 'ordered' if not found
-        
+
         // Set payment status based on payment method
         let paymentStatus = 'unpaid'; // Default for all orders
         if (paymentMethod === 'cod') {
           // COD orders are considered "paid" upon delivery
           paymentStatus = 'unpaid'; // Will be updated to 'paid' after delivery
         }
-        
-        console.log(`Payment method: ${paymentMethod} → Order Status: ${orderStatus} (${statusConfig?.label || 'Default'}), Payment Status: ${paymentStatus}`);
-        
+
+        console.log(
+          `Payment method: ${paymentMethod} → Order Status: ${orderStatus} (${statusConfig?.label || 'Default'}), Payment Status: ${paymentStatus}`,
+        );
+
         // Log status resolution for debugging
         if (!statusConfig) {
-          console.warn(`No specific status configuration found for payment method: ${paymentMethod}, using default 'ordered'`);
+          console.warn(
+            `No specific status configuration found for payment method: ${paymentMethod}, using default 'ordered'`,
+          );
         }
-        
-        const updateResult = await updateQuotesMutation.mutateAsync({ 
-          ids: cartQuoteIds, 
-          status: orderStatus, 
+
+        const updateResult = await updateQuotesMutation.mutateAsync({
+          ids: cartQuoteIds,
+          status: orderStatus,
           method: paymentMethod,
-          paymentStatus: paymentStatus 
+          paymentStatus: paymentStatus,
         });
-        
+
         // Send bank transfer email if payment method is bank_transfer
         if (paymentMethod === 'bank_transfer' && updateResult) {
           try {
             // Get bank details for the destination country
-            const destinationCountry = selectedCartItems[0]?.destinationCountryCode || 
-                                    selectedCartItems[0]?.countryCode || 'US';
-            
+            const destinationCountry =
+              selectedCartItems[0]?.destinationCountryCode ||
+              selectedCartItems[0]?.countryCode ||
+              'US';
+
             const { data: countrySettings } = await supabase
               .from('country_settings')
               .select('bank_accounts')
               .eq('code', destinationCountry)
               .single();
-            
+
             if (countrySettings?.bank_accounts) {
               const formattedBankDetails = formatBankDetailsForEmail(
                 countrySettings.bank_accounts,
-                paymentCurrency
+                paymentCurrency,
               );
-              
+
               // Create a quote object for the email
               const quoteForEmail = {
                 id: updateResult.id,
                 display_id: updateResult.display_id,
                 email: isGuestCheckout ? guestContact.email : user?.email || '',
-                customer_name: isGuestCheckout ? guestContact.fullName : userProfile?.full_name || '',
+                customer_name: isGuestCheckout
+                  ? guestContact.fullName
+                  : userProfile?.full_name || '',
                 final_total: totalAmount,
-                currency: paymentCurrency
+                currency: paymentCurrency,
               };
-              
+
               // Create a properly typed quote for email
               const typedQuoteForEmail: Parameters<typeof sendBankTransferEmail>[0] = {
                 id: updateResult[0].id,
                 display_id: updateResult[0].display_id || '',
                 email: isGuestCheckout ? guestContact.email : user?.email || '',
-                customer_name: isGuestCheckout ? guestContact.fullName : userProfile?.full_name || '',
+                customer_name: isGuestCheckout
+                  ? guestContact.fullName
+                  : userProfile?.full_name || '',
                 final_total: totalAmount,
                 currency: paymentCurrency,
                 status: updateResult[0].status,
                 created_at: updateResult[0].created_at,
-                user_id: updateResult[0].user_id || null
+                user_id: updateResult[0].user_id || null,
               };
-              
+
               sendBankTransferEmail(typedQuoteForEmail, formattedBankDetails);
-              
-              toast({ 
-                title: "Bank Transfer Details Sent", 
-                description: "We've sent bank transfer instructions to your email." 
+
+              toast({
+                title: 'Bank Transfer Details Sent',
+                description: "We've sent bank transfer instructions to your email.",
               });
             }
           } catch (error) {
@@ -1353,7 +1602,11 @@ export default function Checkout() {
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      toast({ title: "An Error Occurred", description: errorMessage, variant: "destructive" });
+      toast({
+        title: 'An Error Occurred',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -1365,7 +1618,7 @@ export default function Checkout() {
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-2" />
         <span className="text-muted-foreground text-sm">
-          {isGuestCheckout ? "Loading your quote..." : "Loading your cart..."}
+          {isGuestCheckout ? 'Loading your quote...' : 'Loading your cart...'}
         </span>
       </div>
     );
@@ -1420,7 +1673,8 @@ export default function Checkout() {
                   <div className="text-center">
                     <div className="text-sm font-medium text-blue-800">From</div>
                     <div className="text-lg font-bold text-blue-900">
-                      🌍 {countries?.find(c => c.code === purchaseCountry)?.name || purchaseCountry}
+                      🌍{' '}
+                      {countries?.find((c) => c.code === purchaseCountry)?.name || purchaseCountry}
                     </div>
                     <div className="text-xs text-blue-600">Purchase Country</div>
                   </div>
@@ -1432,7 +1686,8 @@ export default function Checkout() {
                   <div className="text-center">
                     <div className="text-sm font-medium text-blue-800">To</div>
                     <div className="text-lg font-bold text-blue-900">
-                      🌍 {countries?.find(c => c.code === shippingCountry)?.name || shippingCountry}
+                      🌍{' '}
+                      {countries?.find((c) => c.code === shippingCountry)?.name || shippingCountry}
                     </div>
                     <div className="text-xs text-blue-600">Delivery Country</div>
                   </div>
@@ -1458,7 +1713,7 @@ export default function Checkout() {
                     <div className="grid grid-cols-3 gap-2">
                       <Button
                         type="button"
-                        variant={checkoutMode === 'guest' ? "default" : "outline"}
+                        variant={checkoutMode === 'guest' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setCheckoutMode('guest')}
                         className="text-xs"
@@ -1467,7 +1722,7 @@ export default function Checkout() {
                       </Button>
                       <Button
                         type="button"
-                        variant={checkoutMode === 'signup' ? "default" : "outline"}
+                        variant={checkoutMode === 'signup' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setCheckoutMode('signup')}
                         className="text-xs"
@@ -1476,7 +1731,7 @@ export default function Checkout() {
                       </Button>
                       <Button
                         type="button"
-                        variant={checkoutMode === 'signin' ? "default" : "outline"}
+                        variant={checkoutMode === 'signin' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setCheckoutMode('signin')}
                         className="text-xs"
@@ -1502,7 +1757,8 @@ export default function Checkout() {
                           ))}
                         </select>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Choose your preferred payment currency. Payment methods will be filtered accordingly.
+                          Choose your preferred payment currency. Payment methods will be filtered
+                          accordingly.
                         </p>
                       </div>
                     )}
@@ -1516,7 +1772,12 @@ export default function Checkout() {
                             <Input
                               id="guest-full-name"
                               value={guestContact.fullName}
-                              onChange={(e) => setGuestContact({...guestContact, fullName: e.target.value})}
+                              onChange={(e) =>
+                                setGuestContact({
+                                  ...guestContact,
+                                  fullName: e.target.value,
+                                })
+                              }
                               placeholder="John Doe"
                               required
                             />
@@ -1527,7 +1788,12 @@ export default function Checkout() {
                               id="guest-email"
                               type="email"
                               value={guestContact.email}
-                              onChange={(e) => setGuestContact({...guestContact, email: e.target.value})}
+                              onChange={(e) =>
+                                setGuestContact({
+                                  ...guestContact,
+                                  email: e.target.value,
+                                })
+                              }
                               placeholder="john@example.com"
                               required
                             />
@@ -1543,31 +1809,50 @@ export default function Checkout() {
                               <Input
                                 id="account-full-name"
                                 value={accountData.fullName}
-                                onChange={(e) => setAccountData({...accountData, fullName: e.target.value})}
+                                onChange={(e) =>
+                                  setAccountData({
+                                    ...accountData,
+                                    fullName: e.target.value,
+                                  })
+                                }
                                 placeholder="John Doe"
                                 required
                               />
                             </div>
                           )}
-                          <div className={checkoutMode === 'signup' ? "" : "md:col-span-2"}>
+                          <div className={checkoutMode === 'signup' ? '' : 'md:col-span-2'}>
                             <Label htmlFor="account-email">Email Address *</Label>
                             <Input
                               id="account-email"
                               type="email"
                               value={accountData.email}
-                              onChange={(e) => setAccountData({...accountData, email: e.target.value})}
+                              onChange={(e) =>
+                                setAccountData({
+                                  ...accountData,
+                                  email: e.target.value,
+                                })
+                              }
                               placeholder="john@example.com"
                               required
                             />
                           </div>
-                          <div className={checkoutMode === 'signup' ? "" : "md:col-span-2"}>
+                          <div className={checkoutMode === 'signup' ? '' : 'md:col-span-2'}>
                             <Label htmlFor="account-password">Password *</Label>
                             <Input
                               id="account-password"
                               type="password"
                               value={accountData.password}
-                              onChange={(e) => setAccountData({...accountData, password: e.target.value})}
-                              placeholder={checkoutMode === 'signin' ? "Enter your password" : "Create a secure password"}
+                              onChange={(e) =>
+                                setAccountData({
+                                  ...accountData,
+                                  password: e.target.value,
+                                })
+                              }
+                              placeholder={
+                                checkoutMode === 'signin'
+                                  ? 'Enter your password'
+                                  : 'Create a secure password'
+                              }
                               required
                             />
                           </div>
@@ -1578,7 +1863,12 @@ export default function Checkout() {
                                 id="account-confirm-password"
                                 type="password"
                                 value={accountData.confirmPassword}
-                                onChange={(e) => setAccountData({...accountData, confirmPassword: e.target.value})}
+                                onChange={(e) =>
+                                  setAccountData({
+                                    ...accountData,
+                                    confirmPassword: e.target.value,
+                                  })
+                                }
                                 placeholder="Confirm your password"
                                 required
                               />
@@ -1590,9 +1880,12 @@ export default function Checkout() {
 
                     <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
                       <p>
-                        {checkoutMode === 'guest' && "Complete your order without creating an account. You'll receive order updates via email."}
-                        {checkoutMode === 'signin' && "Sign in to your existing account to track your order and access your purchase history."}
-                        {checkoutMode === 'signup' && "Create an account to easily track your order and manage future purchases."}
+                        {checkoutMode === 'guest' &&
+                          "Complete your order without creating an account. You'll receive order updates via email."}
+                        {checkoutMode === 'signin' &&
+                          'Sign in to your existing account to track your order and access your purchase history.'}
+                        {checkoutMode === 'signup' &&
+                          'Create an account to easily track your order and manage future purchases.'}
                       </p>
                     </div>
 
@@ -1603,26 +1896,28 @@ export default function Checkout() {
                           type="button"
                           onClick={async () => {
                             if (!accountData.email || !accountData.password) {
-                              toast({ 
-                                title: "Missing Information", 
-                                description: "Please enter your email and password", 
-                                variant: "destructive" 
+                              toast({
+                                title: 'Missing Information',
+                                description: 'Please enter your email and password',
+                                variant: 'destructive',
                               });
                               return;
                             }
-                            
+
                             setIsProcessing(true);
                             try {
-                              const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-                                email: accountData.email,
-                                password: accountData.password,
-                              });
+                              const { data: signInData, error: signInError } =
+                                await supabase.auth.signInWithPassword({
+                                  email: accountData.email,
+                                  password: accountData.password,
+                                });
 
                               if (signInError) {
-                                toast({ 
-                                  title: "Sign In Failed", 
-                                  description: "Invalid email or password. Please check your credentials.", 
-                                  variant: "destructive" 
+                                toast({
+                                  title: 'Sign In Failed',
+                                  description:
+                                    'Invalid email or password. Please check your credentials.',
+                                  variant: 'destructive',
                                 });
                                 return;
                               }
@@ -1633,23 +1928,23 @@ export default function Checkout() {
                                   .from('quotes')
                                   .update({
                                     user_id: signInData.user.id,
-                                    is_anonymous: false
+                                    is_anonymous: false,
                                   })
                                   .eq('id', guestQuoteId);
                               }
 
-                              toast({ 
-                                title: "Welcome Back!", 
-                                description: "Successfully signed in. Redirecting...", 
+                              toast({
+                                title: 'Welcome Back!',
+                                description: 'Successfully signed in. Redirecting...',
                               });
-                              
+
                               // Reload to refresh auth state
                               setTimeout(() => window.location.reload(), 1000);
                             } catch (error) {
-                              toast({ 
-                                title: "Error", 
-                                description: "Failed to sign in. Please try again.", 
-                                variant: "destructive" 
+                              toast({
+                                title: 'Error',
+                                description: 'Failed to sign in. Please try again.',
+                                variant: 'destructive',
                               });
                             } finally {
                               setIsProcessing(false);
@@ -1678,43 +1973,49 @@ export default function Checkout() {
                         <Button
                           type="button"
                           onClick={async () => {
-                            if (!accountData.email || !accountData.password || !accountData.fullName) {
-                              toast({ 
-                                title: "Missing Information", 
-                                description: "Please fill in all required fields", 
-                                variant: "destructive" 
+                            if (
+                              !accountData.email ||
+                              !accountData.password ||
+                              !accountData.fullName
+                            ) {
+                              toast({
+                                title: 'Missing Information',
+                                description: 'Please fill in all required fields',
+                                variant: 'destructive',
                               });
                               return;
                             }
-                            
+
                             if (accountData.password !== accountData.confirmPassword) {
-                              toast({ 
-                                title: "Password Mismatch", 
-                                description: "Passwords do not match", 
-                                variant: "destructive" 
+                              toast({
+                                title: 'Password Mismatch',
+                                description: 'Passwords do not match',
+                                variant: 'destructive',
                               });
                               return;
                             }
-                            
+
                             setIsProcessing(true);
                             try {
-                              const { data: authData, error: authError } = await supabase.auth.signUp({
-                                email: accountData.email,
-                                password: accountData.password,
-                                options: {
-                                  data: {
-                                    full_name: accountData.fullName,
-                                    created_via: 'guest_checkout'
-                                  }
-                                }
-                              });
+                              const { data: authData, error: authError } =
+                                await supabase.auth.signUp({
+                                  email: accountData.email,
+                                  password: accountData.password,
+                                  options: {
+                                    data: {
+                                      full_name: accountData.fullName,
+                                      created_via: 'guest_checkout',
+                                    },
+                                  },
+                                });
 
                               if (authError) {
                                 if (authError.message.includes('already registered')) {
-                                  toast({ 
-                                    title: "Account Already Exists", 
-                                    description: "An account with this email already exists. Please sign in instead.", 
-                                    variant: "destructive" 
+                                  toast({
+                                    title: 'Account Already Exists',
+                                    description:
+                                      'An account with this email already exists. Please sign in instead.',
+                                    variant: 'destructive',
                                   });
                                   setCheckoutMode('signin');
                                   return;
@@ -1728,31 +2029,36 @@ export default function Checkout() {
                                   .from('quotes')
                                   .update({
                                     user_id: authData.user.id,
-                                    is_anonymous: false
+                                    is_anonymous: false,
                                   })
                                   .eq('id', guestQuoteId);
                               }
 
-                              toast({ 
-                                title: "Account Created!", 
-                                description: "Please check your email to verify your account.", 
+                              toast({
+                                title: 'Account Created!',
+                                description: 'Please check your email to verify your account.',
                               });
-                              
+
                               // Sign in immediately after signup
-                              const { error: signInError } = await supabase.auth.signInWithPassword({
-                                email: accountData.email,
-                                password: accountData.password,
-                              });
-                              
+                              const { error: signInError } = await supabase.auth.signInWithPassword(
+                                {
+                                  email: accountData.email,
+                                  password: accountData.password,
+                                },
+                              );
+
                               if (!signInError) {
                                 setTimeout(() => window.location.reload(), 1000);
                               }
                             } catch (error) {
-                              const errorMessage = error instanceof Error ? error.message : "Failed to create account. Please try again.";
-                              toast({ 
-                                title: "Error", 
-                                description: errorMessage, 
-                                variant: "destructive" 
+                              const errorMessage =
+                                error instanceof Error
+                                  ? error.message
+                                  : 'Failed to create account. Please try again.';
+                              toast({
+                                title: 'Error',
+                                description: errorMessage,
+                                variant: 'destructive',
                               });
                             } finally {
                               setIsProcessing(false);
@@ -1789,25 +2095,38 @@ export default function Checkout() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Guest checkout with loaded address */}
-                  {isGuestCheckout && (selectedAddress === 'guest-address-loaded' || selectedAddress === 'guest-address') && isAddressComplete(addressFormData) ? (
+                  {isGuestCheckout &&
+                  (selectedAddress === 'guest-address-loaded' ||
+                    selectedAddress === 'guest-address') &&
+                  isAddressComplete(addressFormData) ? (
                     <div className="space-y-4">
                       <div className="p-4 border rounded-lg bg-gray-50">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <span className="font-medium">{addressFormData.recipient_name || guestContact.fullName || 'Guest'}</span>
+                                <span className="font-medium">
+                                  {addressFormData.recipient_name ||
+                                    guestContact.fullName ||
+                                    'Guest'}
+                                </span>
                                 <Badge variant="secondary">Guest Address</Badge>
                               </div>
-                              <p className="text-sm text-muted-foreground">{addressFormData.address_line1}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {addressFormData.address_line1}
+                              </p>
                               {addressFormData.address_line2 && (
-                                <p className="text-sm text-muted-foreground">{addressFormData.address_line2}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {addressFormData.address_line2}
+                                </p>
                               )}
                               <p className="text-sm text-muted-foreground">
-                                {addressFormData.city}, {addressFormData.state_province_region} {addressFormData.postal_code}
+                                {addressFormData.city}, {addressFormData.state_province_region}{' '}
+                                {addressFormData.postal_code}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {countries?.find(c => c.code === addressFormData.country)?.name || addressFormData.country}
+                                {countries?.find((c) => c.code === addressFormData.country)?.name ||
+                                  addressFormData.country}
                               </p>
                               {addressFormData.phone && (
                                 <p className="text-sm text-muted-foreground">
@@ -1827,7 +2146,9 @@ export default function Checkout() {
                         </div>
                       </div>
                     </div>
-                  ) : !isGuestCheckout && selectedAddress === 'temp-address' && isAddressComplete(addressFormData) ? (
+                  ) : !isGuestCheckout &&
+                    selectedAddress === 'temp-address' &&
+                    isAddressComplete(addressFormData) ? (
                     // Temporary address for authenticated users
                     <div className="space-y-4">
                       <div className="p-4 border rounded-lg bg-gray-50">
@@ -1835,18 +2156,28 @@ export default function Checkout() {
                           <div className="flex-1">
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <span className="font-medium">{addressFormData.recipient_name || userProfile?.full_name || 'User'}</span>
+                                <span className="font-medium">
+                                  {addressFormData.recipient_name ||
+                                    userProfile?.full_name ||
+                                    'User'}
+                                </span>
                                 <Badge variant="secondary">One-time Address</Badge>
                               </div>
-                              <p className="text-sm text-muted-foreground">{addressFormData.address_line1}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {addressFormData.address_line1}
+                              </p>
                               {addressFormData.address_line2 && (
-                                <p className="text-sm text-muted-foreground">{addressFormData.address_line2}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {addressFormData.address_line2}
+                                </p>
                               )}
                               <p className="text-sm text-muted-foreground">
-                                {addressFormData.city}, {addressFormData.state_province_region} {addressFormData.postal_code}
+                                {addressFormData.city}, {addressFormData.state_province_region}{' '}
+                                {addressFormData.postal_code}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {countries?.find(c => c.code === addressFormData.country)?.name || addressFormData.country}
+                                {countries?.find((c) => c.code === addressFormData.country)?.name ||
+                                  addressFormData.country}
                               </p>
                               {addressFormData.phone && (
                                 <p className="text-sm text-muted-foreground">
@@ -1866,16 +2197,18 @@ export default function Checkout() {
                         </div>
                       </div>
                     </div>
-                  ) : (!addresses || addresses.length === 0) || isGuestCheckout ? (
+                  ) : !addresses || addresses.length === 0 || isGuestCheckout ? (
                     <div className="text-center py-6">
                       <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-medium mb-2">
-                        {isGuestCheckout ? "Add Shipping Address" : `No addresses found for ${countries?.find(c => c.code === shippingCountry)?.name || shippingCountry}`}
+                        {isGuestCheckout
+                          ? 'Add Shipping Address'
+                          : `No addresses found for ${countries?.find((c) => c.code === shippingCountry)?.name || shippingCountry}`}
                       </h3>
                       <p className="text-muted-foreground mb-4">
-                        {isGuestCheckout 
-                          ? "Please provide a shipping address for your order." 
-                          : `Please add a shipping address for delivery to ${countries?.find(c => c.code === shippingCountry)?.name || shippingCountry}.`}
+                        {isGuestCheckout
+                          ? 'Please provide a shipping address for your order.'
+                          : `Please add a shipping address for delivery to ${countries?.find((c) => c.code === shippingCountry)?.name || shippingCountry}.`}
                       </p>
                       <Button onClick={() => setShowAddressForm(true)}>
                         <Plus className="h-4 w-4 mr-2" />
@@ -1887,31 +2220,41 @@ export default function Checkout() {
                       <RadioGroup value={selectedAddress} onValueChange={setSelectedAddress}>
                         <div className="space-y-3">
                           {addresses.map((address) => (
-                            <div key={address.id} className="flex items-start space-x-3 p-4 border rounded-lg hover:border-primary transition-colors">
+                            <div
+                              key={address.id}
+                              className="flex items-start space-x-3 p-4 border rounded-lg hover:border-primary transition-colors"
+                            >
                               <RadioGroupItem value={address.id} id={address.id} className="mt-1" />
                               <Label htmlFor={address.id} className="flex-1 cursor-pointer">
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2">
                                     <span className="font-medium">{address.address_line1}</span>
-                                    {address.is_default && <Badge variant="secondary">Default</Badge>}
+                                    {address.is_default && (
+                                      <Badge variant="secondary">Default</Badge>
+                                    )}
                                   </div>
                                   {address.address_line2 && (
-                                    <p className="text-sm text-muted-foreground">{address.address_line2}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {address.address_line2}
+                                    </p>
                                   )}
                                   <p className="text-sm text-muted-foreground">
-                                    {address.city}, {address.state_province_region} {address.postal_code}
+                                    {address.city}, {address.state_province_region}{' '}
+                                    {address.postal_code}
                                   </p>
-                                  <p className="text-sm text-muted-foreground">{address.destination_country}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {address.destination_country}
+                                  </p>
                                 </div>
                               </Label>
                             </div>
                           ))}
                         </div>
                       </RadioGroup>
-                      
+
                       <div className="pt-4 border-t">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={() => setShowAddressForm(true)}
                           className="w-full"
                         >
@@ -1927,22 +2270,23 @@ export default function Checkout() {
                     <div className="border rounded-lg p-6 bg-gray-50 space-y-4 mt-4">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium">Add New Address</h4>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => setShowAddressForm(false)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => setShowAddressForm(false)}>
                           Cancel
                         </Button>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="recipient_name">Recipient Name *</Label>
                           <Input
                             id="recipient_name"
                             value={addressFormData.recipient_name || ''}
-                            onChange={(e) => setAddressFormData({...addressFormData, recipient_name: e.target.value})}
+                            onChange={(e) =>
+                              setAddressFormData({
+                                ...addressFormData,
+                                recipient_name: e.target.value,
+                              })
+                            }
                             placeholder="John Doe"
                           />
                         </div>
@@ -1951,7 +2295,12 @@ export default function Checkout() {
                           <Input
                             id="phone"
                             value={addressFormData.phone || ''}
-                            onChange={(e) => setAddressFormData({...addressFormData, phone: e.target.value})}
+                            onChange={(e) =>
+                              setAddressFormData({
+                                ...addressFormData,
+                                phone: e.target.value,
+                              })
+                            }
                             placeholder="+1 234 567 8900"
                           />
                         </div>
@@ -1960,7 +2309,12 @@ export default function Checkout() {
                           <Input
                             id="address_line1"
                             value={addressFormData.address_line1}
-                            onChange={(e) => setAddressFormData({...addressFormData, address_line1: e.target.value})}
+                            onChange={(e) =>
+                              setAddressFormData({
+                                ...addressFormData,
+                                address_line1: e.target.value,
+                              })
+                            }
                             placeholder="123 Main St"
                           />
                         </div>
@@ -1969,7 +2323,12 @@ export default function Checkout() {
                           <Input
                             id="address_line2"
                             value={addressFormData.address_line2}
-                            onChange={(e) => setAddressFormData({...addressFormData, address_line2: e.target.value})}
+                            onChange={(e) =>
+                              setAddressFormData({
+                                ...addressFormData,
+                                address_line2: e.target.value,
+                              })
+                            }
                             placeholder="Apt 4B"
                           />
                         </div>
@@ -1978,7 +2337,12 @@ export default function Checkout() {
                           <Input
                             id="city"
                             value={addressFormData.city}
-                            onChange={(e) => setAddressFormData({...addressFormData, city: e.target.value})}
+                            onChange={(e) =>
+                              setAddressFormData({
+                                ...addressFormData,
+                                city: e.target.value,
+                              })
+                            }
                             placeholder="New York"
                           />
                         </div>
@@ -1987,7 +2351,12 @@ export default function Checkout() {
                           <Input
                             id="state"
                             value={addressFormData.state_province_region}
-                            onChange={(e) => setAddressFormData({...addressFormData, state_province_region: e.target.value})}
+                            onChange={(e) =>
+                              setAddressFormData({
+                                ...addressFormData,
+                                state_province_region: e.target.value,
+                              })
+                            }
                             placeholder="NY"
                           />
                         </div>
@@ -1996,7 +2365,12 @@ export default function Checkout() {
                           <Input
                             id="postal_code"
                             value={addressFormData.postal_code}
-                            onChange={(e) => setAddressFormData({...addressFormData, postal_code: e.target.value})}
+                            onChange={(e) =>
+                              setAddressFormData({
+                                ...addressFormData,
+                                postal_code: e.target.value,
+                              })
+                            }
                             placeholder="10001"
                           />
                         </div>
@@ -2004,36 +2378,52 @@ export default function Checkout() {
                           <Label htmlFor="country">Country *</Label>
                           <Input
                             id="country"
-                            value={countries?.find(c => c.code === shippingCountry)?.name || shippingCountry || ''}
+                            value={
+                              countries?.find((c) => c.code === shippingCountry)?.name ||
+                              shippingCountry ||
+                              ''
+                            }
                             disabled
                             className="bg-gray-100"
                           />
-                          <p className="text-xs text-muted-foreground mt-1">Country is determined by your quote's destination</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Country is determined by your quote's destination
+                          </p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="is_default"
                           checked={addressFormData.is_default}
-                          onCheckedChange={(checked) => setAddressFormData({...addressFormData, is_default: checked as boolean})}
+                          onCheckedChange={(checked) =>
+                            setAddressFormData({
+                              ...addressFormData,
+                              is_default: checked as boolean,
+                            })
+                          }
                         />
                         <Label htmlFor="is_default">Set as default address</Label>
                       </div>
-                      
+
                       {/* Show save to profile option only for authenticated users */}
                       {!isGuestCheckout && (
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="save_to_profile"
                             checked={addressFormData.save_to_profile}
-                            onCheckedChange={(checked) => setAddressFormData({...addressFormData, save_to_profile: checked as boolean})}
+                            onCheckedChange={(checked) =>
+                              setAddressFormData({
+                                ...addressFormData,
+                                save_to_profile: checked as boolean,
+                              })
+                            }
                           />
                           <Label htmlFor="save_to_profile">Save this address to my profile</Label>
                         </div>
                       )}
-                      
-                      <Button 
+
+                      <Button
                         onClick={handleAddAddress}
                         disabled={addAddressMutation.isPending}
                         className="w-full"
@@ -2082,7 +2472,8 @@ export default function Checkout() {
                     <div>
                       <h4 className="font-medium text-blue-900">Secure Checkout</h4>
                       <p className="text-sm text-blue-700 mt-1">
-                        Your payment information is encrypted and secure. We never store your card details.
+                        Your payment information is encrypted and secure. We never store your card
+                        details.
                       </p>
                     </div>
                   </div>
@@ -2101,18 +2492,29 @@ export default function Checkout() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {selectedCartItems.map((item) => (
-                    <div key={item.quoteId} className="flex justify-between items-start p-3 border rounded-lg">
+                    <div
+                      key={item.quoteId}
+                      className="flex justify-between items-start p-3 border rounded-lg"
+                    >
                       <div className="flex-1">
-                        <Link to={`/quote-details/${item.quoteId}`} className="font-medium hover:underline text-primary">
+                        <Link
+                          to={`/quote-details/${item.quoteId}`}
+                          className="font-medium hover:underline text-primary"
+                        >
                           <h4>{item.productName}</h4>
                         </Link>
                         <p className="text-sm text-muted-foreground">
                           {item.quantity} item{item.quantity !== 1 ? 's' : ''}
                         </p>
-                        <Badge variant="outline">{item.countryCode}</Badge> 
+                        <Badge variant="outline">{item.countryCode}</Badge>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold"><CheckoutItemPrice item={item} displayCurrency={isGuestCheckout ? paymentCurrency : undefined} /></div>
+                        <div className="font-bold">
+                          <CheckoutItemPrice
+                            item={item}
+                            displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -2122,17 +2524,32 @@ export default function Checkout() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span><CheckoutTotal items={selectedCartItems} displayCurrency={isGuestCheckout ? paymentCurrency : undefined} /></span>
+                      <span>
+                        <CheckoutTotal
+                          items={selectedCartItems}
+                          displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
+                        />
+                      </span>
                     </div>
                     <div className="flex justify-between font-bold text-lg">
                       <span>Total:</span>
-                      <span><CheckoutTotal items={selectedCartItems} displayCurrency={isGuestCheckout ? paymentCurrency : undefined} /></span>
+                      <span>
+                        <CheckoutTotal
+                          items={selectedCartItems}
+                          displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
+                        />
+                      </span>
                     </div>
                   </div>
 
-                  <Button 
-                    onClick={handlePlaceOrder} 
-                    disabled={!canPlaceOrder || isProcessing || (!isGuestCheckout && (!addresses || addresses.length === 0)) || (isGuestCheckout && checkoutMode !== 'guest' && !user)}
+                  <Button
+                    onClick={handlePlaceOrder}
+                    disabled={
+                      !canPlaceOrder ||
+                      isProcessing ||
+                      (!isGuestCheckout && (!addresses || addresses.length === 0)) ||
+                      (isGuestCheckout && checkoutMode !== 'guest' && !user)
+                    }
                     className="w-full"
                     size="lg"
                   >
@@ -2143,17 +2560,24 @@ export default function Checkout() {
                       </>
                     ) : (
                       <>
-                        {isGuestCheckout && checkoutMode === 'signin' && "Please Sign In Above First"}
-                        {isGuestCheckout && checkoutMode === 'signup' && "Please Create Account Above First"}
+                        {isGuestCheckout &&
+                          checkoutMode === 'signin' &&
+                          'Please Sign In Above First'}
+                        {isGuestCheckout &&
+                          checkoutMode === 'signup' &&
+                          'Please Create Account Above First'}
                         {(!isGuestCheckout || checkoutMode === 'guest') && (
                           <>
-                            Place Order - <CheckoutTotal items={selectedCartItems} displayCurrency={isGuestCheckout ? paymentCurrency : undefined} />
+                            Place Order -{' '}
+                            <CheckoutTotal
+                              items={selectedCartItems}
+                              displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
+                            />
                           </>
                         )}
                       </>
                     )}
                   </Button>
-
 
                   <p className="text-xs text-muted-foreground text-center">
                     By placing this order, you agree to our terms and conditions.
@@ -2195,67 +2619,73 @@ export default function Checkout() {
               amount={totalAmount}
               currency={paymentCurrency}
               customerInfo={{
-                name: isGuestCheckout 
-                  ? (addressFormData.recipient_name || guestContact.fullName)
-                  : (addressFormData.recipient_name || userProfile?.full_name || ''),
-                email: isGuestCheckout ? guestContact.email : (user?.email || ''),
+                name: isGuestCheckout
+                  ? addressFormData.recipient_name || guestContact.fullName
+                  : addressFormData.recipient_name || userProfile?.full_name || '',
+                email: isGuestCheckout ? guestContact.email : user?.email || '',
                 phone: addressFormData.phone || '',
-                address: isAddressComplete(addressFormData) ? {
-                  line1: addressFormData.address_line1,
-                  city: addressFormData.city,
-                  state: addressFormData.state_province_region,
-                  postal_code: addressFormData.postal_code,
-                  country: addressFormData.country || shippingCountry || 'US'
-                } : undefined
+                address: isAddressComplete(addressFormData)
+                  ? {
+                      line1: addressFormData.address_line1,
+                      city: addressFormData.city,
+                      state: addressFormData.state_province_region,
+                      postal_code: addressFormData.postal_code,
+                      country: addressFormData.country || shippingCountry || 'US',
+                    }
+                  : undefined,
               }}
               onSuccess={async (paymentIntent) => {
-                console.log("Payment Succeeded!", paymentIntent);
-                
+                console.log('Payment Succeeded!', paymentIntent);
+
                 // Update quote status to processing for Stripe payments
                 try {
                   const statusConfig = findStatusForPaymentMethod('stripe');
                   const processingStatus = statusConfig?.name || 'processing';
-                  
-                  console.log(`Setting Stripe quotes to ${processingStatus} status after successful payment`);
-                  
-                  await updateQuotesMutation.mutateAsync({ 
-                    ids: cartQuoteIds, 
-                    status: processingStatus, 
+
+                  console.log(
+                    `Setting Stripe quotes to ${processingStatus} status after successful payment`,
+                  );
+
+                  await updateQuotesMutation.mutateAsync({
+                    ids: cartQuoteIds,
+                    status: processingStatus,
                     method: 'stripe',
-                    paymentStatus: 'paid' // Mark as paid since payment succeeded
+                    paymentStatus: 'paid', // Mark as paid since payment succeeded
                   });
-                  
-                  toast({ 
-                    title: "Payment Successful", 
-                    description: "Your payment has been processed successfully." 
+
+                  toast({
+                    title: 'Payment Successful',
+                    description: 'Your payment has been processed successfully.',
                   });
-                  
+
                   // Hide the form
                   setStripeClientSecret(null);
-                  
+
                   // Navigate to order confirmation
                   // The updateQuotesMutation will handle the redirect
                 } catch (error) {
                   console.error('Error updating quotes after payment:', error);
-                  toast({ 
-                    title: "Payment Successful", 
-                    description: "Payment completed, but there was an issue updating your order. Please contact support." 
+                  toast({
+                    title: 'Payment Successful',
+                    description:
+                      'Payment completed, but there was an issue updating your order. Please contact support.',
                   });
                   setStripeClientSecret(null);
                 }
               }}
               onError={(error) => {
-                console.error("Payment Failed:", error);
-                toast({ 
-                  title: "Payment Failed", 
-                  description: error || "There was an issue processing your payment. Please try again.", 
-                  variant: "destructive"
+                console.error('Payment Failed:', error);
+                toast({
+                  title: 'Payment Failed',
+                  description:
+                    error || 'There was an issue processing your payment. Please try again.',
+                  variant: 'destructive',
                 });
                 // Hide the form to allow retry
                 setStripeClientSecret(null);
               }}
             />
-            
+
             {/* Cancel button */}
             <div className="mt-4 text-center">
               <button
@@ -2279,14 +2709,17 @@ export default function Checkout() {
               onStatusChange={(status) => {
                 if (status === 'completed') {
                   setShowPaymentStatus(false);
-                  toast({ title: "Payment Successful", description: "Your payment has been processed successfully." });
+                  toast({
+                    title: 'Payment Successful',
+                    description: 'Your payment has been processed successfully.',
+                  });
                   navigate('/dashboard/orders');
                 } else if (status === 'failed') {
                   setShowPaymentStatus(false);
-                  toast({ 
-                    title: "Payment Failed", 
-                    description: "There was an issue processing your payment. Please try again.", 
-                    variant: "destructive"
+                  toast({
+                    title: 'Payment Failed',
+                    description: 'There was an issue processing your payment. Please try again.',
+                    variant: 'destructive',
                   });
                 }
               }}
@@ -2296,7 +2729,6 @@ export default function Checkout() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

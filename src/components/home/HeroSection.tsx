@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Globe, Package, Shield, Zap } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Button } from '@/components/ui/button';
+import { ArrowRight, Globe, Package, Shield, Zap } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface HeroSectionProps {
   settings: {
@@ -36,17 +36,17 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
   const backgroundImage = heroBannerUrl ? `url(${heroBannerUrl})` : undefined;
 
   const floatingIcons = [
-    { Icon: Package, delay: "0s", x: "10%", y: "20%" },
-    { Icon: Globe, delay: "0.2s", x: "85%", y: "15%" },
-    { Icon: Shield, delay: "0.4s", x: "15%", y: "75%" },
-    { Icon: Zap, delay: "0.6s", x: "80%", y: "70%" }
+    { Icon: Package, delay: '0s', x: '10%', y: '20%' },
+    { Icon: Globe, delay: '0.2s', x: '85%', y: '15%' },
+    { Icon: Shield, delay: '0.4s', x: '15%', y: '75%' },
+    { Icon: Zap, delay: '0.6s', x: '80%', y: '70%' },
   ];
 
   const stats = [
-    { value: "50K+", label: "Happy Customers" },
-    { value: "100+", label: "Countries Served" },
-    { value: "24/7", label: "Customer Support" },
-    { value: "5M+", label: "Products Delivered" }
+    { value: '50K+', label: 'Happy Customers' },
+    { value: '100+', label: 'Countries Served' },
+    { value: '24/7', label: 'Customer Support' },
+    { value: '5M+', label: 'Products Delivered' },
   ];
 
   return (
@@ -61,10 +61,10 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
           }}
         />
       )}
-      
+
       {/* Enhanced Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70" />
-      
+
       {/* Animated Mesh Gradient */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 via-purple-600/20 to-pink-600/20 animate-gradient-shift" />
@@ -75,11 +75,11 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
         <div
           key={index}
           className="absolute opacity-30 animate-float"
-          style={{ 
-            left: x, 
+          style={{
+            left: x,
             top: y,
             animationDelay: delay,
-            animationDuration: '3s'
+            animationDuration: '3s',
           }}
         >
           <Icon className="w-12 h-12 text-white/50" />
@@ -87,7 +87,7 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
       ))}
 
       {/* Content */}
-      <div 
+      <div
         className="container relative z-10 mx-auto px-4 py-20"
         style={{ opacity: Math.max(0, 1 - scrollY / 500) }}
       >
@@ -102,9 +102,12 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
           </div>
 
           {/* Main Heading */}
-          <h1 className="mb-6 text-5xl md:text-7xl lg:text-8xl font-bold leading-tight animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
+          <h1
+            className="mb-6 text-5xl md:text-7xl lg:text-8xl font-bold leading-tight animate-fadeInUp"
+            style={{ animationDelay: '0.1s' }}
+          >
             <span className="bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
-              {settings.hero_headline || "Shop the World,"}
+              {settings.hero_headline || 'Shop the World,'}
             </span>
             <br />
             <span className="bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 bg-clip-text text-transparent">
@@ -113,32 +116,42 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
           </h1>
 
           {/* Subheading */}
-          <p className="mb-8 text-xl md:text-2xl text-gray-200 font-light leading-relaxed max-w-3xl mx-auto animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
-            {settings.hero_subheadline || "Access millions of products from Amazon, eBay, Alibaba and more. We handle everything - purchasing, shipping, and customs clearance."}
+          <p
+            className="mb-8 text-xl md:text-2xl text-gray-200 font-light leading-relaxed max-w-3xl mx-auto animate-fadeInUp"
+            style={{ animationDelay: '0.2s' }}
+          >
+            {settings.hero_subheadline ||
+              'Access millions of products from Amazon, eBay, Alibaba and more. We handle everything - purchasing, shipping, and customs clearance.'}
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12 animate-fadeInUp" style={{ animationDelay: '0.3s' }}>
-            <Button 
-              size="lg" 
+          <div
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12 animate-fadeInUp"
+            style={{ animationDelay: '0.3s' }}
+          >
+            <Button
+              size="lg"
               className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 px-8 py-6 text-lg font-semibold rounded-full"
-              onClick={() => window.location.href = settings.hero_cta_link || '/quote'}
+              onClick={() => (window.location.href = settings.hero_cta_link || '/quote')}
             >
-              {settings.hero_cta_text || "Get Your Free Quote"}
+              {settings.hero_cta_text || 'Get Your Free Quote'}
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button 
+            <Button
               size="lg"
-              variant="outline" 
+              variant="outline"
               className="border-white/30 bg-white/10 backdrop-blur-md text-white hover:bg-white/20 hover:border-white/50 px-8 py-6 text-lg font-semibold rounded-full"
-              onClick={() => window.location.href = '/cost-estimator'}
+              onClick={() => (window.location.href = '/cost-estimator')}
             >
               Calculate Costs Instantly
             </Button>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 animate-fadeInUp" style={{ animationDelay: '0.4s' }}>
+          <div
+            className="grid grid-cols-2 md:grid-cols-4 gap-6 animate-fadeInUp"
+            style={{ animationDelay: '0.4s' }}
+          >
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
                 <div className="text-3xl md:text-4xl font-bold text-white mb-1">{stat.value}</div>
@@ -148,9 +161,12 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
           </div>
         </div>
       </div>
-      
+
       {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-fadeInUp" style={{ animationDelay: '0.8s' }}>
+      <div
+        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-fadeInUp"
+        style={{ animationDelay: '0.8s' }}
+      >
         <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center animate-bounce">
           <div className="w-1 h-3 bg-white/60 rounded-full mt-2" />
         </div>

@@ -1,8 +1,8 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createCorsHeaders } from '../_shared/cors.ts';
-const getEmailTemplate = (type, data)=>{
+const getEmailTemplate = (type, data) => {
   const baseUrl = 'https://whyteclub.com';
-  switch(type){
+  switch (type) {
     case 'signup_confirmation':
       return {
         subject: 'Welcome to iWishBag - Confirm Your Email',
@@ -95,7 +95,7 @@ const getEmailTemplate = (type, data)=>{
             </div>
           </body>
           </html>
-        `
+        `,
       };
     case 'password_reset':
       return {
@@ -165,37 +165,40 @@ const getEmailTemplate = (type, data)=>{
             </div>
           </body>
           </html>
-        `
+        `,
       };
     default:
       throw new Error(`Unknown email type: ${type}`);
   }
 };
-serve(async (req)=>{
-  console.log("🔵 === AUTH EMAIL FUNCTION STARTED ===");
+serve(async (req) => {
+  console.log('🔵 === AUTH EMAIL FUNCTION STARTED ===');
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
-      headers: createCorsHeaders(req, ['GET', 'POST', 'PUT', 'DELETE'])
+      headers: createCorsHeaders(req, ['GET', 'POST', 'PUT', 'DELETE']),
     });
   }
   try {
     const body = await req.json();
-    console.log("🔵 Auth email request:", JSON.stringify(body, null, 2));
+    console.log('🔵 Auth email request:', JSON.stringify(body, null, 2));
     const { email, type, user_id, token, redirect_to } = body;
     if (!email || !type) {
-      return new Response(JSON.stringify({
-        error: 'Missing required fields: email, type'
-      }), {
-        status: 400,
-        headers: {
-          ...createCorsHeaders(req, ['GET', 'POST', 'PUT', 'DELETE']),
-          'Content-Type': 'application/json'
-        }
-      });
+      return new Response(
+        JSON.stringify({
+          error: 'Missing required fields: email, type',
+        }),
+        {
+          status: 400,
+          headers: {
+            ...createCorsHeaders(req, ['GET', 'POST', 'PUT', 'DELETE']),
+            'Content-Type': 'application/json',
+          },
+        },
+      );
     }
     // Generate confirmation/reset URLs
-    let emailData = {};
+    const emailData = {};
     if (type === 'signup_confirmation') {
       // For signup confirmation, we'll generate the URL to our confirmation page
       emailData.confirmationUrl = `https://whyteclub.com/auth/confirm?token=${token}&type=signup&email=${encodeURIComponent(email)}`;
@@ -212,16 +215,16 @@ serve(async (req)=>{
       from: 'iWishBag <noreply@whyteclub.com>',
       to: email,
       subject: template.subject,
-      html: template.html
+      html: template.html,
     };
-    console.log("🔵 Sending email via Resend...");
+    console.log('🔵 Sending email via Resend...');
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(emailPayload)
+      body: JSON.stringify(emailPayload),
     });
     if (!response.ok) {
       const errorData = await response.text();
@@ -229,29 +232,35 @@ serve(async (req)=>{
       throw new Error(`Resend API error: ${response.status} ${errorData}`);
     }
     const result = await response.json();
-    console.log("✅ Auth email sent successfully:", result);
-    return new Response(JSON.stringify({
-      success: true,
-      messageId: result.id,
-      type
-    }), {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
-    });
+    console.log('✅ Auth email sent successfully:', result);
+    return new Response(
+      JSON.stringify({
+        success: true,
+        messageId: result.id,
+        type,
+      }),
+      {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   } catch (error) {
     console.error('❌ Auth email error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to send auth email',
-      details: error.message
-    }), {
-      status: 500,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
-    });
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to send auth email',
+        details: error.message,
+      }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
 });

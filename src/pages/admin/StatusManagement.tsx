@@ -6,15 +6,21 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { 
-  Settings, 
-  Save, 
-  Plus, 
-  Trash2, 
-  ArrowUp, 
-  ArrowDown, 
+import {
+  Settings,
+  Save,
+  Plus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
   AlertTriangle,
   CheckCircle,
   Clock,
@@ -25,7 +31,7 @@ import {
   FileText,
   ShoppingCart,
   Loader2,
-  Calculator
+  Calculator,
 } from 'lucide-react';
 import { useStatusManagement, StatusConfig } from '@/hooks/useStatusManagement';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,22 +40,62 @@ import { TestStatusFiltering } from '@/components/admin/TestStatusFiltering';
 import { StatusConfigFixer } from '@/components/debug/StatusConfigFixer';
 
 const colorOptions = [
-  { value: 'default', label: 'Default', className: 'bg-blue-100 text-blue-800' },
-  { value: 'secondary', label: 'Secondary', className: 'bg-gray-100 text-gray-800' },
-  { value: 'outline', label: 'Outline', className: 'bg-white text-gray-800 border' },
-  { value: 'destructive', label: 'Destructive', className: 'bg-red-100 text-red-800' },
-  { value: 'success', label: 'Success', className: 'bg-green-100 text-green-800' },
-  { value: 'warning', label: 'Warning', className: 'bg-yellow-100 text-yellow-800' },
+  {
+    value: 'default',
+    label: 'Default',
+    className: 'bg-blue-100 text-blue-800',
+  },
+  {
+    value: 'secondary',
+    label: 'Secondary',
+    className: 'bg-gray-100 text-gray-800',
+  },
+  {
+    value: 'outline',
+    label: 'Outline',
+    className: 'bg-white text-gray-800 border',
+  },
+  {
+    value: 'destructive',
+    label: 'Destructive',
+    className: 'bg-red-100 text-red-800',
+  },
+  {
+    value: 'success',
+    label: 'Success',
+    className: 'bg-green-100 text-green-800',
+  },
+  {
+    value: 'warning',
+    label: 'Warning',
+    className: 'bg-yellow-100 text-yellow-800',
+  },
   { value: 'info', label: 'Info', className: 'bg-sky-100 text-sky-800' },
-  { value: 'purple', label: 'Purple', className: 'bg-purple-100 text-purple-800' },
+  {
+    value: 'purple',
+    label: 'Purple',
+    className: 'bg-purple-100 text-purple-800',
+  },
   { value: 'pink', label: 'Pink', className: 'bg-pink-100 text-pink-800' },
-  { value: 'indigo', label: 'Indigo', className: 'bg-indigo-100 text-indigo-800' },
-  { value: 'emerald', label: 'Emerald', className: 'bg-emerald-100 text-emerald-800' },
+  {
+    value: 'indigo',
+    label: 'Indigo',
+    className: 'bg-indigo-100 text-indigo-800',
+  },
+  {
+    value: 'emerald',
+    label: 'Emerald',
+    className: 'bg-emerald-100 text-emerald-800',
+  },
   { value: 'amber', label: 'Amber', className: 'bg-amber-100 text-amber-800' },
   { value: 'rose', label: 'Rose', className: 'bg-rose-100 text-rose-800' },
-  { value: 'violet', label: 'Violet', className: 'bg-violet-100 text-violet-800' },
+  {
+    value: 'violet',
+    label: 'Violet',
+    className: 'bg-violet-100 text-violet-800',
+  },
   { value: 'cyan', label: 'Cyan', className: 'bg-cyan-100 text-cyan-800' },
-  { value: 'lime', label: 'Lime', className: 'bg-lime-100 text-lime-800' }
+  { value: 'lime', label: 'Lime', className: 'bg-lime-100 text-lime-800' },
 ];
 
 const iconOptions = [
@@ -62,7 +108,7 @@ const iconOptions = [
   { value: 'DollarSign', label: 'Dollar Sign', icon: DollarSign },
   { value: 'FileText', label: 'File Text', icon: FileText },
   { value: 'ShoppingCart', label: 'Shopping Cart', icon: ShoppingCart },
-  { value: 'Calculator', label: 'Calculator', icon: Calculator }
+  { value: 'Calculator', label: 'Calculator', icon: Calculator },
 ];
 
 export default function StatusManagement() {
@@ -73,27 +119,24 @@ export default function StatusManagement() {
   const [isSaving, setIsSaving] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { 
-    quoteStatuses, 
-    orderStatuses, 
-    isLoading, 
-    error, 
-    saveStatusSettings 
-  } = useStatusManagement();
+  const { quoteStatuses, orderStatuses, isLoading, error, saveStatusSettings } =
+    useStatusManagement();
 
   // Check authentication and role
   React.useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         console.log('Current user:', user);
-        
+
         if (user) {
           const { data: roles } = await supabase
             .from('user_roles')
             .select('role')
             .eq('user_id', user.id);
-          
+
           console.log('User roles:', roles);
         } else {
           console.log('No authenticated user found');
@@ -102,7 +145,7 @@ export default function StatusManagement() {
         console.error('Error checking authentication:', error);
       }
     };
-    
+
     checkAuth();
   }, []);
 
@@ -126,7 +169,7 @@ export default function StatusManagement() {
       order: category === 'quote' ? localQuoteStatuses.length + 1 : localOrderStatuses.length + 1,
       allowedTransitions: [],
       isTerminal: false,
-      category
+      category,
     };
 
     if (category === 'quote') {
@@ -137,16 +180,24 @@ export default function StatusManagement() {
     setEditingStatus(newStatus);
   };
 
-  const updateStatus = (statusId: string, updates: Partial<StatusConfig>, category: 'quote' | 'order') => {
+  const updateStatus = (
+    statusId: string,
+    updates: Partial<StatusConfig>,
+    category: 'quote' | 'order',
+  ) => {
     if (category === 'quote') {
-      setLocalQuoteStatuses(prev => prev.map(s => s.id === statusId ? { ...s, ...updates } : s));
+      setLocalQuoteStatuses((prev) =>
+        prev.map((s) => (s.id === statusId ? { ...s, ...updates } : s)),
+      );
     } else {
-      setLocalOrderStatuses(prev => prev.map(s => s.id === statusId ? { ...s, ...updates } : s));
+      setLocalOrderStatuses((prev) =>
+        prev.map((s) => (s.id === statusId ? { ...s, ...updates } : s)),
+      );
     }
-    
+
     // Also update the editingStatus if it's the same status being edited
     if (editingStatus && editingStatus.id === statusId) {
-      setEditingStatus(prev => prev ? { ...prev, ...updates } : null);
+      setEditingStatus((prev) => (prev ? { ...prev, ...updates } : null));
     }
 
     // Clear existing timeout
@@ -157,13 +208,15 @@ export default function StatusManagement() {
     // Set new timeout for auto-save
     autoSaveTimeoutRef.current = setTimeout(async () => {
       try {
-        const updatedQuoteStatuses = category === 'quote' 
-          ? localQuoteStatuses.map(s => s.id === statusId ? { ...s, ...updates } : s)
-          : localQuoteStatuses;
-        const updatedOrderStatuses = category === 'order'
-          ? localOrderStatuses.map(s => s.id === statusId ? { ...s, ...updates } : s)
-          : localOrderStatuses;
-        
+        const updatedQuoteStatuses =
+          category === 'quote'
+            ? localQuoteStatuses.map((s) => (s.id === statusId ? { ...s, ...updates } : s))
+            : localQuoteStatuses;
+        const updatedOrderStatuses =
+          category === 'order'
+            ? localOrderStatuses.map((s) => (s.id === statusId ? { ...s, ...updates } : s))
+            : localOrderStatuses;
+
         await saveStatusSettings(updatedQuoteStatuses, updatedOrderStatuses);
       } catch (error) {
         console.error('Auto-save failed:', error);
@@ -182,16 +235,16 @@ export default function StatusManagement() {
 
   const deleteStatus = (statusId: string, category: 'quote' | 'order') => {
     if (category === 'quote') {
-      setLocalQuoteStatuses(prev => prev.filter(s => s.id !== statusId));
+      setLocalQuoteStatuses((prev) => prev.filter((s) => s.id !== statusId));
     } else {
-      setLocalOrderStatuses(prev => prev.filter(s => s.id !== statusId));
+      setLocalOrderStatuses((prev) => prev.filter((s) => s.id !== statusId));
     }
   };
 
   const moveStatus = (statusId: string, direction: 'up' | 'down', category: 'quote' | 'order') => {
     const statuses = category === 'quote' ? localQuoteStatuses : localOrderStatuses;
-    const index = statuses.findIndex(s => s.id === statusId);
-    
+    const index = statuses.findIndex((s) => s.id === statusId);
+
     if (direction === 'up' && index > 0) {
       const newStatuses = [...statuses];
       [newStatuses[index], newStatuses[index - 1]] = [newStatuses[index - 1], newStatuses[index]];
@@ -212,7 +265,7 @@ export default function StatusManagement() {
   };
 
   const getIconComponent = (iconName: string) => {
-    const iconOption = iconOptions.find(opt => opt.value === iconName);
+    const iconOption = iconOptions.find((opt) => opt.value === iconName);
     return iconOption ? iconOption.icon : Clock;
   };
 
@@ -233,7 +286,7 @@ export default function StatusManagement() {
       console.log('Attempting to save status settings...');
       console.log('Quote statuses:', localQuoteStatuses);
       console.log('Order statuses:', localOrderStatuses);
-      
+
       await saveStatusSettings(localQuoteStatuses, localOrderStatuses);
       console.log('Status settings saved successfully');
     } catch (error: unknown) {
@@ -243,9 +296,9 @@ export default function StatusManagement() {
         message: error instanceof Error ? error.message : 'Unknown error',
         code: (error as any)?.code,
         details: (error as any)?.details,
-        hint: (error as any)?.hint
+        hint: (error as any)?.hint,
       });
-      
+
       // Show error message to user
       alert(`Failed to save status settings: ${errorMessage}`);
     } finally {
@@ -256,7 +309,7 @@ export default function StatusManagement() {
   const renderStatusCard = (status: StatusConfig, category: 'quote' | 'order') => {
     const IconComponent = getIconComponent(status.icon);
     const availableTransitions = category === 'quote' ? localQuoteStatuses : localOrderStatuses;
-    
+
     return (
       <Card key={status.id} className="relative hover:shadow-md transition-shadow">
         <CardHeader className="pb-3">
@@ -271,9 +324,13 @@ export default function StatusManagement() {
             <div className="flex items-center gap-2">
               <Badge variant={status.color}>{status.name}</Badge>
               {status.isActive ? (
-                <Badge variant="outline" className="text-green-600">Active</Badge>
+                <Badge variant="outline" className="text-green-600">
+                  Active
+                </Badge>
               ) : (
-                <Badge variant="outline" className="text-gray-500">Inactive</Badge>
+                <Badge variant="outline" className="text-gray-500">
+                  Inactive
+                </Badge>
               )}
             </div>
           </div>
@@ -301,19 +358,27 @@ export default function StatusManagement() {
             <Label className="text-xs text-muted-foreground font-medium">Flow Behavior</Label>
             <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${status.showsInQuotesList ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${status.showsInQuotesList ? 'bg-green-500' : 'bg-gray-300'}`}
+                />
                 <span>Quotes List</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${status.showsInOrdersList ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${status.showsInOrdersList ? 'bg-green-500' : 'bg-gray-300'}`}
+                />
                 <span>Orders List</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${status.canBePaid ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${status.canBePaid ? 'bg-green-500' : 'bg-gray-300'}`}
+                />
                 <span>Can Be Paid</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${status.triggersEmail ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${status.triggersEmail ? 'bg-green-500' : 'bg-gray-300'}`}
+                />
                 <span>Sends Email</span>
               </div>
               {status.isDefaultQuoteStatus && (
@@ -329,8 +394,8 @@ export default function StatusManagement() {
             <Label className="text-xs text-muted-foreground">Allowed Transitions</Label>
             <div className="flex flex-wrap gap-1 mt-1">
               {status.allowedTransitions.length > 0 ? (
-                status.allowedTransitions.map(transitionId => {
-                  const transition = availableTransitions.find(s => s.id === transitionId);
+                status.allowedTransitions.map((transitionId) => {
+                  const transition = availableTransitions.find((s) => s.id === transitionId);
                   return transition ? (
                     <Badge key={transitionId} variant="outline" className="text-xs">
                       {transition.label}
@@ -344,11 +409,7 @@ export default function StatusManagement() {
           </div>
 
           <div className="flex gap-2 pt-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setEditingStatus(status)}
-            >
+            <Button size="sm" variant="outline" onClick={() => setEditingStatus(status)}>
               Edit
             </Button>
             <Button
@@ -363,7 +424,10 @@ export default function StatusManagement() {
               size="sm"
               variant="outline"
               onClick={() => moveStatus(status.id, 'down', category)}
-              disabled={status.order === (category === 'quote' ? localQuoteStatuses.length : localOrderStatuses.length)}
+              disabled={
+                status.order ===
+                (category === 'quote' ? localQuoteStatuses.length : localOrderStatuses.length)
+              }
             >
               <ArrowDown className="h-3 w-3" />
             </Button>
@@ -384,18 +448,15 @@ export default function StatusManagement() {
     if (!editingStatus) return null;
 
     const IconComponent = getIconComponent(editingStatus.icon);
-    const availableTransitions = editingStatus.category === 'quote' ? localQuoteStatuses : localOrderStatuses;
+    const availableTransitions =
+      editingStatus.category === 'quote' ? localQuoteStatuses : localOrderStatuses;
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Edit Status</h3>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setEditingStatus(null)}
-            >
+            <Button size="sm" variant="outline" onClick={() => setEditingStatus(null)}>
               ×
             </Button>
           </div>
@@ -406,7 +467,9 @@ export default function StatusManagement() {
                 <Label>Name (Internal)</Label>
                 <Input
                   value={editingStatus.name}
-                  onChange={(e) => updateStatus(editingStatus.id, { name: e.target.value }, editingStatus.category)}
+                  onChange={(e) =>
+                    updateStatus(editingStatus.id, { name: e.target.value }, editingStatus.category)
+                  }
                   placeholder="e.g., pending"
                 />
               </div>
@@ -414,7 +477,13 @@ export default function StatusManagement() {
                 <Label>Display Label</Label>
                 <Input
                   value={editingStatus.label}
-                  onChange={(e) => updateStatus(editingStatus.id, { label: e.target.value }, editingStatus.category)}
+                  onChange={(e) =>
+                    updateStatus(
+                      editingStatus.id,
+                      { label: e.target.value },
+                      editingStatus.category,
+                    )
+                  }
                   placeholder="e.g., Pending"
                 />
               </div>
@@ -424,7 +493,13 @@ export default function StatusManagement() {
               <Label>Description</Label>
               <Textarea
                 value={editingStatus.description}
-                onChange={(e) => updateStatus(editingStatus.id, { description: e.target.value }, editingStatus.category)}
+                onChange={(e) =>
+                  updateStatus(
+                    editingStatus.id,
+                    { description: e.target.value },
+                    editingStatus.category,
+                  )
+                }
                 placeholder="Describe what this status means"
               />
             </div>
@@ -434,13 +509,19 @@ export default function StatusManagement() {
                 <Label>Color</Label>
                 <Select
                   value={editingStatus.color}
-                  onValueChange={(value) => updateStatus(editingStatus.id, { color: value as string }, editingStatus.category)}
+                  onValueChange={(value) =>
+                    updateStatus(
+                      editingStatus.id,
+                      { color: value as string },
+                      editingStatus.category,
+                    )
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {colorOptions.map(option => (
+                    {colorOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         <div className="flex items-center gap-2">
                           <div className={`w-3 h-3 rounded-full ${option.className}`} />
@@ -455,13 +536,15 @@ export default function StatusManagement() {
                 <Label>Icon</Label>
                 <Select
                   value={editingStatus.icon}
-                  onValueChange={(value) => updateStatus(editingStatus.id, { icon: value }, editingStatus.category)}
+                  onValueChange={(value) =>
+                    updateStatus(editingStatus.id, { icon: value }, editingStatus.category)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {iconOptions.map(option => (
+                    {iconOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         <div className="flex items-center gap-2">
                           <option.icon className="h-4 w-4" />
@@ -479,11 +562,17 @@ export default function StatusManagement() {
               <Label className="text-sm font-medium mb-3 block">Live Preview</Label>
               <div className="flex items-center gap-3">
                 <IconComponent className="h-5 w-5" />
-                <Badge variant={editingStatus.color}>{editingStatus.label || editingStatus.name}</Badge>
+                <Badge variant={editingStatus.color}>
+                  {editingStatus.label || editingStatus.name}
+                </Badge>
                 {editingStatus.isActive ? (
-                  <Badge variant="outline" className="text-green-600">Active</Badge>
+                  <Badge variant="outline" className="text-green-600">
+                    Active
+                  </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-gray-500">Inactive</Badge>
+                  <Badge variant="outline" className="text-gray-500">
+                    Inactive
+                  </Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
@@ -497,7 +586,13 @@ export default function StatusManagement() {
                 <Input
                   type="number"
                   value={editingStatus.order}
-                  onChange={(e) => updateStatus(editingStatus.id, { order: parseInt(e.target.value) }, editingStatus.category)}
+                  onChange={(e) =>
+                    updateStatus(
+                      editingStatus.id,
+                      { order: parseInt(e.target.value) },
+                      editingStatus.category,
+                    )
+                  }
                   min="1"
                 />
               </div>
@@ -506,7 +601,15 @@ export default function StatusManagement() {
                 <Input
                   type="number"
                   value={editingStatus.autoExpireHours || ''}
-                  onChange={(e) => updateStatus(editingStatus.id, { autoExpireHours: e.target.value ? parseInt(e.target.value) : undefined }, editingStatus.category)}
+                  onChange={(e) =>
+                    updateStatus(
+                      editingStatus.id,
+                      {
+                        autoExpireHours: e.target.value ? parseInt(e.target.value) : undefined,
+                      },
+                      editingStatus.category,
+                    )
+                  }
                   placeholder="Optional"
                   min="1"
                 />
@@ -520,7 +623,9 @@ export default function StatusManagement() {
               </div>
               <Switch
                 checked={editingStatus.isActive}
-                onCheckedChange={(checked) => updateStatus(editingStatus.id, { isActive: checked }, editingStatus.category)}
+                onCheckedChange={(checked) =>
+                  updateStatus(editingStatus.id, { isActive: checked }, editingStatus.category)
+                }
               />
             </div>
 
@@ -531,7 +636,9 @@ export default function StatusManagement() {
               </div>
               <Switch
                 checked={editingStatus.isTerminal}
-                onCheckedChange={(checked) => updateStatus(editingStatus.id, { isTerminal: checked }, editingStatus.category)}
+                onCheckedChange={(checked) =>
+                  updateStatus(editingStatus.id, { isTerminal: checked }, editingStatus.category)
+                }
               />
             </div>
 
@@ -542,44 +649,72 @@ export default function StatusManagement() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-sm">Show in Quotes List</Label>
-                    <p className="text-xs text-muted-foreground">Display quotes with this status on the Quotes page</p>
+                    <p className="text-xs text-muted-foreground">
+                      Display quotes with this status on the Quotes page
+                    </p>
                   </div>
                   <Switch
                     checked={editingStatus.showsInQuotesList || false}
-                    onCheckedChange={(checked) => updateStatus(editingStatus.id, { showsInQuotesList: checked }, editingStatus.category)}
+                    onCheckedChange={(checked) =>
+                      updateStatus(
+                        editingStatus.id,
+                        { showsInQuotesList: checked },
+                        editingStatus.category,
+                      )
+                    }
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-sm">Show in Orders List</Label>
-                    <p className="text-xs text-muted-foreground">Display quotes with this status on the Orders page</p>
+                    <p className="text-xs text-muted-foreground">
+                      Display quotes with this status on the Orders page
+                    </p>
                   </div>
                   <Switch
                     checked={editingStatus.showsInOrdersList || false}
-                    onCheckedChange={(checked) => updateStatus(editingStatus.id, { showsInOrdersList: checked }, editingStatus.category)}
+                    onCheckedChange={(checked) =>
+                      updateStatus(
+                        editingStatus.id,
+                        { showsInOrdersList: checked },
+                        editingStatus.category,
+                      )
+                    }
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-sm">Can Be Paid</Label>
-                    <p className="text-xs text-muted-foreground">Allow payment for quotes with this status</p>
+                    <p className="text-xs text-muted-foreground">
+                      Allow payment for quotes with this status
+                    </p>
                   </div>
                   <Switch
                     checked={editingStatus.canBePaid || false}
-                    onCheckedChange={(checked) => updateStatus(editingStatus.id, { canBePaid: checked }, editingStatus.category)}
+                    onCheckedChange={(checked) =>
+                      updateStatus(editingStatus.id, { canBePaid: checked }, editingStatus.category)
+                    }
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-sm">Send Email</Label>
-                    <p className="text-xs text-muted-foreground">Send email notification when this status is set</p>
+                    <p className="text-xs text-muted-foreground">
+                      Send email notification when this status is set
+                    </p>
                   </div>
                   <Switch
                     checked={editingStatus.triggersEmail || false}
-                    onCheckedChange={(checked) => updateStatus(editingStatus.id, { triggersEmail: checked }, editingStatus.category)}
+                    onCheckedChange={(checked) =>
+                      updateStatus(
+                        editingStatus.id,
+                        { triggersEmail: checked },
+                        editingStatus.category,
+                      )
+                    }
                   />
                 </div>
 
@@ -587,11 +722,19 @@ export default function StatusManagement() {
                   <div className="flex items-center justify-between">
                     <div>
                       <Label className="text-sm">Default Quote Status</Label>
-                      <p className="text-xs text-muted-foreground">Use this status for new quotes</p>
+                      <p className="text-xs text-muted-foreground">
+                        Use this status for new quotes
+                      </p>
                     </div>
                     <Switch
                       checked={editingStatus.isDefaultQuoteStatus || false}
-                      onCheckedChange={(checked) => updateStatus(editingStatus.id, { isDefaultQuoteStatus: checked }, editingStatus.category)}
+                      onCheckedChange={(checked) =>
+                        updateStatus(
+                          editingStatus.id,
+                          { isDefaultQuoteStatus: checked },
+                          editingStatus.category,
+                        )
+                      }
                     />
                   </div>
                 )}
@@ -601,7 +744,13 @@ export default function StatusManagement() {
                     <Label className="text-sm">Email Template</Label>
                     <Input
                       value={editingStatus.emailTemplate || ''}
-                      onChange={(e) => updateStatus(editingStatus.id, { emailTemplate: e.target.value }, editingStatus.category)}
+                      onChange={(e) =>
+                        updateStatus(
+                          editingStatus.id,
+                          { emailTemplate: e.target.value },
+                          editingStatus.category,
+                        )
+                      }
                       placeholder="e.g., quote_approved"
                       className="mt-1"
                     />
@@ -614,8 +763,8 @@ export default function StatusManagement() {
               <Label>Allowed Transitions</Label>
               <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
                 {availableTransitions
-                  .filter(s => s.id !== editingStatus.id)
-                  .map(status => (
+                  .filter((s) => s.id !== editingStatus.id)
+                  .map((status) => (
                     <div key={status.id} className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -624,8 +773,12 @@ export default function StatusManagement() {
                         onChange={(e) => {
                           const newTransitions = e.target.checked
                             ? [...editingStatus.allowedTransitions, status.id]
-                            : editingStatus.allowedTransitions.filter(id => id !== status.id);
-                          updateStatus(editingStatus.id, { allowedTransitions: newTransitions }, editingStatus.category);
+                            : editingStatus.allowedTransitions.filter((id) => id !== status.id);
+                          updateStatus(
+                            editingStatus.id,
+                            { allowedTransitions: newTransitions },
+                            editingStatus.category,
+                          );
                         }}
                       />
                       <label htmlFor={`transition-${status.id}`} className="text-sm">
@@ -637,10 +790,7 @@ export default function StatusManagement() {
             </div>
 
             <div className="flex gap-2 justify-end pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setEditingStatus(null)}
-              >
+              <Button variant="outline" onClick={() => setEditingStatus(null)}>
                 Cancel
               </Button>
               <Button
@@ -731,9 +881,7 @@ export default function StatusManagement() {
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold">Quote Statuses</h2>
-                <p className="text-muted-foreground">
-                  Configure the workflow for quote processing
-                </p>
+                <p className="text-muted-foreground">Configure the workflow for quote processing</p>
               </div>
               <Button onClick={() => addStatus('quote')}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -744,7 +892,7 @@ export default function StatusManagement() {
             <div className="grid gap-4">
               {localQuoteStatuses
                 .sort((a, b) => a.order - b.order)
-                .map(status => renderStatusCard(status, 'quote'))}
+                .map((status) => renderStatusCard(status, 'quote'))}
             </div>
           </TabsContent>
 
@@ -752,9 +900,7 @@ export default function StatusManagement() {
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold">Order Statuses</h2>
-                <p className="text-muted-foreground">
-                  Configure the workflow for order processing
-                </p>
+                <p className="text-muted-foreground">Configure the workflow for order processing</p>
               </div>
               <Button onClick={() => addStatus('order')}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -765,7 +911,7 @@ export default function StatusManagement() {
             <div className="grid gap-4">
               {localOrderStatuses
                 .sort((a, b) => a.order - b.order)
-                .map(status => renderStatusCard(status, 'order'))}
+                .map((status) => renderStatusCard(status, 'order'))}
             </div>
           </TabsContent>
 
@@ -777,10 +923,10 @@ export default function StatusManagement() {
                   Diagnose and fix issues with status filtering and configuration
                 </p>
               </div>
-              
+
               {/* Status Configuration Fixer */}
               <StatusConfigFixer />
-              
+
               {/* Test Status Filtering Component */}
               <TestStatusFiltering />
             </div>
@@ -789,7 +935,9 @@ export default function StatusManagement() {
 
         <div className="flex gap-2 justify-end pt-6">
           <div className="flex-1 text-sm text-muted-foreground">
-            <p>💡 Changes are auto-saved after 2 seconds. Use "Save All Changes" to save immediately.</p>
+            <p>
+              💡 Changes are auto-saved after 2 seconds. Use "Save All Changes" to save immediately.
+            </p>
           </div>
           <Button
             variant="outline"
@@ -801,10 +949,7 @@ export default function StatusManagement() {
           >
             Reset to Saved
           </Button>
-          <Button
-            onClick={handleSaveSettings}
-            disabled={isSaving}
-          >
+          <Button onClick={handleSaveSettings} disabled={isSaving}>
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

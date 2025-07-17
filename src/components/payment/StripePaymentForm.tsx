@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import {
-  Elements,
-  PaymentElement,
-  useStripe,
-  useElements,
-} from '@stripe/react-stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -37,14 +32,14 @@ interface StripePaymentFormProps {
 }
 
 // Main wrapper component that provides Stripe Elements context
-export function StripePaymentForm({ 
-  client_secret, 
-  amount, 
+export function StripePaymentForm({
+  client_secret,
+  amount,
   currency = 'USD',
-  onSuccess, 
+  onSuccess,
   onError,
   className,
-  customerInfo 
+  customerInfo,
 }: StripePaymentFormProps) {
   const options = {
     clientSecret: client_secret,
@@ -89,7 +84,7 @@ function StripePaymentFormContent({
 }: StripePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentSucceeded, setPaymentSucceeded] = useState(false);
@@ -224,7 +219,7 @@ function StripePaymentFormContent({
           )}
 
           <div className="space-y-2">
-            <PaymentElement 
+            <PaymentElement
               options={{
                 layout: 'tabs',
                 defaultValues: {
@@ -232,14 +227,16 @@ function StripePaymentFormContent({
                     name: customerInfo?.name || '',
                     email: customerInfo?.email || '',
                     phone: customerInfo?.phone || '',
-                    address: customerInfo?.address ? {
-                      line1: customerInfo.address.line1 || '',
-                      city: customerInfo.address.city || '',
-                      state: customerInfo.address.state || '',
-                      postal_code: customerInfo.address.postal_code || '',
-                      country: customerInfo.address.country || ''
-                    } : undefined
-                  }
+                    address: customerInfo?.address
+                      ? {
+                          line1: customerInfo.address.line1 || '',
+                          city: customerInfo.address.city || '',
+                          state: customerInfo.address.state || '',
+                          postal_code: customerInfo.address.postal_code || '',
+                          country: customerInfo.address.country || '',
+                        }
+                      : undefined,
+                  },
                 },
                 fields: {
                   billingDetails: {
@@ -251,19 +248,15 @@ function StripePaymentFormContent({
                       city: 'auto',
                       state: 'auto',
                       country: 'auto',
-                      postalCode: 'auto'
-                    }
-                  }
-                }
+                      postalCode: 'auto',
+                    },
+                  },
+                },
               }}
             />
           </div>
 
-          <Button
-            type="submit"
-            disabled={!stripe || isLoading}
-            className="w-full"
-          >
+          <Button type="submit" disabled={!stripe || isLoading} className="w-full">
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

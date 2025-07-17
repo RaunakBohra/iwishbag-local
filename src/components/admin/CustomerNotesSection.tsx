@@ -1,8 +1,7 @@
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Save } from "lucide-react";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Save } from 'lucide-react';
 
 interface CustomerNotesSectionProps {
   customerId: string;
@@ -11,18 +10,18 @@ interface CustomerNotesSectionProps {
   isUpdating: boolean;
 }
 
-export const CustomerNotesSection = ({ 
-  customerId, 
-  notes, 
-  onUpdate, 
-  isUpdating 
+export const CustomerNotesSection = ({
+  customerId,
+  notes,
+  onUpdate,
+  isUpdating,
 }: CustomerNotesSectionProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [notesValue, setNotesValue] = useState("");
+  const [notesValue, setNotesValue] = useState('');
 
   const handleEditNotes = () => {
     setIsEditing(true);
-    setNotesValue(notes || "");
+    setNotesValue(notes || '');
   };
 
   const handleSaveNotes = () => {
@@ -32,7 +31,7 @@ export const CustomerNotesSection = ({
 
   const handleCancel = () => {
     setIsEditing(false);
-    setNotesValue("");
+    setNotesValue('');
   };
 
   return (
@@ -40,11 +39,7 @@ export const CustomerNotesSection = ({
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm font-medium text-muted-foreground">Internal Notes</p>
         {!isEditing && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleEditNotes}
-          >
+          <Button variant="outline" size="sm" onClick={handleEditNotes}>
             Edit Notes
           </Button>
         )}
@@ -58,27 +53,17 @@ export const CustomerNotesSection = ({
             rows={3}
           />
           <div className="flex space-x-2">
-            <Button 
-              size="sm" 
-              onClick={handleSaveNotes}
-              disabled={isUpdating}
-            >
+            <Button size="sm" onClick={handleSaveNotes} disabled={isUpdating}>
               <Save className="h-4 w-4 mr-2" />
               Save
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleCancel}
-            >
+            <Button variant="outline" size="sm" onClick={handleCancel}>
               Cancel
             </Button>
           </div>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">
-          {notes || 'No internal notes.'}
-        </p>
+        <p className="text-sm text-muted-foreground">{notes || 'No internal notes.'}</p>
       )}
     </div>
   );

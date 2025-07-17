@@ -227,7 +227,7 @@ async function testPayUIntegration() {
 
   // Write the test HTML file
   writeFileSync('test-payu-local-integration.html', testHTML);
-  
+
   console.log('✅ Created test file: test-payu-local-integration.html');
   console.log('');
   console.log('🎯 To test:');

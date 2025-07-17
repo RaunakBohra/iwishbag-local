@@ -52,17 +52,28 @@ export const quoteCreateSchema = z.object({
 // Payment validation schemas
 export const paymentRequestSchema = z.object({
   quoteIds: z.array(z.string().uuid('Invalid quote ID')).min(1, 'At least one quote required'),
-  gateway: z.enum(['stripe', 'bank_transfer', 'cod', 'payu', 'esewa', 'khalti', 'fonepay', 'airwallex']),
+  gateway: z.enum([
+    'stripe',
+    'bank_transfer',
+    'cod',
+    'payu',
+    'esewa',
+    'khalti',
+    'fonepay',
+    'airwallex',
+  ]),
   success_url: urlSchema,
   cancel_url: urlSchema,
   amount: positiveNumberSchema.optional(),
   currency: z.string().length(3, 'Invalid currency code').optional(),
-  customerInfo: z.object({
-    name: z.string().max(100, 'Name too long').optional(),
-    email: emailSchema.optional(),
-    phone: phoneSchema.optional(),
-    address: z.string().max(500, 'Address too long').optional(),
-  }).optional(),
+  customerInfo: z
+    .object({
+      name: z.string().max(100, 'Name too long').optional(),
+      email: emailSchema.optional(),
+      phone: phoneSchema.optional(),
+      address: z.string().max(500, 'Address too long').optional(),
+    })
+    .optional(),
 });
 
 // User validation schemas
@@ -70,11 +81,13 @@ export const userProfileUpdateSchema = z.object({
   full_name: z.string().max(100, 'Name too long').optional(),
   phone: phoneSchema.optional(),
   preferred_display_currency: z.string().length(3, 'Invalid currency code').optional(),
-  notification_preferences: z.object({
-    email_updates: z.boolean().optional(),
-    sms_updates: z.boolean().optional(),
-    marketing_emails: z.boolean().optional(),
-  }).optional(),
+  notification_preferences: z
+    .object({
+      email_updates: z.boolean().optional(),
+      sms_updates: z.boolean().optional(),
+      marketing_emails: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 // Admin validation schemas
@@ -92,9 +105,10 @@ export const adminQuoteUpdateSchema = z.object({
 // Dynamic validation schema creator for status-dependent validation
 export const createAdminQuoteUpdateSchema = (validStatuses: string[]) => {
   return z.object({
-    status: validStatuses.length > 0 
-      ? z.enum(validStatuses as [string, ...string[]]).optional()
-      : z.string().optional(),
+    status:
+      validStatuses.length > 0
+        ? z.enum(validStatuses as [string, ...string[]]).optional()
+        : z.string().optional(),
     final_total: positiveNumberSchema.optional(),
     final_total_local: positiveNumberSchema.optional(),
     payment_method: z.enum(['stripe', 'cod', 'bank_transfer']).optional(),
@@ -108,7 +122,7 @@ export const createAdminQuoteUpdateSchema = (validStatuses: string[]) => {
 export const validateStatusTransition = (
   currentStatus: string,
   newStatus: string,
-  allowedTransitions: Record<string, string[]>
+  allowedTransitions: Record<string, string[]>,
 ): boolean => {
   if (!currentStatus || !newStatus) return true; // Allow if status is not set
   return allowedTransitions[currentStatus]?.includes(newStatus) ?? false;
@@ -123,7 +137,12 @@ export const exchangeRateSchema = z.object({
 
 // Search and pagination validation
 export const paginationSchema = z.object({
-  page: z.number().int().min(1, 'Page must be at least 1').max(1000, 'Page number too high').optional(),
+  page: z
+    .number()
+    .int()
+    .min(1, 'Page must be at least 1')
+    .max(1000, 'Page number too high')
+    .optional(),
   limit: z.number().int().min(1, 'Limit must be at least 1').max(100, 'Limit too high').optional(),
   search: z.string().max(200, 'Search query too long').optional(),
 });
@@ -161,14 +180,14 @@ export const sanitizeFileName = (fileName: string): string => {
 // Validation utility functions
 export const validateAndSanitize = <T>(
   data: unknown,
-  schema: z.ZodSchema<T>
+  schema: z.ZodSchema<T>,
 ): { success: true; data: T } | { success: false; errors: string[] } => {
   try {
     const validated = schema.parse(data);
     return { success: true, data: validated };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errors = error.errors.map(err => `${err.path.join('.')}: ${err.message}`);
+      const errors = error.errors.map((err) => `${err.path.join('.')}: ${err.message}`);
       return { success: false, errors };
     }
     return { success: false, errors: ['Validation failed'] };

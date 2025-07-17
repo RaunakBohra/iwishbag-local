@@ -1,30 +1,22 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Download, 
-  FileText, 
-  Receipt, 
-  Package, 
-  Eye, 
-  Upload,
-  Trash2
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Tables } from "@/integrations/supabase/types";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Download, FileText, Receipt, Package, Eye, Upload, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Tables } from '@/integrations/supabase/types';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { DocumentUploader } from "./DocumentUploader";
-import { DocumentViewer } from "./DocumentViewer";
+} from '@/components/ui/dialog';
+import { DocumentUploader } from './DocumentUploader';
+import { DocumentViewer } from './DocumentViewer';
 
 // Define document types as a const to ensure type safety
 const DOCUMENT_TYPES = {
@@ -33,10 +25,10 @@ const DOCUMENT_TYPES = {
   SHIPPING_LABEL: 'shipping_label',
   CUSTOMS_FORM: 'customs_form',
   INSURANCE_DOC: 'insurance_doc',
-  OTHER: 'other'
+  OTHER: 'other',
 } as const;
 
-export type DocumentType = typeof DOCUMENT_TYPES[keyof typeof DOCUMENT_TYPES];
+export type DocumentType = (typeof DOCUMENT_TYPES)[keyof typeof DOCUMENT_TYPES];
 
 export interface QuoteDocument {
   id: string;
@@ -58,11 +50,11 @@ interface DocumentManagerProps {
   canUpload?: boolean;
 }
 
-export const DocumentManager = ({ 
-  quoteId, 
-  orderId, 
-  isAdmin = false, 
-  canUpload = false 
+export const DocumentManager = ({
+  quoteId,
+  orderId,
+  isAdmin = false,
+  canUpload = false,
 }: DocumentManagerProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -80,23 +72,21 @@ export const DocumentManager = ({
         .select('*')
         .eq('quote_id', quoteId)
         .order('uploaded_at', { ascending: false });
-      
+
       if (error) throw error;
       return data as QuoteDocument[];
     },
   });
 
   // Filter documents based on user role
-  const visibleDocuments = isAdmin 
-    ? documents 
-    : documents.filter(doc => doc.is_customer_visible);
+  const visibleDocuments = isAdmin ? documents : documents.filter((doc) => doc.is_customer_visible);
 
   const downloadDocument = async (document: QuoteDocument) => {
     try {
       const { data, error } = await supabase.storage
         .from('message-attachments')
         .download(document.file_url.split('/').pop() || '');
-      
+
       if (error) throw error;
 
       // Create download link
@@ -110,74 +100,89 @@ export const DocumentManager = ({
       URL.revokeObjectURL(url);
 
       toast({
-        title: "Download started",
+        title: 'Download started',
         description: `${document.file_name} is being downloaded.`,
       });
     } catch (error) {
       console.error('Download error:', error);
       toast({
-        title: "Download failed",
-        description: "Failed to download the document. Please try again.",
-        variant: "destructive",
+        title: 'Download failed',
+        description: 'Failed to download the document. Please try again.',
+        variant: 'destructive',
       });
     }
   };
 
   const deleteDocument = useMutation({
     mutationFn: async (documentId: string) => {
-      const { error } = await supabase
-        .from('quote_documents')
-        .delete()
-        .eq('id', documentId);
-      
+      const { error } = await supabase.from('quote_documents').delete().eq('id', documentId);
+
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quote-documents', quoteId] });
       toast({
-        title: "Document deleted",
-        description: "The document has been removed successfully.",
+        title: 'Document deleted',
+        description: 'The document has been removed successfully.',
       });
     },
     onError: (error) => {
       toast({
-        title: "Delete failed",
-        description: error.message || "Failed to delete the document.",
-        variant: "destructive",
+        title: 'Delete failed',
+        description: error.message || 'Failed to delete the document.',
+        variant: 'destructive',
       });
     },
   });
 
   const getDocumentIcon = (type: DocumentType) => {
     switch (type) {
-      case 'invoice': return Receipt;
-      case 'receipt': return Receipt;
-      case 'shipping_label': return Package;
-      case 'customs_form': return FileText;
-      case 'insurance_doc': return FileText;
-      default: return FileText;
+      case 'invoice':
+        return Receipt;
+      case 'receipt':
+        return Receipt;
+      case 'shipping_label':
+        return Package;
+      case 'customs_form':
+        return FileText;
+      case 'insurance_doc':
+        return FileText;
+      default:
+        return FileText;
     }
   };
 
   const getDocumentTypeLabel = (type: DocumentType) => {
     switch (type) {
-      case 'invoice': return 'Invoice';
-      case 'receipt': return 'Receipt';
-      case 'shipping_label': return 'Shipping Label';
-      case 'customs_form': return 'Customs Form';
-      case 'insurance_doc': return 'Insurance Document';
-      default: return 'Document';
+      case 'invoice':
+        return 'Invoice';
+      case 'receipt':
+        return 'Receipt';
+      case 'shipping_label':
+        return 'Shipping Label';
+      case 'customs_form':
+        return 'Customs Form';
+      case 'insurance_doc':
+        return 'Insurance Document';
+      default:
+        return 'Document';
     }
   };
 
   const getDocumentTypeBadgeVariant = (type: DocumentType) => {
     switch (type) {
-      case 'invoice': return 'default';
-      case 'receipt': return 'secondary';
-      case 'shipping_label': return 'outline';
-      case 'customs_form': return 'destructive';
-      case 'insurance_doc': return 'secondary';
-      default: return 'outline';
+      case 'invoice':
+        return 'default';
+      case 'receipt':
+        return 'secondary';
+      case 'shipping_label':
+        return 'outline';
+      case 'customs_form':
+        return 'destructive';
+      case 'insurance_doc':
+        return 'secondary';
+      default:
+        return 'outline';
     }
   };
 
@@ -234,11 +239,7 @@ export const DocumentManager = ({
               Documents ({visibleDocuments.length})
             </CardTitle>
             {canUpload && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setShowUploader(true)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setShowUploader(true)}>
                 <Upload className="h-4 w-4 mr-2" />
                 Upload
               </Button>
@@ -250,16 +251,14 @@ export const DocumentManager = ({
             <div className="text-center py-8 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No documents available</p>
-              {canUpload && (
-                <p className="text-sm mt-2">Upload documents to get started</p>
-              )}
+              {canUpload && <p className="text-sm mt-2">Upload documents to get started</p>}
             </div>
           ) : (
             <div className="space-y-4">
               {visibleDocuments.map((document) => {
                 const Icon = getDocumentIcon(document.document_type);
                 return (
-                  <div 
+                  <div
                     key={document.id}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                   >
@@ -267,9 +266,7 @@ export const DocumentManager = ({
                       <Icon className="h-8 w-8 text-muted-foreground flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium truncate">
-                            {document.file_name}
-                          </p>
+                          <p className="font-medium truncate">{document.file_name}</p>
                           <Badge variant={getDocumentTypeBadgeVariant(document.document_type)}>
                             {getDocumentTypeLabel(document.document_type)}
                           </Badge>
@@ -294,11 +291,7 @@ export const DocumentManager = ({
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => downloadDocument(document)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => downloadDocument(document)}>
                         <Download className="h-4 w-4" />
                       </Button>
                       {isAdmin && (
@@ -325,16 +318,16 @@ export const DocumentManager = ({
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Upload Document</DialogTitle>
-            <DialogDescription>
-              Upload documents related to order #{orderId}
-            </DialogDescription>
+            <DialogDescription>Upload documents related to order #{orderId}</DialogDescription>
           </DialogHeader>
-          <DocumentUploader 
+          <DocumentUploader
             quoteId={quoteId}
             orderId={orderId}
             onSuccess={() => {
               setShowUploader(false);
-              queryClient.invalidateQueries({ queryKey: ['quote-documents', quoteId] });
+              queryClient.invalidateQueries({
+                queryKey: ['quote-documents', quoteId],
+              });
             }}
             isAdmin={isAdmin}
           />
@@ -348,14 +341,16 @@ export const DocumentManager = ({
             <DialogTitle className="flex items-center gap-2">
               {selectedDocument && (
                 <>
-                  {React.createElement(getDocumentIcon(selectedDocument.document_type), { className: "h-5 w-5" })}
+                  {React.createElement(getDocumentIcon(selectedDocument.document_type), {
+                    className: 'h-5 w-5',
+                  })}
                   {selectedDocument.file_name}
                 </>
               )}
             </DialogTitle>
           </DialogHeader>
           {selectedDocument && (
-            <DocumentViewer 
+            <DocumentViewer
               document={selectedDocument}
               onDownload={() => downloadDocument(selectedDocument)}
             />

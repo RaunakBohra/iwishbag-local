@@ -1,12 +1,12 @@
-import { useCountrySettings } from "@/hooks/useCountrySettings";
-import { useExchangeRateOperations } from "@/hooks/useExchangeRateOperations";
-import { CountryForm } from "./CountryForm";
-import { CountryListItem } from "./CountryListItem";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertTriangle, Plus, RefreshCw } from "lucide-react";
+import { useCountrySettings } from '@/hooks/useCountrySettings';
+import { useExchangeRateOperations } from '@/hooks/useExchangeRateOperations';
+import { CountryForm } from './CountryForm';
+import { CountryListItem } from './CountryListItem';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertTriangle, Plus, RefreshCw } from 'lucide-react';
 
 export const CountrySettings = () => {
   const {
@@ -26,15 +26,15 @@ export const CountrySettings = () => {
 
   const { triggerUpdate, isUpdating: isUpdatingRates } = useExchangeRateOperations();
 
-  console.log('CountrySettings render:', { 
-    countriesCount: countries?.length, 
-    isLoading, 
+  console.log('CountrySettings render:', {
+    countriesCount: countries?.length,
+    isLoading,
     error: error?.message,
     isCreating,
     isUpdating,
     isDeleting,
     editingCountry: editingCountry?.code,
-    dialogOpen: isCreating || !!editingCountry
+    dialogOpen: isCreating || !!editingCountry,
   }); // DEBUG
 
   if (isLoading) {
@@ -65,9 +65,7 @@ export const CountrySettings = () => {
         </div>
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Error loading country settings: {error.message}
-          </AlertDescription>
+          <AlertDescription>Error loading country settings: {error.message}</AlertDescription>
         </Alert>
       </div>
     );
@@ -78,22 +76,22 @@ export const CountrySettings = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Country Settings</h2>
         <div className="flex gap-2">
-          <Button 
+          <Button
             onClick={() => {
               console.log('Update Exchange Rates button clicked');
               triggerUpdate();
-            }} 
+            }}
             disabled={isCreating || isUpdating || isDeleting || isUpdatingRates}
             variant="outline"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isUpdatingRates ? 'animate-spin' : ''}`} />
             Update Exchange Rates
           </Button>
-          <Button 
+          <Button
             onClick={() => {
               console.log('Add Country button clicked');
               handleAddNewClick();
-            }} 
+            }}
             disabled={isCreating || isUpdating || isDeleting}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -103,16 +101,17 @@ export const CountrySettings = () => {
       </div>
 
       {/* Dialog for Add/Edit Country Form */}
-      <Dialog open={isCreating || !!editingCountry} onOpenChange={(open) => {
-        if (!open) {
-          handleCancelClick();
-        }
-      }}>
+      <Dialog
+        open={isCreating || !!editingCountry}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCancelClick();
+          }
+        }}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingCountry ? 'Edit Country' : 'Add New Country'}
-            </DialogTitle>
+            <DialogTitle>{editingCountry ? 'Edit Country' : 'Add New Country'}</DialogTitle>
           </DialogHeader>
           <CountryForm
             editingCountry={editingCountry}
@@ -137,22 +136,22 @@ export const CountrySettings = () => {
         <div className="text-center py-12">
           <p className="text-muted-foreground">No country settings found.</p>
           <div className="flex gap-2 justify-center mt-4">
-            <Button 
+            <Button
               onClick={() => {
                 console.log('Update Exchange Rates button clicked');
                 triggerUpdate();
-              }} 
+              }}
               disabled={isCreating || isUpdating || isDeleting || isUpdatingRates}
               variant="outline"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isUpdatingRates ? 'animate-spin' : ''}`} />
               Update Exchange Rates
             </Button>
-            <Button 
+            <Button
               onClick={() => {
                 console.log('Add Country button clicked');
                 handleAddNewClick();
-              }} 
+              }}
               disabled={isCreating || isUpdating || isDeleting}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -163,19 +162,23 @@ export const CountrySettings = () => {
       )}
 
       {/* Debug info */}
-      {process.env.NODE_ENV === 'development' && (
+      {import.meta.env.DEV && (
         <div className="mt-8 p-4 bg-muted rounded-lg">
           <h3 className="text-sm font-medium mb-2">Debug Info:</h3>
           <pre className="text-xs">
-            {JSON.stringify({
-              countriesCount: countries?.length || 0,
-              isLoading,
-              error: error?.message,
-              isCreating,
-              isUpdating,
-              isDeleting,
-              editingCountry: editingCountry?.code
-            }, null, 2)}
+            {JSON.stringify(
+              {
+                countriesCount: countries?.length || 0,
+                isLoading,
+                error: error?.message,
+                isCreating,
+                isUpdating,
+                isDeleting,
+                editingCountry: editingCountry?.code,
+              },
+              null,
+              2,
+            )}
           </pre>
         </div>
       )}

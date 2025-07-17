@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Checkout eSewa</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/hmac-sha256.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/enc-base64.min.js"></script>
+</head>
+<body>
+    <h1>Debug Checkout eSewa Integration</h1>
+    <p>This will test our actual checkout backend and show what data it sends.</p>
+    
+    <button onclick="testCheckoutEsewa()">Test Checkout eSewa Backend</button>
+    
+    <div id="results" style="margin-top: 20px; padding: 10px; background: #f0f0f0; white-space: pre-wrap;"></div>
+    
+    <script>
+        async function testCheckoutEsewa() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = 'Testing checkout backend...';
+            
+            try {
+                // Call our actual create-payment function
+                const response = await fetch('/functions/v1/create-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + 'YOUR_AUTH_TOKEN_HERE' // You'll need to replace this
+                    },
+                    body: JSON.stringify({
+                        quoteIds: ['test-quote-id'],
+                        gateway: 'esewa',
+                        success_url: window.location.origin + '/success',
+                        cancel_url: window.location.origin + '/cancel',
+                        amount: 100,
+                        currency: 'NPR',
+                        customerInfo: {
+                            name: 'Test Customer',
+                            email: 'test@example.com',
+                            phone: '9806800001'
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                resultsDiv.innerHTML = `
+Response Status: ${response.status}
+Response Data:
+${JSON.stringify(data, null, 2)}
+
+Expected vs Actual:
+URL: ${data.url}
+Expected: https://rc-epay.esewa.com.np/api/epay/main/v2/form
+Match: ${data.url === 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'}
+
+Form Data:
+${JSON.stringify(data.formData, null, 2)}
+
+Required Fields Check:
+- amount: ${data.formData?.amount || 'MISSING'}
+- tax_amount: ${data.formData?.tax_amount || 'MISSING'}
+- total_amount: ${data.formData?.total_amount || 'MISSING'}
+- transaction_uuid: ${data.formData?.transaction_uuid || 'MISSING'}
+- product_code: ${data.formData?.product_code || 'MISSING'}
+- product_service_charge: ${data.formData?.product_service_charge || 'MISSING'}
+- product_delivery_charge: ${data.formData?.product_delivery_charge || 'MISSING'}
+- success_url: ${data.formData?.success_url || 'MISSING'}
+- failure_url: ${data.formData?.failure_url || 'MISSING'}
+- signed_field_names: ${data.formData?.signed_field_names || 'MISSING'}
+- signature: ${data.formData?.signature || 'MISSING'}
+
+Signature Verification:
+`;
+                
+                // Test signature generation
+                if (data.formData) {
+                    const signatureString = `total_amount=${data.formData.total_amount},transaction_uuid=${data.formData.transaction_uuid},product_code=${data.formData.product_code}`;
+                    const hash = CryptoJS.HmacSHA256(signatureString, '8gBm/:&EnhH.1/q');
+                    const expectedSignature = CryptoJS.enc.Base64.stringify(hash);
+                    
+                    resultsDiv.innerHTML += `
+Signature String: ${signatureString}
+Generated Signature: ${expectedSignature}
+Backend Signature: ${data.formData.signature}
+Signatures Match: ${expectedSignature === data.formData.signature}`;
+                }
+                
+                // Create test form if data is valid
+                if (data.success && data.formData && data.url) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = data.url;
+                    form.target = '_blank';
+                    
+                    Object.entries(data.formData).forEach(([key, value]) => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.value = String(value);
+                        form.appendChild(input);
+                    });
+                    
+                    const submitBtn = document.createElement('input');
+                    submitBtn.type = 'submit';
+                    submitBtn.value = 'Test eSewa Payment';
+                    submitBtn.style.margin = '10px';
+                    submitBtn.style.padding = '10px 20px';
+                    submitBtn.style.backgroundColor = '#4CAF50';
+                    submitBtn.style.color = 'white';
+                    submitBtn.style.border = 'none';
+                    submitBtn.style.cursor = 'pointer';
+                    form.appendChild(submitBtn);
+                    
+                    document.body.appendChild(form);
+                    
+                    resultsDiv.innerHTML += `
+
+✅ Test form created! Click the button above to test payment.`;
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

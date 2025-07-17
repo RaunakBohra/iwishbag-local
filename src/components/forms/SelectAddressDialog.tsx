@@ -44,7 +44,7 @@ export const SelectAddressDialog: React.FC<SelectAddressDialogProps> = ({
     queryKey: ['user-addresses', user?.id, shippingCountry],
     queryFn: async () => {
       if (!user?.id) return [];
-      
+
       const { data, error } = await supabase
         .from('user_addresses')
         .select('*')
@@ -67,14 +67,14 @@ export const SelectAddressDialog: React.FC<SelectAddressDialogProps> = ({
         setSelectedAddressId(addresses[0].id);
       } else {
         // Otherwise, select the default one or the first one
-        const defaultAddress = addresses.find(addr => addr.is_default);
+        const defaultAddress = addresses.find((addr) => addr.is_default);
         setSelectedAddressId(defaultAddress ? defaultAddress.id : addresses[0].id);
       }
     }
   }, [addresses, selectedAddressId]);
 
   const handleUseAddress = () => {
-    const selected = addresses?.find(addr => addr.id === selectedAddressId);
+    const selected = addresses?.find((addr) => addr.id === selectedAddressId);
     if (selected) {
       // Convert to ShippingAddress format
       const shippingAddress: ShippingAddress = {
@@ -116,11 +116,11 @@ export const SelectAddressDialog: React.FC<SelectAddressDialogProps> = ({
               <RadioGroup value={selectedAddressId || ''} onValueChange={setSelectedAddressId}>
                 <div className="space-y-3">
                   {addresses.map((address) => (
-                    <Card 
-                      key={address.id} 
+                    <Card
+                      key={address.id}
                       className={`p-4 cursor-pointer transition-all ${
-                        selectedAddressId === address.id 
-                          ? 'border-primary shadow-md' 
+                        selectedAddressId === address.id
+                          ? 'border-primary shadow-md'
                           : 'hover:border-gray-300'
                       }`}
                       onClick={() => setSelectedAddressId(address.id)}
@@ -145,7 +145,10 @@ export const SelectAddressDialog: React.FC<SelectAddressDialogProps> = ({
                               <div className="text-sm text-gray-700">
                                 <p>{address.address_line1}</p>
                                 {address.address_line2 && <p>{address.address_line2}</p>}
-                                <p>{address.city}, {address.state_province_region} {address.postal_code}</p>
+                                <p>
+                                  {address.city}, {address.state_province_region}{' '}
+                                  {address.postal_code}
+                                </p>
                               </div>
                             </div>
                             {address.phone && (
@@ -163,10 +166,7 @@ export const SelectAddressDialog: React.FC<SelectAddressDialogProps> = ({
               </RadioGroup>
 
               <div className="flex justify-between pt-4">
-                <Button
-                  variant="outline"
-                  onClick={onAddNewAddress}
-                >
+                <Button variant="outline" onClick={onAddNewAddress}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add New Address
                 </Button>

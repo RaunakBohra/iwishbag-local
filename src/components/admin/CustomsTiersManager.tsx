@@ -8,7 +8,14 @@ import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
@@ -30,10 +37,14 @@ interface CustomsTierFormData {
   description?: string;
 }
 
-function CustomsTierForm({ onSubmit, onCancel, initialData }: { 
-  onSubmit: (data: CustomsTierFormData) => Promise<boolean>, 
-  onCancel: () => void, 
-  initialData?: Partial<CustomsTierFormData> 
+function CustomsTierForm({
+  onSubmit,
+  onCancel,
+  initialData,
+}: {
+  onSubmit: (data: CustomsTierFormData) => Promise<boolean>;
+  onCancel: () => void;
+  initialData?: Partial<CustomsTierFormData>;
 }) {
   const { countries } = useCountryUtils();
   const [formData, setFormData] = useState<CustomsTierFormData>({
@@ -49,7 +60,7 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
     vatPercentage: initialData?.vatPercentage || 0,
     priorityOrder: initialData?.priorityOrder || 1,
     isActive: initialData?.isActive !== undefined ? initialData.isActive : true,
-    description: initialData?.description || ''
+    description: initialData?.description || '',
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -71,18 +82,29 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
         vat_percentage: formData.vatPercentage,
         priority_order: formData.priorityOrder,
         is_active: formData.isActive,
-        description: formData.description
+        description: formData.description,
       };
 
       const result = await onSubmit(dbData);
       if (result.success) {
-        toast({ title: 'Success', description: 'Customs tier saved successfully' });
+        toast({
+          title: 'Success',
+          description: 'Customs tier saved successfully',
+        });
         onCancel();
       } else {
-        toast({ title: 'Error', description: result.error || 'Failed to save customs tier', variant: 'destructive' });
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to save customs tier',
+          variant: 'destructive',
+        });
       }
-    } catch (error) {
-      toast({ title: 'Error', description: 'An unexpected error occurred', variant: 'destructive' });
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -93,7 +115,10 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="originCountry">Origin Country</Label>
-          <Select value={formData.originCountry} onValueChange={(value) => setFormData(prev => ({ ...prev, originCountry: value }))}>
+          <Select
+            value={formData.originCountry}
+            onValueChange={(value) => setFormData((prev) => ({ ...prev, originCountry: value }))}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select origin country" />
             </SelectTrigger>
@@ -108,7 +133,12 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
         </div>
         <div>
           <Label htmlFor="destinationCountry">Destination Country</Label>
-          <Select value={formData.destinationCountry} onValueChange={(value) => setFormData(prev => ({ ...prev, destinationCountry: value }))}>
+          <Select
+            value={formData.destinationCountry}
+            onValueChange={(value) =>
+              setFormData((prev) => ({ ...prev, destinationCountry: value }))
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select destination country" />
             </SelectTrigger>
@@ -125,38 +155,48 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
 
       <div>
         <Label htmlFor="ruleName">Rule Name</Label>
-        <Input 
-          id="ruleName" 
-          value={formData.ruleName} 
-          onChange={e => setFormData(prev => ({ ...prev, ruleName: e.target.value }))} 
-          placeholder="e.g., Low Value Items, High Value Electronics" 
-          required 
+        <Input
+          id="ruleName"
+          value={formData.ruleName}
+          onChange={(e) => setFormData((prev) => ({ ...prev, ruleName: e.target.value }))}
+          placeholder="e.g., Low Value Items, High Value Electronics"
+          required
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="priceMin">Price Min ($)</Label>
-          <Input 
-            id="priceMin" 
-            type="number" 
-            step="0.01" 
+          <Input
+            id="priceMin"
+            type="number"
+            step="0.01"
             min="0"
-            value={formData.priceMin || ''} 
-            onChange={e => setFormData(prev => ({ ...prev, priceMin: parseFloat(e.target.value) || undefined }))} 
-            placeholder="0" 
+            value={formData.priceMin || ''}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                priceMin: parseFloat(e.target.value) || undefined,
+              }))
+            }
+            placeholder="0"
           />
         </div>
         <div>
           <Label htmlFor="priceMax">Price Max ($)</Label>
-          <Input 
-            id="priceMax" 
-            type="number" 
-            step="0.01" 
+          <Input
+            id="priceMax"
+            type="number"
+            step="0.01"
             min="0"
-            value={formData.priceMax || ''} 
-            onChange={e => setFormData(prev => ({ ...prev, priceMax: parseFloat(e.target.value) || undefined }))} 
-            placeholder="Leave empty for unlimited" 
+            value={formData.priceMax || ''}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                priceMax: parseFloat(e.target.value) || undefined,
+              }))
+            }
+            placeholder="Leave empty for unlimited"
           />
         </div>
       </div>
@@ -164,26 +204,36 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="weightMin">Weight Min (kg)</Label>
-          <Input 
-            id="weightMin" 
-            type="number" 
-            step="0.01" 
+          <Input
+            id="weightMin"
+            type="number"
+            step="0.01"
             min="0"
-            value={formData.weightMin || ''} 
-            onChange={e => setFormData(prev => ({ ...prev, weightMin: parseFloat(e.target.value) || undefined }))} 
-            placeholder="0" 
+            value={formData.weightMin || ''}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                weightMin: parseFloat(e.target.value) || undefined,
+              }))
+            }
+            placeholder="0"
           />
         </div>
         <div>
           <Label htmlFor="weightMax">Weight Max (kg)</Label>
-          <Input 
-            id="weightMax" 
-            type="number" 
-            step="0.01" 
+          <Input
+            id="weightMax"
+            type="number"
+            step="0.01"
             min="0"
-            value={formData.weightMax || ''} 
-            onChange={e => setFormData(prev => ({ ...prev, weightMax: parseFloat(e.target.value) || undefined }))} 
-            placeholder="Leave empty for unlimited" 
+            value={formData.weightMax || ''}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                weightMax: parseFloat(e.target.value) || undefined,
+              }))
+            }
+            placeholder="Leave empty for unlimited"
           />
         </div>
       </div>
@@ -191,7 +241,12 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="logicType">Logic Type</Label>
-          <Select value={formData.logicType} onValueChange={(value: 'AND' | 'OR') => setFormData(prev => ({ ...prev, logicType: value }))}>
+          <Select
+            value={formData.logicType}
+            onValueChange={(value: 'AND' | 'OR') =>
+              setFormData((prev) => ({ ...prev, logicType: value }))
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select logic type" />
             </SelectTrigger>
@@ -203,13 +258,18 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
         </div>
         <div>
           <Label htmlFor="priorityOrder">Priority Order</Label>
-          <Input 
-            id="priorityOrder" 
-            type="number" 
+          <Input
+            id="priorityOrder"
+            type="number"
             min="1"
-            value={formData.priorityOrder} 
-            onChange={e => setFormData(prev => ({ ...prev, priorityOrder: parseInt(e.target.value) || 1 }))} 
-            placeholder="1" 
+            value={formData.priorityOrder}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                priorityOrder: parseInt(e.target.value) || 1,
+              }))
+            }
+            placeholder="1"
           />
         </div>
       </div>
@@ -217,55 +277,67 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="customsPercentage">Customs Percentage (%)</Label>
-          <Input 
-            id="customsPercentage" 
-            type="number" 
-            step="0.01" 
+          <Input
+            id="customsPercentage"
+            type="number"
+            step="0.01"
             min="0"
             max="100"
-            value={formData.customsPercentage} 
-            onChange={e => setFormData(prev => ({ ...prev, customsPercentage: parseFloat(e.target.value) || 0 }))} 
-            required 
+            value={formData.customsPercentage}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                customsPercentage: parseFloat(e.target.value) || 0,
+              }))
+            }
+            required
           />
         </div>
         <div>
           <Label htmlFor="vatPercentage">VAT Percentage (%)</Label>
-          <Input 
-            id="vatPercentage" 
-            type="number" 
-            step="0.01" 
+          <Input
+            id="vatPercentage"
+            type="number"
+            step="0.01"
             min="0"
             max="100"
-            value={formData.vatPercentage} 
-            onChange={e => setFormData(prev => ({ ...prev, vatPercentage: parseFloat(e.target.value) || 0 }))} 
-            required 
+            value={formData.vatPercentage}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                vatPercentage: parseFloat(e.target.value) || 0,
+              }))
+            }
+            required
           />
         </div>
       </div>
 
       <div>
         <Label htmlFor="description">Description (Optional)</Label>
-        <Input 
-          id="description" 
-          value={formData.description} 
-          onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))} 
-          placeholder="Brief description of this rule" 
+        <Input
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+          placeholder="Brief description of this rule"
         />
       </div>
 
       <div className="flex items-center space-x-2">
-        <Switch 
-          id="isActive" 
-          checked={formData.isActive} 
-          onCheckedChange={checked => setFormData(prev => ({ ...prev, isActive: checked }))} 
+        <Switch
+          id="isActive"
+          checked={formData.isActive}
+          onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isActive: checked }))}
         />
         <Label htmlFor="isActive">Active</Label>
       </div>
 
       <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
         <Button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : (initialData ? 'Update Tier' : 'Create Tier')}
+          {loading ? 'Saving...' : initialData ? 'Update Tier' : 'Create Tier'}
         </Button>
       </div>
     </form>
@@ -273,7 +345,6 @@ function CustomsTierForm({ onSubmit, onCancel, initialData }: {
 }
 
 export function CustomsTiersManager() {
-  const { countries, getCountryDisplayName } = useCountryUtils();
   const [tiers, setTiers] = useState<Array<Tables<'customs_tiers'>>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -314,7 +385,7 @@ export function CustomsTiersManager() {
         .single();
 
       if (error) throw error;
-      
+
       await fetchTiers();
       return { success: true, data: result };
     } catch (err: unknown) {
@@ -324,7 +395,7 @@ export function CustomsTiersManager() {
 
   const handleUpdate = async (data: CustomsTierFormData) => {
     if (!editingTier) return { success: false, error: 'No tier selected' };
-    
+
     try {
       const { data: result, error } = await supabase
         .from('route_customs_tiers')
@@ -334,7 +405,7 @@ export function CustomsTiersManager() {
         .single();
 
       if (error) throw error;
-      
+
       await fetchTiers();
       return { success: true, data: result };
     } catch (err: unknown) {
@@ -344,21 +415,23 @@ export function CustomsTiersManager() {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('route_customs_tiers')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('route_customs_tiers').delete().eq('id', id);
 
       if (error) throw error;
-      
+
       await fetchTiers();
-      toast({ title: 'Success', description: 'Customs tier deleted successfully' });
+      toast({
+        title: 'Success',
+        description: 'Customs tier deleted successfully',
+      });
     } catch (err: unknown) {
-      toast({ title: 'Error', description: err.message || 'Failed to delete customs tier', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to delete customs tier',
+        variant: 'destructive',
+      });
     }
   };
-
-
 
   const mapTierToFormData = (tier: Tables<'customs_tiers'>): CustomsTierFormData => ({
     originCountry: tier.origin_country,
@@ -373,7 +446,7 @@ export function CustomsTiersManager() {
     vatPercentage: tier.vat_percentage,
     priorityOrder: tier.priority_order,
     isActive: tier.is_active,
-    description: tier.description
+    description: tier.description,
   });
 
   if (loading) {
@@ -416,7 +489,9 @@ export function CustomsTiersManager() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create Customs Tier</DialogTitle>
-              <DialogDescription>Configure tiered customs rules for a specific route.</DialogDescription>
+              <DialogDescription>
+                Configure tiered customs rules for a specific route.
+              </DialogDescription>
             </DialogHeader>
             <CustomsTierForm
               onSubmit={async (data) => {
@@ -429,10 +504,13 @@ export function CustomsTiersManager() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-          setIsEditDialogOpen(open);
-          if (!open) setEditingTier(null);
-        }}>
+        <Dialog
+          open={isEditDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditDialogOpen(open);
+            if (!open) setEditingTier(null);
+          }}
+        >
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Customs Tier</DialogTitle>
@@ -463,8 +541,8 @@ export function CustomsTiersManager() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center space-x-2">
-                    <ShippingRouteDisplay 
-                      origin={tier.origin_country} 
+                    <ShippingRouteDisplay
+                      origin={tier.origin_country}
                       destination={tier.destination_country}
                       showCodes={true}
                       showIcon={false}
@@ -475,7 +553,8 @@ export function CustomsTiersManager() {
                     <Badge variant="outline">Priority {tier.priority_order}</Badge>
                   </CardTitle>
                   <CardDescription>
-                    <strong>{tier.rule_name}</strong> - {tier.customs_percentage}% customs, {tier.vat_percentage}% VAT
+                    <strong>{tier.rule_name}</strong> - {tier.customs_percentage}% customs,{' '}
+                    {tier.vat_percentage}% VAT
                   </CardDescription>
                 </div>
                 <div className="flex space-x-2">
@@ -490,11 +569,7 @@ export function CustomsTiersManager() {
                     <Edit className="h-4 w-4 mr-2" />
                     Edit
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(tier.id)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => handleDelete(tier.id)}>
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
                   </Button>
@@ -507,10 +582,14 @@ export function CustomsTiersManager() {
                   <strong>Conditions:</strong>
                   <div className="mt-1 space-y-1">
                     {tier.price_min !== null && tier.price_max !== null && (
-                      <div>Price: ${tier.price_min} - {tier.price_max || '∞'}</div>
+                      <div>
+                        Price: ${tier.price_min} - {tier.price_max || '∞'}
+                      </div>
                     )}
                     {tier.weight_min !== null && tier.weight_max !== null && (
-                      <div>Weight: {tier.weight_min} - {tier.weight_max || '∞'} kg</div>
+                      <div>
+                        Weight: {tier.weight_min} - {tier.weight_max || '∞'} kg
+                      </div>
                     )}
                     <div className="text-blue-600 font-medium">Logic: {tier.logic_type}</div>
                   </div>
@@ -536,10 +615,12 @@ export function CustomsTiersManager() {
           <CardContent className="text-center py-8">
             <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">No customs tiers configured yet.</p>
-            <p className="text-sm text-gray-500 mt-2">Create your first customs tier to get started.</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Create your first customs tier to get started.
+            </p>
           </CardContent>
         </Card>
       )}
     </div>
   );
-} 
+}

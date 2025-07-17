@@ -47,19 +47,24 @@ export function usePaymentLinks() {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
 
-  const createPaymentLink = async (params: CreatePaymentLinkParams): Promise<PaymentLinkResponse | null> => {
+  const createPaymentLink = async (
+    params: CreatePaymentLinkParams,
+  ): Promise<PaymentLinkResponse | null> => {
     setIsCreating(true);
-    
+
     try {
       // Determine which function to use based on gateway
       let functionName: string;
-      
+
       if (params.gateway === 'paypal') {
         functionName = 'create-paypal-payment-link';
       } else if (params.gateway === 'payu' || !params.gateway) {
         // Use enhanced v2 function if advanced features are requested
-        const useV2 = params.customFields?.length || params.partialPaymentAllowed || 
-                      params.template !== 'default' || params.apiMethod === 'rest';
+        const useV2 =
+          params.customFields?.length ||
+          params.partialPaymentAllowed ||
+          params.template !== 'default' ||
+          params.apiMethod === 'rest';
         functionName = useV2 ? 'create-payu-payment-link-v2' : 'create-payment-link';
       } else {
         toast({
@@ -69,7 +74,7 @@ export function usePaymentLinks() {
         });
         return null;
       }
-      
+
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: params,
       });
@@ -153,9 +158,9 @@ export function usePaymentLinks() {
     try {
       const { error } = await supabase
         .from('payment_links')
-        .update({ 
+        .update({
           status: 'cancelled',
-          cancelled_at: new Date().toISOString()
+          cancelled_at: new Date().toISOString(),
         })
         .eq('id', linkId);
 

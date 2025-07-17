@@ -1,5 +1,4 @@
-
-import { Tables } from "@/integrations/supabase/types";
+import { Tables } from '@/integrations/supabase/types';
 
 export type Message = Tables<'messages'>;
 

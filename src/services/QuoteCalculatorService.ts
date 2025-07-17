@@ -2,20 +2,20 @@ import { getExchangeRate, ExchangeRateResult } from '@/lib/currencyUtils';
 import { getShippingCost } from '@/lib/unified-shipping-calculator';
 import { Tables } from '@/integrations/supabase/types';
 import { currencyService } from '@/services/CurrencyService';
-import { 
-  startQuoteCalculationMonitoring, 
-  completeQuoteCalculationMonitoring, 
+import {
+  startQuoteCalculationMonitoring,
+  completeQuoteCalculationMonitoring,
   recordQuoteCalculationApiCall,
-  QuoteCalculationErrorCode
+  QuoteCalculationErrorCode,
 } from '@/services/ErrorHandlingService';
-import { 
-  logger, 
-  LogCategory, 
-  logInfo, 
-  logError, 
+import {
+  logger,
+  LogCategory,
+  logInfo,
+  logError,
   logWarn,
   logPerformanceStart,
-  logPerformanceEnd
+  logPerformanceEnd,
 } from '@/services/LoggingService';
 
 // Types
@@ -59,7 +59,7 @@ export interface QuoteCalculationBreakdown {
   // Item totals
   total_item_price: number;
   total_item_weight: number;
-  
+
   // Cost components
   sales_tax_price: number;
   merchant_shipping_price: number;
@@ -69,14 +69,14 @@ export interface QuoteCalculationBreakdown {
   insurance_amount: number;
   customs_and_ecs: number;
   discount: number;
-  
+
   // Fees and totals
   payment_gateway_fee: number;
   subtotal_before_fees: number;
   subtotal: number;
   vat: number;
   final_total: number;
-  
+
   // Metadata
   currency: string;
   exchange_rate: number;
@@ -118,18 +118,24 @@ export interface ValidationResult {
 
 export class QuoteCalculatorService {
   private static instance: QuoteCalculatorService;
-  private calculationCache = new Map<string, { result: QuoteCalculationResult; timestamp: number }>();
+  private calculationCache = new Map<
+    string,
+    { result: QuoteCalculationResult; timestamp: number }
+  >();
   private exchangeRateCache = new Map<string, { rate: ExchangeRateResult; timestamp: number }>();
   private readonly CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
   private performanceMetrics = {
     totalCalculations: 0,
     totalCacheHits: 0,
     totalApiCalls: 0,
-    averageCalculationTime: 0
+    averageCalculationTime: 0,
   };
-  
+
   // **NEW: Monitoring tracking**
-  private activeCalculations = new Map<string, { apiCalls: number; cacheHits: number; userId?: string }>();
+  private activeCalculations = new Map<
+    string,
+    { apiCalls: number; cacheHits: number; userId?: string }
+  >();
 
   private constructor() {}
 
@@ -144,20 +150,24 @@ export class QuoteCalculatorService {
    * Main quote calculation method
    */
   async calculateQuote(
-    params: QuoteCalculationParams, 
+    params: QuoteCalculationParams,
     userId?: string,
-    sessionId?: string
+    sessionId?: string,
   ): Promise<QuoteCalculationResult> {
     const startTime = Date.now();
     this.performanceMetrics.totalCalculations++;
 
     // **NEW: Generate unique calculation ID and start monitoring**
     const calculationId = `calc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const totalValue = params.items.reduce((sum, item) => sum + (item.item_price * item.quantity), 0);
-    
+    const totalValue = params.items.reduce((sum, item) => sum + item.item_price * item.quantity, 0);
+
     // Initialize monitoring tracking
-    this.activeCalculations.set(calculationId, { apiCalls: 0, cacheHits: 0, userId });
-    
+    this.activeCalculations.set(calculationId, {
+      apiCalls: 0,
+      cacheHits: 0,
+      userId,
+    });
+
     // Start monitoring
     startQuoteCalculationMonitoring(
       calculationId,
@@ -167,7 +177,7 @@ export class QuoteCalculatorService {
       params.items.length,
       totalValue,
       userId,
-      sessionId
+      sessionId,
     );
 
     // Enhanced logging
@@ -182,14 +192,14 @@ export class QuoteCalculatorService {
         itemCount: params.items.length,
         totalValue,
         hasShippingAddress: !!params.shippingAddress,
-        hasCustomsPercentage: params.customs_percentage !== undefined
-      }
+        hasCustomsPercentage: params.customs_percentage !== undefined,
+      },
     });
 
     try {
       // Generate cache key
       const cacheKey = this.generateCacheKey(params);
-      
+
       // Check cache first
       const cachedResult = this.getCachedCalculation(cacheKey);
       if (cachedResult) {
@@ -200,7 +210,7 @@ export class QuoteCalculatorService {
           tracking.cacheHits++;
           recordQuoteCalculationApiCall(calculationId, true);
         }
-        
+
         // Enhanced logging for cache hit
         logInfo(LogCategory.CACHE_OPERATION, 'Quote calculation cache hit', {
           quoteId: calculationId,
@@ -209,10 +219,10 @@ export class QuoteCalculatorService {
           metadata: {
             cacheKey,
             finalTotal: cachedResult.breakdown?.final_total,
-            calculationTime: Date.now() - startTime
-          }
+            calculationTime: Date.now() - startTime,
+          },
         });
-        
+
         // **NEW: Complete monitoring for cached result**
         completeQuoteCalculationMonitoring(
           calculationId,
@@ -221,9 +231,9 @@ export class QuoteCalculatorService {
           undefined, // no error
           tracking?.apiCalls || 0,
           tracking?.cacheHits || 1,
-          0 // no cache misses for pure cache hit
+          0, // no cache misses for pure cache hit
         );
-        
+
         this.activeCalculations.delete(calculationId);
         return cachedResult;
       }
@@ -244,10 +254,10 @@ export class QuoteCalculatorService {
             errors: validation.errors,
             warnings: validation.warnings,
             originCountry: params.originCountry,
-            destinationCountry: params.destinationCountry
-          }
+            destinationCountry: params.destinationCountry,
+          },
         });
-        
+
         // **NEW: Complete monitoring for validation error**
         const errorCode = this.mapValidationErrorToMonitoringCode(validation.errors[0]?.code);
         completeQuoteCalculationMonitoring(
@@ -257,9 +267,9 @@ export class QuoteCalculatorService {
           errorCode,
           this.activeCalculations.get(calculationId)?.apiCalls || 0,
           this.activeCalculations.get(calculationId)?.cacheHits || 0,
-          1 // cache miss
+          1, // cache miss
         );
-        
+
         this.activeCalculations.delete(calculationId);
         return {
           success: false,
@@ -267,29 +277,29 @@ export class QuoteCalculatorService {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid calculation parameters',
-            details: validation.errors
-          }
+            details: validation.errors,
+          },
         };
       }
 
       // Perform calculation
       const breakdown = await this.performCalculation(params, calculationId);
-      
+
       const tracking = this.activeCalculations.get(calculationId);
       const result: QuoteCalculationResult = {
         success: true,
         breakdown,
-        warnings: validation.warnings.map(w => w.message),
+        warnings: validation.warnings.map((w) => w.message),
         performance: {
           calculation_time_ms: Date.now() - startTime,
           cache_hits: tracking?.cacheHits || 0,
-          api_calls: tracking?.apiCalls || 0
-        }
+          api_calls: tracking?.apiCalls || 0,
+        },
       };
 
       // Cache the result
       this.cacheCalculation(cacheKey, result);
-      
+
       // Update performance metrics
       this.updatePerformanceMetrics(Date.now() - startTime);
 
@@ -304,8 +314,8 @@ export class QuoteCalculatorService {
           calculationTime: result.performance?.calculation_time_ms,
           apiCalls: tracking?.apiCalls || 0,
           cacheHits: tracking?.cacheHits || 0,
-          warningCount: validation.warnings.length
-        }
+          warningCount: validation.warnings.length,
+        },
       });
 
       // **NEW: Complete monitoring for successful calculation**
@@ -316,16 +326,15 @@ export class QuoteCalculatorService {
         undefined, // no error
         tracking?.apiCalls || 0,
         tracking?.cacheHits || 0,
-        1 // one cache miss (for the initial lookup)
+        1, // one cache miss (for the initial lookup)
       );
-      
+
       this.activeCalculations.delete(calculationId);
       return result;
-
     } catch (error) {
       // Enhanced error logging
       logError(
-        LogCategory.QUOTE_CALCULATION, 
+        LogCategory.QUOTE_CALCULATION,
         'Quote calculation failed with exception',
         error instanceof Error ? error : new Error(String(error)),
         {
@@ -337,11 +346,11 @@ export class QuoteCalculatorService {
             destinationCountry: params.destinationCountry,
             currency: params.currency,
             itemCount: params.items.length,
-            calculationTime: Date.now() - startTime
-          }
-        }
+            calculationTime: Date.now() - startTime,
+          },
+        },
       );
-      
+
       // **NEW: Complete monitoring for calculation error**
       const tracking = this.activeCalculations.get(calculationId);
       completeQuoteCalculationMonitoring(
@@ -351,9 +360,9 @@ export class QuoteCalculatorService {
         QuoteCalculationErrorCode.CALCULATION_FAILED,
         tracking?.apiCalls || 0,
         tracking?.cacheHits || 0,
-        1 // cache miss
+        1, // cache miss
       );
-      
+
       this.activeCalculations.delete(calculationId);
       return {
         success: false,
@@ -361,8 +370,8 @@ export class QuoteCalculatorService {
         error: {
           code: 'CALCULATION_ERROR',
           message: error instanceof Error ? error.message : 'Unknown calculation error',
-          details: error
-        }
+          details: error,
+        },
       };
     }
   }
@@ -379,7 +388,7 @@ export class QuoteCalculatorService {
       errors.push({
         field: 'items',
         message: 'At least one item is required',
-        code: 'MISSING_ITEMS'
+        code: 'MISSING_ITEMS',
       });
     }
 
@@ -388,15 +397,15 @@ export class QuoteCalculatorService {
       errors.push({
         field: 'originCountry',
         message: 'Origin country is required',
-        code: 'MISSING_ORIGIN_COUNTRY'
+        code: 'MISSING_ORIGIN_COUNTRY',
       });
     }
 
     if (!params.destinationCountry) {
       errors.push({
-        field: 'destinationCountry', 
+        field: 'destinationCountry',
         message: 'Destination country is required',
-        code: 'MISSING_DESTINATION_COUNTRY'
+        code: 'MISSING_DESTINATION_COUNTRY',
       });
     }
 
@@ -405,7 +414,7 @@ export class QuoteCalculatorService {
       errors.push({
         field: 'countrySettings',
         message: 'Country settings are required',
-        code: 'MISSING_COUNTRY_SETTINGS'
+        code: 'MISSING_COUNTRY_SETTINGS',
       });
     } else {
       // Validate exchange rate
@@ -414,13 +423,13 @@ export class QuoteCalculatorService {
         errors.push({
           field: 'exchangeRate',
           message: `Invalid exchange rate for ${params.originCountry}: ${rate}`,
-          code: 'INVALID_EXCHANGE_RATE'
+          code: 'INVALID_EXCHANGE_RATE',
         });
       } else if (rate > 1000) {
         warnings.push({
           field: 'exchangeRate',
           message: `Very high exchange rate detected for ${params.originCountry}: ${rate}`,
-          code: 'HIGH_EXCHANGE_RATE'
+          code: 'HIGH_EXCHANGE_RATE',
         });
       }
     }
@@ -431,7 +440,7 @@ export class QuoteCalculatorService {
         errors.push({
           field: `items[${index}].item_price`,
           message: 'Item price must be greater than 0',
-          code: 'INVALID_ITEM_PRICE'
+          code: 'INVALID_ITEM_PRICE',
         });
       }
 
@@ -439,7 +448,7 @@ export class QuoteCalculatorService {
         errors.push({
           field: `items[${index}].item_weight`,
           message: 'Item weight must be greater than 0',
-          code: 'INVALID_ITEM_WEIGHT'
+          code: 'INVALID_ITEM_WEIGHT',
         });
       }
 
@@ -447,7 +456,7 @@ export class QuoteCalculatorService {
         errors.push({
           field: `items[${index}].quantity`,
           message: 'Item quantity must be at least 1',
-          code: 'INVALID_ITEM_QUANTITY'
+          code: 'INVALID_ITEM_QUANTITY',
         });
       }
 
@@ -456,37 +465,42 @@ export class QuoteCalculatorService {
         warnings.push({
           field: `items[${index}].item_price`,
           message: `Very high item price: ${item.item_price}`,
-          code: 'HIGH_ITEM_PRICE'
+          code: 'HIGH_ITEM_PRICE',
         });
       }
     });
 
     // Validate optional numeric fields
     const numericFields = [
-      'sales_tax_price', 'merchant_shipping_price', 'domestic_shipping',
-      'handling_charge', 'discount', 'insurance_amount', 'customs_percentage'
+      'sales_tax_price',
+      'merchant_shipping_price',
+      'domestic_shipping',
+      'handling_charge',
+      'discount',
+      'insurance_amount',
+      'customs_percentage',
     ];
 
-    numericFields.forEach(field => {
+    numericFields.forEach((field) => {
       const value = params[field as keyof QuoteCalculationParams] as number;
       if (value !== undefined && value !== null) {
         if (isNaN(value) || !isFinite(value)) {
           errors.push({
             field,
             message: `${field} must be a valid number`,
-            code: 'INVALID_NUMERIC_VALUE'
+            code: 'INVALID_NUMERIC_VALUE',
           });
         } else if (value < 0 && field !== 'discount') {
           errors.push({
             field,
             message: `${field} cannot be negative`,
-            code: 'NEGATIVE_VALUE'
+            code: 'NEGATIVE_VALUE',
           });
         } else if (value > 100000) {
           warnings.push({
             field,
             message: `Very high ${field}: ${value}`,
-            code: 'HIGH_VALUE'
+            code: 'HIGH_VALUE',
           });
         }
       }
@@ -498,7 +512,7 @@ export class QuoteCalculatorService {
         warnings.push({
           field: 'customs_percentage',
           message: `Customs percentage seems high: ${params.customs_percentage}%`,
-          code: 'HIGH_CUSTOMS_PERCENTAGE'
+          code: 'HIGH_CUSTOMS_PERCENTAGE',
         });
       }
     }
@@ -506,7 +520,7 @@ export class QuoteCalculatorService {
     return {
       isValid: errors.length === 0,
       errors,
-      warnings
+      warnings,
     };
   }
 
@@ -543,20 +557,27 @@ export class QuoteCalculatorService {
   /**
    * Perform the actual calculation
    */
-  private async performCalculation(params: QuoteCalculationParams, calculationId?: string): Promise<QuoteCalculationBreakdown> {
+  private async performCalculation(
+    params: QuoteCalculationParams,
+    calculationId?: string,
+  ): Promise<QuoteCalculationBreakdown> {
     // Start performance tracking for calculation steps
     logPerformanceStart(`calculation.${calculationId}`);
-    
+
     // Calculate item totals
     const total_item_price = params.items.reduce(
-      (sum, item) => sum + (item.item_price * item.quantity), 0
+      (sum, item) => sum + item.item_price * item.quantity,
+      0,
     );
     const total_item_weight = params.items.reduce(
-      (sum, item) => sum + (item.item_weight * item.quantity), 0
+      (sum, item) => sum + item.item_weight * item.quantity,
+      0,
     );
 
     // Determine destination currency
-    const destinationCurrency = currencyService.getCurrencyForCountrySync(params.destinationCountry);
+    const destinationCurrency = currencyService.getCurrencyForCountrySync(
+      params.destinationCountry,
+    );
 
     // Log calculation details
     logger.debug(LogCategory.QUOTE_CALCULATION, 'Starting calculation breakdown', {
@@ -564,8 +585,8 @@ export class QuoteCalculatorService {
       metadata: {
         totalItemPrice: total_item_price,
         totalItemWeight: total_item_weight,
-        itemCount: params.items.length
-      }
+        itemCount: params.items.length,
+      },
     });
 
     // Parse numeric values with safety
@@ -601,7 +622,7 @@ export class QuoteCalculatorService {
         recordQuoteCalculationApiCall(calculationId, false); // Not a cache hit
       }
     }
-    
+
     // Log shipping API call
     const shippingStartTime = performance.now();
     const apiRequestId = logger.logApiRequest('GET', 'getShippingCost', {
@@ -610,17 +631,17 @@ export class QuoteCalculatorService {
         originCountry: params.originCountry,
         destinationCountry: params.destinationCountry,
         totalWeight: total_item_weight,
-        totalPrice: total_item_price
-      }
+        totalPrice: total_item_price,
+      },
     });
-    
+
     const shippingCost = await getShippingCost(
       params.originCountry,
       params.destinationCountry,
       total_item_weight,
-      total_item_price
+      total_item_price,
     );
-    
+
     // Log shipping API response
     logger.logApiResponse(
       apiRequestId,
@@ -631,9 +652,9 @@ export class QuoteCalculatorService {
         metadata: {
           method: shippingCost.method,
           cost: shippingCost.cost,
-          hasRoute: !!shippingCost.route
-        }
-      }
+          hasRoute: !!shippingCost.route,
+        },
+      },
     );
 
     let international_shipping: number;
@@ -648,7 +669,8 @@ export class QuoteCalculatorService {
       international_shipping = shippingCost.cost;
       shipping_method = 'route-specific';
       shipping_route_id = shippingCost.route.id || undefined;
-      exchange_rate = (shippingCost.route as { exchange_rate?: number })?.exchange_rate || purchaseCurrencyRate;
+      exchange_rate =
+        (shippingCost.route as { exchange_rate?: number })?.exchange_rate || purchaseCurrencyRate;
       exchange_rate_source = 'shipping_route';
     } else {
       // Fallback calculation - already returns cost in purchase currency
@@ -659,10 +681,12 @@ export class QuoteCalculatorService {
     }
 
     // Calculate customs and duties
-    const customs_and_ecs = ((total_item_price + sales_tax_price + merchant_shipping_price + international_shipping) * (customs_percentage / 100));
+    const customs_and_ecs =
+      (total_item_price + sales_tax_price + merchant_shipping_price + international_shipping) *
+      (customs_percentage / 100);
 
     // Calculate subtotal before fees
-    const subtotal_before_fees = 
+    const subtotal_before_fees =
       total_item_price +
       sales_tax_price +
       merchant_shipping_price +
@@ -675,10 +699,11 @@ export class QuoteCalculatorService {
 
     // Calculate payment gateway fee
     const gateway_percent_fee = params.countrySettings.payment_gateway_percent_fee || 0;
-    const reasonable_percent_fee = gateway_percent_fee > 100 ? gateway_percent_fee / 100 : gateway_percent_fee;
-    
-    const payment_gateway_fee = 
-      (params.countrySettings.payment_gateway_fixed_fee || 0) + 
+    const reasonable_percent_fee =
+      gateway_percent_fee > 100 ? gateway_percent_fee / 100 : gateway_percent_fee;
+
+    const payment_gateway_fee =
+      (params.countrySettings.payment_gateway_fixed_fee || 0) +
       (subtotal_before_fees * reasonable_percent_fee) / 100;
 
     // Calculate final totals
@@ -691,8 +716,8 @@ export class QuoteCalculatorService {
       quoteId: calculationId,
       metadata: {
         finalTotal: final_total,
-        currency: params.currency
-      }
+        currency: params.currency,
+      },
     });
 
     // Log calculation breakdown summary
@@ -705,12 +730,12 @@ export class QuoteCalculatorService {
           customsAndEcs: customs_and_ecs,
           paymentGatewayFee: payment_gateway_fee,
           vat,
-          finalTotal: final_total
+          finalTotal: final_total,
         },
         exchangeRate: exchange_rate,
         exchangeRateSource: exchange_rate_source,
-        shippingMethod: shipping_method
-      }
+        shippingMethod: shipping_method,
+      },
     });
 
     return {
@@ -734,7 +759,7 @@ export class QuoteCalculatorService {
       exchange_rate_source,
       shipping_method,
       shipping_route_id,
-      calculation_timestamp: new Date()
+      calculation_timestamp: new Date(),
     };
   }
 
@@ -743,10 +768,10 @@ export class QuoteCalculatorService {
    */
   private generateCacheKey(params: QuoteCalculationParams): string {
     const keyData = {
-      items: params.items.map(item => ({
+      items: params.items.map((item) => ({
         price: item.item_price,
         weight: item.item_weight,
-        quantity: item.quantity
+        quantity: item.quantity,
       })),
       origin: params.originCountry,
       destination: params.destinationCountry,
@@ -758,9 +783,9 @@ export class QuoteCalculatorService {
       discount: params.discount || 0,
       insurance: params.insurance_amount || 0,
       customs: params.customs_percentage || 0,
-      rate: params.countrySettings.rate_from_usd
+      rate: params.countrySettings.rate_from_usd,
     };
-    
+
     return btoa(JSON.stringify(keyData)).replace(/[^a-zA-Z0-9]/g, '');
   }
 
@@ -769,7 +794,7 @@ export class QuoteCalculatorService {
    */
   private getCachedCalculation(cacheKey: string): QuoteCalculationResult | null {
     const cached = this.calculationCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
       return cached.result;
     }
     this.calculationCache.delete(cacheKey);
@@ -779,7 +804,7 @@ export class QuoteCalculatorService {
   private cacheCalculation(cacheKey: string, result: QuoteCalculationResult): void {
     this.calculationCache.set(cacheKey, {
       result,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -787,8 +812,10 @@ export class QuoteCalculatorService {
    * Performance tracking
    */
   private updatePerformanceMetrics(calculationTime: number): void {
-    this.performanceMetrics.averageCalculationTime = 
-      (this.performanceMetrics.averageCalculationTime * (this.performanceMetrics.totalCalculations - 1) + calculationTime) / 
+    this.performanceMetrics.averageCalculationTime =
+      (this.performanceMetrics.averageCalculationTime *
+        (this.performanceMetrics.totalCalculations - 1) +
+        calculationTime) /
       this.performanceMetrics.totalCalculations;
   }
 
@@ -798,10 +825,12 @@ export class QuoteCalculatorService {
   getPerformanceMetrics() {
     return {
       ...this.performanceMetrics,
-      cacheHitRate: this.performanceMetrics.totalCalculations > 0 
-        ? (this.performanceMetrics.totalCacheHits / this.performanceMetrics.totalCalculations) * 100 
-        : 0,
-      cacheSize: this.calculationCache.size
+      cacheHitRate:
+        this.performanceMetrics.totalCalculations > 0
+          ? (this.performanceMetrics.totalCacheHits / this.performanceMetrics.totalCalculations) *
+            100
+          : 0,
+      cacheSize: this.calculationCache.size,
     };
   }
 
@@ -820,12 +849,12 @@ export class QuoteCalculatorService {
     return {
       calculationCache: {
         size: this.calculationCache.size,
-        entries: Array.from(this.calculationCache.keys())
+        entries: Array.from(this.calculationCache.keys()),
       },
       exchangeRateCache: {
         size: this.exchangeRateCache.size,
-        entries: Array.from(this.exchangeRateCache.keys())
-      }
+        entries: Array.from(this.exchangeRateCache.keys()),
+      },
     };
   }
 }

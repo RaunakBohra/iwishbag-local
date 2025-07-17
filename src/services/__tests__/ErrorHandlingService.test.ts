@@ -8,7 +8,7 @@ import {
   errorHandlingService,
   createValidationError,
   createCalculationError,
-  createNetworkError
+  createNetworkError,
 } from '../ErrorHandlingService';
 
 describe('ErrorHandlingService', () => {
@@ -23,13 +23,13 @@ describe('ErrorHandlingService', () => {
   beforeEach(() => {
     service = ErrorHandlingService.getInstance();
     service.clearErrorLog();
-    
+
     // Spy on console methods
     consoleSpy = {
       error: vi.spyOn(console, 'error').mockImplementation(() => {}),
       warn: vi.spyOn(console, 'warn').mockImplementation(() => {}),
       info: vi.spyOn(console, 'info').mockImplementation(() => {}),
-      log: vi.spyOn(console, 'log').mockImplementation(() => {})
+      log: vi.spyOn(console, 'log').mockImplementation(() => {}),
     };
 
     // Reset config to defaults
@@ -39,7 +39,7 @@ describe('ErrorHandlingService', () => {
       enableFallbacks: true,
       logErrors: true,
       showUserMessages: true,
-      autoRecovery: true
+      autoRecovery: true,
     });
   });
 
@@ -64,7 +64,7 @@ describe('ErrorHandlingService', () => {
     test('should create error with all required fields', () => {
       const error = service.createError(
         QuoteCalculationErrorCode.MISSING_ITEMS,
-        'Test error message'
+        'Test error message',
       );
 
       expect(error).toMatchObject({
@@ -72,7 +72,7 @@ describe('ErrorHandlingService', () => {
         message: 'Test error message',
         severity: 'low',
         timestamp: expect.any(Date),
-        recoveryActions: expect.any(Array)
+        recoveryActions: expect.any(Array),
       });
     });
 
@@ -84,7 +84,7 @@ describe('ErrorHandlingService', () => {
         currency: 'USD',
         itemCount: 2,
         userId: 'user-123',
-        sessionId: 'session-456'
+        sessionId: 'session-456',
       };
 
       const error = service.createError(
@@ -92,7 +92,7 @@ describe('ErrorHandlingService', () => {
         'Test calculation error',
         details,
         context,
-        'testField'
+        'testField',
       );
 
       expect(error).toMatchObject({
@@ -101,32 +101,26 @@ describe('ErrorHandlingService', () => {
         details,
         context,
         field: 'testField',
-        severity: 'high'
+        severity: 'high',
       });
     });
 
     test('should log error when logErrors is enabled', () => {
-      service.createError(
-        QuoteCalculationErrorCode.SYSTEM_ERROR,
-        'Critical error'
-      );
+      service.createError(QuoteCalculationErrorCode.SYSTEM_ERROR, 'Critical error');
 
       expect(consoleSpy.error).toHaveBeenCalledWith(
         '[QuoteCalculationCRITICAL]',
         expect.objectContaining({
           code: QuoteCalculationErrorCode.SYSTEM_ERROR,
-          message: 'Critical error'
-        })
+          message: 'Critical error',
+        }),
       );
     });
 
     test('should not log error when logErrors is disabled', () => {
       service.updateConfig({ logErrors: false });
-      
-      service.createError(
-        QuoteCalculationErrorCode.SYSTEM_ERROR,
-        'Critical error'
-      );
+
+      service.createError(QuoteCalculationErrorCode.SYSTEM_ERROR, 'Critical error');
 
       expect(consoleSpy.error).not.toHaveBeenCalled();
     });
@@ -137,10 +131,10 @@ describe('ErrorHandlingService', () => {
       const criticalCodes = [
         QuoteCalculationErrorCode.SYSTEM_ERROR,
         QuoteCalculationErrorCode.MEMORY_ERROR,
-        QuoteCalculationErrorCode.DATABASE_ERROR
+        QuoteCalculationErrorCode.DATABASE_ERROR,
       ];
 
-      criticalCodes.forEach(code => {
+      criticalCodes.forEach((code) => {
         const error = service.createError(code, 'Test');
         expect(error.severity).toBe('critical');
       });
@@ -150,10 +144,10 @@ describe('ErrorHandlingService', () => {
       const highCodes = [
         QuoteCalculationErrorCode.CALCULATION_FAILED,
         QuoteCalculationErrorCode.INVALID_EXCHANGE_RATE,
-        QuoteCalculationErrorCode.MISSING_COUNTRY_SETTINGS
+        QuoteCalculationErrorCode.MISSING_COUNTRY_SETTINGS,
       ];
 
-      highCodes.forEach(code => {
+      highCodes.forEach((code) => {
         const error = service.createError(code, 'Test');
         expect(error.severity).toBe('high');
       });
@@ -164,10 +158,10 @@ describe('ErrorHandlingService', () => {
         QuoteCalculationErrorCode.SHIPPING_COST_API_ERROR,
         QuoteCalculationErrorCode.EXCHANGE_RATE_API_ERROR,
         QuoteCalculationErrorCode.NETWORK_ERROR,
-        QuoteCalculationErrorCode.TIMEOUT_ERROR
+        QuoteCalculationErrorCode.TIMEOUT_ERROR,
       ];
 
-      mediumCodes.forEach(code => {
+      mediumCodes.forEach((code) => {
         const error = service.createError(code, 'Test');
         expect(error.severity).toBe('medium');
       });
@@ -177,10 +171,10 @@ describe('ErrorHandlingService', () => {
       const lowCodes = [
         QuoteCalculationErrorCode.MISSING_ITEMS,
         QuoteCalculationErrorCode.INVALID_ITEM_PRICE,
-        QuoteCalculationErrorCode.INVALID_ITEM_WEIGHT
+        QuoteCalculationErrorCode.INVALID_ITEM_WEIGHT,
       ];
 
-      lowCodes.forEach(code => {
+      lowCodes.forEach((code) => {
         const error = service.createError(code, 'Test');
         expect(error.severity).toBe('low');
       });
@@ -189,57 +183,51 @@ describe('ErrorHandlingService', () => {
 
   describe('Recovery Actions Generation', () => {
     test('should generate retry action for network errors', () => {
-      const error = service.createError(
-        QuoteCalculationErrorCode.NETWORK_ERROR,
-        'Network failure'
-      );
+      const error = service.createError(QuoteCalculationErrorCode.NETWORK_ERROR, 'Network failure');
 
       expect(error.recoveryActions).toHaveLength(1);
       expect(error.recoveryActions?.[0]).toMatchObject({
         type: 'retry',
         description: 'Retry the calculation',
         automatic: true,
-        action: expect.any(Function)
+        action: expect.any(Function),
       });
     });
 
     test('should generate fallback action for shipping API errors', () => {
       const error = service.createError(
         QuoteCalculationErrorCode.SHIPPING_COST_API_ERROR,
-        'Shipping API failure'
+        'Shipping API failure',
       );
 
       expect(error.recoveryActions).toHaveLength(1);
       expect(error.recoveryActions?.[0]).toMatchObject({
         type: 'fallback',
         description: 'Use fallback shipping calculation',
-        automatic: true
+        automatic: true,
       });
     });
 
     test('should generate contact admin action for configuration errors', () => {
       const error = service.createError(
         QuoteCalculationErrorCode.MISSING_COUNTRY_SETTINGS,
-        'Country not configured'
+        'Country not configured',
       );
 
       expect(error.recoveryActions).toHaveLength(1);
       expect(error.recoveryActions?.[0]).toMatchObject({
         type: 'contact_admin',
-        description: 'Contact administrator to configure country settings'
+        description: 'Contact administrator to configure country settings',
       });
     });
 
     test('should generate manual action for unknown errors', () => {
-      const error = service.createError(
-        QuoteCalculationErrorCode.UNKNOWN_ERROR,
-        'Unknown error'
-      );
+      const error = service.createError(QuoteCalculationErrorCode.UNKNOWN_ERROR, 'Unknown error');
 
       expect(error.recoveryActions).toHaveLength(1);
       expect(error.recoveryActions?.[0]).toMatchObject({
         type: 'manual',
-        description: 'Please check your input values and try again'
+        description: 'Please check your input values and try again',
       });
     });
   });
@@ -248,31 +236,30 @@ describe('ErrorHandlingService', () => {
     test('should handle error without automatic recovery', async () => {
       const error = service.createError(
         QuoteCalculationErrorCode.MISSING_ITEMS,
-        'No items provided'
+        'No items provided',
       );
 
       const result = await service.handleError(error);
 
       expect(result).toMatchObject({
         handled: false,
-        userMessage: expect.stringContaining('Please add at least one item')
+        userMessage: expect.stringContaining('Please add at least one item'),
       });
     });
 
     test('should perform automatic recovery when available', async () => {
       const mockAction = vi.fn().mockResolvedValue(undefined);
-      const error = service.createError(
-        QuoteCalculationErrorCode.NETWORK_ERROR,
-        'Network failure'
-      );
-      
+      const error = service.createError(QuoteCalculationErrorCode.NETWORK_ERROR, 'Network failure');
+
       // Override with mock action
-      error.recoveryActions = [{
-        type: 'retry',
-        description: 'Mock retry',
-        automatic: true,
-        action: mockAction
-      }];
+      error.recoveryActions = [
+        {
+          type: 'retry',
+          description: 'Mock retry',
+          automatic: true,
+          action: mockAction,
+        },
+      ];
 
       const result = await service.handleError(error);
 
@@ -280,52 +267,50 @@ describe('ErrorHandlingService', () => {
       expect(result).toMatchObject({
         handled: true,
         recovery: 'automatic',
-        userMessage: 'Recovered from error: Mock retry'
+        userMessage: 'Recovered from error: Mock retry',
       });
     });
 
     test('should handle recovery action failure', async () => {
       const mockAction = vi.fn().mockRejectedValue(new Error('Recovery failed'));
-      const error = service.createError(
-        QuoteCalculationErrorCode.NETWORK_ERROR,
-        'Network failure'
-      );
-      
-      error.recoveryActions = [{
-        type: 'retry',
-        description: 'Mock retry',
-        automatic: true,
-        action: mockAction
-      }];
+      const error = service.createError(QuoteCalculationErrorCode.NETWORK_ERROR, 'Network failure');
+
+      error.recoveryActions = [
+        {
+          type: 'retry',
+          description: 'Mock retry',
+          automatic: true,
+          action: mockAction,
+        },
+      ];
 
       const result = await service.handleError(error);
 
       expect(mockAction).toHaveBeenCalled();
       expect(result).toMatchObject({
         handled: false,
-        userMessage: expect.stringContaining('Network connection issue')
+        userMessage: expect.stringContaining('Network connection issue'),
       });
       expect(consoleSpy.warn).toHaveBeenCalledWith(
         '[ErrorHandlingService] Auto-recovery failed:',
-        expect.any(Error)
+        expect.any(Error),
       );
     });
 
     test('should skip automatic recovery when disabled', async () => {
       service.updateConfig({ autoRecovery: false });
-      
+
       const mockAction = vi.fn().mockResolvedValue(undefined);
-      const error = service.createError(
-        QuoteCalculationErrorCode.NETWORK_ERROR,
-        'Network failure'
-      );
-      
-      error.recoveryActions = [{
-        type: 'retry',
-        description: 'Mock retry',
-        automatic: true,
-        action: mockAction
-      }];
+      const error = service.createError(QuoteCalculationErrorCode.NETWORK_ERROR, 'Network failure');
+
+      error.recoveryActions = [
+        {
+          type: 'retry',
+          description: 'Mock retry',
+          automatic: true,
+          action: mockAction,
+        },
+      ];
 
       const result = await service.handleError(error);
 
@@ -341,7 +326,7 @@ describe('ErrorHandlingService', () => {
         'Invalid price',
         undefined,
         undefined,
-        'price'
+        'price',
       );
 
       const result = service['generateUserMessage'](error);
@@ -353,11 +338,13 @@ describe('ErrorHandlingService', () => {
         QuoteCalculationErrorCode.SHIPPING_COST_API_ERROR,
         'Shipping API error',
         undefined,
-        { originCountry: 'US', destinationCountry: 'IN' }
+        { originCountry: 'US', destinationCountry: 'IN' },
       );
 
       const result = service['generateUserMessage'](error);
-      expect(result).toBe('Unable to fetch shipping costs. Using estimated rates. (Route: US → IN)');
+      expect(result).toBe(
+        'Unable to fetch shipping costs. Using estimated rates. (Route: US → IN)',
+      );
     });
 
     test('should handle missing route information', () => {
@@ -365,7 +352,7 @@ describe('ErrorHandlingService', () => {
         QuoteCalculationErrorCode.SHIPPING_COST_API_ERROR,
         'Shipping API error',
         undefined,
-        { originCountry: 'US' }
+        { originCountry: 'US' },
       );
 
       const result = service['generateUserMessage'](error);
@@ -375,7 +362,7 @@ describe('ErrorHandlingService', () => {
     test('should fallback to unknown error message for invalid codes', () => {
       const error = service.createError(
         'INVALID_CODE' as QuoteCalculationErrorCode,
-        'Invalid error code'
+        'Invalid error code',
       );
 
       const result = service['generateUserMessage'](error);
@@ -389,38 +376,26 @@ describe('ErrorHandlingService', () => {
       service.createError(QuoteCalculationErrorCode.SYSTEM_ERROR, 'Critical');
       expect(consoleSpy.error).toHaveBeenCalledWith(
         '[QuoteCalculationCRITICAL]',
-        expect.any(Object)
+        expect.any(Object),
       );
 
       // High error
       service.createError(QuoteCalculationErrorCode.CALCULATION_FAILED, 'High');
-      expect(consoleSpy.error).toHaveBeenCalledWith(
-        '[QuoteCalculationHIGH]',
-        expect.any(Object)
-      );
+      expect(consoleSpy.error).toHaveBeenCalledWith('[QuoteCalculationHIGH]', expect.any(Object));
 
       // Medium error
       service.createError(QuoteCalculationErrorCode.NETWORK_ERROR, 'Medium');
-      expect(consoleSpy.warn).toHaveBeenCalledWith(
-        '[QuoteCalculationMEDIUM]',
-        expect.any(Object)
-      );
+      expect(consoleSpy.warn).toHaveBeenCalledWith('[QuoteCalculationMEDIUM]', expect.any(Object));
 
       // Low error
       service.createError(QuoteCalculationErrorCode.MISSING_ITEMS, 'Low');
-      expect(consoleSpy.info).toHaveBeenCalledWith(
-        '[QuoteCalculationLOW]',
-        expect.any(Object)
-      );
+      expect(consoleSpy.info).toHaveBeenCalledWith('[QuoteCalculationLOW]', expect.any(Object));
     });
 
     test('should maintain error log with size limit', () => {
       // Add 105 errors to test size limit
       for (let i = 0; i < 105; i++) {
-        service.createError(
-          QuoteCalculationErrorCode.MISSING_ITEMS,
-          `Error ${i}`
-        );
+        service.createError(QuoteCalculationErrorCode.MISSING_ITEMS, `Error ${i}`);
       }
 
       const stats = service.getErrorStats();
@@ -431,42 +406,42 @@ describe('ErrorHandlingService', () => {
   describe('Retry Mechanism', () => {
     test('should successfully execute operation on first try', async () => {
       const mockOperation = vi.fn().mockResolvedValue('success');
-      
+
       const result = await service.withRetry(mockOperation, 'test-op');
-      
+
       expect(result).toBe('success');
       expect(mockOperation).toHaveBeenCalledTimes(1);
     });
 
     test('should retry failing operation up to maxRetries', async () => {
-      const mockOperation = vi.fn()
+      const mockOperation = vi
+        .fn()
         .mockRejectedValueOnce(new Error('Attempt 1'))
         .mockRejectedValueOnce(new Error('Attempt 2'))
         .mockResolvedValue('success');
 
       const result = await service.withRetry(mockOperation, 'test-op');
-      
+
       expect(result).toBe('success');
       expect(mockOperation).toHaveBeenCalledTimes(3);
     });
 
     test('should throw QuoteCalculationError after max retries', async () => {
       const mockOperation = vi.fn().mockRejectedValue(new Error('Always fails'));
-      
-      await expect(
-        service.withRetry(mockOperation, 'test-op')
-      ).rejects.toMatchObject({
+
+      await expect(service.withRetry(mockOperation, 'test-op')).rejects.toMatchObject({
         code: QuoteCalculationErrorCode.CALCULATION_FAILED,
-        message: expect.stringContaining('Operation failed after 3 attempts')
+        message: expect.stringContaining('Operation failed after 3 attempts'),
       });
-      
+
       expect(mockOperation).toHaveBeenCalledTimes(3);
     });
 
     test('should use exponential backoff for retries', async () => {
       service.updateConfig({ retryDelay: 100 }); // Shorter delay for testing
-      
-      const mockOperation = vi.fn()
+
+      const mockOperation = vi
+        .fn()
         .mockRejectedValueOnce(new Error('Attempt 1'))
         .mockRejectedValueOnce(new Error('Attempt 2'))
         .mockResolvedValue('success');
@@ -474,7 +449,7 @@ describe('ErrorHandlingService', () => {
       const startTime = Date.now();
       await service.withRetry(mockOperation, 'test-op');
       const endTime = Date.now();
-      
+
       // Should have waited at least 100ms + 200ms = 300ms
       expect(endTime - startTime).toBeGreaterThanOrEqual(250);
     });
@@ -482,14 +457,12 @@ describe('ErrorHandlingService', () => {
     test('should include context in retry error', async () => {
       const mockOperation = vi.fn().mockRejectedValue(new Error('Always fails'));
       const context = { originCountry: 'US', destinationCountry: 'IN' };
-      
-      await expect(
-        service.withRetry(mockOperation, 'test-op', context)
-      ).rejects.toMatchObject({
+
+      await expect(service.withRetry(mockOperation, 'test-op', context)).rejects.toMatchObject({
         context,
         details: expect.objectContaining({
-          attempts: 3
-        })
+          attempts: 3,
+        }),
       });
     });
   });
@@ -513,35 +486,32 @@ describe('ErrorHandlingService', () => {
       expect(stats.errorsByCode).toEqual({
         [QuoteCalculationErrorCode.MISSING_ITEMS]: 2,
         [QuoteCalculationErrorCode.SYSTEM_ERROR]: 1,
-        [QuoteCalculationErrorCode.NETWORK_ERROR]: 1
+        [QuoteCalculationErrorCode.NETWORK_ERROR]: 1,
       });
       expect(stats.errorsBySeverity).toEqual({
         low: 2,
         critical: 1,
-        medium: 1
+        medium: 1,
       });
     });
 
     test('should filter recent and daily errors correctly', () => {
       const now = new Date();
       const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-      
+
       // Create error and manually set timestamp
-      const oldError = service.createError(
-        QuoteCalculationErrorCode.MISSING_ITEMS,
-        'Old error'
-      );
+      const oldError = service.createError(QuoteCalculationErrorCode.MISSING_ITEMS, 'Old error');
       oldError.timestamp = twoHoursAgo;
-      
+
       // Force add to log (since createError already added it, we need to replace)
       service.clearErrorLog();
       service['errorLog'].push(oldError);
-      
+
       // Add recent error
       service.createError(QuoteCalculationErrorCode.NETWORK_ERROR, 'Recent error');
 
       const stats = service.getErrorStats();
-      
+
       expect(stats.totalErrors).toBe(2);
       expect(stats.recentErrors).toBe(1); // Only the recent one
       expect(stats.dailyErrors).toBe(2); // Both within 24 hours
@@ -552,10 +522,10 @@ describe('ErrorHandlingService', () => {
       service.createError(QuoteCalculationErrorCode.SYSTEM_ERROR, 'Last error');
 
       const stats = service.getErrorStats();
-      
+
       expect(stats.lastError).toMatchObject({
         code: QuoteCalculationErrorCode.SYSTEM_ERROR,
-        message: 'Last error'
+        message: 'Last error',
       });
     });
   });
@@ -564,7 +534,7 @@ describe('ErrorHandlingService', () => {
     test('should update configuration partially', () => {
       const newConfig = {
         maxRetries: 5,
-        enableFallbacks: false
+        enableFallbacks: false,
       };
 
       service.updateConfig(newConfig);
@@ -589,13 +559,13 @@ describe('ErrorHandlingService', () => {
         alerting: {
           enableAlerts: true,
           warningThreshold: 5,
-          criticalThreshold: 10
+          criticalThreshold: 10,
         },
         performanceThresholds: {
           timeoutMs: 30000,
           slowCalculationMs: 5000,
-          errorRatePercent: 5
-        }
+          errorRatePercent: 5,
+        },
       });
     });
 
@@ -637,44 +607,41 @@ describe('ErrorHandlingService', () => {
         field: 'price',
         details: {
           field: 'price',
-          value: 'abc'
-        }
+          value: 'abc',
+        },
       });
     });
 
     test('createCalculationError should create proper calculation error', () => {
       const details = { calculation: 'failed' };
       const context = { originCountry: 'US' };
-      
+
       const error = createCalculationError('Calculation failed', details, context);
 
       expect(error).toMatchObject({
         code: QuoteCalculationErrorCode.CALCULATION_FAILED,
         message: 'Calculation failed',
         details,
-        context
+        context,
       });
     });
 
     test('createNetworkError should create proper network error', () => {
       const details = { timeout: 5000 };
-      
+
       const error = createNetworkError('Network timeout', details);
 
       expect(error).toMatchObject({
         code: QuoteCalculationErrorCode.NETWORK_ERROR,
         message: 'Network timeout',
-        details
+        details,
       });
     });
   });
 
   describe('Edge Cases and Error Conditions', () => {
     test('should handle null/undefined error messages', () => {
-      const error = service.createError(
-        QuoteCalculationErrorCode.UNKNOWN_ERROR,
-        null as any
-      );
+      const error = service.createError(QuoteCalculationErrorCode.UNKNOWN_ERROR, null as any);
 
       expect(error.message).toBe(null);
       expect(error.code).toBe(QuoteCalculationErrorCode.UNKNOWN_ERROR);
@@ -685,7 +652,7 @@ describe('ErrorHandlingService', () => {
         QuoteCalculationErrorCode.NETWORK_ERROR,
         'Network error',
         undefined,
-        {}
+        {},
       );
 
       expect(error.context).toEqual({});
@@ -695,7 +662,7 @@ describe('ErrorHandlingService', () => {
     test('should handle recovery action without action function', async () => {
       const error = service.createError(
         QuoteCalculationErrorCode.SHIPPING_COST_API_ERROR,
-        'Shipping error'
+        'Shipping error',
       );
 
       // Recovery action for shipping error doesn't have action function
@@ -707,17 +674,14 @@ describe('ErrorHandlingService', () => {
 
     test('should handle withRetry with sync operation', async () => {
       const syncOperation = () => Promise.resolve('sync-result');
-      
+
       const result = await service.withRetry(syncOperation, 'sync-op');
       expect(result).toBe('sync-result');
     });
 
     test('should handle very long error messages', () => {
       const longMessage = 'x'.repeat(10000);
-      const error = service.createError(
-        QuoteCalculationErrorCode.UNKNOWN_ERROR,
-        longMessage
-      );
+      const error = service.createError(QuoteCalculationErrorCode.UNKNOWN_ERROR, longMessage);
 
       expect(error.message).toBe(longMessage);
       expect(consoleSpy.info).toHaveBeenCalled();
@@ -725,17 +689,16 @@ describe('ErrorHandlingService', () => {
 
     test('should handle recovery action that returns undefined', async () => {
       const mockAction = vi.fn().mockResolvedValue(undefined);
-      const error = service.createError(
-        QuoteCalculationErrorCode.NETWORK_ERROR,
-        'Network error'
-      );
-      
-      error.recoveryActions = [{
-        type: 'retry',
-        description: 'Test retry',
-        automatic: true,
-        action: mockAction
-      }];
+      const error = service.createError(QuoteCalculationErrorCode.NETWORK_ERROR, 'Network error');
+
+      error.recoveryActions = [
+        {
+          type: 'retry',
+          description: 'Test retry',
+          automatic: true,
+          action: mockAction,
+        },
+      ];
 
       const result = await service.handleError(error);
       expect(result.handled).toBe(true);
@@ -746,14 +709,12 @@ describe('ErrorHandlingService', () => {
   describe('Performance and Memory Management', () => {
     test('should limit error log memory usage', () => {
       const initialMemory = process.memoryUsage().heapUsed;
-      
+
       // Add many errors
       for (let i = 0; i < 1000; i++) {
-        service.createError(
-          QuoteCalculationErrorCode.MISSING_ITEMS,
-          `Error ${i}`,
-          { largeData: 'x'.repeat(1000) }
-        );
+        service.createError(QuoteCalculationErrorCode.MISSING_ITEMS, `Error ${i}`, {
+          largeData: 'x'.repeat(1000),
+        });
       }
 
       const stats = service.getErrorStats();
@@ -766,14 +727,11 @@ describe('ErrorHandlingService', () => {
 
     test('should handle rapid error creation efficiently', () => {
       const start = Date.now();
-      
+
       for (let i = 0; i < 1000; i++) {
-        service.createError(
-          QuoteCalculationErrorCode.MISSING_ITEMS,
-          `Rapid error ${i}`
-        );
+        service.createError(QuoteCalculationErrorCode.MISSING_ITEMS, `Rapid error ${i}`);
       }
-      
+
       const duration = Date.now() - start;
       expect(duration).toBeLessThan(1000); // Should complete within 1 second
     });

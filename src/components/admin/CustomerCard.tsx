@@ -1,15 +1,14 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CustomerEmailDialog } from "./CustomerEmailDialog";
-import { CustomerCodToggle } from "./CustomerCodToggle";
-import { CustomerNotesSection } from "./CustomerNotesSection";
-import { CustomerNameEditor } from "./CustomerNameEditor";
-import { format } from "date-fns";
-import { User, Calendar, Mail, Shield, Trash2, UserMinus, UserPlus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Check, X, Pencil, Loader2 } from "lucide-react";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CustomerEmailDialog } from './CustomerEmailDialog';
+import { CustomerCodToggle } from './CustomerCodToggle';
+import { CustomerNotesSection } from './CustomerNotesSection';
+import { format } from 'date-fns';
+import { Calendar, Mail, Shield, Trash2, UserMinus, UserPlus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Check, X, Pencil, Loader2 } from 'lucide-react';
 
 interface CustomerProfile {
   id: string;
@@ -38,12 +37,12 @@ interface CustomerCardProps {
   onAssignAdmin?: (email: string) => void;
 }
 
-export const CustomerCard = ({ 
-  customer, 
-  onCodToggle, 
+export const CustomerCard = ({
+  customer,
+  onCodToggle,
   onNotesUpdate,
   onNameUpdate,
-  isCodUpdating, 
+  isCodUpdating,
   isNotesUpdating,
   isNameUpdating,
   showRoleManagement = false,
@@ -51,7 +50,7 @@ export const CustomerCard = ({
   onRemoveUser,
   isAdmin = false,
   isCurrentUser = false,
-  onAssignAdmin
+  onAssignAdmin,
 }: CustomerCardProps) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(customer.full_name || '');
@@ -116,7 +115,10 @@ export const CustomerCard = ({
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Mail className="h-4 w-4" />
               <span>{customer.email}</span>
-              <CustomerEmailDialog customerEmail={customer.email} customerName={customer.full_name || undefined} />
+              <CustomerEmailDialog
+                customerEmail={customer.email}
+                customerName={customer.full_name || undefined}
+              />
             </div>
           </div>
           {showRoleManagement && (

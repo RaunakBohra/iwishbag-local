@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Clock, Truck, DollarSign, Calendar, AlertTriangle, CheckCircle, Package, AlertCircle, Info } from 'lucide-react';
+// Removed unused Button, RadioGroup, RadioGroupItem, Label imports
+import {
+  Truck,
+  Calendar,
+  AlertTriangle,
+  CheckCircle,
+  Package,
+  AlertCircle,
+  Info,
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  DeliveryOption, 
+import {
+  DeliveryOption,
   calculateDeliveryDates,
-  createDeliveryTimeline,
-  DeliveryPhase
+  DeliveryPhase,
 } from '@/lib/delivery-estimates';
 import { EnhancedDeliveryTimeline } from './EnhancedDeliveryTimeline';
-import { format, addBusinessDays, parseISO } from 'date-fns';
-import { Tables } from '@/integrations/supabase/types';
+import { format, parseISO, addBusinessDays } from 'date-fns';
+// Removed unused Tables import
 
 // Define estimate structure
 interface DeliveryEstimate {
@@ -42,26 +47,26 @@ interface DeliveryEstimateDisplayProps {
   className?: string;
 }
 
-export const DeliveryEstimateDisplay = ({ 
-  estimate, 
+export const DeliveryEstimateDisplay = ({
+  estimate,
   quote,
-  className = ''
+  className = '',
 }: DeliveryEstimateDisplayProps) => {
   const [selectedOption, setSelectedOption] = useState<DeliveryOption | null>(null);
   const [deliveryTimeline, setDeliveryTimeline] = useState<DeliveryTimeline | null>(null);
   const [processingDays, setProcessingDays] = useState(2);
   const [customsClearanceDays, setCustomsClearanceDays] = useState(3);
-  const [loading, setLoading] = useState(false);
+  const [_loading, _setLoading] = useState(false);
 
   // Determine the start date based on quote status
   const getStartDate = () => {
     if (!quote) return new Date();
-    
+
     // If quote is paid, use payment date
     if (quote.status === 'paid' && quote.paid_at) {
       return parseISO(quote.paid_at);
     }
-    
+
     // Otherwise use quote creation date
     return parseISO(quote.created_at);
   };
@@ -105,11 +110,19 @@ export const DeliveryEstimateDisplay = ({
         selectedOption,
         processingDays,
         customsClearanceDays,
-        startDate
+        startDate,
       );
       setDeliveryTimeline(timeline);
     }
-  }, [selectedOption, processingDays, customsClearanceDays, quote?.status, quote?.paid_at, quote?.created_at]);
+  }, [
+    selectedOption,
+    processingDays,
+    customsClearanceDays,
+    quote?.status,
+    quote?.paid_at,
+    quote?.created_at,
+    getStartDate,
+  ]);
 
   if (!deliveryTimeline || !selectedOption) {
     return <div>Loading delivery estimate...</div>;
@@ -141,14 +154,16 @@ export const DeliveryEstimateDisplay = ({
           <div className="flex items-center gap-2">
             <Info className="h-4 w-4" />
             <span>
-              <strong>Timeline based on:</strong> {isPaymentPhase ? 'Payment Date' : 'Quote Request Date'}
+              <strong>Timeline based on:</strong>{' '}
+              {isPaymentPhase ? 'Payment Date' : 'Quote Request Date'}
             </span>
           </div>
           <div>
             <strong>Start date:</strong> {format(startDate, 'EEEE, MMMM d, yyyy')}
           </div>
           <div>
-            <strong>Estimated delivery:</strong> {format(minDate, 'MMM d, yyyy')} – {format(maxDate, 'MMM d, yyyy')}
+            <strong>Estimated delivery:</strong> {format(minDate, 'MMM d, yyyy')} –{' '}
+            {format(maxDate, 'MMM d, yyyy')}
           </div>
           <div>
             <strong>Latest expected delivery:</strong> {format(maxDate, 'EEEE, MMMM d, yyyy')}
@@ -160,7 +175,8 @@ export const DeliveryEstimateDisplay = ({
                 <span className="text-sm font-medium">Timeline will be updated after payment</span>
               </div>
               <p className="text-xs text-blue-700 mt-1">
-                Once you complete payment, we'll recalculate the delivery timeline from your payment date for more accurate estimates.
+                Once you complete payment, we'll recalculate the delivery timeline from your payment
+                date for more accurate estimates.
               </p>
             </div>
           )}
@@ -168,13 +184,18 @@ export const DeliveryEstimateDisplay = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {deliveryTimeline.phases.map((phase, idx) => (
-            <div key={phase.phase} className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50">
+          {deliveryTimeline.phases.map((phase, _idx) => (
+            <div
+              key={phase.phase}
+              className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50"
+            >
               <div className="flex-shrink-0">
                 {/* Icon for each phase */}
                 {phase.icon === 'package' && <Package className="h-6 w-6 text-blue-500" />}
                 {phase.icon === 'plane' && <Truck className="h-6 w-6 text-green-500" />}
-                {phase.icon === 'building2' && <AlertTriangle className="h-6 w-6 text-yellow-500" />}
+                {phase.icon === 'building2' && (
+                  <AlertTriangle className="h-6 w-6 text-yellow-500" />
+                )}
                 {phase.icon === 'truck' && <CheckCircle className="h-6 w-6 text-purple-500" />}
               </div>
               <div className="flex-1">
@@ -190,7 +211,7 @@ export const DeliveryEstimateDisplay = ({
             </div>
           ))}
         </div>
-        
+
         {/* Additional information for payment phase */}
         {isPaymentPhase && (
           <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -199,12 +220,12 @@ export const DeliveryEstimateDisplay = ({
               <span className="text-sm font-medium">Payment Confirmed</span>
             </div>
             <p className="text-xs text-green-700 mt-1">
-              Your payment was received on {format(parseISO(quote.paid_at), 'MMM d, yyyy')}. 
-              The delivery timeline above reflects the actual processing start date.
+              Your payment was received on {format(parseISO(quote.paid_at), 'MMM d, yyyy')}. The
+              delivery timeline above reflects the actual processing start date.
             </p>
           </div>
         )}
       </CardContent>
     </Card>
   );
-}; 
+};

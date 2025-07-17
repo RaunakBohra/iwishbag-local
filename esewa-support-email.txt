@@ -1,0 +1,96 @@
+Subject: eSewa API Integration Support Required - ES104 Signature Error (Merchant ID: NP-ES-IWISH)
+
+Dear eSewa Technical Support Team,
+
+I hope this email finds you well. I am writing to request technical assistance with our eSewa payment gateway integration for our e-commerce platform "iwishBag".
+
+MERCHANT DETAILS:
+- Merchant ID: NP-ES-IWISH
+- Business: iwishBag (International Shopping Platform)
+- Integration Type: eSewa API v2 (Epay)
+
+CURRENT ISSUE:
+We are receiving "ES104 - Invalid payload signature" error when attempting to process payments through your API. Our development team has confirmed that:
+
+✅ Merchant ID "NP-ES-IWISH" is recognized (no "merchant not found" errors)
+✅ All required form fields are being sent correctly
+✅ POST method to correct endpoint: https://epay.esewa.com.np/api/epay/main/v2/form
+❌ Signature generation is causing ES104 error
+
+TECHNICAL DETAILS:
+We are currently using the following signature generation method:
+- Algorithm: HMAC-SHA256
+- Output Format: Base64
+- Secret Key: LCQsJCkxKiJDKyNIMjJeIjIwNjs=
+- Signature String Format: total_amount,transaction_uuid,product_code
+- Example: "100,ESW_TEST_123,NP-ES-IWISH"
+
+SAMPLE TEST DATA:
+For testing purposes, please provide the correct signature for these values:
+- Amount: 100
+- Tax Amount: 0
+- Total Amount: 100
+- Transaction UUID: ESW_TEST_123
+- Product Code: NP-ES-IWISH
+- Product Service Charge: 0
+- Product Delivery Charge: 0
+
+REQUEST FOR SUPPORT:
+Could you please provide:
+
+1. ✅ Confirmation that our Merchant ID "NP-ES-IWISH" is active and properly configured
+2. ✅ Correct signature generation algorithm (hash method, encoding format)
+3. ✅ Exact signature string format (field order, separators, encoding)
+4. ✅ Expected signature value for the sample test data above
+5. ✅ Any additional setup steps required for API integration
+
+BUSINESS CONTEXT:
+iwishBag is an international shopping platform that enables customers in Nepal to purchase products from global marketplaces. eSewa integration is crucial for our Nepali customers to make secure local payments. We are ready to launch this feature once the signature issue is resolved.
+
+TECHNICAL TEAM CONTACT:
+- Development Team: Available for technical calls/screen sharing if needed
+- Integration Status: 99% complete, only signature generation pending
+- Timeline: Ready to implement fixes immediately upon receiving guidance
+
+We have thoroughly tested our implementation against your API documentation and are confident that the only remaining issue is the signature generation format. Your prompt assistance would be greatly appreciated as this is blocking our production launch.
+
+Thank you for your time and support. Please let me know if you need any additional information or if we can schedule a technical call to resolve this quickly.
+
+Best regards,
+
+[Your Name]
+[Your Title]
+iwishBag
+[Your Phone Number]
+[Your Email Address]
+
+---
+TECHNICAL APPENDIX (for your technical team):
+
+Current Signature Generation Code (Node.js):
+```javascript
+const signatureString = `${total_amount},${transaction_uuid},${product_code}`;
+const signature = crypto.createHmac('sha256', secret_key).update(signatureString).digest('base64');
+```
+
+Error Response Received:
+```json
+{"code":"ES104","message":"Invalid payload signature."}
+```
+
+Form Data Being Sent:
+```json
+{
+  "amount": "100",
+  "tax_amount": "0", 
+  "total_amount": "100",
+  "transaction_uuid": "ESW_TEST_123",
+  "product_code": "NP-ES-IWISH",
+  "product_service_charge": "0",
+  "product_delivery_charge": "0",
+  "success_url": "https://iwishbag.com/payment-callback/esewa-success",
+  "failure_url": "https://iwishbag.com/payment-callback/esewa-failure", 
+  "signed_field_names": "total_amount,transaction_uuid,product_code",
+  "signature": "[GENERATED_SIGNATURE]"
+}
+```

@@ -119,7 +119,14 @@
       "WebFetch(domain:docs.khalti.com)",
       "Bash(supabase:*)",
       "WebFetch(domain:www.scribd.com)",
-      "WebFetch(domain:developer.esewa.com.np)"
+      "WebFetch(domain:developer.esewa.com.np)",
+      "Bash(open:*)",
+      "Bash(python3:*)",
+      "Bash(npx prettier:*)",
+      "Bash(npx lhci:*)",
+      "Bash(./reset-db.sh:*)",
+      "Bash(./fix-database-schema.sh:*)",
+      "Bash(vercel:*)"
     ],
     "deny": []
   }

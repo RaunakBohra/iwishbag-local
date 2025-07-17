@@ -5,29 +5,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 
-import { QuoteBreakdownHeader } from './QuoteBreakdownHeader';
 import { QuoteBreakdownDetails } from './QuoteBreakdownDetails';
-import { QuoteBreakdownApproval } from './QuoteBreakdownApproval';
 import { QuoteItemCard } from './QuoteItemCard';
-import { Banknote, Clock, ShoppingCart, Package, AlertCircle, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { QuoteApprovalDialog } from './QuoteApprovalDialog';
-import { QuoteStepper, QuoteStep } from './QuoteStepper';
 import { QuoteSummary } from './QuoteSummary';
 import { CustomerRejectQuoteDialog } from './CustomerRejectQuoteDialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { HelpCircle, MessageCircle, XCircle, BookOpen, Edit2 } from 'lucide-react';
 import { QuoteMessaging } from '../messaging/QuoteMessaging';
-import { formatAmountForDisplay } from '@/lib/currencyUtils';
 
 type QuoteWithItems = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
@@ -48,18 +37,31 @@ interface QuoteBreakdownProps {
 
 // DEPRECATED: Legacy function moved inside component for dynamic access
 
-export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onRecalculate, onSave, onCancel, onAddToCart, addToCartText }: QuoteBreakdownProps) {
+export function QuoteBreakdown({
+  quote,
+  onApprove,
+  onReject,
+  onCalculate: _onCalculate,
+  onRecalculate: _onRecalculate,
+  onSave: _onSave,
+  onCancel: _onCancel,
+  onAddToCart,
+  addToCartText,
+}: QuoteBreakdownProps) {
   const { getStatusConfig } = useStatusManagement();
-  const [isItemsExpanded, setIsItemsExpanded] = useState(true);
+  const [isItemsExpanded, _setIsItemsExpanded] = useState(true);
+
+  // Get status configuration for this quote
+  const statusConfig = getStatusConfig(quote.status, 'quote');
 
   // DYNAMIC: Quote UI state mapping using status management configuration
   const getQuoteUIState = useMemo(() => {
     const { status, in_cart } = quote;
     const statusConfig = getStatusConfig(status, 'quote');
-    
+
     let step: 'review' | 'approve' | 'cart' | 'checkout' | 'rejected' = 'review';
     let summaryStatus: 'pending' | 'approved' | 'rejected' | 'in_cart' = 'pending';
-    
+
     // Use dynamic configuration or fallback to hardcoded logic
     if (statusConfig) {
       // Determine step based on status configuration
@@ -107,11 +109,11 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
         summaryStatus = 'pending';
       }
     }
-    
+
     return { step, summaryStatus, rejected: step === 'rejected' };
   }, [quote, getStatusConfig]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
+  const [_isEditing, _setIsEditing] = useState(false);
+  const [_isDirty, _setIsDirty] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isApprovalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [isRejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -120,7 +122,7 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
   const [showMessages, setShowMessages] = useState(false);
   const queryClient = useQueryClient();
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const _isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   const { data: countrySettings } = useQuery({
     queryKey: ['country-settings', quote.destination_country],
@@ -132,7 +134,7 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
         .single();
       if (error) throw error;
       return data;
-    }
+    },
   });
 
   // Refresh quote data when component mounts or when returning to the page
@@ -142,7 +144,7 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
 
   const hasCalculation = quote.final_total !== null;
   const showBreakdown = hasCalculation; // Always show breakdown if there's a calculation
-  
+
   // Use the same currency conversion logic for both breakdown and summary
   const quoteTotal = useMemo(() => {
     if (!quote.final_total) return 0;
@@ -212,20 +214,31 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
           status={uiState.summaryStatus}
           total={quoteTotal}
           itemCount={quote.quote_items?.length || 0}
-          onApprove={uiState.step === 'approve' || (statusConfig?.allowApproval ?? false) ? handleApproveClick : undefined}
-          onReject={statusConfig?.allowRejection ?? false ? handleRejectSummary : undefined}
+          onApprove={
+            uiState.step === 'approve' || (statusConfig?.allowApproval ?? false)
+              ? handleApproveClick
+              : undefined
+          }
+          onReject={(statusConfig?.allowRejection ?? false) ? handleRejectSummary : undefined}
           isProcessing={isProcessing}
           countryCode={quote.destination_country}
           renderActions={() => (
             <>
               {quote.status !== 'rejected' && (
-                <Button onClick={handleAddToCart} disabled={isProcessing} className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm">
+                <Button
+                  onClick={handleAddToCart}
+                  disabled={isProcessing}
+                  className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm"
+                >
                   <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  {addToCartText || "Add to Cart"}
+                  {addToCartText || 'Add to Cart'}
                 </Button>
               )}
               {quote.status !== 'rejected' && (
-                <Button asChild className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm">
+                <Button
+                  asChild
+                  className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm"
+                >
                   <Link to="/cart">
                     <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                     Go to Cart
@@ -233,7 +246,11 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
                 </Button>
               )}
               {quote.status !== 'rejected' && (
-                <Button onClick={handleReApprove} disabled={isProcessing} className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm">
+                <Button
+                  onClick={handleReApprove}
+                  disabled={isProcessing}
+                  className="ml-1.5 sm:ml-2 bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 h-auto text-sm"
+                >
                   Re-Approve Quote
                 </Button>
               )}
@@ -290,23 +307,41 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
           <div className="md:block hidden">
             <Popover open={isHelpOpen} onOpenChange={setHelpOpen}>
               <PopoverTrigger asChild>
-                <button className="text-base font-medium flex items-center gap-1 text-red-600 dark:text-red-400 bg-transparent border-none shadow-none px-0 py-0 hover:bg-transparent hover:text-red-500 focus:outline-none focus:ring-0" type="button">
+                <button
+                  className="text-base font-medium flex items-center gap-1 text-red-600 dark:text-red-400 bg-transparent border-none shadow-none px-0 py-0 hover:bg-transparent hover:text-red-500 focus:outline-none focus:ring-0"
+                  type="button"
+                >
                   <HelpCircle className="w-5 h-5 text-red-600 dark:text-red-400" /> Need Help?
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="center" className="w-56 p-2 backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl">
-                <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-gray-700" onClick={handleMessageSupport}>
+              <PopoverContent
+                align="center"
+                className="w-56 p-2 backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl"
+              >
+                <button
+                  className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-gray-700"
+                  onClick={handleMessageSupport}
+                >
                   <MessageCircle className="w-4 h-4" /> Message Support
                 </button>
                 {quote.status !== 'rejected' && (
-                  <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-red-600" onClick={handleCancelQuote}>
+                  <button
+                    className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-red-600"
+                    onClick={handleCancelQuote}
+                  >
                     <XCircle className="w-4 h-4" /> Cancel Quote
                   </button>
                 )}
-                <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-gray-700" onClick={handleFAQ}>
+                <button
+                  className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-gray-700"
+                  onClick={handleFAQ}
+                >
                   <BookOpen className="w-4 h-4" /> FAQ
                 </button>
-                <button className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-gray-700" onClick={handleRequestChanges}>
+                <button
+                  className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-white/20 text-sm transition-colors duration-300 text-gray-700"
+                  onClick={handleRequestChanges}
+                >
                   <Edit2 className="w-4 h-4" /> Request Changes
                 </button>
               </PopoverContent>
@@ -318,33 +353,34 @@ export function QuoteBreakdown({ quote, onApprove, onReject, onCalculate, onReca
               type="button"
               onClick={() => setMobileHelpOpen(true)}
             >
-              <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" /> Need Help?
+              <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" /> Need
+              Help?
             </button>
             <Dialog open={isMobileHelpOpen} onOpenChange={setMobileHelpOpen}>
               <DialogContent className="sm:max-w-[300px] backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl">
                 <div className="flex flex-col divide-y divide-white/20">
-                  <button 
-                    className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-gray-700" 
+                  <button
+                    className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-gray-700"
                     onClick={handleMessageSupport}
                   >
                     <MessageCircle className="w-4 h-4" /> Message Support
                   </button>
                   {quote.status !== 'rejected' && (
-                    <button 
-                      className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-red-600" 
+                    <button
+                      className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-red-600"
                       onClick={handleCancelQuote}
                     >
                       <XCircle className="w-4 h-4" /> Cancel Quote
                     </button>
                   )}
-                  <button 
-                    className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-gray-700" 
+                  <button
+                    className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-gray-700"
                     onClick={handleFAQ}
                   >
                     <BookOpen className="w-4 h-4" /> FAQ
                   </button>
-                  <button 
-                    className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-gray-700" 
+                  <button
+                    className="flex items-center gap-2 w-full px-3 py-3 text-sm hover:bg-white/20 active:bg-white/30 transition-colors duration-300 text-gray-700"
                     onClick={handleRequestChanges}
                   >
                     <Edit2 className="w-4 h-4" /> Request Changes

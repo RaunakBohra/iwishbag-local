@@ -29,7 +29,7 @@ export const useCart = () => {
     loadFromServer,
     selectAllCart,
     selectAllSaved,
-    clearCart
+    clearCart,
   } = useCartStore();
 
   const { formatAmount } = useUserCurrency();
@@ -46,28 +46,28 @@ export const useCart = () => {
   // Cart calculations - FIXED: Use consistent calculation method
   const cartTotal = useMemo(() => {
     return items.reduce((total, item) => {
-      return total + ((item.finalTotal || 0) * (item.quantity || 1));
+      return total + (item.finalTotal || 0) * (item.quantity || 1);
     }, 0);
   }, [items]);
 
   const cartWeight = useMemo(() => {
     return items.reduce((total, item) => {
-      return total + ((item.itemWeight || 0) * (item.quantity || 1));
+      return total + (item.itemWeight || 0) * (item.quantity || 1);
     }, 0);
   }, [items]);
 
   // FIXED: Ensure selectedItemsTotal only includes cart items (not saved items)
   const selectedItemsTotal = useMemo(() => {
-    const selectedCartItems = items.filter(item => selectedItems.includes(item.id));
+    const selectedCartItems = items.filter((item) => selectedItems.includes(item.id));
     return selectedCartItems.reduce((total, item) => {
-      return total + ((item.finalTotal || 0) * (item.quantity || 1));
+      return total + (item.finalTotal || 0) * (item.quantity || 1);
     }, 0);
   }, [items, selectedItems]);
 
   const selectedItemsWeight = useMemo(() => {
-    const selectedCartItems = items.filter(item => selectedItems.includes(item.id));
+    const selectedCartItems = items.filter((item) => selectedItems.includes(item.id));
     return selectedCartItems.reduce((total, item) => {
-      return total + ((item.itemWeight || 0) * (item.quantity || 1));
+      return total + (item.itemWeight || 0) * (item.quantity || 1);
     }, 0);
   }, [items, selectedItems]);
 
@@ -85,7 +85,7 @@ export const useCart = () => {
 
   // FIXED: Add selected cart items count (excludes saved items)
   const selectedCartItemCount = useMemo(() => {
-    return items.filter(item => selectedItems.includes(item.id)).length;
+    return items.filter((item) => selectedItems.includes(item.id)).length;
   }, [items, selectedItems]);
 
   // Formatted values
@@ -108,40 +108,42 @@ export const useCart = () => {
   };
 
   const getSelectedItems = () => {
-    return [...items, ...savedItems].filter(item => selectedItems.includes(item.id));
+    return [...items, ...savedItems].filter((item) => selectedItems.includes(item.id));
   };
 
   const getSelectedCartItems = () => {
-    return items.filter(item => selectedItems.includes(item.id));
+    return items.filter((item) => selectedItems.includes(item.id));
   };
 
   const getSelectedSavedItems = () => {
-    return savedItems.filter(item => selectedItems.includes(item.id));
+    return savedItems.filter((item) => selectedItems.includes(item.id));
   };
 
   const hasSelectedItems = selectedItemCount > 0;
   const hasCartItems = itemCount > 0;
   const hasSavedItems = savedItemCount > 0;
-  const isAllSelected = selectedItemCount === (itemCount + savedItemCount) && (itemCount + savedItemCount) > 0;
+  const isAllSelected =
+    selectedItemCount === itemCount + savedItemCount && itemCount + savedItemCount > 0;
 
   // FIXED: Context-aware select all with better logic
   const isAllCartSelected = itemCount > 0 && getSelectedCartItems().length === itemCount;
-  const isAllSavedSelected = savedItemCount > 0 && getSelectedSavedItems().length === savedItemCount;
+  const isAllSavedSelected =
+    savedItemCount > 0 && getSelectedSavedItems().length === savedItemCount;
 
   // FIXED: Improved select all handlers with better state management
   const handleSelectAllCart = () => {
     if (isAllCartSelected) {
       // Deselect only cart items, keep saved items selected
-      const cartItemIds = items.map(item => item.id);
-      const remainingSelectedItems = selectedItems.filter(id => !cartItemIds.includes(id));
+      const cartItemIds = items.map((item) => item.id);
+      const remainingSelectedItems = selectedItems.filter((id) => !cartItemIds.includes(id));
       useCartStore.setState({ selectedItems: remainingSelectedItems });
     } else {
       // Select all cart items, keep existing saved items selected
-      const cartItemIds = items.map(item => item.id);
-      const savedItemIds = savedItems.map(item => item.id);
-      const currentlySelectedSavedItems = selectedItems.filter(id => savedItemIds.includes(id));
-      useCartStore.setState({ 
-        selectedItems: [...cartItemIds, ...currentlySelectedSavedItems]
+      const cartItemIds = items.map((item) => item.id);
+      const savedItemIds = savedItems.map((item) => item.id);
+      const currentlySelectedSavedItems = selectedItems.filter((id) => savedItemIds.includes(id));
+      useCartStore.setState({
+        selectedItems: [...cartItemIds, ...currentlySelectedSavedItems],
       });
     }
   };
@@ -149,16 +151,16 @@ export const useCart = () => {
   const handleSelectAllSaved = () => {
     if (isAllSavedSelected) {
       // Deselect only saved items, keep cart items selected
-      const savedItemIds = savedItems.map(item => item.id);
-      const remainingSelectedItems = selectedItems.filter(id => !savedItemIds.includes(id));
+      const savedItemIds = savedItems.map((item) => item.id);
+      const remainingSelectedItems = selectedItems.filter((id) => !savedItemIds.includes(id));
       useCartStore.setState({ selectedItems: remainingSelectedItems });
     } else {
       // Select all saved items, keep existing cart items selected
-      const savedItemIds = savedItems.map(item => item.id);
-      const cartItemIds = items.map(item => item.id);
-      const currentlySelectedCartItems = selectedItems.filter(id => cartItemIds.includes(id));
-      useCartStore.setState({ 
-        selectedItems: [...savedItemIds, ...currentlySelectedCartItems]
+      const savedItemIds = savedItems.map((item) => item.id);
+      const cartItemIds = items.map((item) => item.id);
+      const currentlySelectedCartItems = selectedItems.filter((id) => cartItemIds.includes(id));
+      useCartStore.setState({
+        selectedItems: [...savedItemIds, ...currentlySelectedCartItems],
       });
     }
   };
@@ -171,14 +173,14 @@ export const useCart = () => {
   };
 
   const handleBulkMoveToSaved = async () => {
-    const selectedCartItemIds = getSelectedCartItems().map(item => item.id);
+    const selectedCartItemIds = getSelectedCartItems().map((item) => item.id);
     if (selectedCartItemIds.length > 0) {
       await bulkMove(selectedCartItemIds, true);
     }
   };
 
   const handleBulkMoveToCart = async () => {
-    const selectedSavedItemIds = getSelectedSavedItems().map(item => item.id);
+    const selectedSavedItemIds = getSelectedSavedItems().map((item) => item.id);
     if (selectedSavedItemIds.length > 0) {
       await bulkMove(selectedSavedItemIds, false);
     }
@@ -204,7 +206,7 @@ export const useCart = () => {
     error,
     isSyncing,
     hasLoadedFromServer,
-    
+
     // Computed values
     cartTotal,
     cartWeight,
@@ -217,7 +219,7 @@ export const useCart = () => {
     formattedCartTotal,
     formattedSelectedTotal,
     formattedSelectedCartTotal,
-    
+
     // Boolean flags
     hasSelectedItems,
     hasCartItems,
@@ -225,7 +227,7 @@ export const useCart = () => {
     isAllSelected,
     isAllCartSelected,
     isAllSavedSelected,
-    
+
     // Actions
     addItem,
     removeItem,
@@ -245,13 +247,13 @@ export const useCart = () => {
     selectAllCart,
     selectAllSaved,
     clearCart,
-    
+
     // Utility functions
     isItemSelected,
     getSelectedItems,
     getSelectedCartItems,
     getSelectedSavedItems,
-    
+
     // Bulk operation handlers
     handleBulkDelete,
     handleBulkMoveToSaved,
@@ -260,5 +262,3 @@ export const useCart = () => {
     handleSelectAllSaved,
   };
 };
-
- 

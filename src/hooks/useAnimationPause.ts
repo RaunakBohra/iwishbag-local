@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect } from 'react';
 
 export const useAnimationPause = () => {
   const ref = useRef<HTMLDivElement>(null);
@@ -9,28 +9,28 @@ export const useAnimationPause = () => {
 
     const handleVisibilityChange = () => {
       const animations = element.getAnimations?.() || [];
-      
+
       if (document.hidden) {
-        animations.forEach(animation => {
+        animations.forEach((animation) => {
           animation.pause();
         });
       } else {
-        animations.forEach(animation => {
+        animations.forEach((animation) => {
           animation.play();
         });
       }
     };
 
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
-      entries.forEach(entry => {
+      entries.forEach((entry) => {
         const animations = entry.target.getAnimations?.() || [];
-        
+
         if (entry.isIntersecting) {
-          animations.forEach(animation => {
+          animations.forEach((animation) => {
             animation.play();
           });
         } else {
-          animations.forEach(animation => {
+          animations.forEach((animation) => {
             animation.pause();
           });
         }
@@ -38,11 +38,11 @@ export const useAnimationPause = () => {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     const observer = new IntersectionObserver(handleIntersection, {
-      threshold: 0.1
+      threshold: 0.1,
     });
-    
+
     observer.observe(element);
 
     return () => {

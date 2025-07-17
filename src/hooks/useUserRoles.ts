@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserRole {
   id: string;
@@ -34,18 +34,20 @@ export const useUserRoles = () => {
     queryFn: async () => {
       try {
         console.log('Fetching users with roles for local development...');
-        
+
         // Get all user roles with profile information
         const { data: userRoles, error: rolesError } = await supabase
           .from('user_roles')
-          .select(`
+          .select(
+            `
             *,
             profiles!inner (
               id,
               full_name,
               created_at
             )
-          `)
+          `,
+          )
           .order('created_at', { ascending: false });
 
         if (rolesError) {
@@ -66,29 +68,30 @@ export const useUserRoles = () => {
 
         // Create a map of user roles by user_id
         const rolesMap = new Map();
-        userRoles?.forEach(role => {
+        userRoles?.forEach((role) => {
           rolesMap.set(role.user_id, role);
         });
 
         // Combine profiles with their roles
-        const usersWithRoles: UserWithRole[] = allProfiles?.map(profile => {
-          const role = rolesMap.get(profile.id);
-          
-          return {
-            id: profile.id,
-            email: `user-${profile.id}@example.com`, // Mock email for local dev
-            full_name: profile.full_name,
-            role: role?.role || null,
-            role_id: role?.id || null,
-            created_at: profile.created_at,
-            created_by: role?.created_by || null,
-            last_sign_in: null,
-            email_confirmed: true
-          };
-        }) || [];
+        const usersWithRoles: UserWithRole[] =
+          allProfiles?.map((profile) => {
+            const role = rolesMap.get(profile.id);
+
+            return {
+              id: profile.id,
+              email: `user-${profile.id}@example.com`, // Mock email for local dev
+              full_name: profile.full_name,
+              role: role?.role || null,
+              role_id: role?.id || null,
+              created_at: profile.created_at,
+              created_by: role?.created_by || null,
+              last_sign_in: null,
+              email_confirmed: true,
+            };
+          }) || [];
 
         // Add current user if not in the list
-        if (currentUser && !usersWithRoles.find(u => u.id === currentUser.id)) {
+        if (currentUser && !usersWithRoles.find((u) => u.id === currentUser.id)) {
           usersWithRoles.unshift({
             id: currentUser.id,
             email: currentUser.email || 'current-user@example.com',
@@ -98,7 +101,7 @@ export const useUserRoles = () => {
             created_at: currentUser.created_at,
             created_by: null,
             last_sign_in: currentUser.last_sign_in_at,
-            email_confirmed: !!currentUser.email_confirmed_at
+            email_confirmed: !!currentUser.email_confirmed_at,
           });
         }
 
@@ -115,22 +118,30 @@ export const useUserRoles = () => {
 
   // Assign role to user by email
   const assignRoleMutation = useMutation({
-    mutationFn: async ({ email, role }: { email: string; role: 'admin' | 'user' | 'moderator' }) => {
+    mutationFn: async ({
+      email,
+      role,
+    }: {
+      email: string;
+      role: 'admin' | 'user' | 'moderator';
+    }) => {
       try {
         // For local development, extract user ID from email or find by name
         let targetUserId: string;
-        
+
         if (email.includes('user-') && email.includes('@example.com')) {
           // Extract user ID from mock email format
           targetUserId = email.replace('user-', '').replace('@example.com', '');
         } else {
           // Find user by email in the users list
-          const targetUser = users?.find(user => user.email?.toLowerCase() === email.toLowerCase());
-          
+          const targetUser = users?.find(
+            (user) => user.email?.toLowerCase() === email.toLowerCase(),
+          );
+
           if (!targetUser) {
             throw new Error(`User with email "${email}" not found`);
           }
-          
+
           targetUserId = targetUser.id;
         }
 
@@ -141,7 +152,8 @@ export const useUserRoles = () => {
           .eq('user_id', targetUserId)
           .single();
 
-        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        if (checkError && checkError.code !== 'PGRST116') {
+          // PGRST116 = no rows returned
           console.error('Error checking existing role:', checkError);
           throw new Error('Failed to check existing user role');
         }
@@ -150,9 +162,9 @@ export const useUserRoles = () => {
           // Update existing role
           const { error: updateError } = await supabase
             .from('user_roles')
-            .update({ 
+            .update({
               role: role,
-              created_by: currentUser?.id || null
+              created_by: currentUser?.id || null,
             })
             .eq('user_id', targetUserId);
 
@@ -162,13 +174,11 @@ export const useUserRoles = () => {
           }
         } else {
           // Create new role
-          const { error: insertError } = await supabase
-            .from('user_roles')
-            .insert({
-              user_id: targetUserId,
-              role: role,
-              created_by: currentUser?.id || null
-            });
+          const { error: insertError } = await supabase.from('user_roles').insert({
+            user_id: targetUserId,
+            role: role,
+            created_by: currentUser?.id || null,
+          });
 
           if (insertError) {
             console.error('Error creating user role:', insertError);
@@ -185,17 +195,17 @@ export const useUserRoles = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-roles'] });
       toast({
-        title: "Success",
-        description: "Role assigned successfully",
+        title: 'Success',
+        description: 'Role assigned successfully',
       });
     },
     onError: (error: unknown) => {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Assign role mutation error:', error);
       toast({
-        title: "Error",
-        description: errorMessage || "Failed to assign role. Please check the email and try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: errorMessage || 'Failed to assign role. Please check the email and try again.',
+        variant: 'destructive',
       });
     },
   });
@@ -226,10 +236,7 @@ export const useUserRoles = () => {
         }
 
         // Delete the role
-        const { error: deleteError } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('id', roleId);
+        const { error: deleteError } = await supabase.from('user_roles').delete().eq('id', roleId);
 
         if (deleteError) {
           console.error('Error removing role:', deleteError);
@@ -245,29 +252,29 @@ export const useUserRoles = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-roles'] });
       toast({
-        title: "Success",
-        description: "Role removed successfully",
+        title: 'Success',
+        description: 'Role removed successfully',
       });
     },
     onError: (error: unknown) => {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Remove role mutation error:', error);
       toast({
-        title: "Error",
-        description: errorMessage || "Failed to remove role",
-        variant: "destructive",
+        title: 'Error',
+        description: errorMessage || 'Failed to remove role',
+        variant: 'destructive',
       });
     },
   });
 
   // Get users by role
   const getUsersByRole = (role: 'admin' | 'user' | 'moderator') => {
-    return users?.filter(user => user.role === role) || [];
+    return users?.filter((user) => user.role === role) || [];
   };
 
   // Get users without roles
   const getUsersWithoutRole = () => {
-    return users?.filter(user => !user.role) || [];
+    return users?.filter((user) => !user.role) || [];
   };
 
   return {
@@ -277,6 +284,6 @@ export const useUserRoles = () => {
     removeRoleMutation,
     getUsersByRole,
     getUsersWithoutRole,
-    currentUser
+    currentUser,
   };
-}; 
+};

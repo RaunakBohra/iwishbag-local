@@ -16,7 +16,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
             refetchOnWindowFocus: false,
           },
         },
-      })
+      }),
   );
 
   return (
@@ -25,4 +25,4 @@ export function QueryProvider({ children }: QueryProviderProps) {
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
-} 
+}

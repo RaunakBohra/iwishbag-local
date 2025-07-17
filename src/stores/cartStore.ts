@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { normalizeCountryCode } from '@/lib/addressUtils';
 
 export interface CartItem {
   id: string;
@@ -66,7 +67,7 @@ export const useCartStore = create<CartStore>()(
         if (syncTimeout) {
           clearTimeout(syncTimeout);
         }
-        
+
         syncTimeout = setTimeout(() => {
           get().syncWithServer();
         }, 500);
@@ -87,22 +88,20 @@ export const useCartStore = create<CartStore>()(
         // Actions
         addItem: (item: CartItem) => {
           set((state) => {
-            const existingItem = state.items.find(i => i.id === item.id);
-            
+            const existingItem = state.items.find((i) => i.id === item.id);
+
             if (existingItem) {
               return {
                 ...state,
-                items: state.items.map(i => 
-                  i.id === item.id 
-                    ? { ...i, quantity: i.quantity + item.quantity }
-                    : i
-                )
+                items: state.items.map((i) =>
+                  i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i,
+                ),
               };
             }
-            
+
             return {
               ...state,
-              items: [...state.items, item]
+              items: [...state.items, item],
             };
           });
         },
@@ -111,23 +110,20 @@ export const useCartStore = create<CartStore>()(
           // Update local state immediately
           set((state) => ({
             ...state,
-            items: state.items.filter(item => item.id !== id),
-            selectedItems: state.selectedItems.filter(itemId => itemId !== id)
+            items: state.items.filter((item) => item.id !== id),
+            selectedItems: state.selectedItems.filter((itemId) => itemId !== id),
           }));
 
           // Sync with server
           try {
-            const { error } = await supabase
-              .from('quotes')
-              .update({ in_cart: false })
-              .eq('id', id);
+            const { error } = await supabase.from('quotes').update({ in_cart: false }).eq('id', id);
 
             if (error) {
               logger.error('Error syncing removeItem with server', error, 'Cart');
               // Revert local state on error
               set((state) => ({
                 ...state,
-                items: [...state.items, state.items.find(item => item.id === id)].filter(Boolean)
+                items: [...state.items, state.items.find((item) => item.id === id)].filter(Boolean),
               }));
             }
           } catch (error) {
@@ -135,7 +131,7 @@ export const useCartStore = create<CartStore>()(
             // Revert local state on error
             set((state) => ({
               ...state,
-              items: [...state.items, state.items.find(item => item.id === id)].filter(Boolean)
+              items: [...state.items, state.items.find((item) => item.id === id)].filter(Boolean),
             }));
           }
         },
@@ -143,39 +139,34 @@ export const useCartStore = create<CartStore>()(
         updateQuantity: (id: string, quantity: number) => {
           set((state) => ({
             ...state,
-            items: state.items.map(item => 
-              item.id === id ? { ...item, quantity } : item
-            )
+            items: state.items.map((item) => (item.id === id ? { ...item, quantity } : item)),
           }));
         },
 
         moveToSaved: async (id: string) => {
           const state = get();
-          const item = state.items.find(i => i.id === id);
+          const item = state.items.find((i) => i.id === id);
           if (!item) return;
-          
+
           // Update local state immediately
           set((state) => ({
             ...state,
-            items: state.items.filter(i => i.id !== id),
+            items: state.items.filter((i) => i.id !== id),
             savedItems: [...state.savedItems, { ...item, inCart: false }],
-            selectedItems: state.selectedItems.filter(itemId => itemId !== id)
+            selectedItems: state.selectedItems.filter((itemId) => itemId !== id),
           }));
 
           // Sync with server
           try {
-            const { error } = await supabase
-              .from('quotes')
-              .update({ in_cart: false })
-              .eq('id', id);
+            const { error } = await supabase.from('quotes').update({ in_cart: false }).eq('id', id);
 
             if (error) {
               console.error('Error syncing moveToSaved with server:', error);
               // Revert local state on error
               set((state) => ({
                 ...state,
-                savedItems: state.savedItems.filter(i => i.id !== id),
-                items: [...state.items, { ...item, inCart: true }]
+                savedItems: state.savedItems.filter((i) => i.id !== id),
+                items: [...state.items, { ...item, inCart: true }],
               }));
             }
           } catch (error) {
@@ -183,39 +174,36 @@ export const useCartStore = create<CartStore>()(
             // Revert local state on error
             set((state) => ({
               ...state,
-              savedItems: state.savedItems.filter(i => i.id !== id),
-              items: [...state.items, { ...item, inCart: true }]
+              savedItems: state.savedItems.filter((i) => i.id !== id),
+              items: [...state.items, { ...item, inCart: true }],
             }));
           }
         },
 
         moveToCart: async (id: string) => {
           const state = get();
-          const item = state.savedItems.find(i => i.id === id);
+          const item = state.savedItems.find((i) => i.id === id);
           if (!item) return;
-          
+
           // Update local state immediately
           set((state) => ({
             ...state,
-            savedItems: state.savedItems.filter(i => i.id !== id),
+            savedItems: state.savedItems.filter((i) => i.id !== id),
             items: [...state.items, { ...item, inCart: true }],
-            selectedItems: state.selectedItems.filter(itemId => itemId !== id)
+            selectedItems: state.selectedItems.filter((itemId) => itemId !== id),
           }));
 
           // Sync with server
           try {
-            const { error } = await supabase
-              .from('quotes')
-              .update({ in_cart: true })
-              .eq('id', id);
+            const { error } = await supabase.from('quotes').update({ in_cart: true }).eq('id', id);
 
             if (error) {
               console.error('Error syncing moveToCart with server:', error);
               // Revert local state on error
               set((state) => ({
                 ...state,
-                items: state.items.filter(i => i.id !== id),
-                savedItems: [...state.savedItems, { ...item, inCart: false }]
+                items: state.items.filter((i) => i.id !== id),
+                savedItems: [...state.savedItems, { ...item, inCart: false }],
               }));
             }
           } catch (error) {
@@ -223,8 +211,8 @@ export const useCartStore = create<CartStore>()(
             // Revert local state on error
             set((state) => ({
               ...state,
-              items: state.items.filter(i => i.id !== id),
-              savedItems: [...state.savedItems, { ...item, inCart: false }]
+              items: state.items.filter((i) => i.id !== id),
+              savedItems: [...state.savedItems, { ...item, inCart: false }],
             }));
           }
         },
@@ -232,46 +220,48 @@ export const useCartStore = create<CartStore>()(
         toggleSelection: (id: string) => {
           set((state) => ({
             selectedItems: state.selectedItems.includes(id)
-              ? state.selectedItems.filter(itemId => itemId !== id)
-              : [...state.selectedItems, id]
+              ? state.selectedItems.filter((itemId) => itemId !== id)
+              : [...state.selectedItems, id],
           }));
         },
 
         selectAll: () => {
           set((state) => ({
-            selectedItems: [...state.items, ...state.savedItems].map(item => item.id)
+            selectedItems: [...state.items, ...state.savedItems].map((item) => item.id),
           }));
         },
 
         selectAllCart: () => {
           set((state) => ({
-            selectedItems: state.items.map(item => item.id)
+            selectedItems: state.items.map((item) => item.id),
           }));
         },
 
         selectAllSaved: () => {
           set((state) => ({
-            selectedItems: state.savedItems.map(item => item.id)
+            selectedItems: state.savedItems.map((item) => item.id),
           }));
         },
 
         clearSelection: () => {
           set((state) => ({
-            selectedItems: []
+            selectedItems: [],
           }));
         },
 
         bulkDelete: async (ids: string[]) => {
           // Store items to revert if needed
           const state = get();
-          const itemsToDelete = [...state.items, ...state.savedItems].filter(item => ids.includes(item.id));
-          
+          const itemsToDelete = [...state.items, ...state.savedItems].filter((item) =>
+            ids.includes(item.id),
+          );
+
           // Update local state immediately
           set((state) => ({
             ...state,
-            items: state.items.filter(item => !ids.includes(item.id)),
-            savedItems: state.savedItems.filter(item => !ids.includes(item.id)),
-            selectedItems: state.selectedItems.filter(id => !ids.includes(id))
+            items: state.items.filter((item) => !ids.includes(item.id)),
+            savedItems: state.savedItems.filter((item) => !ids.includes(item.id)),
+            selectedItems: state.selectedItems.filter((id) => !ids.includes(id)),
           }));
 
           // Sync with server
@@ -286,8 +276,18 @@ export const useCartStore = create<CartStore>()(
               // Revert local state on error
               set((state) => ({
                 ...state,
-                items: [...state.items, ...itemsToDelete.filter(item => !state.savedItems.some(saved => saved.id === item.id))],
-                savedItems: [...state.savedItems, ...itemsToDelete.filter(item => state.savedItems.some(saved => saved.id === item.id))]
+                items: [
+                  ...state.items,
+                  ...itemsToDelete.filter(
+                    (item) => !state.savedItems.some((saved) => saved.id === item.id),
+                  ),
+                ],
+                savedItems: [
+                  ...state.savedItems,
+                  ...itemsToDelete.filter((item) =>
+                    state.savedItems.some((saved) => saved.id === item.id),
+                  ),
+                ],
               }));
             }
           } catch (error) {
@@ -295,24 +295,37 @@ export const useCartStore = create<CartStore>()(
             // Revert local state on error
             set((state) => ({
               ...state,
-              items: [...state.items, ...itemsToDelete.filter(item => !state.savedItems.some(saved => saved.id === item.id))],
-              savedItems: [...state.savedItems, ...itemsToDelete.filter(item => state.savedItems.some(saved => saved.id === item.id))]
+              items: [
+                ...state.items,
+                ...itemsToDelete.filter(
+                  (item) => !state.savedItems.some((saved) => saved.id === item.id),
+                ),
+              ],
+              savedItems: [
+                ...state.savedItems,
+                ...itemsToDelete.filter((item) =>
+                  state.savedItems.some((saved) => saved.id === item.id),
+                ),
+              ],
             }));
           }
         },
 
         bulkMove: async (ids: string[], toSaved: boolean) => {
           const state = get();
-          
+
           if (toSaved) {
-            const itemsToMove = state.items.filter(item => ids.includes(item.id));
-            
+            const itemsToMove = state.items.filter((item) => ids.includes(item.id));
+
             // Update local state immediately
             set((state) => ({
               ...state,
-              items: state.items.filter(item => !ids.includes(item.id)),
-              savedItems: [...state.savedItems, ...itemsToMove.map(item => ({ ...item, inCart: false }))],
-              selectedItems: state.selectedItems.filter(id => !ids.includes(id))
+              items: state.items.filter((item) => !ids.includes(item.id)),
+              savedItems: [
+                ...state.savedItems,
+                ...itemsToMove.map((item) => ({ ...item, inCart: false })),
+              ],
+              selectedItems: state.selectedItems.filter((id) => !ids.includes(id)),
             }));
 
             // Sync with server
@@ -327,8 +340,11 @@ export const useCartStore = create<CartStore>()(
                 // Revert local state on error
                 set((state) => ({
                   ...state,
-                  savedItems: state.savedItems.filter(item => !ids.includes(item.id)),
-                  items: [...state.items, ...itemsToMove.map(item => ({ ...item, inCart: true }))]
+                  savedItems: state.savedItems.filter((item) => !ids.includes(item.id)),
+                  items: [
+                    ...state.items,
+                    ...itemsToMove.map((item) => ({ ...item, inCart: true })),
+                  ],
                 }));
               }
             } catch (error) {
@@ -336,19 +352,19 @@ export const useCartStore = create<CartStore>()(
               // Revert local state on error
               set((state) => ({
                 ...state,
-                savedItems: state.savedItems.filter(item => !ids.includes(item.id)),
-                items: [...state.items, ...itemsToMove.map(item => ({ ...item, inCart: true }))]
+                savedItems: state.savedItems.filter((item) => !ids.includes(item.id)),
+                items: [...state.items, ...itemsToMove.map((item) => ({ ...item, inCart: true }))],
               }));
             }
           } else {
-            const itemsToMove = state.savedItems.filter(item => ids.includes(item.id));
-            
+            const itemsToMove = state.savedItems.filter((item) => ids.includes(item.id));
+
             // Update local state immediately
             set((state) => ({
               ...state,
-              savedItems: state.savedItems.filter(item => !ids.includes(item.id)),
-              items: [...state.items, ...itemsToMove.map(item => ({ ...item, inCart: true }))],
-              selectedItems: state.selectedItems.filter(id => !ids.includes(id))
+              savedItems: state.savedItems.filter((item) => !ids.includes(item.id)),
+              items: [...state.items, ...itemsToMove.map((item) => ({ ...item, inCart: true }))],
+              selectedItems: state.selectedItems.filter((id) => !ids.includes(id)),
             }));
 
             // Sync with server
@@ -363,8 +379,11 @@ export const useCartStore = create<CartStore>()(
                 // Revert local state on error
                 set((state) => ({
                   ...state,
-                  items: state.items.filter(item => !ids.includes(item.id)),
-                  savedItems: [...state.savedItems, ...itemsToMove.map(item => ({ ...item, inCart: false }))]
+                  items: state.items.filter((item) => !ids.includes(item.id)),
+                  savedItems: [
+                    ...state.savedItems,
+                    ...itemsToMove.map((item) => ({ ...item, inCart: false })),
+                  ],
                 }));
               }
             } catch (error) {
@@ -372,8 +391,11 @@ export const useCartStore = create<CartStore>()(
               // Revert local state on error
               set((state) => ({
                 ...state,
-                items: state.items.filter(item => !ids.includes(item.id)),
-                savedItems: [...state.savedItems, ...itemsToMove.map(item => ({ ...item, inCart: false }))]
+                items: state.items.filter((item) => !ids.includes(item.id)),
+                savedItems: [
+                  ...state.savedItems,
+                  ...itemsToMove.map((item) => ({ ...item, inCart: false })),
+                ],
               }));
             }
           }
@@ -403,7 +425,7 @@ export const useCartStore = create<CartStore>()(
             selectedItems: [],
             isLoading: false,
             error: null,
-            hasLoadedFromServer: false
+            hasLoadedFromServer: false,
           });
           localStorage.removeItem('cartState');
         },
@@ -411,9 +433,9 @@ export const useCartStore = create<CartStore>()(
         syncWithServer: async () => {
           const state = get();
           if (!state.userId || state.isSyncing) return;
-          
+
           set({ isSyncing: true });
-          
+
           try {
             // Sync cart items (in_cart = true)
             for (const item of state.items) {
@@ -421,19 +443,19 @@ export const useCartStore = create<CartStore>()(
                 .from('quotes')
                 .update({ in_cart: true })
                 .eq('id', item.id);
-              
+
               if (error) {
                 console.error(`Error syncing cart item ${item.id}:`, error);
               }
             }
-            
+
             // Sync saved items (in_cart = false)
             for (const item of state.savedItems) {
               const { error } = await supabase
                 .from('quotes')
                 .update({ in_cart: false })
                 .eq('id', item.id);
-              
+
               if (error) {
                 console.error(`Error syncing saved item ${item.id}:`, error);
               }
@@ -447,13 +469,13 @@ export const useCartStore = create<CartStore>()(
 
         loadFromServer: async (userId: string) => {
           const state = get();
-          
+
           // Prevent multiple simultaneous loads
           if (state.isLoading) {
             logger.debug('Cart load already in progress, skipping');
             return;
           }
-          
+
           logger.cart('Loading cart from server', { userId });
           set({ isLoading: true, error: null });
 
@@ -464,19 +486,9 @@ export const useCartStore = create<CartStore>()(
             // Fetch all quotes in a single query (optimized for performance)
             const { data: allQuotes, error: quotesError } = await supabase
               .from('quotes')
-              .select(`
-                *,
-                quote_items (
-                  id,
-                  product_name,
-                  product_url,
-                  quantity,
-                  item_price,
-                  item_weight,
-                  image_url,
-                  options
-                )
-              `)
+              .select(
+                '*, quote_items(id, product_name, product_url, quantity, item_price, item_weight, image_url, options)',
+              )
               .eq('user_id', userId)
               .order('created_at', { ascending: false });
 
@@ -486,8 +498,8 @@ export const useCartStore = create<CartStore>()(
             }
 
             // Separate cart and saved quotes locally (more efficient than 2 DB calls)
-            const cartQuotes = allQuotes?.filter(q => q.in_cart) || [];
-            const savedQuotes = allQuotes?.filter(q => !q.in_cart) || [];
+            const cartQuotes = allQuotes?.filter((q) => q.in_cart) || [];
+            const savedQuotes = allQuotes?.filter((q) => !q.in_cart) || [];
 
             // Helper function to convert quote to cart item
             interface QuoteWithItems {
@@ -511,18 +523,18 @@ export const useCartStore = create<CartStore>()(
               created_at?: string;
               updated_at?: string;
             }
-            
+
             const convertQuoteToCartItem = (quote: QuoteWithItems): CartItem => {
               const firstItem = quote.quote_items?.[0];
               const quoteItems = quote.quote_items || [];
-              
+
               // Calculate total from quote items with proper null checks
               const totalFromItems = quoteItems.reduce((sum: number, item) => {
                 const itemPrice = item.item_price || 0;
                 const itemQuantity = item.quantity || 1;
-                return sum + (itemPrice * itemQuantity);
+                return sum + itemPrice * itemQuantity;
               }, 0);
-              
+
               // FIXED: Use proper fallback chain for total price
               let totalPrice = 0;
               if (quote.final_total && quote.final_total > 0) {
@@ -535,17 +547,18 @@ export const useCartStore = create<CartStore>()(
                 // If no price found, use the first item's price
                 totalPrice = firstItem?.item_price || 0;
               }
-              
+
               const quantity = quote.quantity || firstItem?.quantity || 1;
               const itemWeight = firstItem?.item_weight || quote.item_weight || 0;
-              
+
               // Extract destination country from shipping address or quote
               let destinationCountry = quote.destination_country || 'US'; // Default fallback
               if (quote.shipping_address) {
                 try {
-                  const shippingAddr = typeof quote.shipping_address === 'string' 
-                    ? JSON.parse(quote.shipping_address) 
-                    : quote.shipping_address;
+                  const shippingAddr =
+                    typeof quote.shipping_address === 'string'
+                      ? JSON.parse(quote.shipping_address)
+                      : quote.shipping_address;
                   if (shippingAddr?.destination_country) {
                     destinationCountry = shippingAddr.destination_country;
                   } else if (shippingAddr?.countryCode) {
@@ -558,11 +571,15 @@ export const useCartStore = create<CartStore>()(
                   console.warn('Failed to parse shipping address:', e);
                 }
               }
-              
+
+              // Normalize country names to country codes
+              // This fixes the issue where shipping addresses contain full country names
+              destinationCountry = normalizeCountryCode(destinationCountry);
+
               // Determine purchase country (where we buy from)
               // origin_country is the merchant location (e.g., US for Amazon.com)
               const purchaseCountry = quote.origin_country || quote.destination_country || 'US';
-              
+
               // Log country data for debugging
               if (!destinationCountry || destinationCountry === 'US') {
                 console.debug('Cart item country resolution:', {
@@ -571,10 +588,10 @@ export const useCartStore = create<CartStore>()(
                   purchaseCountry,
                   quote_destination_country: quote.destination_country,
                   quote_origin_country: quote.origin_country,
-                  shipping_address: quote.shipping_address
+                  shipping_address: quote.shipping_address,
                 });
               }
-              
+
               const cartItem = {
                 id: quote.id,
                 quoteId: quote.id,
@@ -590,17 +607,17 @@ export const useCartStore = create<CartStore>()(
                 inCart: quote.in_cart || false,
                 isSelected: false,
                 createdAt: new Date(quote.created_at),
-                updatedAt: new Date(quote.updated_at)
+                updatedAt: new Date(quote.updated_at),
               };
-              
+
               // FIXED: Final safety check to ensure all numeric values are valid
               const validatedCartItem = {
                 ...cartItem,
                 finalTotal: isNaN(cartItem.finalTotal) ? 0 : cartItem.finalTotal,
                 quantity: isNaN(cartItem.quantity) ? 1 : cartItem.quantity,
-                itemWeight: isNaN(cartItem.itemWeight) ? 0 : cartItem.itemWeight
+                itemWeight: isNaN(cartItem.itemWeight) ? 0 : cartItem.itemWeight,
               };
-              
+
               return validatedCartItem;
             };
 
@@ -609,22 +626,21 @@ export const useCartStore = create<CartStore>()(
             const savedItems: CartItem[] = savedQuotes.map(convertQuoteToCartItem);
 
             // Update state
-            set({ 
-              items: cartItems, 
-              savedItems, 
+            set({
+              items: cartItems,
+              savedItems,
               isLoading: false,
               hasLoadedFromServer: true,
               selectedItems: [],
-              isInitialized: true
+              isInitialized: true,
             });
 
             logger.cart('Cart loaded successfully from server');
-
           } catch (error) {
             logger.error('Error loading cart from server', error, 'Cart');
-            set({ 
+            set({
               error: error instanceof Error ? error.message : 'Failed to load cart',
-              isLoading: false 
+              isLoading: false,
             });
           }
         },
@@ -649,14 +665,14 @@ export const useCartStore = create<CartStore>()(
           state.isLoading = false;
         }
       },
-    }
-  )
+    },
+  ),
 );
 
 export function setCartStorageKey(userId: string) {
   if (userId) {
     useCartStore.persist.setOptions({
-      name: `cart-store-${userId}`
+      name: `cart-store-${userId}`,
     });
   }
-} 
+}

@@ -1,40 +1,45 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Package, Clock, CheckCircle, Users } from "lucide-react";
-import { useStatusManagement } from "@/hooks/useStatusManagement";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Package, Clock, CheckCircle, Users } from 'lucide-react';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 export const AdminAnalytics = () => {
   const { getStatusesForOrdersList, getStatusesForQuotesList } = useStatusManagement();
-  
+
   const { data: analytics, isLoading } = useQuery({
     queryKey: ['admin-analytics-basic'],
     queryFn: async () => {
       // Use count queries instead of fetching all data
-      const [
-        totalQuotesResult,
-        pendingQuotesResult,
-        activeOrdersResult,
-        completedOrdersResult
-      ] = await Promise.all([
-        supabase.from('quotes').select('*', { count: 'exact', head: true }),
-        supabase.from('quotes').select('*', { count: 'exact', head: true })
-          .in('status', getStatusesForQuotesList()),
-        supabase.from('quotes').select('*', { count: 'exact', head: true })
-          .in('status', getStatusesForOrdersList()),
-        supabase.from('quotes').select('*', { count: 'exact', head: true })
-          .in('status', getStatusesForOrdersList().filter(status => status === 'completed'))
-      ]);
+      const [totalQuotesResult, pendingQuotesResult, activeOrdersResult, completedOrdersResult] =
+        await Promise.all([
+          supabase.from('quotes').select('*', { count: 'exact', head: true }),
+          supabase
+            .from('quotes')
+            .select('*', { count: 'exact', head: true })
+            .in('status', getStatusesForQuotesList()),
+          supabase
+            .from('quotes')
+            .select('*', { count: 'exact', head: true })
+            .in('status', getStatusesForOrdersList()),
+          supabase
+            .from('quotes')
+            .select('*', { count: 'exact', head: true })
+            .in(
+              'status',
+              getStatusesForOrdersList().filter((status) => status === 'completed'),
+            ),
+        ]);
 
       return {
         totalQuotes: totalQuotesResult.count || 0,
         pendingQuotes: pendingQuotesResult.count || 0,
         activeOrders: activeOrdersResult.count || 0,
-        completedOrders: completedOrdersResult.count || 0
+        completedOrders: completedOrdersResult.count || 0,
       };
     },
     staleTime: 60000, // Cache for 1 minute
-    refetchInterval: 300000 // Refetch every 5 minutes
+    refetchInterval: 300000, // Refetch every 5 minutes
   });
 
   if (isLoading) {
@@ -56,29 +61,29 @@ export const AdminAnalytics = () => {
 
   const metrics = [
     {
-      title: "Total Quotes",
+      title: 'Total Quotes',
       value: analytics?.totalQuotes || 0,
       icon: Package,
-      color: "text-blue-600"
+      color: 'text-blue-600',
     },
     {
-      title: "Pending Quotes",
+      title: 'Pending Quotes',
       value: analytics?.pendingQuotes || 0,
       icon: Clock,
-      color: "text-yellow-600"
+      color: 'text-yellow-600',
     },
     {
-      title: "Active Orders",
+      title: 'Active Orders',
       value: analytics?.activeOrders || 0,
       icon: Users,
-      color: "text-green-600"
+      color: 'text-green-600',
     },
     {
-      title: "Completed Orders",
+      title: 'Completed Orders',
       value: analytics?.completedOrders || 0,
       icon: CheckCircle,
-      color: "text-purple-600"
-    }
+      color: 'text-purple-600',
+    },
   ];
 
   return (

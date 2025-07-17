@@ -1,36 +1,33 @@
-import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
-import { GuestEmailField } from "@/components/forms/quote-form-fields/GuestEmailField";
-import QuoteItem from "./quote-form-fields/QuoteItem";
-import { Plus, Sparkles, ArrowRight, CheckCircle, MapPin, PlusCircle, Edit } from "lucide-react";
-import { CountryField } from "./quote-form-fields/CountryField";
-import { useQuoteForm } from "@/hooks/useQuoteForm";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Tables } from "@/integrations/supabase/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AddressForm } from "@/components/profile/AddressForm";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from '@/components/ui/button';
+import { Form } from '@/components/ui/form';
+import { GuestEmailField } from '@/components/forms/quote-form-fields/GuestEmailField';
+import QuoteItem from './quote-form-fields/QuoteItem';
+import { Plus, Sparkles, ArrowRight, CheckCircle, MapPin, PlusCircle } from 'lucide-react';
+import { CountryField } from './quote-form-fields/CountryField';
+import { useQuoteForm } from '@/hooks/useQuoteForm';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { useState, useEffect } from 'react';
+// Removed unused useAuth import
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AddressForm } from '@/components/profile/AddressForm';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const QuoteForm = () => {
-  const {
-    form,
-    fields,
-    append,
-    remove,
-    onSubmit,
-    loading,
-    countryCode,
-    user,
-  } = useQuoteForm();
+  const { form, fields, append, remove, onSubmit, loading, countryCode, user } = useQuoteForm();
 
   const queryClient = useQueryClient();
   const [selectedAddressId, setSelectedAddressId] = useState<string | undefined>();
@@ -58,11 +55,8 @@ const QuoteForm = () => {
   const { data: allCountrySettings } = useQuery({
     queryKey: ['country-settings'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('country_settings')
-        .select('*')
-        .order('name');
-      
+      const { data, error } = await supabase.from('country_settings').select('*').order('name');
+
       if (error) throw new Error(error.message);
       return data;
     },
@@ -71,7 +65,7 @@ const QuoteForm = () => {
   // Auto-select default address when addresses are loaded
   useEffect(() => {
     if (userAddresses && userAddresses.length > 0 && !selectedAddressId) {
-      const defaultAddress = userAddresses.find(addr => addr.is_default);
+      const defaultAddress = userAddresses.find((addr) => addr.is_default);
       if (defaultAddress) {
         setSelectedAddressId(defaultAddress.id);
       } else {
@@ -81,7 +75,7 @@ const QuoteForm = () => {
     }
   }, [userAddresses, selectedAddressId]);
 
-  const selectedAddress = userAddresses?.find(addr => addr.id === selectedAddressId);
+  const selectedAddress = userAddresses?.find((addr) => addr.id === selectedAddressId);
 
   const handleAddressSelect = (addressId: string) => {
     setSelectedAddressId(addressId);
@@ -91,7 +85,7 @@ const QuoteForm = () => {
     setShowAddressDialog(true);
   };
 
-  const handleAddressDialogClose = () => {
+  const _handleAddressDialogClose = () => {
     setShowAddressDialog(false);
   };
 
@@ -109,18 +103,20 @@ const QuoteForm = () => {
     // Include selected address in the submission
     const submissionData = {
       ...data,
-      shippingAddress: selectedAddress ? {
-        fullName: user?.full_name || '',
-        recipientName: selectedAddress.recipient_name,
-        streetAddress: selectedAddress.address_line1,
-        addressLine2: selectedAddress.address_line2,
-        city: selectedAddress.city,
-        state: selectedAddress.state_province_region,
-        postalCode: selectedAddress.postal_code,
-        country: selectedAddress.country,
-        countryCode: selectedAddress.destination_country,
-        phone: selectedAddress.phone,
-      } : undefined,
+      shippingAddress: selectedAddress
+        ? {
+            fullName: user?.full_name || '',
+            recipientName: selectedAddress.recipient_name,
+            streetAddress: selectedAddress.address_line1,
+            addressLine2: selectedAddress.address_line2,
+            city: selectedAddress.city,
+            state: selectedAddress.state_province_region,
+            postalCode: selectedAddress.postal_code,
+            country: selectedAddress.country,
+            countryCode: selectedAddress.destination_country,
+            phone: selectedAddress.phone,
+          }
+        : undefined,
     };
     onSubmit(submissionData);
   };
@@ -156,14 +152,19 @@ const QuoteForm = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <CountryField control={form.control} isLoading={loading} filter="purchase" label="Purchase Country" />
+            <CountryField
+              control={form.control}
+              isLoading={loading}
+              filter="purchase"
+              label="Purchase Country"
+            />
             {countryCode && (
               <div className="mt-3 flex items-center space-x-2 text-sm text-green-600">
                 <CheckCircle className="h-4 w-4" />
                 <span>Selected purchase country: {countryCode}</span>
               </div>
             )}
-            
+
             {/* Origin-Destination Display */}
             {countryCode && selectedAddress && (
               <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -172,7 +173,7 @@ const QuoteForm = () => {
                     <div className="text-sm font-medium text-blue-800">Where we'll buy from</div>
                     <div className="text-lg font-bold text-blue-900">
                       {(() => {
-                        const country = allCountrySettings?.find(c => c.code === countryCode);
+                        const country = allCountrySettings?.find((c) => c.code === countryCode);
                         return country ? `🌍 ${country.name}` : `🌍 ${countryCode}`;
                       })()}
                     </div>
@@ -218,8 +219,10 @@ const QuoteForm = () => {
           </CardHeader>
           <CardContent>
             <RadioGroup
-              value={form.watch("quoteType") || "combined"}
-              onValueChange={(value) => form.setValue("quoteType", value as "combined" | "separate")}
+              value={form.watch('quoteType') || 'combined'}
+              onValueChange={(value) =>
+                form.setValue('quoteType', value as 'combined' | 'separate')
+              }
               className="grid grid-cols-1 md:grid-cols-2 gap-4"
             >
               <div className="flex items-start space-x-3 p-4 rounded-lg border-2 hover:border-primary/30 transition-colors cursor-pointer">
@@ -269,27 +272,25 @@ const QuoteForm = () => {
           <CardContent className="space-y-6">
             {fields.map((field, index) => (
               <div key={field.id}>
-                <QuoteItem 
-                    index={index}
-                    remove={remove}
-                    control={form.control}
+                <QuoteItem
+                  index={index}
+                  remove={remove}
+                  control={form.control}
                   setValue={form.setValue}
                 />
-                {index < fields.length - 1 && (
-                  <Separator className="my-6" />
-                )}
+                {index < fields.length - 1 && <Separator className="my-6" />}
               </div>
             ))}
-        
-        <Button
-          type="button"
+
+            <Button
+              type="button"
               variant="outline"
-          onClick={() => append()}
+              onClick={() => append()}
               className="w-full h-12 border-dashed border-2 hover:border-primary/50 transition-colors"
-        >
-          <Plus className="h-4 w-4 mr-2" />
+            >
+              <Plus className="h-4 w-4 mr-2" />
               Add Another Product
-        </Button>
+            </Button>
           </CardContent>
         </Card>
 
@@ -333,7 +334,9 @@ const QuoteForm = () => {
                               {address.city}, {address.state_province_region} {address.postal_code}
                             </span>
                             {address.phone && (
-                              <span className="text-sm text-muted-foreground">📞 {address.phone}</span>
+                              <span className="text-sm text-muted-foreground">
+                                📞 {address.phone}
+                              </span>
                             )}
                             {address.is_default && (
                               <Badge variant="secondary" className="w-fit text-xs mt-1">
@@ -355,11 +358,16 @@ const QuoteForm = () => {
                         <div>
                           <h4 className="font-medium text-green-800">Selected Address</h4>
                           <div className="text-sm text-green-700 mt-1">
-                            <p><strong>Recipient:</strong> {selectedAddress.recipient_name}</p>
-                            <p>{selectedAddress.address_line1}</p>
-                            {selectedAddress.address_line2 && <p>{selectedAddress.address_line2}</p>}
                             <p>
-                              {selectedAddress.city}, {selectedAddress.state_province_region} {selectedAddress.postal_code}
+                              <strong>Recipient:</strong> {selectedAddress.recipient_name}
+                            </p>
+                            <p>{selectedAddress.address_line1}</p>
+                            {selectedAddress.address_line2 && (
+                              <p>{selectedAddress.address_line2}</p>
+                            )}
+                            <p>
+                              {selectedAddress.city}, {selectedAddress.state_province_region}{' '}
+                              {selectedAddress.postal_code}
                             </p>
                             <p>{selectedAddress.country}</p>
                             {selectedAddress.phone && <p>📞 {selectedAddress.phone}</p>}
@@ -427,14 +435,14 @@ const QuoteForm = () => {
 
         {/* Submit Section */}
         <div className="text-center space-y-4">
-          <Button 
-            type="submit" 
-            size="lg" 
-            className="w-full md:w-auto h-12 px-8 text-lg" 
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full md:w-auto h-12 px-8 text-lg"
             disabled={loading || !selectedAddress}
           >
             {loading ? (
-              "Getting Your Shopping Quote..."
+              'Getting Your Shopping Quote...'
             ) : (
               <>
                 Get My Shopping Quote
@@ -443,9 +451,7 @@ const QuoteForm = () => {
             )}
           </Button>
           {!selectedAddress && (
-            <p className="text-sm text-orange-600">
-              Please select a shipping address to continue
-            </p>
+            <p className="text-sm text-orange-600">Please select a shipping address to continue</p>
           )}
           <p className="text-sm text-muted-foreground">
             You'll receive your shopping quote within 24 hours

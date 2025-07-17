@@ -8,15 +8,15 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 // Mock dependencies
 vi.mock('@/stores/cartStore', () => ({
   useCartStore: vi.fn(),
-  setCartStorageKey: vi.fn()
+  setCartStorageKey: vi.fn(),
 }));
 
 vi.mock('@/hooks/useUserCurrency', () => ({
-  useUserCurrency: vi.fn()
+  useUserCurrency: vi.fn(),
 }));
 
 vi.mock('@/hooks/useUserProfile', () => ({
-  useUserProfile: vi.fn()
+  useUserProfile: vi.fn(),
 }));
 
 type MockCartStore = {
@@ -82,7 +82,7 @@ describe('useCart', () => {
       inCart: true,
       isSelected: false,
       createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-01')
+      updatedAt: new Date('2024-01-01'),
     },
     {
       id: 'item-2',
@@ -98,8 +98,8 @@ describe('useCart', () => {
       inCart: true,
       isSelected: false,
       createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-01')
-    }
+      updatedAt: new Date('2024-01-01'),
+    },
   ];
 
   const mockSavedItems: CartItem[] = [
@@ -116,8 +116,8 @@ describe('useCart', () => {
       inCart: false,
       isSelected: false,
       createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-01')
-    }
+      updatedAt: new Date('2024-01-01'),
+    },
   ];
 
   let mockCartStore: MockCartStore;
@@ -155,7 +155,7 @@ describe('useCart', () => {
       selectAllCart: vi.fn(),
       selectAllSaved: vi.fn(),
       clearCart: vi.fn(),
-      setState: vi.fn()
+      setState: vi.fn(),
     };
 
     // Add setState to the store mock
@@ -165,7 +165,7 @@ describe('useCart', () => {
 
     // Setup mock user currency
     mockUserCurrency = {
-      formatAmount: vi.fn((amount: number) => `$${amount.toFixed(2)}`)
+      formatAmount: vi.fn((amount: number) => `$${amount.toFixed(2)}`),
     };
     mockUseUserCurrency.mockReturnValue(mockUserCurrency);
 
@@ -173,8 +173,8 @@ describe('useCart', () => {
     mockUserProfile = {
       data: {
         id: mockUserId,
-        preferred_display_currency: 'USD'
-      }
+        preferred_display_currency: 'USD',
+      },
     };
     mockUseUserProfile.mockReturnValue(mockUserProfile);
   });
@@ -240,11 +240,11 @@ describe('useCart', () => {
       const itemsWithMissingTotal = [
         {
           ...mockCartItems[0],
-          finalTotal: undefined as any
+          finalTotal: undefined as any,
         },
-        mockCartItems[1]
+        mockCartItems[1],
       ];
-      
+
       mockCartStore.items = itemsWithMissingTotal;
       mockUseCartStore.mockReturnValue(mockCartStore);
 
@@ -258,11 +258,11 @@ describe('useCart', () => {
       const itemsWithMissingWeight = [
         {
           ...mockCartItems[0],
-          itemWeight: undefined as any
+          itemWeight: undefined as any,
         },
-        mockCartItems[1]
+        mockCartItems[1],
       ];
-      
+
       mockCartStore.items = itemsWithMissingWeight;
       mockUseCartStore.mockReturnValue(mockCartStore);
 
@@ -276,11 +276,11 @@ describe('useCart', () => {
       const itemsWithMissingQuantity = [
         {
           ...mockCartItems[0],
-          quantity: undefined as any
+          quantity: undefined as any,
         },
-        mockCartItems[1]
+        mockCartItems[1],
       ];
-      
+
       mockCartStore.items = itemsWithMissingQuantity;
       mockUseCartStore.mockReturnValue(mockCartStore);
 
@@ -455,7 +455,7 @@ describe('useCart', () => {
 
       const selectedItems = result.current.getSelectedItems();
       expect(selectedItems).toHaveLength(2);
-      expect(selectedItems.map(item => item.id)).toEqual(['item-1', 'saved-1']);
+      expect(selectedItems.map((item) => item.id)).toEqual(['item-1', 'saved-1']);
     });
 
     test('getSelectedCartItems should return only selected cart items', () => {
@@ -490,7 +490,7 @@ describe('useCart', () => {
       });
 
       expect(mockCartStore.setState).toHaveBeenCalledWith({
-        selectedItems: ['item-1', 'item-2']
+        selectedItems: ['item-1', 'item-2'],
       });
     });
 
@@ -505,7 +505,7 @@ describe('useCart', () => {
       });
 
       expect(mockCartStore.setState).toHaveBeenCalledWith({
-        selectedItems: []
+        selectedItems: [],
       });
     });
 
@@ -520,7 +520,7 @@ describe('useCart', () => {
       });
 
       expect(mockCartStore.setState).toHaveBeenCalledWith({
-        selectedItems: ['item-1', 'item-2', 'saved-1']
+        selectedItems: ['item-1', 'item-2', 'saved-1'],
       });
     });
 
@@ -532,7 +532,7 @@ describe('useCart', () => {
       });
 
       expect(mockCartStore.setState).toHaveBeenCalledWith({
-        selectedItems: ['saved-1']
+        selectedItems: ['saved-1'],
       });
     });
 
@@ -547,7 +547,7 @@ describe('useCart', () => {
       });
 
       expect(mockCartStore.setState).toHaveBeenCalledWith({
-        selectedItems: ['saved-1', 'item-1']
+        selectedItems: ['saved-1', 'item-1'],
       });
     });
   });
@@ -691,8 +691,8 @@ describe('useCart', () => {
           ...mockCartItems[0],
           finalTotal: 999999.99,
           quantity: 100,
-          itemWeight: 999.99
-        }
+          itemWeight: 999.99,
+        },
       ];
 
       mockCartStore.items = largeValueItems;
@@ -710,8 +710,8 @@ describe('useCart', () => {
           ...mockCartItems[0],
           finalTotal: -100,
           quantity: 1,
-          itemWeight: -1
-        }
+          itemWeight: -1,
+        },
       ];
 
       mockCartStore.items = negativeValueItems;
@@ -729,8 +729,8 @@ describe('useCart', () => {
           ...mockCartItems[0],
           finalTotal: 10.999,
           quantity: 3,
-          itemWeight: 1.333
-        }
+          itemWeight: 1.333,
+        },
       ];
 
       mockCartStore.items = decimalItems;
@@ -756,11 +756,11 @@ describe('useCart', () => {
         inCart: true,
         isSelected: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       }));
 
       mockCartStore.items = manyItems;
-      mockCartStore.selectedItems = manyItems.slice(0, 500).map(item => item.id);
+      mockCartStore.selectedItems = manyItems.slice(0, 500).map((item) => item.id);
       mockUseCartStore.mockReturnValue(mockCartStore);
 
       const start = performance.now();

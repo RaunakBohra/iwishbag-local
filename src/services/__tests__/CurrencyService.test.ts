@@ -5,8 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 // Mock Supabase
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: vi.fn()
-  }
+    from: vi.fn(),
+  },
 }));
 
 const mockSupabase = supabase as unknown as {
@@ -100,11 +100,14 @@ describe('CurrencyService', () => {
           eq: vi.fn().mockReturnValue({
             not: vi.fn().mockReturnValue({
               limit: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: null, error: new Error('Not found') })
-              })
-            })
-          })
-        })
+                single: vi.fn().mockResolvedValue({
+                  data: null,
+                  error: new Error('Not found'),
+                }),
+              }),
+            }),
+          }),
+        }),
       });
 
       const minAmount = await currencyService.getMinimumPaymentAmount('USD');
@@ -118,14 +121,14 @@ describe('CurrencyService', () => {
           eq: vi.fn().mockReturnValue({
             not: vi.fn().mockReturnValue({
               limit: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ 
-                  data: { minimum_payment_amount: 25 }, 
-                  error: null 
-                })
-              })
-            })
-          })
-        })
+                single: vi.fn().mockResolvedValue({
+                  data: { minimum_payment_amount: 25 },
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+        }),
       });
 
       const minAmount = await currencyService.getMinimumPaymentAmount('USD');
@@ -200,7 +203,7 @@ describe('CurrencyService', () => {
     });
 
     test('should handle zero decimal currencies', () => {
-      ['JPY', 'KRW', 'VND', 'IDR'].forEach(currency => {
+      ['JPY', 'KRW', 'VND', 'IDR'].forEach((currency) => {
         const options = currencyService.getCurrencyFormatOptions(currency);
         expect(options.decimalPlaces).toBe(0);
       });
@@ -214,16 +217,16 @@ describe('CurrencyService', () => {
           not: vi.fn().mockReturnValue({
             order: vi.fn().mockResolvedValue({
               data: null,
-              error: new Error('Database error')
-            })
-          })
-        })
+              error: new Error('Database error'),
+            }),
+          }),
+        }),
       });
 
       const currencies = await currencyService.getAllCurrencies();
       expect(currencies.length).toBeGreaterThan(0); // Should return fallback currencies
-      expect(currencies.some(c => c.code === 'USD')).toBe(true);
-      expect(currencies.some(c => c.code === 'EUR')).toBe(true);
+      expect(currencies.some((c) => c.code === 'USD')).toBe(true);
+      expect(currencies.some((c) => c.code === 'EUR')).toBe(true);
     });
 
     test('should handle getCurrency with cache miss gracefully', async () => {
@@ -232,10 +235,10 @@ describe('CurrencyService', () => {
           not: vi.fn().mockReturnValue({
             order: vi.fn().mockResolvedValue({
               data: [],
-              error: null
-            })
-          })
-        })
+              error: null,
+            }),
+          }),
+        }),
       });
 
       const currency = await currencyService.getCurrency('USD');
@@ -246,16 +249,16 @@ describe('CurrencyService', () => {
       const mockCountrySettings = [
         { code: 'US', currency: 'USD' },
         { code: 'IN', currency: 'INR' },
-        { code: 'NP', currency: 'NPR' }
+        { code: 'NP', currency: 'NPR' },
       ];
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnValue({
           not: vi.fn().mockResolvedValue({
             data: mockCountrySettings,
-            error: null
-          })
-        })
+            error: null,
+          }),
+        }),
       });
 
       const map = await currencyService.getCountryCurrencyMap();
@@ -267,9 +270,7 @@ describe('CurrencyService', () => {
 
   describe('Cache Management', () => {
     test('should cache currency data and use cache on subsequent calls', async () => {
-      const mockCountrySettings = [
-        { code: 'US', currency: 'USD', minimum_payment_amount: 10 }
-      ];
+      const mockCountrySettings = [{ code: 'US', currency: 'USD', minimum_payment_amount: 10 }];
 
       // Mock first call
       mockSupabase.from.mockReturnValue({
@@ -277,10 +278,10 @@ describe('CurrencyService', () => {
           not: vi.fn().mockReturnValue({
             order: vi.fn().mockResolvedValue({
               data: mockCountrySettings,
-              error: null
-            })
-          })
-        })
+              error: null,
+            }),
+          }),
+        }),
       });
 
       // First call should hit database
@@ -298,20 +299,20 @@ describe('CurrencyService', () => {
     test('should clear cache when requested', async () => {
       // Add something to cache first
       await currencyService.getAllCurrencies();
-      
+
       // Clear cache
       currencyService.clearCache();
-      
+
       // Mock for second call
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnValue({
           not: vi.fn().mockReturnValue({
             order: vi.fn().mockResolvedValue({
               data: [],
-              error: null
-            })
-          })
-        })
+              error: null,
+            }),
+          }),
+        }),
       });
 
       // Should hit database again after cache clear
@@ -354,15 +355,15 @@ describe('CurrencyService', () => {
       // Test the complete workflow from amount validation to payment
       const amount = 1500;
       const currency = 'INR';
-      
+
       // Check if amount meets minimum
       const isValid = currencyService.isValidPaymentAmountSync(amount, currency);
       expect(isValid).toBe(true);
-      
+
       // Check if currency is supported by payment gateways
       const isSupported = currencyService.isSupportedByPaymentGateway(currency);
       expect(isSupported).toBe(true);
-      
+
       // Format for display
       const formatted = currencyService.formatAmount(amount, currency);
       expect(formatted).toBe('₹1,500.00');
@@ -374,11 +375,11 @@ describe('CurrencyService', () => {
       const quoteCurrency = 'USD';
       const paymentAmount = 8300; // INR equivalent
       const paymentCurrency = 'INR';
-      
+
       // Both should be valid individually
       expect(currencyService.isValidPaymentAmountSync(quoteAmount, quoteCurrency)).toBe(true);
       expect(currencyService.isValidPaymentAmountSync(paymentAmount, paymentCurrency)).toBe(true);
-      
+
       // Formatting should show different symbols
       expect(currencyService.formatAmount(quoteAmount, quoteCurrency)).toBe('$100.00');
       expect(currencyService.formatAmount(paymentAmount, paymentCurrency)).toBe('₹8,300.00');

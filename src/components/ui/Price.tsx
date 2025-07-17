@@ -38,7 +38,7 @@ export const Price: React.FC<PriceProps> = ({
   exchangeRate,
   showWarnings = false,
   className = '',
-  showSkeleton = true
+  showSkeleton = true,
 }) => {
   const { data: userProfile } = useUserProfile();
   const [priceResult, setPriceResult] = useState<PriceResult | null>(null);
@@ -62,7 +62,7 @@ export const Price: React.FC<PriceProps> = ({
           destinationCountry,
           userPreferredCurrency: userPreferredCurrency || userProfile?.preferred_display_currency,
           exchangeRate,
-          showWarnings
+          showWarnings,
         });
 
         setPriceResult(result);
@@ -73,7 +73,7 @@ export const Price: React.FC<PriceProps> = ({
           formatted: `$${amount.toLocaleString()}`,
           currency: 'USD',
           amount,
-          warning: errorMessage
+          warning: errorMessage,
         });
       } finally {
         setIsLoading(false);
@@ -81,7 +81,15 @@ export const Price: React.FC<PriceProps> = ({
     };
 
     formatPrice();
-  }, [amount, originCountry, destinationCountry, userPreferredCurrency, userProfile?.preferred_display_currency, exchangeRate, showWarnings]);
+  }, [
+    amount,
+    originCountry,
+    destinationCountry,
+    userPreferredCurrency,
+    userProfile?.preferred_display_currency,
+    exchangeRate,
+    showWarnings,
+  ]);
 
   if (isLoading && showSkeleton) {
     return <Skeleton className={`h-4 w-16 ${className}`} />;
@@ -133,7 +141,7 @@ export const DualPrice: React.FC<DualPriceProps> = ({
   exchangeRate,
   showWarnings = false,
   className = '',
-  showSkeleton = true
+  showSkeleton = true,
 }) => {
   const [dualPriceResult, setDualPriceResult] = useState<DualPriceResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -145,7 +153,7 @@ export const DualPrice: React.FC<DualPriceProps> = ({
         setDualPriceResult({
           origin: { formatted: 'N/A', currency: 'USD', amount: 0 },
           destination: { formatted: 'N/A', currency: 'USD', amount: 0 },
-          display: 'N/A'
+          display: 'N/A',
         });
         setIsLoading(false);
         return;
@@ -159,7 +167,7 @@ export const DualPrice: React.FC<DualPriceProps> = ({
           originCountry,
           destinationCountry,
           exchangeRate,
-          showWarnings
+          showWarnings,
         });
 
         setDualPriceResult(result);
@@ -167,10 +175,18 @@ export const DualPrice: React.FC<DualPriceProps> = ({
         const errorMessage = err instanceof Error ? err.message : 'Failed to format dual price';
         setError(errorMessage);
         setDualPriceResult({
-          origin: { formatted: `$${amount.toLocaleString()}`, currency: 'USD', amount },
-          destination: { formatted: `$${amount.toLocaleString()}`, currency: 'USD', amount },
+          origin: {
+            formatted: `$${amount.toLocaleString()}`,
+            currency: 'USD',
+            amount,
+          },
+          destination: {
+            formatted: `$${amount.toLocaleString()}`,
+            currency: 'USD',
+            amount,
+          },
           display: `$${amount.toLocaleString()}`,
-          warning: errorMessage
+          warning: errorMessage,
         });
       } finally {
         setIsLoading(false);
@@ -231,7 +247,7 @@ export const AdminPrice: React.FC<AdminPriceProps> = ({
   showWarnings = true,
   showExchangeRate = true,
   className = '',
-  showSkeleton = true
+  showSkeleton = true,
 }) => {
   const [dualPriceResult, setDualPriceResult] = useState<DualPriceResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -243,7 +259,7 @@ export const AdminPrice: React.FC<AdminPriceProps> = ({
         setDualPriceResult({
           origin: { formatted: 'N/A', currency: 'USD', amount: 0 },
           destination: { formatted: 'N/A', currency: 'USD', amount: 0 },
-          display: 'N/A'
+          display: 'N/A',
         });
         setIsLoading(false);
         return;
@@ -257,7 +273,7 @@ export const AdminPrice: React.FC<AdminPriceProps> = ({
           originCountry,
           destinationCountry,
           exchangeRate,
-          showWarnings: true // Always show warnings for admins
+          showWarnings: true, // Always show warnings for admins
         });
 
         setDualPriceResult(result);
@@ -265,10 +281,18 @@ export const AdminPrice: React.FC<AdminPriceProps> = ({
         const errorMessage = err instanceof Error ? err.message : 'Failed to format admin price';
         setError(errorMessage);
         setDualPriceResult({
-          origin: { formatted: `$${amount.toLocaleString()}`, currency: 'USD', amount },
-          destination: { formatted: `$${amount.toLocaleString()}`, currency: 'USD', amount },
+          origin: {
+            formatted: `$${amount.toLocaleString()}`,
+            currency: 'USD',
+            amount,
+          },
+          destination: {
+            formatted: `$${amount.toLocaleString()}`,
+            currency: 'USD',
+            amount,
+          },
           display: `$${amount.toLocaleString()}`,
-          warning: errorMessage
+          warning: errorMessage,
         });
       } finally {
         setIsLoading(false);
@@ -309,11 +333,13 @@ export const AdminPrice: React.FC<AdminPriceProps> = ({
           <div className={`${hasWarning ? 'text-orange-600' : ''} ${className}`}>
             {hasWarning && <AlertCircle size={14} className="inline mr-1" />}
             <span className="font-medium">{dualPriceResult?.display || 'N/A'}</span>
-            {showExchangeRate && dualPriceResult?.exchangeRate && dualPriceResult.exchangeRate !== 1 && (
-              <span className="text-xs text-gray-500 ml-1">
-                (Rate: {dualPriceResult.exchangeRate.toFixed(4)})
-              </span>
-            )}
+            {showExchangeRate &&
+              dualPriceResult?.exchangeRate &&
+              dualPriceResult.exchangeRate !== 1 && (
+                <span className="text-xs text-gray-500 ml-1">
+                  (Rate: {dualPriceResult.exchangeRate.toFixed(4)})
+                </span>
+              )}
           </div>
         </TooltipTrigger>
         {hasWarning && (
@@ -339,12 +365,18 @@ interface QuotePriceData {
   };
 }
 
-export const QuotePrice: React.FC<{ quote: QuotePriceData; className?: string }> = ({ quote, className }) => {
+export const QuotePrice: React.FC<{
+  quote: QuotePriceData;
+  className?: string;
+}> = ({ quote, className }) => {
   if (!quote) return <span className={className}>N/A</span>;
 
   const originCountry = quote.origin_country || quote.purchase_country || 'US';
-  const destinationCountry = quote.destination_country || 
-    (quote.shipping_address?.destination_country || quote.shipping_address?.country || 'US');
+  const destinationCountry =
+    quote.destination_country ||
+    quote.shipping_address?.destination_country ||
+    quote.shipping_address?.country ||
+    'US';
 
   return (
     <Price
@@ -367,13 +399,13 @@ interface CartItemData {
   destination_country?: string;
 }
 
-export const CartItemPrice: React.FC<{ 
-  item: CartItemData; 
-  quantity?: number; 
-  className?: string 
+export const CartItemPrice: React.FC<{
+  item: CartItemData;
+  quantity?: number;
+  className?: string;
 }> = ({ item, quantity = 1, className }) => {
   const amount = item.finalTotal ? item.finalTotal * quantity : item.final_total * quantity;
-  
+
   return (
     <Price
       amount={amount}
@@ -392,7 +424,10 @@ interface OrderPriceData {
   exchange_rate?: number;
 }
 
-export const OrderPrice: React.FC<{ order: OrderPriceData; className?: string }> = ({ order, className }) => {
+export const OrderPrice: React.FC<{
+  order: OrderPriceData;
+  className?: string;
+}> = ({ order, className }) => {
   if (!order) return <span className={className}>N/A</span>;
 
   return (

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal eSewa Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Minimal eSewa Test</h1>
+    <p>This tests the bare minimum form submission to eSewa</p>
+    
+    <button onclick="testMinimalForm()">Test Minimal Form</button>
+    <div id="result"></div>
+
+    <script>
+        function testMinimalForm() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing minimal form...</p>';
+            
+            // Create the absolute minimum form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.target = '_blank';
+            
+            // Add minimal required fields
+            const fields = {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: '250717-113700',
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code',
+                signature: 'test_signature'
+            };
+            
+            Object.entries(fields).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            
+            // Add form to page
+            document.body.appendChild(form);
+            
+            // Log form details
+            console.log('Form created:');
+            console.log('Method:', form.method);
+            console.log('Action:', form.action);
+            console.log('Target:', form.target);
+            console.log('Elements:', form.elements.length);
+            
+            for (let i = 0; i < form.elements.length; i++) {
+                const element = form.elements[i];
+                console.log(`Field ${i}: ${element.name} = ${element.value}`);
+            }
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <h4>✅ Minimal Form Created</h4>
+                    <p><strong>Method:</strong> ${form.method}</p>
+                    <p><strong>Action:</strong> ${form.action}</p>
+                    <p><strong>Fields:</strong> ${form.elements.length}</p>
+                </div>
+            `;
+            
+            // Submit immediately
+            setTimeout(() => {
+                console.log('About to submit form...');
+                try {
+                    form.submit();
+                    resultDiv.innerHTML += '<p class="success">✅ Form submitted</p>';
+                } catch (error) {
+                    resultDiv.innerHTML += '<p class="error">❌ Form submission failed: ' + error.message + '</p>';
+                }
+            }, 1000);
+        }
+        
+        console.log('Minimal eSewa test page loaded');
+    </script>
+</body>
+</html>

@@ -4,12 +4,25 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+// Removed unused Label import
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+// Removed unused Badge import
 import { Lock, Edit, Save, X, AlertTriangle, CheckCircle } from 'lucide-react';
 import { ShippingAddress, AddressFormData } from '@/types/address';
 import { validateAddress, normalizeAddress } from '@/lib/addressValidation';
@@ -17,13 +30,32 @@ import { useAllCountries } from '@/hooks/useAllCountries';
 
 // Validation schema for address form
 const addressFormSchema = z.object({
-  fullName: z.string().min(2, 'Full name must be at least 2 characters').max(100, 'Full name must be no more than 100 characters'),
-  streetAddress: z.string().min(5, 'Street address must be at least 5 characters').max(200, 'Street address must be no more than 200 characters'),
-  city: z.string().min(2, 'City must be at least 2 characters').max(100, 'City must be no more than 100 characters'),
+  fullName: z
+    .string()
+    .min(2, 'Full name must be at least 2 characters')
+    .max(100, 'Full name must be no more than 100 characters'),
+  streetAddress: z
+    .string()
+    .min(5, 'Street address must be at least 5 characters')
+    .max(200, 'Street address must be no more than 200 characters'),
+  city: z
+    .string()
+    .min(2, 'City must be at least 2 characters')
+    .max(100, 'City must be no more than 100 characters'),
   state: z.string().max(100, 'State must be no more than 100 characters').optional(),
-  postalCode: z.string().min(3, 'Postal code must be at least 3 characters').max(20, 'Postal code must be no more than 20 characters'),
-  country: z.string().regex(/^[A-Za-z]{2}$/, 'Country must be a 2-letter country code').transform(val => val.toUpperCase()),
-  phone: z.string().regex(/^[+]?[1-9]\d{0,15}$/, 'Invalid phone number format').optional().or(z.literal('')),
+  postalCode: z
+    .string()
+    .min(3, 'Postal code must be at least 3 characters')
+    .max(20, 'Postal code must be no more than 20 characters'),
+  country: z
+    .string()
+    .regex(/^[A-Za-z]{2}$/, 'Country must be a 2-letter country code')
+    .transform((val) => val.toUpperCase()),
+  phone: z
+    .string()
+    .regex(/^[+]?[1-9]\d{0,15}$/, 'Invalid phone number format')
+    .optional()
+    .or(z.literal('')),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
 });
 
@@ -54,21 +86,22 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
   // Convert country name to code if needed for initial form values
   const getInitialCountryCode = (country: string | undefined): string => {
     if (!country) return '';
-    
+
     // If it's already a valid 2-letter code, use it
     if (/^[A-Z]{2}$/i.test(country)) {
       return country.toUpperCase();
     }
-    
+
     // If countries are loaded, try to find the code
     if (countries && countries.length > 0) {
       const found = countries.find(
-        c => c.name.toLowerCase() === country.toLowerCase() || 
-            c.code.toLowerCase() === country.toLowerCase()
+        (c) =>
+          c.name.toLowerCase() === country.toLowerCase() ||
+          c.code.toLowerCase() === country.toLowerCase(),
       );
       return found?.code || '';
     }
-    
+
     // Countries not loaded yet, return as-is
     return country;
   };
@@ -96,22 +129,22 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
       lastAddressRef.current !== JSON.stringify(currentAddress)
     ) {
       let countryCode = currentAddress.country || '';
-      
+
       // Ensure country code is uppercase
       if (countryCode) {
         countryCode = countryCode.toUpperCase();
       }
-      
+
       // If it's not a valid 2-letter code, try to find it in the countries list
       if (countryCode && !/^[A-Z]{2}$/.test(countryCode)) {
         const found = countries.find(
           (c) =>
             c.name.toLowerCase() === countryCode.toLowerCase() ||
-            c.code.toLowerCase() === countryCode.toLowerCase()
+            c.code.toLowerCase() === countryCode.toLowerCase(),
         );
         countryCode = found ? found.code : ''; // Clear if not found
       }
-      
+
       form.reset({
         fullName: currentAddress.fullName || '',
         streetAddress: currentAddress.streetAddress || '',
@@ -127,7 +160,7 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
   }, [currentAddress, countries, form]);
 
   const watchedCountry = form.watch('country');
-  const selectedCountry = countries?.find(c => c.code === watchedCountry);
+  const selectedCountry = countries?.find((c) => c.code === watchedCountry);
 
   const handleSubmit = (data: AddressFormData) => {
     // Clear previous validation messages
@@ -148,7 +181,9 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
     }
 
     // Prepare reason for the change
-    const reason = currentAddress ? 'Address updated by customer' : 'Initial address added by customer';
+    const reason = currentAddress
+      ? 'Address updated by customer'
+      : 'Initial address added by customer';
 
     // Call the save function
     onSave(normalizedAddress, reason);
@@ -175,14 +210,36 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
         <CardContent>
           {currentAddress && (
             <div className="space-y-2 text-sm">
-              <div><strong>Full Name:</strong> {currentAddress.fullName}</div>
-              <div><strong>Street Address:</strong> {currentAddress.streetAddress}</div>
-              <div><strong>City:</strong> {currentAddress.city}</div>
-              {currentAddress.state && <div><strong>State:</strong> {currentAddress.state}</div>}
-              <div><strong>Postal Code:</strong> {currentAddress.postalCode}</div>
-              <div><strong>Country:</strong> {currentAddress.country}</div>
-              {currentAddress.phone && <div><strong>Phone:</strong> {currentAddress.phone}</div>}
-              {currentAddress.email && <div><strong>Email:</strong> {currentAddress.email}</div>}
+              <div>
+                <strong>Full Name:</strong> {currentAddress.fullName}
+              </div>
+              <div>
+                <strong>Street Address:</strong> {currentAddress.streetAddress}
+              </div>
+              <div>
+                <strong>City:</strong> {currentAddress.city}
+              </div>
+              {currentAddress.state && (
+                <div>
+                  <strong>State:</strong> {currentAddress.state}
+                </div>
+              )}
+              <div>
+                <strong>Postal Code:</strong> {currentAddress.postalCode}
+              </div>
+              <div>
+                <strong>Country:</strong> {currentAddress.country}
+              </div>
+              {currentAddress.phone && (
+                <div>
+                  <strong>Phone:</strong> {currentAddress.phone}
+                </div>
+              )}
+              {currentAddress.email && (
+                <div>
+                  <strong>Email:</strong> {currentAddress.email}
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -219,10 +276,9 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
           {currentAddress ? 'Edit Shipping Address' : 'Add Shipping Address'}
         </CardTitle>
         <CardDescription>
-          {currentAddress 
+          {currentAddress
             ? 'Update your shipping address details. You cannot change the country as it affects shipping costs.'
-            : 'Enter your shipping address to receive your order.'
-          }
+            : 'Enter your shipping address to receive your order.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -311,7 +367,7 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Country *</FormLabel>
-                    <Select 
+                    <Select
                       onValueChange={field.onChange}
                       value={field.value || ''}
                       disabled={!canChangeCountry}
@@ -399,7 +455,7 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
             <div className="flex gap-2 pt-4">
               <Button type="submit" disabled={isLoading} className="flex-1">
                 <Save className="h-4 w-4 mr-2" />
-                {isLoading ? 'Saving...' : (currentAddress ? 'Update Address' : 'Save Address')}
+                {isLoading ? 'Saving...' : currentAddress ? 'Update Address' : 'Save Address'}
               </Button>
               <Button type="button" variant="outline" onClick={handleCancel} disabled={isLoading}>
                 <X className="h-4 w-4 mr-2" />
@@ -411,4 +467,4 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

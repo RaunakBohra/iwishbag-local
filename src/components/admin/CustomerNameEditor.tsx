@@ -1,8 +1,7 @@
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Edit2, Save, X } from "lucide-react";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Edit2, Save, X } from 'lucide-react';
 
 interface CustomerNameEditorProps {
   customerId: string;
@@ -11,20 +10,20 @@ interface CustomerNameEditorProps {
   isUpdating: boolean;
 }
 
-export const CustomerNameEditor = ({ 
-  customerId, 
-  currentName, 
-  onUpdate, 
-  isUpdating 
+export const CustomerNameEditor = ({
+  customerId,
+  currentName,
+  onUpdate,
+  isUpdating,
 }: CustomerNameEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [nameValue, setNameValue] = useState("");
+  const [nameValue, setNameValue] = useState('');
 
   const displayName = currentName || 'No name provided';
 
   const handleEditName = () => {
     setIsEditing(true);
-    setNameValue(currentName || "");
+    setNameValue(currentName || '');
   };
 
   const handleSaveName = () => {
@@ -34,7 +33,7 @@ export const CustomerNameEditor = ({
 
   const handleCancel = () => {
     setIsEditing(false);
-    setNameValue("");
+    setNameValue('');
   };
 
   if (isEditing) {
@@ -53,18 +52,10 @@ export const CustomerNameEditor = ({
             }
           }}
         />
-        <Button 
-          size="sm" 
-          onClick={handleSaveName}
-          disabled={isUpdating}
-        >
+        <Button size="sm" onClick={handleSaveName} disabled={isUpdating}>
           <Save className="h-4 w-4" />
         </Button>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleCancel}
-        >
+        <Button variant="outline" size="sm" onClick={handleCancel}>
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -74,8 +65,8 @@ export const CustomerNameEditor = ({
   return (
     <div className="flex items-center space-x-2 group">
       <span className="text-xl font-semibold">{displayName}</span>
-      <Button 
-        variant="ghost" 
+      <Button
+        variant="ghost"
         size="sm"
         onClick={handleEditName}
         className="opacity-0 group-hover:opacity-100 transition-opacity"

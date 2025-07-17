@@ -1,6 +1,8 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { createWebhookHeaders } from '../_shared/cors.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createWebhookHeaders } from '../_shared/cors.ts';
+
+type Database = any; // Add type for SupabaseClient
 
 interface WebhookLog {
   request_id: string;
@@ -24,7 +26,7 @@ interface PaymentTransactionInsert {
 }
 
 // Get webhook headers (empty object for webhooks)
-const corsHeaders = createWebhookHeaders()
+const corsHeaders = createWebhookHeaders();
 
 interface PayUWebhookData {
   txnid: string;
@@ -159,18 +161,22 @@ interface PayUWebhookData {
 }
 
 // Log webhook attempts for monitoring and debugging
-async function logWebhookAttempt(supabaseAdmin: SupabaseClient<Database>, requestId: string, status: string, userAgent: string, errorMessage?: string) {
+async function logWebhookAttempt(
+  supabaseAdmin: SupabaseClient<Database>,
+  requestId: string,
+  status: string,
+  userAgent: string,
+  errorMessage?: string,
+) {
   try {
-    await supabaseAdmin
-      .from('webhook_logs')
-      .insert({
-        request_id: requestId,
-        webhook_type: 'payu',
-        status: status,
-        user_agent: userAgent,
-        error_message: errorMessage,
-        created_at: new Date().toISOString()
-      });
+    await supabaseAdmin.from('webhook_logs').insert({
+      request_id: requestId,
+      webhook_type: 'payu',
+      status: status,
+      user_agent: userAgent,
+      error_message: errorMessage,
+      created_at: new Date().toISOString(),
+    });
   } catch (error) {
     console.error('Failed to log webhook attempt:', error);
     // Don't fail the webhook if logging fails
@@ -198,14 +204,14 @@ async function verifyPayUHash(data: PayUWebhookData, salt: string): Promise<bool
       data.udf7 || '',
       data.udf8 || '',
       data.udf9 || '',
-      data.udf10 || ''
+      data.udf10 || '',
     ].join('|');
 
     const encoder = new TextEncoder();
     const dataBytes = encoder.encode(hashString);
     const hashBuffer = await crypto.subtle.digest('SHA-512', dataBytes);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const calculatedHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const calculatedHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 
     return calculatedHash === data.hash;
   } catch (error) {
@@ -219,23 +225,28 @@ async function verifyPayUHash(data: PayUWebhookData, salt: string): Promise<bool
 serve(async (req) => {
   // Webhooks should not accept OPTIONS requests - only POST
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 })
+    return new Response('Method not allowed', { status: 405 });
   }
 
   // Add comprehensive error handling and logging
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
-  
+
   try {
     console.log(`🔔 PayU Webhook Received [${requestId}]`);
-    
+
     const supabaseAdmin: SupabaseClient<Database> = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // Log webhook attempt
-    await logWebhookAttempt(supabaseAdmin, requestId, 'started', req.headers.get('user-agent') || '');
+    await logWebhookAttempt(
+      supabaseAdmin,
+      requestId,
+      'started',
+      req.headers.get('user-agent') || '',
+    );
 
     // Parse webhook data with error handling
     let webhookData: PayUWebhookData;
@@ -244,9 +255,9 @@ serve(async (req) => {
     } catch (parseError) {
       console.error(`[${requestId}] JSON parsing error:`, parseError);
       await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'JSON parsing failed');
-      return new Response(JSON.stringify({ error: 'Invalid JSON data' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      return new Response(JSON.stringify({ error: 'Invalid JSON data' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -255,42 +266,54 @@ serve(async (req) => {
       console.error(`[${requestId}] Missing required fields:`, {
         txnid: !!webhookData.txnid,
         status: !!webhookData.status,
-        amount: !!webhookData.amount
+        amount: !!webhookData.amount,
       });
       await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'Missing required fields');
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    
+
     console.log('PayU Webhook Data:', {
       txnid: webhookData.txnid,
       status: webhookData.status,
       amount: webhookData.amount,
       mihpayid: webhookData.mihpayid,
       email: webhookData.email,
-      productinfo: webhookData.productinfo
+      productinfo: webhookData.productinfo,
     });
 
     // Verify webhook hash
     const salt = Deno.env.get('PAYU_SALT_KEY');
     if (!salt) {
       console.error(`[${requestId}] PayU salt key not configured`);
-      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'PayU salt key not configured');
-      return new Response(JSON.stringify({ error: 'Configuration error' }), { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      await logWebhookAttempt(
+        supabaseAdmin,
+        requestId,
+        'failed',
+        '',
+        'PayU salt key not configured',
+      );
+      return new Response(JSON.stringify({ error: 'Configuration error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const isValidHash = await verifyPayUHash(webhookData, salt);
     if (!isValidHash) {
       console.error(`[${requestId}] Invalid webhook hash - possible security issue`);
-      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'Invalid webhook hash verification');
-      return new Response(JSON.stringify({ error: 'Invalid hash' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      await logWebhookAttempt(
+        supabaseAdmin,
+        requestId,
+        'failed',
+        '',
+        'Invalid webhook hash verification',
+      );
+      return new Response(JSON.stringify({ error: 'Invalid hash' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -299,18 +322,21 @@ serve(async (req) => {
     // Extract quote IDs from productinfo with multiple fallback methods
     let quoteIds: string[] = [];
     const productInfo = webhookData.productinfo || '';
-    
+
     console.log(`[${requestId}] 🔍 Extracting quote IDs from productinfo:`, productInfo);
-    
+
     // Method 1: Extract from productinfo - Format: "Order: Product Name (quote_id1,quote_id2)"
     if (productInfo) {
       const quoteIdsMatch = productInfo.match(/\(([^)]+)\)$/);
       if (quoteIdsMatch) {
-        quoteIds = quoteIdsMatch[1].split(',').map(id => id.trim()).filter(id => id);
+        quoteIds = quoteIdsMatch[1]
+          .split(',')
+          .map((id) => id.trim())
+          .filter((id) => id);
         console.log(`[${requestId}] ✅ Found quote IDs in productinfo with parentheses:`, quoteIds);
       }
     }
-    
+
     // Method 2: Primary fallback - Extract UUID-like strings directly from productinfo
     if (quoteIds.length === 0 && productInfo) {
       const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
@@ -320,10 +346,12 @@ serve(async (req) => {
         console.log(`[${requestId}] ✅ Found quote IDs via UUID regex in productinfo:`, quoteIds);
       }
     }
-    
+
     // Method 3: Extract from transaction ID if it contains quote ID
     if (quoteIds.length === 0 && webhookData.txnid) {
-      const txnUuidMatch = webhookData.txnid.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+      const txnUuidMatch = webhookData.txnid.match(
+        /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+      );
       if (txnUuidMatch) {
         quoteIds = [txnUuidMatch[0]];
         console.log(`[${requestId}] ✅ Found quote ID in transaction ID:`, quoteIds);
@@ -333,12 +361,12 @@ serve(async (req) => {
     if (quoteIds.length === 0) {
       console.error(`[${requestId}] ❌ No quote IDs found in any location. PayU data:`, {
         productinfo: productInfo,
-        txnid: webhookData.txnid
+        txnid: webhookData.txnid,
       });
       await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'No quote IDs found');
-      return new Response(JSON.stringify({ error: 'Quote IDs not found' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      return new Response(JSON.stringify({ error: 'Quote IDs not found' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -351,7 +379,7 @@ serve(async (req) => {
     // Determine payment status
     let paymentStatus: 'success' | 'failed' | 'pending';
     let orderStatus: 'paid' | 'failed' | 'pending';
-    
+
     switch (webhookData.status.toLowerCase()) {
       case 'success':
         paymentStatus = 'success';
@@ -383,7 +411,7 @@ serve(async (req) => {
             guest_name: guestSession.guest_name,
             guest_email: guestSession.guest_email,
             shipping_address: guestSession.shipping_address,
-            quote_id: guestSession.quote_id
+            quote_id: guestSession.quote_id,
           };
           console.log('✅ Guest session data retrieved for atomic processing');
         } else {
@@ -400,35 +428,50 @@ serve(async (req) => {
       .from('quotes')
       .select('id, status, display_id, final_total, user_id')
       .in('id', quoteIds);
-      
+
     if (fetchError) {
       console.error(`[${requestId}] ❌ Error fetching quotes for verification:`, fetchError);
-      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'Error fetching quotes for verification');
-      return new Response(JSON.stringify({ error: 'Error verifying quotes' }), { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      await logWebhookAttempt(
+        supabaseAdmin,
+        requestId,
+        'failed',
+        '',
+        'Error fetching quotes for verification',
+      );
+      return new Response(JSON.stringify({ error: 'Error verifying quotes' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    
+
     if (!existingQuotes || existingQuotes.length === 0) {
       console.error(`[${requestId}] ❌ No quotes found with IDs:`, quoteIds);
-      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', 'No quotes found with provided IDs');
-      return new Response(JSON.stringify({ error: 'Quotes not found' }), { 
-        status: 404, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      await logWebhookAttempt(
+        supabaseAdmin,
+        requestId,
+        'failed',
+        '',
+        'No quotes found with provided IDs',
+      );
+      return new Response(JSON.stringify({ error: 'Quotes not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    
-    console.log(`[${requestId}] 📋 Found quotes to update:`, existingQuotes.map(q => ({ 
-      id: q.id, 
-      display_id: q.display_id, 
-      status: q.status,
-      final_total: q.final_total 
-    })));
+
+    console.log(
+      `[${requestId}] 📋 Found quotes to update:`,
+      existingQuotes.map((q) => ({
+        id: q.id,
+        display_id: q.display_id,
+        status: q.status,
+        final_total: q.final_total,
+      })),
+    );
 
     // Process webhook atomically using RPC
     console.log(`[${requestId}] 🔄 Processing webhook atomically...`);
-    
+
     // Prepare payment data for atomic processing
     const paymentData = {
       transaction_id: webhookData.mihpayid || webhookData.txnid,
@@ -455,44 +498,64 @@ serve(async (req) => {
         name_on_card: webhookData.name_on_card,
         error_code: webhookData.error_code,
         error_message: webhookData.error_Message,
-        webhook_received_at: new Date().toISOString()
-      }
+        webhook_received_at: new Date().toISOString(),
+      },
     };
 
     // Call atomic RPC function
-    const { data: atomicResult, error: atomicError } = await supabaseAdmin
-      .rpc('process_payment_webhook_atomic', {
+    const { data: atomicResult, error: atomicError } = await supabaseAdmin.rpc(
+      'process_payment_webhook_atomic',
+      {
         p_quote_ids: quoteIds,
         p_payment_status: paymentStatus,
         p_payment_data: paymentData,
         p_guest_session_token: guestSessionToken,
         p_guest_session_data: guestSessionData,
-        p_create_order: orderStatus === 'paid'
-      });
+        p_create_order: orderStatus === 'paid',
+      },
+    );
 
     if (atomicError) {
       console.error(`[${requestId}] ❌ Atomic webhook processing failed:`, atomicError);
-      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', `Atomic processing failed: ${atomicError.message}`);
-      return new Response(JSON.stringify({ 
-        error: 'Webhook processing failed',
-        details: atomicError.message 
-      }), { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      await logWebhookAttempt(
+        supabaseAdmin,
+        requestId,
+        'failed',
+        '',
+        `Atomic processing failed: ${atomicError.message}`,
+      );
+      return new Response(
+        JSON.stringify({
+          error: 'Webhook processing failed',
+          details: atomicError.message,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     if (!atomicResult || atomicResult.length === 0 || !atomicResult[0].success) {
       const errorMessage = atomicResult?.[0]?.error_message || 'Unknown atomic processing error';
       console.error(`[${requestId}] ❌ Atomic webhook processing failed:`, errorMessage);
-      await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', `Atomic processing failed: ${errorMessage}`);
-      return new Response(JSON.stringify({ 
-        error: 'Webhook processing failed',
-        details: errorMessage 
-      }), { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      await logWebhookAttempt(
+        supabaseAdmin,
+        requestId,
+        'failed',
+        '',
+        `Atomic processing failed: ${errorMessage}`,
+      );
+      return new Response(
+        JSON.stringify({
+          error: 'Webhook processing failed',
+          details: errorMessage,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     const result = atomicResult[0];
@@ -501,55 +564,72 @@ serve(async (req) => {
       payment_ledger_entry_id: result.payment_ledger_entry_id,
       quotes_updated: result.quotes_updated,
       guest_session_updated: result.guest_session_updated,
-      order_created: !!result.order_id
+      order_created: !!result.order_id,
     });
 
     // Log successful webhook processing
     const processingTime = Date.now() - startTime;
-    await logWebhookAttempt(supabaseAdmin, requestId, 'success', '', `Processed in ${processingTime}ms`);
-    
+    await logWebhookAttempt(
+      supabaseAdmin,
+      requestId,
+      'success',
+      '',
+      `Processed in ${processingTime}ms`,
+    );
+
     console.log(`✅ PayU webhook processed successfully [${requestId}] in ${processingTime}ms`);
 
     // Send success response with atomic results
-    return new Response(JSON.stringify({ 
-      success: true, 
-      message: `Payment ${paymentStatus}`,
-      quoteIds,
-      transactionId: webhookData.mihpayid || webhookData.txnid,
-      requestId,
-      processingTime: `${processingTime}ms`,
-      atomicResults: {
-        payment_transaction_id: result.payment_transaction_id,
-        payment_ledger_entry_id: result.payment_ledger_entry_id,
-        quotes_updated: result.quotes_updated,
-        guest_session_updated: result.guest_session_updated,
-        order_created: !!result.order_id,
-        order_id: result.order_id
-      }
-    }), { 
-      status: 200, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-    });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: `Payment ${paymentStatus}`,
+        quoteIds,
+        transactionId: webhookData.mihpayid || webhookData.txnid,
+        requestId,
+        processingTime: `${processingTime}ms`,
+        atomicResults: {
+          payment_transaction_id: result.payment_transaction_id,
+          payment_ledger_entry_id: result.payment_ledger_entry_id,
+          quotes_updated: result.quotes_updated,
+          guest_session_updated: result.guest_session_updated,
+          order_created: !!result.order_id,
+          order_id: result.order_id,
+        },
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   } catch (error) {
     const processingTime = Date.now() - startTime;
     console.error(`❌ PayU webhook error [${requestId}]:`, error);
-    
+
     // Log the error
     const supabaseAdmin: SupabaseClient<Database> = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
-    await logWebhookAttempt(supabaseAdmin, requestId, 'failed', '', `Error after ${processingTime}ms: ${error.message}`);
-    
-    return new Response(JSON.stringify({ 
-      error: 'Webhook processing failed', 
-      details: error.message,
+    await logWebhookAttempt(
+      supabaseAdmin,
       requestId,
-      processingTime: `${processingTime}ms`
-    }), { 
-      status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-    });
+      'failed',
+      '',
+      `Error after ${processingTime}ms: ${error.message}`,
+    );
+
+    return new Response(
+      JSON.stringify({
+        error: 'Webhook processing failed',
+        details: error.message,
+        requestId,
+        processingTime: `${processingTime}ms`,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   }
-}) 
+});

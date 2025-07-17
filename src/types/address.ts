@@ -120,4 +120,4 @@ export const ADDRESS_UNLOCK_REASONS = {
   ADMIN_UNLOCK: 'Unlocked by admin',
   PAYMENT_FAILED: 'Payment failed',
   ORDER_CANCELLED: 'Order cancelled',
-} as const; 
+} as const;

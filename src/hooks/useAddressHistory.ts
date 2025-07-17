@@ -9,7 +9,11 @@ interface UseAddressHistoryOptions {
 }
 
 export function useAddressHistory({ quoteId, enabled = true }: UseAddressHistoryOptions) {
-  const { data: history, isLoading, error } = useQuery({
+  const {
+    data: history,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['address-history', quoteId],
     queryFn: async () => {
       const result = await getAddressHistory(quoteId);
@@ -20,41 +24,46 @@ export function useAddressHistory({ quoteId, enabled = true }: UseAddressHistory
   });
 
   // Process and format history data
-  const processedHistory = history?.map((change, index) => {
-    const previousChange = index < history.length - 1 ? history[index + 1] : null;
-    
-    // Calculate changes between this and previous entry
-    let changes: { field: keyof ShippingAddress; oldValue: string; newValue: string }[] = [];
-    if (change.oldAddress && change.newAddress) {
-      changes = compareAddresses(change.oldAddress, change.newAddress);
-    } else if (change.newAddress && !change.oldAddress) {
-      // This is a creation - all fields are new
-      changes = Object.entries(change.newAddress).map(([field, value]) => ({
-        field: field as keyof ShippingAddress,
-        oldValue: '',
-        newValue: value || '',
-      }));
-    }
+  const processedHistory =
+    history?.map((change, index) => {
+      const previousChange = index < history.length - 1 ? history[index + 1] : null;
 
-    const changeSummary = getAddressChangeSummary(changes);
-    
-    return {
-      ...change,
-      changes,
-      changeSummary,
-      hasCountryChange: changes.some(c => c.field === 'country'),
-      isSignificantChange: changes.length > 2 || changes.some(c => c.field === 'country'),
-    };
-  }) || [];
+      // Calculate changes between this and previous entry
+      let changes: {
+        field: keyof ShippingAddress;
+        oldValue: string;
+        newValue: string;
+      }[] = [];
+      if (change.oldAddress && change.newAddress) {
+        changes = compareAddresses(change.oldAddress, change.newAddress);
+      } else if (change.newAddress && !change.oldAddress) {
+        // This is a creation - all fields are new
+        changes = Object.entries(change.newAddress).map(([field, value]) => ({
+          field: field as keyof ShippingAddress,
+          oldValue: '',
+          newValue: value || '',
+        }));
+      }
+
+      const changeSummary = getAddressChangeSummary(changes);
+
+      return {
+        ...change,
+        changes,
+        changeSummary,
+        hasCountryChange: changes.some((c) => c.field === 'country'),
+        isSignificantChange: changes.length > 2 || changes.some((c) => c.field === 'country'),
+      };
+    }) || [];
 
   // Get recent changes (last 5)
   const recentChanges = processedHistory.slice(0, 5);
 
   // Get country changes specifically
-  const countryChanges = processedHistory.filter(change => change.hasCountryChange);
+  const countryChanges = processedHistory.filter((change) => change.hasCountryChange);
 
   // Get significant changes
-  const significantChanges = processedHistory.filter(change => change.isSignificantChange);
+  const significantChanges = processedHistory.filter((change) => change.isSignificantChange);
 
   // Format change type for display
   const formatChangeType = (changeType: string) => {
@@ -101,26 +110,26 @@ export function useAddressHistory({ quoteId, enabled = true }: UseAddressHistory
     // Raw data
     history: processedHistory,
     rawHistory: history,
-    
+
     // Processed data
     recentChanges,
     countryChanges,
     significantChanges,
     latestChange,
     originalAddress,
-    
+
     // State
     isLoading,
     error,
     hasChanges,
-    
+
     // Utilities
     formatChangeType,
     getChangeIcon,
-    
+
     // Statistics
     totalChanges: processedHistory.length,
     countryChangeCount: countryChanges.length,
     significantChangeCount: significantChanges.length,
   };
-} 
+}

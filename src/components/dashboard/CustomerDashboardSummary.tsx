@@ -1,7 +1,6 @@
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tables } from "@/integrations/supabase/types";
-import { ShoppingCart, Package, Clock, CheckCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tables } from '@/integrations/supabase/types';
+import { ShoppingCart, Package, Clock, CheckCircle } from 'lucide-react';
 
 type Quote = Tables<'quotes'>;
 
@@ -12,9 +11,11 @@ interface CustomerDashboardSummaryProps {
 
 export const CustomerDashboardSummary = ({ quotes, orders }: CustomerDashboardSummaryProps) => {
   const totalQuotes = quotes.length;
-  const pendingQuotes = quotes.filter(q => ['pending', 'calculated', 'sent'].includes(q.status)).length;
+  const pendingQuotes = quotes.filter((q) =>
+    ['pending', 'calculated', 'sent'].includes(q.status),
+  ).length;
   const totalOrders = orders.length;
-  const itemsInCart = quotes.filter(q => q.in_cart).length;
+  const itemsInCart = quotes.filter((q) => q.in_cart).length;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -25,9 +26,7 @@ export const CustomerDashboardSummary = ({ quotes, orders }: CustomerDashboardSu
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{totalQuotes}</div>
-          <p className="text-xs text-muted-foreground">
-            All your quote requests
-          </p>
+          <p className="text-xs text-muted-foreground">All your quote requests</p>
         </CardContent>
       </Card>
 
@@ -38,9 +37,7 @@ export const CustomerDashboardSummary = ({ quotes, orders }: CustomerDashboardSu
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{pendingQuotes}</div>
-          <p className="text-xs text-muted-foreground">
-            Awaiting response
-          </p>
+          <p className="text-xs text-muted-foreground">Awaiting response</p>
         </CardContent>
       </Card>
 
@@ -51,9 +48,7 @@ export const CustomerDashboardSummary = ({ quotes, orders }: CustomerDashboardSu
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{itemsInCart}</div>
-          <p className="text-xs text-muted-foreground">
-            Ready to checkout
-          </p>
+          <p className="text-xs text-muted-foreground">Ready to checkout</p>
         </CardContent>
       </Card>
 
@@ -64,9 +59,7 @@ export const CustomerDashboardSummary = ({ quotes, orders }: CustomerDashboardSu
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{totalOrders}</div>
-          <p className="text-xs text-muted-foreground">
-            Completed purchases
-          </p>
+          <p className="text-xs text-muted-foreground">Completed purchases</p>
         </CardContent>
       </Card>
     </div>

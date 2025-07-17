@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Clock, User, AlertCircle, CheckCircle, XCircle, FileText, DollarSign, Truck, Package } from 'lucide-react';
+import { Clock, User, AlertCircle, FileText, DollarSign, Truck, Package } from 'lucide-react';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
@@ -83,7 +83,11 @@ const getTriggerColor = (trigger: string) => {
 export const StatusTransitionHistory: React.FC<StatusTransitionHistoryProps> = ({ quoteId }) => {
   const { getStatusConfig } = useStatusManagement();
 
-  const { data: transitions, isLoading, error } = useQuery({
+  const {
+    data: transitions,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['status-transitions', quoteId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -93,10 +97,10 @@ export const StatusTransitionHistory: React.FC<StatusTransitionHistoryProps> = (
         .order('changed_at', { ascending: false });
 
       if (error) throw error;
-      
+
       return data as StatusTransition[];
     },
-    enabled: !!quoteId
+    enabled: !!quoteId,
   });
 
   if (isLoading) {
@@ -155,33 +159,43 @@ export const StatusTransitionHistory: React.FC<StatusTransitionHistoryProps> = (
     <Card>
       <CardHeader>
         <CardTitle>Status History</CardTitle>
-        <CardDescription>
-          Timeline of status changes for this quote
-        </CardDescription>
+        <CardDescription>Timeline of status changes for this quote</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {transitions.map((transition, index) => {
-            const fromStatusConfig = getStatusConfig(transition.from_status, 'quote');
-            const toStatusConfig = getStatusConfig(transition.to_status, 'quote');
+            const _fromStatusConfig = getStatusConfig(transition.from_status, 'quote');
+            const _toStatusConfig = getStatusConfig(transition.to_status, 'quote');
             const isLatest = index === 0;
 
             return (
               <div key={transition.id} className="flex items-start gap-4">
                 {/* Timeline dot */}
-                <div className={`flex-shrink-0 w-3 h-3 rounded-full mt-2 ${
-                  isLatest ? 'bg-blue-500' : 'bg-gray-300'
-                }`} />
-                
+                <div
+                  className={`flex-shrink-0 w-3 h-3 rounded-full mt-2 ${
+                    isLatest ? 'bg-blue-500' : 'bg-gray-300'
+                  }`}
+                />
+
                 {/* Content */}
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-2">
                       {getTriggerIcon(transition.trigger)}
                       <span className="font-medium">
-                        <StatusBadge status={transition.from_status} category="quote" showIcon={false} className="text-xs" />
+                        <StatusBadge
+                          status={transition.from_status}
+                          category="quote"
+                          showIcon={false}
+                          className="text-xs"
+                        />
                         <span className="mx-1">→</span>
-                        <StatusBadge status={transition.to_status} category="quote" showIcon={false} className="text-xs" />
+                        <StatusBadge
+                          status={transition.to_status}
+                          category="quote"
+                          showIcon={false}
+                          className="text-xs"
+                        />
                       </span>
                     </div>
                     <Badge className={`text-xs ${getTriggerColor(transition.trigger)}`}>
@@ -193,22 +207,20 @@ export const StatusTransitionHistory: React.FC<StatusTransitionHistoryProps> = (
                       </Badge>
                     )}
                   </div>
-                  
+
                   <div className="text-sm text-muted-foreground space-y-1">
                     <div className="flex items-center gap-2">
                       <Clock className="h-3 w-3" />
-                      <span>
-                        {new Date(transition.changed_at).toLocaleString()}
-                      </span>
+                      <span>{new Date(transition.changed_at).toLocaleString()}</span>
                     </div>
-                    
+
                     {transition.changed_by && (
                       <div className="flex items-center gap-2">
                         <User className="h-3 w-3" />
                         <span>Changed by: {transition.changed_by}</span>
                       </div>
                     )}
-                    
+
                     {transition.metadata && Object.keys(transition.metadata).length > 0 && (
                       <div className="text-xs bg-gray-50 p-2 rounded">
                         <strong>Metadata:</strong> {JSON.stringify(transition.metadata, null, 2)}
@@ -223,4 +235,4 @@ export const StatusTransitionHistory: React.FC<StatusTransitionHistoryProps> = (
       </CardContent>
     </Card>
   );
-}; 
+};

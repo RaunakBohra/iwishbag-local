@@ -1,0 +1,94 @@
+{
+  "security": {
+    "description": "Security configuration for iwishBag e-commerce platform",
+    "lastUpdated": "2025-01-17",
+    "tools": {
+      "auditCI": {
+        "enabled": true,
+        "config": ".audit-ci.jsonc",
+        "description": "Dependency vulnerability scanning with npm audit"
+      },
+      "semgrep": {
+        "enabled": true,
+        "config": ".semgrep.yml",
+        "description": "Static application security testing (SAST)"
+      },
+      "eslint": {
+        "enabled": true,
+        "securityRules": [
+          "no-eval",
+          "no-implied-eval",
+          "no-new-func",
+          "no-script-url"
+        ],
+        "description": "ESLint with security-focused rules"
+      }
+    },
+    "policies": {
+      "dependencyVulnerabilities": {
+        "moderate": "warn",
+        "high": "block",
+        "critical": "block"
+      },
+      "sastFindings": {
+        "info": "allow",
+        "warning": "warn",
+        "error": "block"
+      },
+      "codeQuality": {
+        "maxWarnings": 1200,
+        "blockOnError": true
+      }
+    },
+    "alerting": {
+      "enabled": true,
+      "channels": [
+        {
+          "type": "github-issues",
+          "enabled": true,
+          "conditions": ["critical-vulnerability", "high-vulnerability"]
+        },
+        {
+          "type": "pr-comments",
+          "enabled": true,
+          "conditions": ["security-scan-results"]
+        }
+      ]
+    },
+    "scanning": {
+      "schedule": {
+        "dependency": "weekly",
+        "sast": "on-push",
+        "comprehensive": "weekly"
+      },
+      "targets": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "supabase/functions/**/*.ts",
+        "scripts/**/*.js",
+        "package.json",
+        "package-lock.json"
+      ],
+      "exclusions": [
+        "node_modules/**",
+        "dist/**",
+        "build/**",
+        "coverage/**",
+        "*.test.ts",
+        "*.test.tsx"
+      ]
+    },
+    "recommendations": [
+      "Keep dependencies updated regularly",
+      "Review and address all security findings promptly",
+      "Follow secure coding practices",
+      "Implement proper authentication and authorization",
+      "Use HTTPS for all data transmission",
+      "Sanitize user inputs to prevent XSS and injection attacks",
+      "Regularly audit third-party integrations",
+      "Implement proper error handling without exposing sensitive information",
+      "Use environment variables for sensitive configuration",
+      "Implement rate limiting for API endpoints"
+    ]
+  }
+}

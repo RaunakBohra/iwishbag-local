@@ -6,11 +6,11 @@ const mockDeno = {
   env: {
     get: vi.fn((key: string) => {
       const envVars: Record<string, string> = {
-        'AIRWALLEX_API_KEY': 'test_airwallex_key',
-        'AIRWALLEX_CLIENT_ID': 'test_client_id',
-        'AIRWALLEX_WEBHOOK_SECRET': 'test_webhook_secret',
-        'SUPABASE_URL': 'http://127.0.0.1:54321',
-        'SUPABASE_SERVICE_ROLE_KEY': 'test-service-role-key',
+        AIRWALLEX_API_KEY: 'test_airwallex_key',
+        AIRWALLEX_CLIENT_ID: 'test_client_id',
+        AIRWALLEX_WEBHOOK_SECRET: 'test_webhook_secret',
+        SUPABASE_URL: 'http://127.0.0.1:54321',
+        SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
       };
       return envVars[key] || '';
     }),
@@ -21,7 +21,7 @@ const mockDeno = {
 Object.defineProperty(global, 'Deno', {
   value: mockDeno,
   writable: true,
-  configurable: true
+  configurable: true,
 });
 
 // Mock crypto for UUID generation
@@ -30,7 +30,7 @@ Object.defineProperty(global, 'crypto', {
     randomUUID: vi.fn(() => 'test-uuid-123'),
   },
   writable: true,
-  configurable: true
+  configurable: true,
 });
 
 import {
@@ -39,7 +39,7 @@ import {
   processRefundSucceeded,
   processRefundFailed,
   processDisputeCreated,
-  processDisputeUpdated
+  processDisputeUpdated,
 } from '../airwallex-webhook/atomic-operations.ts';
 
 describe('airwallex-atomic-operations', () => {
@@ -60,7 +60,7 @@ describe('airwallex-atomic-operations', () => {
     mockEq = vi.fn().mockReturnValue({ error: null });
     mockIn = vi.fn().mockReturnValue({ error: null });
     mockSingle = vi.fn().mockResolvedValue({ data: [], error: null });
-    
+
     // Create chainable mocks with proper promise returns
     const createChainableMock = () => {
       const chainable = {
@@ -70,15 +70,15 @@ describe('airwallex-atomic-operations', () => {
         select: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         insert: vi.fn().mockReturnThis(),
-        upsert: vi.fn().mockReturnThis()
+        upsert: vi.fn().mockReturnThis(),
       };
-      
+
       // Make terminal operations return promises
       Object.defineProperty(chainable, 'then', {
-        value: (resolve: Function) => resolve({ error: null }),
-        configurable: true
+        value: (resolve: (value: any) => void) => resolve({ error: null }),
+        configurable: true,
       });
-      
+
       return chainable;
     };
 
@@ -93,11 +93,11 @@ describe('airwallex-atomic-operations', () => {
       insert: mockInsert,
       upsert: mockUpsert,
       eq: vi.fn().mockReturnValue({ error: null }),
-      in: vi.fn().mockReturnValue({ error: null })
+      in: vi.fn().mockReturnValue({ error: null }),
     });
 
     mockSupabaseAdmin = {
-      from: mockFrom
+      from: mockFrom,
     } as any;
   });
 
@@ -114,12 +114,12 @@ describe('airwallex-atomic-operations', () => {
       merchant_order_id: 'quote_123',
       metadata: {
         quote_ids: 'quote_123,quote_456',
-        user_id: 'user_789'
+        user_id: 'user_789',
       },
       created_at: '2024-01-15T10:00:00Z',
       customer: {
-        email: 'test@example.com'
-      }
+        email: 'test@example.com',
+      },
     };
 
     it('should successfully process payment success', async () => {
@@ -127,9 +127,9 @@ describe('airwallex-atomic-operations', () => {
       mockSingle.mockResolvedValueOnce({
         data: [
           { id: 'quote_123', status: 'approved', user_id: 'user_789' },
-          { id: 'quote_456', status: 'sent', user_id: 'user_789' }
+          { id: 'quote_456', status: 'sent', user_id: 'user_789' },
         ],
-        error: null
+        error: null,
       });
 
       const result = await processPaymentIntentSucceeded(mockSupabaseAdmin, mockPaymentIntent);
@@ -147,7 +147,7 @@ describe('airwallex-atomic-operations', () => {
       const paymentIntentNoQuotes = {
         ...mockPaymentIntent,
         metadata: { user_id: 'user_789' },
-        merchant_order_id: undefined
+        merchant_order_id: undefined,
       };
 
       const result = await processPaymentIntentSucceeded(mockSupabaseAdmin, paymentIntentNoQuotes);
@@ -167,9 +167,9 @@ describe('airwallex-atomic-operations', () => {
         update: vi.fn().mockReturnThis(),
         insert: vi.fn().mockReturnThis(),
         upsert: vi.fn().mockReturnThis(),
-        then: (resolve: Function) => resolve({ error: new Error('Database error') })
+        then: (resolve: (value: any) => void) => resolve({ error: new Error('Database error') }),
       };
-      
+
       // Override the update mock to return an error
       mockUpdate.mockReturnValueOnce(errorChainable);
 
@@ -187,40 +187,54 @@ describe('airwallex-atomic-operations', () => {
       currency: 'USD',
       status: 'failed',
       metadata: {
-        quote_ids: 'quote_789'
+        quote_ids: 'quote_789',
       },
       latest_payment_attempt: {
-        failure_reason: 'Insufficient funds'
-      }
+        failure_reason: 'Insufficient funds',
+      },
     };
 
     it('should process payment failure correctly', async () => {
-      const result = await processPaymentIntentFailed(mockSupabaseAdmin, mockPaymentIntent, 'failed');
+      const result = await processPaymentIntentFailed(
+        mockSupabaseAdmin,
+        mockPaymentIntent,
+        'failed',
+      );
 
       expect(result.success).toBe(true);
 
       // Verify transaction update
-      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-        status: 'failed',
-        error_message: 'Insufficient funds'
-      }));
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'failed',
+          error_message: 'Insufficient funds',
+        }),
+      );
 
       // Verify quote reset
-      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-        status: 'approved',
-        payment_transaction_id: null
-      }));
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'approved',
+          payment_transaction_id: null,
+        }),
+      );
     });
 
     it('should handle cancellation differently', async () => {
       const cancelledIntent = { ...mockPaymentIntent, status: 'cancelled' };
-      
-      const result = await processPaymentIntentFailed(mockSupabaseAdmin, cancelledIntent, 'cancelled');
+
+      const result = await processPaymentIntentFailed(
+        mockSupabaseAdmin,
+        cancelledIntent,
+        'cancelled',
+      );
 
       expect(result.success).toBe(true);
-      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-        status: 'cancelled'
-      }));
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'cancelled',
+        }),
+      );
     });
   });
 
@@ -232,70 +246,82 @@ describe('airwallex-atomic-operations', () => {
       currency: 'USD',
       status: 'succeeded',
       reason: 'Customer request',
-      created_at: '2024-01-16T10:00:00Z'
+      created_at: '2024-01-16T10:00:00Z',
     };
 
     it('should process full refund correctly', async () => {
       // Mock refunds table check
-      mockSingle.mockResolvedValueOnce({ data: { table_name: 'refunds' }, error: null });
-      
+      mockSingle.mockResolvedValueOnce({
+        data: { table_name: 'refunds' },
+        error: null,
+      });
+
       // Mock transaction fetch
       mockSingle.mockResolvedValueOnce({
         data: { amount: 100, refunded_amount: 50 },
-        error: null
+        error: null,
       });
-      
+
       // Mock quote IDs fetch
       mockSingle.mockResolvedValueOnce({
         data: { quote_ids: ['quote_123'] },
-        error: null
+        error: null,
       });
 
       const result = await processRefundSucceeded(mockSupabaseAdmin, mockRefund);
 
       expect(result.success).toBe(true);
-      
+
       // Verify refund insert
-      expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({
-        id: 'airwallex_refund_ref_test_123',
-        amount: 50, // Converted from cents
-        status: 'succeeded'
-      }));
+      expect(mockInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'airwallex_refund_ref_test_123',
+          amount: 50, // Converted from cents
+          status: 'succeeded',
+        }),
+      );
 
       // Verify transaction update to fully refunded
-      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-        refunded_amount: 100,
-        status: 'refunded'
-      }));
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          refunded_amount: 100,
+          status: 'refunded',
+        }),
+      );
     });
 
     it('should handle partial refund', async () => {
       // Mock refunds table check
-      mockSingle.mockResolvedValueOnce({ data: { table_name: 'refunds' }, error: null });
-      
+      mockSingle.mockResolvedValueOnce({
+        data: { table_name: 'refunds' },
+        error: null,
+      });
+
       // Mock transaction with higher amount
       mockSingle.mockResolvedValueOnce({
         data: { amount: 200, refunded_amount: 0 },
-        error: null
+        error: null,
       });
 
       const result = await processRefundSucceeded(mockSupabaseAdmin, mockRefund);
 
       expect(result.success).toBe(true);
-      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-        refunded_amount: 50,
-        status: 'partially_refunded'
-      }));
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          refunded_amount: 50,
+          status: 'partially_refunded',
+        }),
+      );
     });
 
     it('should work without refunds table', async () => {
       // No refunds table
       mockSingle.mockResolvedValueOnce({ data: null, error: null });
-      
+
       // Mock transaction
       mockSingle.mockResolvedValueOnce({
         data: { amount: 100, refunded_amount: 0 },
-        error: null
+        error: null,
       });
 
       const result = await processRefundSucceeded(mockSupabaseAdmin, mockRefund);
@@ -315,20 +341,25 @@ describe('airwallex-atomic-operations', () => {
       status: 'failed',
       reason: 'Customer request',
       failure_reason: 'Insufficient balance',
-      created_at: '2024-01-16T10:00:00Z'
+      created_at: '2024-01-16T10:00:00Z',
     };
 
     it('should process failed refund with refunds table', async () => {
       // Mock refunds table exists
-      mockSingle.mockResolvedValueOnce({ data: { table_name: 'refunds' }, error: null });
+      mockSingle.mockResolvedValueOnce({
+        data: { table_name: 'refunds' },
+        error: null,
+      });
 
       const result = await processRefundFailed(mockSupabaseAdmin, mockRefund);
 
       expect(result.success).toBe(true);
-      expect(mockUpsert).toHaveBeenCalledWith(expect.objectContaining({
-        status: 'failed',
-        failure_reason: 'Insufficient balance'
-      }));
+      expect(mockUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'failed',
+          failure_reason: 'Insufficient balance',
+        }),
+      );
     });
 
     it('should handle missing refunds table', async () => {
@@ -351,29 +382,36 @@ describe('airwallex-atomic-operations', () => {
       status: 'needs_response',
       reason: 'fraudulent',
       evidence_due_by: '2024-01-30T23:59:59Z',
-      created_at: '2024-01-16T10:00:00Z'
+      created_at: '2024-01-16T10:00:00Z',
     };
 
     it('should create dispute record when table exists', async () => {
       // Mock disputes table exists
-      mockSingle.mockResolvedValueOnce({ data: { table_name: 'disputes' }, error: null });
+      mockSingle.mockResolvedValueOnce({
+        data: { table_name: 'disputes' },
+        error: null,
+      });
 
       const result = await processDisputeCreated(mockSupabaseAdmin, mockDispute);
 
       expect(result.success).toBe(true);
-      
+
       // Verify dispute insert
-      expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({
-        id: 'airwallex_dispute_disp_test_123',
-        amount: 100, // Converted from cents
-        reason: 'fraudulent',
-        evidence_due_by: '2024-01-30T23:59:59Z'
-      }));
+      expect(mockInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'airwallex_dispute_disp_test_123',
+          amount: 100, // Converted from cents
+          reason: 'fraudulent',
+          evidence_due_by: '2024-01-30T23:59:59Z',
+        }),
+      );
 
       // Verify transaction update
-      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-        has_dispute: true
-      }));
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          has_dispute: true,
+        }),
+      );
     });
 
     it('should handle missing disputes table', async () => {
@@ -385,9 +423,11 @@ describe('airwallex-atomic-operations', () => {
       expect(result.success).toBe(true);
       expect(mockInsert).not.toHaveBeenCalled();
       // Transaction should still be updated
-      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-        has_dispute: true
-      }));
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          has_dispute: true,
+        }),
+      );
     });
   });
 
@@ -400,38 +440,48 @@ describe('airwallex-atomic-operations', () => {
       status: 'won',
       reason: 'fraudulent',
       created_at: '2024-01-16T10:00:00Z',
-      updated_at: '2024-01-20T10:00:00Z'
+      updated_at: '2024-01-20T10:00:00Z',
     };
 
     it('should update dispute when won', async () => {
       // Mock disputes table exists
-      mockSingle.mockResolvedValueOnce({ data: { table_name: 'disputes' }, error: null });
+      mockSingle.mockResolvedValueOnce({
+        data: { table_name: 'disputes' },
+        error: null,
+      });
 
       const result = await processDisputeUpdated(mockSupabaseAdmin, mockDispute);
 
       expect(result.success).toBe(true);
-      
+
       // Verify dispute update
-      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-        status: 'won'
-      }));
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'won',
+        }),
+      );
 
       // Verify transaction dispute flag cleared
-      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-        has_dispute: false
-      }));
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          has_dispute: false,
+        }),
+      );
     });
 
     it('should not clear dispute flag for ongoing disputes', async () => {
       const ongoingDispute = { ...mockDispute, status: 'under_review' };
-      
+
       // Mock disputes table exists
-      mockSingle.mockResolvedValueOnce({ data: { table_name: 'disputes' }, error: null });
+      mockSingle.mockResolvedValueOnce({
+        data: { table_name: 'disputes' },
+        error: null,
+      });
 
       const result = await processDisputeUpdated(mockSupabaseAdmin, ongoingDispute);
 
       expect(result.success).toBe(true);
-      
+
       // Should update dispute but not clear has_dispute flag
       const updateCalls = mockUpdate.mock.calls;
       expect(updateCalls).toHaveLength(1); // Only dispute update, not transaction

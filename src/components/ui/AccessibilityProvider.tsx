@@ -1,18 +1,18 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { 
-  Eye, 
-  EyeOff, 
-  Volume2, 
-  VolumeX, 
-  ZoomIn, 
-  ZoomOut, 
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import {
+  Eye,
+  EyeOff,
+  Volume2,
+  VolumeX,
+  ZoomIn,
+  ZoomOut,
   RotateCcw,
   Keyboard,
-  MousePointer
-} from "lucide-react";
+  MousePointer,
+} from 'lucide-react';
 
 interface AccessibilityContextType {
   highContrast: boolean;
@@ -31,10 +31,11 @@ interface AccessibilityContextType {
 
 const AccessibilityContext = createContext<AccessibilityContextType | undefined>(undefined);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAccessibility = () => {
   const context = useContext(AccessibilityContext);
   if (!context) {
-    throw new Error("useAccessibility must be used within an AccessibilityProvider");
+    throw new Error('useAccessibility must be used within an AccessibilityProvider');
   }
   return context;
 };
@@ -53,7 +54,7 @@ export const AccessibilityProvider: React.FC<AccessibilityProviderProps> = ({ ch
   // Apply accessibility settings to document
   useEffect(() => {
     const root = document.documentElement;
-    
+
     // High contrast
     if (highContrast) {
       root.classList.add('high-contrast');
@@ -80,8 +81,8 @@ export const AccessibilityProvider: React.FC<AccessibilityProviderProps> = ({ ch
   }, [highContrast, fontSize, reducedMotion, keyboardNavigation]);
 
   const toggleHighContrast = () => setHighContrast(!highContrast);
-  const increaseFontSize = () => setFontSize(prev => Math.min(prev + 2, 24));
-  const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 2, 12));
+  const increaseFontSize = () => setFontSize((prev) => Math.min(prev + 2, 24));
+  const decreaseFontSize = () => setFontSize((prev) => Math.max(prev - 2, 12));
   const resetFontSize = () => setFontSize(16);
   const toggleReducedMotion = () => setReducedMotion(!reducedMotion);
   const toggleSound = () => setSoundEnabled(!soundEnabled);
@@ -102,11 +103,7 @@ export const AccessibilityProvider: React.FC<AccessibilityProviderProps> = ({ ch
     toggleKeyboardNavigation,
   };
 
-  return (
-    <AccessibilityContext.Provider value={value}>
-      {children}
-    </AccessibilityContext.Provider>
-  );
+  return <AccessibilityContext.Provider value={value}>{children}</AccessibilityContext.Provider>;
 };
 
 // Accessibility toolbar component
@@ -147,7 +144,7 @@ export const AccessibilityToolbar: React.FC = () => {
               <h3 className="font-semibold">Accessibility</h3>
               <Badge variant="secondary">A11y</Badge>
             </div>
-            
+
             <Separator />
 
             {/* High Contrast */}
@@ -157,11 +154,11 @@ export const AccessibilityToolbar: React.FC = () => {
                 <span className="text-sm">High Contrast</span>
               </div>
               <Button
-                variant={highContrast ? "default" : "outline"}
+                variant={highContrast ? 'default' : 'outline'}
                 size="sm"
                 onClick={toggleHighContrast}
               >
-                {highContrast ? "On" : "Off"}
+                {highContrast ? 'On' : 'Off'}
               </Button>
             </div>
 
@@ -180,11 +177,7 @@ export const AccessibilityToolbar: React.FC = () => {
                 >
                   <ZoomOut className="h-3 w-3" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={resetFontSize}
-                >
+                <Button variant="outline" size="sm" onClick={resetFontSize}>
                   <RotateCcw className="h-3 w-3" />
                 </Button>
                 <Button
@@ -202,11 +195,11 @@ export const AccessibilityToolbar: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-sm">Reduced Motion</span>
               <Button
-                variant={reducedMotion ? "default" : "outline"}
+                variant={reducedMotion ? 'default' : 'outline'}
                 size="sm"
                 onClick={toggleReducedMotion}
               >
-                {reducedMotion ? "On" : "Off"}
+                {reducedMotion ? 'On' : 'Off'}
               </Button>
             </div>
 
@@ -217,11 +210,11 @@ export const AccessibilityToolbar: React.FC = () => {
                 <span className="text-sm">Sound</span>
               </div>
               <Button
-                variant={soundEnabled ? "default" : "outline"}
+                variant={soundEnabled ? 'default' : 'outline'}
                 size="sm"
                 onClick={toggleSound}
               >
-                {soundEnabled ? "On" : "Off"}
+                {soundEnabled ? 'On' : 'Off'}
               </Button>
             </div>
 
@@ -232,11 +225,11 @@ export const AccessibilityToolbar: React.FC = () => {
                 <span className="text-sm">Keyboard Nav</span>
               </div>
               <Button
-                variant={keyboardNavigation ? "default" : "outline"}
+                variant={keyboardNavigation ? 'default' : 'outline'}
                 size="sm"
                 onClick={toggleKeyboardNavigation}
               >
-                {keyboardNavigation ? "On" : "Off"}
+                {keyboardNavigation ? 'On' : 'Off'}
               </Button>
             </div>
           </div>
@@ -247,6 +240,7 @@ export const AccessibilityToolbar: React.FC = () => {
 };
 
 // Keyboard navigation hook
+// eslint-disable-next-line react-refresh/only-export-components
 export const useKeyboardNavigation = () => {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -258,9 +252,9 @@ export const useKeyboardNavigation = () => {
       // Tab navigation enhancement
       if (event.key === 'Tab') {
         const focusableElements = document.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
         );
-        
+
         const firstElement = focusableElements[0] as HTMLElement;
         const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
 
@@ -277,4 +271,4 @@ export const useKeyboardNavigation = () => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
-}; 
+};

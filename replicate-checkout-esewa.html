@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Replicate Checkout eSewa</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .step { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .success { color: green; }
+        .error { color: red; }
+        .log { background: #e9ecef; padding: 8px; margin: 5px 0; border-radius: 3px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Replicate Checkout eSewa Process</h1>
+    <p>This will replicate the exact same process as the checkout page.</p>
+    
+    <div class="step">
+        <h3>Step 1: Call Backend</h3>
+        <button onclick="replicateCheckout()">Replicate Checkout Process</button>
+    </div>
+    
+    <div class="step">
+        <h3>Console Logs</h3>
+        <div id="logs"></div>
+    </div>
+    
+    <div class="step">
+        <h3>Results</h3>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let logDiv = document.getElementById('logs');
+        let resultDiv = document.getElementById('results');
+        
+        function addLog(message, type = 'info') {
+            const logEntry = document.createElement('div');
+            logEntry.className = `log ${type}`;
+            logEntry.textContent = new Date().toISOString() + ': ' + message;
+            logDiv.appendChild(logEntry);
+            console.log(message);
+        }
+        
+        async function replicateCheckout() {
+            logDiv.innerHTML = '';
+            resultDiv.innerHTML = '';
+            
+            addLog('🚀 Starting checkout replication...');
+            
+            try {
+                addLog('📞 Calling create-payment endpoint...');
+                
+                const paymentRequest = {
+                    quoteIds: ['test-quote-' + Date.now()],
+                    gateway: 'esewa',
+                    amount: 100,
+                    currency: 'NPR',
+                    success_url: window.location.origin + '/payment-callback/esewa-success',
+                    cancel_url: window.location.origin + '/payment-callback/esewa-failure',
+                    customerInfo: {
+                        name: 'Test Customer',
+                        email: 'test@example.com',
+                        phone: '9806800001'
+                    }
+                };
+                
+                addLog('📋 Payment request: ' + JSON.stringify(paymentRequest));
+                
+                const response = await fetch('/functions/v1/create-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(paymentRequest)
+                });
+                
+                addLog('📨 Response status: ' + response.status);
+                
+                const paymentResponse = await response.json();
+                addLog('📦 Payment response received');
+                
+                // Log the exact same things as checkout page
+                addLog('🔍 eSewa payment response: ' + JSON.stringify(paymentResponse, null, 2));
+                addLog('🔍 Has formData? ' + !!paymentResponse.formData);
+                addLog('🔍 Has URL? ' + !!paymentResponse.url);
+                addLog('🔍 Method? ' + paymentResponse.method);
+                
+                if (paymentResponse.formData && paymentResponse.url) {
+                    addLog('📋 Creating form for eSewa submission...');
+                    addLog('📋 Form action URL: ' + paymentResponse.url);
+                    addLog('📋 Form data: ' + JSON.stringify(paymentResponse.formData));
+                    
+                    // Safety check: Fix URL corruption if detected (same as checkout)
+                    let cleanUrl = paymentResponse.url;
+                    if (cleanUrl.includes('e  pay') || cleanUrl.includes('e%20%20pay')) {
+                        addLog('⚠️ URL corruption detected, fixing...', 'error');
+                        cleanUrl = cleanUrl.replace(/e\s+pay/g, 'epay').replace(/e%20%20pay/g, 'epay');
+                        addLog('🔧 Fixed URL: ' + cleanUrl);
+                    }
+                    
+                    // Create form exactly like checkout
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = cleanUrl;
+                    form.target = '_blank'; // Changed to _blank for testing
+                    form.style.display = 'none';
+                    
+                    // Add all form fields from Edge Function response
+                    Object.entries(paymentResponse.formData).forEach(([key, value]) => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.value = String(value);
+                        form.appendChild(input);
+                        addLog('📝 eSewa form field: ' + key + ' = ' + value);
+                    });
+                    
+                    document.body.appendChild(form);
+                    addLog('✅ eSewa form created with ' + form.elements.length + ' fields');
+                    
+                    // Show form for inspection
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Form Created Successfully!</h4>
+                            <p><strong>Action:</strong> ${form.action}</p>
+                            <p><strong>Method:</strong> ${form.method}</p>
+                            <p><strong>Fields:</strong> ${form.elements.length}</p>
+                            
+                            <h4>Form Fields:</h4>
+                            <ul>
+                                ${Object.entries(paymentResponse.formData).map(([key, value]) => 
+                                    `<li><strong>${key}:</strong> ${value}</li>`
+                                ).join('')}
+                            </ul>
+                            
+                            <button onclick="submitTestForm()" style="padding: 10px 20px; background: #28a745; color: white; border: none; cursor: pointer; border-radius: 4px;">
+                                Submit Test Form
+                            </button>
+                        </div>
+                    `;
+                    
+                    // Store form globally for testing
+                    window.testForm = form;
+                    
+                } else {
+                    addLog('❌ eSewa formData or URL missing, falling back to direct redirect', 'error');
+                    addLog('❌ formData: ' + JSON.stringify(paymentResponse.formData), 'error');
+                    addLog('❌ url: ' + paymentResponse.url, 'error');
+                    
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Backend Error</h4>
+                            <p>Missing formData or URL</p>
+                            <pre>${JSON.stringify(paymentResponse, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                addLog('❌ Error: ' + error.message, 'error');
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Request Failed</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function submitTestForm() {
+            if (window.testForm) {
+                addLog('🚀 Submitting to eSewa via POST...');
+                try {
+                    window.testForm.submit();
+                    addLog('✅ Form submitted successfully');
+                } catch (error) {
+                    addLog('❌ Form submission failed: ' + error.message, 'error');
+                    addLog('❌ Falling back to direct redirect', 'error');
+                    // Note: In actual checkout, this would redirect to paymentResponse.url
+                }
+            }
+        }
+    </script>
+</body>
+</html>

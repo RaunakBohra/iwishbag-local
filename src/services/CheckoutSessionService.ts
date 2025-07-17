@@ -1,16 +1,17 @@
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  GuestCheckoutSession, 
-  CreateGuestSessionRequest, 
-  UpdateGuestSessionRequest, 
+import {
+  GuestCheckoutSession,
+  CreateGuestSessionRequest,
+  UpdateGuestSessionRequest,
   GuestSessionResponse,
-  GuestSessionService 
+  GuestSessionService,
 } from '@/types/guestCheckout';
 
 /**
  * Extended checkout session types for authenticated users
  */
-export interface AuthenticatedCheckoutSession extends Omit<GuestCheckoutSession, 'guest_name' | 'guest_email' | 'guest_phone'> {
+export interface AuthenticatedCheckoutSession
+  extends Omit<GuestCheckoutSession, 'guest_name' | 'guest_email' | 'guest_phone'> {
   user_id: string;
   temporary_shipping_address?: {
     streetAddress?: string;
@@ -53,7 +54,6 @@ export interface UnifiedSessionResponse {
  * Prevents quote contamination by storing checkout details temporarily until payment confirmation
  */
 class CheckoutSessionServiceImpl implements GuestSessionService {
-  
   /**
    * Generate a unique session token
    */
@@ -69,7 +69,7 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
   async createSession(request: CreateGuestSessionRequest): Promise<GuestSessionResponse> {
     try {
       const sessionToken = this.generateSessionToken();
-      
+
       const { data, error } = await supabase
         .from('guest_checkout_sessions')
         .insert({
@@ -96,7 +96,10 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in createSession:', error);
-      return { success: false, error: 'Failed to create guest checkout session' };
+      return {
+        success: false,
+        error: 'Failed to create guest checkout session',
+      };
     }
   }
 
@@ -113,8 +116,10 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       if (request.guest_name !== undefined) updateData.guest_name = request.guest_name;
       if (request.guest_email !== undefined) updateData.guest_email = request.guest_email;
       if (request.guest_phone !== undefined) updateData.guest_phone = request.guest_phone;
-      if (request.shipping_address !== undefined) updateData.shipping_address = request.shipping_address;
-      if (request.payment_currency !== undefined) updateData.payment_currency = request.payment_currency;
+      if (request.shipping_address !== undefined)
+        updateData.shipping_address = request.shipping_address;
+      if (request.payment_currency !== undefined)
+        updateData.payment_currency = request.payment_currency;
       if (request.payment_method !== undefined) updateData.payment_method = request.payment_method;
       if (request.payment_amount !== undefined) updateData.payment_amount = request.payment_amount;
       if (request.status !== undefined) updateData.status = request.status;
@@ -133,13 +138,19 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       }
 
       if (!data) {
-        return { success: false, error: 'Session not found or already completed' };
+        return {
+          success: false,
+          error: 'Session not found or already completed',
+        };
       }
 
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in updateSession:', error);
-      return { success: false, error: 'Failed to update guest checkout session' };
+      return {
+        success: false,
+        error: 'Failed to update guest checkout session',
+      };
     }
   }
 
@@ -149,10 +160,12 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
    * Create a checkout session for authenticated users
    * Stores temporary data until payment confirmation
    */
-  async createAuthenticatedSession(request: CreateAuthenticatedSessionRequest): Promise<UnifiedSessionResponse> {
+  async createAuthenticatedSession(
+    request: CreateAuthenticatedSessionRequest,
+  ): Promise<UnifiedSessionResponse> {
     try {
       const sessionToken = this.generateSessionToken();
-      
+
       const { data, error } = await supabase
         .from('authenticated_checkout_sessions')
         .insert({
@@ -177,22 +190,29 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in createAuthenticatedSession:', error);
-      return { success: false, error: 'Failed to create authenticated checkout session' };
+      return {
+        success: false,
+        error: 'Failed to create authenticated checkout session',
+      };
     }
   }
 
   /**
    * Update an authenticated checkout session
    */
-  async updateAuthenticatedSession(request: UpdateAuthenticatedSessionRequest): Promise<UnifiedSessionResponse> {
+  async updateAuthenticatedSession(
+    request: UpdateAuthenticatedSessionRequest,
+  ): Promise<UnifiedSessionResponse> {
     try {
       const updateData: Partial<AuthenticatedCheckoutSession> = {
         updated_at: new Date().toISOString(),
       };
 
       // Only update provided fields
-      if (request.temporary_shipping_address !== undefined) updateData.temporary_shipping_address = request.temporary_shipping_address;
-      if (request.payment_currency !== undefined) updateData.payment_currency = request.payment_currency;
+      if (request.temporary_shipping_address !== undefined)
+        updateData.temporary_shipping_address = request.temporary_shipping_address;
+      if (request.payment_currency !== undefined)
+        updateData.payment_currency = request.payment_currency;
       if (request.payment_method !== undefined) updateData.payment_method = request.payment_method;
       if (request.payment_amount !== undefined) updateData.payment_amount = request.payment_amount;
       if (request.status !== undefined) updateData.status = request.status;
@@ -211,20 +231,29 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       }
 
       if (!data) {
-        return { success: false, error: 'Session not found or already completed' };
+        return {
+          success: false,
+          error: 'Session not found or already completed',
+        };
       }
 
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in updateAuthenticatedSession:', error);
-      return { success: false, error: 'Failed to update authenticated checkout session' };
+      return {
+        success: false,
+        error: 'Failed to update authenticated checkout session',
+      };
     }
   }
 
   /**
    * Get authenticated session by user ID and quote IDs
    */
-  async getAuthenticatedSessionByQuotes(userId: string, quoteIds: string[]): Promise<UnifiedSessionResponse> {
+  async getAuthenticatedSessionByQuotes(
+    userId: string,
+    quoteIds: string[],
+  ): Promise<UnifiedSessionResponse> {
     try {
       const { data, error } = await supabase
         .from('authenticated_checkout_sessions')
@@ -268,7 +297,10 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
 
       if (sessionError || !sessionData) {
         console.error('Error getting session for completion:', sessionError);
-        return { success: false, error: 'Session not found or already completed' };
+        return {
+          success: false,
+          error: 'Session not found or already completed',
+        };
       }
 
       // Update quotes with temporary shipping address if it exists
@@ -279,7 +311,7 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
             .update({
               shipping_address: sessionData.temporary_shipping_address,
               address_updated_at: new Date().toISOString(),
-              address_updated_by: sessionData.user_id
+              address_updated_by: sessionData.user_id,
             })
             .eq('id', quoteId);
 
@@ -295,7 +327,7 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
         .from('authenticated_checkout_sessions')
         .update({
           status: 'completed',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('session_token', sessionToken)
         .eq('status', 'active')
@@ -310,7 +342,10 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in completeAuthenticatedSession:', error);
-      return { success: false, error: 'Failed to complete authenticated session' };
+      return {
+        success: false,
+        error: 'Failed to complete authenticated session',
+      };
     }
   }
 
@@ -330,7 +365,10 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       // Try authenticated sessions
       const authResponse = await this.getAuthenticatedSession(sessionToken);
       if (authResponse.success) {
-        return { success: true, session: authResponse.session as AuthenticatedCheckoutSession };
+        return {
+          success: true,
+          session: authResponse.session as AuthenticatedCheckoutSession,
+        };
       }
 
       return { success: false, error: 'Session not found' };
@@ -400,7 +438,10 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in getAuthenticatedSession:', error);
-      return { success: false, error: 'Failed to get authenticated checkout session' };
+      return {
+        success: false,
+        error: 'Failed to get authenticated checkout session',
+      };
     }
   }
 
@@ -418,10 +459,16 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       // Try authenticated session
       const authResult = await this.completeAuthenticatedSession(sessionToken);
       if (authResult.success) {
-        return { success: true, session: authResult.session as AuthenticatedCheckoutSession };
+        return {
+          success: true,
+          session: authResult.session as AuthenticatedCheckoutSession,
+        };
       }
 
-      return { success: false, error: 'Session not found or already completed' };
+      return {
+        success: false,
+        error: 'Session not found or already completed',
+      };
     } catch (error) {
       console.error('Error in completeSession:', error);
       return { success: false, error: 'Failed to complete checkout session' };
@@ -437,7 +484,7 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
         .from('guest_checkout_sessions')
         .update({
           status: 'completed',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('session_token', sessionToken)
         .eq('status', 'active')
@@ -450,13 +497,19 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       }
 
       if (!data) {
-        return { success: false, error: 'Session not found or already completed' };
+        return {
+          success: false,
+          error: 'Session not found or already completed',
+        };
       }
 
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in completeGuestSession:', error);
-      return { success: false, error: 'Failed to complete guest checkout session' };
+      return {
+        success: false,
+        error: 'Failed to complete guest checkout session',
+      };
     }
   }
 
@@ -474,7 +527,10 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       // Try authenticated session
       const authResult = await this.expireAuthenticatedSession(sessionToken);
       if (authResult.success) {
-        return { success: true, session: authResult.session as AuthenticatedCheckoutSession };
+        return {
+          success: true,
+          session: authResult.session as AuthenticatedCheckoutSession,
+        };
       }
 
       return { success: false, error: 'Session not found' };
@@ -493,7 +549,7 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
         .from('guest_checkout_sessions')
         .update({
           status: 'expired',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('session_token', sessionToken)
         .neq('status', 'completed') // Don't expire completed sessions
@@ -508,7 +564,10 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in expireGuestSession:', error);
-      return { success: false, error: 'Failed to expire guest checkout session' };
+      return {
+        success: false,
+        error: 'Failed to expire guest checkout session',
+      };
     }
   }
 
@@ -521,7 +580,7 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
         .from('authenticated_checkout_sessions')
         .update({
           status: 'expired',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('session_token', sessionToken)
         .neq('status', 'completed') // Don't expire completed sessions
@@ -536,7 +595,10 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in expireAuthenticatedSession:', error);
-      return { success: false, error: 'Failed to expire authenticated checkout session' };
+      return {
+        success: false,
+        error: 'Failed to expire authenticated checkout session',
+      };
     }
   }
 
@@ -589,12 +651,21 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
   }
 
   // Additional compatibility methods for existing interface
-  async enhancedCleanup(triggeredBy: string = 'manual'): Promise<{ deleted: number; errors: string[] }> {
+  async enhancedCleanup(
+    triggeredBy: string = 'manual',
+  ): Promise<{ deleted: number; errors: string[] }> {
     // Implementation maintained for compatibility
     return { success: true, stats: { totalProcessed: 0 } };
   }
 
-  async getCleanupHistory(limit: number = 50): Promise<{ cleanups: Array<{ timestamp: string; triggeredBy: string; deleted: number }>; total: number }> {
+  async getCleanupHistory(limit: number = 50): Promise<{
+    cleanups: Array<{
+      timestamp: string;
+      triggeredBy: string;
+      deleted: number;
+    }>;
+    total: number;
+  }> {
     // Implementation maintained for compatibility
     return { success: true, logs: [] };
   }

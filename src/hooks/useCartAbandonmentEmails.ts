@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { useToast } from '@/hooks/use-toast';
 import { useEmailSettings } from '@/hooks/useEmailSettings';
 
@@ -50,7 +50,8 @@ export const useCartAbandonmentEmails = () => {
 
       const { data, error } = await supabase
         .from('quotes')
-        .select(`
+        .select(
+          `
           id,
           user_id,
           email,
@@ -59,7 +60,8 @@ export const useCartAbandonmentEmails = () => {
           quantity,
           product_name,
           image_url
-        `)
+        `,
+        )
         .eq('in_cart', true)
         .lt('updated_at', abandonedThreshold.toISOString())
         .order('updated_at', { ascending: false });
@@ -74,10 +76,7 @@ export const useCartAbandonmentEmails = () => {
   const { data: emailTemplates, isLoading: loadingTemplates } = useQuery({
     queryKey: ['email-templates'],
     queryFn: async (): Promise<EmailTemplate[]> => {
-      const { data, error } = await supabase
-        .from('email_templates')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.from('email_templates').select('*').order('name');
 
       if (error) {
         console.error('Error fetching email templates:', error);
@@ -98,7 +97,7 @@ Complete your purchase now and enjoy your items!
 Best regards,
 The Team`,
             template_type: 'cart_abandonment',
-            is_active: true
+            is_active: true,
           },
           {
             id: 'discount-abandonment',
@@ -118,13 +117,13 @@ Complete your purchase now!
 Best regards,
 The Team`,
             template_type: 'cart_abandonment',
-            is_active: true
-          }
+            is_active: true,
+          },
         ];
       }
-      
+
       return data || [];
-    }
+    },
   });
 
   // Get email campaigns
@@ -152,22 +151,35 @@ The Team`,
           status: 'scheduled',
           created_at: new Date().toISOString(),
           scheduled_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        }
+        },
       ];
-    }
+    },
   });
 
   // Send abandonment email
   const sendAbandonmentEmailMutation = useMutation({
-    mutationFn: async ({ email, templateName, cartData }: { email: string; templateName: string; cartData: Record<string, unknown> }) => {
+    mutationFn: async ({
+      email,
+      templateName,
+      cartData,
+    }: {
+      email: string;
+      templateName: string;
+      cartData: Record<string, unknown>;
+    }) => {
       // Check if cart abandonment emails are enabled
       if (!shouldSendEmail('cart_abandonment')) {
         console.log('Cart abandonment emails are disabled');
-        return { skipped: true, message: 'Cart abandonment emails are disabled' };
+        return {
+          skipped: true,
+          message: 'Cart abandonment emails are disabled',
+        };
       }
 
-      const accessToken = await supabase.auth.getSession().then(({ data }) => data.session?.access_token);
-      
+      const accessToken = await supabase.auth
+        .getSession()
+        .then(({ data }) => data.session?.access_token);
+
       if (!accessToken) {
         throw new Error('User not authenticated - cannot send email');
       }
@@ -178,9 +190,9 @@ The Team`,
           to: email,
           subject: 'Complete Your Purchase - Your Cart is Waiting!',
           html: generateCartAbandonmentHtml(templateName, cartData),
-          from: 'noreply@whyteclub.com'
+          from: 'noreply@whyteclub.com',
         },
-        headers: { Authorization: `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (error) {
@@ -248,35 +260,42 @@ The Team`,
       `;
     }
 
-    return baseHtml + content + `
+    return (
+      baseHtml +
+      content +
+      `
           <p>Best regards,<br>The WishBag Team</p>
         </div>
       </body>
       </html>
-    `;
+    `
+    );
   };
 
   // Send bulk recovery emails
   const sendBulkRecoveryEmails = useMutation({
-    mutationFn: async ({ 
-      cartIds, 
-      templateId, 
-      delayBetweenEmails = 1000 
-    }: { 
-      cartIds: string[]; 
-      templateId: string; 
+    mutationFn: async ({
+      cartIds,
+      templateId,
+      delayBetweenEmails = 1000,
+    }: {
+      cartIds: string[];
+      templateId: string;
       delayBetweenEmails?: number;
     }) => {
       const results = [];
-      
+
       for (const cartId of cartIds) {
         try {
-          const result = await sendAbandonmentEmailMutation.mutateAsync({ email: cartId, templateName: templateId });
+          const result = await sendAbandonmentEmailMutation.mutateAsync({
+            email: cartId,
+            templateName: templateId,
+          });
           results.push({ cartId, success: true, result });
-          
+
           // Add delay between emails to avoid rate limiting
           if (delayBetweenEmails > 0) {
-            await new Promise(resolve => setTimeout(resolve, delayBetweenEmails));
+            await new Promise((resolve) => setTimeout(resolve, delayBetweenEmails));
           }
         } catch (error) {
           results.push({ cartId, success: false, error });
@@ -286,22 +305,22 @@ The Team`,
       return results;
     },
     onSuccess: (results) => {
-      const successCount = results.filter(r => r.success).length;
+      const successCount = results.filter((r) => r.success).length;
       const failureCount = results.length - successCount;
-      
+
       if (successCount > 0) {
         toast.success(`Sent ${successCount} recovery emails successfully`);
       }
       if (failureCount > 0) {
         toast.error(`${failureCount} emails failed to send`);
       }
-      
+
       queryClient.invalidateQueries({ queryKey: ['email-campaigns'] });
     },
     onError: (error) => {
       toast.error('Failed to send bulk recovery emails');
       console.error('Bulk email sending error:', error);
-    }
+    },
   });
 
   // Create email campaign
@@ -315,9 +334,9 @@ The Team`,
       };
 
       console.log('Creating campaign:', newCampaign);
-      
+
       // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       return newCampaign;
     },
@@ -328,7 +347,7 @@ The Team`,
     onError: (error) => {
       toast.error('Failed to create email campaign');
       console.error('Campaign creation error:', error);
-    }
+    },
   });
 
   // Get abandonment analytics
@@ -343,12 +362,12 @@ The Team`,
 
       // Group by time periods
       const now = new Date();
-      const last24h = abandonedCarts.filter(cart => {
+      const last24h = abandonedCarts.filter((cart) => {
         const cartDate = new Date(cart.updated_at);
         return now.getTime() - cartDate.getTime() <= 24 * 60 * 60 * 1000;
       });
 
-      const last7d = abandonedCarts.filter(cart => {
+      const last7d = abandonedCarts.filter((cart) => {
         const cartDate = new Date(cart.updated_at);
         return now.getTime() - cartDate.getTime() <= 7 * 24 * 60 * 60 * 1000;
       });
@@ -363,7 +382,7 @@ The Team`,
         averageTimeToAbandon: 24, // hours
       };
     },
-    enabled: !!abandonedCarts
+    enabled: !!abandonedCarts,
   });
 
   return {
@@ -372,20 +391,21 @@ The Team`,
     emailTemplates,
     emailCampaigns,
     abandonmentAnalytics,
-    
+
     // Loading states
     loadingCarts,
     loadingTemplates,
     loadingCampaigns,
-    
+
     // Mutations
     sendAbandonmentEmail: sendAbandonmentEmailMutation.mutate,
     sendBulkRecoveryEmails,
     createEmailCampaign,
-    
+
     // Utilities
     getAbandonedCartsCount: () => abandonedCarts?.length || 0,
-    getTotalAbandonedValue: () => abandonedCarts?.reduce((sum, cart) => sum + cart.final_total_local, 0) || 0,
+    getTotalAbandonedValue: () =>
+      abandonedCarts?.reduce((sum, cart) => sum + cart.final_total_local, 0) || 0,
     isSending: sendAbandonmentEmailMutation.isPending,
   };
-}; 
+};

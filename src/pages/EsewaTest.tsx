@@ -110,9 +110,7 @@ const EsewaTest = () => {
       console.log('✅ Test quote created:', quote);
     } catch (error) {
       console.error('❌ Error creating test quote:', error);
-      setError(
-        error instanceof Error ? error.message : 'Failed to create test quote'
-      );
+      setError(error instanceof Error ? error.message : 'Failed to create test quote');
     } finally {
       setIsCreatingQuote(false);
     }
@@ -139,38 +137,30 @@ const EsewaTest = () => {
       console.log('👤 User ID:', user.id);
 
       // Verify session is valid
-      const { data: session, error: sessionError } =
-        await supabase.auth.getSession();
+      const { data: session, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session.session) {
-        throw new Error(
-          'Authentication session expired. Please refresh and try again.'
-        );
+        throw new Error('Authentication session expired. Please refresh and try again.');
       }
 
       console.log('✅ Session verified');
 
       // Call the Edge Function
-      const { data, error } = await supabase.functions.invoke(
-        'create-payment',
-        {
-          body: {
-            quoteIds: [testQuote.id],
-            gateway: 'esewa',
-            success_url:
-              window.location.origin + '/payment-callback/esewa-success',
-            cancel_url:
-              window.location.origin + '/payment-callback/esewa-failure',
-            amount: parseFloat(amount),
-            currency: 'NPR',
-            customerInfo: {
-              name: 'Test Customer',
-              email: user?.email || 'test@example.com',
-              phone: '9806800001',
-            },
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          quoteIds: [testQuote.id],
+          gateway: 'esewa',
+          success_url: window.location.origin + '/payment-callback/esewa-success',
+          cancel_url: window.location.origin + '/payment-callback/esewa-failure',
+          amount: parseFloat(amount),
+          currency: 'NPR',
+          customerInfo: {
+            name: 'Test Customer',
+            email: user?.email || 'test@example.com',
+            phone: '9806800001',
           },
-        }
-      );
+        },
+      });
 
       if (error) {
         console.error('❌ Edge Function error:', error);
@@ -187,18 +177,13 @@ const EsewaTest = () => {
         console.log('   - Method:', data.method);
         console.log('   - Has formData:', !!data.formData);
         console.log('   - Transaction ID:', data.transactionId);
-        console.log(
-          '   - Form fields:',
-          data.formData ? Object.keys(data.formData) : 'None'
-        );
+        console.log('   - Form fields:', data.formData ? Object.keys(data.formData) : 'None');
       } else {
         setError('Payment request failed - invalid response structure');
       }
     } catch (error) {
       console.error('❌ Error testing eSewa payment:', error);
-      setError(
-        error instanceof Error ? error.message : 'Failed to test eSewa payment'
-      );
+      setError(error instanceof Error ? error.message : 'Failed to test eSewa payment');
     } finally {
       setIsTestingPayment(false);
     }
@@ -243,8 +228,7 @@ const EsewaTest = () => {
     } catch (error) {
       console.error('❌ Form submission failed:', error);
       setError(
-        'Form submission failed: ' +
-          (error instanceof Error ? error.message : 'Unknown error')
+        'Form submission failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
       );
     }
   };
@@ -263,11 +247,7 @@ const EsewaTest = () => {
             Back
           </Button>
 
-          <Button
-            onClick={resetAll}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
+          <Button onClick={resetAll} variant="outline" className="flex items-center gap-2">
             <RefreshCw className="h-4 w-4" />
             Reset Test
           </Button>
@@ -275,12 +255,8 @@ const EsewaTest = () => {
 
         {/* Title */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">
-            🏦 eSewa Payment Testing
-          </h1>
-          <p className="text-xl text-gray-600">
-            Test and debug eSewa payment gateway integration
-          </p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">🏦 eSewa Payment Testing</h1>
+          <p className="text-xl text-gray-600">Test and debug eSewa payment gateway integration</p>
         </div>
 
         {/* Status Messages */}
@@ -315,9 +291,7 @@ const EsewaTest = () => {
               <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
                 <div className="flex items-center gap-2">
                   <XCircle className="h-5 w-5 text-red-600" />
-                  <span className="text-red-800 font-medium">
-                    Not logged in
-                  </span>
+                  <span className="text-red-800 font-medium">Not logged in</span>
                 </div>
                 <Button
                   onClick={() => navigate('/auth')}
@@ -331,9 +305,7 @@ const EsewaTest = () => {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 p-4 bg-green-50 rounded-lg">
                   <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="text-green-800 font-medium">
-                    Authenticated
-                  </span>
+                  <span className="text-green-800 font-medium">Authenticated</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -352,8 +324,7 @@ const EsewaTest = () => {
                   <div className="flex items-center gap-2">
                     <Shield className="h-4 w-4 text-gray-500" />
                     <span>
-                      <strong>Session:</strong>{' '}
-                      {sessionInfo?.session ? '✅ Valid' : '❌ Invalid'}
+                      <strong>Session:</strong> {sessionInfo?.session ? '✅ Valid' : '❌ Invalid'}
                     </span>
                   </div>
                 </div>
@@ -391,7 +362,7 @@ const EsewaTest = () => {
                     id="amount"
                     type="number"
                     value={amount}
-                    onChange={e => setAmount(e.target.value)}
+                    onChange={(e) => setAmount(e.target.value)}
                     placeholder="100"
                     className="pr-12"
                     disabled={isCreatingQuote || isTestingPayment}
@@ -407,10 +378,7 @@ const EsewaTest = () => {
               <div>
                 <Label className="text-sm font-medium">Gateway</Label>
                 <div className="mt-1 flex items-center h-10 px-3 bg-green-50 border border-green-200 rounded-md">
-                  <Badge
-                    variant="outline"
-                    className="bg-green-100 text-green-800"
-                  >
+                  <Badge variant="outline" className="bg-green-100 text-green-800">
                     eSewa (Nepal)
                   </Badge>
                 </div>
@@ -433,8 +401,7 @@ const EsewaTest = () => {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600 mb-4">
-                Generate a test quote for NPR {amount} that can be used for
-                payment testing.
+                Generate a test quote for NPR {amount} that can be used for payment testing.
               </p>
               <Button
                 onClick={createTestQuote}
@@ -468,8 +435,7 @@ const EsewaTest = () => {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600 mb-4">
-                Call the payment Edge Function to generate eSewa form data with
-                signature.
+                Call the payment Edge Function to generate eSewa form data with signature.
               </p>
               <Button
                 onClick={testEsewaPayment}
@@ -523,9 +489,7 @@ const EsewaTest = () => {
         {testQuote && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="text-lg text-green-700">
-                📋 Test Quote Details
-              </CardTitle>
+              <CardTitle className="text-lg text-green-700">📋 Test Quote Details</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -569,27 +533,19 @@ const EsewaTest = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-6">
                 <div>
                   <span className="font-medium text-gray-500">Success:</span>
-                  <p className="mt-1">
-                    {paymentResponse.success ? '✅ Yes' : '❌ No'}
-                  </p>
+                  <p className="mt-1">{paymentResponse.success ? '✅ Yes' : '❌ No'}</p>
                 </div>
                 <div>
                   <span className="font-medium text-gray-500">Method:</span>
                   <p className="mt-1">{paymentResponse.method}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-500">
-                    Transaction ID:
-                  </span>
-                  <p className="font-mono text-xs mt-1">
-                    {paymentResponse.transactionId}
-                  </p>
+                  <span className="font-medium text-gray-500">Transaction ID:</span>
+                  <p className="font-mono text-xs mt-1">{paymentResponse.transactionId}</p>
                 </div>
                 <div>
                   <span className="font-medium text-gray-500">Form Data:</span>
-                  <p className="mt-1">
-                    {paymentResponse.formData ? '✅ Present' : '❌ Missing'}
-                  </p>
+                  <p className="mt-1">{paymentResponse.formData ? '✅ Present' : '❌ Missing'}</p>
                 </div>
               </div>
 
@@ -602,9 +558,7 @@ const EsewaTest = () => {
 
               {paymentResponse.formData && (
                 <div>
-                  <span className="font-medium text-gray-500 mb-2 block">
-                    Form Data (JSON):
-                  </span>
+                  <span className="font-medium text-gray-500 mb-2 block">Form Data (JSON):</span>
                   <pre className="text-xs p-3 bg-gray-900 text-green-400 rounded overflow-x-auto">
                     {JSON.stringify(paymentResponse.formData, null, 2)}
                   </pre>
@@ -644,8 +598,7 @@ const EsewaTest = () => {
                 <h4 className="font-medium mb-2">🔐 eSewa Test Credentials:</h4>
                 <div className="p-3 bg-yellow-50 rounded border border-yellow-200">
                   <p>
-                    <strong>eSewa ID:</strong> 9806800001 (or
-                    9806800002/003/004/005)
+                    <strong>eSewa ID:</strong> 9806800001 (or 9806800002/003/004/005)
                   </p>
                   <p>
                     <strong>Password:</strong> Nepal@123

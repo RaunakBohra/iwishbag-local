@@ -68,32 +68,38 @@ export const useEmailSettings = () => {
 
   // Helper functions to get specific settings
   const isEmailSendingEnabled = () => {
-    const setting = emailSettings?.find(s => s.setting_key === 'email_sending_enabled');
+    const setting = emailSettings?.find((s) => s.setting_key === 'email_sending_enabled');
     return setting?.setting_value ?? true;
   };
 
   const isCartAbandonmentEnabled = () => {
-    const setting = emailSettings?.find(s => s.setting_key === 'cart_abandonment_enabled');
+    const setting = emailSettings?.find((s) => s.setting_key === 'cart_abandonment_enabled');
     return setting?.setting_value ?? true;
   };
 
   const isQuoteNotificationsEnabled = () => {
-    const setting = emailSettings?.find(s => s.setting_key === 'quote_notifications_enabled');
+    const setting = emailSettings?.find((s) => s.setting_key === 'quote_notifications_enabled');
     return setting?.setting_value ?? true;
   };
 
   const isOrderNotificationsEnabled = () => {
-    const setting = emailSettings?.find(s => s.setting_key === 'order_notifications_enabled');
+    const setting = emailSettings?.find((s) => s.setting_key === 'order_notifications_enabled');
     return setting?.setting_value ?? true;
   };
 
   const isStatusNotificationsEnabled = () => {
-    const setting = emailSettings?.find(s => s.setting_key === 'status_notifications_enabled');
+    const setting = emailSettings?.find((s) => s.setting_key === 'status_notifications_enabled');
     return setting?.setting_value ?? true;
   };
 
   // Helper function to check if a specific email type should be sent
-  const shouldSendEmail = (emailType: 'cart_abandonment' | 'quote_notification' | 'order_notification' | 'status_notification') => {
+  const shouldSendEmail = (
+    emailType:
+      | 'cart_abandonment'
+      | 'quote_notification'
+      | 'order_notification'
+      | 'status_notification',
+  ) => {
     if (!isEmailSendingEnabled()) {
       return false;
     }
@@ -124,4 +130,4 @@ export const useEmailSettings = () => {
     isStatusNotificationsEnabled,
     shouldSendEmail,
   };
-}; 
+};

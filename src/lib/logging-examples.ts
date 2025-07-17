@@ -3,14 +3,14 @@
  * These patterns can be used throughout the application
  */
 
-import { 
-  logger, 
-  LogCategory, 
-  logInfo, 
-  logError, 
+import {
+  logger,
+  LogCategory,
+  logInfo,
+  logError,
   logWarn,
   logPerformanceStart,
-  logPerformanceEnd
+  logPerformanceEnd,
 } from '@/services/LoggingService';
 
 /**
@@ -19,54 +19,54 @@ import {
 export const logAuthExample = async (email: string, userId?: string) => {
   // Start performance tracking
   logPerformanceStart('auth.login');
-  
+
   // Log the start of authentication
   logInfo(LogCategory.USER_AUTHENTICATION, 'User login attempt', {
     userId: userId || 'anonymous',
     metadata: {
       email: email.substring(0, 3) + '***@***', // Partially masked
       timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent
-    }
+      userAgent: navigator.userAgent,
+    },
   });
 
   try {
     // Simulate auth process
     const result = await performAuth(email);
-    
+
     // Log successful authentication
     logInfo(LogCategory.USER_AUTHENTICATION, 'User login successful', {
       userId: result.userId,
       sessionId: result.sessionId,
       metadata: {
         authMethod: 'email',
-        firstLogin: result.firstLogin
-      }
+        firstLogin: result.firstLogin,
+      },
     });
-    
+
     // End performance tracking
     logPerformanceEnd('auth.login', LogCategory.USER_AUTHENTICATION, {
-      userId: result.userId
+      userId: result.userId,
     });
-    
+
     return result;
   } catch (error) {
     // Log authentication failure
     logError(
-      LogCategory.USER_AUTHENTICATION, 
+      LogCategory.USER_AUTHENTICATION,
       'User login failed',
       error instanceof Error ? error : new Error('Unknown auth error'),
       {
         metadata: {
           email: email.substring(0, 3) + '***@***',
-          errorType: error instanceof Error ? error.name : 'Unknown'
-        }
-      }
+          errorType: error instanceof Error ? error.name : 'Unknown',
+        },
+      },
     );
-    
+
     // Still end performance tracking
     logPerformanceEnd('auth.login', LogCategory.USER_AUTHENTICATION);
-    
+
     throw error;
   }
 };
@@ -79,11 +79,11 @@ export const logPaymentExample = async (
   amount: number,
   currency: string,
   gateway: string,
-  userId: string
+  userId: string,
 ) => {
   const paymentLogger = logger.createChildLogger({
     paymentId,
-    userId
+    userId,
   });
 
   // Log payment initiation
@@ -92,8 +92,8 @@ export const logPaymentExample = async (
       amount,
       currency,
       gateway,
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    },
   });
 
   // Log API request
@@ -101,36 +101,36 @@ export const logPaymentExample = async (
     'POST',
     `/api/payments/${gateway}/charge`,
     { paymentId, userId },
-    { amount, currency } // Will be sanitized
+    { amount, currency }, // Will be sanitized
   );
 
   try {
     // Simulate payment processing
     const startTime = performance.now();
     const result = await processPayment(paymentId, amount, currency, gateway);
-    
+
     // Log API response
     logger.logApiResponse(
       requestId,
       result.status,
       performance.now() - startTime,
       { paymentId, userId },
-      result
+      result,
     );
 
     if (result.success) {
       paymentLogger.info(LogCategory.PAYMENT_PROCESSING, 'Payment successful', {
         metadata: {
           transactionId: result.transactionId,
-          processingTime: result.processingTime
-        }
+          processingTime: result.processingTime,
+        },
       });
     } else {
       paymentLogger.warn(LogCategory.PAYMENT_PROCESSING, 'Payment declined', {
         metadata: {
           reason: result.declineReason,
-          code: result.declineCode
-        }
+          code: result.declineCode,
+        },
       });
     }
 
@@ -145,11 +145,11 @@ export const logPaymentExample = async (
         metadata: {
           gateway,
           amount,
-          currency
-        }
-      }
+          currency,
+        },
+      },
     );
-    
+
     throw error;
   }
 };
@@ -157,18 +157,14 @@ export const logPaymentExample = async (
 /**
  * Example: Logging database operations
  */
-export const logDatabaseExample = async (
-  operation: string,
-  table: string,
-  userId?: string
-) => {
+export const logDatabaseExample = async (operation: string, table: string, userId?: string) => {
   const context = {
     userId,
     metadata: {
       operation,
       table,
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    },
   };
 
   // Log query start
@@ -178,19 +174,19 @@ export const logDatabaseExample = async (
   try {
     // Simulate database operation
     const result = await performDatabaseOperation(operation, table);
-    
+
     // Log query success
     logInfo(LogCategory.DATABASE_OPERATION, `Database ${operation} completed`, {
       ...context,
       metadata: {
         ...context.metadata,
         rowsAffected: result.rowsAffected,
-        duration: result.duration
-      }
+        duration: result.duration,
+      },
     });
-    
+
     logPerformanceEnd(`db.${operation}.${table}`, LogCategory.DATABASE_OPERATION, context);
-    
+
     return result;
   } catch (error) {
     // Log database error
@@ -198,11 +194,11 @@ export const logDatabaseExample = async (
       LogCategory.DATABASE_OPERATION,
       `Database ${operation} failed`,
       error instanceof Error ? error : new Error('Database error'),
-      context
+      context,
     );
-    
+
     logPerformanceEnd(`db.${operation}.${table}`, LogCategory.DATABASE_OPERATION, context);
-    
+
     throw error;
   }
 };
@@ -214,12 +210,16 @@ export const logSecurityExample = (
   eventType: string,
   severity: 'low' | 'medium' | 'high' | 'critical',
   details: Record<string, unknown>,
-  userId?: string
+  userId?: string,
 ) => {
-  const logMethod = severity === 'critical' ? logger.critical :
-                   severity === 'high' ? logger.error :
-                   severity === 'medium' ? logger.warn :
-                   logger.info;
+  const logMethod =
+    severity === 'critical'
+      ? logger.critical
+      : severity === 'high'
+        ? logger.error
+        : severity === 'medium'
+          ? logger.warn
+          : logger.info;
 
   logMethod.call(
     logger,
@@ -234,9 +234,9 @@ export const logSecurityExample = (
         ...details,
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent,
-        ip: 'client-ip-placeholder' // Would be set by server
-      }
-    }
+        ip: 'client-ip-placeholder', // Would be set by server
+      },
+    },
   );
 };
 
@@ -247,7 +247,7 @@ export const logPerformanceExample = (
   metricName: string,
   value: number,
   unit: string,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
 ) => {
   logInfo(LogCategory.PERFORMANCE, `Performance metric: ${metricName}`, {
     metadata: {
@@ -255,8 +255,8 @@ export const logPerformanceExample = (
       value,
       unit,
       ...metadata,
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    },
   });
 
   // Check for performance anomalies
@@ -266,8 +266,8 @@ export const logPerformanceExample = (
         metric: metricName,
         value,
         threshold: 3000,
-        exceeded: value - 3000
-      }
+        exceeded: value - 3000,
+      },
     });
   }
 };
@@ -320,22 +320,27 @@ async function performAuth(email: string) {
   return {
     userId: 'user123',
     sessionId: 'session123',
-    firstLogin: false
+    firstLogin: false,
   };
 }
 
-async function processPayment(paymentId: string, amount: number, currency: string, gateway: string) {
+async function processPayment(
+  paymentId: string,
+  amount: number,
+  currency: string,
+  gateway: string,
+) {
   return {
     success: true,
     status: 200,
     transactionId: 'txn123',
-    processingTime: 1234
+    processingTime: 1234,
   };
 }
 
 async function performDatabaseOperation(operation: string, table: string) {
   return {
     rowsAffected: 1,
-    duration: 45
+    duration: 45,
   };
 }

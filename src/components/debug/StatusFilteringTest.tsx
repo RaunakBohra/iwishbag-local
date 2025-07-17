@@ -4,23 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { useDashboardState } from '@/hooks/useDashboardState';
-import { CheckCircle, AlertTriangle, RefreshCw, List, Database } from 'lucide-react';
+import { CheckCircle, AlertTriangle, RefreshCw, List } from 'lucide-react';
 
 export const StatusFilteringTest: React.FC = () => {
-  const { 
-    getStatusesForQuotesList, 
+  const {
+    getStatusesForQuotesList,
     getStatusesForOrdersList,
     quoteStatuses,
     orderStatuses,
-    isLoading: statusLoading
+    isLoading: statusLoading,
   } = useStatusManagement();
-  
-  const { 
-    quotes, 
-    orders, 
-    allQuotes, 
-    isLoading: dataLoading 
-  } = useDashboardState();
+
+  const { quotes, orders, allQuotes, isLoading: dataLoading } = useDashboardState();
 
   const [testResults, setTestResults] = useState<{
     quotesListStatuses: string[];
@@ -39,34 +34,39 @@ export const StatusFilteringTest: React.FC = () => {
     // Get the filter arrays
     const quotesListStatuses = getStatusesForQuotesList();
     const ordersListStatuses = getStatusesForOrdersList();
-    
+
     // Count items
     const totalQuotes = allQuotes?.length || 0;
     const quotesShownInQuotesList = quotes?.length || 0;
     const quotesShownInOrdersList = orders?.length || 0;
-    
+
     // Count payment_pending specifically
-    const paymentPendingTotal = allQuotes?.filter(q => q.status === 'payment_pending').length || 0;
-    const paymentPendingInQuotes = quotes?.filter(q => q.status === 'payment_pending').length || 0;
-    const paymentPendingInOrders = orders?.filter(q => q.status === 'payment_pending').length || 0;
-    
+    const paymentPendingTotal =
+      allQuotes?.filter((q) => q.status === 'payment_pending').length || 0;
+    const paymentPendingInQuotes =
+      quotes?.filter((q) => q.status === 'payment_pending').length || 0;
+    const paymentPendingInOrders =
+      orders?.filter((q) => q.status === 'payment_pending').length || 0;
+
     // Check for issues
     const issues: string[] = [];
-    
+
     if (quotesListStatuses.includes('payment_pending')) {
       issues.push('payment_pending is configured to show in quotes list (should be false)');
     }
-    
+
     if (!ordersListStatuses.includes('payment_pending')) {
       issues.push('payment_pending is NOT configured to show in orders list (should be true)');
     }
-    
+
     if (paymentPendingInQuotes > 0) {
       issues.push(`${paymentPendingInQuotes} payment_pending items are showing in quotes list`);
     }
-    
+
     if (paymentPendingTotal > 0 && paymentPendingInOrders !== paymentPendingTotal) {
-      issues.push(`Only ${paymentPendingInOrders} of ${paymentPendingTotal} payment_pending items are showing in orders list`);
+      issues.push(
+        `Only ${paymentPendingInOrders} of ${paymentPendingTotal} payment_pending items are showing in orders list`,
+      );
     }
 
     const isConfigurationCorrect = issues.length === 0;
@@ -81,7 +81,7 @@ export const StatusFilteringTest: React.FC = () => {
       paymentPendingInQuotes,
       paymentPendingInOrders,
       isConfigurationCorrect,
-      issues
+      issues,
     });
   };
 
@@ -89,7 +89,7 @@ export const StatusFilteringTest: React.FC = () => {
     if (!statusLoading && !dataLoading) {
       runTest();
     }
-  }, [statusLoading, dataLoading, quotes, orders, allQuotes]);
+  }, [statusLoading, dataLoading, quotes, orders, allQuotes, runTest]);
 
   if (statusLoading || dataLoading) {
     return (
@@ -121,15 +121,23 @@ export const StatusFilteringTest: React.FC = () => {
         {testResults && (
           <div className="space-y-4">
             {/* Overall Status */}
-            <Alert className={testResults.isConfigurationCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+            <Alert
+              className={
+                testResults.isConfigurationCorrect
+                  ? 'border-green-200 bg-green-50'
+                  : 'border-red-200 bg-red-50'
+              }
+            >
               {testResults.isConfigurationCorrect ? (
                 <CheckCircle className="h-4 w-4 text-green-600" />
               ) : (
                 <AlertTriangle className="h-4 w-4 text-red-600" />
               )}
-              <AlertDescription className={testResults.isConfigurationCorrect ? 'text-green-800' : 'text-red-800'}>
-                {testResults.isConfigurationCorrect 
-                  ? '✅ Status filtering is working correctly!' 
+              <AlertDescription
+                className={testResults.isConfigurationCorrect ? 'text-green-800' : 'text-red-800'}
+              >
+                {testResults.isConfigurationCorrect
+                  ? '✅ Status filtering is working correctly!'
                   : '❌ Status filtering has issues that need attention'}
               </AlertDescription>
             </Alert>
@@ -186,14 +194,22 @@ export const StatusFilteringTest: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span>In quotes list:</span>
-                  <span className={`font-medium ${testResults.paymentPendingInQuotes > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    {testResults.paymentPendingInQuotes} {testResults.paymentPendingInQuotes > 0 ? '❌' : '✅'}
+                  <span
+                    className={`font-medium ${testResults.paymentPendingInQuotes > 0 ? 'text-red-600' : 'text-green-600'}`}
+                  >
+                    {testResults.paymentPendingInQuotes}{' '}
+                    {testResults.paymentPendingInQuotes > 0 ? '❌' : '✅'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>In orders list:</span>
-                  <span className={`font-medium ${testResults.paymentPendingInOrders === testResults.paymentPendingTotal ? 'text-green-600' : 'text-red-600'}`}>
-                    {testResults.paymentPendingInOrders} {testResults.paymentPendingInOrders === testResults.paymentPendingTotal ? '✅' : '❌'}
+                  <span
+                    className={`font-medium ${testResults.paymentPendingInOrders === testResults.paymentPendingTotal ? 'text-green-600' : 'text-red-600'}`}
+                  >
+                    {testResults.paymentPendingInOrders}{' '}
+                    {testResults.paymentPendingInOrders === testResults.paymentPendingTotal
+                      ? '✅'
+                      : '❌'}
                   </span>
                 </div>
               </div>
@@ -204,10 +220,12 @@ export const StatusFilteringTest: React.FC = () => {
               <div className="p-3 bg-gray-50 rounded-lg">
                 <h4 className="font-medium mb-2">Quote Statuses ({quoteStatuses.length})</h4>
                 <div className="text-xs space-y-1">
-                  {quoteStatuses.map(status => (
+                  {quoteStatuses.map((status) => (
                     <div key={status.name} className="flex justify-between">
                       <span>{status.label}</span>
-                      <span className={status.showsInQuotesList ? 'text-green-600' : 'text-gray-400'}>
+                      <span
+                        className={status.showsInQuotesList ? 'text-green-600' : 'text-gray-400'}
+                      >
                         {status.showsInQuotesList ? 'Shows in quotes' : 'Hidden'}
                       </span>
                     </div>
@@ -218,10 +236,12 @@ export const StatusFilteringTest: React.FC = () => {
               <div className="p-3 bg-gray-50 rounded-lg">
                 <h4 className="font-medium mb-2">Order Statuses ({orderStatuses.length})</h4>
                 <div className="text-xs space-y-1">
-                  {orderStatuses.map(status => (
+                  {orderStatuses.map((status) => (
                     <div key={status.name} className="flex justify-between">
                       <span>{status.label}</span>
-                      <span className={status.showsInOrdersList ? 'text-green-600' : 'text-gray-400'}>
+                      <span
+                        className={status.showsInOrdersList ? 'text-green-600' : 'text-gray-400'}
+                      >
                         {status.showsInOrdersList ? 'Shows in orders' : 'Hidden'}
                       </span>
                     </div>

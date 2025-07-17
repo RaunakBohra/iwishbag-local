@@ -1,12 +1,18 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Mail, Send } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Mail, Send } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CustomerEmailDialogProps {
   customerEmail: string;
@@ -15,7 +21,10 @@ interface CustomerEmailDialogProps {
 
 async function getAccessToken() {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
     if (error) {
       console.warn('Error getting session:', error);
       return null;
@@ -29,17 +38,17 @@ async function getAccessToken() {
 
 export const CustomerEmailDialog = ({ customerEmail, customerName }: CustomerEmailDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [subject, setSubject] = useState("");
-  const [content, setContent] = useState("");
+  const [subject, setSubject] = useState('');
+  const [content, setContent] = useState('');
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
 
   const handleSendEmail = async () => {
     if (!subject.trim() || !content.trim()) {
       toast({
-        title: "Error",
-        description: "Please fill in both subject and message content.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Please fill in both subject and message content.',
+        variant: 'destructive',
       });
       return;
     }
@@ -47,41 +56,41 @@ export const CustomerEmailDialog = ({ customerEmail, customerName }: CustomerEma
     setIsSending(true);
     try {
       const accessToken = await getAccessToken();
-      
+
       if (accessToken) {
-      const { data, error } = await supabase.functions.invoke('send-email', {
-        body: {
-          recipientEmail: customerEmail,
-          subject: subject.trim(),
-          content: content.trim(),
+        const { error } = await supabase.functions.invoke('send-email', {
+          body: {
+            recipientEmail: customerEmail,
+            subject: subject.trim(),
+            content: content.trim(),
           },
-          headers: { Authorization: `Bearer ${accessToken}` }
-      });
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Email Sent",
-        description: `Email successfully sent to ${customerEmail}`,
-      });
+        toast({
+          title: 'Email Sent',
+          description: `Email successfully sent to ${customerEmail}`,
+        });
 
-      // Reset form and close dialog
-      setSubject("");
-      setContent("");
-      setIsOpen(false);
+        // Reset form and close dialog
+        setSubject('');
+        setContent('');
+        setIsOpen(false);
       } else {
         toast({
-          title: "Authentication Error",
-          description: "You must be logged in to send emails.",
-          variant: "destructive",
+          title: 'Authentication Error',
+          description: 'You must be logged in to send emails.',
+          variant: 'destructive',
         });
       }
     } catch (error) {
       console.error('Error sending email:', error);
       toast({
-        title: "Error",
-        description: "Failed to send email. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to send email. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsSending(false);

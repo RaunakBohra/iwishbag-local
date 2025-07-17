@@ -1,18 +1,24 @@
-
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useOrderMutations, type ShippingData } from "@/hooks/useOrderMutations";
-import { Tables } from "@/integrations/supabase/types";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Ship } from "lucide-react";
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { useOrderMutations, type ShippingData } from '@/hooks/useOrderMutations';
+import { Tables } from '@/integrations/supabase/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Ship } from 'lucide-react';
 
 const shippingSchema = z.object({
-  shipping_carrier: z.string().min(1, "Shipping carrier is required"),
-  tracking_number: z.string().min(1, "Tracking number is required"),
+  shipping_carrier: z.string().min(1, 'Shipping carrier is required'),
+  tracking_number: z.string().min(1, 'Tracking number is required'),
 });
 
 type ShippingFormValues = ShippingData;
@@ -27,32 +33,40 @@ export const ShippingInfoForm = ({ quote }: ShippingInfoFormProps) => {
   const form = useForm<ShippingFormValues>({
     resolver: zodResolver(shippingSchema),
     defaultValues: {
-      shipping_carrier: quote.shipping_carrier || "",
-      tracking_number: quote.tracking_number || "",
+      shipping_carrier: quote.shipping_carrier || '',
+      tracking_number: quote.tracking_number || '',
     },
   });
 
   const onSubmit = (data: ShippingFormValues) => {
     updateShippingInfo(data);
   };
-  
+
   const canBeShipped = ['paid', 'ordered'].includes(quote.status);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Shipping Management</CardTitle>
-        <CardDescription>
-          Enter tracking information to mark the order as shipped.
-        </CardDescription>
+        <CardDescription>Enter tracking information to mark the order as shipped.</CardDescription>
       </CardHeader>
       <CardContent>
         {quote.status === 'shipped' || quote.status === 'completed' ? (
           <div className="space-y-2 text-sm">
-            <p><strong>Status:</strong> Marked as {quote.status}</p>
-            <p><strong>Carrier:</strong> {quote.shipping_carrier}</p>
-            <p><strong>Tracking #:</strong> {quote.tracking_number}</p>
-            {quote.shipped_at && <p><strong>Shipped On:</strong> {new Date(quote.shipped_at).toLocaleDateString()}</p>}
+            <p>
+              <strong>Status:</strong> Marked as {quote.status}
+            </p>
+            <p>
+              <strong>Carrier:</strong> {quote.shipping_carrier}
+            </p>
+            <p>
+              <strong>Tracking #:</strong> {quote.tracking_number}
+            </p>
+            {quote.shipped_at && (
+              <p>
+                <strong>Shipped On:</strong> {new Date(quote.shipped_at).toLocaleDateString()}
+              </p>
+            )}
           </div>
         ) : (
           <Form {...form}>
@@ -83,11 +97,19 @@ export const ShippingInfoForm = ({ quote }: ShippingInfoFormProps) => {
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={isUpdatingShipping || !canBeShipped} className="w-full">
+              <Button
+                type="submit"
+                disabled={isUpdatingShipping || !canBeShipped}
+                className="w-full"
+              >
                 <Ship className="mr-2 h-4 w-4" />
                 {isUpdatingShipping ? 'Saving...' : 'Save & Mark as Shipped'}
               </Button>
-              {!canBeShipped && <p className="text-xs text-muted-foreground text-center pt-2">Order must be in 'paid' or 'ordered' status to be shipped.</p>}
+              {!canBeShipped && (
+                <p className="text-xs text-muted-foreground text-center pt-2">
+                  Order must be in 'paid' or 'ordered' status to be shipped.
+                </p>
+              )}
             </form>
           </Form>
         )}

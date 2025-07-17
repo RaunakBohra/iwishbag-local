@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Download, ExternalLink, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
-import { QuoteDocument } from "./DocumentManager";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Download, ExternalLink, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
+import { QuoteDocument } from './DocumentManager';
 
 interface DocumentViewerProps {
   document: QuoteDocument;
@@ -15,9 +15,9 @@ export const DocumentViewer = ({ document, onDownload }: DocumentViewerProps) =>
   const isPdf = document.file_name.toLowerCase().endsWith('.pdf');
   const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(document.file_name);
 
-  const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 200));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50));
-  const handleRotate = () => setRotation(prev => (prev + 90) % 360);
+  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 25, 200));
+  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 25, 50));
+  const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -68,11 +68,7 @@ export const DocumentViewer = ({ document, onDownload }: DocumentViewerProps) =>
       {/* Document Content */}
       <div className="border rounded-lg overflow-hidden bg-white">
         {isPdf ? (
-          <iframe
-            src={document.file_url}
-            className="w-full h-[600px]"
-            title={document.file_name}
-          />
+          <iframe src={document.file_url} className="w-full h-[600px]" title={document.file_name} />
         ) : isImage ? (
           <div className="flex justify-center p-4 bg-gray-50">
             <img

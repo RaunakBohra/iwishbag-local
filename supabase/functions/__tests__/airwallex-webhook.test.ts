@@ -6,15 +6,15 @@ globalThis.Deno = {
   env: {
     get: vi.fn((key: string) => {
       const envVars: Record<string, string> = {
-        'SUPABASE_URL': 'http://127.0.0.1:54321',
-        'SUPABASE_SERVICE_ROLE_KEY': 'test-service-role-key',
-        'AIRWALLEX_WEBHOOK_SECRET': 'test_webhook_secret',
-        'AIRWALLEX_API_KEY': 'test_airwallex_key',
-        'AIRWALLEX_CLIENT_ID': 'test_client_id'
+        SUPABASE_URL: 'http://127.0.0.1:54321',
+        SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
+        AIRWALLEX_WEBHOOK_SECRET: 'test_webhook_secret',
+        AIRWALLEX_API_KEY: 'test_airwallex_key',
+        AIRWALLEX_CLIENT_ID: 'test_client_id',
       };
       return envVars[key] || null;
-    })
-  }
+    }),
+  },
 } as any;
 
 // Mock crypto with subtle API for HMAC operations
@@ -27,31 +27,31 @@ Object.defineProperty(global, 'crypto', {
       }),
       sign: vi.fn(async (algorithm, key, data) => {
         // Return a deterministic mock signature buffer for testing
-        // This will produce the hex string: 0102030405060708  
+        // This will produce the hex string: 0102030405060708
         return new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]).buffer;
-      })
-    }
+      }),
+    },
   },
   writable: true,
-  configurable: true
+  configurable: true,
 });
 
 // Mock serve function
 const mockServe = vi.fn();
 vi.doMock('https://deno.land/std@0.168.0/http/server.ts', () => ({
-  serve: mockServe
+  serve: mockServe,
 }));
 
 // Mock Supabase client
 const mockSupabaseClient = vi.fn();
 vi.doMock('https://esm.sh/@supabase/supabase-js@2', () => ({
   createClient: mockSupabaseClient,
-  SupabaseClient: class {}
+  SupabaseClient: class {},
 }));
 
 // Mock CORS headers
 vi.doMock('../_shared/cors.ts', () => ({
-  createWebhookHeaders: () => ({})
+  createWebhookHeaders: () => ({}),
 }));
 
 // Mock monitoring utilities
@@ -64,7 +64,7 @@ const mockLogger = {
   startPerformance: vi.fn(),
   endPerformance: vi.fn(),
   logFunctionStart: vi.fn(),
-  logFunctionEnd: vi.fn()
+  logFunctionEnd: vi.fn(),
 };
 
 const mockPaymentMonitoring = {
@@ -78,7 +78,7 @@ const mockPaymentMonitoring = {
       return { success: false, error: error.message };
     }
   }),
-  cleanup: vi.fn()
+  cleanup: vi.fn(),
 };
 
 vi.doMock('../_shared/monitoring-utils.ts', () => ({
@@ -95,20 +95,20 @@ vi.doMock('../_shared/monitoring-utils.ts', () => ({
     return new Response(JSON.stringify(data), { status });
   }),
   validateWebhookSignature: vi.fn(() => true),
-  sanitizeForLogging: vi.fn((data) => data)
+  sanitizeForLogging: vi.fn((data) => data),
 }));
 
 vi.doMock('../_shared/edge-logging.ts', () => ({
   EdgeLogCategory: {
     WEBHOOK_PROCESSING: 'webhook_processing',
-    EDGE_FUNCTION: 'edge_function'
-  }
+    EDGE_FUNCTION: 'edge_function',
+  },
 }));
 
 vi.doMock('../_shared/edge-payment-monitoring.ts', () => ({
   EdgePaymentErrorCode: {
-    WEBHOOK_PROCESSING_FAILED: 'WEBHOOK_PROCESSING_FAILED'
-  }
+    WEBHOOK_PROCESSING_FAILED: 'WEBHOOK_PROCESSING_FAILED',
+  },
 }));
 
 // Store references to mocked functions
@@ -126,7 +126,7 @@ vi.doMock('../airwallex-webhook/atomic-operations.ts', () => ({
   processRefundSucceeded: mockProcessRefundSucceeded,
   processRefundFailed: mockProcessRefundFailed,
   processDisputeCreated: mockProcessDisputeCreated,
-  processDisputeUpdated: mockProcessDisputeUpdated
+  processDisputeUpdated: mockProcessDisputeUpdated,
 }));
 
 // Import will be done in beforeEach after mocks are set up
@@ -140,7 +140,7 @@ describe('airwallex-webhook', () => {
   let mockSingle: ReturnType<typeof vi.fn>;
   let mockEq: ReturnType<typeof vi.fn>;
   let mockSupabaseInstance: SupabaseClient;
-  
+
   // Create a direct handler function to avoid import/serve issues
   const createMockHandler = () => {
     return async (req: Request): Promise<Response> => {
@@ -150,15 +150,16 @@ describe('airwallex-webhook', () => {
       }
 
       // Get the webhook signature from headers
-      const signature = req.headers.get('x-airwallex-signature') || req.headers.get('X-Airwallex-Signature');
-      
+      const signature =
+        req.headers.get('x-airwallex-signature') || req.headers.get('X-Airwallex-Signature');
+
       if (!signature) {
         return new Response('No signature', { status: 400 });
       }
 
       try {
         const body = await req.text();
-        
+
         // Initialize Supabase admin client
         const supabaseAdmin = mockSupabaseInstance;
 
@@ -175,21 +176,29 @@ describe('airwallex-webhook', () => {
 
         const config = airwallexGateway.config || {};
         const testMode = airwallexGateway.test_mode;
-        
+
         // Get the webhook secret from config
-        const webhookSecret = testMode 
-          ? config.test_webhook_secret 
-          : (config.live_webhook_secret || config.webhook_secret);
+        const webhookSecret = testMode
+          ? config.test_webhook_secret
+          : config.live_webhook_secret || config.webhook_secret;
 
         if (!webhookSecret) {
-          return new Response(JSON.stringify({ error: 'Configuration incomplete' }), { status: 500 });
+          return new Response(JSON.stringify({ error: 'Configuration incomplete' }), {
+            status: 500,
+          });
         }
 
         // Verify webhook signature
-        const isValidSignature = await verifyAirwallexWebhookSignature(signature, webhookSecret, body);
-        
+        const isValidSignature = await verifyAirwallexWebhookSignature(
+          signature,
+          webhookSecret,
+          body,
+        );
+
         if (!isValidSignature) {
-          return new Response(JSON.stringify({ error: 'Invalid signature' }), { status: 400 });
+          return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+            status: 400,
+          });
         }
 
         // Parse the webhook event
@@ -197,7 +206,9 @@ describe('airwallex-webhook', () => {
         try {
           event = JSON.parse(body);
         } catch (parseError) {
-          return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 });
+          return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
+            status: 400,
+          });
         }
 
         // Log webhook processing
@@ -209,11 +220,11 @@ describe('airwallex-webhook', () => {
           event_type: event.name,
           event_id: event.id,
           user_agent: req.headers.get('user-agent') || 'Unknown',
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         });
 
         // Handle the event
-        let processingSuccess = true;
+        const processingSuccess = true;
         let processingError: string | undefined;
 
         switch (event.name) {
@@ -232,47 +243,53 @@ describe('airwallex-webhook', () => {
         if (!webhookLogResult.error) {
           await supabaseAdmin
             .from('webhook_logs')
-            .update({ 
+            .update({
               status: processingSuccess ? 'completed' : 'failed',
               error_message: processingError || null,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             })
             .eq('request_id', webhookId);
         }
 
-        const responseData = { 
-          received: true, 
+        const responseData = {
+          received: true,
           processed: processingSuccess,
           error: processingError,
           webhookId,
           eventType: event.name,
-          eventId: event.id
+          eventId: event.id,
         };
 
-        return new Response(JSON.stringify(responseData), { 
+        return new Response(JSON.stringify(responseData), {
           status: processingSuccess ? 200 : 500,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
-
       } catch (err) {
-        return new Response(JSON.stringify({ 
-          error: err instanceof Error ? err.message : 'Webhook processing error' 
-        }), { 
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return new Response(
+          JSON.stringify({
+            error: err instanceof Error ? err.message : 'Webhook processing error',
+          }),
+          {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
       }
     };
   };
 
   // Signature verification function (mocked in tests)
-  const verifyAirwallexWebhookSignature = async (signature: string, secret: string, payload: string): Promise<boolean> => {
+  const verifyAirwallexWebhookSignature = async (
+    signature: string,
+    secret: string,
+    payload: string,
+  ): Promise<boolean> => {
     try {
       // Airwallex signature format: t=timestamp,v1=signature
       const elements = signature.split(',');
       let timestamp = '';
       let webhookSignature = '';
-      
+
       for (const element of elements) {
         const [key, value] = element.split('=');
         if (key === 't') {
@@ -281,23 +298,24 @@ describe('airwallex-webhook', () => {
           webhookSignature = value;
         }
       }
-      
+
       if (!timestamp || !webhookSignature) {
         return false;
       }
-      
+
       // Verify timestamp is within tolerance (5 minutes)
       const currentTime = Math.floor(Date.now() / 1000);
       const webhookTime = parseInt(timestamp);
       const timeDiff = currentTime - webhookTime;
-      
-      if (timeDiff > 300 || timeDiff < -300) { // 5 minutes tolerance
+
+      if (timeDiff > 300 || timeDiff < -300) {
+        // 5 minutes tolerance
         return false;
       }
-      
+
       // Create the signed payload
       const signedPayload = `${timestamp}.${payload}`;
-      
+
       // Generate HMAC-SHA256 signature
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -305,23 +323,18 @@ describe('airwallex-webhook', () => {
         encoder.encode(secret),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['sign']
+        ['sign'],
       );
-      
-      const signatureBuffer = await crypto.subtle.sign(
-        'HMAC',
-        key,
-        encoder.encode(signedPayload)
-      );
-      
+
+      const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(signedPayload));
+
       // Convert to hex string
       const computedSignature = Array.from(new Uint8Array(signatureBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
+        .map((b) => b.toString(16).padStart(2, '0'))
         .join('');
-      
+
       // Compare signatures
       return computedSignature === webhookSignature;
-      
     } catch (error) {
       return false;
     }
@@ -329,17 +342,17 @@ describe('airwallex-webhook', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    
+
     // Reset monitoring mocks
     mockLogger.info.mockClear();
-    mockLogger.warn.mockClear(); 
+    mockLogger.warn.mockClear();
     mockLogger.error.mockClear();
     mockLogger.debug.mockClear();
     mockLogger.startPerformance.mockClear();
     mockLogger.endPerformance.mockClear();
     mockLogger.logFunctionStart.mockClear();
     mockLogger.logFunctionEnd.mockClear();
-    
+
     mockPaymentMonitoring.startWebhookMonitoring.mockClear();
     mockPaymentMonitoring.completeWebhookMonitoring.mockClear();
     mockPaymentMonitoring.monitorGatewayCall.mockReset();
@@ -352,7 +365,7 @@ describe('airwallex-webhook', () => {
       }
     });
     mockPaymentMonitoring.cleanup.mockClear();
-    
+
     // Use our mock handler instead of trying to import the actual module
     handler = createMockHandler();
 
@@ -372,7 +385,7 @@ describe('airwallex-webhook', () => {
     });
 
     mockSupabaseInstance = {
-      from: mockFrom
+      from: mockFrom,
     } as any;
 
     mockSupabaseClient.mockReturnValue(mockSupabaseInstance);
@@ -385,7 +398,7 @@ describe('airwallex-webhook', () => {
   describe('Main webhook handler', () => {
     it('should reject non-POST requests', async () => {
       const req = new Request('https://example.com/webhook', {
-        method: 'GET'
+        method: 'GET',
       });
 
       const response = await handler(req);
@@ -398,9 +411,9 @@ describe('airwallex-webhook', () => {
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ test: 'data' })
+        body: JSON.stringify({ test: 'data' }),
       });
 
       const response = await handler(req);
@@ -410,14 +423,17 @@ describe('airwallex-webhook', () => {
     });
 
     it('should handle payment_gateways lookup failure', async () => {
-      mockSingle.mockResolvedValue({ data: null, error: new Error('Database error') });
+      mockSingle.mockResolvedValue({
+        data: null,
+        error: new Error('Database error'),
+      });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': 't=1234567890,v1=test_signature'
+          'x-airwallex-signature': 't=1234567890,v1=test_signature',
         },
-        body: JSON.stringify({ test: 'data' })
+        body: JSON.stringify({ test: 'data' }),
       });
 
       const response = await handler(req);
@@ -433,17 +449,17 @@ describe('airwallex-webhook', () => {
           config: {
             // No webhook_secret
           },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': 't=1234567890,v1=test_signature'
+          'x-airwallex-signature': 't=1234567890,v1=test_signature',
         },
-        body: JSON.stringify({ test: 'data' })
+        body: JSON.stringify({ test: 'data' }),
       });
 
       const response = await handler(req);
@@ -457,19 +473,19 @@ describe('airwallex-webhook', () => {
       mockSingle.mockResolvedValue({
         data: {
           config: {
-            test_webhook_secret: 'test_secret'
+            test_webhook_secret: 'test_secret',
           },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': 't=1234567890,v1=invalid_signature'
+          'x-airwallex-signature': 't=1234567890,v1=invalid_signature',
         },
-        body: JSON.stringify({ test: 'data' })
+        body: JSON.stringify({ test: 'data' }),
       });
 
       const response = await handler(req);
@@ -484,7 +500,7 @@ describe('airwallex-webhook', () => {
       const validTimestamp = Math.floor(Date.now() / 1000).toString();
       const payload = 'invalid json';
       const secret = 'test_secret';
-      
+
       // Generate a valid signature for the invalid JSON
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -492,34 +508,34 @@ describe('airwallex-webhook', () => {
         encoder.encode(secret),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['sign']
+        ['sign'],
       );
-      
+
       const signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
-        encoder.encode(`${validTimestamp}.${payload}`)
+        encoder.encode(`${validTimestamp}.${payload}`),
       );
-      
+
       // Generate the expected signature "0102030405060708"
       const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
           config: {
-            test_webhook_secret: secret
+            test_webhook_secret: secret,
           },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': `t=${validTimestamp},v1=${signature}`
+          'x-airwallex-signature': `t=${validTimestamp},v1=${signature}`,
         },
-        body: payload
+        body: payload,
       });
 
       const response = await handler(req);
@@ -540,15 +556,15 @@ describe('airwallex-webhook', () => {
             id: 'pi_test_789',
             amount: 10000,
             currency: 'USD',
-            status: 'succeeded'
-          }
+            status: 'succeeded',
+          },
         },
         created_at: new Date().toISOString(),
-        version: '2023-10-01'
+        version: '2023-10-01',
       };
       const payload = JSON.stringify(eventData);
       const secret = 'test_secret';
-      
+
       // Generate valid signature
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -556,60 +572,64 @@ describe('airwallex-webhook', () => {
         encoder.encode(secret),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['sign']
+        ['sign'],
       );
-      
+
       const signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
-        encoder.encode(`${validTimestamp}.${payload}`)
+        encoder.encode(`${validTimestamp}.${payload}`),
       );
-      
+
       // Generate the expected signature "0102030405060708"
       const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
           config: {
-            test_webhook_secret: secret
+            test_webhook_secret: secret,
           },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
           'x-airwallex-signature': `t=${validTimestamp},v1=${signature}`,
-          'user-agent': 'Airwallex-Webhook/1.0'
+          'user-agent': 'Airwallex-Webhook/1.0',
         },
-        body: payload
+        body: payload,
       });
 
       const response = await handler(req);
-      
+
       expect(response.status).toBe(200);
-      
+
       const responseData = await response.json();
       expect(responseData).toMatchObject({
         received: true,
-        processed: true
+        processed: true,
       });
       expect(responseData.eventId).toBe('evt_test_123');
       expect(responseData.eventType).toBe('payment_intent.succeeded');
 
       // Verify webhook_logs interactions
       expect(mockFrom).toHaveBeenCalledWith('webhook_logs');
-      expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({
-        webhook_type: 'airwallex',
-        status: 'processing',
-        user_agent: 'Airwallex-Webhook/1.0'
-      }));
-      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
-        status: 'completed',
-        error_message: null
-      }));
+      expect(mockInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          webhook_type: 'airwallex',
+          status: 'processing',
+          user_agent: 'Airwallex-Webhook/1.0',
+        }),
+      );
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'completed',
+          error_message: null,
+        }),
+      );
     });
 
     it('should handle unhandled event types gracefully', async () => {
@@ -620,15 +640,15 @@ describe('airwallex-webhook', () => {
         account_id: 'acc_test_456',
         data: {
           object: {
-            id: 'obj_test_789'
-          }
+            id: 'obj_test_789',
+          },
         },
         created_at: new Date().toISOString(),
-        version: '2023-10-01'
+        version: '2023-10-01',
       };
       const payload = JSON.stringify(eventData);
       const secret = 'test_secret';
-      
+
       // Generate valid signature
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -636,34 +656,34 @@ describe('airwallex-webhook', () => {
         encoder.encode(secret),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['sign']
+        ['sign'],
       );
-      
+
       const signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
-        encoder.encode(`${validTimestamp}.${payload}`)
+        encoder.encode(`${validTimestamp}.${payload}`),
       );
-      
+
       // Generate the expected signature "0102030405060708"
       const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
           config: {
-            test_webhook_secret: secret
+            test_webhook_secret: secret,
           },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': `t=${validTimestamp},v1=${signature}`
+          'x-airwallex-signature': `t=${validTimestamp},v1=${signature}`,
         },
-        body: payload
+        body: payload,
       });
 
       const response = await handler(req);
@@ -681,15 +701,15 @@ describe('airwallex-webhook', () => {
         account_id: 'acc_test_456',
         data: {
           object: {
-            id: 'pi_test_789'
-          }
+            id: 'pi_test_789',
+          },
         },
         created_at: new Date().toISOString(),
-        version: '2023-10-01'
+        version: '2023-10-01',
       };
       const payload = JSON.stringify(eventData);
       const secret = 'test_secret';
-      
+
       // Generate valid signature
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -697,26 +717,26 @@ describe('airwallex-webhook', () => {
         encoder.encode(secret),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['sign']
+        ['sign'],
       );
-      
+
       const signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
-        encoder.encode(`${validTimestamp}.${payload}`)
+        encoder.encode(`${validTimestamp}.${payload}`),
       );
-      
+
       // Generate the expected signature "0102030405060708"
       const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
           config: {
-            test_webhook_secret: secret
+            test_webhook_secret: secret,
           },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       // Make webhook_logs insert fail
@@ -725,9 +745,9 @@ describe('airwallex-webhook', () => {
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': `t=${validTimestamp},v1=${signature}`
+          'x-airwallex-signature': `t=${validTimestamp},v1=${signature}`,
         },
-        body: payload
+        body: payload,
       });
 
       const response = await handler(req);
@@ -744,11 +764,11 @@ describe('airwallex-webhook', () => {
         account_id: 'acc_test_456',
         data: { object: {} },
         created_at: new Date().toISOString(),
-        version: '2023-10-01'
+        version: '2023-10-01',
       };
       const payload = JSON.stringify(eventData);
       const secret = 'test_secret';
-      
+
       // Generate valid signature
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -756,32 +776,32 @@ describe('airwallex-webhook', () => {
         encoder.encode(secret),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['sign']
+        ['sign'],
       );
-      
+
       const signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
-        encoder.encode(`${validTimestamp}.${payload}`)
+        encoder.encode(`${validTimestamp}.${payload}`),
       );
-      
+
       // Generate the expected signature "0102030405060708"
       const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
           config: { test_webhook_secret: secret },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'X-Airwallex-Signature': `t=${validTimestamp},v1=${signature}` // Capital X
+          'X-Airwallex-Signature': `t=${validTimestamp},v1=${signature}`, // Capital X
         },
-        body: payload
+        body: payload,
       });
 
       const response = await handler(req);
@@ -795,7 +815,7 @@ describe('airwallex-webhook', () => {
     let verifyAirwallexWebhookSignature: (
       signature: string,
       secret: string,
-      payload: string
+      payload: string,
     ) => Promise<boolean>;
 
     beforeEach(async () => {
@@ -809,7 +829,7 @@ describe('airwallex-webhook', () => {
       const validTimestamp = Math.floor(Date.now() / 1000).toString();
       const payload = '{"test":"data"}';
       const secret = 'test_webhook_secret';
-      
+
       // Generate valid signature
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -817,33 +837,33 @@ describe('airwallex-webhook', () => {
         encoder.encode(secret),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['sign']
+        ['sign'],
       );
-      
+
       const signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
-        encoder.encode(`${validTimestamp}.${payload}`)
+        encoder.encode(`${validTimestamp}.${payload}`),
       );
-      
+
       const validSignature = Array.from(new Uint8Array(signatureBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
+        .map((b) => b.toString(16).padStart(2, '0'))
         .join('');
 
       mockSingle.mockResolvedValue({
         data: {
           config: { test_webhook_secret: secret },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': `t=${validTimestamp},v1=${validSignature}`
+          'x-airwallex-signature': `t=${validTimestamp},v1=${validSignature}`,
         },
-        body: payload
+        body: payload,
       });
 
       const response = await handler(req);
@@ -856,17 +876,17 @@ describe('airwallex-webhook', () => {
       mockSingle.mockResolvedValue({
         data: {
           config: { test_webhook_secret: 'secret' },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': 'v1=some_signature' // Missing t=
+          'x-airwallex-signature': 'v1=some_signature', // Missing t=
         },
-        body: '{"test":"data"}'
+        body: '{"test":"data"}',
       });
 
       const response = await handler(req);
@@ -880,17 +900,17 @@ describe('airwallex-webhook', () => {
       mockSingle.mockResolvedValue({
         data: {
           config: { test_webhook_secret: 'secret' },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': 't=1234567890' // Missing v1=
+          'x-airwallex-signature': 't=1234567890', // Missing v1=
         },
-        body: '{"test":"data"}'
+        body: '{"test":"data"}',
       });
 
       const response = await handler(req);
@@ -902,21 +922,21 @@ describe('airwallex-webhook', () => {
 
     it('should reject tampered signature', async () => {
       const validTimestamp = Math.floor(Date.now() / 1000).toString();
-      
+
       mockSingle.mockResolvedValue({
         data: {
           config: { test_webhook_secret: 'secret' },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': `t=${validTimestamp},v1=tampered_signature_value`
+          'x-airwallex-signature': `t=${validTimestamp},v1=tampered_signature_value`,
         },
-        body: '{"test":"data"}'
+        body: '{"test":"data"}',
       });
 
       const response = await handler(req);
@@ -930,7 +950,7 @@ describe('airwallex-webhook', () => {
       const oldTimestamp = Math.floor(Date.now() / 1000) - 400; // 400 seconds ago
       const payload = '{"test":"data"}';
       const secret = 'test_webhook_secret';
-      
+
       // Generate signature with old timestamp
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -938,32 +958,32 @@ describe('airwallex-webhook', () => {
         encoder.encode(secret),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['sign']
+        ['sign'],
       );
-      
+
       const signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
-        encoder.encode(`${oldTimestamp}.${payload}`)
+        encoder.encode(`${oldTimestamp}.${payload}`),
       );
-      
+
       // Generate the expected signature "0102030405060708"
       const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
           config: { test_webhook_secret: secret },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': `t=${oldTimestamp},v1=${signature}`
+          'x-airwallex-signature': `t=${oldTimestamp},v1=${signature}`,
         },
-        body: payload
+        body: payload,
       });
 
       const response = await handler(req);
@@ -977,7 +997,7 @@ describe('airwallex-webhook', () => {
       const futureTimestamp = Math.floor(Date.now() / 1000) + 400; // 400 seconds in future
       const payload = '{"test":"data"}';
       const secret = 'test_webhook_secret';
-      
+
       // Generate signature with future timestamp
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -985,32 +1005,32 @@ describe('airwallex-webhook', () => {
         encoder.encode(secret),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['sign']
+        ['sign'],
       );
-      
+
       const signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
-        encoder.encode(`${futureTimestamp}.${payload}`)
+        encoder.encode(`${futureTimestamp}.${payload}`),
       );
-      
+
       // Generate the expected signature "0102030405060708"
       const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
           config: { test_webhook_secret: secret },
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': `t=${futureTimestamp},v1=${signature}`
+          'x-airwallex-signature': `t=${futureTimestamp},v1=${signature}`,
         },
-        body: payload
+        body: payload,
       });
 
       const response = await handler(req);
@@ -1024,17 +1044,17 @@ describe('airwallex-webhook', () => {
       mockSingle.mockResolvedValue({
         data: {
           config: { test_webhook_secret: '' }, // Empty secret
-          test_mode: true
+          test_mode: true,
         },
-        error: null
+        error: null,
       });
 
       const req = new Request('https://example.com/webhook', {
         method: 'POST',
         headers: {
-          'x-airwallex-signature': 't=1234567890,v1=some_signature'
+          'x-airwallex-signature': 't=1234567890,v1=some_signature',
         },
-        body: '{"test":"data"}'
+        body: '{"test":"data"}',
       });
 
       const response = await handler(req);

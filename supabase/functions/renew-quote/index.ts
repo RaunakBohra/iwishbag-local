@@ -1,11 +1,17 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { authenticateUser, requireAdmin, AuthError, createAuthErrorResponse, validateMethod } from '../_shared/auth.ts';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
+import {
+  authenticateUser,
+  requireAdmin,
+  AuthError,
+  createAuthErrorResponse,
+  validateMethod,
+} from '../_shared/auth.ts';
 import { createCorsHeaders } from '../_shared/cors.ts';
 
 serve(async (req) => {
   const corsHeaders = createCorsHeaders(req);
-  
+
   // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -24,43 +30,46 @@ serve(async (req) => {
     const { quoteId } = await req.json();
 
     if (!quoteId) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Quote ID is required' }),
-        { status: 400, headers: corsHeaders }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Quote ID is required' }), {
+        status: 400,
+        headers: corsHeaders,
+      });
     }
 
     // Use environment variables for security
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const client = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     // First, check if the quote exists and can be renewed
     const { data: quote, error: fetchError } = await client
-      .from("quotes")
-      .select("*")
-      .eq("id", quoteId)
+      .from('quotes')
+      .select('*')
+      .eq('id', quoteId)
       .single();
 
     if (fetchError || !quote) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Quote not found' }),
-        { status: 404, headers: corsHeaders }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Quote not found' }), {
+        status: 404,
+        headers: corsHeaders,
+      });
     }
 
     // Check if quote is expired and hasn't been renewed before
     if (quote.status !== 'expired') {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Quote is not expired' }),
-        { status: 400, headers: corsHeaders }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Quote is not expired' }), {
+        status: 400,
+        headers: corsHeaders,
+      });
     }
 
     if (quote.renewal_count >= 1) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Quote has already been renewed once' }),
-        { status: 400, headers: corsHeaders }
+        JSON.stringify({
+          success: false,
+          error: 'Quote has already been renewed once',
+        }),
+        { status: 400, headers: corsHeaders },
       );
     }
 
@@ -69,44 +78,41 @@ serve(async (req) => {
     const expiresAt = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000); // 5 days from now
 
     const { error: updateError } = await client
-      .from("quotes")
+      .from('quotes')
       .update({
         status: 'pending',
         sent_at: now.toISOString(),
         expires_at: expiresAt.toISOString(),
         renewed_at: now.toISOString(),
-        renewal_count: 1
+        renewal_count: 1,
       })
-      .eq("id", quoteId);
+      .eq('id', quoteId);
 
     if (updateError) {
-      return new Response(
-        JSON.stringify({ success: false, error: updateError.message }),
-        { status: 500, headers: corsHeaders }
-      );
+      return new Response(JSON.stringify({ success: false, error: updateError.message }), {
+        status: 500,
+        headers: corsHeaders,
+      });
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: 'Quote renewed successfully',
-        expiresAt: expiresAt.toISOString()
+        expiresAt: expiresAt.toISOString(),
       }),
-      { status: 200, headers: corsHeaders }
+      { status: 200, headers: corsHeaders },
     );
-
   } catch (error) {
     console.error('❌ Quote renewal error:', error);
-    
+
     if (error instanceof AuthError) {
       return createAuthErrorResponse(error, corsHeaders);
     }
-    
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: corsHeaders }
-    );
+
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
+      status: 500,
+      headers: corsHeaders,
+    });
   }
 });
-
- 

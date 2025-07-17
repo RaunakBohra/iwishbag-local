@@ -2,22 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle,
-  Clock,
-  BarChart3,
-  PieChart,
-  Activity,
-  RefreshCw
-} from 'lucide-react';
+import { DollarSign, AlertTriangle, CheckCircle, XCircle, Activity, RefreshCw } from 'lucide-react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { Tables } from '@/integrations/supabase/types';
 
@@ -66,14 +60,14 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState('7d');
-  const [selectedGateway, setSelectedGateway] = useState('all');
+  const [_selectedGateway, _setSelectedGateway] = useState('all');
   const supabase = useSupabaseClient();
 
   const timeRangeOptions = [
     { value: '1d', label: 'Last 24 hours' },
     { value: '7d', label: 'Last 7 days' },
     { value: '30d', label: 'Last 30 days' },
-    { value: '90d', label: 'Last 90 days' }
+    { value: '90d', label: 'Last 90 days' },
   ];
 
   const fetchMetrics = async () => {
@@ -107,7 +101,11 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
       if (webhookError) throw webhookError;
 
       // Process metrics
-      const processedMetrics = processPaymentMetrics(payments || [], errorStats || [], webhookLogs || []);
+      const processedMetrics = processPaymentMetrics(
+        payments || [],
+        errorStats || [],
+        webhookLogs || [],
+      );
       setMetrics(processedMetrics);
     } catch (err) {
       console.error('Error fetching payment metrics:', err);
@@ -124,28 +122,35 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
     return date.toISOString();
   };
 
-  const processPaymentMetrics = (payments: PaymentTransaction[], errors: PaymentErrorLog[], webhooks: WebhookLog[]): PaymentMetrics => {
+  const processPaymentMetrics = (
+    payments: PaymentTransaction[],
+    errors: PaymentErrorLog[],
+    _webhooks: WebhookLog[],
+  ): PaymentMetrics => {
     const total = payments.length;
-    const successful = payments.filter(p => p.status === 'success').length;
-    const failed = payments.filter(p => p.status === 'failed').length;
-    const pending = payments.filter(p => p.status === 'pending').length;
-    
+    const successful = payments.filter((p) => p.status === 'success').length;
+    const failed = payments.filter((p) => p.status === 'failed').length;
+    const pending = payments.filter((p) => p.status === 'pending').length;
+
     const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
     const avgAmount = total > 0 ? totalAmount / total : 0;
-    
+
     const successRate = total > 0 ? (successful / total) * 100 : 0;
     const failureRate = total > 0 ? (failed / total) * 100 : 0;
 
     // Gateway breakdown
-    const gatewayStats = payments.reduce((acc, p) => {
-      const gateway = p.gateway || 'unknown';
-      if (!acc[gateway]) {
-        acc[gateway] = { count: 0, amount: 0 };
-      }
-      acc[gateway].count++;
-      acc[gateway].amount += p.amount || 0;
-      return acc;
-    }, {} as Record<string, { count: number; amount: number }>);
+    const gatewayStats = payments.reduce(
+      (acc, p) => {
+        const gateway = p.gateway || 'unknown';
+        if (!acc[gateway]) {
+          acc[gateway] = { count: 0, amount: 0 };
+        }
+        acc[gateway].count++;
+        acc[gateway].amount += p.amount || 0;
+        return acc;
+      },
+      {} as Record<string, { count: number; amount: number }>,
+    );
 
     const topGateways = Object.entries(gatewayStats)
       .map(([gateway, stats]) => ({ gateway, ...stats }))
@@ -153,14 +158,17 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
       .slice(0, 5);
 
     // Error breakdown
-    const errorBreakdown = errors.reduce((acc, err) => {
-      const code = err.error_code || 'unknown';
-      if (!acc[code]) {
-        acc[code] = { count: 0, severity: err.severity || 'medium' };
-      }
-      acc[code].count++;
-      return acc;
-    }, {} as Record<string, { count: number; severity: string }>);
+    const errorBreakdown = errors.reduce(
+      (acc, err) => {
+        const code = err.error_code || 'unknown';
+        if (!acc[code]) {
+          acc[code] = { count: 0, severity: err.severity || 'medium' };
+        }
+        acc[code].count++;
+        return acc;
+      },
+      {} as Record<string, { count: number; severity: string }>,
+    );
 
     const topErrors = Object.entries(errorBreakdown)
       .map(([error_code, stats]) => ({ error_code, ...stats }))
@@ -181,18 +189,21 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
       failure_rate: failureRate,
       top_gateways: topGateways,
       error_breakdown: topErrors,
-      daily_stats: dailyStats
+      daily_stats: dailyStats,
     };
   };
 
-  const getDailyStats = (payments: PaymentTransaction[], days: number): Array<{
+  const getDailyStats = (
+    payments: PaymentTransaction[],
+    days: number,
+  ): Array<{
     date: string;
     transactions: number;
     amount: number;
     success_rate: number;
   }> => {
     const stats: Record<string, { transactions: number; amount: number; successful: number }> = {};
-    
+
     // Initialize all days
     for (let i = 0; i < days; i++) {
       const date = new Date();
@@ -202,7 +213,7 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
     }
 
     // Process payments
-    payments.forEach(payment => {
+    payments.forEach((payment) => {
       const date = new Date(payment.created_at).toISOString().split('T')[0];
       if (stats[date]) {
         stats[date].transactions++;
@@ -218,7 +229,7 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
         date,
         transactions: data.transactions,
         amount: data.amount,
-        success_rate: data.transactions > 0 ? (data.successful / data.transactions) * 100 : 0
+        success_rate: data.transactions > 0 ? (data.successful / data.transactions) * 100 : 0,
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
   };
@@ -226,7 +237,7 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'USD',
     }).format(amount);
   };
 
@@ -236,7 +247,7 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
 
   useEffect(() => {
     fetchMetrics();
-  }, [timeRange, selectedGateway]);
+  }, [timeRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
@@ -271,25 +282,23 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
         <div>
           <h2 className="text-2xl font-bold">Payment Analytics</h2>
-          <p className="text-muted-foreground">
-            Monitor payment performance and identify issues
-          </p>
+          <p className="text-muted-foreground">Monitor payment performance and identify issues</p>
         </div>
-        
+
         <div className="flex gap-2">
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {timeRangeOptions.map(option => (
+              {timeRangeOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          
+
           <Button onClick={fetchMetrics} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -348,9 +357,7 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(metrics.average_amount)}
-            </div>
+            <div className="text-2xl font-bold">{formatCurrency(metrics.average_amount)}</div>
             <div className="text-xs text-muted-foreground">
               {metrics.pending_transactions} pending
             </div>
@@ -374,7 +381,10 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
             <CardContent>
               <div className="space-y-4">
                 {metrics.top_gateways.map((gateway, index) => (
-                  <div key={gateway.gateway} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div
+                    key={gateway.gateway}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
                       <Badge variant="outline">{index + 1}</Badge>
                       <div>
@@ -405,12 +415,15 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
             <CardContent>
               <div className="space-y-4">
                 {metrics.error_breakdown.map((error, index) => (
-                  <div key={error.error_code} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div
+                    key={error.error_code}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
                       <Badge variant="outline">{index + 1}</Badge>
                       <div>
                         <div className="font-medium">{error.error_code}</div>
-                        <Badge 
+                        <Badge
                           variant={error.severity === 'high' ? 'destructive' : 'secondary'}
                           className="mt-1"
                         >
@@ -436,12 +449,13 @@ export const PaymentAnalyticsDashboard: React.FC<PaymentAnalyticsProps> = ({ cla
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {metrics.daily_stats.slice(-7).map((day, index) => (
-                  <div key={day.date} className="flex items-center justify-between p-3 border rounded-lg">
+                {metrics.daily_stats.slice(-7).map((day, _index) => (
+                  <div
+                    key={day.date}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
                     <div>
-                      <div className="font-medium">
-                        {new Date(day.date).toLocaleDateString()}
-                      </div>
+                      <div className="font-medium">{new Date(day.date).toLocaleDateString()}</div>
                       <div className="text-sm text-muted-foreground">
                         {day.transactions} transactions
                       </div>

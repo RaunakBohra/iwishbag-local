@@ -3,9 +3,9 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  XCircle, 
-  ArrowLeft, 
+import {
+  XCircle,
+  ArrowLeft,
   RefreshCw,
   AlertTriangle,
   IndianRupee,
@@ -14,7 +14,7 @@ import {
   HelpCircle,
   Home,
   Phone,
-  CreditCard
+  CreditCard,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AnimatedSection } from '@/components/shared/AnimatedSection';
@@ -51,24 +51,23 @@ const PaymentFailure: React.FC = () => {
           errorCode: error_code || undefined,
           errorMessage: error_Message || 'Payment could not be processed',
           gateway: gateway,
-          amount: amount ? parseFloat(amount) : undefined
+          amount: amount ? parseFloat(amount) : undefined,
         };
 
         setFailureData(failureInfo);
 
         // Show failure toast
         toast({
-          title: "Payment Failed",
+          title: 'Payment Failed',
           description: failureInfo.errorMessage,
-          variant: "destructive"
+          variant: 'destructive',
         });
-
       } catch (error) {
         console.error('Error processing payment failure:', error);
         toast({
-          title: "Error",
-          description: "There was an issue processing your payment. Please try again.",
-          variant: "destructive"
+          title: 'Error',
+          description: 'There was an issue processing your payment. Please try again.',
+          variant: 'destructive',
         });
       } finally {
         setIsLoading(false);
@@ -98,23 +97,23 @@ const PaymentFailure: React.FC = () => {
 
   const getErrorMessage = (errorCode?: string) => {
     if (!errorCode) return 'Payment could not be processed';
-    
+
     const errorMessages: Record<string, string> = {
-      'E001': 'Invalid merchant credentials',
-      'E002': 'Invalid transaction amount',
-      'E003': 'Invalid transaction ID',
-      'E004': 'Hash verification failed',
-      'E005': 'Payment gateway error',
-      'E006': 'Bank declined the transaction',
-      'E007': 'Insufficient funds',
-      'E008': 'Card expired',
-      'E009': 'Invalid card details',
-      'E010': 'Transaction timeout',
-      'E011': 'User cancelled payment',
-      'E012': 'Duplicate transaction',
-      'E013': 'Merchant account suspended',
-      'E014': 'Invalid currency',
-      'E015': 'Transaction limit exceeded'
+      E001: 'Invalid merchant credentials',
+      E002: 'Invalid transaction amount',
+      E003: 'Invalid transaction ID',
+      E004: 'Hash verification failed',
+      E005: 'Payment gateway error',
+      E006: 'Bank declined the transaction',
+      E007: 'Insufficient funds',
+      E008: 'Card expired',
+      E009: 'Invalid card details',
+      E010: 'Transaction timeout',
+      E011: 'User cancelled payment',
+      E012: 'Duplicate transaction',
+      E013: 'Merchant account suspended',
+      E014: 'Invalid currency',
+      E015: 'Transaction limit exceeded',
     };
 
     return errorMessages[errorCode] || 'Payment could not be processed';
@@ -141,7 +140,9 @@ const PaymentFailure: React.FC = () => {
               </div>
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-red-600 mx-auto"></div>
               <p className="mt-6 text-gray-600 font-medium">Processing payment status...</p>
-              <p className="text-sm text-gray-500 mt-2">Please wait while we check your transaction</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Please wait while we check your transaction
+              </p>
             </CardContent>
           </Card>
         </AnimatedSection>
@@ -154,8 +155,14 @@ const PaymentFailure: React.FC = () => {
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-0 -left-40 w-80 h-80 bg-red-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-float" />
-        <div className="absolute top-0 -right-40 w-80 h-80 bg-yellow-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-float" style={{ animationDelay: '2s' }} />
-        <div className="absolute -bottom-32 left-20 w-80 h-80 bg-orange-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-float" style={{ animationDelay: '4s' }} />
+        <div
+          className="absolute top-0 -right-40 w-80 h-80 bg-yellow-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-float"
+          style={{ animationDelay: '2s' }}
+        />
+        <div
+          className="absolute -bottom-32 left-20 w-80 h-80 bg-orange-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-float"
+          style={{ animationDelay: '4s' }}
+        />
       </div>
 
       <div className="relative z-10 flex items-center justify-center min-h-screen">
@@ -176,38 +183,42 @@ const PaymentFailure: React.FC = () => {
               <AnimatedSection animation="fadeInUp" delay={400}>
                 <div className="flex items-center justify-center gap-2 text-gray-600">
                   <AlertTriangle className="w-5 h-5 text-red-500" />
-                  <p className="text-lg">
-                    We're sorry, but your payment could not be processed.
-                  </p>
+                  <p className="text-lg">We're sorry, but your payment could not be processed.</p>
                 </div>
               </AnimatedSection>
-              
+
               <AnimatedSection animation="fadeIn" delay={500}>
                 <div className="border-t border-b py-6 space-y-4 bg-gray-50 rounded-lg">
                   {failureData?.transactionId && (
                     <div className="flex justify-between items-center px-4">
                       <span className="font-medium text-gray-600">Transaction ID:</span>
-                      <Badge variant="secondary" className="text-sm font-mono bg-gradient-to-r from-red-100 to-pink-100">
+                      <Badge
+                        variant="secondary"
+                        className="text-sm font-mono bg-gradient-to-r from-red-100 to-pink-100"
+                      >
                         {failureData.transactionId}
                       </Badge>
                     </div>
                   )}
-                  
+
                   <div className="flex justify-between items-center px-4">
                     <span className="font-medium text-gray-600">Payment Method:</span>
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center text-white">
                         {getGatewayIcon(failureData?.gateway || 'payu')}
                       </div>
-                      <span className="text-sm font-medium">{getGatewayName(failureData?.gateway || 'payu')}</span>
+                      <span className="text-sm font-medium">
+                        {getGatewayName(failureData?.gateway || 'payu')}
+                      </span>
                     </div>
                   </div>
-                  
+
                   {failureData?.amount && (
                     <div className="flex justify-between items-center px-4">
                       <span className="font-medium text-gray-600">Amount:</span>
                       <span className="text-2xl font-bold text-gray-800">
-                        ₹<AnimatedCounter end={failureData.amount} decimals={2} />
+                        ₹
+                        <AnimatedCounter end={failureData.amount} decimals={2} />
                       </span>
                     </div>
                   )}
@@ -226,7 +237,10 @@ const PaymentFailure: React.FC = () => {
                         {getErrorMessage(failureData?.errorCode)}
                       </p>
                       {failureData?.errorCode && (
-                        <Badge variant="outline" className="text-xs mt-3 border-red-300 text-red-600">
+                        <Badge
+                          variant="outline"
+                          className="text-xs mt-3 border-red-300 text-red-600"
+                        >
                           Error Code: {failureData.errorCode}
                         </Badge>
                       )}
@@ -264,7 +278,10 @@ const PaymentFailure: React.FC = () => {
                   <div className="flex items-center gap-2 text-sm">
                     <HelpCircle className="w-5 h-5 text-blue-600" />
                     <span className="font-medium text-blue-800">Need Help?</span>
-                    <a href="tel:+919999999999" className="text-blue-600 hover:underline ml-auto flex items-center gap-1">
+                    <a
+                      href="tel:+919999999999"
+                      className="text-blue-600 hover:underline ml-auto flex items-center gap-1"
+                    >
                       <Phone className="w-4 h-4" />
                       Call Support
                     </a>
@@ -274,12 +291,15 @@ const PaymentFailure: React.FC = () => {
             </CardContent>
             <CardContent className="p-8 pt-0 space-y-3">
               <AnimatedSection animation="fadeInUp" delay={900}>
-                <Button onClick={handleRetryPayment} className="w-full group bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700">
+                <Button
+                  onClick={handleRetryPayment}
+                  className="w-full group bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                >
                   <RefreshCw className="h-4 w-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
                   Try Again
                 </Button>
               </AnimatedSection>
-              
+
               <AnimatedSection animation="fadeInUp" delay={1000}>
                 <div className="flex gap-3">
                   <Button variant="outline" asChild className="flex-1 group">
@@ -304,4 +324,4 @@ const PaymentFailure: React.FC = () => {
   );
 };
 
-export default PaymentFailure; 
+export default PaymentFailure;

@@ -5,13 +5,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar, Package, Truck, Clock, CheckCircle, Info, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
-import { 
-  DeliveryOption, 
+import {
+  DeliveryOption,
   calculateDeliveryDates,
   DeliveryEstimate,
-  calculateDeliveryEstimate
 } from '@/lib/delivery-estimates';
-import { format, parseISO, addBusinessDays } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 interface QuoteDeliveryTimelineProps {
@@ -21,7 +20,7 @@ interface QuoteDeliveryTimelineProps {
 
 export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
   quote,
-  className = ''
+  className = '',
 }) => {
   const { getStatusConfig } = useStatusManagement();
   interface DeliveryPhase {
@@ -45,20 +44,26 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
 
   // DYNAMIC: Determine the start date based on quote status configuration
   const getStartDate = () => {
-    const statusConfig = getStatusConfig(quote.status, quote.status.includes('paid') || quote.status.includes('ordered') ? 'order' : 'quote');
+    const statusConfig = getStatusConfig(
+      quote.status,
+      quote.status.includes('paid') || quote.status.includes('ordered') ? 'order' : 'quote',
+    );
     const isPaymentReceived = statusConfig?.isSuccessful && statusConfig?.countsAsOrder;
-    
+
     // If payment received and paid_at exists, use payment date
     if (isPaymentReceived && quote.paid_at) {
       return parseISO(quote.paid_at);
     }
-    
+
     // Otherwise use quote creation date
     return parseISO(quote.created_at);
   };
 
   // DYNAMIC: Determine if this is a payment-phase timeline
-  const statusConfig = getStatusConfig(quote.status, quote.status.includes('paid') || quote.status.includes('ordered') ? 'order' : 'quote');
+  const statusConfig = getStatusConfig(
+    quote.status,
+    quote.status.includes('paid') || quote.status.includes('ordered') ? 'order' : 'quote',
+  );
   const isPaymentPhase = statusConfig?.isSuccessful && statusConfig?.countsAsOrder && quote.paid_at;
 
   // Fetch shipping route and delivery options
@@ -103,7 +108,7 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
           selectedOption,
           routeData.processing_days || 2,
           routeData.customs_clearance_days || 3,
-          startDate
+          startDate,
         );
 
         setDeliveryTimeline(timeline);
@@ -118,7 +123,10 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
     if (quote && quote.destination_country) {
       fetchDeliveryData();
     }
-  }, [quote.id, quote.status, quote.paid_at, quote.created_at, quote.destination_country, quote.origin_country]);
+  }, [
+    quote,
+    getStartDate,
+  ]);
 
   if (loading) {
     return (
@@ -177,19 +185,18 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
         <div className="text-sm text-muted-foreground space-y-1">
           <div className="flex items-center gap-2">
             <Info className="h-4 w-4" />
-            <span>
-              Timeline based on: {isPaymentPhase ? 'Payment Date' : 'Quote Request Date'}
-            </span>
+            <span>Timeline based on: {isPaymentPhase ? 'Payment Date' : 'Quote Request Date'}</span>
           </div>
-          <div>
-            Start date: {format(startDate, 'EEEE, MMMM d, yyyy')}
-          </div>
+          <div>Start date: {format(startDate, 'EEEE, MMMM d, yyyy')}</div>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {deliveryTimeline.phases.map((phase, idx: number) => (
-            <div key={phase.phase} className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50">
+          {deliveryTimeline.phases.map((phase, _idx: number) => (
+            <div
+              key={phase.phase}
+              className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50"
+            >
               <div className="flex-shrink-0">
                 {/* Icon for each phase */}
                 {phase.icon === 'package' && <Package className="h-6 w-6 text-blue-500" />}
@@ -219,7 +226,8 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
               <span className="text-sm font-medium">Timeline will be updated after payment</span>
             </div>
             <p className="text-xs text-blue-700 mt-1">
-              Once you complete payment, we'll recalculate the delivery timeline from your payment date for more accurate estimates.
+              Once you complete payment, we'll recalculate the delivery timeline from your payment
+              date for more accurate estimates.
             </p>
           </div>
         )}
@@ -232,12 +240,12 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
               <span className="text-sm font-medium">Payment Confirmed</span>
             </div>
             <p className="text-xs text-green-700 mt-1">
-              Your payment was received on {format(parseISO(quote.paid_at), 'MMM d, yyyy')}. 
-              The delivery timeline above reflects the actual processing start date.
+              Your payment was received on {format(parseISO(quote.paid_at), 'MMM d, yyyy')}. The
+              delivery timeline above reflects the actual processing start date.
             </p>
           </div>
         )}
       </CardContent>
     </Card>
   );
-}; 
+};

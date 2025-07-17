@@ -1,12 +1,18 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tables } from "@/integrations/supabase/types";
-import { CountryFormData } from "@/hooks/useCountrySettings";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tables } from '@/integrations/supabase/types';
+import { CountryFormData } from '@/hooks/useCountrySettings';
+import { useToast } from '@/hooks/use-toast';
 
 type CountrySetting = Tables<'country_settings'>;
 
@@ -35,7 +41,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
       setFormCurrency(editingCountry.currency);
       setPurchaseAllowed(editingCountry.purchase_allowed ?? true);
       setShippingAllowed(editingCountry.shipping_allowed ?? true);
-      setWeightUnit(editingCountry.weight_unit as 'lbs' | 'kg' || 'lbs');
+      setWeightUnit((editingCountry.weight_unit as 'lbs' | 'kg') || 'lbs');
       setPaymentGateway(editingCountry.payment_gateway || 'stripe');
       if (editingCountry.priority_thresholds) {
         setPriorityThresholds({
@@ -65,9 +71,15 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
     setPriorityError(null);
     const { low, normal, urgent } = priorityThresholds;
     if (
-      isNaN(low) || isNaN(normal) || isNaN(urgent) ||
-      low === null || normal === null || urgent === null ||
-      low === undefined || normal === undefined || urgent === undefined
+      isNaN(low) ||
+      isNaN(normal) ||
+      isNaN(urgent) ||
+      low === null ||
+      normal === null ||
+      urgent === null ||
+      low === undefined ||
+      normal === undefined ||
+      urgent === undefined
     ) {
       setPriorityError('All priority thresholds are required.');
       return;
@@ -78,9 +90,9 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
     }
     try {
       const formData = new FormData(e.currentTarget);
-      
+
       // Validate required fields
-      const code = editingCountry?.code || formData.get('code') as string;
+      const code = editingCountry?.code || (formData.get('code') as string);
       const name = formData.get('name') as string;
       const currency = formData.get('currency') as string;
       const rateFromUsd = formData.get('rate_from_usd') as string;
@@ -88,11 +100,19 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
       const additionalWeight = formData.get('additional_weight') as string;
       const volumetricDivisor = formData.get('volumetric_divisor') as string;
 
-      if (!code || !name || !currency || !rateFromUsd || !minShipping || !additionalWeight || !volumetricDivisor) {
+      if (
+        !code ||
+        !name ||
+        !currency ||
+        !rateFromUsd ||
+        !minShipping ||
+        !additionalWeight ||
+        !volumetricDivisor
+      ) {
         toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields.",
-          variant: "destructive",
+          title: 'Validation Error',
+          description: 'Please fill in all required fields.',
+          variant: 'destructive',
         });
         return;
       }
@@ -109,8 +129,10 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
         additional_weight: parseFloat(additionalWeight),
         weight_unit: weightUnit,
         volumetric_divisor: parseFloat(volumetricDivisor),
-        payment_gateway_fixed_fee: parseFloat(formData.get('payment_gateway_fixed_fee') as string) || 0,
-        payment_gateway_percent_fee: parseFloat(formData.get('payment_gateway_percent_fee') as string) || 0,
+        payment_gateway_fixed_fee:
+          parseFloat(formData.get('payment_gateway_fixed_fee') as string) || 0,
+        payment_gateway_percent_fee:
+          parseFloat(formData.get('payment_gateway_percent_fee') as string) || 0,
         payment_gateway: paymentGateway,
         purchase_allowed: purchaseAllowed,
         shipping_allowed: shippingAllowed,
@@ -121,114 +143,114 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
     } catch (error) {
       console.error('Error submitting form:', error);
       toast({
-        title: "Error",
-        description: "Failed to submit form. Please check your input.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to submit form. Please check your input.',
+        variant: 'destructive',
       });
     }
   };
-  
+
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="code">Country Code *</Label>
-          <Input 
-            id="code" 
-            name="code" 
-            defaultValue={editingCountry?.code || ''} 
+          <Input
+            id="code"
+            name="code"
+            defaultValue={editingCountry?.code || ''}
             disabled={!!editingCountry}
-            required 
+            required
             placeholder="e.g., US, IN, NP"
           />
         </div>
         <div>
           <Label htmlFor="name">Country Name *</Label>
-          <Input 
-            id="name" 
-            name="name" 
-            defaultValue={editingCountry?.name || ''} 
-            required 
+          <Input
+            id="name"
+            name="name"
+            defaultValue={editingCountry?.name || ''}
+            required
             placeholder="e.g., United States"
           />
         </div>
         <div>
           <Label htmlFor="currency">Currency *</Label>
-          <Input 
-            id="currency" 
-            name="currency" 
-            defaultValue={editingCountry?.currency || ''} 
-            required 
+          <Input
+            id="currency"
+            name="currency"
+            defaultValue={editingCountry?.currency || ''}
+            required
             onChange={(e) => setFormCurrency(e.target.value)}
             placeholder="e.g., USD, INR, NPR"
           />
         </div>
         <div>
           <Label htmlFor="rate_from_usd">Rate from USD *</Label>
-          <Input 
-            id="rate_from_usd" 
-            name="rate_from_usd" 
-            type="number" 
-            step="0.01" 
-            defaultValue={editingCountry?.rate_from_usd || ''} 
-            required 
+          <Input
+            id="rate_from_usd"
+            name="rate_from_usd"
+            type="number"
+            step="0.01"
+            defaultValue={editingCountry?.rate_from_usd || ''}
+            required
             placeholder="e.g., 1.00, 83.00"
           />
         </div>
         <div>
           <Label htmlFor="sales_tax">Sales Tax (%)</Label>
-          <Input 
-            id="sales_tax" 
-            name="sales_tax" 
-            type="number" 
-            step="0.01" 
-            defaultValue={editingCountry?.sales_tax || 0} 
+          <Input
+            id="sales_tax"
+            name="sales_tax"
+            type="number"
+            step="0.01"
+            defaultValue={editingCountry?.sales_tax || 0}
             placeholder="0.00"
           />
         </div>
         <div>
           <Label htmlFor="vat">VAT (%)</Label>
-          <Input 
-            id="vat" 
-            name="vat" 
-            type="number" 
-            step="0.01" 
-            defaultValue={editingCountry?.vat || 0} 
+          <Input
+            id="vat"
+            name="vat"
+            type="number"
+            step="0.01"
+            defaultValue={editingCountry?.vat || 0}
             placeholder="0.00"
           />
         </div>
         <div>
           <Label htmlFor="min_shipping">Min Shipping ({formCurrency}) *</Label>
-          <Input 
-            id="min_shipping" 
-            name="min_shipping" 
-            type="number" 
-            step="0.01" 
-            defaultValue={editingCountry?.min_shipping || ''} 
-            required 
+          <Input
+            id="min_shipping"
+            name="min_shipping"
+            type="number"
+            step="0.01"
+            defaultValue={editingCountry?.min_shipping || ''}
+            required
             placeholder="0.00"
           />
         </div>
         <div>
           <Label htmlFor="additional_shipping">Additional Shipping (%)</Label>
-          <Input 
-            id="additional_shipping" 
-            name="additional_shipping" 
-            type="number" 
-            step="0.01" 
-            defaultValue={editingCountry?.additional_shipping || 0} 
+          <Input
+            id="additional_shipping"
+            name="additional_shipping"
+            type="number"
+            step="0.01"
+            defaultValue={editingCountry?.additional_shipping || 0}
             placeholder="0.00"
           />
         </div>
         <div>
           <Label htmlFor="additional_weight">Additional Weight Cost ({formCurrency}) *</Label>
-          <Input 
-            id="additional_weight" 
-            name="additional_weight" 
-            type="number" 
-            step="0.01" 
-            defaultValue={editingCountry?.additional_weight || ''} 
-            required 
+          <Input
+            id="additional_weight"
+            name="additional_weight"
+            type="number"
+            step="0.01"
+            defaultValue={editingCountry?.additional_weight || ''}
+            required
             placeholder="0.00"
           />
         </div>
@@ -246,35 +268,37 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
         </div>
         <div>
           <Label htmlFor="volumetric_divisor">Volumetric Divisor *</Label>
-          <Input 
-            id="volumetric_divisor" 
-            name="volumetric_divisor" 
-            type="number" 
-            step="0.01" 
-            defaultValue={editingCountry?.volumetric_divisor || ''} 
-            required 
+          <Input
+            id="volumetric_divisor"
+            name="volumetric_divisor"
+            type="number"
+            step="0.01"
+            defaultValue={editingCountry?.volumetric_divisor || ''}
+            required
             placeholder="5000"
           />
         </div>
         <div>
-          <Label htmlFor="payment_gateway_fixed_fee">Payment Gateway Fixed Fee ({formCurrency})</Label>
-          <Input 
-            id="payment_gateway_fixed_fee" 
-            name="payment_gateway_fixed_fee" 
-            type="number" 
-            step="0.01" 
-            defaultValue={editingCountry?.payment_gateway_fixed_fee || 0} 
+          <Label htmlFor="payment_gateway_fixed_fee">
+            Payment Gateway Fixed Fee ({formCurrency})
+          </Label>
+          <Input
+            id="payment_gateway_fixed_fee"
+            name="payment_gateway_fixed_fee"
+            type="number"
+            step="0.01"
+            defaultValue={editingCountry?.payment_gateway_fixed_fee || 0}
             placeholder="0.00"
           />
         </div>
         <div>
           <Label htmlFor="payment_gateway_percent_fee">Payment Gateway Percent Fee (%)</Label>
-          <Input 
-            id="payment_gateway_percent_fee" 
-            name="payment_gateway_percent_fee" 
-            type="number" 
-            step="0.01" 
-            defaultValue={editingCountry?.payment_gateway_percent_fee || 0} 
+          <Input
+            id="payment_gateway_percent_fee"
+            name="payment_gateway_percent_fee"
+            type="number"
+            step="0.01"
+            defaultValue={editingCountry?.payment_gateway_percent_fee || 0}
             placeholder="0.00"
           />
         </div>
@@ -294,31 +318,41 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
         </div>
         <div className="col-span-2 grid grid-cols-2 gap-4">
           <div className="flex items-center space-x-2 pt-4">
-              <Checkbox 
-                  id="purchase_allowed" 
-                  name="purchase_allowed"
-                  checked={purchaseAllowed}
-                  onCheckedChange={(checked) => setPurchaseAllowed(!!checked)}
-              />
-              <Label htmlFor="purchase_allowed" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Purchase Allowed
-              </Label>
+            <Checkbox
+              id="purchase_allowed"
+              name="purchase_allowed"
+              checked={purchaseAllowed}
+              onCheckedChange={(checked) => setPurchaseAllowed(!!checked)}
+            />
+            <Label
+              htmlFor="purchase_allowed"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Purchase Allowed
+            </Label>
           </div>
           <div className="flex items-center space-x-2 pt-4">
-              <Checkbox 
-                  id="shipping_allowed" 
-                  name="shipping_allowed"
-                  checked={shippingAllowed}
-                  onCheckedChange={(checked) => setShippingAllowed(!!checked)}
-              />
-              <Label htmlFor="shipping_allowed" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Shipping Allowed
-              </Label>
+            <Checkbox
+              id="shipping_allowed"
+              name="shipping_allowed"
+              checked={shippingAllowed}
+              onCheckedChange={(checked) => setShippingAllowed(!!checked)}
+            />
+            <Label
+              htmlFor="shipping_allowed"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Shipping Allowed
+            </Label>
           </div>
         </div>
         <div className="col-span-2">
           <Label className="font-semibold">Priority Thresholds</Label>
-          <div className="text-xs text-muted-foreground mb-2">Set the amount thresholds (in {formCurrency || 'main currency'}) for each priority. Quotes with a final total above each threshold will be assigned the corresponding priority, unless manually overridden.</div>
+          <div className="text-xs text-muted-foreground mb-2">
+            Set the amount thresholds (in {formCurrency || 'main currency'}) for each priority.
+            Quotes with a final total above each threshold will be assigned the corresponding
+            priority, unless manually overridden.
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="priority-low">Low ({formCurrency || 'CUR'})</Label>
@@ -329,7 +363,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 step="0.01"
                 required
                 value={priorityThresholds.low}
-                onChange={e => handlePriorityChange('low', e.target.value)}
+                onChange={(e) => handlePriorityChange('low', e.target.value)}
                 min={0}
               />
             </div>
@@ -342,7 +376,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 step="0.01"
                 required
                 value={priorityThresholds.normal}
-                onChange={e => handlePriorityChange('normal', e.target.value)}
+                onChange={(e) => handlePriorityChange('normal', e.target.value)}
                 min={priorityThresholds.low}
               />
             </div>
@@ -355,7 +389,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 step="0.01"
                 required
                 value={priorityThresholds.urgent}
-                onChange={e => handlePriorityChange('urgent', e.target.value)}
+                onChange={(e) => handlePriorityChange('urgent', e.target.value)}
                 min={priorityThresholds.normal}
               />
             </div>
@@ -370,5 +404,5 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
         </div>
       </form>
     </div>
-  )
-}
+  );
+};

@@ -1,13 +1,13 @@
-import AuthForm from "@/components/forms/AuthForm";
-import { useAuth } from "@/contexts/AuthContext";
-import { Navigate, useLocation } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Lock, Shield, Users, Globe, Package, Zap, TrendingUp, ArrowRight } from "lucide-react";
-import { AnimatedSection } from "@/components/shared/AnimatedSection";
-import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
-import { ParallaxSection } from "@/components/shared/ParallaxSection";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useEffect } from "react";
+import AuthForm from '@/components/forms/AuthForm';
+import { useAuth } from '@/contexts/AuthContext';
+import { Navigate, useLocation } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Lock, Shield, Users, Globe, Package, Zap, TrendingUp, ArrowRight } from 'lucide-react';
+import { AnimatedSection } from '@/components/shared/AnimatedSection';
+import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
+import { ParallaxSection } from '@/components/shared/ParallaxSection';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useEffect } from 'react';
 
 const Auth = () => {
   const { session } = useAuth();
@@ -28,30 +28,30 @@ const Auth = () => {
   const features = [
     {
       icon: Package,
-      title: "Global Shopping",
-      description: "Shop from anywhere in the world"
+      title: 'Global Shopping',
+      description: 'Shop from anywhere in the world',
     },
     {
       icon: Shield,
-      title: "Secure Payments",
-      description: "Bank-level encryption for all transactions"
+      title: 'Secure Payments',
+      description: 'Bank-level encryption for all transactions',
     },
     {
       icon: Zap,
-      title: "Fast Shipping",
-      description: "Express delivery options available"
+      title: 'Fast Shipping',
+      description: 'Express delivery options available',
     },
     {
       icon: TrendingUp,
-      title: "Best Prices",
-      description: "Competitive rates with transparent fees"
-    }
+      title: 'Best Prices',
+      description: 'Competitive rates with transparent fees',
+    },
   ];
 
   const stats = [
-    { value: 50000, label: "Happy Customers", suffix: "+" },
-    { value: 100, label: "Countries", suffix: "+" },
-    { value: 24, label: "Support", suffix: "/7" }
+    { value: 50000, label: 'Happy Customers', suffix: '+' },
+    { value: 100, label: 'Countries', suffix: '+' },
+    { value: 24, label: 'Support', suffix: '/7' },
   ];
 
   return (
@@ -60,9 +60,18 @@ const Auth = () => {
       <div className="absolute inset-0">
         {/* Gradient Orbs */}
         <div className="absolute top-0 -left-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" />
-        <div className="absolute top-0 -right-40 w-80 h-80 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" style={{ animationDelay: '2s' }} />
-        <div className="absolute -bottom-32 left-20 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" style={{ animationDelay: '4s' }} />
-        <div className="absolute bottom-0 right-20 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" style={{ animationDelay: '6s' }} />
+        <div
+          className="absolute top-0 -right-40 w-80 h-80 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
+          style={{ animationDelay: '2s' }}
+        />
+        <div
+          className="absolute -bottom-32 left-20 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
+          style={{ animationDelay: '4s' }}
+        />
+        <div
+          className="absolute bottom-0 right-20 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
+          style={{ animationDelay: '6s' }}
+        />
       </div>
 
       {/* Grid Pattern */}
@@ -71,14 +80,15 @@ const Auth = () => {
       {/* Main Content */}
       <div className="relative z-10 w-full flex items-center justify-center p-4">
         <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center gap-12">
-          
           {/* Left Side - Features */}
           <div className="flex-1 hidden lg:block">
             <AnimatedSection animation="fadeInLeft">
               <div className="space-y-8">
                 <div>
                   <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                    Shop the World,<br />Ship to Your Door
+                    Shop the World,
+                    <br />
+                    Ship to Your Door
                   </h2>
                   <p className="text-xl text-gray-600">
                     Access global products with transparent pricing and reliable shipping.
@@ -139,9 +149,7 @@ const Auth = () => {
               {message && (
                 <AnimatedSection animation="fadeInDown">
                   <Alert className="mb-4 border-green-200 bg-green-50">
-                    <AlertDescription className="text-green-800">
-                      {message}
-                    </AlertDescription>
+                    <AlertDescription className="text-green-800">{message}</AlertDescription>
                   </Alert>
                 </AnimatedSection>
               )}
@@ -157,9 +165,7 @@ const Auth = () => {
                     </div>
                   </AnimatedSection>
                   <AnimatedSection animation="fadeInUp" delay={300}>
-                    <CardTitle className="text-3xl font-bold text-gray-900">
-                      Welcome Back
-                    </CardTitle>
+                    <CardTitle className="text-3xl font-bold text-gray-900">Welcome Back</CardTitle>
                     <CardDescription className="text-gray-600 mt-2">
                       Sign in to access your global shopping dashboard
                     </CardDescription>

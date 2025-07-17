@@ -4,18 +4,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { 
-  AlertTriangle, 
-  XCircle, 
-  Clock, 
-  RefreshCw, 
-  ChevronDown, 
+import {
+  AlertTriangle,
+  XCircle,
+  Clock,
+  RefreshCw,
+  ChevronDown,
   ChevronUp,
   Copy,
   ExternalLink,
-  HelpCircle
+  HelpCircle,
 } from 'lucide-react';
-import { PaymentError, PaymentErrorContext, PaymentErrorHandler } from '@/utils/paymentErrorHandler';
+import {
+  PaymentError,
+  PaymentErrorContext,
+  PaymentErrorHandler,
+} from '@/utils/paymentErrorHandler';
 import { PaymentGateway } from '@/types/payment';
 
 interface PaymentErrorDisplayProps {
@@ -33,7 +37,7 @@ export const PaymentErrorDisplay: React.FC<PaymentErrorDisplayProps> = ({
   onRetry,
   onContactSupport,
   onChangePaymentMethod,
-  className = ''
+  className = '',
 }) => {
   const [parsedError, setParsedError] = useState<PaymentError | null>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -43,7 +47,7 @@ export const PaymentErrorDisplay: React.FC<PaymentErrorDisplayProps> = ({
   useEffect(() => {
     const parsed = PaymentErrorHandler.parseError(error, context);
     setParsedError(parsed);
-    
+
     if (parsed.shouldRetry && parsed.retryDelay) {
       setRetryCountdown(Math.ceil(parsed.retryDelay / 1000));
       setCanRetry(false);
@@ -55,7 +59,7 @@ export const PaymentErrorDisplay: React.FC<PaymentErrorDisplayProps> = ({
   useEffect(() => {
     if (retryCountdown > 0) {
       const timer = setTimeout(() => {
-        setRetryCountdown(prev => {
+        setRetryCountdown((prev) => {
           if (prev <= 1) {
             setCanRetry(true);
             return 0;
@@ -63,7 +67,7 @@ export const PaymentErrorDisplay: React.FC<PaymentErrorDisplayProps> = ({
           return prev - 1;
         });
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [retryCountdown]);
@@ -76,11 +80,16 @@ export const PaymentErrorDisplay: React.FC<PaymentErrorDisplayProps> = ({
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'critical':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'high':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'low':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -100,13 +109,13 @@ export const PaymentErrorDisplay: React.FC<PaymentErrorDisplayProps> = ({
 
   const getGatewayDisplayName = (gateway: PaymentGateway) => {
     const names = {
-      'payu': 'PayU',
-      'stripe': 'Stripe',
-      'bank_transfer': 'Bank Transfer',
-      'esewa': 'eSewa',
-      'khalti': 'Khalti',
-      'fonepay': 'Fonepay',
-      'cod': 'Cash on Delivery'
+      payu: 'PayU',
+      stripe: 'Stripe',
+      bank_transfer: 'Bank Transfer',
+      esewa: 'eSewa',
+      khalti: 'Khalti',
+      fonepay: 'Fonepay',
+      cod: 'Cash on Delivery',
     };
     return names[gateway] || gateway;
   };
@@ -132,9 +141,7 @@ export const PaymentErrorDisplay: React.FC<PaymentErrorDisplayProps> = ({
         <CardContent className="space-y-4">
           <Alert>
             <AlertTriangle className="h-4 w-4" />
-            <AlertDescription className="text-base">
-              {parsedError.userMessage}
-            </AlertDescription>
+            <AlertDescription className="text-base">{parsedError.userMessage}</AlertDescription>
           </Alert>
 
           {/* Transaction Details */}
@@ -143,7 +150,7 @@ export const PaymentErrorDisplay: React.FC<PaymentErrorDisplayProps> = ({
               <span className="font-medium">Payment Method:</span>
               <span className="ml-2">{getGatewayDisplayName(context.gateway)}</span>
             </div>
-            
+
             {context.transactionId && (
               <div className="flex items-center gap-2">
                 <span className="font-medium">Transaction ID:</span>
@@ -160,19 +167,19 @@ export const PaymentErrorDisplay: React.FC<PaymentErrorDisplayProps> = ({
                 </Button>
               </div>
             )}
-            
+
             {context.amount && context.currency && (
               <div>
                 <span className="font-medium">Amount:</span>
                 <span className="ml-2">
                   {new Intl.NumberFormat('en-US', {
                     style: 'currency',
-                    currency: context.currency
+                    currency: context.currency,
                   }).format(context.amount)}
                 </span>
               </div>
             )}
-            
+
             <div>
               <span className="font-medium">Time:</span>
               <span className="ml-2">{new Date(context.timestamp).toLocaleString()}</span>
@@ -214,23 +221,15 @@ export const PaymentErrorDisplay: React.FC<PaymentErrorDisplayProps> = ({
                 )}
               </Button>
             )}
-            
+
             {onChangePaymentMethod && (
-              <Button
-                onClick={onChangePaymentMethod}
-                variant="outline"
-                className="flex-1"
-              >
+              <Button onClick={onChangePaymentMethod} variant="outline" className="flex-1">
                 Change Payment Method
               </Button>
             )}
-            
+
             {onContactSupport && (
-              <Button
-                onClick={onContactSupport}
-                variant="outline"
-                className="flex-1"
-              >
+              <Button onClick={onContactSupport} variant="outline" className="flex-1">
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Contact Support
               </Button>
@@ -255,20 +254,30 @@ export const PaymentErrorDisplay: React.FC<PaymentErrorDisplayProps> = ({
                 )}
               </Button>
             </CollapsibleTrigger>
-            
+
             <CollapsibleContent className="mt-2 space-y-2">
               <div className="bg-gray-50 p-3 rounded-md text-sm">
                 <div className="space-y-1">
-                  <div><strong>Error Code:</strong> {parsedError.code}</div>
-                  <div><strong>Message:</strong> {parsedError.message}</div>
-                  <div><strong>Severity:</strong> {parsedError.severity}</div>
-                  <div><strong>Can Retry:</strong> {parsedError.shouldRetry ? 'Yes' : 'No'}</div>
+                  <div>
+                    <strong>Error Code:</strong> {parsedError.code}
+                  </div>
+                  <div>
+                    <strong>Message:</strong> {parsedError.message}
+                  </div>
+                  <div>
+                    <strong>Severity:</strong> {parsedError.severity}
+                  </div>
+                  <div>
+                    <strong>Can Retry:</strong> {parsedError.shouldRetry ? 'Yes' : 'No'}
+                  </div>
                   {parsedError.retryDelay && (
-                    <div><strong>Retry Delay:</strong> {parsedError.retryDelay / 1000}s</div>
+                    <div>
+                      <strong>Retry Delay:</strong> {parsedError.retryDelay / 1000}s
+                    </div>
                   )}
                 </div>
               </div>
-              
+
               <div className="text-xs text-muted-foreground">
                 Include these details when contacting support for faster resolution.
               </div>

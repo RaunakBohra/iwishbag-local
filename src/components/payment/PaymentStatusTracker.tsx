@@ -28,12 +28,12 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
   gateway,
   onStatusChange,
   autoRefresh = true,
-  refreshInterval = 5000
+  refreshInterval = 5000,
 }) => {
   const [status, setStatus] = useState<PaymentStatus>({
     status: 'pending',
     progress: 0,
-    last_update: new Date().toISOString()
+    last_update: new Date().toISOString(),
   });
   const [isChecking, setIsChecking] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -41,7 +41,7 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
   // Start timer when component mounts
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeElapsed(prev => prev + 1);
+      setTimeElapsed((prev) => prev + 1);
     }, 1000);
 
     return () => clearInterval(timer);
@@ -74,12 +74,12 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
       console.error('No transaction ID provided for payment status check');
       return;
     }
-    
+
     setIsChecking(true);
     try {
       // Call the real payment status verification API
       const response = await fetch(`/supabase/functions/verify-payment-status/${transactionId}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data) {
@@ -89,18 +89,18 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
       } else {
         // If API call fails, set error status
         const errorData = await response.json().catch(() => ({}));
-        setStatus(prev => ({
+        setStatus((prev) => ({
           ...prev,
           error_message: errorData.error || 'Failed to check payment status',
-          last_update: new Date().toISOString()
+          last_update: new Date().toISOString(),
         }));
       }
     } catch (error) {
       console.error('Error checking payment status:', error);
-      setStatus(prev => ({
+      setStatus((prev) => ({
         ...prev,
         error_message: 'Network error while checking payment status',
-        last_update: new Date().toISOString()
+        last_update: new Date().toISOString(),
       }));
     } finally {
       setIsChecking(false);
@@ -110,22 +110,92 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
   const getGatewayStatus = (gateway: PaymentGateway, progress: number): string => {
     // Validate progress parameter
     const validProgress = Math.max(0, Math.min(100, progress || 0));
-    
+
     const statuses = {
-      stripe: ['Initializing...', 'Processing payment...', 'Confirming transaction...', 'Payment successful'],
-      payu: ['Redirecting to PayU...', 'Payment in progress...', 'Verifying payment...', 'Payment confirmed'],
-      esewa: ['Generating QR code...', 'Waiting for payment...', 'Verifying payment...', 'Payment received'],
-      khalti: ['Generating QR code...', 'Waiting for payment...', 'Verifying payment...', 'Payment received'],
-      fonepay: ['Generating QR code...', 'Waiting for payment...', 'Verifying payment...', 'Payment received'],
-      bank_transfer: ['Preparing transfer details...', 'Transfer initiated...', 'Processing transfer...', 'Transfer completed'],
-      cod: ['Order confirmed...', 'Preparing for delivery...', 'Out for delivery...', 'Payment on delivery'],
-      airwallex: ['Initializing...', 'Processing payment...', 'Confirming transaction...', 'Payment successful'],
-      razorpay: ['Initializing...', 'Processing payment...', 'Confirming transaction...', 'Payment successful'],
-      paypal: ['Redirecting to PayPal...', 'Processing payment...', 'Confirming transaction...', 'Payment successful'],
-      upi: ['Generating UPI request...', 'Waiting for payment...', 'Verifying payment...', 'Payment received'],
-      paytm: ['Redirecting to Paytm...', 'Payment in progress...', 'Verifying payment...', 'Payment confirmed'],
-      grabpay: ['Generating QR code...', 'Waiting for payment...', 'Verifying payment...', 'Payment received'],
-      alipay: ['Generating QR code...', 'Waiting for payment...', 'Verifying payment...', 'Payment received']
+      stripe: [
+        'Initializing...',
+        'Processing payment...',
+        'Confirming transaction...',
+        'Payment successful',
+      ],
+      payu: [
+        'Redirecting to PayU...',
+        'Payment in progress...',
+        'Verifying payment...',
+        'Payment confirmed',
+      ],
+      esewa: [
+        'Generating QR code...',
+        'Waiting for payment...',
+        'Verifying payment...',
+        'Payment received',
+      ],
+      khalti: [
+        'Generating QR code...',
+        'Waiting for payment...',
+        'Verifying payment...',
+        'Payment received',
+      ],
+      fonepay: [
+        'Generating QR code...',
+        'Waiting for payment...',
+        'Verifying payment...',
+        'Payment received',
+      ],
+      bank_transfer: [
+        'Preparing transfer details...',
+        'Transfer initiated...',
+        'Processing transfer...',
+        'Transfer completed',
+      ],
+      cod: [
+        'Order confirmed...',
+        'Preparing for delivery...',
+        'Out for delivery...',
+        'Payment on delivery',
+      ],
+      airwallex: [
+        'Initializing...',
+        'Processing payment...',
+        'Confirming transaction...',
+        'Payment successful',
+      ],
+      razorpay: [
+        'Initializing...',
+        'Processing payment...',
+        'Confirming transaction...',
+        'Payment successful',
+      ],
+      paypal: [
+        'Redirecting to PayPal...',
+        'Processing payment...',
+        'Confirming transaction...',
+        'Payment successful',
+      ],
+      upi: [
+        'Generating UPI request...',
+        'Waiting for payment...',
+        'Verifying payment...',
+        'Payment received',
+      ],
+      paytm: [
+        'Redirecting to Paytm...',
+        'Payment in progress...',
+        'Verifying payment...',
+        'Payment confirmed',
+      ],
+      grabpay: [
+        'Generating QR code...',
+        'Waiting for payment...',
+        'Verifying payment...',
+        'Payment received',
+      ],
+      alipay: [
+        'Generating QR code...',
+        'Waiting for payment...',
+        'Verifying payment...',
+        'Payment received',
+      ],
     };
 
     const gatewayStatuses = statuses[gateway] || statuses.stripe;
@@ -135,21 +205,25 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
 
   const getStatusIcon = () => {
     switch (status.status) {
-      case 'completed': 
+      case 'completed':
         return <CheckCircle className="h-5 w-5 text-green-600" />;
-      case 'failed': 
+      case 'failed':
         return <AlertTriangle className="h-5 w-5 text-red-600" />;
-      default: 
+      default:
         return <Clock className="h-5 w-5 text-blue-600" />;
     }
   };
 
   const getStatusColor = () => {
     switch (status.status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'failed': return 'bg-red-100 text-red-800';
-      case 'processing': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-yellow-100 text-yellow-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'failed':
+        return 'bg-red-100 text-red-800';
+      case 'processing':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-yellow-100 text-yellow-800';
     }
   };
 
@@ -210,13 +284,15 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
             <span className="text-sm">Time Elapsed:</span>
             <span className="text-sm font-medium">{formatTime(timeElapsed)}</span>
           </div>
-          
-          {status.estimated_completion && status.status !== 'completed' && status.status !== 'failed' && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Estimated Completion:</span>
-              <span className="text-sm font-medium">{getEstimatedTime()}</span>
-            </div>
-          )}
+
+          {status.estimated_completion &&
+            status.status !== 'completed' &&
+            status.status !== 'failed' && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Estimated Completion:</span>
+                <span className="text-sm font-medium">{getEstimatedTime()}</span>
+              </div>
+            )}
         </div>
 
         {/* Last Update */}
@@ -229,8 +305,8 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
 
         {/* Action Buttons */}
         {status.status !== 'completed' && status.status !== 'failed' && (
-          <Button 
-            onClick={checkPaymentStatus} 
+          <Button
+            onClick={checkPaymentStatus}
             disabled={isChecking}
             className="w-full"
             variant="outline"
@@ -276,4 +352,4 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

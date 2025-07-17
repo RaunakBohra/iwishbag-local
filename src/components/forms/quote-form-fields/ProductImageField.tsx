@@ -1,7 +1,7 @@
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { ImageUpload } from "@/components/ui/image-upload";
-import { Control, useWatch } from "react-hook-form";
-import { useEffect } from "react";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { ImageUpload } from '@/components/ui/image-upload';
+import { Control, useWatch } from 'react-hook-form';
+import { useEffect } from 'react';
 
 interface ProductAnalysisResult {
   imageUrl?: string;
@@ -20,7 +20,7 @@ export const ProductImageField = ({ control, index, analysisResult }: ProductIma
   // Watch the image URL field
   const imageUrl = useWatch({
     control,
-    name: `items.${index}.imageUrl`
+    name: `items.${index}.imageUrl`,
   });
 
   // Auto-set image URL when analysis result is available
@@ -42,7 +42,7 @@ export const ProductImageField = ({ control, index, analysisResult }: ProductIma
               <ImageUpload
                 currentImageUrl={field.value}
                 onImageUpload={field.onChange}
-                onImageRemove={() => field.onChange("")}
+                onImageRemove={() => field.onChange('')}
               />
             </div>
           </FormControl>

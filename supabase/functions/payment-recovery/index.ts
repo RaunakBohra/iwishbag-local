@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 interface PaymentTransaction {
   id: string;
@@ -24,26 +24,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, content-type',
   'Access-Control-Allow-Methods': 'POST',
   'Access-Control-Max-Age': '86400',
-}
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // Find abandoned payments (pending for more than 1 hour)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    
+
     const { data: abandonedPayments, error } = await supabaseAdmin
       .from('payment_transactions')
-      .select(`
+      .select(
+        `
         *,
         quotes!inner(
           id,
@@ -53,15 +54,16 @@ serve(async (req) => {
           final_currency,
           product_name
         )
-      `)
+      `,
+      )
       .eq('status', 'pending')
       .lt('created_at', oneHourAgo.toISOString());
 
     if (error) {
       console.error('Error fetching abandoned payments:', error);
-      return new Response(JSON.stringify({ error: 'Failed to fetch abandoned payments' }), { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      return new Response(JSON.stringify({ error: 'Failed to fetch abandoned payments' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -78,28 +80,36 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ 
-      success: true,
-      processed: processedCount,
-      total: abandonedPayments?.length || 0
-    }), { 
-      status: 200, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        processed: processedCount,
+        total: abandonedPayments?.length || 0,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   } catch (error) {
     console.error('Payment recovery error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({
+        error: 'Internal server error',
+        details: error.message,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
     );
   }
 });
 
-async function sendPaymentReminder(payment: PaymentTransaction, supabaseAdmin: ReturnType<typeof createClient>) {
+async function sendPaymentReminder(
+  payment: PaymentTransaction,
+  supabaseAdmin: ReturnType<typeof createClient>,
+) {
   try {
     // Get user information
     const { data: user, error: userError } = await supabaseAdmin
@@ -125,35 +135,39 @@ async function sendPaymentReminder(payment: PaymentTransaction, supabaseAdmin: R
         product_name: payment.quotes.product_name || 'Your order',
         payment_link: `${Deno.env.get('SITE_URL') || 'https://your-site.com'}/checkout?quotes=${payment.quotes.id}`,
         transaction_id: payment.id,
-        hours_abandoned: Math.floor((Date.now() - new Date(payment.created_at).getTime()) / (1000 * 60 * 60))
-      }
+        hours_abandoned: Math.floor(
+          (Date.now() - new Date(payment.created_at).getTime()) / (1000 * 60 * 60),
+        ),
+      },
     };
 
     // Send email using the send-email function
-    const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
-      body: emailData
-    });
+    const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke(
+      'send-email',
+      {
+        body: emailData,
+      },
+    );
 
     if (emailError) {
       console.error(`Failed to send email for payment ${payment.id}:`, emailError);
       throw emailError;
     }
 
-    console.log(`Successfully sent payment reminder for transaction ${payment.id} to ${user.email}`);
+    console.log(
+      `Successfully sent payment reminder for transaction ${payment.id} to ${user.email}`,
+    );
 
     // Log the recovery attempt
-    await supabaseAdmin
-      .from('payment_recovery_logs')
-      .insert({
-        transaction_id: payment.id,
-        user_id: payment.quotes.user_id,
-        email_sent: user.email,
-        recovery_type: 'abandoned_payment',
-        created_at: new Date().toISOString()
-      });
-
+    await supabaseAdmin.from('payment_recovery_logs').insert({
+      transaction_id: payment.id,
+      user_id: payment.quotes.user_id,
+      email_sent: user.email,
+      recovery_type: 'abandoned_payment',
+      created_at: new Date().toISOString(),
+    });
   } catch (error) {
     console.error(`Error in sendPaymentReminder for payment ${payment.id}:`, error);
     throw error;
   }
-} 
+}

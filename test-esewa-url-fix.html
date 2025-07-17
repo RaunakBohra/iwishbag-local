@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>eSewa URL Encoding Test</title>
+</head>
+<body>
+    <h1>eSewa URL Encoding Debug</h1>
+    
+    <div id="results"></div>
+    
+    <script>
+        // Test different URL scenarios
+        const correctUrl = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+        const problematicUrl = 'https://rc-epay.esewa.com.np/api/e  pay/main/v2/form'; // with spaces
+        
+        console.log('=== URL Analysis ===');
+        console.log('Correct URL:', correctUrl);
+        console.log('Problematic URL:', problematicUrl);
+        
+        // Test form creation (this simulates what happens in Checkout.tsx)
+        function testFormCreation(url, label) {
+            console.log(`\n--- Testing ${label} ---`);
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+            
+            console.log('Original URL:', url);
+            console.log('Form action after setting:', form.action);
+            console.log('URLs match:', url === form.action);
+            
+            // Test what happens when we submit
+            const testDiv = document.createElement('div');
+            testDiv.innerHTML = `<p><strong>${label}:</strong><br>
+                Original: ${url}<br>
+                Form action: ${form.action}<br>
+                Match: ${url === form.action}</p>`;
+            
+            document.getElementById('results').appendChild(testDiv);
+            
+            return form.action;
+        }
+        
+        // Test both URLs
+        const correctResult = testFormCreation(correctUrl, 'Correct URL');
+        const problematicResult = testFormCreation(problematicUrl, 'Problematic URL');
+        
+        // Test URL encoding scenarios
+        console.log('\n=== URL Encoding Tests ===');
+        console.log('Correct URL encoded:', encodeURIComponent(correctUrl));
+        console.log('Problematic URL encoded:', encodeURIComponent(problematicUrl));
+        
+        // Test if the issue is in JSON parsing
+        const jsonTest = {
+            test_url: correctUrl,
+            problematic_url: problematicUrl
+        };
+        
+        const jsonString = JSON.stringify(jsonTest);
+        const parsedBack = JSON.parse(jsonString);
+        
+        console.log('\n=== JSON Test ===');
+        console.log('JSON string:', jsonString);
+        console.log('Parsed back test_url:', parsedBack.test_url);
+        console.log('URLs match after JSON:', correctUrl === parsedBack.test_url);
+        
+        // Test what the error URL looks like decoded
+        const errorUrl = 'https://rc-epay.esewa.com.np/api/e%20%20pay/main/v2/form';
+        console.log('\n=== Error URL Analysis ===');
+        console.log('Error URL:', errorUrl);
+        console.log('Decoded:', decodeURIComponent(errorUrl));
+        
+        // Final test - create actual form and log what happens
+        console.log('\n=== Actual Form Test ===');
+        const testForm = document.createElement('form');
+        testForm.method = 'POST';
+        testForm.action = correctUrl;
+        testForm.target = '_blank';
+        
+        // Add hidden fields like in the real implementation
+        const hiddenFields = {
+            amount: '100',
+            tax_amount: '0',
+            total_amount: '100',
+            transaction_uuid: 'test-123',
+            product_code: 'EPAYTEST',
+            product_service_charge: '0',
+            product_delivery_charge: '0',
+            success_url: 'https://example.com/success',
+            failure_url: 'https://example.com/failure',
+            signed_field_names: 'total_amount,transaction_uuid,product_code,',
+            signature: 'test-signature'
+        };
+        
+        Object.entries(hiddenFields).forEach(([key, value]) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            testForm.appendChild(input);
+        });
+        
+        // Add submit button
+        const submitBtn = document.createElement('input');
+        submitBtn.type = 'submit';
+        submitBtn.value = 'Test eSewa Form';
+        testForm.appendChild(submitBtn);
+        
+        document.body.appendChild(testForm);
+        
+        console.log('Form created successfully');
+        console.log('Form action:', testForm.action);
+        console.log('Form method:', testForm.method);
+        console.log('Form fields:', testForm.elements.length);
+    </script>
+</body>
+</html>

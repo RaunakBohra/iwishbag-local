@@ -1,4 +1,4 @@
-import { OptimizedCostEstimator } from "@/components/shared/OptimizedCostEstimator";
+import { OptimizedCostEstimator } from '@/components/shared/OptimizedCostEstimator';
 
 // Re-export the optimized version for backward compatibility
 const CostEstimator = () => {

@@ -27,8 +27,8 @@ export function PayUDebugPage() {
     PayUDebugger.clear();
     loadLogs();
     toast({
-      title: "Logs Cleared",
-      description: "PayU debug logs have been cleared.",
+      title: 'Logs Cleared',
+      description: 'PayU debug logs have been cleared.',
     });
   };
 
@@ -38,14 +38,14 @@ export function PayUDebugPage() {
       setCopiedIndex(index);
       setTimeout(() => setCopiedIndex(null), 2000);
       toast({
-        title: "Copied",
-        description: "Debug data copied to clipboard.",
+        title: 'Copied',
+        description: 'Debug data copied to clipboard.',
       });
     } catch (error) {
       toast({
-        title: "Copy Failed",
-        description: "Failed to copy to clipboard.",
-        variant: "destructive",
+        title: 'Copy Failed',
+        description: 'Failed to copy to clipboard.',
+        variant: 'destructive',
       });
     }
   };
@@ -53,9 +53,17 @@ export function PayUDebugPage() {
   const getEventBadge = (event: string) => {
     switch (event) {
       case 'response':
-        return <Badge variant="outline" className="bg-blue-50">Response</Badge>;
+        return (
+          <Badge variant="outline" className="bg-blue-50">
+            Response
+          </Badge>
+        );
       case 'submission':
-        return <Badge variant="outline" className="bg-green-50">Submission</Badge>;
+        return (
+          <Badge variant="outline" className="bg-green-50">
+            Submission
+          </Badge>
+        );
       case 'error':
         return <Badge variant="destructive">Error</Badge>;
       default:
@@ -64,9 +72,20 @@ export function PayUDebugPage() {
   };
 
   const renderFormDataSummary = (formData: Record<string, string>) => {
-    const requiredFields = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
+    const requiredFields = [
+      'key',
+      'txnid',
+      'amount',
+      'productinfo',
+      'firstname',
+      'email',
+      'phone',
+      'surl',
+      'furl',
+      'hash',
+    ];
     const presentFields = Object.keys(formData);
-    const missingFields = requiredFields.filter(field => !presentFields.includes(field));
+    const missingFields = requiredFields.filter((field) => !presentFields.includes(field));
 
     return (
       <div className="space-y-2">
@@ -84,10 +103,18 @@ export function PayUDebugPage() {
           )}
         </div>
         <div className="grid grid-cols-2 gap-2 text-sm">
-          <div><strong>Transaction ID:</strong> {formData.txnid || 'N/A'}</div>
-          <div><strong>Amount:</strong> {formData.amount || 'N/A'}</div>
-          <div><strong>Email:</strong> {formData.email || 'N/A'}</div>
-          <div><strong>Phone:</strong> {formData.phone || 'N/A'}</div>
+          <div>
+            <strong>Transaction ID:</strong> {formData.txnid || 'N/A'}
+          </div>
+          <div>
+            <strong>Amount:</strong> {formData.amount || 'N/A'}
+          </div>
+          <div>
+            <strong>Email:</strong> {formData.email || 'N/A'}
+          </div>
+          <div>
+            <strong>Phone:</strong> {formData.phone || 'N/A'}
+          </div>
         </div>
       </div>
     );
@@ -116,7 +143,13 @@ export function PayUDebugPage() {
             <div className="text-center py-8 text-muted-foreground">
               <p>No PayU debug logs found.</p>
               <p className="text-sm mt-2">Logs will appear here when you attempt a PayU payment.</p>
-              <p className="text-sm mt-4">You can also run <code className="bg-gray-100 px-2 py-1 rounded">PayUDebugger.displayInConsole()</code> in the browser console.</p>
+              <p className="text-sm mt-4">
+                You can also run{' '}
+                <code className="bg-gray-100 px-2 py-1 rounded">
+                  PayUDebugger.displayInConsole()
+                </code>{' '}
+                in the browser console.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">

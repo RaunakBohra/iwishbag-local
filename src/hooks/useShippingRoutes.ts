@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { 
-  getShippingRoutes, 
-  upsertShippingRoute, 
+import {
+  getShippingRoutes,
+  upsertShippingRoute,
   deleteShippingRoute,
   getShippingCost,
-  calculateUnifiedQuote
+  calculateUnifiedQuote,
 } from '../lib/unified-shipping-calculator';
-import type { 
-  ShippingRoute, 
+import type {
+  ShippingRoute,
   ShippingRouteDB,
   ShippingRouteFormData,
   UnifiedQuoteInput,
-  UnifiedQuoteResult
+  UnifiedQuoteResult,
 } from '../types/shipping';
 
 /**
@@ -101,7 +101,7 @@ export function useShippingRoutes() {
     fetchRoutes,
     createRoute,
     updateRoute,
-    removeRoute
+    removeRoute,
   };
 }
 
@@ -116,7 +116,7 @@ export function useShippingCalculator() {
     originCountry: string,
     destinationCountry: string,
     weight: number,
-    price: number = 0
+    price: number = 0,
   ) => {
     try {
       setLoading(true);
@@ -149,7 +149,7 @@ export function useShippingCalculator() {
     loading,
     error,
     calculateShipping,
-    calculateQuote
+    calculateQuote,
   };
 }
 
@@ -173,7 +173,7 @@ export function useOriginCountries() {
           return;
         }
 
-        const uniqueCountries = [...new Set(data?.map(route => route.origin_country) || [])];
+        const uniqueCountries = [...new Set(data?.map((route) => route.origin_country) || [])];
         setCountries(uniqueCountries.sort());
       } catch (err) {
         console.error('Error fetching origin countries:', err);
@@ -208,7 +208,7 @@ export function useDestinationCountries() {
           return;
         }
 
-        const uniqueCountries = [...new Set(data?.map(route => route.destination_country) || [])];
+        const uniqueCountries = [...new Set(data?.map((route) => route.destination_country) || [])];
         setCountries(uniqueCountries.sort());
       } catch (err) {
         console.error('Error fetching destination countries:', err);
@@ -234,4 +234,4 @@ export async function getShippingRouteById(routeId: string | number) {
     .single();
   if (error) throw new Error(error.message);
   return data;
-} 
+}

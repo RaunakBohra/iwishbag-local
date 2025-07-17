@@ -6,15 +6,7 @@ import { useAllCountries } from '@/hooks/useAllCountries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  MapPin, 
-  DollarSign, 
-  Globe, 
-  Settings,
-  User,
-  Phone,
-  Mail
-} from 'lucide-react';
+import { MapPin, DollarSign, Globe, Settings, User, Phone, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { currencyService } from '@/services/CurrencyService';
 
@@ -23,9 +15,9 @@ interface UserPreferencesProps {
   compact?: boolean;
 }
 
-export const UserPreferences: React.FC<UserPreferencesProps> = ({ 
-  showEditButton = true, 
-  compact = false 
+export const UserPreferences: React.FC<UserPreferencesProps> = ({
+  showEditButton = true,
+  compact = false,
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -44,12 +36,12 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
       if (error) throw error;
       return data;
     },
-    enabled: !!user
+    enabled: !!user,
   });
 
   const getCountryName = (countryCode: string) => {
     if (!allCountries) return countryCode;
-    const country = allCountries.find(c => c.code === countryCode);
+    const country = allCountries.find((c) => c.code === countryCode);
     return country?.name || countryCode;
   };
 
@@ -60,7 +52,7 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
 
   const getAvailablePaymentMethods = (countryCode: string) => {
     const methods = [];
-    
+
     switch (countryCode) {
       case 'NP':
         methods.push('eSewa', 'Khalti', 'Fonepay');
@@ -71,10 +63,10 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
       default:
         methods.push('Stripe', 'Airwallex');
     }
-    
+
     // Universal methods
     methods.push('Bank Transfer', 'Cash on Delivery');
-    
+
     return methods;
   };
 
@@ -113,13 +105,11 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-sm">
-            No profile information available.
-          </p>
+          <p className="text-muted-foreground text-sm">No profile information available.</p>
           {showEditButton && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="mt-3"
               onClick={() => navigate('/profile')}
             >
@@ -139,22 +129,14 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
       <div className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">
-            {getCountryName(profile.country || 'US')}
-          </span>
+          <span className="text-sm font-medium">{getCountryName(profile.country || 'US')}</span>
         </div>
         <div className="flex items-center gap-2">
           <DollarSign className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">
-            {profile.preferred_display_currency || 'USD'}
-          </span>
+          <span className="text-sm font-medium">{profile.preferred_display_currency || 'USD'}</span>
         </div>
         {showEditButton && (
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => navigate('/profile')}
-          >
+          <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
             <Settings className="h-4 w-4" />
           </Button>
         )}
@@ -187,7 +169,9 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">Name:</span>
-                <span>{profile.full_name || user?.user_metadata?.name || user?.user_metadata?.full_name}</span>
+                <span>
+                  {profile.full_name || user?.user_metadata?.name || user?.user_metadata?.full_name}
+                </span>
               </div>
             )}
             {profile.phone && (
@@ -218,7 +202,8 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
               <DollarSign className="h-4 w-4 text-muted-foreground" />
               <span className="text-muted-foreground">Currency:</span>
               <Badge variant="outline" className="text-xs">
-                {getCurrencyName(profile.preferred_display_currency || 'USD')} ({profile.preferred_display_currency || 'USD'})
+                {getCurrencyName(profile.preferred_display_currency || 'USD')} (
+                {profile.preferred_display_currency || 'USD'})
               </Badge>
             </div>
           </div>
@@ -240,11 +225,7 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
         </div>
 
         {showEditButton && (
-          <Button 
-            variant="outline" 
-            className="w-full"
-            onClick={() => navigate('/profile')}
-          >
+          <Button variant="outline" className="w-full" onClick={() => navigate('/profile')}>
             <Settings className="h-4 w-4 mr-2" />
             Edit Preferences
           </Button>
@@ -252,4 +233,4 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

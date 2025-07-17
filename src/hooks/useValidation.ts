@@ -24,26 +24,29 @@ export function useValidation<T>(schema: z.ZodSchema<T>): UseValidationReturn<T>
   const [errors, setErrors] = useState<string[]>([]);
   const [isValid, setIsValid] = useState<boolean>(true);
 
-  const validate = useCallback((data: unknown): ValidationResult<T> => {
-    const result = validateAndSanitize(data, schema);
-    
-    if (result.success) {
-      setErrors([]);
-      setIsValid(true);
-      return {
-        isValid: true,
-        errors: [],
-        data: result.data,
-      };
-    } else {
-      setErrors(result.errors);
-      setIsValid(false);
-      return {
-        isValid: false,
-        errors: result.errors,
-      };
-    }
-  }, [schema]);
+  const validate = useCallback(
+    (data: unknown): ValidationResult<T> => {
+      const result = validateAndSanitize(data, schema);
+
+      if (result.success) {
+        setErrors([]);
+        setIsValid(true);
+        return {
+          isValid: true,
+          errors: [],
+          data: result.data,
+        };
+      } else {
+        setErrors(result.errors);
+        setIsValid(false);
+        return {
+          isValid: false,
+          errors: result.errors,
+        };
+      }
+    },
+    [schema],
+  );
 
   const reset = useCallback(() => {
     setErrors([]);
@@ -67,24 +70,27 @@ export function useFieldValidation(schema: z.ZodSchema) {
   const [error, setError] = useState<string>('');
   const [isValid, setIsValid] = useState<boolean>(true);
 
-  const validateField = useCallback((value: unknown) => {
-    try {
-      schema.parse(value);
-      setError('');
-      setIsValid(true);
-      return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const firstError = error.errors[0];
-        setError(firstError.message);
+  const validateField = useCallback(
+    (value: unknown) => {
+      try {
+        schema.parse(value);
+        setError('');
+        setIsValid(true);
+        return true;
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const firstError = error.errors[0];
+          setError(firstError.message);
+          setIsValid(false);
+          return false;
+        }
+        setError('Validation failed');
         setIsValid(false);
         return false;
       }
-      setError('Validation failed');
-      setIsValid(false);
-      return false;
-    }
-  }, [schema]);
+    },
+    [schema],
+  );
 
   const reset = useCallback(() => {
     setError('');
@@ -105,7 +111,7 @@ export function useFieldValidation(schema: z.ZodSchema) {
  * @returns Multi-field validation utilities
  */
 export function useMultiFieldValidation<T extends Record<string, z.ZodSchema>>(
-  schemas: T
+  schemas: T,
 ): {
   validate: (data: Record<keyof T, unknown>) => boolean;
   errors: Record<keyof T, string>;
@@ -116,46 +122,52 @@ export function useMultiFieldValidation<T extends Record<string, z.ZodSchema>>(
   const [errors, setErrors] = useState<Record<keyof T, string>>({} as Record<keyof T, string>);
   const [isValid, setIsValid] = useState<boolean>(true);
 
-  const validateField = useCallback((field: keyof T, value: unknown): boolean => {
-    const schema = schemas[field];
-    try {
-      schema.parse(value);
-      setErrors(prev => ({ ...prev, [field]: '' }));
-      return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const firstError = error.errors[0];
-        setErrors(prev => ({ ...prev, [field]: firstError.message }));
-        return false;
-      }
-      setErrors(prev => ({ ...prev, [field]: 'Validation failed' }));
-      return false;
-    }
-  }, [schemas]);
-
-  const validate = useCallback((data: Record<keyof T, unknown>): boolean => {
-    let allValid = true;
-    const newErrors: Record<keyof T, string> = {} as Record<keyof T, string>;
-
-    for (const [field, schema] of Object.entries(schemas)) {
+  const validateField = useCallback(
+    (field: keyof T, value: unknown): boolean => {
+      const schema = schemas[field];
       try {
-        schema.parse(data[field]);
-        newErrors[field as keyof T] = '';
+        schema.parse(value);
+        setErrors((prev) => ({ ...prev, [field]: '' }));
+        return true;
       } catch (error) {
-        allValid = false;
         if (error instanceof z.ZodError) {
           const firstError = error.errors[0];
-          newErrors[field as keyof T] = firstError.message;
-        } else {
-          newErrors[field as keyof T] = 'Validation failed';
+          setErrors((prev) => ({ ...prev, [field]: firstError.message }));
+          return false;
+        }
+        setErrors((prev) => ({ ...prev, [field]: 'Validation failed' }));
+        return false;
+      }
+    },
+    [schemas],
+  );
+
+  const validate = useCallback(
+    (data: Record<keyof T, unknown>): boolean => {
+      let allValid = true;
+      const newErrors: Record<keyof T, string> = {} as Record<keyof T, string>;
+
+      for (const [field, schema] of Object.entries(schemas)) {
+        try {
+          schema.parse(data[field]);
+          newErrors[field as keyof T] = '';
+        } catch (error) {
+          allValid = false;
+          if (error instanceof z.ZodError) {
+            const firstError = error.errors[0];
+            newErrors[field as keyof T] = firstError.message;
+          } else {
+            newErrors[field as keyof T] = 'Validation failed';
+          }
         }
       }
-    }
 
-    setErrors(newErrors);
-    setIsValid(allValid);
-    return allValid;
-  }, [schemas]);
+      setErrors(newErrors);
+      setIsValid(allValid);
+      return allValid;
+    },
+    [schemas],
+  );
 
   const reset = useCallback(() => {
     setErrors({} as Record<keyof T, string>);

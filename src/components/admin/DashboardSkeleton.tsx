@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const DashboardSkeleton = () => {
   return (
@@ -63,7 +63,10 @@ export const DashboardSkeleton = () => {
               <CardContent>
                 <div className="space-y-4">
                   {[1, 2, 3].map((j) => (
-                    <div key={j} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div
+                      key={j}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
                       <div className="flex items-center gap-3">
                         <Skeleton className="h-8 w-8 rounded-lg" />
                         <div>
@@ -120,4 +123,4 @@ export const DashboardSkeleton = () => {
       </div>
     </div>
   );
-}; 
+};

@@ -1,36 +1,36 @@
-import { motion } from "framer-motion";
-import { useState } from "react";
-import { Calculator, ArrowRight, DollarSign, Truck, FileText, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { Calculator, ArrowRight, DollarSign, Truck, FileText, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 export const CostEstimatorPreview = () => {
   const [productPrice, setProductPrice] = useState(100);
-  const [selectedCountry, setSelectedCountry] = useState("US");
-  
+  const [selectedCountry, setSelectedCountry] = useState('US');
+
   // Simple calculation for demo
   const shipping = productPrice * 0.15;
-  const customs = productPrice * 0.10;
+  const customs = productPrice * 0.1;
   const serviceFee = productPrice * 0.05;
   const total = productPrice + shipping + customs + serviceFee;
 
   const countries = [
-    { code: "US", name: "USA", flag: "🇺🇸" },
-    { code: "CN", name: "China", flag: "🇨🇳" },
-    { code: "JP", name: "Japan", flag: "🇯🇵" },
-    { code: "UK", name: "UK", flag: "🇬🇧" }
+    { code: 'US', name: 'USA', flag: '🇺🇸' },
+    { code: 'CN', name: 'China', flag: '🇨🇳' },
+    { code: 'JP', name: 'Japan', flag: '🇯🇵' },
+    { code: 'UK', name: 'UK', flag: '🇬🇧' },
   ];
 
   return (
     <section className="py-20 bg-gradient-to-b from-white via-blue-50/30 to-white relative overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0">
-        <motion.div 
+        <motion.div
           className="absolute top-20 right-20 w-96 h-96 bg-blue-200 rounded-full filter blur-3xl opacity-20"
           animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
           transition={{ duration: 20, repeat: Infinity }}
         />
-        <motion.div 
+        <motion.div
           className="absolute bottom-20 left-20 w-96 h-96 bg-purple-200 rounded-full filter blur-3xl opacity-20"
           animate={{ scale: [1, 1.2, 1], rotate: [0, -90, 0] }}
           transition={{ duration: 15, repeat: Infinity }}
@@ -51,25 +51,29 @@ export const CostEstimatorPreview = () => {
                 <Sparkles className="w-4 h-4" />
                 No Hidden Fees
               </div>
-              
+
               <h2 className="text-4xl md:text-5xl font-bold mb-6">
                 Know Your Total Cost
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Instantly</span>
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  {' '}
+                  Instantly
+                </span>
               </h2>
-              
+
               <p className="text-xl text-gray-600 mb-8">
-                Our transparent pricing calculator shows you exactly what you'll pay - product price, shipping, customs, and our service fee. No surprises!
+                Our transparent pricing calculator shows you exactly what you'll pay - product
+                price, shipping, customs, and our service fee. No surprises!
               </p>
 
               {/* Features List */}
               <div className="space-y-4 mb-8">
                 {[
-                  "Real-time currency conversion",
-                  "Accurate customs calculation",
-                  "Compare shipping options",
-                  "Save estimates for later"
+                  'Real-time currency conversion',
+                  'Accurate customs calculation',
+                  'Compare shipping options',
+                  'Save estimates for later',
                 ].map((feature, index) => (
-                  <motion.div 
+                  <motion.div
                     key={index}
                     className="flex items-center gap-3"
                     initial={{ opacity: 0, x: -20 }}
@@ -78,8 +82,18 @@ export const CostEstimatorPreview = () => {
                     viewport={{ once: true }}
                   >
                     <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
                     </div>
                     <span className="text-gray-700">{feature}</span>
@@ -90,14 +104,15 @@ export const CostEstimatorPreview = () => {
               {/* Testimonial */}
               <div className="bg-gray-100 rounded-xl p-6 relative">
                 <div className="flex items-start gap-4">
-                  <img 
-                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100" 
+                  <img
+                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100"
                     alt="Customer"
                     className="w-12 h-12 rounded-full object-cover"
                   />
                   <div>
                     <p className="text-gray-700 italic">
-                      "The cost estimator saved me from surprises! I knew exactly what I'd pay before ordering."
+                      "The cost estimator saved me from surprises! I knew exactly what I'd pay
+                      before ordering."
                     </p>
                     <p className="text-sm text-gray-500 mt-2">- Amit K., Delhi</p>
                   </div>
@@ -121,7 +136,9 @@ export const CostEstimatorPreview = () => {
 
                 {/* Country Selection */}
                 <div className="mb-6">
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Shopping From</label>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    Shopping From
+                  </label>
                   <div className="grid grid-cols-4 gap-2">
                     {countries.map((country) => (
                       <button
@@ -161,7 +178,7 @@ export const CostEstimatorPreview = () => {
 
                 {/* Cost Breakdown */}
                 <div className="space-y-3 mb-6">
-                  <motion.div 
+                  <motion.div
                     className="flex justify-between items-center"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -173,8 +190,8 @@ export const CostEstimatorPreview = () => {
                     </span>
                     <span className="font-medium">${productPrice.toFixed(2)}</span>
                   </motion.div>
-                  
-                  <motion.div 
+
+                  <motion.div
                     className="flex justify-between items-center"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -186,8 +203,8 @@ export const CostEstimatorPreview = () => {
                     </span>
                     <span className="font-medium">${shipping.toFixed(2)}</span>
                   </motion.div>
-                  
-                  <motion.div 
+
+                  <motion.div
                     className="flex justify-between items-center"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -199,8 +216,8 @@ export const CostEstimatorPreview = () => {
                     </span>
                     <span className="font-medium">${customs.toFixed(2)}</span>
                   </motion.div>
-                  
-                  <motion.div 
+
+                  <motion.div
                     className="flex justify-between items-center"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -218,7 +235,7 @@ export const CostEstimatorPreview = () => {
                 <div className="border-t-2 border-dashed border-gray-200 my-6" />
 
                 {/* Total */}
-                <motion.div 
+                <motion.div
                   className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 mb-6"
                   initial={{ scale: 0.95 }}
                   animate={{ scale: 1 }}

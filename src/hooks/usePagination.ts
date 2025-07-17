@@ -42,11 +42,11 @@ export const usePagination = (options: PaginationOptions = {}): UsePaginationRet
     initialPageSize = 10,
     pageSizeOptions = [10, 25, 50, 100],
     totalCount: initialTotalCount = 0,
-    useUrlState = true
+    useUrlState = true,
   } = options;
 
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // Get initial values from URL if enabled
   const getInitialPage = () => {
     if (useUrlState) {
@@ -59,8 +59,8 @@ export const usePagination = (options: PaginationOptions = {}): UsePaginationRet
   const getInitialPageSize = () => {
     if (useUrlState) {
       const urlPageSize = searchParams.get('pageSize');
-      return urlPageSize && pageSizeOptions.includes(parseInt(urlPageSize, 10)) 
-        ? parseInt(urlPageSize, 10) 
+      return urlPageSize && pageSizeOptions.includes(parseInt(urlPageSize, 10))
+        ? parseInt(urlPageSize, 10)
         : initialPageSize;
     }
     return initialPageSize;
@@ -74,19 +74,19 @@ export const usePagination = (options: PaginationOptions = {}): UsePaginationRet
   useEffect(() => {
     if (useUrlState) {
       const params = new URLSearchParams(searchParams);
-      
+
       if (currentPage === 1) {
         params.delete('page');
       } else {
         params.set('page', currentPage.toString());
       }
-      
+
       if (pageSize === initialPageSize) {
         params.delete('pageSize');
       } else {
         params.set('pageSize', pageSize.toString());
       }
-      
+
       setSearchParams(params, { replace: true });
     }
   }, [currentPage, pageSize, useUrlState, searchParams, setSearchParams, initialPageSize]);
@@ -96,27 +96,39 @@ export const usePagination = (options: PaginationOptions = {}): UsePaginationRet
   const hasNextPage = useMemo(() => currentPage < totalPages, [currentPage, totalPages]);
   const hasPreviousPage = useMemo(() => currentPage > 1, [currentPage]);
   const startIndex = useMemo(() => (currentPage - 1) * pageSize, [currentPage, pageSize]);
-  const endIndex = useMemo(() => Math.min(startIndex + pageSize - 1, totalCount - 1), [startIndex, pageSize, totalCount]);
+  const endIndex = useMemo(
+    () => Math.min(startIndex + pageSize - 1, totalCount - 1),
+    [startIndex, pageSize, totalCount],
+  );
 
   // Calculate page range for Supabase
-  const pageRange = useMemo(() => ({
-    from: startIndex,
-    to: endIndex
-  }), [startIndex, endIndex]);
+  const pageRange = useMemo(
+    () => ({
+      from: startIndex,
+      to: endIndex,
+    }),
+    [startIndex, endIndex],
+  );
 
   // Actions
-  const setPage = useCallback((page: number) => {
-    const validPage = Math.max(1, Math.min(page, totalPages || 1));
-    setCurrentPage(validPage);
-  }, [totalPages]);
+  const setPage = useCallback(
+    (page: number) => {
+      const validPage = Math.max(1, Math.min(page, totalPages || 1));
+      setCurrentPage(validPage);
+    },
+    [totalPages],
+  );
 
-  const setPageSize = useCallback((size: number) => {
-    if (pageSizeOptions.includes(size)) {
-      setPageSizeState(size);
-      // Reset to first page when changing page size
-      setCurrentPage(1);
-    }
-  }, [pageSizeOptions]);
+  const setPageSize = useCallback(
+    (size: number) => {
+      if (pageSizeOptions.includes(size)) {
+        setPageSizeState(size);
+        // Reset to first page when changing page size
+        setCurrentPage(1);
+      }
+    },
+    [pageSizeOptions],
+  );
 
   const setTotalCount = useCallback((count: number) => {
     setTotalCountState(Math.max(0, count));
@@ -142,9 +154,12 @@ export const usePagination = (options: PaginationOptions = {}): UsePaginationRet
     setPage(totalPages);
   }, [totalPages, setPage]);
 
-  const goToPage = useCallback((page: number) => {
-    setPage(page);
-  }, [setPage]);
+  const goToPage = useCallback(
+    (page: number) => {
+      setPage(page);
+    },
+    [setPage],
+  );
 
   return {
     // State
@@ -158,7 +173,7 @@ export const usePagination = (options: PaginationOptions = {}): UsePaginationRet
     endIndex,
     pageSizeOptions,
     pageRange,
-    
+
     // Actions
     setPage,
     setPageSize,
@@ -167,6 +182,6 @@ export const usePagination = (options: PaginationOptions = {}): UsePaginationRet
     previousPage,
     firstPage,
     lastPage,
-    goToPage
+    goToPage,
   };
 };

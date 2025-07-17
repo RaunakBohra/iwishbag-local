@@ -8,7 +8,7 @@ export enum LogLevel {
   INFO = 1,
   WARN = 2,
   ERROR = 3,
-  CRITICAL = 4
+  CRITICAL = 4,
 }
 
 export enum LogCategory {
@@ -21,7 +21,7 @@ export enum LogCategory {
   BUSINESS_METRICS = 'business.metrics',
   SECURITY_EVENT = 'security.event',
   PERFORMANCE = 'performance',
-  CACHE_OPERATION = 'cache.operation'
+  CACHE_OPERATION = 'cache.operation',
 }
 
 interface LogContext {
@@ -89,7 +89,7 @@ export class LoggingService {
       flushInterval: 5000, // 5 seconds
       enableStackTrace: import.meta.env.DEV,
       enablePerformanceMetrics: true,
-      sensitiveFields: ['password', 'token', 'secret', 'apiKey', 'creditCard', 'cvv', 'ssn']
+      sensitiveFields: ['password', 'token', 'secret', 'apiKey', 'creditCard', 'cvv', 'ssn'],
     };
 
     // Start flush timer
@@ -113,7 +113,7 @@ export class LoggingService {
    */
   updateConfig(config: Partial<LoggingConfig>): void {
     this.config = { ...this.config, ...config };
-    
+
     // Restart flush timer if interval changed
     if (config.flushInterval) {
       this.stopFlushTimer();
@@ -129,7 +129,7 @@ export class LoggingService {
     category: LogCategory,
     message: string,
     context: LogContext = {},
-    error?: Error
+    error?: Error,
   ): void {
     // Check if we should log based on level
     if (level < this.config.minLevel) return;
@@ -145,7 +145,7 @@ export class LoggingService {
       version: import.meta.env.VITE_APP_VERSION || '1.0.0',
       service: 'iwishbag-frontend',
       error: error ? this.sanitizeError(error) : undefined,
-      stackTrace: error && this.config.enableStackTrace ? error.stack : undefined
+      stackTrace: error && this.config.enableStackTrace ? error.stack : undefined,
     };
 
     // Add caller information in development
@@ -198,23 +198,18 @@ export class LoggingService {
   /**
    * Log API request
    */
-  logApiRequest(
-    method: string,
-    url: string,
-    context: LogContext,
-    requestData?: unknown
-  ): string {
+  logApiRequest(method: string, url: string, context: LogContext, requestData?: unknown): string {
     const requestId = this.generateRequestId();
     const sanitizedData = this.sanitizeData(requestData);
-    
+
     this.info(LogCategory.API_REQUEST, `${method} ${url}`, {
       ...context,
       requestId,
       metadata: {
         method,
         url,
-        requestData: sanitizedData
-      }
+        requestData: sanitizedData,
+      },
     });
 
     return requestId;
@@ -228,19 +223,19 @@ export class LoggingService {
     status: number,
     duration: number,
     context: LogContext,
-    responseData?: unknown
+    responseData?: unknown,
   ): void {
     const sanitizedData = this.sanitizeData(responseData);
     const level = status >= 400 ? LogLevel.ERROR : LogLevel.INFO;
-    
+
     this.log(level, LogCategory.API_REQUEST, `Response ${status}`, {
       ...context,
       requestId,
       duration,
       metadata: {
         status,
-        responseData: sanitizedData
-      }
+        responseData: sanitizedData,
+      },
     });
   }
 
@@ -268,8 +263,8 @@ export class LoggingService {
         ...context,
         duration,
         metadata: {
-          performanceMark: markName
-        }
+          performanceMark: markName,
+        },
       });
     }
   }
@@ -298,7 +293,7 @@ export class LoggingService {
     // Remote logging (buffered)
     if (this.config.enableRemote) {
       this.logBuffer.push(entry);
-      
+
       // Flush if buffer is full
       if (this.logBuffer.length >= this.config.batchSize) {
         this.flush();
@@ -315,7 +310,7 @@ export class LoggingService {
       [LogLevel.INFO]: 'color: blue',
       [LogLevel.WARN]: 'color: orange',
       [LogLevel.ERROR]: 'color: red',
-      [LogLevel.CRITICAL]: 'color: red; font-weight: bold'
+      [LogLevel.CRITICAL]: 'color: red; font-weight: bold',
     };
 
     const levelNames = {
@@ -323,17 +318,21 @@ export class LoggingService {
       [LogLevel.INFO]: 'INFO',
       [LogLevel.WARN]: 'WARN',
       [LogLevel.ERROR]: 'ERROR',
-      [LogLevel.CRITICAL]: 'CRITICAL'
+      [LogLevel.CRITICAL]: 'CRITICAL',
     };
 
     const prefix = `[${entry.timestamp}] [${levelNames[entry.level]}] [${entry.category}]`;
     const style = levelColors[entry.level];
 
     // Use appropriate console method
-    const consoleMethod = entry.level >= LogLevel.ERROR ? console.error :
-                         entry.level >= LogLevel.WARN ? console.warn :
-                         entry.level === LogLevel.DEBUG ? console.debug :
-                         console.log;
+    const consoleMethod =
+      entry.level >= LogLevel.ERROR
+        ? console.error
+        : entry.level >= LogLevel.WARN
+          ? console.warn
+          : entry.level === LogLevel.DEBUG
+            ? console.debug
+            : console.log;
 
     // Log with style
     consoleMethod(
@@ -341,7 +340,7 @@ export class LoggingService {
       style,
       'color: inherit',
       entry.context,
-      entry.error
+      entry.error,
     );
 
     // Log stack trace if available
@@ -357,15 +356,15 @@ export class LoggingService {
     try {
       const storageKey = 'iwishbag_logs';
       const existingLogs = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      
+
       // Add new entry
       existingLogs.push(entry);
-      
+
       // Trim to max size
       if (existingLogs.length > this.config.maxLocalStorageLogs) {
         existingLogs.splice(0, existingLogs.length - this.config.maxLocalStorageLogs);
       }
-      
+
       localStorage.setItem(storageKey, JSON.stringify(existingLogs));
     } catch (error) {
       // Silently fail - don't want logging to break the app
@@ -390,8 +389,8 @@ export class LoggingService {
         },
         body: JSON.stringify({
           logs: logsToSend,
-          timestamp: new Date().toISOString()
-        })
+          timestamp: new Date().toISOString(),
+        }),
       });
     } catch (error) {
       // Re-add logs to buffer on failure
@@ -422,11 +421,11 @@ export class LoggingService {
    */
   private sanitizeContext(context: LogContext): LogContext {
     const sanitized = { ...context };
-    
+
     if (sanitized.metadata) {
       sanitized.metadata = this.sanitizeData(sanitized.metadata) as Record<string, unknown>;
     }
-    
+
     return sanitized;
   }
 
@@ -435,19 +434,19 @@ export class LoggingService {
    */
   private sanitizeData(data: unknown): unknown {
     if (!data) return data;
-    
+
     if (typeof data === 'string') {
       // Mask potential sensitive strings
       return this.maskSensitiveString(data);
     }
-    
+
     if (Array.isArray(data)) {
-      return data.map(item => this.sanitizeData(item));
+      return data.map((item) => this.sanitizeData(item));
     }
-    
+
     if (typeof data === 'object') {
       const sanitized: Record<string, unknown> = {};
-      
+
       for (const [key, value] of Object.entries(data)) {
         // Check if key is sensitive
         if (this.isSensitiveField(key)) {
@@ -456,10 +455,10 @@ export class LoggingService {
           sanitized[key] = this.sanitizeData(value);
         }
       }
-      
+
       return sanitized;
     }
-    
+
     return data;
   }
 
@@ -468,8 +467,8 @@ export class LoggingService {
    */
   private isSensitiveField(fieldName: string): boolean {
     const lowerField = fieldName.toLowerCase();
-    return this.config.sensitiveFields.some(sensitive => 
-      lowerField.includes(sensitive.toLowerCase())
+    return this.config.sensitiveFields.some((sensitive) =>
+      lowerField.includes(sensitive.toLowerCase()),
     );
   }
 
@@ -479,11 +478,13 @@ export class LoggingService {
   private maskSensitiveString(str: string): string {
     // Mask credit card numbers
     str = str.replace(/\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g, '[CARD]');
-    
+
     // Mask email addresses (partial)
-    str = str.replace(/([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, 
-      (match, user, domain) => `${user.substring(0, 3)}...@${domain}`);
-    
+    str = str.replace(
+      /([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
+      (match, user, domain) => `${user.substring(0, 3)}...@${domain}`,
+    );
+
     return str;
   }
 
@@ -494,37 +495,41 @@ export class LoggingService {
     return {
       name: error.name,
       message: this.maskSensitiveString(error.message),
-      stack: error.stack
+      stack: error.stack,
     } as Error;
   }
 
   /**
    * Get caller information
    */
-  private getCallerInfo(): { functionName?: string; fileName?: string; lineNumber?: number } {
+  private getCallerInfo(): {
+    functionName?: string;
+    fileName?: string;
+    lineNumber?: number;
+  } {
     try {
       const stack = new Error().stack;
       if (!stack) return {};
-      
+
       const lines = stack.split('\n');
       // Skip first 3 lines (Error, getCallerInfo, log method)
       const callerLine = lines[4];
-      
+
       if (!callerLine) return {};
-      
+
       // Parse the caller line
       const match = callerLine.match(/at\s+(\S+)\s+\((.+):(\d+):\d+\)/);
       if (match) {
         return {
           functionName: match[1],
           fileName: match[2].split('/').pop(),
-          lineNumber: parseInt(match[3])
+          lineNumber: parseInt(match[3]),
         };
       }
     } catch {
       // Ignore errors in getting caller info
     }
-    
+
     return {};
   }
 
@@ -548,23 +553,23 @@ export class LoggingService {
     try {
       const storageKey = 'iwishbag_logs';
       const logs: LogEntry[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      
+
       let filtered = logs;
-      
+
       if (filter) {
-        filtered = logs.filter(log => {
+        filtered = logs.filter((log) => {
           if (filter.level !== undefined && log.level < filter.level) return false;
           if (filter.category && log.category !== filter.category) return false;
           if (filter.startTime && new Date(log.timestamp) < filter.startTime) return false;
           if (filter.endTime && new Date(log.timestamp) > filter.endTime) return false;
           return true;
         });
-        
+
         if (filter.limit) {
           filtered = filtered.slice(-filter.limit);
         }
       }
-      
+
       return filtered;
     } catch (error) {
       console.error('Failed to read logs from localStorage:', error);
@@ -594,11 +599,14 @@ export class LoggingService {
   /**
    * Download logs as file
    */
-  downloadLogs(filename: string = 'iwishbag-logs.json', filter?: Parameters<typeof this.getStoredLogs>[0]): void {
+  downloadLogs(
+    filename: string = 'iwishbag-logs.json',
+    filter?: Parameters<typeof this.getStoredLogs>[0],
+  ): void {
     const data = this.exportLogs(filter);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
@@ -615,7 +623,7 @@ export class LoggingService {
 export class ChildLogger {
   constructor(
     private parent: LoggingService,
-    private defaultContext: LogContext
+    private defaultContext: LogContext,
   ) {}
 
   private mergeContext(context?: LogContext): LogContext {
@@ -647,24 +655,31 @@ export class ChildLogger {
 export const logger = LoggingService.getInstance();
 
 // Export convenience functions
-export const logDebug = (category: LogCategory, message: string, context?: LogContext) => 
+export const logDebug = (category: LogCategory, message: string, context?: LogContext) =>
   logger.debug(category, message, context);
 
-export const logInfo = (category: LogCategory, message: string, context?: LogContext) => 
+export const logInfo = (category: LogCategory, message: string, context?: LogContext) =>
   logger.info(category, message, context);
 
-export const logWarn = (category: LogCategory, message: string, context?: LogContext) => 
+export const logWarn = (category: LogCategory, message: string, context?: LogContext) =>
   logger.warn(category, message, context);
 
-export const logError = (category: LogCategory, message: string, error?: Error, context?: LogContext) => 
-  logger.error(category, message, error, context);
+export const logError = (
+  category: LogCategory,
+  message: string,
+  error?: Error,
+  context?: LogContext,
+) => logger.error(category, message, error, context);
 
-export const logCritical = (category: LogCategory, message: string, error?: Error, context?: LogContext) => 
-  logger.critical(category, message, error, context);
+export const logCritical = (
+  category: LogCategory,
+  message: string,
+  error?: Error,
+  context?: LogContext,
+) => logger.critical(category, message, error, context);
 
 // Export performance logging helpers
-export const logPerformanceStart = (markName: string) => 
-  logger.startPerformance(markName);
+export const logPerformanceStart = (markName: string) => logger.startPerformance(markName);
 
-export const logPerformanceEnd = (markName: string, category: LogCategory, context?: LogContext) => 
+export const logPerformanceEnd = (markName: string, category: LogCategory, context?: LogContext) =>
   logger.endPerformance(markName, category, context);

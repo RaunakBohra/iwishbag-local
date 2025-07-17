@@ -10,14 +10,17 @@ export const useQuoteRenewal = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/renew-quote`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/renew-quote`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ quoteId }),
         },
-        body: JSON.stringify({ quoteId }),
-      });
+      );
 
       const data = await response.json();
 
@@ -45,4 +48,4 @@ export const useQuoteRenewal = () => {
     error,
     clearError: () => setError(null),
   };
-}; 
+};

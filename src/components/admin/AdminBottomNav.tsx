@@ -1,32 +1,27 @@
-import { useNavigate, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Package, 
-  Users
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useNavigate, useLocation } from 'react-router-dom';
+import { LayoutDashboard, FileText, Package, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const navItems = [
   {
-    title: "Dashboard",
+    title: 'Dashboard',
     icon: LayoutDashboard,
-    href: "/admin",
+    href: '/admin',
   },
   {
-    title: "Quotes",
+    title: 'Quotes',
     icon: FileText,
-    href: "/admin/quotes",
+    href: '/admin/quotes',
   },
   {
-    title: "Orders",
+    title: 'Orders',
     icon: Package,
-    href: "/admin/orders",
+    href: '/admin/orders',
   },
   {
-    title: "Customers",
+    title: 'Customers',
     icon: Users,
-    href: "/admin/customers",
+    href: '/admin/customers',
   },
 ];
 
@@ -44,10 +39,10 @@ export const AdminBottomNav = () => {
               key={item.title}
               onClick={() => navigate(item.href)}
               className={cn(
-                "flex flex-col items-center justify-center py-2 px-3 min-w-0 flex-1 transition-colors",
+                'flex flex-col items-center justify-center py-2 px-3 min-w-0 flex-1 transition-colors',
                 isActive
-                  ? "text-primary bg-primary/10"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? 'text-primary bg-primary/10'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
               <item.icon className="h-5 w-5 mb-1" />
@@ -58,4 +53,4 @@ export const AdminBottomNav = () => {
       </div>
     </div>
   );
-}; 
+};

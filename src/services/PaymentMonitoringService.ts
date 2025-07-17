@@ -3,19 +3,16 @@
  * Extends the logging and error handling services for payment-specific monitoring
  */
 
-import { 
-  logger, 
-  LogCategory, 
+import {
+  logger,
+  LogCategory,
   LogContext,
   logInfo,
   logError,
   logWarn,
-  logCritical
+  logCritical,
 } from '@/services/LoggingService';
-import { 
-  errorHandlingService,
-  QuoteCalculationErrorCode
-} from '@/services/ErrorHandlingService';
+import { errorHandlingService, QuoteCalculationErrorCode } from '@/services/ErrorHandlingService';
 
 // Payment-specific error codes
 export enum PaymentErrorCode {
@@ -23,34 +20,34 @@ export enum PaymentErrorCode {
   GATEWAY_UNAVAILABLE = 'GATEWAY_UNAVAILABLE',
   GATEWAY_TIMEOUT = 'GATEWAY_TIMEOUT',
   GATEWAY_CONFIGURATION_ERROR = 'GATEWAY_CONFIGURATION_ERROR',
-  
+
   // Transaction Errors
   PAYMENT_DECLINED = 'PAYMENT_DECLINED',
   INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
   CARD_EXPIRED = 'CARD_EXPIRED',
   INVALID_CARD = 'INVALID_CARD',
   FRAUD_DETECTED = 'FRAUD_DETECTED',
-  
+
   // Processing Errors
   PAYMENT_PROCESSING_FAILED = 'PAYMENT_PROCESSING_FAILED',
   WEBHOOK_PROCESSING_FAILED = 'WEBHOOK_PROCESSING_FAILED',
   DUPLICATE_PAYMENT = 'DUPLICATE_PAYMENT',
-  
+
   // Integration Errors
   STRIPE_API_ERROR = 'STRIPE_API_ERROR',
   PAYPAL_API_ERROR = 'PAYPAL_API_ERROR',
   PAYU_API_ERROR = 'PAYU_API_ERROR',
   AIRWALLEX_API_ERROR = 'AIRWALLEX_API_ERROR',
-  
+
   // Status Errors
   PAYMENT_STATUS_MISMATCH = 'PAYMENT_STATUS_MISMATCH',
   PAYMENT_NOT_FOUND = 'PAYMENT_NOT_FOUND',
   INVALID_PAYMENT_STATE = 'INVALID_PAYMENT_STATE',
-  
+
   // Security Errors
   WEBHOOK_SIGNATURE_INVALID = 'WEBHOOK_SIGNATURE_INVALID',
   PAYMENT_TOKEN_EXPIRED = 'PAYMENT_TOKEN_EXPIRED',
-  UNAUTHORIZED_PAYMENT_ACCESS = 'UNAUTHORIZED_PAYMENT_ACCESS'
+  UNAUTHORIZED_PAYMENT_ACCESS = 'UNAUTHORIZED_PAYMENT_ACCESS',
 }
 
 // Payment monitoring metrics
@@ -102,14 +99,14 @@ export class PaymentMonitoringService {
       alertThresholds: {
         failureRatePercent: 5,
         slowPaymentMs: 10000, // 10 seconds
-        webhookDelayMs: 30000 // 30 seconds
+        webhookDelayMs: 30000, // 30 seconds
       },
       gatewayTimeouts: {
         stripe: 30000,
         paypal: 45000,
         payu: 30000,
-        airwallex: 30000
-      }
+        airwallex: 30000,
+      },
     };
 
     // Initialize payment-specific alerts
@@ -140,7 +137,7 @@ export class PaymentMonitoringService {
       ...params,
       startTime: performance.now(),
       success: false,
-      webhookEvents: []
+      webhookEvents: [],
     };
 
     this.activePayments.set(params.paymentId, metrics);
@@ -154,8 +151,8 @@ export class PaymentMonitoringService {
         gateway: params.gateway,
         amount: params.amount,
         currency: params.currency,
-        ...params.metadata
-      }
+        ...params.metadata,
+      },
     });
 
     // Start performance tracking
@@ -170,7 +167,7 @@ export class PaymentMonitoringService {
     success: boolean,
     errorCode?: PaymentErrorCode,
     errorMessage?: string,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
   ): void {
     const metrics = this.activePayments.get(paymentId);
     if (!metrics) {
@@ -196,8 +193,8 @@ export class PaymentMonitoringService {
       metadata: {
         duration,
         success,
-        gateway: metrics.gateway
-      }
+        gateway: metrics.gateway,
+      },
     });
 
     // Log completion
@@ -209,12 +206,12 @@ export class PaymentMonitoringService {
           gateway: metrics.gateway,
           duration,
           amount: metrics.amount,
-          currency: metrics.currency
-        }
+          currency: metrics.currency,
+        },
       });
     } else {
       logError(
-        LogCategory.PAYMENT_PROCESSING, 
+        LogCategory.PAYMENT_PROCESSING,
         `Payment failed: ${errorMessage || 'Unknown error'}`,
         errorMessage ? new Error(errorMessage) : undefined,
         {
@@ -226,9 +223,9 @@ export class PaymentMonitoringService {
             duration,
             amount: metrics.amount,
             currency: metrics.currency,
-            ...metadata
-          }
-        }
+            ...metadata,
+          },
+        },
       );
     }
 
@@ -263,22 +260,22 @@ export class PaymentMonitoringService {
       metadata: {
         gateway: params.gateway,
         eventType: params.eventType,
-        ...params.metadata
-      }
+        ...params.metadata,
+      },
     };
 
     if (params.success) {
       logInfo(
         LogCategory.PAYMENT_PROCESSING,
         `Webhook processed: ${params.gateway} - ${params.eventType}`,
-        context
+        context,
       );
     } else {
       logError(
         LogCategory.PAYMENT_PROCESSING,
         `Webhook processing failed: ${params.gateway} - ${params.eventType}`,
         params.errorMessage ? new Error(params.errorMessage) : undefined,
-        context
+        context,
       );
     }
 
@@ -309,9 +306,9 @@ export class PaymentMonitoringService {
       `${params.gateway}/${params.operation}`,
       {
         paymentId: params.paymentId,
-        metadata: { gateway: params.gateway, operation: params.operation }
+        metadata: { gateway: params.gateway, operation: params.operation },
       },
-      params.request
+      params.request,
     );
 
     logger.logApiResponse(
@@ -319,18 +316,28 @@ export class PaymentMonitoringService {
       params.success ? 200 : 500,
       params.duration,
       { paymentId: params.paymentId },
-      params.response
+      params.response,
     );
 
     // Check for slow API calls
-    if (params.duration > this.config.gatewayTimeouts[params.gateway as keyof typeof this.config.gatewayTimeouts] * 0.8) {
-      logWarn(LogCategory.PAYMENT_PROCESSING, `Slow gateway API call: ${params.gateway}/${params.operation}`, {
-        paymentId: params.paymentId,
-        metadata: {
-          duration: params.duration,
-          threshold: this.config.gatewayTimeouts[params.gateway as keyof typeof this.config.gatewayTimeouts]
-        }
-      });
+    if (
+      params.duration >
+      this.config.gatewayTimeouts[params.gateway as keyof typeof this.config.gatewayTimeouts] * 0.8
+    ) {
+      logWarn(
+        LogCategory.PAYMENT_PROCESSING,
+        `Slow gateway API call: ${params.gateway}/${params.operation}`,
+        {
+          paymentId: params.paymentId,
+          metadata: {
+            duration: params.duration,
+            threshold:
+              this.config.gatewayTimeouts[
+                params.gateway as keyof typeof this.config.gatewayTimeouts
+              ],
+          },
+        },
+      );
     }
   }
 
@@ -349,8 +356,8 @@ export class PaymentMonitoringService {
           paymentId: metrics.paymentId,
           gateway: metrics.gateway,
           duration,
-          threshold: this.config.alertThresholds.slowPaymentMs
-        }
+          threshold: this.config.alertThresholds.slowPaymentMs,
+        },
       );
     }
 
@@ -363,11 +370,12 @@ export class PaymentMonitoringService {
    */
   private checkFailureRate(): void {
     const recentPayments = this.paymentMetricsLog.filter(
-      m => m.endTime && (performance.now() - m.startTime) < 3600000 // Last hour
+      (m) => m.endTime && performance.now() - m.startTime < 3600000, // Last hour
     );
 
-    if (recentPayments.length >= 20) { // Minimum sample size
-      const failedPayments = recentPayments.filter(m => !m.success);
+    if (recentPayments.length >= 20) {
+      // Minimum sample size
+      const failedPayments = recentPayments.filter((m) => !m.success);
       const failureRate = (failedPayments.length / recentPayments.length) * 100;
 
       if (failureRate > this.config.alertThresholds.failureRatePercent) {
@@ -381,9 +389,9 @@ export class PaymentMonitoringService {
               threshold: this.config.alertThresholds.failureRatePercent,
               totalPayments: recentPayments.length,
               failedPayments: failedPayments.length,
-              topErrors: this.getTopErrors(failedPayments)
-            }
-          }
+              topErrors: this.getTopErrors(failedPayments),
+            },
+          },
         );
       }
     }
@@ -393,12 +401,15 @@ export class PaymentMonitoringService {
    * Get top error codes from failed payments
    */
   private getTopErrors(failedPayments: PaymentMetrics[]): Array<{ code: string; count: number }> {
-    const errorCounts = failedPayments.reduce((acc, payment) => {
-      if (payment.errorCode) {
-        acc[payment.errorCode] = (acc[payment.errorCode] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
+    const errorCounts = failedPayments.reduce(
+      (acc, payment) => {
+        if (payment.errorCode) {
+          acc[payment.errorCode] = (acc[payment.errorCode] || 0) + 1;
+        }
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return Object.entries(errorCounts)
       .sort(([, a], [, b]) => b - a)
@@ -426,44 +437,45 @@ export class PaymentMonitoringService {
     gatewayBreakdown: Record<string, { total: number; successful: number; failed: number }>;
     topErrors: Array<{ code: string; count: number }>;
   } {
-    const cutoffTime = performance.now() - (timeWindowMinutes * 60 * 1000);
-    const recentPayments = this.paymentMetricsLog.filter(m => m.startTime > cutoffTime);
+    const cutoffTime = performance.now() - timeWindowMinutes * 60 * 1000;
+    const recentPayments = this.paymentMetricsLog.filter((m) => m.startTime > cutoffTime);
 
-    const successfulPayments = recentPayments.filter(m => m.success);
-    const failedPayments = recentPayments.filter(m => !m.success);
+    const successfulPayments = recentPayments.filter((m) => m.success);
+    const failedPayments = recentPayments.filter((m) => !m.success);
 
     // Gateway breakdown
-    const gatewayBreakdown = recentPayments.reduce((acc, payment) => {
-      if (!acc[payment.gateway]) {
-        acc[payment.gateway] = { total: 0, successful: 0, failed: 0 };
-      }
-      acc[payment.gateway].total++;
-      if (payment.success) {
-        acc[payment.gateway].successful++;
-      } else {
-        acc[payment.gateway].failed++;
-      }
-      return acc;
-    }, {} as Record<string, { total: number; successful: number; failed: number }>);
+    const gatewayBreakdown = recentPayments.reduce(
+      (acc, payment) => {
+        if (!acc[payment.gateway]) {
+          acc[payment.gateway] = { total: 0, successful: 0, failed: 0 };
+        }
+        acc[payment.gateway].total++;
+        if (payment.success) {
+          acc[payment.gateway].successful++;
+        } else {
+          acc[payment.gateway].failed++;
+        }
+        return acc;
+      },
+      {} as Record<string, { total: number; successful: number; failed: number }>,
+    );
 
     // Average processing time
     const totalProcessingTime = recentPayments
-      .filter(m => m.endTime)
+      .filter((m) => m.endTime)
       .reduce((sum, m) => sum + (m.endTime! - m.startTime), 0);
-    const averageProcessingTime = recentPayments.length > 0 
-      ? totalProcessingTime / recentPayments.length 
-      : 0;
+    const averageProcessingTime =
+      recentPayments.length > 0 ? totalProcessingTime / recentPayments.length : 0;
 
     return {
       totalPayments: recentPayments.length,
       successfulPayments: successfulPayments.length,
       failedPayments: failedPayments.length,
-      successRate: recentPayments.length > 0 
-        ? (successfulPayments.length / recentPayments.length) * 100 
-        : 0,
+      successRate:
+        recentPayments.length > 0 ? (successfulPayments.length / recentPayments.length) * 100 : 0,
       averageProcessingTime,
       gatewayBreakdown,
-      topErrors: this.getTopErrors(failedPayments)
+      topErrors: this.getTopErrors(failedPayments),
     };
   }
 
@@ -480,22 +492,32 @@ export class PaymentMonitoringService {
 export const paymentMonitoringService = PaymentMonitoringService.getInstance();
 
 // Helper functions for easy integration
-export const startPaymentMonitoring = (params: Parameters<PaymentMonitoringService['startPaymentMonitoring']>[0]) => 
-  paymentMonitoringService.startPaymentMonitoring(params);
+export const startPaymentMonitoring = (
+  params: Parameters<PaymentMonitoringService['startPaymentMonitoring']>[0],
+) => paymentMonitoringService.startPaymentMonitoring(params);
 
 export const completePaymentMonitoring = (
   paymentId: string,
   success: boolean,
   errorCode?: PaymentErrorCode,
   errorMessage?: string,
-  metadata?: Record<string, unknown>
-) => paymentMonitoringService.completePaymentMonitoring(paymentId, success, errorCode, errorMessage, metadata);
+  metadata?: Record<string, unknown>,
+) =>
+  paymentMonitoringService.completePaymentMonitoring(
+    paymentId,
+    success,
+    errorCode,
+    errorMessage,
+    metadata,
+  );
 
-export const logWebhookEvent = (params: Parameters<PaymentMonitoringService['logWebhookEvent']>[0]) =>
-  paymentMonitoringService.logWebhookEvent(params);
+export const logWebhookEvent = (
+  params: Parameters<PaymentMonitoringService['logWebhookEvent']>[0],
+) => paymentMonitoringService.logWebhookEvent(params);
 
-export const logGatewayApiCall = (params: Parameters<PaymentMonitoringService['logGatewayApiCall']>[0]) =>
-  paymentMonitoringService.logGatewayApiCall(params);
+export const logGatewayApiCall = (
+  params: Parameters<PaymentMonitoringService['logGatewayApiCall']>[0],
+) => paymentMonitoringService.logGatewayApiCall(params);
 
 export const getPaymentMetrics = (timeWindowMinutes?: number) =>
   paymentMonitoringService.getPaymentMetrics(timeWindowMinutes);

@@ -2,14 +2,20 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   QuoteCalculationErrorCode,
   testQuoteAlert,
   getAlertSummary,
   setAlertingEnabled,
-  errorHandlingService
+  errorHandlingService,
 } from '@/services/ErrorHandlingService';
 import { Bell, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
 
@@ -18,7 +24,7 @@ import { Bell, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
  */
 export function QuoteAlertTester() {
   const [selectedError, setSelectedError] = useState<QuoteCalculationErrorCode>(
-    QuoteCalculationErrorCode.CALCULATION_FAILED
+    QuoteCalculationErrorCode.CALCULATION_FAILED,
   );
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [alertSummary, setAlertSummary] = useState(getAlertSummary());
@@ -45,7 +51,7 @@ export function QuoteAlertTester() {
   const handleTestAlert = () => {
     testQuoteAlert(selectedError);
     setLastTestResult(`Test alert sent for ${selectedError}`);
-    
+
     // Update summary after a short delay to capture the new alert
     setTimeout(() => {
       setAlertSummary(getAlertSummary());
@@ -86,9 +92,7 @@ export function QuoteAlertTester() {
             <Bell className="h-5 w-5" />
             Quote Alert System Status
           </CardTitle>
-          <CardDescription>
-            Test and monitor the quote calculation alert system
-          </CardDescription>
+          <CardDescription>Test and monitor the quote calculation alert system</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between mb-4">
@@ -98,7 +102,7 @@ export function QuoteAlertTester() {
                 {alertsEnabled ? 'Enabled' : 'Disabled'}
               </Badge>
             </div>
-            <Button 
+            <Button
               onClick={handleToggleAlerting}
               variant={alertsEnabled ? 'outline' : 'default'}
               size="sm"
@@ -122,7 +126,9 @@ export function QuoteAlertTester() {
               <div className="text-xs text-muted-foreground">Warnings (24h)</div>
             </div>
             <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{alertSummary.recentAlerts.length}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {alertSummary.recentAlerts.length}
+              </div>
               <div className="text-xs text-muted-foreground">Recent Alerts</div>
             </div>
           </div>
@@ -151,21 +157,24 @@ export function QuoteAlertTester() {
             <AlertCircle className="h-5 w-5" />
             Test Alert System
           </CardTitle>
-          <CardDescription>
-            Trigger test alerts to verify the alerting mechanism
-          </CardDescription>
+          <CardDescription>Trigger test alerts to verify the alerting mechanism</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Select Error Code</label>
-              <Select value={selectedError} onValueChange={(value) => setSelectedError(value as QuoteCalculationErrorCode)}>
+              <Select
+                value={selectedError}
+                onValueChange={(value) => setSelectedError(value as QuoteCalculationErrorCode)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem disabled className="font-semibold">Critical Errors</SelectItem>
-                  {criticalErrors.map(error => (
+                  <SelectItem disabled className="font-semibold">
+                    Critical Errors
+                  </SelectItem>
+                  {criticalErrors.map((error) => (
                     <SelectItem key={error} value={error}>
                       <span className="flex items-center gap-2">
                         <Badge variant="destructive" className="w-2 h-2 p-0" />
@@ -173,8 +182,10 @@ export function QuoteAlertTester() {
                       </span>
                     </SelectItem>
                   ))}
-                  <SelectItem disabled className="font-semibold">Warning Errors</SelectItem>
-                  {warningErrors.map(error => (
+                  <SelectItem disabled className="font-semibold">
+                    Warning Errors
+                  </SelectItem>
+                  {warningErrors.map((error) => (
                     <SelectItem key={error} value={error}>
                       <span className="flex items-center gap-2">
                         <Badge variant="secondary" className="w-2 h-2 p-0" />
@@ -213,19 +224,18 @@ export function QuoteAlertTester() {
               <Info className="h-5 w-5" />
               Recent Alerts
             </CardTitle>
-            <CardDescription>
-              Last 10 alerts from the system
-            </CardDescription>
+            <CardDescription>Last 10 alerts from the system</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               {alertSummary.recentAlerts.map((alert, index) => (
-                <div key={alert.id || index} className="flex items-start justify-between p-3 border rounded-lg">
+                <div
+                  key={alert.id || index}
+                  className="flex items-start justify-between p-3 border rounded-lg"
+                >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge variant={getSeverityColor(alert.severity)}>
-                        {alert.severity}
-                      </Badge>
+                      <Badge variant={getSeverityColor(alert.severity)}>{alert.severity}</Badge>
                       <span className="font-mono text-xs">{alert.errorCode}</span>
                     </div>
                     <p className="text-sm text-muted-foreground">{alert.description}</p>

@@ -1,14 +1,14 @@
-import { Input } from "@/components/ui/input";
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Search } from "lucide-react";
-import { useStatusManagement } from "@/hooks/useStatusManagement";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/select';
+import { Search } from 'lucide-react';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { Badge } from '@/components/ui/badge';
 
 type OrderFiltersProps = {
   searchInput: string;
@@ -32,7 +32,7 @@ export const OrderFilters = ({
   // Get only order statuses that should show in orders list
   const allowedStatusNames = getStatusesForOrdersList();
   const availableOrderStatuses = (orderStatuses || [])
-    .filter(status => status.isActive && allowedStatusNames.includes(status.name))
+    .filter((status) => status.isActive && allowedStatusNames.includes(status.name))
     .sort((a, b) => a.order - b.order);
 
   return (
@@ -63,7 +63,7 @@ export const OrderFilters = ({
           ))}
         </SelectContent>
       </Select>
-      
+
       {/* Payment Status Filter */}
       {onPaymentStatusChange && (
         <Select onValueChange={onPaymentStatusChange} value={paymentStatusFilter || 'all'}>

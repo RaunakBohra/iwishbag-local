@@ -40,26 +40,24 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountryUtils } from '@/lib/countryUtils';
 
-const steps = [
-  'Product Info',
-  'Shipping & Contact', 
-  'Review & Submit',
-];
+const steps = ['Product Info', 'Shipping & Contact', 'Review & Submit'];
 
 export default function QuoteRequestPage() {
   const { user } = useAuth();
   const { countries } = useCountryUtils();
   const [currentStep, setCurrentStep] = useState(1);
   const [quoteType, setQuoteType] = useState('separate');
-  const [products, setProducts] = useState([{
-    name: '',
-    url: '',
-    file: null,
-    quantity: 1,
-    price: '',
-    weight: '',
-    country: ''
-  }]);
+  const [products, setProducts] = useState([
+    {
+      name: '',
+      url: '',
+      file: null,
+      quantity: 1,
+      price: '',
+      weight: '',
+      country: '',
+    },
+  ]);
   const [shippingContact, setShippingContact] = useState({
     name: '',
     email: '',
@@ -68,7 +66,7 @@ export default function QuoteRequestPage() {
     country: '',
     state: '',
     city: '',
-    zip: ''
+    zip: '',
   });
   const [quoteSubmitted, setQuoteSubmitted] = useState(false);
 
@@ -119,15 +117,15 @@ export default function QuoteRequestPage() {
         city: shippingContact.city,
         state: shippingContact.state,
         postalCode: shippingContact.zip,
-        country: shippingContact.country,  // Store country code for logic and DB
+        country: shippingContact.country, // Store country code for logic and DB
         destination_country: shippingContact.country, // Add destination_country for calculation compatibility
         phone: shippingContact.whatsapp || '',
-        email: emailToUse
+        email: emailToUse,
       };
 
       if (quoteType === 'combined') {
         // Combined quote: Create one quote with multiple items
-        const items = products.map(product => ({
+        const items = products.map((product) => ({
           productUrl: product.url,
           productName: product.name,
           quantity: product.quantity,
@@ -139,7 +137,7 @@ export default function QuoteRequestPage() {
 
         // Submit combined quote to Supabase
         const { data: quote, error: quoteError } = await supabase
-          .from("quotes")
+          .from('quotes')
           .insert({
             email: emailToUse,
             destination_country: products[0]?.country || '',
@@ -148,17 +146,17 @@ export default function QuoteRequestPage() {
             currency: 'USD',
             final_currency: 'USD',
             user_id: user ? user.id : undefined,
-            shipping_address: shippingAddressData
+            shipping_address: shippingAddressData,
           })
           .select('id')
           .single();
 
         if (quoteError || !quote) {
-          console.error("Error inserting quote:", quoteError);
+          console.error('Error inserting quote:', quoteError);
           return;
         }
 
-        const quoteItemsToInsert = items.map(item => ({
+        const quoteItemsToInsert = items.map((item) => ({
           quote_id: quote.id,
           product_url: item.productUrl,
           product_name: item.productName,
@@ -169,10 +167,10 @@ export default function QuoteRequestPage() {
           item_weight: item.weight && !isNaN(parseFloat(item.weight)) ? parseFloat(item.weight) : 0,
         }));
 
-        const { error: itemsError } = await supabase.from("quote_items").insert(quoteItemsToInsert);
+        const { error: itemsError } = await supabase.from('quote_items').insert(quoteItemsToInsert);
 
         if (itemsError) {
-          console.error("Error inserting quote items:", itemsError);
+          console.error('Error inserting quote items:', itemsError);
           return;
         }
       } else {
@@ -190,7 +188,7 @@ export default function QuoteRequestPage() {
 
           // Submit individual quote to Supabase
           const { data: quote, error: quoteError } = await supabase
-            .from("quotes")
+            .from('quotes')
             .insert({
               email: emailToUse,
               destination_country: product.country || '',
@@ -199,13 +197,13 @@ export default function QuoteRequestPage() {
               currency: 'USD',
               final_currency: 'USD',
               user_id: user ? user.id : undefined,
-                                      shipping_address: shippingAddressData
+              shipping_address: shippingAddressData,
             })
             .select('id')
             .single();
 
           if (quoteError || !quote) {
-            console.error("Error inserting quote:", quoteError);
+            console.error('Error inserting quote:', quoteError);
             continue;
           }
 
@@ -217,20 +215,23 @@ export default function QuoteRequestPage() {
             options: item.options,
             image_url: item.imageUrl,
             item_price: item.price && !isNaN(parseFloat(item.price)) ? parseFloat(item.price) : 0,
-            item_weight: item.weight && !isNaN(parseFloat(item.weight)) ? parseFloat(item.weight) : 0,
+            item_weight:
+              item.weight && !isNaN(parseFloat(item.weight)) ? parseFloat(item.weight) : 0,
           };
 
-          const { error: itemsError } = await supabase.from("quote_items").insert([quoteItemToInsert]);
+          const { error: itemsError } = await supabase
+            .from('quote_items')
+            .insert([quoteItemToInsert]);
 
           if (itemsError) {
-            console.error("Error inserting quote item:", itemsError);
+            console.error('Error inserting quote item:', itemsError);
           }
         }
       }
 
       setQuoteSubmitted(true);
     } catch (error) {
-      console.error("Error submitting quote:", error);
+      console.error('Error submitting quote:', error);
     }
   };
 
@@ -239,7 +240,9 @@ export default function QuoteRequestPage() {
       <div className="max-w-4xl mx-auto py-4 sm:py-8 px-4 sm:px-6">
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Request a Quote</h1>
-          <p className="text-sm sm:text-base text-gray-600 px-2">Get a detailed quote for your international shipping needs</p>
+          <p className="text-sm sm:text-base text-gray-600 px-2">
+            Get a detailed quote for your international shipping needs
+          </p>
         </div>
 
         {quoteSubmitted ? (
@@ -253,24 +256,26 @@ export default function QuoteRequestPage() {
               </div>
               <div className="space-y-3 sm:space-y-4">
                 <h2 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-700 bg-clip-text text-transparent">
-                  {quoteType === 'combined' ? 'Quote Request Submitted!' : 'Quote Requests Submitted!'}
+                  {quoteType === 'combined'
+                    ? 'Quote Request Submitted!'
+                    : 'Quote Requests Submitted!'}
                 </h2>
                 <div className="flex items-center justify-center gap-2 sm:gap-3 text-green-700 bg-green-100 px-4 sm:px-6 py-2 sm:py-3 rounded-full inline-flex shadow-sm">
                   <Clock className="h-4 w-4 sm:h-6 sm:w-6" />
-                  <span className="font-semibold text-sm sm:text-lg">Estimated Response: 24-48 hours</span>
+                  <span className="font-semibold text-sm sm:text-lg">
+                    Estimated Response: 24-48 hours
+                  </span>
                 </div>
                 <div className="max-w-2xl mx-auto space-y-2 sm:space-y-3">
                   <p className="text-gray-700 text-base sm:text-lg leading-relaxed">
-                    {quoteType === 'combined' 
-                      ? 'Thank you for your quote request. We\'ll review your products and get back to you with a detailed quote.'
-                      : 'Thank you for your quote requests. We\'ll review each product individually and get back to you with separate detailed quotes.'
-                    }
+                    {quoteType === 'combined'
+                      ? "Thank you for your quote request. We'll review your products and get back to you with a detailed quote."
+                      : "Thank you for your quote requests. We'll review each product individually and get back to you with separate detailed quotes."}
                   </p>
                   <p className="text-gray-500 text-xs sm:text-sm">
                     {quoteType === 'combined'
-                      ? 'You\'ll receive a confirmation email shortly with your quote request details.'
-                      : 'You\'ll receive confirmation emails shortly with your quote request details.'
-                    }
+                      ? "You'll receive a confirmation email shortly with your quote request details."
+                      : "You'll receive confirmation emails shortly with your quote request details."}
                   </p>
                 </div>
               </div>
@@ -282,15 +287,17 @@ export default function QuoteRequestPage() {
                 onClick={() => {
                   setQuoteSubmitted(false);
                   setCurrentStep(1);
-                  setProducts([{
-                    name: '',
-                    url: '',
-                    file: null,
-                    quantity: 1,
-                    price: '',
-                    weight: '',
-                    country: ''
-                  }]);
+                  setProducts([
+                    {
+                      name: '',
+                      url: '',
+                      file: null,
+                      quantity: 1,
+                      price: '',
+                      weight: '',
+                      country: '',
+                    },
+                  ]);
                   setShippingContact({
                     name: '',
                     email: '',
@@ -299,7 +306,7 @@ export default function QuoteRequestPage() {
                     country: '',
                     state: '',
                     city: '',
-                    zip: ''
+                    zip: '',
                   });
                 }}
                 className="w-full sm:w-auto px-6 py-3 rounded-lg border border-blue-600 text-blue-600 bg-white hover:bg-blue-50 font-semibold shadow-sm transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
@@ -308,18 +315,28 @@ export default function QuoteRequestPage() {
                 Request Another Quote
               </button>
               <button
-                onClick={() => window.location.href = '/dashboard'}
+                onClick={() => (window.location.href = '/dashboard')}
                 className="w-full sm:w-auto px-6 py-3 rounded-lg bg-green-600 text-white font-semibold shadow-sm hover:bg-green-700 transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
               >
                 <Package className="h-4 w-4 sm:h-5 sm:w-5" />
                 Go to Dashboard
               </button>
               <button
-                onClick={() => window.location.href = '/'}
+                onClick={() => (window.location.href = '/')}
                 className="w-full sm:w-auto px-6 py-3 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-semibold shadow-sm transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
               >
-                <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                <svg
+                  className="h-4 w-4 sm:h-5 sm:w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                  />
                 </svg>
                 Go to Home
               </button>
@@ -330,31 +347,53 @@ export default function QuoteRequestPage() {
             {/* Progress Bar - Only shown during active flow */}
             <div className="mb-6 sm:mb-8">
               <div className="flex items-center justify-center space-x-2 sm:space-x-4">
-                <div className={`flex items-center ${currentStep >= 1 ? 'text-green-600' : 'text-gray-400'}`}>
-                  <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 1 ? 'bg-green-600 border-green-600 text-white' : 'border-gray-300'}`}>
+                <div
+                  className={`flex items-center ${currentStep >= 1 ? 'text-green-600' : 'text-gray-400'}`}
+                >
+                  <div
+                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 1 ? 'bg-green-600 border-green-600 text-white' : 'border-gray-300'}`}
+                  >
                     1
                   </div>
-                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:inline">Product Info</span>
+                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:inline">
+                    Product Info
+                  </span>
                 </div>
-                <div className={`w-8 sm:w-12 h-0.5 ${currentStep >= 2 ? 'bg-green-600' : 'bg-gray-300'}`}></div>
-                <div className={`flex items-center ${currentStep >= 2 ? 'text-green-600' : 'text-gray-400'}`}>
-                  <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 2 ? 'bg-green-600 border-green-600 text-white' : 'border-gray-300'}`}>
+                <div
+                  className={`w-8 sm:w-12 h-0.5 ${currentStep >= 2 ? 'bg-green-600' : 'bg-gray-300'}`}
+                ></div>
+                <div
+                  className={`flex items-center ${currentStep >= 2 ? 'text-green-600' : 'text-gray-400'}`}
+                >
+                  <div
+                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 2 ? 'bg-green-600 border-green-600 text-white' : 'border-gray-300'}`}
+                  >
                     2
                   </div>
-                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:inline">Shipping & Review</span>
+                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:inline">
+                    Shipping & Review
+                  </span>
                 </div>
               </div>
               {/* Mobile step labels */}
               <div className="flex justify-center space-x-8 mt-2 sm:hidden">
-                <span className={`text-xs font-medium ${currentStep >= 1 ? 'text-green-600' : 'text-gray-400'}`}>Product Info</span>
-                <span className={`text-xs font-medium ${currentStep >= 2 ? 'text-green-600' : 'text-gray-400'}`}>Shipping & Review</span>
+                <span
+                  className={`text-xs font-medium ${currentStep >= 1 ? 'text-green-600' : 'text-gray-400'}`}
+                >
+                  Product Info
+                </span>
+                <span
+                  className={`text-xs font-medium ${currentStep >= 2 ? 'text-green-600' : 'text-gray-400'}`}
+                >
+                  Shipping & Review
+                </span>
               </div>
             </div>
-            
+
             {renderStep()}
           </>
         )}
       </div>
     </div>
   );
-} 
+}

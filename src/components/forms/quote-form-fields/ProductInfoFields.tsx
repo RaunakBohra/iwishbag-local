@@ -1,10 +1,10 @@
-import { Control, useWatch, UseFormSetValue, FieldValues } from "react-hook-form";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { ExternalLink, Link, Package, Settings } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Control, useWatch, UseFormSetValue, FieldValues } from 'react-hook-form';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { ExternalLink, Link, Package, Settings } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 // Define the shape of a product item in the form
 interface ProductFormItem {
@@ -24,11 +24,11 @@ interface ProductInfoFieldsProps {
   setValue: UseFormSetValue<ProductFormData>;
 }
 
-export const ProductInfoFields = ({ control, index, setValue }: ProductInfoFieldsProps) => {
+export const ProductInfoFields = ({ control, index, _setValue }: ProductInfoFieldsProps) => {
   // Watch the product URL field
-  const productUrl = useWatch({
+  const _productUrl = useWatch({
     control,
-    name: `items.${index}.productUrl`
+    name: `items.${index}.productUrl`,
   });
 
   const handleOpenUrl = (url: string) => {
@@ -48,14 +48,16 @@ export const ProductInfoFields = ({ control, index, setValue }: ProductInfoField
             <FormLabel className="flex items-center space-x-2">
               <Link className="h-4 w-4" />
               <span>Product Link</span>
-              <Badge variant="secondary" className="text-xs">Required</Badge>
+              <Badge variant="secondary" className="text-xs">
+                Required
+              </Badge>
             </FormLabel>
             <FormControl>
               <div className="space-y-2">
                 <div className="flex gap-2">
-                  <Input 
-                    placeholder="https://www.amazon.com/product-link or any international store" 
-                    {...field} 
+                  <Input
+                    placeholder="https://www.amazon.com/product-link or any international store"
+                    {...field}
                     className="flex-1"
                   />
                   {field.value && (
@@ -71,7 +73,8 @@ export const ProductInfoFields = ({ control, index, setValue }: ProductInfoField
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Paste the direct link to the product from any international store (US, China, Japan, UK, etc.)
+                  Paste the direct link to the product from any international store (US, China,
+                  Japan, UK, etc.)
                 </p>
               </div>
             </FormControl>
@@ -89,13 +92,15 @@ export const ProductInfoFields = ({ control, index, setValue }: ProductInfoField
             <FormLabel className="flex items-center space-x-2">
               <Package className="h-4 w-4" />
               <span>Product Name</span>
-              <Badge variant="outline" className="text-xs">Auto-filled</Badge>
+              <Badge variant="outline" className="text-xs">
+                Auto-filled
+              </Badge>
             </FormLabel>
             <FormControl>
               <div className="space-y-2">
-                <Input 
-                  placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5" 
-                  {...field} 
+                <Input
+                  placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5"
+                  {...field}
                 />
                 <p className="text-xs text-muted-foreground">
                   A brief description helps us understand what you're looking for
@@ -116,17 +121,20 @@ export const ProductInfoFields = ({ control, index, setValue }: ProductInfoField
             <FormLabel className="flex items-center space-x-2">
               <Settings className="h-4 w-4" />
               <span>Specifications & Options</span>
-              <Badge variant="outline" className="text-xs">Auto-filled</Badge>
+              <Badge variant="outline" className="text-xs">
+                Auto-filled
+              </Badge>
             </FormLabel>
             <FormControl>
               <div className="space-y-2">
-                <Textarea 
-                  placeholder="e.g., Color: Space Gray, Storage: 256GB, Size: Large, Quantity: 2, or any specific requirements" 
-                  {...field} 
+                <Textarea
+                  placeholder="e.g., Color: Space Gray, Storage: 256GB, Size: Large, Quantity: 2, or any specific requirements"
+                  {...field}
                   rows={3}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Include any specific requirements like size, color, quantity, or special features you need
+                  Include any specific requirements like size, color, quantity, or special features
+                  you need
                 </p>
               </div>
             </FormControl>

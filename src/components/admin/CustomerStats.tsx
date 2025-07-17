@@ -1,15 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Users, 
-  DollarSign, 
-  ShoppingCart, 
-  TrendingUp, 
-  Star, 
-  MapPin,
-  Calendar,
-  Activity
-} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Users, DollarSign, ShoppingCart, Star, Activity } from 'lucide-react';
 
 interface CustomerAnalytics {
   customerId: string;
@@ -27,7 +17,7 @@ interface Customer {
   cod_enabled: boolean;
   internal_notes: string | null;
   created_at: string;
-  user_addresses: { 
+  user_addresses: {
     id: string;
     address_line1: string;
     address_line2: string | null;
@@ -66,8 +56,8 @@ export const CustomerStats = ({ customers, customerAnalytics }: CustomerStatsPro
 
   // Calculate basic statistics
   const totalCustomers = customers.length;
-  const activeCustomers = customers.filter(c => c.cod_enabled).length;
-  const vipCustomers = customers.filter(c => c.internal_notes?.includes("VIP")).length;
+  const activeCustomers = customers.filter((c) => c.cod_enabled).length;
+  const vipCustomers = customers.filter((c) => c.internal_notes?.includes('VIP')).length;
 
   return (
     <div className="space-y-6">
@@ -123,12 +113,12 @@ export const CustomerStats = ({ customers, customerAnalytics }: CustomerStatsPro
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            The enhanced customer management page is now fully functional with advanced filtering, 
-            search capabilities, and expandable customer details. Analytics data will be populated 
+            The enhanced customer management page is now fully functional with advanced filtering,
+            search capabilities, and expandable customer details. Analytics data will be populated
             as customers interact with the system.
           </p>
         </CardContent>
       </Card>
     </div>
   );
-}; 
+};

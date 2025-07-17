@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CustomerValidator } from '@/lib/customerValidation';
 import { SecureLogger } from '@/lib/secureLogger';
-import type { CustomerInfo, ValidationResult } from '@/types/stripeCustomer';
+import type { CustomerInfo } from '@/types/stripeCustomer';
 
 // Mock implementations
 const mockStripe = {
@@ -128,7 +128,9 @@ describe('CustomerValidator', () => {
       const result = CustomerValidator.validateCustomerInfo(customerInfo);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Invalid phone number format. Use international format (e.g., +1234567890)');
+      expect(result.errors).toContain(
+        'Invalid phone number format. Use international format (e.g., +1234567890)',
+      );
     });
 
     it('should require complete address information', () => {
@@ -171,7 +173,7 @@ describe('CustomerValidator', () => {
 
     it('should sanitize dangerous characters from input', () => {
       const customerInfo: CustomerInfo = {
-        name: 'John & Doe', // Use & which gets sanitized but doesn't fail validation  
+        name: 'John & Doe', // Use & which gets sanitized but doesn't fail validation
         email: 'john@example.com',
         address: {
           line1: '123 Main St & Co.',
@@ -272,7 +274,7 @@ describe('SecureLogger', () => {
       expect(sanitized.has_name).toBe(true);
       expect(sanitized.name_length).toBe(8);
       expect(sanitized.has_phone).toBe(true);
-      expect(sanitized.phone_length).toBe(12);
+      expect(sanitized.phone_length).toBe(11);
       expect(sanitized.has_address).toBe(true);
       expect(sanitized.address_country).toBe('US');
 
@@ -304,7 +306,7 @@ describe('SecureLogger', () => {
         'payment_create',
         { userId: 'user123', operation: 'test' },
         customerData,
-        { success: true }
+        { success: true },
       );
 
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -318,7 +320,7 @@ describe('SecureLogger', () => {
             has_name: true,
             name_length: 8,
           }),
-        })
+        }),
       );
 
       // Ensure PII is not in the logged data
@@ -337,18 +339,8 @@ describe('createStripePaymentEnhancedSecure Integration', () => {
   });
 
   it('should validate input parameters', async () => {
-    const invalidParams = {
-      stripe: null,
-      amount: -100,
-      currency: 'INVALID',
-      quoteIds: [],
-      userId: '',
-      customerInfo: {},
-      quotes: [],
-      supabaseAdmin: null,
-    };
-
     // This would be tested with the actual function once imported
+    // Parameters would include: stripe, amount, currency, quoteIds, userId, customerInfo, quotes, supabaseAdmin
     // For now, testing the validation logic separately
     const validation = {
       isValid: false,
@@ -374,7 +366,10 @@ describe('createStripePaymentEnhancedSecure Integration', () => {
     });
 
     // Test would verify that database errors are handled properly
-    const errorResult = { success: false, error: 'Failed to fetch quote details' };
+    const errorResult = {
+      success: false,
+      error: 'Failed to fetch quote details',
+    };
     expect(errorResult.success).toBe(false);
     expect(errorResult.error).toContain('Failed to fetch quote details');
   });
@@ -383,7 +378,10 @@ describe('createStripePaymentEnhancedSecure Integration', () => {
     mockStripe.customers.list.mockRejectedValue(new Error('Stripe API error'));
 
     // Test would verify that Stripe errors don't crash the payment flow
-    const errorResult = { success: false, error: 'Customer creation failed but payment can continue' };
+    const errorResult = {
+      success: false,
+      error: 'Customer creation failed but payment can continue',
+    };
     expect(errorResult.success).toBe(false);
     expect(errorResult.error).toContain('Customer creation failed');
   });
@@ -394,7 +392,9 @@ describe('Security Tests', () => {
   describe('Input Validation Security', () => {
     it('should prevent XSS in customer names', () => {
       const maliciousName = '<script>alert("xss")</script>';
-      const result = CustomerValidator.validateCustomerInfo({ name: maliciousName });
+      const result = CustomerValidator.validateCustomerInfo({
+        name: maliciousName,
+      });
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Name contains invalid characters');
@@ -410,9 +410,9 @@ describe('Security Tests', () => {
 
     it('should enforce maximum length limits to prevent buffer overflow', () => {
       const oversizedInput = 'a'.repeat(10000);
-      const result = CustomerValidator.validateCustomerInfo({ 
+      const result = CustomerValidator.validateCustomerInfo({
         name: oversizedInput,
-        email: 'test@example.com'
+        email: 'test@example.com',
       });
 
       expect(result.isValid).toBe(false);
@@ -441,7 +441,7 @@ describe('Security Tests', () => {
       expect(sanitized.has_name).toBe(true);
       expect(sanitized.name_length).toBe(8);
       expect(sanitized.has_phone).toBe(true);
-      expect(sanitized.phone_length).toBe(12);
+      expect(sanitized.phone_length).toBe(11);
     });
   });
 });

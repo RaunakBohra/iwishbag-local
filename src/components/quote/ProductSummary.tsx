@@ -23,18 +23,18 @@ interface ProductSummaryProps {
   destinationCountry?: string; // Add destination country for proper currency display
 }
 
-export default function ProductSummary({ 
-  products, 
-  title = "Products Summary", 
-  showEditButton = false, 
+export default function ProductSummary({
+  products,
+  title = 'Products Summary',
+  showEditButton = false,
   onEdit,
-  className = "",
-  destinationCountry
+  className = '',
+  destinationCountry,
 }: ProductSummaryProps) {
   const totalItems = products.reduce((sum, product) => sum + product.quantity, 0);
   const totalValue = products.reduce((sum, product) => {
     const price = parseFloat(product.price) || 0;
-    return sum + (price * product.quantity);
+    return sum + price * product.quantity;
   }, 0);
 
   return (
@@ -62,7 +62,8 @@ export default function ProductSummary({
             </span>
             <span className="flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full">
               <DollarSign className="h-4 w-4 text-green-600" />
-              Total: <Price 
+              Total:{' '}
+              <Price
                 amount={totalValue}
                 originCountry={products[0]?.country || 'US'}
                 destinationCountry={destinationCountry}
@@ -79,7 +80,10 @@ export default function ProductSummary({
       )}
       <CardContent className="space-y-4">
         {products.map((product, index) => (
-          <div key={index} className="bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+          <div
+            key={index}
+            className="bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow"
+          >
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-start gap-3 mb-3">
@@ -92,10 +96,10 @@ export default function ProductSummary({
                     </h4>
                     {product.url && (
                       <div className="flex items-center gap-2 mb-2">
-                        <a 
-                          href={product.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
+                        <a
+                          href={product.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1 hover:underline"
                         >
                           <ExternalLink className="h-3 w-3" />
@@ -106,26 +110,39 @@ export default function ProductSummary({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-0">
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-0"
+                  >
                     Qty: {product.quantity}
                   </Badge>
                   {product.price && (
-                    <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200 border-0">
-                      <Price 
+                    <Badge
+                      variant="secondary"
+                      className="bg-green-100 text-green-700 hover:bg-green-200 border-0"
+                    >
+                      <Price
                         amount={parseFloat(product.price)}
                         originCountry={product.country || 'US'}
                         destinationCountry={destinationCountry}
                         showSkeleton={false}
-                      /> each
+                      />{' '}
+                      each
                     </Badge>
                   )}
                   {product.weight && (
-                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-0">
+                    <Badge
+                      variant="secondary"
+                      className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-0"
+                    >
                       {product.weight} kg
                     </Badge>
                   )}
                   {product.country && (
-                    <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-300 flex items-center gap-1">
+                    <Badge
+                      variant="outline"
+                      className="bg-gray-50 text-gray-700 border-gray-300 flex items-center gap-1"
+                    >
                       <Globe className="h-3 w-3" />
                       {product.country}
                     </Badge>
@@ -135,7 +152,7 @@ export default function ProductSummary({
               {product.price && (
                 <div className="text-right ml-4">
                   <div className="text-lg font-bold text-gray-900">
-                    <Price 
+                    <Price
                       amount={parseFloat(product.price) * product.quantity}
                       originCountry={product.country || 'US'}
                       destinationCountry={destinationCountry}
@@ -143,9 +160,7 @@ export default function ProductSummary({
                       showSkeleton={false}
                     />
                   </div>
-                  <div className="text-sm text-gray-500">
-                    Total for this item
-                  </div>
+                  <div className="text-sm text-gray-500">Total for this item</div>
                 </div>
               )}
             </div>
@@ -154,4 +169,4 @@ export default function ProductSummary({
       </CardContent>
     </div>
   );
-} 
+}

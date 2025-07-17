@@ -2,12 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Activity,
-  TrendingUp,
-  TrendingDown,
-  AlertCircle
-} from 'lucide-react';
+import { Activity, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { getQuoteCalculationMetrics } from '@/services/ErrorHandlingService';
 import { cn } from '@/lib/utils';
 
@@ -15,8 +10,19 @@ import { cn } from '@/lib/utils';
  * Compact widget showing quote system health
  * Can be embedded in other admin dashboards
  */
+interface QuoteMetrics {
+  totalQuotes: number;
+  successRate: number;
+  errorRate: number;
+  avgProcessingTime: number;
+  recentErrors: Array<{
+    error: string;
+    count: number;
+  }>;
+}
+
 export function QuoteHealthWidget() {
-  const [metrics, setMetrics] = useState<any>(null);
+  const [metrics, setMetrics] = useState<QuoteMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -54,16 +60,16 @@ export function QuoteHealthWidget() {
   }
 
   const healthScore = Math.round(
-    (metrics.successRate * 0.5) + 
-    (Math.max(0, 100 - metrics.errorRate) * 0.3) +
-    (Math.max(0, 100 - (metrics.averageCalculationTime / 50)) * 0.2)
+    metrics.successRate * 0.5 +
+      Math.max(0, 100 - metrics.errorRate) * 0.3 +
+      Math.max(0, 100 - metrics.averageCalculationTime / 50) * 0.2,
   );
 
   const healthStatus = healthScore >= 90 ? 'success' : healthScore >= 70 ? 'warning' : 'error';
   const statusColors = {
     success: 'text-green-600',
     warning: 'text-yellow-600',
-    error: 'text-red-600'
+    error: 'text-red-600',
   };
 
   return (
@@ -74,8 +80,14 @@ export function QuoteHealthWidget() {
             <Activity className="h-4 w-4" />
             Quote System Health
           </CardTitle>
-          <Badge 
-            variant={healthStatus === 'success' ? 'default' : healthStatus === 'warning' ? 'secondary' : 'destructive'}
+          <Badge
+            variant={
+              healthStatus === 'success'
+                ? 'default'
+                : healthStatus === 'warning'
+                  ? 'secondary'
+                  : 'destructive'
+            }
             className="ml-auto"
           >
             {healthScore}%
@@ -96,9 +108,9 @@ export function QuoteHealthWidget() {
             )}
           </div>
         </div>
-        
+
         <Progress value={healthScore} className="h-2" />
-        
+
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Calculations/hr</span>

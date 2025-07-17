@@ -1,6 +1,19 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Package, ShoppingCart, CheckCircle, Mail, Plus, Search, HelpCircle, TrendingUp, Clock, Globe, ArrowRight, Sparkles } from 'lucide-react';
+import {
+  Package,
+  ShoppingCart,
+  CheckCircle,
+  Mail,
+  Plus,
+  Search,
+  HelpCircle,
+  TrendingUp,
+  Clock,
+  Globe,
+  ArrowRight,
+  Sparkles,
+} from 'lucide-react';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { AnimatedSection } from '@/components/shared/AnimatedSection';
@@ -9,24 +22,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 const Dashboard = () => {
-  const {
-    user,
-    quotes,
-    orders,
-    isLoading,
-    isError,
-  } = useDashboardState();
+  const { user, quotes, orders, isLoading, isError } = useDashboardState();
 
   // Metrics
-  const activeQuotes = quotes?.filter(q => q.status === 'pending' || q.status === 'sent' || q.status === 'calculated').length || 0;
-  const approvedQuotes = quotes?.filter(q => q.status === 'approved').length || 0;
-  const ordersInProgress = orders?.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length || 0;
-  const deliveredOrders = orders?.filter(o => o.status === 'completed').length || 0;
+  const activeQuotes =
+    quotes?.filter(
+      (q) => q.status === 'pending' || q.status === 'sent' || q.status === 'calculated',
+    ).length || 0;
+  const approvedQuotes = quotes?.filter((q) => q.status === 'approved').length || 0;
+  const ordersInProgress =
+    orders?.filter((o) => o.status !== 'completed' && o.status !== 'cancelled').length || 0;
+  const deliveredOrders = orders?.filter((o) => o.status === 'completed').length || 0;
   const unreadMessages = 0; // TODO: Connect to real unread messages count
 
   // Recent activity (quotes and orders, most recent 5)
   const recentActivity = [
-    ...(quotes?.slice(0, 3).map(q => ({
+    ...(quotes?.slice(0, 3).map((q) => ({
       type: 'quote',
       text: `Quote #${q.display_id || q.id} - ${q.status}`,
       link: `/dashboard/quotes/${q.id}`,
@@ -34,7 +45,7 @@ const Dashboard = () => {
       date: q.created_at,
       status: q.status,
     })) || []),
-    ...(orders?.slice(0, 2).map(o => ({
+    ...(orders?.slice(0, 2).map((o) => ({
       type: 'order',
       text: `Order #${o.display_id || o.id} - ${o.status}`,
       link: `/dashboard/orders/${o.id}`,
@@ -42,47 +53,67 @@ const Dashboard = () => {
       date: o.created_at,
       status: o.status,
     })) || []),
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+  ]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
 
   // Quick Actions
   const quickActions = [
-    { label: 'Request Quote', icon: <Plus className="h-5 w-5" />, to: '/quote', variant: 'primary', color: 'from-blue-500 to-blue-600' },
-    { label: 'View All Quotes', icon: <Package className="h-5 w-5" />, to: '/dashboard/quotes', variant: 'outline', color: 'from-purple-500 to-purple-600' },
-    { label: 'My Orders', icon: <ShoppingCart className="h-5 w-5" />, to: '/dashboard/orders', variant: 'outline', color: 'from-green-500 to-green-600' },
+    {
+      label: 'Request Quote',
+      icon: <Plus className="h-5 w-5" />,
+      to: '/quote',
+      variant: 'primary',
+      color: 'from-blue-500 to-blue-600',
+    },
+    {
+      label: 'View All Quotes',
+      icon: <Package className="h-5 w-5" />,
+      to: '/dashboard/quotes',
+      variant: 'outline',
+      color: 'from-purple-500 to-purple-600',
+    },
+    {
+      label: 'My Orders',
+      icon: <ShoppingCart className="h-5 w-5" />,
+      to: '/dashboard/orders',
+      variant: 'outline',
+      color: 'from-green-500 to-green-600',
+    },
   ];
 
   const metricCards = [
-    { 
-      value: activeQuotes, 
-      label: 'Active Quotes', 
-      icon: Package, 
+    {
+      value: activeQuotes,
+      label: 'Active Quotes',
+      icon: Package,
       color: 'from-blue-500 to-blue-600',
       bgColor: 'from-blue-50 to-blue-100',
-      link: '/dashboard/quotes'
+      link: '/dashboard/quotes',
     },
-    { 
-      value: approvedQuotes, 
-      label: 'Approved Quotes', 
-      icon: CheckCircle, 
+    {
+      value: approvedQuotes,
+      label: 'Approved Quotes',
+      icon: CheckCircle,
       color: 'from-emerald-500 to-emerald-600',
       bgColor: 'from-emerald-50 to-emerald-100',
-      link: '/dashboard/quotes'
+      link: '/dashboard/quotes',
     },
-    { 
-      value: ordersInProgress, 
-      label: 'Orders in Progress', 
-      icon: ShoppingCart, 
+    {
+      value: ordersInProgress,
+      label: 'Orders in Progress',
+      icon: ShoppingCart,
       color: 'from-purple-500 to-purple-600',
       bgColor: 'from-purple-50 to-purple-100',
-      link: '/dashboard/orders'
+      link: '/dashboard/orders',
     },
-    { 
-      value: deliveredOrders, 
-      label: 'Delivered Orders', 
-      icon: TrendingUp, 
+    {
+      value: deliveredOrders,
+      label: 'Delivered Orders',
+      icon: TrendingUp,
       color: 'from-green-500 to-green-600',
       bgColor: 'from-green-50 to-green-100',
-      link: '/dashboard/orders'
+      link: '/dashboard/orders',
     },
   ];
 
@@ -102,9 +133,12 @@ const Dashboard = () => {
               </div>
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                  Welcome back, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Customer'}!
+                  Welcome back,{' '}
+                  {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Customer'}!
                 </h1>
-                <p className="text-gray-600 text-sm">Here's what's happening with your international shopping.</p>
+                <p className="text-gray-600 text-sm">
+                  Here's what's happening with your international shopping.
+                </p>
               </div>
             </div>
           </div>
@@ -115,10 +149,16 @@ const Dashboard = () => {
           {metricCards.map((metric, index) => (
             <AnimatedSection key={index} animation="zoomIn" delay={index * 100}>
               <Link to={metric.link}>
-                <Card className={`relative overflow-hidden group hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1`}>
-                  <div className={`absolute inset-0 bg-gradient-to-br ${metric.bgColor} opacity-50`} />
+                <Card
+                  className={`relative overflow-hidden group hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1`}
+                >
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${metric.bgColor} opacity-50`}
+                  />
                   <CardContent className="relative p-6">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${metric.color} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}>
+                    <div
+                      className={`w-12 h-12 rounded-xl bg-gradient-to-br ${metric.color} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}
+                    >
                       <metric.icon className="w-6 h-6" />
                     </div>
                     <div className="text-3xl font-bold text-gray-900 mb-1">
@@ -139,14 +179,16 @@ const Dashboard = () => {
               <Globe className="w-5 h-5 text-primary" />
               Quick Actions
             </h2>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {quickActions.map((action, index) => (
                 <AnimatedSection key={index} animation="fadeInUp" delay={500 + index * 100}>
                   <Link to={action.to}>
                     <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden">
                       <CardContent className="p-6">
-                        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}>
+                        <div
+                          className={`w-12 h-12 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}
+                        >
                           {action.icon}
                         </div>
                         <h3 className="font-semibold text-gray-900 mb-1">{action.label}</h3>
@@ -178,7 +220,10 @@ const Dashboard = () => {
                     <Clock className="w-5 h-5 text-primary" />
                     Recent Activity
                   </CardTitle>
-                  <Link to="/dashboard/quotes" className="text-primary hover:underline text-sm font-medium">
+                  <Link
+                    to="/dashboard/quotes"
+                    className="text-primary hover:underline text-sm font-medium"
+                  >
                     View All
                   </Link>
                 </div>
@@ -193,7 +238,10 @@ const Dashboard = () => {
                   )}
                   {recentActivity.map((item, idx) => (
                     <li key={idx} className="group">
-                      <Link to={item.link} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                      <Link
+                        to={item.link}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
                         <div className="flex-shrink-0">{item.icon}</div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 group-hover:text-primary transition-colors">
@@ -221,7 +269,8 @@ const Dashboard = () => {
                 </div>
                 <h3 className="text-xl font-semibold mb-3">Need Assistance?</h3>
                 <p className="text-gray-600 mb-6">
-                  Our support team is here to help you with any questions about international shipping, customs, or your orders.
+                  Our support team is here to help you with any questions about international
+                  shipping, customs, or your orders.
                 </p>
                 <div className="space-y-3">
                   <Link to="/contact">
@@ -232,7 +281,10 @@ const Dashboard = () => {
                   </Link>
                   <p className="text-sm text-gray-600">
                     or email us at{' '}
-                    <a href="mailto:support@iwishbag.com" className="text-primary hover:underline font-medium">
+                    <a
+                      href="mailto:support@iwishbag.com"
+                      className="text-primary hover:underline font-medium"
+                    >
                       support@iwishbag.com
                     </a>
                   </p>
@@ -249,7 +301,8 @@ const Dashboard = () => {
             <CardContent className="relative p-8 text-center">
               <h3 className="text-2xl font-bold mb-3">Ready to Shop Globally?</h3>
               <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-                Get instant quotes for products from anywhere in the world. We handle shipping, customs, and delivery.
+                Get instant quotes for products from anywhere in the world. We handle shipping,
+                customs, and delivery.
               </p>
               <Link to="/quote">
                 <Button size="lg" variant="secondary" className="group">

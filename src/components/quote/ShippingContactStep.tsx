@@ -32,7 +32,14 @@ function validateEmail(email) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 }
 
-export default function ShippingContactStep({ shippingContact, setShippingContact, next, back, products, quoteType }) {
+export default function ShippingContactStep({
+  shippingContact,
+  setShippingContact,
+  next,
+  back,
+  products,
+  quoteType,
+}) {
   const { user } = useAuth();
   const { data: profile } = useUserProfile();
   const { countries, getCountryDisplayName } = useCountryUtils();
@@ -42,7 +49,11 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
   const [addressToEdit, setAddressToEdit] = useState(null);
 
   // Fetch user addresses if logged in
-  const { data: addresses, isLoading: addressesLoading, refetch } = useQuery({
+  const {
+    data: addresses,
+    isLoading: addressesLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['user_addresses', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -66,9 +77,7 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
   let shippingAddressSummary = '';
   let address = null;
   if (user && addresses && addresses.length > 0) {
-    address = selectedAddressId
-      ? addresses.find(a => a.id === selectedAddressId)
-      : addresses[0];
+    address = selectedAddressId ? addresses.find((a) => a.id === selectedAddressId) : addresses[0];
     if (address) {
       shippingCountry = address.destination_country || '';
       shippingCity = address.city;
@@ -90,7 +99,7 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
     if (user && addresses && addresses.length > 0 && address) {
       return '';
     }
-    
+
     // For guests or users without addresses, validate all fields
     if (!shippingContact.address) return 'Address is required.';
     if (!shippingContact.country) return 'Country is required.';
@@ -112,7 +121,9 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
   // NEW: Auto-populate shippingContact from address on initial load
   useEffect(() => {
     if (
-      user && addresses && addresses.length > 0 &&
+      user &&
+      addresses &&
+      addresses.length > 0 &&
       address &&
       (!shippingContact || !shippingContact.country)
     ) {
@@ -133,7 +144,7 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
   // Update shippingContact when user selects a different address
   useEffect(() => {
     if (user && addresses && addresses.length > 0 && selectedAddressId) {
-      const selectedAddr = addresses.find(addr => addr.id === selectedAddressId);
+      const selectedAddr = addresses.find((addr) => addr.id === selectedAddressId);
       if (selectedAddr) {
         setShippingContact({
           name: selectedAddr.recipient_name || '',
@@ -156,15 +167,19 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
       <div className="space-y-6">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Shipping & Contact Information</h2>
-          <p className="text-gray-600">Review your shipping details and submit your quote request</p>
+          <p className="text-gray-600">
+            Review your shipping details and submit your quote request
+          </p>
         </div>
-        
+
         {showRoute && (
           <div className="mb-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm">
             <div className="flex items-center justify-center space-x-6">
               <div className="text-center">
                 <div className="text-sm font-medium text-blue-800 mb-1">Purchase Country</div>
-                <div className="text-xl font-bold text-blue-900">🌍 {getCountryDisplayName(purchaseCountry)}</div>
+                <div className="text-xl font-bold text-blue-900">
+                  🌍 {getCountryDisplayName(purchaseCountry)}
+                </div>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-0.5 bg-blue-300"></div>
@@ -173,7 +188,9 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
               </div>
               <div className="text-center">
                 <div className="text-sm font-medium text-blue-800 mb-1">Delivery Address</div>
-                <div className="text-xl font-bold text-blue-900">🌍 {getCountryDisplayName(shippingCountry)}</div>
+                <div className="text-xl font-bold text-blue-900">
+                  🌍 {getCountryDisplayName(shippingCountry)}
+                </div>
               </div>
             </div>
             <div className="mt-4 text-center">
@@ -183,7 +200,7 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
             </div>
           </div>
         )}
-        
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Shipping Address</h3>
@@ -193,7 +210,9 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
                   <div className="font-medium">{address.recipient_name}</div>
                   <div>{address.address_line1}</div>
                   {address.address_line2 && <div>{address.address_line2}</div>}
-                  <div>{address.city}, {address.state_province_region} {address.postal_code}</div>
+                  <div>
+                    {address.city}, {address.state_province_region} {address.postal_code}
+                  </div>
                   <div className="font-medium">{address.destination_country}</div>
                   {address.phone && <div className="text-blue-600">📞 {address.phone}</div>}
                 </div>
@@ -204,16 +223,18 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
               </div>
             )}
           </div>
-          
+
           {addresses.length > 1 && address && (
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Choose another address:</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Choose another address:
+              </label>
               <select
                 className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={address.id}
-                onChange={e => setSelectedAddressId(e.target.value)}
+                onChange={(e) => setSelectedAddressId(e.target.value)}
               >
-                {addresses.map(a => (
+                {addresses.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.recipient_name}, {a.address_line1}, {a.city}
                   </option>
@@ -221,35 +242,41 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
               </select>
             </div>
           )}
-          
+
           <div className="flex gap-3">
-            <button 
-              type="button" 
-              className="flex-1 py-2 px-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium" 
-              onClick={() => { setAddressToEdit(address); setAddressModalOpen(true); }}
+            <button
+              type="button"
+              className="flex-1 py-2 px-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium"
+              onClick={() => {
+                setAddressToEdit(address);
+                setAddressModalOpen(true);
+              }}
               disabled={!address}
             >
               Edit Address
             </button>
-            <button 
-              type="button" 
-              className="flex-1 py-2 px-4 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium" 
-              onClick={() => { setAddressToEdit(null); setAddressModalOpen(true); }}
+            <button
+              type="button"
+              className="flex-1 py-2 px-4 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium"
+              onClick={() => {
+                setAddressToEdit(null);
+                setAddressModalOpen(true);
+              }}
             >
               + Add New Address
             </button>
           </div>
         </div>
-        
+
         <Dialog open={addressModalOpen} onOpenChange={setAddressModalOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{addressToEdit ? 'Edit Address' : 'Add New Address'}</DialogTitle>
             </DialogHeader>
-            <AddressForm 
-              address={addressToEdit} 
-              onSuccess={(newAddress) => { 
-                setAddressModalOpen(false); 
+            <AddressForm
+              address={addressToEdit}
+              onSuccess={(newAddress) => {
+                setAddressModalOpen(false);
                 refetch();
                 // Update shippingContact if this is a new address or editing current address
                 if (newAddress && (!addressToEdit || addressToEdit.id === address?.id)) {
@@ -269,15 +296,15 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
                     setSelectedAddressId(newAddress.id);
                   }
                 }
-              }} 
+              }}
             />
           </DialogContent>
         </Dialog>
-        
+
         <div className="flex gap-4 pt-4">
-          <button 
-            type="button" 
-            className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium" 
+          <button
+            type="button"
+            className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
             onClick={back}
           >
             Back to Products
@@ -316,9 +343,11 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
       <div className="space-y-6">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Shipping Address Required</h2>
-          <p className="text-gray-600">Please add a shipping address to continue with your quote request</p>
+          <p className="text-gray-600">
+            Please add a shipping address to continue with your quote request
+          </p>
         </div>
-        
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
           <div className="mb-4">
             <MapPin className="h-12 w-12 text-blue-600 mx-auto mb-4" />
@@ -327,34 +356,37 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
               To request a quote, you need to add a shipping address to your profile first.
             </p>
           </div>
-          
+
           <div className="flex gap-4 justify-center">
-            <button 
-              type="button" 
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium" 
-              onClick={() => { setAddressToEdit(null); setAddressModalOpen(true); }}
+            <button
+              type="button"
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              onClick={() => {
+                setAddressToEdit(null);
+                setAddressModalOpen(true);
+              }}
             >
               + Add Shipping Address
             </button>
-            <button 
-              type="button" 
-              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium" 
-              onClick={() => window.location.href = '/profile/address'}
+            <button
+              type="button"
+              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              onClick={() => (window.location.href = '/profile/address')}
             >
               Manage Addresses
             </button>
           </div>
         </div>
-        
+
         <Dialog open={addressModalOpen} onOpenChange={setAddressModalOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Address</DialogTitle>
             </DialogHeader>
-            <AddressForm 
-              address={addressToEdit} 
-              onSuccess={(newAddress) => { 
-                setAddressModalOpen(false); 
+            <AddressForm
+              address={addressToEdit}
+              onSuccess={(newAddress) => {
+                setAddressModalOpen(false);
                 refetch();
                 // Update shippingContact with the new address
                 if (newAddress) {
@@ -372,7 +404,7 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
                   // This will trigger the first useEffect to set selectedAddressId
                   setSelectedAddressId(newAddress.id);
                 }
-              }} 
+              }}
             />
           </DialogContent>
         </Dialog>
@@ -388,17 +420,20 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
         <p className="text-gray-600">Enter your shipping details and submit your quote request</p>
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-700">
-            💡 <strong>Tip:</strong> Sign up for an account to save your addresses and get a faster quote experience!
+            💡 <strong>Tip:</strong> Sign up for an account to save your addresses and get a faster
+            quote experience!
           </p>
         </div>
       </div>
-      
+
       {showRoute && (
         <div className="mb-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm">
           <div className="flex items-center justify-center space-x-6">
             <div className="text-center">
               <div className="text-sm font-medium text-blue-800 mb-1">Purchase Country</div>
-              <div className="text-xl font-bold text-blue-900">🌍 {getCountryDisplayName(purchaseCountry)}</div>
+              <div className="text-xl font-bold text-blue-900">
+                🌍 {getCountryDisplayName(purchaseCountry)}
+              </div>
             </div>
             <div className="flex items-center space-x-3">
               <div className="w-12 h-0.5 bg-blue-300"></div>
@@ -407,7 +442,9 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
             </div>
             <div className="text-center">
               <div className="text-sm font-medium text-blue-800 mb-1">Delivery Address</div>
-              <div className="text-xl font-bold text-blue-900">🌍 {getCountryDisplayName(shippingCountry)}</div>
+              <div className="text-xl font-bold text-blue-900">
+                🌍 {getCountryDisplayName(shippingCountry)}
+              </div>
             </div>
           </div>
           <div className="mt-4 text-center">
@@ -426,15 +463,17 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
               <User className="h-5 w-5 mr-2 text-blue-600" />
               Contact Information
             </h3>
-            
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                <input 
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                  value={shippingContact.email} 
-                  onChange={e => handleChange('email', e.target.value)} 
-                  placeholder="your@email.com" 
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <input
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={shippingContact.email}
+                  onChange={(e) => handleChange('email', e.target.value)}
+                  placeholder="your@email.com"
                 />
               </div>
             </div>
@@ -445,54 +484,54 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
               <MapPin className="h-5 w-5 mr-2 text-blue-600" />
               Shipping Address
             </h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Full Address</label>
-                <input 
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                  value={shippingContact.address} 
-                  onChange={e => handleChange('address', e.target.value)} 
-                  placeholder="Street address, apartment, suite, etc." 
+                <input
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={shippingContact.address}
+                  onChange={(e) => handleChange('address', e.target.value)}
+                  placeholder="Street address, apartment, suite, etc."
                 />
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-                  <input 
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                    value={shippingContact.country} 
-                    onChange={e => handleChange('country', e.target.value)} 
-                    placeholder="Country" 
+                  <input
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={shippingContact.country}
+                    onChange={(e) => handleChange('country', e.target.value)}
+                    placeholder="Country"
                   />
                 </div>
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-                  <input 
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                    value={shippingContact.state} 
-                    onChange={e => handleChange('state', e.target.value)} 
-                    placeholder="State/Province" 
+                  <input
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={shippingContact.state}
+                    onChange={(e) => handleChange('state', e.target.value)}
+                    placeholder="State/Province"
                   />
                 </div>
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                  <input 
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                    value={shippingContact.city} 
-                    onChange={e => handleChange('city', e.target.value)} 
-                    placeholder="City" 
+                  <input
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={shippingContact.city}
+                    onChange={(e) => handleChange('city', e.target.value)}
+                    placeholder="City"
                   />
                 </div>
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">ZIP Code</label>
-                  <input 
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                    value={shippingContact.zip} 
-                    onChange={e => handleChange('zip', e.target.value)} 
-                    placeholder="ZIP/Postal code" 
+                  <input
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={shippingContact.zip}
+                    onChange={(e) => handleChange('zip', e.target.value)}
+                    placeholder="ZIP/Postal code"
                   />
                 </div>
               </div>
@@ -507,27 +546,30 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
               <Package className="h-5 w-5 mr-2 text-blue-600" />
               Quote Summary
             </h3>
-            
+
             <div className="space-y-4">
               <div className="border-b border-gray-200 pb-3">
                 <div className="text-sm text-gray-600 mb-1">Quote Type</div>
-                <div className="font-medium text-gray-900">{quoteType === 'combined' ? 'Combined Quote' : 'Separate Quotes'}</div>
+                <div className="font-medium text-gray-900">
+                  {quoteType === 'combined' ? 'Combined Quote' : 'Separate Quotes'}
+                </div>
               </div>
-              
+
               <div className="border-b border-gray-200 pb-3">
                 <div className="text-sm text-gray-600 mb-1">Shipping Route</div>
                 <div className="font-medium text-gray-900">
-                  <ShippingRouteDisplay 
-                    origin={purchaseCountry} 
+                  <ShippingRouteDisplay
+                    origin={purchaseCountry}
                     destination={shippingCountry}
                     showIcon={false}
                   />
                 </div>
               </div>
-              
+
               <div className="bg-blue-50 rounded-lg p-3">
                 <div className="text-sm text-blue-700">
-                  We'll calculate shipping costs, customs duties, and provide you with a detailed quote within 24-48 hours.
+                  We'll calculate shipping costs, customs duties, and provide you with a detailed
+                  quote within 24-48 hours.
                 </div>
               </div>
             </div>
@@ -540,16 +582,16 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
           )}
 
           <div className="flex gap-4 pt-4">
-            <button 
-              type="button" 
-              className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium" 
+            <button
+              type="button"
+              className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
               onClick={back}
             >
               Back to Products
             </button>
-            <button 
-              type="button" 
-              className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm" 
+            <button
+              type="button"
+              className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm"
               onClick={handleSubmit}
             >
               Submit Quote Request
@@ -559,4 +601,4 @@ export default function ShippingContactStep({ shippingContact, setShippingContac
       </div>
     </div>
   );
-} 
+}

@@ -12,26 +12,23 @@ async function verifyAndRecordStripePayment() {
   const paymentIntentId = 'pi_3RlBRmQj80XSacOA1djAv9ND';
   const quoteId = '974397df-e02b-48f3-a091-b5edd44fd35c';
   const userId = '130ec316-970f-429f-8cb8-ff9adf751248';
-  
+
   console.log('Verifying Stripe payment:', paymentIntentId);
 
   // 1. Call payment-verification function
-  const verificationResponse = await fetch(
-    `${supabaseUrl}/functions/v1/payment-verification`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${supabaseServiceKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        transaction_id: paymentIntentId,
-        gateway: 'stripe',
-        amount: 1063.81,
-        currency: 'USD',
-      }),
-    }
-  );
+  const verificationResponse = await fetch(`${supabaseUrl}/functions/v1/payment-verification`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      transaction_id: paymentIntentId,
+      gateway: 'stripe',
+      amount: 1063.81,
+      currency: 'USD',
+    }),
+  });
 
   const verificationResult = await verificationResponse.json();
   console.log('Verification result:', verificationResult);
@@ -45,7 +42,7 @@ async function verifyAndRecordStripePayment() {
 
   if (!existingTransaction) {
     console.log('Creating payment_transactions record...');
-    
+
     const { data: newTransaction, error: txError } = await supabase
       .from('payment_transactions')
       .insert({
@@ -114,7 +111,7 @@ async function verifyAndRecordStripePayment() {
       p_gateway_transaction_id: paymentIntentId,
       p_notes: 'Stripe payment completed successfully',
       p_user_id: userId,
-    }
+    },
   );
 
   if (ledgerError) {

@@ -30,7 +30,7 @@ export class RouteService {
         return {
           origin: route.origin_country,
           destination: route.destination_country,
-          route
+          route,
         };
       }
     }
@@ -39,7 +39,7 @@ export class RouteService {
     // Note: destination_country is the new field, country_code is deprecated
     return {
       origin: quote.origin_country || 'US',
-      destination: quote.destination_country || ''
+      destination: quote.destination_country || '',
     };
   }
 
@@ -48,7 +48,7 @@ export class RouteService {
    */
   static async getRouteById(routeId: number): Promise<ShippingRoute | null> {
     const cacheKey = `route_${routeId}`;
-    
+
     // Check cache first
     if (this.routeCache.has(cacheKey)) {
       return this.routeCache.get(cacheKey)!;
@@ -98,7 +98,11 @@ export class RouteService {
   /**
    * Update a quote to use proper route fields
    */
-  static async updateQuoteRoute(quoteId: string, origin: string, destination: string): Promise<void> {
+  static async updateQuoteRoute(
+    quoteId: string,
+    origin: string,
+    destination: string,
+  ): Promise<void> {
     // Find or create the route
     const routeId = await this.findOrCreateRoute(origin, destination);
 
@@ -116,10 +120,7 @@ export class RouteService {
       updateData.shipping_route_id = routeId;
     }
 
-    const { error } = await supabase
-      .from('quotes')
-      .update(updateData)
-      .eq('id', quoteId);
+    const { error } = await supabase.from('quotes').update(updateData).eq('id', quoteId);
 
     if (error) {
       console.error('Error updating quote route:', error);

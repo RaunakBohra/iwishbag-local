@@ -1,10 +1,17 @@
-import { useEffect, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
+import { useEffect, useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface AnimatedSectionProps {
   children: React.ReactNode;
   className?: string;
-  animation?: "fadeIn" | "fadeInUp" | "fadeInDown" | "fadeInLeft" | "fadeInRight" | "zoomIn" | "slideIn";
+  animation?:
+    | 'fadeIn'
+    | 'fadeInUp'
+    | 'fadeInDown'
+    | 'fadeInLeft'
+    | 'fadeInRight'
+    | 'zoomIn'
+    | 'slideIn';
   delay?: number;
   threshold?: number;
   once?: boolean;
@@ -13,10 +20,10 @@ interface AnimatedSectionProps {
 export const AnimatedSection = ({
   children,
   className,
-  animation = "fadeInUp",
+  animation = 'fadeInUp',
   delay = 0,
   threshold = 0.1,
-  once = true
+  once = true,
 }: AnimatedSectionProps) => {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -32,7 +39,7 @@ export const AnimatedSection = ({
           setIsVisible(false);
         }
       },
-      { threshold }
+      { threshold },
     );
 
     if (sectionRef.current) {
@@ -45,22 +52,22 @@ export const AnimatedSection = ({
   }, [threshold, once]);
 
   const animationClasses = {
-    fadeIn: "animate-fadeIn",
-    fadeInUp: "animate-fadeInUp",
-    fadeInDown: "animate-fadeInDown",
-    fadeInLeft: "animate-fadeInLeft",
-    fadeInRight: "animate-fadeInRight",
-    zoomIn: "animate-zoomIn",
-    slideIn: "animate-slideIn"
+    fadeIn: 'animate-fadeIn',
+    fadeInUp: 'animate-fadeInUp',
+    fadeInDown: 'animate-fadeInDown',
+    fadeInLeft: 'animate-fadeInLeft',
+    fadeInRight: 'animate-fadeInRight',
+    zoomIn: 'animate-zoomIn',
+    slideIn: 'animate-slideIn',
   };
 
   return (
     <div
       ref={sectionRef}
       className={cn(
-        "transition-all duration-700",
-        isVisible ? animationClasses[animation] : "opacity-0",
-        className
+        'transition-all duration-700',
+        isVisible ? animationClasses[animation] : 'opacity-0',
+        className,
       )}
       style={{ animationDelay: `${delay}ms` }}
     >

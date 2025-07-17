@@ -1,37 +1,140 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
   'Access-Control-Allow-Headers': 'authorization, content-type',
   'Access-Control-Allow-Methods': 'POST',
   'Access-Control-Max-Age': '86400',
-}
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
 
-    console.log('🚀 Starting PayPal integration setup...')
+    console.log('🚀 Starting PayPal integration setup...');
 
     // 1. Add PayPal gateway
-    console.log('📝 Adding PayPal gateway...')
-    const { error: paypalError } = await supabaseClient
-      .from('payment_gateways')
-      .upsert({
+    console.log('📝 Adding PayPal gateway...');
+    const { error: paypalError } = await supabaseClient.from('payment_gateways').upsert(
+      {
         name: 'PayPal',
         code: 'paypal',
         is_active: true,
-        supported_countries: ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'AT', 'CH', 'SE', 'NO', 'DK', 'FI', 'PL', 'CZ', 'HU', 'SG', 'MY', 'TH', 'PH', 'VN', 'IN', 'NP', 'BD', 'LK', 'PK', 'AE', 'SA', 'KW', 'QA', 'BH', 'OM', 'JO', 'LB', 'EG', 'MA', 'TN', 'DZ', 'NG', 'GH', 'KE', 'UG', 'TZ', 'ZA', 'BR', 'MX', 'AR', 'CL', 'CO', 'PE', 'UY', 'PY', 'BO', 'EC', 'VE'],
-        supported_currencies: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'SGD', 'MYR', 'THB', 'PHP', 'VND', 'INR', 'NPR', 'BDT', 'LKR', 'PKR', 'AED', 'SAR', 'KWD', 'QAR', 'BHD', 'OMR', 'JOD', 'LBP', 'EGP', 'MAD', 'TND', 'DZD', 'NGN', 'GHS', 'KES', 'UGX', 'TZS', 'ZAR', 'BRL', 'MXN', 'ARS', 'CLP', 'COP', 'PEN', 'UYU', 'PYG', 'BOB', 'VES'],
+        supported_countries: [
+          'US',
+          'CA',
+          'GB',
+          'AU',
+          'DE',
+          'FR',
+          'IT',
+          'ES',
+          'NL',
+          'BE',
+          'AT',
+          'CH',
+          'SE',
+          'NO',
+          'DK',
+          'FI',
+          'PL',
+          'CZ',
+          'HU',
+          'SG',
+          'MY',
+          'TH',
+          'PH',
+          'VN',
+          'IN',
+          'NP',
+          'BD',
+          'LK',
+          'PK',
+          'AE',
+          'SA',
+          'KW',
+          'QA',
+          'BH',
+          'OM',
+          'JO',
+          'LB',
+          'EG',
+          'MA',
+          'TN',
+          'DZ',
+          'NG',
+          'GH',
+          'KE',
+          'UG',
+          'TZ',
+          'ZA',
+          'BR',
+          'MX',
+          'AR',
+          'CL',
+          'CO',
+          'PE',
+          'UY',
+          'PY',
+          'BO',
+          'EC',
+          'VE',
+        ],
+        supported_currencies: [
+          'USD',
+          'EUR',
+          'GBP',
+          'CAD',
+          'AUD',
+          'JPY',
+          'SGD',
+          'MYR',
+          'THB',
+          'PHP',
+          'VND',
+          'INR',
+          'NPR',
+          'BDT',
+          'LKR',
+          'PKR',
+          'AED',
+          'SAR',
+          'KWD',
+          'QAR',
+          'BHD',
+          'OMR',
+          'JOD',
+          'LBP',
+          'EGP',
+          'MAD',
+          'TND',
+          'DZD',
+          'NGN',
+          'GHS',
+          'KES',
+          'UGX',
+          'TZS',
+          'ZAR',
+          'BRL',
+          'MXN',
+          'ARS',
+          'CLP',
+          'COP',
+          'PEN',
+          'UYU',
+          'PYG',
+          'BOB',
+          'VES',
+        ],
         fee_percent: 3.49,
         fee_fixed: 0.49,
         priority: 2,
@@ -43,33 +146,35 @@ serve(async (req) => {
           supported_funding_sources: ['paypal', 'card', 'venmo', 'applepay', 'googlepay'],
           supported_payment_methods: ['paypal', 'card'],
           merchant_account_id: '',
-          partner_attribution_id: 'iwishBag_Cart_SPB'
+          partner_attribution_id: 'iwishBag_Cart_SPB',
         },
-        test_mode: true
-      }, { 
+        test_mode: true,
+      },
+      {
         onConflict: 'code',
-        ignoreDuplicates: false 
-      })
+        ignoreDuplicates: false,
+      },
+    );
 
     if (paypalError) {
-      console.error('❌ Error adding PayPal gateway:', paypalError)
-      throw paypalError
+      console.error('❌ Error adding PayPal gateway:', paypalError);
+      throw paypalError;
     }
 
-    console.log('✅ PayPal gateway added successfully')
+    console.log('✅ PayPal gateway added successfully');
 
     // 2. Add columns using raw SQL
-    console.log('📝 Adding database columns...')
-    
+    console.log('📝 Adding database columns...');
+
     const migrations = [
       // Add preferred_payment_gateway to profiles
       `ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferred_payment_gateway TEXT`,
-      
+
       // Add gateway columns to country_settings
       `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS available_gateways TEXT[] DEFAULT ARRAY['bank_transfer']`,
       `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS default_gateway TEXT DEFAULT 'bank_transfer'`,
       `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS gateway_config JSONB DEFAULT '{}'`,
-      
+
       // Create helper functions
       `CREATE OR REPLACE FUNCTION get_recommended_gateway(
         country_code TEXT,
@@ -125,22 +230,24 @@ serve(async (req) => {
         
         RETURN gateway_code = ANY(available_gateways);
       END;
-      $$ LANGUAGE plpgsql SECURITY DEFINER`
-    ]
+      $$ LANGUAGE plpgsql SECURITY DEFINER`,
+    ];
 
     for (const sql of migrations) {
-      const { error } = await supabaseClient.rpc('exec_sql', { sql_query: sql })
+      const { error } = await supabaseClient.rpc('exec_sql', {
+        sql_query: sql,
+      });
       if (error) {
-        console.error(`❌ Error executing SQL: ${sql.substring(0, 50)}...`, error)
+        console.error(`❌ Error executing SQL: ${sql.substring(0, 50)}...`, error);
         // Continue with other migrations even if one fails
       }
     }
 
-    console.log('✅ Database columns added')
+    console.log('✅ Database columns added');
 
     // 3. Update country configurations
-    console.log('📝 Updating country configurations...')
-    
+    console.log('📝 Updating country configurations...');
+
     const countryUpdates = [
       {
         code: 'US',
@@ -149,8 +256,8 @@ serve(async (req) => {
         gateway_config: {
           paypal_priority: 1,
           stripe_priority: 2,
-          preferred_for_amount_above: 50.00
-        }
+          preferred_for_amount_above: 50.0,
+        },
       },
       {
         code: 'IN',
@@ -161,8 +268,8 @@ serve(async (req) => {
           paypal_priority: 2,
           razorpay_priority: 3,
           upi_priority: 4,
-          preferred_for_amount_above: 500.00
-        }
+          preferred_for_amount_above: 500.0,
+        },
       },
       {
         code: 'NP',
@@ -173,10 +280,10 @@ serve(async (req) => {
           esewa_priority: 2,
           khalti_priority: 3,
           fonepay_priority: 4,
-          preferred_for_amount_above: 100.00
-        }
-      }
-    ]
+          preferred_for_amount_above: 100.0,
+        },
+      },
+    ];
 
     for (const update of countryUpdates) {
       const { error } = await supabaseClient
@@ -184,32 +291,32 @@ serve(async (req) => {
         .update({
           available_gateways: update.available_gateways,
           default_gateway: update.default_gateway,
-          gateway_config: update.gateway_config
+          gateway_config: update.gateway_config,
         })
-        .eq('code', update.code)
+        .eq('code', update.code);
 
       if (error) {
-        console.error(`❌ Error updating ${update.code}:`, error)
+        console.error(`❌ Error updating ${update.code}:`, error);
       } else {
-        console.log(`✅ Updated ${update.code} configuration`)
+        console.log(`✅ Updated ${update.code} configuration`);
       }
     }
 
     // 4. Verify the setup
-    console.log('🔍 Verifying setup...')
+    console.log('🔍 Verifying setup...');
     const { data: gateways } = await supabaseClient
       .from('payment_gateways')
       .select('code, name, is_active, priority')
-      .order('priority')
-    
-    console.log('📊 Available gateways:', gateways)
+      .order('priority');
+
+    console.log('📊 Available gateways:', gateways);
 
     const { data: countries } = await supabaseClient
       .from('country_settings')
       .select('code, default_gateway, available_gateways')
-      .in('code', ['US', 'IN', 'NP'])
-    
-    console.log('📊 Country configurations:', countries)
+      .in('code', ['US', 'IN', 'NP']);
+
+    console.log('📊 Country configurations:', countries);
 
     return new Response(
       JSON.stringify({
@@ -218,28 +325,27 @@ serve(async (req) => {
         data: {
           gateways: gateways,
           countries: countries,
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       },
-    )
-
+    );
   } catch (error) {
-    console.error('❌ PayPal setup failed:', error)
-    
+    console.error('❌ PayPal setup failed:', error);
+
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message,
-        message: 'PayPal integration setup failed'
+        message: 'PayPal integration setup failed',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       },
-    )
+    );
   }
-})
+});

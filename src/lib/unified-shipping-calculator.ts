@@ -1,14 +1,14 @@
 import { supabase } from '../integrations/supabase/client';
 import { getExchangeRate, convertCurrency, getCountryCurrency } from './currencyUtils';
-import type { 
-  ShippingCost, 
-  ShippingRoute, 
+import type {
+  ShippingCost,
+  ShippingRoute,
   ShippingRouteDB,
   UnifiedQuoteInput,
   UnifiedQuoteResult,
   QuoteCalculationConfig,
   WeightTier,
-  Carrier
+  Carrier,
 } from '../types/shipping';
 import type { Tables } from '../integrations/supabase/types';
 
@@ -26,9 +26,14 @@ export async function getShippingCost(
   originCountry: string,
   destinationCountry: string,
   weight: number,
-  price: number = 0
+  price: number = 0,
 ): Promise<ShippingCost> {
-  console.log('[getShippingCost] originCountry:', originCountry, 'destinationCountry:', destinationCountry);
+  console.log(
+    '[getShippingCost] originCountry:',
+    originCountry,
+    'destinationCountry:',
+    destinationCountry,
+  );
   try {
     // First, try to get route-specific shipping cost
     const { data: route, error: routeError } = await supabase
@@ -48,10 +53,10 @@ export async function getShippingCost(
   } catch (error) {
     console.error('Error getting shipping cost:', error);
     return {
-      cost: 25.00, // Default fallback
+      cost: 25.0, // Default fallback
       carrier: 'Standard',
       deliveryDays: '7-14',
-      method: 'default'
+      method: 'default',
     };
   }
 }
@@ -62,12 +67,12 @@ export async function getShippingCost(
 function calculateRouteSpecificShipping(
   route: ShippingRouteDB,
   weight: number,
-  price: number
+  price: number,
 ): ShippingCost {
   // Convert weight to route's weight unit if needed
   let convertedWeight = weight;
   const routeWeightUnit = route.weight_unit || 'kg';
-  
+
   // If the route uses pounds but weight is in kg, convert kg to lb
   if (routeWeightUnit === 'lb') {
     convertedWeight = weight * 2.20462; // Convert kg to lb
@@ -77,15 +82,15 @@ function calculateRouteSpecificShipping(
     // Weight is already in kg (assuming input is always in kg)
     convertedWeight = weight;
   }
-  
+
   let baseCost = route.base_shipping_cost;
-  
+
   // Add weight-based cost using converted weight
   baseCost += convertedWeight * route.cost_per_kg;
-  
+
   // Add percentage-based cost
   const percentageCost = (price * route.cost_percentage) / 100;
-  
+
   // Check weight tiers for minimum cost (using converted weight)
   if (route.weight_tiers) {
     const weightTiers = route.weight_tiers as WeightTier[];
@@ -96,19 +101,19 @@ function calculateRouteSpecificShipping(
       }
     }
   }
-  
+
   const finalCost = baseCost + percentageCost;
-  
+
   // Get carrier info
   const carriers = route.carriers as Carrier[];
   const defaultCarrier = carriers?.[0] || { name: 'DHL', days: '5-10' };
-  
+
   return {
     cost: Math.round(finalCost * 100) / 100,
     carrier: defaultCarrier.name,
     deliveryDays: defaultCarrier.days,
     method: 'route-specific',
-    route: route
+    route: route,
   };
 }
 
@@ -118,7 +123,7 @@ function calculateRouteSpecificShipping(
 async function calculateFallbackShipping(
   destinationCountry: string,
   weight: number,
-  price: number
+  price: number,
 ): Promise<ShippingCost> {
   try {
     const { data: countrySettings, error } = await supabase
@@ -129,17 +134,13 @@ async function calculateFallbackShipping(
 
     if (countrySettings && !error) {
       // Use the same logic as your current manual calculator
-      const shippingCost = calculateStandardInternationalShipping(
-        weight,
-        price,
-        countrySettings
-      );
+      const shippingCost = calculateStandardInternationalShipping(weight, price, countrySettings);
 
       return {
         cost: shippingCost,
         carrier: 'Standard',
         deliveryDays: '7-14',
-        method: 'default'
+        method: 'default',
       };
     }
   } catch (error) {
@@ -148,10 +149,10 @@ async function calculateFallbackShipping(
 
   // Ultimate fallback
   return {
-    cost: 25.00,
+    cost: 25.0,
     carrier: 'Standard',
     deliveryDays: '7-14',
-    method: 'default'
+    method: 'default',
   };
 }
 
@@ -161,19 +162,19 @@ async function calculateFallbackShipping(
 function calculateStandardInternationalShipping(
   itemWeight: number,
   itemPrice: number,
-  settings: CountrySettings
+  settings: CountrySettings,
 ): number {
   let shippingCost = settings.min_shipping;
-  
+
   // Add percentage of item price
   shippingCost += (itemPrice * settings.additional_shipping) / 100;
-  
+
   // Add weight-based cost
   if (itemWeight > 1) {
     const additionalWeight = itemWeight - 1;
     shippingCost += additionalWeight * settings.additional_weight;
   }
-  
+
   return Math.round(shippingCost * 100) / 100;
 }
 
@@ -183,8 +184,14 @@ function calculateStandardInternationalShipping(
  */
 export async function calculateUnifiedQuote(
   input: UnifiedQuoteInput,
-  supabaseClient = supabase
-): Promise<UnifiedQuoteResult & { exchangeRate: number; exchangeRateSource: string; warning?: string }> {
+  supabaseClient = supabase,
+): Promise<
+  UnifiedQuoteResult & {
+    exchangeRate: number;
+    exchangeRateSource: string;
+    warning?: string;
+  }
+> {
   const {
     itemPrice,
     itemWeight,
@@ -197,17 +204,26 @@ export async function calculateUnifiedQuote(
     insuranceAmount = 0,
     discount = 0,
     customsCategory = 'general',
-    config
+    config,
   } = input;
 
-  console.log(`[calculateUnifiedQuote] ${originCountry} → ${destinationCountry}, Item: ${itemPrice}, Weight: ${itemWeight}`);
+  console.log(
+    `[calculateUnifiedQuote] ${originCountry} → ${destinationCountry}, Item: ${itemPrice}, Weight: ${itemWeight}`,
+  );
 
   // Get exchange rate for currency conversion
   const exchangeRateResult = await getExchangeRate(originCountry, destinationCountry);
-  console.log(`[calculateUnifiedQuote] Exchange rate: ${exchangeRateResult.rate} (${exchangeRateResult.source})`);
+  console.log(
+    `[calculateUnifiedQuote] Exchange rate: ${exchangeRateResult.rate} (${exchangeRateResult.source})`,
+  );
 
   // Get shipping cost (returns cost in origin currency)
-  const shippingCost = await getShippingCost(originCountry, destinationCountry, itemWeight, itemPrice);
+  const shippingCost = await getShippingCost(
+    originCountry,
+    destinationCountry,
+    itemWeight,
+    itemPrice,
+  );
 
   // Get country settings for customs and VAT calculations
   const { data: countrySettings } = await supabaseClient
@@ -227,7 +243,11 @@ export async function calculateUnifiedQuote(
       customsDuty = (itemPrice * countrySettings.customs_percent) / 100;
     } else {
       // Convert item price to destination currency for customs calculation
-      const convertedItemPrice = convertCurrency(itemPrice, exchangeRateResult.rate, destinationCurrency);
+      const convertedItemPrice = convertCurrency(
+        itemPrice,
+        exchangeRateResult.rate,
+        destinationCurrency,
+      );
       customsDuty = (convertedItemPrice * countrySettings.customs_percent) / 100;
       // Convert customs duty back to origin currency for total calculation
       customsDuty = convertCurrency(customsDuty, 1 / exchangeRateResult.rate, originCurrency);
@@ -241,11 +261,26 @@ export async function calculateUnifiedQuote(
       vat = ((itemPrice + shippingCost.cost + customsDuty) * countrySettings.vat_percent) / 100;
     } else {
       // Convert all amounts to destination currency for VAT calculation
-      const convertedItemPrice = convertCurrency(itemPrice, exchangeRateResult.rate, destinationCurrency);
-      const convertedShipping = convertCurrency(shippingCost.cost, exchangeRateResult.rate, destinationCurrency);
-      const convertedCustoms = convertCurrency(customsDuty, exchangeRateResult.rate, destinationCurrency);
-      
-      vat = ((convertedItemPrice + convertedShipping + convertedCustoms) * countrySettings.vat_percent) / 100;
+      const convertedItemPrice = convertCurrency(
+        itemPrice,
+        exchangeRateResult.rate,
+        destinationCurrency,
+      );
+      const convertedShipping = convertCurrency(
+        shippingCost.cost,
+        exchangeRateResult.rate,
+        destinationCurrency,
+      );
+      const convertedCustoms = convertCurrency(
+        customsDuty,
+        exchangeRateResult.rate,
+        destinationCurrency,
+      );
+
+      vat =
+        ((convertedItemPrice + convertedShipping + convertedCustoms) *
+          countrySettings.vat_percent) /
+        100;
       // Convert VAT back to origin currency for total calculation
       vat = convertCurrency(vat, 1 / exchangeRateResult.rate, originCurrency);
     }
@@ -270,18 +305,18 @@ export async function calculateUnifiedQuote(
       insuranceAmount,
       customsDuty: Math.round(customsDuty * 100) / 100,
       vat: Math.round(vat * 100) / 100,
-      discount
+      discount,
     },
     shippingCost,
     settings: {
       usedRoute: shippingCost.route,
       usedSettings: shippingCost.method === 'route-specific' ? 'route-specific' : 'default',
       originCountry,
-      destinationCountry
+      destinationCountry,
     },
     exchangeRate: exchangeRateResult.rate,
     exchangeRateSource: exchangeRateResult.source,
-    warning: exchangeRateResult.warning
+    warning: exchangeRateResult.warning,
   };
 }
 
@@ -311,7 +346,9 @@ export async function getShippingRoutes(): Promise<ShippingRouteDB[]> {
 /**
  * Create or update a shipping route
  */
-export async function upsertShippingRoute(routeData: Partial<ShippingRouteDB>): Promise<{ success: boolean; error?: string }> {
+export async function upsertShippingRoute(
+  routeData: Partial<ShippingRouteDB>,
+): Promise<{ success: boolean; error?: string }> {
   try {
     // Map camelCase form fields to snake_case database fields
     const dbData = {
@@ -332,13 +369,11 @@ export async function upsertShippingRoute(routeData: Partial<ShippingRouteDB>): 
       max_weight: routeData.maxWeight,
       restricted_items: routeData.restrictedItems,
       requires_documentation: routeData.requiresDocumentation,
-      is_active: routeData.isActive
+      is_active: routeData.isActive,
     };
 
     const onConflict: string = routeData.id ? 'id' : 'origin_country,destination_country';
-    const { error } = await supabase
-      .from('shipping_routes')
-      .upsert(dbData, { onConflict });
+    const { error } = await supabase.from('shipping_routes').upsert(dbData, { onConflict });
 
     if (error) {
       console.error('Error upserting shipping route:', error);
@@ -355,12 +390,11 @@ export async function upsertShippingRoute(routeData: Partial<ShippingRouteDB>): 
 /**
  * Delete a shipping route
  */
-export async function deleteShippingRoute(id: number): Promise<{ success: boolean; error?: string }> {
+export async function deleteShippingRoute(
+  id: number,
+): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabase
-      .from('shipping_routes')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('shipping_routes').delete().eq('id', id);
 
     if (error) {
       console.error('Error deleting shipping route:', error);
@@ -372,4 +406,4 @@ export async function deleteShippingRoute(id: number): Promise<{ success: boolea
     console.error('Error deleting shipping route:', error);
     return { success: false, error: 'Unknown error occurred' };
   }
-} 
+}

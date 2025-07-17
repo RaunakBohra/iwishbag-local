@@ -3,12 +3,23 @@ export type PaymentGateway = string; // Dynamic type from database gateway codes
 
 // Fallback gateway codes for TypeScript and development
 export const FALLBACK_GATEWAY_CODES = [
-  'payu', 'esewa', 'khalti', 'fonepay', 'airwallex', 'stripe',
-  'bank_transfer', 'cod', 'razorpay', 'paypal', 'upi', 'paytm',
-  'grabpay', 'alipay'
+  'payu',
+  'esewa',
+  'khalti',
+  'fonepay',
+  'airwallex',
+  'stripe',
+  'bank_transfer',
+  'cod',
+  'razorpay',
+  'paypal',
+  'upi',
+  'paytm',
+  'grabpay',
+  'alipay',
 ] as const;
 
-export type FallbackPaymentGateway = typeof FALLBACK_GATEWAY_CODES[number];
+export type FallbackPaymentGateway = (typeof FALLBACK_GATEWAY_CODES)[number];
 
 // Payment Gateway Configuration Types
 export interface PaymentGatewayCredentials {
@@ -62,7 +73,7 @@ export interface PaymentMetadata {
   webhook_url?: string;
 }
 
-export type PaymentStatus = 
+export type PaymentStatus =
   | 'pending'
   | 'processing'
   | 'completed'
@@ -71,16 +82,9 @@ export type PaymentStatus =
   | 'refunded'
   | 'partially_refunded';
 
-export type RefundType = 
-  | 'original_method'
-  | 'store_credit'
-  | 'manual';
+export type RefundType = 'original_method' | 'store_credit' | 'manual';
 
-export type RefundStatus = 
-  | 'pending'
-  | 'processing'
-  | 'completed'
-  | 'failed';
+export type RefundStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 // Payment Gateway Configuration
 export interface PaymentGatewayConfig {
@@ -256,13 +260,16 @@ export interface PaymentAnalytics {
   currency: string;
   success_rate: number;
   average_amount: number;
-  gateway_breakdown: Record<PaymentGateway, {
-    count: number;
-    amount: number;
-    success_rate: number;
-  }>;
+  gateway_breakdown: Record<
+    PaymentGateway,
+    {
+      count: number;
+      amount: number;
+      success_rate: number;
+    }
+  >;
   time_period: {
     start: string;
     end: string;
   };
-} 
+}

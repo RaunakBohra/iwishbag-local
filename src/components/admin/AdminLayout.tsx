@@ -1,9 +1,9 @@
-import { Outlet } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AdminSidebar } from "./AdminSidebar";
-import { AdminBottomNav } from "./AdminBottomNav";
-import { ErrorBoundary, AdminErrorFallback } from "@/components/ui/ErrorBoundary";
-import Header from "@/components/layout/Header";
+import { Outlet } from 'react-router-dom';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { AdminSidebar } from './AdminSidebar';
+import { AdminBottomNav } from './AdminBottomNav';
+import { ErrorBoundary, AdminErrorFallback } from '@/components/ui/ErrorBoundary';
+import Header from '@/components/layout/Header';
 
 export const AdminLayout = () => {
   return (

@@ -3,17 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  AlertCircle, 
-  RefreshCw, 
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  RefreshCw,
   ExternalLink,
   IndianRupee,
   Smartphone,
   CreditCard,
-  Building
+  Building,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -40,7 +40,7 @@ const PAYMENT_STATUSES = {
     bgColor: 'bg-yellow-50',
     borderColor: 'border-yellow-200',
     message: 'Payment initiated',
-    description: 'Your payment request has been sent to PayU'
+    description: 'Your payment request has been sent to PayU',
   },
   processing: {
     icon: RefreshCw,
@@ -48,7 +48,7 @@ const PAYMENT_STATUSES = {
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-200',
     message: 'Processing payment',
-    description: 'PayU is processing your payment'
+    description: 'PayU is processing your payment',
   },
   success: {
     icon: CheckCircle,
@@ -56,7 +56,7 @@ const PAYMENT_STATUSES = {
     bgColor: 'bg-green-50',
     borderColor: 'border-green-200',
     message: 'Payment successful',
-    description: 'Your payment has been completed successfully'
+    description: 'Your payment has been completed successfully',
   },
   failed: {
     icon: XCircle,
@@ -64,7 +64,7 @@ const PAYMENT_STATUSES = {
     bgColor: 'bg-red-50',
     borderColor: 'border-red-200',
     message: 'Payment failed',
-    description: 'Your payment could not be processed'
+    description: 'Your payment could not be processed',
   },
   cancelled: {
     icon: XCircle,
@@ -72,8 +72,8 @@ const PAYMENT_STATUSES = {
     bgColor: 'bg-gray-50',
     borderColor: 'border-gray-200',
     message: 'Payment cancelled',
-    description: 'You cancelled the payment'
-  }
+    description: 'You cancelled the payment',
+  },
 };
 
 export const PayUStatusTracker: React.FC<PayUStatusTrackerProps> = ({
@@ -82,13 +82,13 @@ export const PayUStatusTracker: React.FC<PayUStatusTrackerProps> = ({
   amountInINR,
   exchangeRate,
   onStatusChange,
-  onComplete
+  onComplete,
 }) => {
   const { toast } = useToast();
   const [currentStatus, setCurrentStatus] = useState<PaymentStatus>({
     status: 'pending',
     message: 'Payment initiated',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
   const [isPolling, setIsPolling] = useState(false);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
@@ -98,7 +98,7 @@ export const PayUStatusTracker: React.FC<PayUStatusTrackerProps> = ({
     const statusProgression = [
       { status: 'pending', delay: 0 },
       { status: 'processing', delay: 2000 },
-      { status: 'success', delay: 5000 }
+      { status: 'success', delay: 5000 },
     ];
 
     statusProgression.forEach(({ status, delay }) => {
@@ -106,12 +106,12 @@ export const PayUStatusTracker: React.FC<PayUStatusTrackerProps> = ({
         const newStatus: PaymentStatus = {
           status: status as 'pending' | 'processing' | 'success' | 'failed' | 'cancelled',
           message: PAYMENT_STATUSES[status as keyof typeof PAYMENT_STATUSES].message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
-        
+
         setCurrentStatus(newStatus);
         onStatusChange?.(status);
-        
+
         if (status === 'success') {
           onComplete?.(true);
           stopPolling();
@@ -142,8 +142,8 @@ export const PayUStatusTracker: React.FC<PayUStatusTrackerProps> = ({
 
   const handleRetry = () => {
     toast({
-      title: "Retrying payment",
-      description: "Redirecting to PayU payment page...",
+      title: 'Retrying payment',
+      description: 'Redirecting to PayU payment page...',
     });
     // In a real implementation, you would redirect to PayU again
   };
@@ -152,7 +152,7 @@ export const PayUStatusTracker: React.FC<PayUStatusTrackerProps> = ({
     setCurrentStatus({
       status: 'cancelled',
       message: 'Payment cancelled',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
     onComplete?.(false);
     stopPolling();
@@ -163,12 +163,18 @@ export const PayUStatusTracker: React.FC<PayUStatusTrackerProps> = ({
 
   const getProgressValue = () => {
     switch (currentStatus.status) {
-      case 'pending': return 25;
-      case 'processing': return 75;
-      case 'success': return 100;
-      case 'failed': return 100;
-      case 'cancelled': return 100;
-      default: return 0;
+      case 'pending':
+        return 25;
+      case 'processing':
+        return 75;
+      case 'success':
+        return 100;
+      case 'failed':
+        return 100;
+      case 'cancelled':
+        return 100;
+      default:
+        return 0;
     }
   };
 
@@ -182,16 +188,16 @@ export const PayUStatusTracker: React.FC<PayUStatusTrackerProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Status Display */}
-        <div className={`p-4 rounded-lg border ${currentStatusConfig.bgColor} ${currentStatusConfig.borderColor}`}>
+        <div
+          className={`p-4 rounded-lg border ${currentStatusConfig.bgColor} ${currentStatusConfig.borderColor}`}
+        >
           <div className="flex items-center gap-3">
             <StatusIcon className={`h-6 w-6 ${currentStatusConfig.color}`} />
             <div className="flex-1">
               <h3 className={`font-semibold ${currentStatusConfig.color}`}>
                 {currentStatusConfig.message}
               </h3>
-              <p className="text-sm text-gray-600">
-                {currentStatusConfig.description}
-              </p>
+              <p className="text-sm text-gray-600">{currentStatusConfig.description}</p>
             </div>
           </div>
         </div>
@@ -248,20 +254,10 @@ export const PayUStatusTracker: React.FC<PayUStatusTrackerProps> = ({
         <div className="flex gap-2">
           {currentStatus.status === 'pending' && (
             <>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleCancel}
-                className="flex-1"
-              >
+              <Button variant="outline" size="sm" onClick={handleCancel} className="flex-1">
                 Cancel Payment
               </Button>
-              <Button 
-                size="sm" 
-                onClick={startPolling}
-                disabled={isPolling}
-                className="flex-1"
-              >
+              <Button size="sm" onClick={startPolling} disabled={isPolling} className="flex-1">
                 {isPolling ? (
                   <>
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -278,21 +274,18 @@ export const PayUStatusTracker: React.FC<PayUStatusTrackerProps> = ({
           )}
 
           {currentStatus.status === 'failed' && (
-            <Button 
-              onClick={handleRetry}
-              className="flex-1"
-            >
+            <Button onClick={handleRetry} className="flex-1">
               <RefreshCw className="h-4 w-4 mr-2" />
               Try Again
             </Button>
           )}
 
           {currentStatus.status === 'success' && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="flex-1"
-              onClick={() => window.location.href = '/orders'}
+              onClick={() => (window.location.href = '/orders')}
             >
               <ExternalLink className="h-4 w-4 mr-2" />
               View Orders
@@ -307,4 +300,4 @@ export const PayUStatusTracker: React.FC<PayUStatusTrackerProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

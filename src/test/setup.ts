@@ -13,7 +13,7 @@ afterEach(() => {
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -66,28 +66,28 @@ const createMockSupabaseQuery = () => ({
       order: vi.fn(() => ({
         limit: vi.fn(() => ({
           maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-          single: vi.fn(() => Promise.resolve({ data: null, error: null }))
+          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
         })),
         maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        single: vi.fn(() => Promise.resolve({ data: null, error: null }))
+        single: vi.fn(() => Promise.resolve({ data: null, error: null })),
       })),
       maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-      single: vi.fn(() => Promise.resolve({ data: null, error: null }))
+      single: vi.fn(() => Promise.resolve({ data: null, error: null })),
     })),
     maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
-    single: vi.fn(() => Promise.resolve({ data: null, error: null }))
+    single: vi.fn(() => Promise.resolve({ data: null, error: null })),
   })),
   insert: vi.fn(() => ({
-    select: vi.fn(() => Promise.resolve({ data: null, error: null }))
+    select: vi.fn(() => Promise.resolve({ data: null, error: null })),
   })),
   update: vi.fn(() => ({
     eq: vi.fn(() => ({
-      select: vi.fn(() => Promise.resolve({ data: null, error: null }))
-    }))
+      select: vi.fn(() => Promise.resolve({ data: null, error: null })),
+    })),
   })),
   delete: vi.fn(() => ({
-    eq: vi.fn(() => Promise.resolve({ data: null, error: null }))
-  }))
+    eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
+  })),
 });
 
 // Mock Supabase client with complete API surface - allows test-level overrides
@@ -102,35 +102,37 @@ vi.mock('@/integrations/supabase/client', () => ({
       resetPasswordForEmail: vi.fn(() => Promise.resolve({ data: null, error: null })),
       updateUser: vi.fn(() => Promise.resolve({ data: null, error: null })),
       onAuthStateChange: vi.fn(() => ({
-        data: { subscription: { unsubscribe: vi.fn() } }
-      }))
+        data: { subscription: { unsubscribe: vi.fn() } },
+      })),
     },
     storage: {
       from: vi.fn(() => ({
         upload: vi.fn(() => Promise.resolve({ data: null, error: null })),
         download: vi.fn(() => Promise.resolve({ data: null, error: null })),
         remove: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'test-url' } }))
-      }))
+        getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'test-url' } })),
+      })),
     },
     functions: {
-      invoke: vi.fn(() => Promise.resolve({ data: null, error: null }))
+      invoke: vi.fn(() => Promise.resolve({ data: null, error: null })),
     },
     channel: vi.fn(() => ({
       on: vi.fn().mockReturnThis(),
       subscribe: vi.fn(() => Promise.resolve('OK')),
-      unsubscribe: vi.fn(() => Promise.resolve('OK'))
-    }))
+      unsubscribe: vi.fn(() => Promise.resolve('OK')),
+    })),
   },
 }));
 
 // Mock Stripe
 vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({
-    elements: vi.fn(),
-    confirmCardPayment: vi.fn(),
-    createPaymentMethod: vi.fn(),
-  })),
+  loadStripe: vi.fn(() =>
+    Promise.resolve({
+      elements: vi.fn(),
+      confirmCardPayment: vi.fn(),
+      createPaymentMethod: vi.fn(),
+    }),
+  ),
 }));
 
 vi.mock('@stripe/react-stripe-js', () => ({

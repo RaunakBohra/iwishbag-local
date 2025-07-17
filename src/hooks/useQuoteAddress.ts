@@ -2,18 +2,14 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  ShippingAddress, 
-  AddressPermissionCheck, 
-  AddressFormData 
-} from '@/types/address';
-import { 
-  updateQuoteAddress, 
-  checkAddressPermissions, 
+import { ShippingAddress, AddressPermissionCheck, AddressFormData } from '@/types/address';
+import {
+  updateQuoteAddress,
+  checkAddressPermissions,
   createInitialAddress,
   lockAddressAfterPayment,
   unlockAddress,
-  getAddressHistory
+  getAddressHistory,
 } from '@/lib/addressUpdates';
 import { validateAddress, normalizeAddress } from '@/lib/addressValidation';
 import { useToast } from '@/components/ui/use-toast';
@@ -30,12 +26,17 @@ export function useQuoteAddress({ quoteId, autoRefresh = true }: UseQuoteAddress
   const [isEditing, setIsEditing] = useState(false);
 
   // Fetch quote with address data
-  const { data: quote, isLoading: quoteLoading, error: quoteError } = useQuery({
+  const {
+    data: quote,
+    isLoading: quoteLoading,
+    error: quoteError,
+  } = useQuery({
     queryKey: ['quote-address', quoteId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('quotes')
-        .select(`
+        .select(
+          `
           id,
           shipping_address,
           address_locked,
@@ -44,7 +45,8 @@ export function useQuoteAddress({ quoteId, autoRefresh = true }: UseQuoteAddress
           status,
           user_id,
           destination_country
-        `)
+        `,
+        )
         .eq('id', quoteId)
         .single();
 
@@ -85,25 +87,27 @@ export function useQuoteAddress({ quoteId, autoRefresh = true }: UseQuoteAddress
     onSuccess: (result) => {
       if (result.success) {
         toast({
-          title: "Address Updated",
-          description: "Your shipping address has been updated successfully.",
+          title: 'Address Updated',
+          description: 'Your shipping address has been updated successfully.',
         });
         queryClient.invalidateQueries({ queryKey: ['quote-address', quoteId] });
-        queryClient.invalidateQueries({ queryKey: ['quote-address-history', quoteId] });
+        queryClient.invalidateQueries({
+          queryKey: ['quote-address-history', quoteId],
+        });
         setIsEditing(false);
       } else {
         toast({
-          title: "Update Failed",
-          description: result.error || "Failed to update address",
-          variant: "destructive",
+          title: 'Update Failed',
+          description: result.error || 'Failed to update address',
+          variant: 'destructive',
         });
       }
     },
     onError: (error: Error) => {
       toast({
-        title: "Update Failed",
+        title: 'Update Failed',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
@@ -117,25 +121,27 @@ export function useQuoteAddress({ quoteId, autoRefresh = true }: UseQuoteAddress
     onSuccess: (result) => {
       if (result.success) {
         toast({
-          title: "Address Added",
-          description: "Shipping address has been added to your quote.",
+          title: 'Address Added',
+          description: 'Shipping address has been added to your quote.',
         });
         queryClient.invalidateQueries({ queryKey: ['quote-address', quoteId] });
-        queryClient.invalidateQueries({ queryKey: ['quote-address-history', quoteId] });
+        queryClient.invalidateQueries({
+          queryKey: ['quote-address-history', quoteId],
+        });
         setIsEditing(false);
       } else {
         toast({
-          title: "Failed to Add Address",
-          description: result.error || "Failed to add address",
-          variant: "destructive",
+          title: 'Failed to Add Address',
+          description: result.error || 'Failed to add address',
+          variant: 'destructive',
         });
       }
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to Add Address",
+        title: 'Failed to Add Address',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
@@ -148,23 +154,23 @@ export function useQuoteAddress({ quoteId, autoRefresh = true }: UseQuoteAddress
     onSuccess: (result) => {
       if (result.success) {
         toast({
-          title: "Address Locked",
-          description: "Address has been locked after payment completion.",
+          title: 'Address Locked',
+          description: 'Address has been locked after payment completion.',
         });
         queryClient.invalidateQueries({ queryKey: ['quote-address', quoteId] });
       } else {
         toast({
-          title: "Failed to Lock Address",
-          description: result.error || "Failed to lock address",
-          variant: "destructive",
+          title: 'Failed to Lock Address',
+          description: result.error || 'Failed to lock address',
+          variant: 'destructive',
         });
       }
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to Lock Address",
+        title: 'Failed to Lock Address',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
@@ -178,24 +184,26 @@ export function useQuoteAddress({ quoteId, autoRefresh = true }: UseQuoteAddress
     onSuccess: (result) => {
       if (result.success) {
         toast({
-          title: "Address Unlocked",
-          description: "Address has been unlocked and can now be modified.",
+          title: 'Address Unlocked',
+          description: 'Address has been unlocked and can now be modified.',
         });
         queryClient.invalidateQueries({ queryKey: ['quote-address', quoteId] });
-        queryClient.invalidateQueries({ queryKey: ['quote-address-history', quoteId] });
+        queryClient.invalidateQueries({
+          queryKey: ['quote-address-history', quoteId],
+        });
       } else {
         toast({
-          title: "Failed to Unlock Address",
-          description: result.error || "Failed to unlock address",
-          variant: "destructive",
+          title: 'Failed to Unlock Address',
+          description: result.error || 'Failed to unlock address',
+          variant: 'destructive',
         });
       }
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to Unlock Address",
+        title: 'Failed to Unlock Address',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
@@ -244,7 +252,7 @@ export function useQuoteAddress({ quoteId, autoRefresh = true }: UseQuoteAddress
     isAddressLocked,
     canEdit,
     canChangeCountry,
-    
+
     // Loading states
     quoteLoading,
     permissionsLoading,
@@ -253,10 +261,10 @@ export function useQuoteAddress({ quoteId, autoRefresh = true }: UseQuoteAddress
     isCreating: createAddressMutation.isPending,
     isLocking: lockAddressMutation.isPending,
     isUnlocking: unlockAddressMutation.isPending,
-    
+
     // Error states
     quoteError,
-    
+
     // Actions
     updateAddress: updateAddressMutation.mutate,
     createAddress: createAddressMutation.mutate,
@@ -264,15 +272,17 @@ export function useQuoteAddress({ quoteId, autoRefresh = true }: UseQuoteAddress
     unlockAddress: unlockAddressMutation.mutate,
     validateAddress: validateAddressData,
     formatAddress,
-    
+
     // UI state
     isEditing,
     setIsEditing,
-    
+
     // Utilities
     refresh: () => {
       queryClient.invalidateQueries({ queryKey: ['quote-address', quoteId] });
-      queryClient.invalidateQueries({ queryKey: ['quote-address-history', quoteId] });
+      queryClient.invalidateQueries({
+        queryKey: ['quote-address-history', quoteId],
+      });
     },
   };
-} 
+}

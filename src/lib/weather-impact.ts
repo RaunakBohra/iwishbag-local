@@ -37,7 +37,7 @@ const mockWeatherAlerts: WeatherAlert[] = [
     start_date: new Date('2025-06-25'),
     end_date: new Date('2025-06-28'),
     estimated_delay_days: 3,
-    affected_routes: ['US-IN', 'UK-IN', 'CA-IN']
+    affected_routes: ['US-IN', 'UK-IN', 'CA-IN'],
   },
   {
     id: 'alert_002',
@@ -48,7 +48,7 @@ const mockWeatherAlerts: WeatherAlert[] = [
     start_date: new Date('2025-06-26'),
     end_date: new Date('2025-06-30'),
     estimated_delay_days: 1,
-    affected_routes: ['US-AE', 'UK-AE', 'IN-AE']
+    affected_routes: ['US-AE', 'UK-AE', 'IN-AE'],
   },
   {
     id: 'alert_003',
@@ -59,22 +59,21 @@ const mockWeatherAlerts: WeatherAlert[] = [
     start_date: new Date('2025-06-27'),
     end_date: new Date('2025-06-29'),
     estimated_delay_days: 1,
-    affected_routes: ['US-UK', 'IN-UK', 'AE-UK']
-  }
+    affected_routes: ['US-UK', 'IN-UK', 'AE-UK'],
+  },
 ];
 
 // Get weather alerts for a specific route
 export function getWeatherAlertsForRoute(origin: string, destination: string): WeatherAlert[] {
   const routeKey = `${origin}-${destination}`;
-  return mockWeatherAlerts.filter(alert => 
-    alert.affected_routes.includes(routeKey) &&
-    alert.end_date >= new Date()
+  return mockWeatherAlerts.filter(
+    (alert) => alert.affected_routes.includes(routeKey) && alert.end_date >= new Date(),
   );
 }
 
 // Get all active weather alerts
 export function getActiveWeatherAlerts(): WeatherAlert[] {
-  return mockWeatherAlerts.filter(alert => alert.end_date >= new Date());
+  return mockWeatherAlerts.filter((alert) => alert.end_date >= new Date());
 }
 
 // Calculate weather impact for delivery routes
@@ -83,47 +82,47 @@ export function calculateWeatherImpact(routes: DeliveryRoute[]): WeatherImpact {
   const affectedRoutes: string[] = [];
   let totalDelay = 0;
 
-  routes.forEach(route => {
+  routes.forEach((route) => {
     const routeAlerts = getWeatherAlertsForRoute(route.origin, route.destination);
     if (routeAlerts.length > 0) {
       affectedRoutes.push(route.route_id);
-      const maxDelay = Math.max(...routeAlerts.map(alert => alert.estimated_delay_days));
+      const maxDelay = Math.max(...routeAlerts.map((alert) => alert.estimated_delay_days));
       totalDelay += maxDelay;
     }
   });
 
-  const highSeverityAlerts = allAlerts.filter(alert => 
-    alert.severity === 'high' || alert.severity === 'extreme'
+  const highSeverityAlerts = allAlerts.filter(
+    (alert) => alert.severity === 'high' || alert.severity === 'extreme',
   ).length;
 
   return {
     totalAlerts: allAlerts.length,
     highSeverityAlerts,
     affectedRoutes,
-    totalEstimatedDelay: totalDelay
+    totalEstimatedDelay: totalDelay,
   };
 }
 
 // Get weather alerts by severity
 export function getWeatherAlertsBySeverity(severity: WeatherAlert['severity']): WeatherAlert[] {
-  return getActiveWeatherAlerts().filter(alert => alert.severity === severity);
+  return getActiveWeatherAlerts().filter((alert) => alert.severity === severity);
 }
 
 // Get weather alerts by type
 export function getWeatherAlertsByType(type: WeatherAlert['type']): WeatherAlert[] {
-  return getActiveWeatherAlerts().filter(alert => alert.type === type);
+  return getActiveWeatherAlerts().filter((alert) => alert.type === type);
 }
 
 // Calculate adjusted delivery time due to weather
 export function calculateWeatherAdjustedDeliveryTime(
   baseDeliveryDays: number,
   origin: string,
-  destination: string
+  destination: string,
 ): number {
   const alerts = getWeatherAlertsForRoute(origin, destination);
   if (alerts.length === 0) return baseDeliveryDays;
 
-  const maxDelay = Math.max(...alerts.map(alert => alert.estimated_delay_days));
+  const maxDelay = Math.max(...alerts.map((alert) => alert.estimated_delay_days));
   return baseDeliveryDays + maxDelay;
 }
 
@@ -133,7 +132,7 @@ export function generateWeatherAlertMessage(alert: WeatherAlert): string {
     low: '🟡',
     medium: '🟠',
     high: '🔴',
-    extreme: '🟣'
+    extreme: '🟣',
   };
 
   const typeEmoji = {
@@ -143,7 +142,7 @@ export function generateWeatherAlertMessage(alert: WeatherAlert): string {
     extreme_cold: '❄️',
     high_winds: '💨',
     snow: '🌨️',
-    ice: '🧊'
+    ice: '🧊',
   };
 
   return `${severityEmoji[alert.severity]} ${typeEmoji[alert.type]} **${alert.severity.toUpperCase()} ${alert.type.toUpperCase()} ALERT**
@@ -164,18 +163,18 @@ export function getWeatherImpactSummary(): {
   totalEstimatedDelay: number;
 } {
   const alerts = getActiveWeatherAlerts();
-  const highSeverityAlerts = alerts.filter(alert => 
-    alert.severity === 'high' || alert.severity === 'extreme'
+  const highSeverityAlerts = alerts.filter(
+    (alert) => alert.severity === 'high' || alert.severity === 'extreme',
   ).length;
 
-  const affectedRoutes = [...new Set(alerts.flatMap(alert => alert.affected_routes))];
+  const affectedRoutes = [...new Set(alerts.flatMap((alert) => alert.affected_routes))];
   const totalDelay = alerts.reduce((sum, alert) => sum + alert.estimated_delay_days, 0);
 
   return {
     totalAlerts: alerts.length,
     highSeverityAlerts,
     affectedRoutes,
-    totalEstimatedDelay: totalDelay
+    totalEstimatedDelay: totalDelay,
   };
 }
 
@@ -189,8 +188,8 @@ export function hasWeatherDelays(origin: string, destination: string): boolean {
 export function getWeatherDelay(origin: string, destination: string): number {
   const alerts = getWeatherAlertsForRoute(origin, destination);
   if (alerts.length === 0) return 0;
-  
-  return Math.max(...alerts.map(alert => alert.estimated_delay_days));
+
+  return Math.max(...alerts.map((alert) => alert.estimated_delay_days));
 }
 
 // Format weather impact for display
@@ -200,4 +199,4 @@ export function formatWeatherImpact(impact: WeatherImpact): string {
   }
 
   return `${impact.totalAlerts} active weather alert${impact.totalAlerts > 1 ? 's' : ''} affecting ${impact.affectedRoutes.length} route${impact.affectedRoutes.length > 1 ? 's' : ''}. Estimated total delay: +${impact.totalEstimatedDelay} days`;
-} 
+}

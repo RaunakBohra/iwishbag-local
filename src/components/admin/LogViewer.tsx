@@ -4,28 +4,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Download,
   RefreshCw,
   Search,
-  Filter,
-  Clock,
   AlertCircle,
   Info,
   AlertTriangle,
   XCircle,
   Trash2,
-  FileText
+  FileText,
 } from 'lucide-react';
-import { 
-  logger, 
-  LogLevel, 
-  LogCategory,
-  LoggingService
-} from '@/services/LoggingService';
+import { logger, LogLevel, LogCategory } from '@/services/LoggingService';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -35,14 +32,14 @@ interface LogViewerProps {
 }
 
 export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerProps) {
-  const [logs, setLogs] = useState<any[]>([]);
-  const [filteredLogs, setFilteredLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<unknown[]>([]);
+  const [filteredLogs, setFilteredLogs] = useState<unknown[]>([]);
   const [selectedLevel, setSelectedLevel] = useState<LogLevel | 'all'>('all');
   const [selectedCategory, setSelectedCategory] = useState<LogCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState({
     start: '',
-    end: ''
+    end: '',
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDetails, setShowDetails] = useState<string | null>(null);
@@ -65,33 +62,34 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
 
     // Filter by level
     if (selectedLevel !== 'all') {
-      filtered = filtered.filter(log => log.level >= selectedLevel);
+      filtered = filtered.filter((log) => log.level >= selectedLevel);
     }
 
     // Filter by category
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(log => log.category === selectedCategory);
+      filtered = filtered.filter((log) => log.category === selectedCategory);
     }
 
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(log => 
-        log.message.toLowerCase().includes(query) ||
-        JSON.stringify(log.context).toLowerCase().includes(query) ||
-        (log.error?.message || '').toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (log) =>
+          log.message.toLowerCase().includes(query) ||
+          JSON.stringify(log.context).toLowerCase().includes(query) ||
+          (log.error?.message || '').toLowerCase().includes(query),
       );
     }
 
     // Filter by date range
     if (dateRange.start) {
       const startDate = new Date(dateRange.start);
-      filtered = filtered.filter(log => new Date(log.timestamp) >= startDate);
+      filtered = filtered.filter((log) => new Date(log.timestamp) >= startDate);
     }
     if (dateRange.end) {
       const endDate = new Date(dateRange.end);
       endDate.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(log => new Date(log.timestamp) <= endDate);
+      filtered = filtered.filter((log) => new Date(log.timestamp) <= endDate);
     }
 
     setFilteredLogs(filtered);
@@ -100,26 +98,46 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
   // Initial fetch
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-filter when criteria change
   useEffect(() => {
     filterLogs();
-  }, [selectedLevel, selectedCategory, searchQuery, dateRange]);
+  }, [selectedLevel, selectedCategory, searchQuery, dateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get log level icon and color
   const getLogLevelInfo = (level: LogLevel) => {
     switch (level) {
       case LogLevel.DEBUG:
-        return { icon: Info, color: 'text-gray-500', bgColor: 'bg-gray-50 dark:bg-gray-900' };
+        return {
+          icon: Info,
+          color: 'text-gray-500',
+          bgColor: 'bg-gray-50 dark:bg-gray-900',
+        };
       case LogLevel.INFO:
-        return { icon: Info, color: 'text-blue-500', bgColor: 'bg-blue-50 dark:bg-blue-900/20' };
+        return {
+          icon: Info,
+          color: 'text-blue-500',
+          bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+        };
       case LogLevel.WARN:
-        return { icon: AlertTriangle, color: 'text-yellow-500', bgColor: 'bg-yellow-50 dark:bg-yellow-900/20' };
+        return {
+          icon: AlertTriangle,
+          color: 'text-yellow-500',
+          bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
+        };
       case LogLevel.ERROR:
-        return { icon: XCircle, color: 'text-red-500', bgColor: 'bg-red-50 dark:bg-red-900/20' };
+        return {
+          icon: XCircle,
+          color: 'text-red-500',
+          bgColor: 'bg-red-50 dark:bg-red-900/20',
+        };
       case LogLevel.CRITICAL:
-        return { icon: AlertCircle, color: 'text-red-700', bgColor: 'bg-red-100 dark:bg-red-900/30' };
+        return {
+          icon: AlertCircle,
+          color: 'text-red-700',
+          bgColor: 'bg-red-100 dark:bg-red-900/30',
+        };
     }
   };
 
@@ -129,7 +147,7 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
       [LogLevel.INFO]: 'INFO',
       [LogLevel.WARN]: 'WARN',
       [LogLevel.ERROR]: 'ERROR',
-      [LogLevel.CRITICAL]: 'CRITICAL'
+      [LogLevel.CRITICAL]: 'CRITICAL',
     };
     return names[level];
   };
@@ -140,7 +158,7 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
       level: selectedLevel !== 'all' ? selectedLevel : undefined,
       category: selectedCategory !== 'all' ? selectedCategory : undefined,
       startTime: dateRange.start ? new Date(dateRange.start) : undefined,
-      endTime: dateRange.end ? new Date(dateRange.end) : undefined
+      endTime: dateRange.end ? new Date(dateRange.end) : undefined,
     });
   };
 
@@ -151,9 +169,7 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
     }
   };
 
-  const containerClass = embedded 
-    ? 'h-full' 
-    : 'space-y-6';
+  const containerClass = embedded ? 'h-full' : 'space-y-6';
 
   return (
     <div className={containerClass}>
@@ -161,13 +177,11 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">System Logs</h2>
-            <p className="text-muted-foreground">
-              View and analyze application logs for debugging
-            </p>
+            <p className="text-muted-foreground">View and analyze application logs for debugging</p>
           </div>
           <div className="flex gap-2">
             <Button onClick={fetchLogs} disabled={isRefreshing} variant="outline">
-              <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
+              <RefreshCw className={cn('h-4 w-4 mr-2', isRefreshing && 'animate-spin')} />
               Refresh
             </Button>
             <Button onClick={handleExport} variant="outline">
@@ -197,7 +211,10 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
             <div className="grid gap-4 md:grid-cols-4">
               <div>
                 <Label htmlFor="level">Log Level</Label>
-                <Select value={selectedLevel} onValueChange={(value: any) => setSelectedLevel(value)}>
+                <Select
+                  value={selectedLevel}
+                  onValueChange={(value: string) => setSelectedLevel(value)}
+                >
                   <SelectTrigger id="level">
                     <SelectValue />
                   </SelectTrigger>
@@ -214,15 +231,18 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
 
               <div>
                 <Label htmlFor="category">Category</Label>
-                <Select value={selectedCategory} onValueChange={(value: any) => setSelectedCategory(value)}>
+                <Select
+                  value={selectedCategory}
+                  onValueChange={(value: string) => setSelectedCategory(value)}
+                >
                   <SelectTrigger id="category">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {Object.values(LogCategory).map(category => (
+                    {Object.values(LogCategory).map((category) => (
                       <SelectItem key={category} value={category}>
-                        {category.replace(/\./g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {category.replace(/\./g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -262,11 +282,8 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
           </div>
 
           {/* Logs */}
-          <div 
-            className={cn(
-              "space-y-2 overflow-y-auto",
-              embedded && "flex-1"
-            )}
+          <div
+            className={cn('space-y-2 overflow-y-auto', embedded && 'flex-1')}
             style={{ maxHeight: embedded ? undefined : maxHeight }}
           >
             {filteredLogs.length === 0 ? (
@@ -283,14 +300,14 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
                   <div
                     key={log.timestamp + index}
                     className={cn(
-                      "p-3 rounded-lg border cursor-pointer transition-colors",
+                      'p-3 rounded-lg border cursor-pointer transition-colors',
                       levelInfo.bgColor,
-                      isExpanded && "ring-2 ring-primary"
+                      isExpanded && 'ring-2 ring-primary',
                     )}
                     onClick={() => setShowDetails(isExpanded ? null : log.timestamp + index)}
                   >
                     <div className="flex items-start gap-3">
-                      <LevelIcon className={cn("h-4 w-4 mt-0.5", levelInfo.color)} />
+                      <LevelIcon className={cn('h-4 w-4 mt-0.5', levelInfo.color)} />
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant="outline" className="text-xs">
@@ -308,9 +325,9 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
                             </Badge>
                           )}
                         </div>
-                        
+
                         <p className="text-sm">{log.message}</p>
-                        
+
                         {log.error && (
                           <p className="text-sm text-red-600 dark:text-red-400">
                             Error: {log.error.message}
@@ -327,7 +344,7 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
                                 </pre>
                               </div>
                             )}
-                            
+
                             {log.stackTrace && (
                               <div>
                                 <p className="text-xs font-medium mb-1">Stack Trace:</p>

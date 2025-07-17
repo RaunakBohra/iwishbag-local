@@ -14,7 +14,7 @@ export function useExchangeRate(fromCountry: string, toCountry: string) {
     staleTime: 15 * 60 * 1000, // 15 minutes
     gcTime: 60 * 60 * 1000, // 1 hour
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false
+    refetchOnReconnect: false,
   });
 }
 
@@ -23,7 +23,7 @@ export function useMultipleExchangeRates(pairs: ExchangeRateKey[]) {
     queryKey: ['exchangeRates', pairs],
     queryFn: async () => {
       const results: Record<string, ExchangeRateResult> = {};
-      
+
       await Promise.all(
         pairs.map(async (pair) => {
           const key = `${pair.fromCountry}-${pair.toCountry}`;
@@ -35,19 +35,19 @@ export function useMultipleExchangeRates(pairs: ExchangeRateKey[]) {
               rate: 1,
               source: 'fallback',
               confidence: 'low',
-              warning: 'Failed to fetch exchange rate'
+              warning: 'Failed to fetch exchange rate',
             };
           }
-        })
+        }),
       );
-      
+
       return results;
     },
     enabled: pairs.length > 0,
     staleTime: 15 * 60 * 1000, // 15 minutes
     gcTime: 60 * 60 * 1000, // 1 hour
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false
+    refetchOnReconnect: false,
   });
 }
 
@@ -61,7 +61,7 @@ export function usePrefetchExchangeRates() {
     { fromCountry: 'IN', toCountry: 'US' },
     { fromCountry: 'NP', toCountry: 'US' },
     { fromCountry: 'CA', toCountry: 'US' },
-    { fromCountry: 'AU', toCountry: 'US' }
+    { fromCountry: 'AU', toCountry: 'US' },
   ];
 
   return useMultipleExchangeRates(commonPairs);
@@ -77,6 +77,6 @@ export function useExchangeRateWithCache(fromCountry: string, toCountry: string)
     exchangeRateConfidence: exchangeRateData?.confidence || 'low',
     exchangeRateWarning: exchangeRateData?.warning,
     isLoading,
-    error
+    error,
   };
 }

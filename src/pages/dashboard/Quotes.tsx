@@ -1,7 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { Tables } from '@/integrations/supabase/types';
 import { Link } from 'react-router-dom';
-import { Package, Search, Filter, ArrowLeft, Plus, Calendar, Globe, DollarSign, ShoppingCart, Eye } from 'lucide-react';
+import {
+  Package,
+  Search,
+  Filter,
+  ArrowLeft,
+  Plus,
+  Calendar,
+  Globe,
+  DollarSign,
+  ShoppingCart,
+  Eye,
+} from 'lucide-react';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
@@ -10,7 +21,13 @@ import { useCartStore } from '@/stores/cartStore';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,16 +35,16 @@ import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 
 // AddToCartButton component
-const AddToCartButton = ({ quoteId, className = "" }: { quoteId: string; className?: string }) => {
+const AddToCartButton = ({ quoteId, className = '' }: { quoteId: string; className?: string }) => {
   const { addToCart } = useQuoteState(quoteId);
-  
+
   const handleAddToCart = async () => {
     await addToCart();
   };
 
   return (
-    <Button 
-      size="sm" 
+    <Button
+      size="sm"
       className={`flex items-center gap-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 ${className}`}
       onClick={handleAddToCart}
     >
@@ -50,7 +67,12 @@ interface Country {
 }
 
 // QuoteCard component with proper currency conversion
-const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
+const QuoteCard = ({
+  quote,
+  deliveryEstimate,
+  countries,
+  isQuoteInCart,
+}: {
   quote: Tables<'quotes'> & { quote_items?: Tables<'quote_items'>[] };
   deliveryEstimate: DeliveryEstimate | undefined;
   countries: Country[] | undefined;
@@ -58,23 +80,20 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
 }) => {
   const { formatAmount } = useQuoteDisplayCurrency({ quote });
   const { getStatusConfig } = useStatusManagement();
-  
-  const numberOfItems = Array.isArray(quote.quote_items) 
-    ? quote.quote_items.length 
-    : 1;
-  const firstItem = Array.isArray(quote.quote_items) && quote.quote_items.length > 0 
-    ? quote.quote_items[0] 
-    : null;
-    
+
+  const numberOfItems = Array.isArray(quote.quote_items) ? quote.quote_items.length : 1;
+  const firstItem =
+    Array.isArray(quote.quote_items) && quote.quote_items.length > 0 ? quote.quote_items[0] : null;
+
   // Get origin country name for fallback display
   const originCountry = quote.origin_country || quote.destination_country || 'US';
-  const originCountryName = countries?.find(c => c.code === originCountry)?.name || originCountry;
+  const originCountryName = countries?.find((c) => c.code === originCountry)?.name || originCountry;
   const fallbackName = `${originCountryName} Quote`;
-  
+
   // Check if quote can be added to cart based on status configuration
   const statusConfig = getStatusConfig(quote.status, 'quote');
-  const canAddToCart = statusConfig?.allowCartActions ?? (quote.status === 'approved'); // fallback to hardcoded
-  
+  const canAddToCart = statusConfig?.allowCartActions ?? quote.status === 'approved'; // fallback to hardcoded
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md hover:border-gray-200 transition-all duration-200">
       {/* Mobile Layout */}
@@ -88,7 +107,9 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
             <div className="flex items-center gap-2 mt-1">
               <StatusBadge status={quote.status} category="quote" />
               {isQuoteInCart(quote.id) && (
-                <Badge variant="secondary" className="text-xs">In Cart</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  In Cart
+                </Badge>
               )}
             </div>
           </div>
@@ -96,9 +117,7 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
 
         {/* Price */}
         <div className="mb-4">
-          <div className="text-lg font-bold text-green-600">
-            {formatAmount(quote.final_total)}
-          </div>
+          <div className="text-lg font-bold text-green-600">{formatAmount(quote.final_total)}</div>
         </div>
 
         {/* Info Grid */}
@@ -110,8 +129,8 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
           <div className="flex items-center gap-1 text-gray-600">
             <Globe className="h-3 w-3 text-gray-400" />
             {deliveryEstimate?.origin && deliveryEstimate?.destination ? (
-              <ShippingRouteDisplay 
-                origin={deliveryEstimate.origin} 
+              <ShippingRouteDisplay
+                origin={deliveryEstimate.origin}
                 destination={deliveryEstimate.destination}
                 className="truncate"
                 showIcon={false}
@@ -139,7 +158,13 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
           <div className="mb-2 flex items-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 border border-red-100 text-red-700 font-medium">
               <Calendar className="h-3 w-3 text-red-400" />
-              Expires: {new Date(quote.expires_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              Expires:{' '}
+              {new Date(quote.expires_at).toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </span>
           </div>
         )}
@@ -170,7 +195,9 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
               <div className="flex items-center gap-2">
                 <StatusBadge status={quote.status} category="quote" />
                 {isQuoteInCart(quote.id) && (
-                  <Badge variant="secondary" className="text-xs">In Cart</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    In Cart
+                  </Badge>
                 )}
               </div>
             </div>
@@ -186,8 +213,8 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
               <span className="flex items-center gap-1">
                 <Globe className="h-3 w-3 text-gray-400" />
                 {deliveryEstimate?.origin && deliveryEstimate?.destination ? (
-                  <ShippingRouteDisplay 
-                    origin={deliveryEstimate.origin} 
+                  <ShippingRouteDisplay
+                    origin={deliveryEstimate.origin}
                     destination={deliveryEstimate.destination}
                     showIcon={false}
                   />
@@ -212,9 +239,7 @@ const QuoteCard = ({ quote, deliveryEstimate, countries, isQuoteInCart }: {
                 View
               </Button>
             </Link>
-            {canAddToCart && !isQuoteInCart(quote.id) && (
-              <AddToCartButton quoteId={quote.id} />
-            )}
+            {canAddToCart && !isQuoteInCart(quote.id) && <AddToCartButton quoteId={quote.id} />}
           </div>
         </div>
       </div>
@@ -238,26 +263,26 @@ export default function Quotes() {
   // formatAmount will be handled per quote with useQuoteDisplayCurrency
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deliveryEstimates, setDeliveryEstimates] = useState<Record<string, DeliveryEstimate>>({});
-  
+
   // Subscribe to cart store to make quotes list reactive to cart changes
   const cartItems = useCartStore((state) => state.items);
 
   // Helper function to check if a quote is in cart
   const isQuoteInCart = (quoteId: string) => {
-    return cartItems.some(item => item.quoteId === quoteId);
+    return cartItems.some((item) => item.quoteId === quoteId);
   };
 
   // Filter quotes by status
   const statusFilteredQuotes = useMemo(() => {
     if (statusFilter === 'all') return filteredQuotes;
-    return filteredQuotes.filter(quote => quote.status === statusFilter);
+    return filteredQuotes.filter((quote) => quote.status === statusFilter);
   }, [filteredQuotes, statusFilter]);
 
   // Calculate delivery estimates when quotes change
   React.useEffect(() => {
     const calculateDeliveryEstimates = async () => {
       const estimates: Record<string, DeliveryEstimate> = {};
-      
+
       for (const quote of statusFilteredQuotes) {
         try {
           // Get shipping route data
@@ -270,7 +295,7 @@ export default function Quotes() {
               .maybeSingle();
             shippingRoute = data;
           }
-          
+
           // Fallback if no shipping route
           if (!shippingRoute) {
             shippingRoute = {
@@ -280,26 +305,34 @@ export default function Quotes() {
               processing_days: 2,
               customs_clearance_days: 3,
               delivery_options: [
-                { id: 'default', name: 'Standard Delivery', min_days: 7, max_days: 14, cost: 0 }
-              ]
+                {
+                  id: 'default',
+                  name: 'Standard Delivery',
+                  min_days: 7,
+                  max_days: 14,
+                  cost: 0,
+                },
+              ],
             };
           }
-          
+
           // Get delivery options
           let options = shippingRoute.delivery_options || [];
-          const enabledOptions = Array.isArray(quote.enabled_delivery_options) ? quote.enabled_delivery_options : [];
+          const enabledOptions = Array.isArray(quote.enabled_delivery_options)
+            ? quote.enabled_delivery_options
+            : [];
           if (enabledOptions.length > 0) {
             options = options.filter((opt) => enabledOptions.includes(opt.id));
           }
-          
+
           const option = options[0] || {
             id: 'default',
             name: 'Standard Delivery',
             min_days: 7,
             max_days: 14,
-            cost: 0
+            cost: 0,
           };
-          
+
           // Calculate window
           let startDate: Date = new Date();
           // @ts-expect-error - payment_date might exist on extended quote type
@@ -309,17 +342,30 @@ export default function Quotes() {
           } else if (typeof quote.created_at === 'string' && quote.created_at) {
             startDate = new Date(quote.created_at);
           }
-          
-          const minDays = (shippingRoute.processing_days || 0) + (shippingRoute.customs_clearance_days || 0) + (option.min_days || 0);
-          const maxDays = (shippingRoute.processing_days || 0) + (shippingRoute.customs_clearance_days || 0) + (option.max_days || 0);
-          
-          const minDate = new Date(startDate); minDate.setDate(minDate.getDate() + minDays);
-          const maxDate = new Date(startDate); maxDate.setDate(maxDate.getDate() + maxDays);
-          
-          const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          
+
+          const minDays =
+            (shippingRoute.processing_days || 0) +
+            (shippingRoute.customs_clearance_days || 0) +
+            (option.min_days || 0);
+          const maxDays =
+            (shippingRoute.processing_days || 0) +
+            (shippingRoute.customs_clearance_days || 0) +
+            (option.max_days || 0);
+
+          const minDate = new Date(startDate);
+          minDate.setDate(minDate.getDate() + minDays);
+          const maxDate = new Date(startDate);
+          maxDate.setDate(maxDate.getDate() + maxDays);
+
+          const formatDate = (d: Date) =>
+            d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
           // Get proper route display using the shared utilities
-          const shippingAddress = quote.shipping_address ? (typeof quote.shipping_address === 'string' ? JSON.parse(quote.shipping_address) : quote.shipping_address) : null;
+          const shippingAddress = quote.shipping_address
+            ? typeof quote.shipping_address === 'string'
+              ? JSON.parse(quote.shipping_address)
+              : quote.shipping_address
+            : null;
           const fetchRouteById = async (routeId: string) => {
             const { data } = await supabase
               .from('shipping_routes')
@@ -328,23 +374,30 @@ export default function Quotes() {
               .maybeSingle();
             return data;
           };
-          
-          const { origin, destination } = await getQuoteRouteCountries(quote, shippingAddress, countries, fetchRouteById, null, null);
-          
+
+          const { origin, destination } = await getQuoteRouteCountries(
+            quote,
+            shippingAddress,
+            countries,
+            fetchRouteById,
+            null,
+            null,
+          );
+
           estimates[quote.id] = {
             label: `${formatDate(minDate)}-${formatDate(maxDate)}`,
             days: `${minDays}-${maxDays}d`,
             origin,
-            destination
+            destination,
           };
         } catch (error) {
           console.error('Error calculating delivery estimate for quote:', quote.id, error);
         }
       }
-      
+
       setDeliveryEstimates(estimates);
     };
-    
+
     if (statusFilteredQuotes.length > 0) {
       calculateDeliveryEstimates();
     }
@@ -374,13 +427,18 @@ export default function Quotes() {
     <div className="container py-4 sm:py-8 px-4 sm:px-6">
       {/* Header */}
       <div className="flex items-center gap-3 sm:gap-4 mb-6">
-        <Link to="/dashboard" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
+        <Link
+          to="/dashboard"
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+        >
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">Back to Dashboard</span>
         </Link>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Quotes</h1>
-          <p className="text-sm text-gray-500 mt-1">Track your quote requests and manage your orders</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Track your quote requests and manage your orders
+          </p>
         </div>
       </div>
 
@@ -405,14 +463,13 @@ export default function Quotes() {
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               {(quoteStatuses || [])
-                .filter(status => status.isActive && status.showInCustomerView)
+                .filter((status) => status.isActive && status.showInCustomerView)
                 .sort((a, b) => a.order - b.order)
                 .map((status) => (
                   <SelectItem key={status.name} value={status.name}>
                     {status.label}
                   </SelectItem>
-                ))
-              }
+                ))}
             </SelectContent>
           </Select>
           <Link to="/quote">
@@ -434,10 +491,9 @@ export default function Quotes() {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No quotes found</h3>
             <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-              {searchTerm || statusFilter !== 'all' 
-                ? 'Try adjusting your search or filters to find what you\'re looking for'
-                : 'Get started by requesting your first quote to see it here'
-              }
+              {searchTerm || statusFilter !== 'all'
+                ? "Try adjusting your search or filters to find what you're looking for"
+                : 'Get started by requesting your first quote to see it here'}
             </p>
             {!searchTerm && statusFilter === 'all' && (
               <Link to="/quote">

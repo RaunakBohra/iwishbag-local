@@ -4,35 +4,35 @@
 export interface PayUDebugData {
   timestamp: string;
   event: 'response' | 'submission' | 'error';
-  data: any;
+  data: unknown;
 }
 
 export class PayUDebugger {
   private static STORAGE_KEY = 'payu_debug_log';
   private static MAX_ENTRIES = 10;
 
-  static log(event: 'response' | 'submission' | 'error', data: any) {
+  static log(event: 'response' | 'submission' | 'error', data: unknown) {
     try {
       // Get existing logs
       const existingLogs = this.getLogs();
-      
+
       // Add new entry
       const newEntry: PayUDebugData = {
         timestamp: new Date().toISOString(),
         event,
-        data
+        data,
       };
-      
+
       existingLogs.unshift(newEntry);
-      
+
       // Keep only last MAX_ENTRIES
       if (existingLogs.length > this.MAX_ENTRIES) {
         existingLogs.length = this.MAX_ENTRIES;
       }
-      
+
       // Save back to localStorage
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(existingLogs));
-      
+
       // Also log to console
       console.log(`[PayU Debug] ${event}:`, data);
     } catch (error) {
@@ -82,13 +82,24 @@ export function validatePayUFormData(formData: Record<string, string>): {
   missingFields: string[];
   presentFields: string[];
 } {
-  const requiredFields = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
+  const requiredFields = [
+    'key',
+    'txnid',
+    'amount',
+    'productinfo',
+    'firstname',
+    'email',
+    'phone',
+    'surl',
+    'furl',
+    'hash',
+  ];
   const presentFields = Object.keys(formData);
-  const missingFields = requiredFields.filter(field => !formData[field]);
-  
+  const missingFields = requiredFields.filter((field) => !formData[field]);
+
   return {
     isValid: missingFields.length === 0,
     missingFields,
-    presentFields
+    presentFields,
   };
 }

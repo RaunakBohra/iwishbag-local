@@ -15,10 +15,10 @@ const mockDeno = {
   env: {
     get: vi.fn((key: string) => {
       const envVars: Record<string, string> = {
-        'STRIPE_SECRET_KEY': 'sk_test_123',
-        'STRIPE_WEBHOOK_SECRET': 'whsec_test_123',
-        'SUPABASE_URL': 'https://test.supabase.co',
-        'SUPABASE_SERVICE_ROLE_KEY': 'test-service-role-key',
+        STRIPE_SECRET_KEY: 'sk_test_123',
+        STRIPE_WEBHOOK_SECRET: 'whsec_test_123',
+        SUPABASE_URL: 'https://test.supabase.co',
+        SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
       };
       return envVars[key] || '';
     }),
@@ -29,7 +29,7 @@ const mockDeno = {
 Object.defineProperty(global, 'Deno', {
   value: mockDeno,
   writable: true,
-  configurable: true
+  configurable: true,
 });
 
 // Mock crypto for UUID generation
@@ -38,7 +38,7 @@ Object.defineProperty(global, 'crypto', {
     randomUUID: vi.fn(() => 'test-uuid-123'),
   },
   writable: true,
-  configurable: true
+  configurable: true,
 });
 
 // Mock Stripe
@@ -107,12 +107,14 @@ describe('payment-verification Stripe Integration', () => {
           quote_ids: 'quote-123,quote-456',
         },
         charges: {
-          data: [{
-            id: 'ch_test_123',
-            amount: 1000,
-            currency: 'usd',
-            status: 'succeeded',
-          }],
+          data: [
+            {
+              id: 'ch_test_123',
+              amount: 1000,
+              currency: 'usd',
+              status: 'succeeded',
+            },
+          ],
         },
       };
 
@@ -120,7 +122,7 @@ describe('payment-verification Stripe Integration', () => {
 
       const verifyStripePayment = async (transactionId: string) => {
         const paymentIntent = await mockStripe.paymentIntents.retrieve(transactionId);
-        
+
         return {
           success: true,
           payment_status: paymentIntent.status === 'succeeded' ? 'completed' : 'pending',
@@ -163,7 +165,7 @@ describe('payment-verification Stripe Integration', () => {
 
       const verifyStripePayment = async (transactionId: string) => {
         const paymentIntent = await mockStripe.paymentIntents.retrieve(transactionId);
-        
+
         return {
           success: true,
           payment_status: paymentIntent.status === 'succeeded' ? 'completed' : 'pending',
@@ -201,7 +203,7 @@ describe('payment-verification Stripe Integration', () => {
 
       const verifyStripePayment = async (transactionId: string) => {
         const paymentIntent = await mockStripe.paymentIntents.retrieve(transactionId);
-        
+
         let paymentStatus = 'pending';
         if (paymentIntent.status === 'succeeded') paymentStatus = 'completed';
         else if (paymentIntent.status === 'payment_failed') paymentStatus = 'failed';
@@ -261,7 +263,7 @@ describe('payment-verification Stripe Integration', () => {
         const event = mockStripe.webhooks.constructEvent(
           payload,
           signature,
-          mockDeno.env.get('STRIPE_WEBHOOK_SECRET')
+          mockDeno.env.get('STRIPE_WEBHOOK_SECRET'),
         );
 
         return {
@@ -278,7 +280,7 @@ describe('payment-verification Stripe Integration', () => {
       expect(mockStripe.webhooks.constructEvent).toHaveBeenCalledWith(
         mockWebhookPayload,
         mockWebhookSignature,
-        'whsec_test_123'
+        'whsec_test_123',
       );
 
       expect(result).toEqual({
@@ -309,7 +311,7 @@ describe('payment-verification Stripe Integration', () => {
           const event = mockStripe.webhooks.constructEvent(
             payload,
             signature,
-            mockDeno.env.get('STRIPE_WEBHOOK_SECRET')
+            mockDeno.env.get('STRIPE_WEBHOOK_SECRET'),
           );
 
           return {
@@ -356,9 +358,10 @@ describe('payment-verification Stripe Integration', () => {
 
       const verifyAndUpdatePayment = async (transactionId: string) => {
         const paymentIntent = await mockStripe.paymentIntents.retrieve(transactionId);
-        
+
         // Update payment transaction status
-        const { data, error } = await mockSupabase.from('payment_transactions')
+        const { data, error } = await mockSupabase
+          .from('payment_transactions')
           .update({
             status: paymentIntent.status === 'succeeded' ? 'completed' : 'pending',
             gateway_response: paymentIntent,
@@ -395,9 +398,9 @@ describe('payment-verification Stripe Integration', () => {
       mockStripe.paymentIntents.retrieve.mockResolvedValue(mockPaymentIntent);
       mockSupabase.from.mockReturnValue({
         update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ 
-            data: null, 
-            error: { message: 'Database update failed' } 
+          eq: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: 'Database update failed' },
           }),
         }),
       });
@@ -405,8 +408,9 @@ describe('payment-verification Stripe Integration', () => {
       const verifyAndUpdatePayment = async (transactionId: string) => {
         try {
           const paymentIntent = await mockStripe.paymentIntents.retrieve(transactionId);
-          
-          const { data, error } = await mockSupabase.from('payment_transactions')
+
+          const { data, error } = await mockSupabase
+            .from('payment_transactions')
             .update({
               status: paymentIntent.status === 'succeeded' ? 'completed' : 'pending',
               gateway_response: paymentIntent,
@@ -461,7 +465,7 @@ describe('payment-verification Stripe Integration', () => {
 
         const verifyStripePayment = async (transactionId: string) => {
           const paymentIntent = await mockStripe.paymentIntents.retrieve(transactionId);
-          
+
           return {
             success: true,
             payment_status: 'completed',
@@ -489,7 +493,7 @@ describe('payment-verification Stripe Integration', () => {
       const verifyStripePayment = async (transactionId: string) => {
         try {
           const paymentIntent = await mockStripe.paymentIntents.retrieve(transactionId);
-          
+
           return {
             success: true,
             payment_status: 'completed',
@@ -525,7 +529,7 @@ describe('payment-verification Stripe Integration', () => {
       const verifyStripePayment = async (transactionId: string) => {
         try {
           const paymentIntent = await mockStripe.paymentIntents.retrieve(transactionId);
-          
+
           return {
             success: true,
             payment_status: 'completed',
@@ -573,9 +577,9 @@ describe('payment-verification Stripe Integration', () => {
 
       const verifyStripePayment = async (transactionId: string) => {
         const paymentIntent = await mockStripe.paymentIntents.retrieve(transactionId);
-        
+
         const quoteIds = paymentIntent.metadata?.quote_ids?.split(',') || [];
-        
+
         return {
           success: true,
           payment_status: 'completed',
@@ -619,15 +623,15 @@ describe('payment-verification Stripe Integration', () => {
       const validateWebhookSecurity = (request: WebhookRequest) => {
         const signature = request.headers['stripe-signature'];
         const userAgent = request.headers['user-agent'];
-        
+
         if (!signature) {
           return { valid: false, error: 'Missing Stripe signature' };
         }
-        
+
         if (!userAgent?.includes('Stripe')) {
           return { valid: false, error: 'Invalid user agent' };
         }
-        
+
         return { valid: true };
       };
 
@@ -650,11 +654,11 @@ describe('payment-verification Stripe Integration', () => {
 
       const validateWebhookSecurity = (request: WebhookRequest) => {
         const signature = request.headers['stripe-signature'];
-        
+
         if (!signature) {
           return { valid: false, error: 'Missing Stripe signature' };
         }
-        
+
         return { valid: true };
       };
 

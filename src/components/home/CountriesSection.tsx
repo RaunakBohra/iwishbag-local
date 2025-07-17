@@ -1,79 +1,75 @@
-import { motion } from "framer-motion";
-import { useState } from "react";
-import { ChevronDown, MapPin, ShoppingBag } from "lucide-react";
+import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { ChevronDown, MapPin, ShoppingBag } from 'lucide-react';
 
 const countries = [
   {
-    id: "us",
-    name: "United States",
-    flag: "🇺🇸",
+    id: 'us',
+    name: 'United States',
+    flag: '🇺🇸',
     description: "Shop from the world's largest marketplace",
-    stores: ["Amazon", "Walmart", "Best Buy", "Target", "Nike"],
-    popularProducts: ["Electronics", "Fashion", "Home Goods", "Sports Equipment"],
+    stores: ['Amazon', 'Walmart', 'Best Buy', 'Target', 'Nike'],
+    popularProducts: ['Electronics', 'Fashion', 'Home Goods', 'Sports Equipment'],
     brands: [
-      "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg",
-      "https://upload.wikimedia.org/wikipedia/commons/c/ca/Walmart_logo.svg",
-      "https://upload.wikimedia.org/wikipedia/commons/f/f5/Best_Buy_logo_2018.svg"
+      'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/c/ca/Walmart_logo.svg',
+      'https://upload.wikimedia.org/wikipedia/commons/f/f5/Best_Buy_logo_2018.svg',
     ],
-    color: "from-blue-500 to-red-500"
+    color: 'from-blue-500 to-red-500',
   },
   {
-    id: "china",
-    name: "China",
-    flag: "🇨🇳",
-    description: "Direct access to manufacturers",
-    stores: ["Taobao", "JD.com", "AliExpress", "1688", "Tmall"],
-    popularProducts: ["Electronics", "Gadgets", "Fashion", "Home Decor"],
+    id: 'china',
+    name: 'China',
+    flag: '🇨🇳',
+    description: 'Direct access to manufacturers',
+    stores: ['Taobao', 'JD.com', 'AliExpress', '1688', 'Tmall'],
+    popularProducts: ['Electronics', 'Gadgets', 'Fashion', 'Home Decor'],
     brands: [
-      "https://upload.wikimedia.org/wikipedia/en/1/11/Taobao_logo.svg",
-      "https://upload.wikimedia.org/wikipedia/en/b/b2/AliExpress_logo.svg"
+      'https://upload.wikimedia.org/wikipedia/en/1/11/Taobao_logo.svg',
+      'https://upload.wikimedia.org/wikipedia/en/b/b2/AliExpress_logo.svg',
     ],
-    color: "from-red-500 to-yellow-500"
+    color: 'from-red-500 to-yellow-500',
   },
   {
-    id: "japan",
-    name: "Japan",
-    flag: "🇯🇵",
-    description: "Premium quality and unique products",
-    stores: ["Rakuten", "Amazon Japan", "Mercari", "Yahoo Shopping"],
-    popularProducts: ["Anime Goods", "Electronics", "Beauty", "Stationery"],
-    brands: [
-      "https://upload.wikimedia.org/wikipedia/commons/4/40/Rakuten_Global_Brand_Logo.svg"
-    ],
-    color: "from-red-500 to-white"
+    id: 'japan',
+    name: 'Japan',
+    flag: '🇯🇵',
+    description: 'Premium quality and unique products',
+    stores: ['Rakuten', 'Amazon Japan', 'Mercari', 'Yahoo Shopping'],
+    popularProducts: ['Anime Goods', 'Electronics', 'Beauty', 'Stationery'],
+    brands: ['https://upload.wikimedia.org/wikipedia/commons/4/40/Rakuten_Global_Brand_Logo.svg'],
+    color: 'from-red-500 to-white',
   },
   {
-    id: "uk",
-    name: "United Kingdom",
-    flag: "🇬🇧",
-    description: "European fashion and lifestyle",
-    stores: ["Amazon UK", "Argos", "ASOS", "John Lewis"],
-    popularProducts: ["Fashion", "Books", "Home & Garden", "Electronics"],
-    brands: [
-      "https://upload.wikimedia.org/wikipedia/commons/d/d5/ASOS_logo_2022.svg"
-    ],
-    color: "from-blue-600 to-red-600"
+    id: 'uk',
+    name: 'United Kingdom',
+    flag: '🇬🇧',
+    description: 'European fashion and lifestyle',
+    stores: ['Amazon UK', 'Argos', 'ASOS', 'John Lewis'],
+    popularProducts: ['Fashion', 'Books', 'Home & Garden', 'Electronics'],
+    brands: ['https://upload.wikimedia.org/wikipedia/commons/d/d5/ASOS_logo_2022.svg'],
+    color: 'from-blue-600 to-red-600',
   },
   {
-    id: "germany",
-    name: "Germany",
-    flag: "🇩🇪",
-    description: "Engineering excellence and quality",
-    stores: ["Amazon.de", "Otto", "MediaMarkt", "Zalando"],
-    popularProducts: ["Auto Parts", "Tools", "Electronics", "Fashion"],
+    id: 'germany',
+    name: 'Germany',
+    flag: '🇩🇪',
+    description: 'Engineering excellence and quality',
+    stores: ['Amazon.de', 'Otto', 'MediaMarkt', 'Zalando'],
+    popularProducts: ['Auto Parts', 'Tools', 'Electronics', 'Fashion'],
     brands: [],
-    color: "from-black to-yellow-500"
+    color: 'from-black to-yellow-500',
   },
   {
-    id: "korea",
-    name: "South Korea",
-    flag: "🇰🇷",
-    description: "K-Beauty and K-Fashion hub",
-    stores: ["Coupang", "Gmarket", "11st", "SSG"],
-    popularProducts: ["K-Beauty", "K-Fashion", "K-Pop Goods", "Electronics"],
+    id: 'korea',
+    name: 'South Korea',
+    flag: '🇰🇷',
+    description: 'K-Beauty and K-Fashion hub',
+    stores: ['Coupang', 'Gmarket', '11st', 'SSG'],
+    popularProducts: ['K-Beauty', 'K-Fashion', 'K-Pop Goods', 'Electronics'],
     brands: [],
-    color: "from-blue-600 to-red-600"
-  }
+    color: 'from-blue-600 to-red-600',
+  },
 ];
 
 export const CountriesSection = () => {
@@ -90,16 +86,21 @@ export const CountriesSection = () => {
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Section Header */}
-        <motion.div 
+        <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           viewport={{ once: true }}
         >
-          <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider">Global Access</span>
+          <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider">
+            Global Access
+          </span>
           <h2 className="text-4xl md:text-5xl font-bold mt-4 mb-6">
-            Shop from <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">100+ Countries</span>
+            Shop from{' '}
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              100+ Countries
+            </span>
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Access millions of products from the world's biggest marketplaces
@@ -119,18 +120,20 @@ export const CountriesSection = () => {
               onMouseEnter={() => setHoveredCountry(country.id)}
               onMouseLeave={() => setHoveredCountry(null)}
             >
-              <div className={`bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 ${
-                expandedCountry === country.id ? 'scale-105' : ''
-              }`}>
+              <div
+                className={`bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 ${
+                  expandedCountry === country.id ? 'scale-105' : ''
+                }`}
+              >
                 {/* Card Header */}
                 <div className={`p-6 bg-gradient-to-br ${country.color} bg-opacity-10`}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-4">
-                      <motion.div 
+                      <motion.div
                         className="text-6xl"
-                        animate={{ 
+                        animate={{
                           scale: hoveredCountry === country.id ? 1.2 : 1,
-                          rotate: hoveredCountry === country.id ? [0, -10, 10, 0] : 0
+                          rotate: hoveredCountry === country.id ? [0, -10, 10, 0] : 0,
                         }}
                         transition={{ duration: 0.3 }}
                       >
@@ -146,7 +149,10 @@ export const CountriesSection = () => {
                   {/* Popular Stores */}
                   <div className="flex flex-wrap gap-2 mb-4">
                     {country.stores.slice(0, 3).map((store) => (
-                      <span key={store} className="px-3 py-1 bg-white/70 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700">
+                      <span
+                        key={store}
+                        className="px-3 py-1 bg-white/70 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700"
+                      >
                         {store}
                       </span>
                     ))}
@@ -161,10 +167,10 @@ export const CountriesSection = () => {
                   {country.brands.length > 0 && (
                     <div className="flex items-center gap-4 mb-4">
                       {country.brands.map((brand, idx) => (
-                        <img 
-                          key={idx} 
-                          src={brand} 
-                          alt="Brand" 
+                        <img
+                          key={idx}
+                          src={brand}
+                          alt="Brand"
                           className="h-6 object-contain filter grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
                         />
                       ))}
@@ -188,20 +194,26 @@ export const CountriesSection = () => {
 
                   {/* Expand Button */}
                   <button
-                    onClick={() => setExpandedCountry(expandedCountry === country.id ? null : country.id)}
+                    onClick={() =>
+                      setExpandedCountry(expandedCountry === country.id ? null : country.id)
+                    }
                     className="mt-4 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
                   >
                     <span>View all stores</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform ${
-                      expandedCountry === country.id ? 'rotate-180' : ''
-                    }`} />
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${
+                        expandedCountry === country.id ? 'rotate-180' : ''
+                      }`}
+                    />
                   </button>
                 </div>
 
                 {/* Expanded Content */}
                 <motion.div
                   initial={false}
-                  animate={{ height: expandedCountry === country.id ? 'auto' : 0 }}
+                  animate={{
+                    height: expandedCountry === country.id ? 'auto' : 0,
+                  }}
                   transition={{ duration: 0.3 }}
                   className="overflow-hidden"
                 >
@@ -210,7 +222,10 @@ export const CountriesSection = () => {
                       <h4 className="font-semibold text-gray-900 mb-3">All Available Stores:</h4>
                       <div className="flex flex-wrap gap-2">
                         {country.stores.map((store) => (
-                          <span key={store} className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-colors cursor-pointer">
+                          <span
+                            key={store}
+                            className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-colors cursor-pointer"
+                          >
                             {store}
                           </span>
                         ))}
@@ -225,9 +240,10 @@ export const CountriesSection = () => {
                 className="absolute inset-0 rounded-2xl pointer-events-none"
                 initial={false}
                 animate={{
-                  boxShadow: hoveredCountry === country.id 
-                    ? `0 0 0 2px ${country.id === 'us' ? '#3B82F6' : country.id === 'china' ? '#EF4444' : '#8B5CF6'}`
-                    : '0 0 0 0px transparent'
+                  boxShadow:
+                    hoveredCountry === country.id
+                      ? `0 0 0 2px ${country.id === 'us' ? '#3B82F6' : country.id === 'china' ? '#EF4444' : '#8B5CF6'}`
+                      : '0 0 0 0px transparent',
                 }}
                 transition={{ duration: 0.2 }}
               />
@@ -236,7 +252,7 @@ export const CountriesSection = () => {
         </div>
 
         {/* View All Countries Button */}
-        <motion.div 
+        <motion.div
           className="text-center mt-12"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

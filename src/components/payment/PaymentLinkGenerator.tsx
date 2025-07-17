@@ -139,7 +139,9 @@ export function PaymentLinkGenerator({
                 <Label htmlFor="gateway">Payment Gateway</Label>
                 <Select
                   value={formData.gateway}
-                  onValueChange={(value: 'payu' | 'paypal' | 'stripe') => setFormData({ ...formData, gateway: value })}
+                  onValueChange={(value: 'payu' | 'paypal' | 'stripe') =>
+                    setFormData({ ...formData, gateway: value })
+                  }
                 >
                   <SelectTrigger id="gateway">
                     <SelectValue />
@@ -267,7 +269,9 @@ export function PaymentLinkGenerator({
                 <div className="text-sm space-y-1 text-muted-foreground">
                   <p>Amount: ₹{createdLink.amountInINR} INR</p>
                   {createdLink.originalCurrency !== 'INR' && (
-                    <p>Original: {createdLink.originalCurrency} {createdLink.originalAmount}</p>
+                    <p>
+                      Original: {createdLink.originalCurrency} {createdLink.originalAmount}
+                    </p>
                   )}
                   <p>Expires: {new Date(createdLink.expiresAt).toLocaleDateString()}</p>
                   <p>Link Code: {createdLink.linkCode}</p>

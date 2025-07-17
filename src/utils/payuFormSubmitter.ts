@@ -44,7 +44,7 @@ export class PayUFormSubmitter {
 
   static submitWithVisibleForm(url: string, formData: PayUFormData): void {
     console.log('🔄 PayU Form Submitter: Creating visible form');
-    
+
     // Create overlay
     const overlay = document.createElement('div');
     overlay.id = 'payuOverlay';
@@ -98,7 +98,7 @@ export class PayUFormSubmitter {
 
   static submitWithNewWindow(url: string, formData: PayUFormData): void {
     console.log('🔄 PayU Form Submitter: Opening new window');
-    
+
     const formHTML = `
       <!DOCTYPE html>
       <html>
@@ -136,7 +136,7 @@ export class PayUFormSubmitter {
 
   static submitWithRedirect(url: string, formData: PayUFormData): void {
     console.log('🔄 PayU Form Submitter: Direct redirect');
-    
+
     // Create form and submit immediately
     const form = document.createElement('form');
     form.method = 'POST';
@@ -154,14 +154,18 @@ export class PayUFormSubmitter {
     });
 
     document.body.appendChild(form);
-    
+
     // Submit immediately
     form.submit();
   }
 
-  static submit(url: string, formData: PayUFormData, method: 'visible' | 'redirect' | 'newWindow' = 'visible'): void {
+  static submit(
+    url: string,
+    formData: PayUFormData,
+    method: 'visible' | 'redirect' | 'newWindow' = 'visible',
+  ): void {
     console.log(`🎯 PayU Form Submitter: Using ${method} method`);
-    
+
     try {
       switch (method) {
         case 'visible':

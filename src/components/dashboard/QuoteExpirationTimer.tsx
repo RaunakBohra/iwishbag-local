@@ -12,7 +12,7 @@ export const QuoteExpirationTimer: React.FC<QuoteExpirationTimerProps> = ({
   expiresAt,
   className = '',
   showIcon = false,
-  compact = false
+  compact = false,
 }) => {
   const [timeLeft, setTimeLeft] = useState<{
     days: number;
@@ -74,9 +74,7 @@ export const QuoteExpirationTimer: React.FC<QuoteExpirationTimerProps> = ({
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {showIcon && <Clock className="h-4 w-4 text-gray-500" />}
-      <span className={`text-sm font-medium ${getTimeColor()}`}>
-        Expires in {formatTime()}
-      </span>
+      <span className={`text-sm font-medium ${getTimeColor()}`}>Expires in {formatTime()}</span>
     </div>
   );
-}; 
+};

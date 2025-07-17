@@ -20,14 +20,14 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
-import { 
-  ArrowLeft, 
-  Package, 
-  Truck, 
-  CheckCircle, 
-  Clock, 
-  DollarSign, 
-  MapPin, 
+import {
+  ArrowLeft,
+  Package,
+  Truck,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  MapPin,
   Calendar,
   ChevronDown,
   ChevronUp,
@@ -45,7 +45,7 @@ import {
   HelpCircle,
   CreditCard,
   CalendarDays,
-  Navigation
+  Navigation,
 } from 'lucide-react';
 import { ShippingAddress } from '@/types/address';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
@@ -62,16 +62,22 @@ export default function OrderDetail() {
   // Use order mutations for order-specific actions
   const { updateOrderStatus, isUpdatingStatus } = useOrderMutations(id || '');
 
-  const { data: order, isLoading, error } = useQuery({
+  const {
+    data: order,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['order-detail', id],
     queryFn: async () => {
       if (!id || !user) return null;
       const { data, error } = await supabase
         .from('quotes')
-        .select(`
+        .select(
+          `
           *,
           quote_items (*)
-        `)
+        `,
+        )
         .eq('id', id)
         .single();
 
@@ -83,30 +89,37 @@ export default function OrderDetail() {
 
   // Get currency display formatter for the order
   const { formatAmount } = useQuoteDisplayCurrency({ quote: order });
-  
+
   // Get country name for display
   const countryName = useMemo(() => {
-    return countries?.find(c => c.code === order?.destination_country)?.name || order?.destination_country;
+    return (
+      countries?.find((c) => c.code === order?.destination_country)?.name ||
+      order?.destination_country
+    );
   }, [countries, order?.destination_country]);
-
 
   // Get payment method display
   const getPaymentMethodDisplay = () => {
     if (!order?.payment_method) return { label: 'N/A', icon: CreditCard };
-    
+
     const methods = {
-      'cod': { label: 'Cash on Delivery', icon: DollarSign },
-      'bank_transfer': { label: 'Bank Transfer', icon: CreditCard },
-      'stripe': { label: 'Credit Card', icon: CreditCard },
-      'paypal': { label: 'PayPal', icon: CreditCard },
+      cod: { label: 'Cash on Delivery', icon: DollarSign },
+      bank_transfer: { label: 'Bank Transfer', icon: CreditCard },
+      stripe: { label: 'Credit Card', icon: CreditCard },
+      paypal: { label: 'PayPal', icon: CreditCard },
     };
-    
-    return methods[order.payment_method as keyof typeof methods] || { label: order.payment_method, icon: CreditCard };
+
+    return (
+      methods[order.payment_method as keyof typeof methods] || {
+        label: order.payment_method,
+        icon: CreditCard,
+      }
+    );
   };
 
   // Parse shipping address from JSONB
   const shippingAddress = order?.shipping_address as unknown as ShippingAddress | null;
-  
+
   // Get route information using unified hook
   const route = useQuoteRoute(order);
 
@@ -149,7 +162,9 @@ export default function OrderDetail() {
         <div className="text-center py-12">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Order Not Found</h2>
-          <p className="text-gray-500 mb-4">The order you're looking for doesn't exist or you don't have permission to view it.</p>
+          <p className="text-gray-500 mb-4">
+            The order you're looking for doesn't exist or you don't have permission to view it.
+          </p>
           <Link to="/dashboard/orders">
             <Button>Back to Orders</Button>
           </Link>
@@ -166,32 +181,45 @@ export default function OrderDetail() {
     <div className="container py-8 animate-in fade-in duration-500">
       {/* Header */}
       <div className="mb-8 animate-in slide-in-from-top duration-700">
-        <Link to="/dashboard/orders" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors duration-200">
+        <Link
+          to="/dashboard/orders"
+          className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors duration-200"
+        >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Orders
         </Link>
-        
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold">Order #{order.order_display_id || order.display_id || order.id.slice(0, 8)}</h1>
+              <h1 className="text-3xl font-bold">
+                Order #{order.order_display_id || order.display_id || order.id.slice(0, 8)}
+              </h1>
               <StatusBadge status={order.status} category="order" showIcon />
             </div>
-            <p className="text-gray-500">Placed on {new Date(order.created_at).toLocaleDateString()}</p>
+            <p className="text-gray-500">
+              Placed on {new Date(order.created_at).toLocaleDateString()}
+            </p>
           </div>
-          
+
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="hover:scale-105 transition-transform duration-200">
+            <Button
+              variant="outline"
+              size="sm"
+              className="hover:scale-105 transition-transform duration-200"
+            >
               <Download className="h-4 w-4 mr-2" />
               Download Invoice
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="hover:scale-105 transition-transform duration-200"
               onClick={() => {
                 // Scroll to messaging section
-                document.getElementById('messaging-section')?.scrollIntoView({ behavior: 'smooth' });
+                document
+                  .getElementById('messaging-section')
+                  ?.scrollIntoView({ behavior: 'smooth' });
               }}
             >
               <MessageCircle className="h-4 w-4 mr-2" />
@@ -217,26 +245,30 @@ export default function OrderDetail() {
                 {/* Product Image */}
                 <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 hover:scale-105 transition-transform duration-200">
                   {order.image_url ? (
-                    <img src={order.image_url} alt={order.product_name} className="w-full h-full object-cover rounded-lg" />
+                    <img
+                      src={order.image_url}
+                      alt={order.product_name}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
                   ) : (
                     <Package className="h-8 w-8 text-gray-400" />
                   )}
                 </div>
-                
+
                 {/* Product Info */}
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-semibold mb-2 truncate">
                     {order.product_name || 'Product Name'}
                   </h3>
-                  
+
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                     {route && (
                       <div className="hover:bg-gray-50 p-2 rounded transition-colors duration-200 col-span-2">
                         <span className="text-gray-500">Shipping Route:</span>
                         <div className="font-medium flex items-center gap-1">
                           <Globe className="h-3 w-3" />
-                          <ShippingRouteDisplay 
-                            origin={route.origin} 
+                          <ShippingRouteDisplay
+                            origin={route.origin}
                             destination={route.destination}
                             showIcon={false}
                           />
@@ -255,12 +287,12 @@ export default function OrderDetail() {
                       <div className="font-medium">{order.quantity || 1}</div>
                     </div>
                   </div>
-                  
+
                   {order.product_url && (
                     <div className="mt-3">
-                      <a 
-                        href={order.product_url} 
-                        target="_blank" 
+                      <a
+                        href={order.product_url}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm hover:scale-105 transition-transform duration-200"
                       >
@@ -289,9 +321,12 @@ export default function OrderDetail() {
           <div className="animate-in slide-in-from-left duration-700 delay-400">
             <OrderReceipt order={order} />
           </div>
-          
+
           {/* Customer Communication */}
-          <Card id="messaging-section" className="animate-in slide-in-from-left duration-700 delay-500 hover:shadow-lg transition-shadow duration-300">
+          <Card
+            id="messaging-section"
+            className="animate-in slide-in-from-left duration-700 delay-500 hover:shadow-lg transition-shadow duration-300"
+          >
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageCircle className="h-5 w-5" />
@@ -299,16 +334,13 @@ export default function OrderDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <QuoteMessaging 
-                quoteId={order.id}
-                quoteUserId={order.user_id}
-              />
+              <QuoteMessaging quoteId={order.id} quoteUserId={order.user_id} />
             </CardContent>
           </Card>
-          
+
           {/* Documents & Downloads */}
           <div className="animate-in slide-in-from-left duration-700 delay-600">
-            <DocumentManager 
+            <DocumentManager
               quoteId={order.id}
               orderId={order.order_display_id || order.display_id || order.id}
               isAdmin={false}
@@ -347,7 +379,7 @@ export default function OrderDetail() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {order.status === 'shipped' && order.tracking_number && (
-                  <Button 
+                  <Button
                     className="w-full hover:scale-105 transition-transform duration-200"
                     onClick={handleTrackPackage}
                   >
@@ -355,9 +387,9 @@ export default function OrderDetail() {
                     Track Package
                   </Button>
                 )}
-                
+
                 {order.status === 'shipped' && (
-                  <Button 
+                  <Button
                     className="w-full hover:scale-105 transition-transform duration-200"
                     onClick={handleMarkAsCompleted}
                     disabled={isUpdatingStatus}
@@ -366,12 +398,14 @@ export default function OrderDetail() {
                     Mark as Delivered
                   </Button>
                 )}
-                
-                <Button 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   className="w-full hover:scale-105 transition-transform duration-200"
                   onClick={() => {
-                    document.getElementById('messaging-section')?.scrollIntoView({ behavior: 'smooth' });
+                    document
+                      .getElementById('messaging-section')
+                      ?.scrollIntoView({ behavior: 'smooth' });
                   }}
                 >
                   <MessageCircle className="h-4 w-4 mr-2" />
@@ -397,39 +431,46 @@ export default function OrderDetail() {
                   {paymentMethod.label}
                 </span>
               </div>
-              
+
               {/* Payment Status */}
               {order.payment_status && (
                 <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                   <span className="text-gray-500">Status:</span>
-                  <Badge variant={
-                    order.payment_status === 'paid' ? 'default' :
-                    order.payment_status === 'partial' ? 'warning' :
-                    order.payment_status === 'overpaid' ? 'secondary' :
-                    'outline'
-                  }>
+                  <Badge
+                    variant={
+                      order.payment_status === 'paid'
+                        ? 'default'
+                        : order.payment_status === 'partial'
+                          ? 'warning'
+                          : order.payment_status === 'overpaid'
+                            ? 'secondary'
+                            : 'outline'
+                    }
+                  >
                     {order.payment_status === 'partial' && order.amount_paid && order.final_total
                       ? `Partial: $${order.amount_paid} of $${order.final_total}`
                       : order.payment_status === 'overpaid' && order.overpayment_amount
-                      ? `Overpaid: +$${order.overpayment_amount}`
-                      : order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)
-                    }
+                        ? `Overpaid: +$${order.overpayment_amount}`
+                        : order.payment_status.charAt(0).toUpperCase() +
+                          order.payment_status.slice(1)}
                   </Badge>
                 </div>
               )}
-              
+
               <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                 <span className="text-gray-500">Total Amount:</span>
                 <span className="font-medium">{formatAmount(order.final_total)}</span>
               </div>
-              
+
               {order.amount_paid && order.amount_paid > 0 && (
                 <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                   <span className="text-gray-500">Amount Paid:</span>
-                  <span className="font-medium text-green-600">{formatAmount(order.amount_paid)}</span>
+                  <span className="font-medium text-green-600">
+                    {formatAmount(order.amount_paid)}
+                  </span>
                 </div>
               )}
-              
+
               {order.payment_status === 'partial' && order.final_total && order.amount_paid && (
                 <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                   <span className="text-gray-500">Outstanding:</span>
@@ -438,25 +479,27 @@ export default function OrderDetail() {
                   </span>
                 </div>
               )}
-              
+
               {order.paid_at && (
                 <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                   <span className="text-gray-500">Paid:</span>
                   <span>{new Date(order.paid_at).toLocaleDateString()}</span>
                 </div>
               )}
-              
+
               {/* Payment Proof Upload for bank transfer */}
-              {order.payment_method === 'bank_transfer' && 
-               (!order.payment_status || order.payment_status === 'unpaid' || order.payment_status === 'partial') && (
-                <div className="pt-2">
-                  <PaymentProofButton 
-                    quoteId={order.id}
-                    orderId={order.order_display_id || order.display_id || order.id}
-                    recipientId={null}
-                  />
-                </div>
-              )}
+              {order.payment_method === 'bank_transfer' &&
+                (!order.payment_status ||
+                  order.payment_status === 'unpaid' ||
+                  order.payment_status === 'partial') && (
+                  <div className="pt-2">
+                    <PaymentProofButton
+                      quoteId={order.id}
+                      orderId={order.order_display_id || order.display_id || order.id}
+                      recipientId={null}
+                    />
+                  </div>
+                )}
             </CardContent>
           </Card>
 
@@ -469,9 +512,9 @@ export default function OrderDetail() {
                   Shipping Address
                 </span>
                 {isOwner && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="hover:scale-105 transition-transform duration-200"
                     onClick={() => setIsAddressDialogOpen(true)}
                   >
@@ -483,20 +526,28 @@ export default function OrderDetail() {
             <CardContent>
               {shippingAddress ? (
                 <div className="text-sm space-y-1">
-                  <p className="font-medium">{shippingAddress.fullName || shippingAddress.recipient_name}</p>
+                  <p className="font-medium">
+                    {shippingAddress.fullName || shippingAddress.recipient_name}
+                  </p>
                   <p>{shippingAddress.streetAddress || shippingAddress.address_line1}</p>
-                  {(shippingAddress.address_line2) && <p>{shippingAddress.address_line2}</p>}
-                  <p>{shippingAddress.city}, {shippingAddress.state || shippingAddress.state_province_region} {shippingAddress.postalCode || shippingAddress.postal_code}</p>
+                  {shippingAddress.address_line2 && <p>{shippingAddress.address_line2}</p>}
+                  <p>
+                    {shippingAddress.city},{' '}
+                    {shippingAddress.state || shippingAddress.state_province_region}{' '}
+                    {shippingAddress.postalCode || shippingAddress.postal_code}
+                  </p>
                   <p>{shippingAddress.country}</p>
-                  {(shippingAddress.phone) && <p className="text-gray-500">📞 {shippingAddress.phone}</p>}
+                  {shippingAddress.phone && (
+                    <p className="text-gray-500">📞 {shippingAddress.phone}</p>
+                  )}
                 </div>
               ) : (
                 <div className="text-sm text-gray-500">
                   <p>No shipping address set</p>
                   {isOwner && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="mt-2 w-full"
                       onClick={() => setIsAddressDialogOpen(true)}
                     >
@@ -532,7 +583,9 @@ export default function OrderDetail() {
               </div>
               <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                 <span className="text-gray-500">Currency:</span>
-                <span>{countries?.find(c => c.code === order.destination_country)?.currency || 'USD'}</span>
+                <span>
+                  {countries?.find((c) => c.code === order.destination_country)?.currency || 'USD'}
+                </span>
               </div>
               <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                 <span className="text-gray-500">Status:</span>
@@ -558,9 +611,7 @@ export default function OrderDetail() {
       {/* Address Edit Dialog */}
       <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
         <DialogContent>
-          <DialogDescription>
-            Update your shipping address for this order.
-          </DialogDescription>
+          <DialogDescription>Update your shipping address for this order.</DialogDescription>
           <AddressEditForm
             currentAddress={shippingAddress}
             onSave={() => {
@@ -574,4 +625,4 @@ export default function OrderDetail() {
       </Dialog>
     </div>
   );
-} 
+}

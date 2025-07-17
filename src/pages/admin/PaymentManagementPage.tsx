@@ -3,13 +3,7 @@ import { Tables } from '@/integrations/supabase/types';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays } from 'date-fns';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -34,12 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 // PaymentProofPreviewModal removed - using UnifiedPaymentModal instead
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Receipt,
   Search,
@@ -121,12 +110,16 @@ interface PaymentProofData {
 const PaymentManagementPage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // State
   const [selectedProofs, setSelectedProofs] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState<'all' | 'bank_transfer' | 'payu' | 'stripe' | 'esewa'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>(
+    'all',
+  );
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<
+    'all' | 'bank_transfer' | 'payu' | 'stripe' | 'esewa'
+  >('all');
   const [dateRange, setDateRange] = useState({
     from: subDays(new Date(), 30),
     to: new Date(),
@@ -135,11 +128,22 @@ const PaymentManagementPage = () => {
   const [pageSize] = useState(10);
   const [selectedProof, setSelectedProof] = useState<PaymentProofData | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  
 
   // Fetch payment proofs with pagination
-  const { data: proofData, isLoading, refetch } = useQuery({
-    queryKey: ['payment-proofs', currentPage, pageSize, statusFilter, paymentMethodFilter, searchQuery, dateRange],
+  const {
+    data: proofData,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: [
+      'payment-proofs',
+      currentPage,
+      pageSize,
+      statusFilter,
+      paymentMethodFilter,
+      searchQuery,
+      dateRange,
+    ],
     queryFn: async () => {
       let allPaymentData: PaymentProofData[] = [];
 
@@ -166,15 +170,17 @@ const PaymentManagementPage = () => {
 
         if (messages && messages.length > 0) {
           // Get unique quote IDs and sender IDs
-          const quoteIds = [...new Set(messages.map(m => m.quote_id).filter(Boolean))];
-          const senderIds = [...new Set(messages.map(m => m.sender_id).filter(Boolean))];
+          const quoteIds = [...new Set(messages.map((m) => m.quote_id).filter(Boolean))];
+          const senderIds = [...new Set(messages.map((m) => m.sender_id).filter(Boolean))];
 
           // Fetch quotes data
           let quotesData: Tables<'quotes'>[] = [];
           if (quoteIds.length > 0) {
             const { data } = await supabase
               .from('quotes')
-              .select('id, order_display_id, final_total, final_currency, payment_method, payment_status, email, amount_paid, user_id')
+              .select(
+                'id, order_display_id, final_total, final_currency, payment_method, payment_status, email, amount_paid, user_id',
+              )
               .in('id', quoteIds);
             quotesData = data || [];
           }
@@ -190,14 +196,14 @@ const PaymentManagementPage = () => {
           }
 
           // Create lookup maps
-          const quotesMap = new Map(quotesData.map(q => [q.id, q]));
-          const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+          const quotesMap = new Map(quotesData.map((q) => [q.id, q]));
+          const profilesMap = new Map(profilesData.map((p) => [p.id, p]));
 
           // Transform bank transfer data
-          const bankTransferData = messages.map(item => {
+          const bankTransferData = messages.map((item) => {
             const quote = quotesMap.get(item.quote_id);
             const profile = profilesMap.get(item.sender_id);
-            
+
             return {
               id: item.id,
               quote_id: item.quote_id,
@@ -228,7 +234,10 @@ const PaymentManagementPage = () => {
       }
 
       // Fetch webhook payments (PayU, Stripe, etc.) if needed
-      if (paymentMethodFilter === 'all' || ['payu', 'stripe', 'esewa'].includes(paymentMethodFilter)) {
+      if (
+        paymentMethodFilter === 'all' ||
+        ['payu', 'stripe', 'esewa'].includes(paymentMethodFilter)
+      ) {
         let transactionsQuery = supabase
           .from('payment_transactions')
           .select('*')
@@ -242,9 +251,9 @@ const PaymentManagementPage = () => {
         // For webhook payments, we'll map status differently
         if (statusFilter !== 'all') {
           const webhookStatusMap = {
-            'pending': 'pending',
-            'verified': 'completed', // Webhook payments are auto-verified when completed
-            'rejected': 'failed'
+            pending: 'pending',
+            verified: 'completed', // Webhook payments are auto-verified when completed
+            rejected: 'failed',
           };
           const mappedStatus = webhookStatusMap[statusFilter as keyof typeof webhookStatusMap];
           if (mappedStatus) {
@@ -263,15 +272,17 @@ const PaymentManagementPage = () => {
 
         if (transactions && transactions.length > 0) {
           // Get unique quote IDs and user IDs
-          const quoteIds = [...new Set(transactions.map(t => t.quote_id).filter(Boolean))];
-          const userIds = [...new Set(transactions.map(t => t.user_id).filter(Boolean))];
+          const quoteIds = [...new Set(transactions.map((t) => t.quote_id).filter(Boolean))];
+          const userIds = [...new Set(transactions.map((t) => t.user_id).filter(Boolean))];
 
           // Fetch quotes data
           let quotesData: Tables<'quotes'>[] = [];
           if (quoteIds.length > 0) {
             const { data } = await supabase
               .from('quotes')
-              .select('id, order_display_id, final_total, final_currency, payment_method, payment_status, email, amount_paid, user_id')
+              .select(
+                'id, order_display_id, final_total, final_currency, payment_method, payment_status, email, amount_paid, user_id',
+              )
               .in('id', quoteIds);
             quotesData = data || [];
           }
@@ -287,28 +298,36 @@ const PaymentManagementPage = () => {
           }
 
           // Create lookup maps
-          const quotesMap = new Map(quotesData.map(q => [q.id, q]));
-          const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+          const quotesMap = new Map(quotesData.map((q) => [q.id, q]));
+          const profilesMap = new Map(profilesData.map((p) => [p.id, p]));
 
           // Transform webhook payment data
-          const webhookData = transactions.map(item => {
+          const webhookData = transactions.map((item) => {
             const quote = quotesMap.get(item.quote_id);
             const profile = profilesMap.get(item.user_id);
-            
+
             // Map webhook status to verification status
             const getVerificationStatus = (status: string) => {
               switch (status) {
-                case 'completed': return 'verified';
-                case 'failed': return 'rejected';
-                case 'pending': return 'pending';
-                default: return null;
+                case 'completed':
+                  return 'verified';
+                case 'failed':
+                  return 'rejected';
+                case 'pending':
+                  return 'pending';
+                default:
+                  return null;
               }
             };
 
-            const gatewayName = item.payment_method === 'payu' ? 'PayU' : 
-                              item.payment_method === 'stripe' ? 'Stripe' : 
-                              item.payment_method === 'esewa' ? 'eSewa' : 
-                              item.payment_method || 'Unknown';
+            const gatewayName =
+              item.payment_method === 'payu'
+                ? 'PayU'
+                : item.payment_method === 'stripe'
+                  ? 'Stripe'
+                  : item.payment_method === 'esewa'
+                    ? 'eSewa'
+                    : item.payment_method || 'Unknown';
 
             return {
               id: item.id,
@@ -344,18 +363,21 @@ const PaymentManagementPage = () => {
       }
 
       // Sort all data by creation date (newest first)
-      allPaymentData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      allPaymentData.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
 
       // Apply client-side search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        allPaymentData = allPaymentData.filter(item => 
-          item.order_display_id.toLowerCase().includes(query) ||
-          item.customer_email.toLowerCase().includes(query) ||
-          item.customer_name.toLowerCase().includes(query) ||
-          item.attachment_file_name.toLowerCase().includes(query) ||
-          (item.transaction_id && item.transaction_id.toLowerCase().includes(query)) ||
-          (item.gateway_name && item.gateway_name.toLowerCase().includes(query))
+        allPaymentData = allPaymentData.filter(
+          (item) =>
+            item.order_display_id.toLowerCase().includes(query) ||
+            item.customer_email.toLowerCase().includes(query) ||
+            item.customer_name.toLowerCase().includes(query) ||
+            item.attachment_file_name.toLowerCase().includes(query) ||
+            (item.transaction_id && item.transaction_id.toLowerCase().includes(query)) ||
+            (item.gateway_name && item.gateway_name.toLowerCase().includes(query)),
         );
       }
 
@@ -378,7 +400,12 @@ const PaymentManagementPage = () => {
   const { data: statistics } = useQuery({
     queryKey: ['payment-proofs-stats', paymentMethodFilter],
     queryFn: async () => {
-      const bankTransferStats = { total: 0, pending: 0, verified: 0, rejected: 0 };
+      const bankTransferStats = {
+        total: 0,
+        pending: 0,
+        verified: 0,
+        rejected: 0,
+      };
       const webhookStats = { total: 0, pending: 0, verified: 0, rejected: 0 };
 
       // Get bank transfer stats if needed
@@ -390,14 +417,23 @@ const PaymentManagementPage = () => {
 
         if (!error && allProofs) {
           bankTransferStats.total = allProofs.length;
-          bankTransferStats.pending = allProofs.filter(p => !p.verification_status || p.verification_status === 'pending').length;
-          bankTransferStats.verified = allProofs.filter(p => p.verification_status === 'verified').length;
-          bankTransferStats.rejected = allProofs.filter(p => p.verification_status === 'rejected').length;
+          bankTransferStats.pending = allProofs.filter(
+            (p) => !p.verification_status || p.verification_status === 'pending',
+          ).length;
+          bankTransferStats.verified = allProofs.filter(
+            (p) => p.verification_status === 'verified',
+          ).length;
+          bankTransferStats.rejected = allProofs.filter(
+            (p) => p.verification_status === 'rejected',
+          ).length;
         }
       }
 
       // Get webhook payment stats if needed
-      if (paymentMethodFilter === 'all' || ['payu', 'stripe', 'esewa'].includes(paymentMethodFilter)) {
+      if (
+        paymentMethodFilter === 'all' ||
+        ['payu', 'stripe', 'esewa'].includes(paymentMethodFilter)
+      ) {
         let transactionsQuery = supabase
           .from('payment_transactions')
           .select('status, payment_method');
@@ -411,9 +447,9 @@ const PaymentManagementPage = () => {
 
         if (!error && allTransactions) {
           webhookStats.total = allTransactions.length;
-          webhookStats.pending = allTransactions.filter(t => t.status === 'pending').length;
-          webhookStats.verified = allTransactions.filter(t => t.status === 'completed').length;
-          webhookStats.rejected = allTransactions.filter(t => t.status === 'failed').length;
+          webhookStats.pending = allTransactions.filter((t) => t.status === 'pending').length;
+          webhookStats.verified = allTransactions.filter((t) => t.status === 'completed').length;
+          webhookStats.rejected = allTransactions.filter((t) => t.status === 'failed').length;
         }
       }
 
@@ -430,9 +466,17 @@ const PaymentManagementPage = () => {
 
   // Unified verify & confirm payment operation
   const bulkUpdateMutation = useMutation({
-    mutationFn: async ({ ids, status, notes }: { ids: string[], status: 'verified' | 'rejected', notes: string }) => {
+    mutationFn: async ({
+      ids,
+      status,
+      notes,
+    }: {
+      ids: string[];
+      status: 'verified' | 'rejected';
+      notes: string;
+    }) => {
       const user = (await supabase.auth.getUser()).data.user;
-      
+
       // Get message details first
       const { data: messages, error: fetchError } = await supabase
         .from('messages')
@@ -440,10 +484,10 @@ const PaymentManagementPage = () => {
         .in('id', ids);
 
       if (fetchError) throw fetchError;
-      
+
       // Get quote IDs from messages
-      const quoteIds = messages?.map(m => m.quote_id).filter(Boolean) || [];
-      
+      const quoteIds = messages?.map((m) => m.quote_id).filter(Boolean) || [];
+
       // Fetch quote details separately
       let quotes: Tables<'quotes'>[] = [];
       if (quoteIds.length > 0) {
@@ -451,54 +495,54 @@ const PaymentManagementPage = () => {
           .from('quotes')
           .select('*')
           .in('id', quoteIds);
-          
+
         if (quotesError) throw quotesError;
         quotes = quotesData || [];
       }
 
       // For each message, calculate and set the verified amount
       const updatePromises = messages.map(async (message) => {
-        const quote = quotes.find(q => q.id === message.quote_id);
+        const quote = quotes.find((q) => q.id === message.quote_id);
         const orderTotal = quote?.final_total || 0;
         const existingPaid = quote?.amount_paid || 0;
         const remainingBalance = orderTotal - existingPaid;
-        
+
         // For now, we'll track the amount in the update logic below
         // since verified_amount column was removed from database
-        
+
         return supabase
           .from('messages')
           .update({
             verification_status: status,
             admin_notes: notes,
             verified_by: user?.id,
-            verified_at: new Date().toISOString()
+            verified_at: new Date().toISOString(),
           })
           .eq('id', message.id);
       });
 
       // Execute all updates
       const updateResults = await Promise.all(updatePromises);
-      const updateError = updateResults.find(result => result.error)?.error;
+      const updateError = updateResults.find((result) => result.error)?.error;
       if (updateError) throw updateError;
 
       // For verified payments, automatically confirm payment using our RPC function
       if (status === 'verified') {
         for (const message of messages || []) {
           if (!message.quote_id) continue;
-          
+
           // Find the corresponding quote from our fetched quotes
-          const quote = quotes.find(q => q.id === message.quote_id);
+          const quote = quotes.find((q) => q.id === message.quote_id);
           if (!quote) continue;
-          
+
           const orderTotal = quote.final_total || 0;
           const existingPaid = quote.amount_paid || 0;
-          
+
           // Use the remaining balance as the amount received
           const remainingBalance = orderTotal - existingPaid;
           const amountReceived = remainingBalance;
           const totalPaid = existingPaid + amountReceived;
-          
+
           // Determine payment status
           let paymentStatus = 'unpaid';
           if (totalPaid >= orderTotal) {
@@ -510,13 +554,13 @@ const PaymentManagementPage = () => {
           // Use our RPC function for payment updates
           console.log(`Updating payment for quote ${message.quote_id}:`, {
             new_amount_paid: totalPaid,
-            new_payment_status: paymentStatus
+            new_payment_status: paymentStatus,
           });
-          
+
           const { error: paymentError } = await supabase.rpc('force_update_payment', {
             quote_id: message.quote_id,
             new_amount_paid: totalPaid,
-            new_payment_status: paymentStatus
+            new_payment_status: paymentStatus,
           });
 
           if (paymentError) {
@@ -536,7 +580,7 @@ const PaymentManagementPage = () => {
         if (!message.quote_id || !user?.id) continue;
 
         // Find the quote to get the customer's user_id
-        const quote = quotes.find(q => q.id === message.quote_id);
+        const quote = quotes.find((q) => q.id === message.quote_id);
         if (!quote || !quote.user_id) {
           console.log('Skipping notification - no quote or user_id found');
           continue;
@@ -550,7 +594,7 @@ const PaymentManagementPage = () => {
 
         let messageContent = '';
         let subject = '';
-        
+
         if (status === 'verified') {
           messageContent = `Excellent news! Your payment has been verified and confirmed! 🎉\n\nWe have successfully processed your payment and your order is now being prepared.\n\n${notes ? `Admin Notes: ${notes}\n\n` : ''}Thank you for your payment and business with us!`;
           subject = 'Payment Confirmed - Order Processing';
@@ -562,20 +606,18 @@ const PaymentManagementPage = () => {
         if (messageContent) {
           const messageData = {
             sender_id: user.id,
-            recipient_id: quote.user_id,  // Use the quote's user_id as recipient
+            recipient_id: quote.user_id, // Use the quote's user_id as recipient
             quote_id: message.quote_id,
             subject,
             content: messageContent,
             message_type: 'payment_verification_result',
-            is_read: false
+            is_read: false,
           };
-          
+
           console.log('Attempting to send notification message:', messageData);
-          
-          const { error: msgError } = await supabase
-            .from('messages')
-            .insert(messageData);
-          
+
+          const { error: msgError } = await supabase.from('messages').insert(messageData);
+
           if (msgError) {
             console.error('Failed to send notification message:', msgError);
             console.error('Message data that failed:', messageData);
@@ -585,7 +627,7 @@ const PaymentManagementPage = () => {
           }
         }
       }
-      
+
       // Return the messages and quote IDs for use in onSuccess
       return { messages, quoteIds };
     },
@@ -595,7 +637,7 @@ const PaymentManagementPage = () => {
         description: `${selectedProofs.size} payment(s) verified and confirmed successfully. Amount paid has been updated.`,
       });
       setSelectedProofs(new Set());
-      
+
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['payment-proofs'] });
       queryClient.invalidateQueries({ queryKey: ['payment-proofs-stats'] });
@@ -613,8 +655,10 @@ const PaymentManagementPage = () => {
   const handleSelectAll = (checked: boolean) => {
     if (checked && proofData?.data) {
       // Only select bank transfer proofs for bulk operations
-      const bankTransferProofs = proofData.data.filter(p => p.payment_type === 'bank_transfer_proof');
-      setSelectedProofs(new Set(bankTransferProofs.map(p => p.id)));
+      const bankTransferProofs = proofData.data.filter(
+        (p) => p.payment_type === 'bank_transfer_proof',
+      );
+      setSelectedProofs(new Set(bankTransferProofs.map((p) => p.id)));
     } else {
       setSelectedProofs(new Set());
     }
@@ -622,7 +666,7 @@ const PaymentManagementPage = () => {
 
   const handleSelectProof = (id: string, checked: boolean) => {
     // Only allow selection of bank transfer proofs
-    const proof = proofData?.data.find(p => p.id === id);
+    const proof = proofData?.data.find((p) => p.id === id);
     if (proof && proof.payment_type !== 'bank_transfer_proof') {
       return; // Don't allow selection of webhook payments
     }
@@ -638,10 +682,11 @@ const PaymentManagementPage = () => {
 
   const handleBulkAction = (action: 'verify' | 'reject') => {
     const status = action === 'verify' ? 'verified' : 'rejected';
-    const notes = action === 'verify' 
-      ? 'Payment proof verified and payment confirmed automatically' 
-      : 'Payment proof rejected - please resubmit with clearer documentation';
-    
+    const notes =
+      action === 'verify'
+        ? 'Payment proof verified and payment confirmed automatically'
+        : 'Payment proof rejected - please resubmit with clearer documentation';
+
     bulkUpdateMutation.mutate({
       ids: Array.from(selectedProofs),
       status,
@@ -671,10 +716,10 @@ const PaymentManagementPage = () => {
       'Verified Amount',
       'Verified Date',
       'Admin Notes',
-      'File Name'
+      'File Name',
     ];
 
-    const rows = proofData.data.map(proof => [
+    const rows = proofData.data.map((proof) => [
       proof.order_display_id,
       proof.customer_name,
       proof.customer_email,
@@ -686,12 +731,12 @@ const PaymentManagementPage = () => {
       proof.amount_paid?.toString() || '0', // Use amount_paid instead of verified_amount
       proof.verified_at ? format(new Date(proof.verified_at), 'yyyy-MM-dd HH:mm') : '',
       proof.admin_notes || '',
-      proof.attachment_file_name
+      proof.attachment_file_name,
     ]);
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -713,11 +758,26 @@ const PaymentManagementPage = () => {
   const getStatusBadge = (status: string | null) => {
     switch (status) {
       case 'verified':
-        return <Badge variant="outline" className="border-green-200 text-green-700"><CheckCircle className="h-3 w-3 mr-1" />Verified</Badge>;
+        return (
+          <Badge variant="outline" className="border-green-200 text-green-700">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Verified
+          </Badge>
+        );
       case 'rejected':
-        return <Badge variant="outline" className="border-red-200 text-red-700"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
+        return (
+          <Badge variant="outline" className="border-red-200 text-red-700">
+            <XCircle className="h-3 w-3 mr-1" />
+            Rejected
+          </Badge>
+        );
       default:
-        return <Badge variant="outline" className="border-amber-200 text-amber-700"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+        return (
+          <Badge variant="outline" className="border-amber-200 text-amber-700">
+            <Clock className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
+        );
     }
   };
 
@@ -729,7 +789,7 @@ const PaymentManagementPage = () => {
       payu: <DollarSign className="h-4 w-4 text-orange-600" />,
       esewa: <DollarSign className="h-4 w-4 text-green-600" />,
     };
-    
+
     return (
       <TooltipProvider>
         <Tooltip>
@@ -737,7 +797,9 @@ const PaymentManagementPage = () => {
             {icons[method] || <DollarSign className="h-4 w-4 text-gray-600" />}
           </TooltipTrigger>
           <TooltipContent>
-            <p className="text-xs">{method.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+            <p className="text-xs">
+              {method.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+            </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -753,8 +815,10 @@ const PaymentManagementPage = () => {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       // Check if any input or textarea is focused
-      if (document.activeElement?.tagName === 'INPUT' || 
-          document.activeElement?.tagName === 'TEXTAREA') {
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
         return;
       }
 
@@ -817,7 +881,9 @@ const PaymentManagementPage = () => {
               Export CSV
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-xs text-muted-foreground">Keyboard Shortcuts</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Keyboard Shortcuts
+            </DropdownMenuLabel>
             <DropdownMenuItem disabled>
               <Keyboard className="h-4 w-4 mr-2" />
               <span className="text-xs">Ctrl+A: Select all</span>
@@ -898,7 +964,10 @@ const PaymentManagementPage = () => {
                 className="pl-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}
+            >
               <SelectTrigger className="w-full sm:w-[150px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -909,7 +978,10 @@ const PaymentManagementPage = () => {
                 <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={paymentMethodFilter} onValueChange={(value) => setPaymentMethodFilter(value as typeof paymentMethodFilter)}>
+            <Select
+              value={paymentMethodFilter}
+              onValueChange={(value) => setPaymentMethodFilter(value as typeof paymentMethodFilter)}
+            >
               <SelectTrigger className="w-full sm:w-[150px]">
                 <SelectValue placeholder="Method" />
               </SelectTrigger>
@@ -921,10 +993,7 @@ const PaymentManagementPage = () => {
                 <SelectItem value="esewa">eSewa</SelectItem>
               </SelectContent>
             </Select>
-            <DateRangePicker
-              value={dateRange}
-              onChange={setDateRange}
-            />
+            <DateRangePicker value={dateRange} onChange={setDateRange} />
           </div>
         </CardContent>
       </Card>
@@ -968,9 +1037,7 @@ const PaymentManagementPage = () => {
       <Card>
         <CardHeader>
           <CardTitle>Payment Proofs</CardTitle>
-          <CardDescription>
-            Review and verify payment submissions from customers
-          </CardDescription>
+          <CardDescription>Review and verify payment submissions from customers</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -986,8 +1053,12 @@ const PaymentManagementPage = () => {
                   <TableRow>
                     <TableHead className="w-12">
                       <Checkbox
-                        checked={selectedProofs.size > 0 && 
-                          proofData.data.filter(p => p.payment_type === 'bank_transfer_proof').every(p => selectedProofs.has(p.id))}
+                        checked={
+                          selectedProofs.size > 0 &&
+                          proofData.data
+                            .filter((p) => p.payment_type === 'bank_transfer_proof')
+                            .every((p) => selectedProofs.has(p.id))
+                        }
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
@@ -1007,7 +1078,9 @@ const PaymentManagementPage = () => {
                         {proof.payment_type === 'bank_transfer_proof' && (
                           <Checkbox
                             checked={selectedProofs.has(proof.id)}
-                            onCheckedChange={(checked) => handleSelectProof(proof.id, checked as boolean)}
+                            onCheckedChange={(checked) =>
+                              handleSelectProof(proof.id, checked as boolean)
+                            }
                           />
                         )}
                       </TableCell>
@@ -1017,7 +1090,9 @@ const PaymentManagementPage = () => {
                       <TableCell>
                         <div>
                           <div className="font-medium">{proof.customer_name}</div>
-                          <div className="text-sm text-muted-foreground">{proof.customer_email}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {proof.customer_email}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -1038,9 +1113,7 @@ const PaymentManagementPage = () => {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        {getStatusBadge(proof.verification_status)}
-                      </TableCell>
+                      <TableCell>{getStatusBadge(proof.verification_status)}</TableCell>
                       <TableCell>
                         <div className="text-sm">
                           {format(new Date(proof.created_at), 'MMM dd, yyyy')}
@@ -1110,16 +1183,18 @@ const PaymentManagementPage = () => {
               {proofData.totalPages > 1 && (
                 <div className="mt-4 flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((currentPage - 1) * pageSize) + 1} to{' '}
+                    Showing {(currentPage - 1) * pageSize + 1} to{' '}
                     {Math.min(currentPage * pageSize, proofData.totalCount)} of{' '}
                     {proofData.totalCount} results
                   </p>
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
-                        <PaginationPrevious 
-                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        <PaginationPrevious
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          className={
+                            currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'
+                          }
                         />
                       </PaginationItem>
                       {Array.from({ length: Math.min(5, proofData.totalPages) }, (_, i) => {
@@ -1138,8 +1213,14 @@ const PaymentManagementPage = () => {
                       })}
                       <PaginationItem>
                         <PaginationNext
-                          onClick={() => setCurrentPage(p => Math.min(proofData.totalPages, p + 1))}
-                          className={currentPage === proofData.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(proofData.totalPages, p + 1))
+                          }
+                          className={
+                            currentPage === proofData.totalPages
+                              ? 'pointer-events-none opacity-50'
+                              : 'cursor-pointer'
+                          }
                         />
                       </PaginationItem>
                     </PaginationContent>

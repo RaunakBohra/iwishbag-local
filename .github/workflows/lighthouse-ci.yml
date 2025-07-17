@@ -1,0 +1,87 @@
+name: Lighthouse CI Performance Testing
+
+on:
+  # Run on main branch pushes and PRs for performance monitoring
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  
+  # Allow manual triggering for performance testing
+  workflow_dispatch:
+
+jobs:
+  lighthouse-ci:
+    runs-on: ubuntu-latest
+    name: Lighthouse CI Performance Analysis
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: |
+          echo "📦 Installing dependencies for Lighthouse CI..."
+          npm ci
+          
+      - name: Build project for performance testing
+        run: |
+          echo "🔨 Building optimized production build..."
+          npm run build
+          
+      - name: Install Lighthouse CI globally
+        run: |
+          echo "🚨 Installing Lighthouse CI globally..."
+          npm install -g @lhci/cli@0.15.x
+          
+      - name: Run Lighthouse CI
+        run: |
+          echo "🚀 Running Lighthouse CI performance tests..."
+          echo "📊 Testing Core Web Vitals and performance metrics..."
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          
+      - name: Upload Lighthouse CI results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-ci-results
+          path: |
+            .lighthouseci/
+            lhci_reports/
+          retention-days: 30
+          
+      - name: Performance Budget Check
+        if: failure()
+        run: |
+          echo "❌ Performance budget exceeded!"
+          echo "🔍 Key areas to investigate:"
+          echo "  • Core Web Vitals (LCP, INP, CLS)"
+          echo "  • Bundle size optimization"
+          echo "  • Image optimization"
+          echo "  • JavaScript execution time"
+          echo "  • CSS optimization"
+          echo ""
+          echo "📊 Review the Lighthouse CI results for detailed recommendations"
+          
+      - name: Success Notification
+        if: success()
+        run: |
+          echo "✅ All performance budgets met!"
+          echo "🚀 Core Web Vitals within targets:"
+          echo "  • LCP < 2.5s"
+          echo "  • INP < 200ms" 
+          echo "  • CLS < 0.1"
+          echo "📈 Performance score ≥ 85%"
+          echo "♿ Accessibility score ≥ 95%"
+          echo "🎯 Best practices score ≥ 90%"
+          echo "🔍 SEO score ≥ 90%"

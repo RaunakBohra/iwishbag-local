@@ -1,5 +1,5 @@
-import React from "react";
-import EmailTemplateManager from "@/components/admin/EmailTemplateManager";
+import React from 'react';
+import EmailTemplateManager from '@/components/admin/EmailTemplateManager';
 
 const EmailTemplatesPage = () => {
   return (
@@ -10,4 +10,4 @@ const EmailTemplatesPage = () => {
   );
 };
 
-export default EmailTemplatesPage; 
+export default EmailTemplatesPage;

@@ -1,4 +1,4 @@
-import { useAllCountries } from "@/hooks/useAllCountries";
+import { useAllCountries } from '@/hooks/useAllCountries';
 
 /**
  * Centralized country utility functions for consistent code/name conversion
@@ -18,15 +18,15 @@ export interface CountryInfo {
  * @returns Display name (e.g., 'United States' or 'United States (US)')
  */
 export const getCountryDisplayName = (
-  code: string, 
-  countries: CountryInfo[] = [], 
-  showCode: boolean = false
+  code: string,
+  countries: CountryInfo[] = [],
+  showCode: boolean = false,
 ): string => {
   if (!code) return 'Unknown';
-  
-  const country = countries.find(c => c.code === code);
+
+  const country = countries.find((c) => c.code === code);
   if (!country) return code;
-  
+
   return showCode ? `${country.name} (${code})` : country.name;
 };
 
@@ -36,18 +36,15 @@ export const getCountryDisplayName = (
  * @param countries - Array of country objects from useAllCountries
  * @returns Country code (e.g., 'US') or original name if not found
  */
-export const getCountryCode = (
-  name: string, 
-  countries: CountryInfo[] = []
-): string => {
+export const getCountryCode = (name: string, countries: CountryInfo[] = []): string => {
   if (!name) return '';
-  
+
   // If it's already a 2-letter code, return it
   if (name.length === 2 && /^[A-Z]{2}$/.test(name.toUpperCase())) {
     return name.toUpperCase();
   }
-  
-  const country = countries.find(c => c.name === name);
+
+  const country = countries.find((c) => c.name === name);
   return country ? country.code : name;
 };
 
@@ -57,14 +54,14 @@ export const getCountryCode = (
  */
 export const useCountryUtils = () => {
   const { data: countries = [] } = useAllCountries();
-  
+
   return {
     countries,
-    getCountryDisplayName: (code: string, showCode: boolean = false) => 
+    getCountryDisplayName: (code: string, showCode: boolean = false) =>
       getCountryDisplayName(code, countries, showCode),
     getCountryCode: (name: string) => getCountryCode(name, countries),
-    getCountryByCode: (code: string) => countries.find(c => c.code === code),
-    getCountryByName: (name: string) => countries.find(c => c.name === name),
+    getCountryByCode: (code: string) => countries.find((c) => c.code === code),
+    getCountryByName: (name: string) => countries.find((c) => c.name === name),
   };
 };
 
@@ -80,20 +77,20 @@ export const formatShippingRoute = (
   originCode: string,
   destinationCode: string,
   countries: CountryInfo[] = [],
-  showCodes: boolean = false
+  showCodes: boolean = false,
 ): string => {
   // Handle empty or invalid inputs
   if (!originCode || !destinationCode) {
     return '—';
   }
-  
+
   const originName = getCountryDisplayName(originCode, countries, showCodes);
   const destinationName = getCountryDisplayName(destinationCode, countries, showCodes);
-  
+
   // If either country name is invalid, return a dash
   if (originName === 'Unknown' || destinationName === 'Unknown') {
     return '—';
   }
-  
+
   return `${originName} → ${destinationName}`;
-}; 
+};

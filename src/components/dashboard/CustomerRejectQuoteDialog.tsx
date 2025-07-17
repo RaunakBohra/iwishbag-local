@@ -73,17 +73,19 @@ export const CustomerRejectQuoteDialog: React.FC<RejectQuoteDialogProps> = ({
   }, [isOpen]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!isSubmitting && !isPending) {
-        onOpenChange(open);
-      }
-    }}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!isSubmitting && !isPending) {
+          onOpenChange(open);
+        }
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Reject Quote</DialogTitle>
           <DialogDescription>
-            Please provide a reason for rejecting this quote. Your feedback is
-            valuable to us.
+            Please provide a reason for rejecting this quote. Your feedback is valuable to us.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -118,17 +120,14 @@ export const CustomerRejectQuoteDialog: React.FC<RejectQuoteDialogProps> = ({
           </div>
         </div>
         <DialogFooter>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isPending || isSubmitting}
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={!selectedReason || isPending || isSubmitting}
-          >
+          <Button onClick={handleConfirm} disabled={!selectedReason || isPending || isSubmitting}>
             {isPending || isSubmitting ? 'Submitting...' : 'Confirm Rejection'}
           </Button>
         </DialogFooter>

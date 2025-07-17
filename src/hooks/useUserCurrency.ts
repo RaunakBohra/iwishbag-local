@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useUserProfile } from './useUserProfile';
 import { useAllCountries } from './useAllCountries';
@@ -9,11 +8,11 @@ export const useUserCurrency = () => {
   const { data: allCountries } = useAllCountries();
 
   const userCurrency = userProfile?.preferred_display_currency || 'USD';
-  
+
   const exchangeRate = useMemo(() => {
     if (userCurrency === 'USD') return 1;
-    
-    const country = allCountries?.find(c => c.currency === userCurrency);
+
+    const country = allCountries?.find((c) => c.currency === userCurrency);
     return country?.rate_from_usd || 1;
   }, [allCountries, userCurrency]);
 

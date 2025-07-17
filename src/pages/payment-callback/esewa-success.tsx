@@ -13,7 +13,7 @@ const EsewaSuccess: React.FC = () => {
       try {
         // eSewa sends the response data as URL parameters (encoded)
         const encodedData = searchParams.get('data');
-        
+
         if (!encodedData) {
           setStatus('error');
           setMessage('No payment data received from eSewa.');
@@ -23,23 +23,28 @@ const EsewaSuccess: React.FC = () => {
         console.log('📥 eSewa success callback - data length:', encodedData.length);
 
         // Call our Edge Function to handle the eSewa callback
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/esewa-callback`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain',
-            'Authorization': session?.access_token ? `Bearer ${session.access_token}` : ''
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/esewa-callback`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain',
+              Authorization: session?.access_token ? `Bearer ${session.access_token}` : '',
+            },
+            body: encodedData,
           },
-          body: encodedData
-        });
+        );
 
         const result = await response.json();
 
         if (result.success) {
           setStatus('success');
           setMessage(result.message || 'Payment completed successfully!');
-          
+
           // Redirect to success page after a brief delay
           setTimeout(() => {
             navigate('/payment-success?gateway=esewa&status=success');
@@ -47,7 +52,7 @@ const EsewaSuccess: React.FC = () => {
         } else {
           setStatus('error');
           setMessage(result.error || 'Payment verification failed.');
-          
+
           // Redirect to failure page after a brief delay
           setTimeout(() => {
             navigate('/payment-failure?gateway=esewa&status=error');
@@ -57,7 +62,7 @@ const EsewaSuccess: React.FC = () => {
         console.error('❌ eSewa callback processing error:', error);
         setStatus('error');
         setMessage('An error occurred while processing your payment.');
-        
+
         // Redirect to failure page after a brief delay
         setTimeout(() => {
           navigate('/payment-failure?gateway=esewa&status=error');
@@ -79,12 +84,22 @@ const EsewaSuccess: React.FC = () => {
               <p className="text-gray-600">{message}</p>
             </>
           )}
-          
+
           {status === 'success' && (
             <>
               <div className="rounded-full h-12 w-12 bg-green-100 mx-auto mb-4 flex items-center justify-center">
-                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                <svg
+                  className="h-6 w-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 13l4 4L19 7"
+                  ></path>
                 </svg>
               </div>
               <h2 className="text-xl font-semibold text-green-900 mb-2">Payment Successful!</h2>
@@ -92,12 +107,22 @@ const EsewaSuccess: React.FC = () => {
               <p className="text-sm text-gray-500 mt-2">Redirecting you to the success page...</p>
             </>
           )}
-          
+
           {status === 'error' && (
             <>
               <div className="rounded-full h-12 w-12 bg-red-100 mx-auto mb-4 flex items-center justify-center">
-                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                <svg
+                  className="h-6 w-6 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  ></path>
                 </svg>
               </div>
               <h2 className="text-xl font-semibold text-red-900 mb-2">Payment Error</h2>

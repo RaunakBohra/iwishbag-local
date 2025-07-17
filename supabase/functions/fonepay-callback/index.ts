@@ -1,25 +1,25 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { createCorsHeaders } from '../_shared/cors.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createCorsHeaders } from '../_shared/cors.ts';
 
 interface FonepayResponse {
-  PRN: string;       // Product Reference Number
-  PID: string;       // Merchant Code
-  PS: boolean;       // Payment Status (true = success)
-  RC: string;        // Response Code
-  UID: string;       // Fonepay Trace ID
-  BC: string;        // Bank Code
-  INI: string;       // Initiator
-  P_AMT: number;     // Paid Amount
-  R_AMT: number;     // Requested Amount
-  R1: string;        // Reference data (contains Order_{quoteIds})
-  R2: string;        // Customer name
-  DV: string;        // Hash for verification
+  PRN: string; // Product Reference Number
+  PID: string; // Merchant Code
+  PS: boolean; // Payment Status (true = success)
+  RC: string; // Response Code
+  UID: string; // Fonepay Trace ID
+  BC: string; // Bank Code
+  INI: string; // Initiator
+  P_AMT: number; // Paid Amount
+  R_AMT: number; // Requested Amount
+  R1: string; // Reference data (contains Order_{quoteIds})
+  R2: string; // Customer name
+  DV: string; // Hash for verification
 }
 
 serve(async (req) => {
   const corsHeaders = createCorsHeaders(req);
-  
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -27,7 +27,7 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // Parse query parameters from Fonepay response
@@ -46,7 +46,7 @@ serve(async (req) => {
       R_AMT: parseFloat(params.get('R_AMT') || '0'),
       R1: params.get('R1') || '',
       R2: params.get('R2') || '',
-      DV: params.get('DV') || ''
+      DV: params.get('DV') || '',
     };
 
     console.log('📥 Fonepay callback received:', responseData);
@@ -63,7 +63,7 @@ serve(async (req) => {
     }
 
     const secretKey = gatewayConfig.config.secret_key;
-    
+
     // Generate verification hash
     const verificationString = [
       responseData.PRN,
@@ -76,7 +76,7 @@ serve(async (req) => {
       responseData.P_AMT.toString(),
       responseData.R_AMT.toString(),
       responseData.R1,
-      responseData.R2
+      responseData.R2,
     ].join(',');
 
     console.log('🔐 Verification string:', verificationString);
@@ -85,18 +85,18 @@ serve(async (req) => {
     const encoder = new TextEncoder();
     const keyData = encoder.encode(secretKey);
     const messageData = encoder.encode(verificationString);
-    
+
     const cryptoKey = await crypto.subtle.importKey(
       'raw',
       keyData,
       { name: 'HMAC', hash: 'SHA-512' },
       false,
-      ['sign']
+      ['sign'],
     );
-    
+
     const hashBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const calculatedHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const calculatedHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 
     console.log('🔍 Calculated hash:', calculatedHash.substring(0, 20) + '...');
     console.log('🔍 Received hash:', responseData.DV.substring(0, 20) + '...');
@@ -114,11 +114,11 @@ serve(async (req) => {
     console.log('🔍 Extracting quote IDs from R1:', r1);
 
     let quoteIds: string[] = [];
-    
+
     // Parse quote IDs from R1 parameter format: "Order_{quoteIds}"
     if (r1 && r1.startsWith('Order_')) {
       const quoteIdsString = r1.replace('Order_', '');
-      quoteIds = quoteIdsString.split(',').filter(id => id.trim().length > 0);
+      quoteIds = quoteIdsString.split(',').filter((id) => id.trim().length > 0);
       console.log('📋 Extracted quote IDs:', quoteIds);
     } else {
       console.error('❌ Could not extract quote IDs from R1 parameter:', r1);
@@ -127,7 +127,7 @@ serve(async (req) => {
     // Update quote status if payment successful
     if (responseData.PS && quoteIds.length > 0) {
       console.log('💰 Payment successful, updating quote status');
-      
+
       const { error: updateError } = await supabaseAdmin
         .from('quotes')
         .update({
@@ -141,9 +141,9 @@ serve(async (req) => {
             amount: responseData.P_AMT,
             bank_code: responseData.BC,
             initiator: responseData.INI,
-            payment_date: new Date().toISOString()
+            payment_date: new Date().toISOString(),
           }),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .in('id', quoteIds);
 
@@ -162,28 +162,26 @@ serve(async (req) => {
         .select('user_id')
         .eq('id', quoteIds[0])
         .single();
-      
+
       userId = firstQuote?.user_id || null;
     }
 
     // Create payment transaction record (follows same pattern as other gateways)
-    const { error: transactionError } = await supabaseAdmin
-      .from('payment_transactions')
-      .insert({
-        user_id: userId,
-        quote_id: quoteIds.length > 0 ? quoteIds[0] : null, // Primary quote
-        gateway: 'fonepay',
-        gateway_transaction_id: responseData.UID || prn,
-        amount: responseData.P_AMT,
-        currency: 'NPR',
-        status: responseData.PS ? 'completed' : 'failed',
-        payment_method: 'fonepay',
-        purchase_order_id: prn,
-        gateway_response: responseData,
-        completed_at: responseData.PS ? new Date().toISOString() : null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+    const { error: transactionError } = await supabaseAdmin.from('payment_transactions').insert({
+      user_id: userId,
+      quote_id: quoteIds.length > 0 ? quoteIds[0] : null, // Primary quote
+      gateway: 'fonepay',
+      gateway_transaction_id: responseData.UID || prn,
+      amount: responseData.P_AMT,
+      currency: 'NPR',
+      status: responseData.PS ? 'completed' : 'failed',
+      payment_method: 'fonepay',
+      purchase_order_id: prn,
+      gateway_response: responseData,
+      completed_at: responseData.PS ? new Date().toISOString() : null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
 
     if (transactionError) {
       console.error('⚠️ Warning: Could not create payment transaction record:', transactionError);
@@ -192,16 +190,14 @@ serve(async (req) => {
     }
 
     // Log webhook processing for audit trail
-    const { error: webhookError } = await supabaseAdmin
-      .from('webhook_logs')
-      .insert({
-        webhook_type: 'fonepay_callback',
-        status: responseData.PS ? 'success' : 'failed',
-        request_data: responseData,
-        response_data: { redirectUrl: `pending_redirect` },
-        error_message: responseData.PS ? null : responseData.RC,
-        created_at: new Date().toISOString()
-      });
+    const { error: webhookError } = await supabaseAdmin.from('webhook_logs').insert({
+      webhook_type: 'fonepay_callback',
+      status: responseData.PS ? 'success' : 'failed',
+      request_data: responseData,
+      response_data: { redirectUrl: `pending_redirect` },
+      error_message: responseData.PS ? null : responseData.RC,
+      created_at: new Date().toISOString(),
+    });
 
     if (webhookError) {
       console.error('⚠️ Warning: Could not log webhook processing:', webhookError);
@@ -220,23 +216,22 @@ serve(async (req) => {
       status: 302,
       headers: {
         ...corsHeaders,
-        'Location': redirectUrl
-      }
+        Location: redirectUrl,
+      },
     });
-
   } catch (error) {
     console.error('❌ Fonepay callback error:', error);
-    
+
     // Redirect to error page on any error
     const url = new URL(req.url);
     const baseUrl = url.origin;
-    
+
     return new Response(null, {
       status: 302,
       headers: {
         ...corsHeaders,
-        'Location': `${baseUrl}/payment-failure?gateway=fonepay&error=${encodeURIComponent(error.message)}`
-      }
+        Location: `${baseUrl}/payment-failure?gateway=fonepay&error=${encodeURIComponent(error.message)}`,
+      },
     });
   }
 });

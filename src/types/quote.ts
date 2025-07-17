@@ -1,25 +1,44 @@
-export type QuoteStatus = 
-  | 'pending'           // Initial state when quote is created
-  | 'sent'             // Quote has been sent to customer
-  | 'approved'         // Customer has approved the quote
-  | 'rejected'         // Quote has been rejected
-  | 'expired'          // Quote has expired
-  | 'paid'             // Payment received
-  | 'ordered'          // Order has been placed
-  | 'shipped'          // Order has been shipped
-  | 'completed'        // Order has been completed
-  | 'cancelled';       // Quote or order has been cancelled
+export type QuotePriority = 'low' | 'medium' | 'high' | 'urgent';
 
-export type QuoteApprovalStatus = 
-  | 'pending'          // Waiting for customer approval
-  | 'approved'         // Customer has approved
+export interface QuoteBreakdown {
+  item_price: number;
+  sales_tax_price: number;
+  merchant_shipping_price: number;
+  international_shipping: number;
+  customs_and_ecs: number;
+  domestic_shipping: number;
+  handling_charge: number;
+  insurance_amount: number;
+  payment_gateway_fee: number;
+  sub_total: number;
+  vat: number;
+  discount: number;
+  final_total: number;
+  exchange_rate: number;
+}
+
+export type QuoteStatus =
+  | 'pending' // Initial state when quote is created
+  | 'sent' // Quote has been sent to customer
+  | 'approved' // Customer has approved the quote
+  | 'rejected' // Quote has been rejected
+  | 'expired' // Quote has expired
+  | 'paid' // Payment received
+  | 'ordered' // Order has been placed
+  | 'shipped' // Order has been shipped
+  | 'completed' // Order has been completed
+  | 'cancelled'; // Quote or order has been cancelled
+
+export type QuoteApprovalStatus =
+  | 'pending' // Waiting for customer approval
+  | 'approved' // Customer has approved
   | 'rejected';
 
-export type PaymentMethod = 
-  | 'stripe'           // Stripe payment
-  | 'cod'              // Cash on delivery
-  | 'bank_transfer'    // Bank transfer
-  | null;              // No payment method selected
+export type PaymentMethod =
+  | 'stripe' // Stripe payment
+  | 'cod' // Cash on delivery
+  | 'bank_transfer' // Bank transfer
+  | null; // No payment method selected
 
 export interface Quote {
   id: string;
@@ -84,9 +103,9 @@ export interface QuoteState {
 // For React components: use the hook version (useStatusTransitionValidation)
 // For utility functions: use this version with explicit transition rules
 export const isValidStatusTransition = (
-  currentState: QuoteState, 
+  currentState: QuoteState,
   newState: Partial<QuoteState>,
-  allowedTransitions?: Record<string, string[]>
+  allowedTransitions?: Record<string, string[]>,
 ): boolean => {
   // If status is changing
   if (newState.status && newState.status !== currentState.status) {
@@ -94,7 +113,7 @@ export const isValidStatusTransition = (
     if (allowedTransitions) {
       return allowedTransitions[currentState.status]?.includes(newState.status) ?? false;
     }
-    
+
     // FALLBACK: Legacy hardcoded transitions (will be deprecated)
     switch (currentState.status) {
       case 'pending':
@@ -145,7 +164,9 @@ export const isValidStatusTransition = (
 
 export const isQuoteEditable = (state: QuoteState, editableStatuses?: string[]): boolean => {
   if (!editableStatuses) {
-    console.warn('isQuoteEditable: No status configuration provided. Use useStatusManagement() hook instead.');
+    console.warn(
+      'isQuoteEditable: No status configuration provided. Use useStatusManagement() hook instead.',
+    );
     return ['pending', 'calculated'].includes(state.status); // legacy fallback
   }
   return editableStatuses.includes(state.status);
@@ -153,7 +174,9 @@ export const isQuoteEditable = (state: QuoteState, editableStatuses?: string[]):
 
 export const isQuoteApproved = (state: QuoteState, approvedStatuses?: string[]): boolean => {
   if (!approvedStatuses) {
-    console.warn('isQuoteApproved: No status configuration provided. Use useStatusManagement() hook instead.');
+    console.warn(
+      'isQuoteApproved: No status configuration provided. Use useStatusManagement() hook instead.',
+    );
     return state.status === 'approved'; // legacy fallback
   }
   return approvedStatuses.includes(state.status);
@@ -165,7 +188,9 @@ export const isQuoteInCart = (state: QuoteState): boolean => {
 
 export const isQuotePaid = (state: QuoteState, paidStatuses?: string[]): boolean => {
   if (!paidStatuses) {
-    console.warn('isQuotePaid: No status configuration provided. Use useStatusManagement() hook instead.');
+    console.warn(
+      'isQuotePaid: No status configuration provided. Use useStatusManagement() hook instead.',
+    );
     return ['paid', 'ordered', 'shipped', 'completed'].includes(state.status); // legacy fallback
   }
   return paidStatuses.includes(state.status);
@@ -173,7 +198,9 @@ export const isQuotePaid = (state: QuoteState, paidStatuses?: string[]): boolean
 
 export const isQuoteCompleted = (state: QuoteState, completedStatuses?: string[]): boolean => {
   if (!completedStatuses) {
-    console.warn('isQuoteCompleted: No status configuration provided. Use useStatusManagement() hook instead.');
+    console.warn(
+      'isQuoteCompleted: No status configuration provided. Use useStatusManagement() hook instead.',
+    );
     return state.status === 'completed'; // legacy fallback
   }
   return completedStatuses.includes(state.status);
@@ -181,7 +208,9 @@ export const isQuoteCompleted = (state: QuoteState, completedStatuses?: string[]
 
 export const isQuoteCancelled = (state: QuoteState, cancelledStatuses?: string[]): boolean => {
   if (!cancelledStatuses) {
-    console.warn('isQuoteCancelled: No status configuration provided. Use useStatusManagement() hook instead.');
+    console.warn(
+      'isQuoteCancelled: No status configuration provided. Use useStatusManagement() hook instead.',
+    );
     return state.status === 'cancelled'; // legacy fallback
   }
   return cancelledStatuses.includes(state.status);
@@ -189,7 +218,9 @@ export const isQuoteCancelled = (state: QuoteState, cancelledStatuses?: string[]
 
 export const canAddToCart = (state: QuoteState, cartEligibleStatuses?: string[]): boolean => {
   if (!cartEligibleStatuses) {
-    console.warn('canAddToCart: No status configuration provided. Use useStatusManagement() hook instead.');
+    console.warn(
+      'canAddToCart: No status configuration provided. Use useStatusManagement() hook instead.',
+    );
     return state.status === 'approved' && !state.in_cart; // legacy fallback
   }
   return cartEligibleStatuses.includes(state.status) && !state.in_cart;
@@ -218,16 +249,16 @@ export const createStatusChecker = (config: StatusCheckConfig) => ({
 // Status update function
 export const updateQuoteState = (
   currentState: QuoteState,
-  updates: Partial<QuoteState>
+  updates: Partial<QuoteState>,
 ): QuoteState | null => {
   const newState = { ...currentState, ...updates };
-  
+
   if (!isValidStatusTransition(currentState, updates)) {
     return null;
   }
 
   return newState;
-}; 
+};
 
 export interface ShippingAddress {
   country: string;
@@ -254,4 +285,4 @@ export type QuoteItem = {
   category: 'electronics' | 'clothing' | 'home' | 'other';
   created_at: string;
   updated_at: string;
-}; 
+};

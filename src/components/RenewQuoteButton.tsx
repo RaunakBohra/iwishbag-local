@@ -18,19 +18,19 @@ export const RenewQuoteButton = ({ quoteId, onRenewed, className }: RenewQuoteBu
   const handleRenew = async () => {
     try {
       await renewQuote(quoteId);
-      
+
       toast({
-        title: "Quote Renewed",
-        description: "Your quote has been renewed and is now pending admin review.",
+        title: 'Quote Renewed',
+        description: 'Your quote has been renewed and is now pending admin review.',
       });
 
       setIsRenewed(true);
       onRenewed?.();
     } catch (error) {
       toast({
-        title: "Renewal Failed",
-        description: error instanceof Error ? error.message : "Failed to renew quote",
-        variant: "destructive",
+        title: 'Renewal Failed',
+        description: error instanceof Error ? error.message : 'Failed to renew quote',
+        variant: 'destructive',
       });
     }
   };
@@ -45,13 +45,9 @@ export const RenewQuoteButton = ({ quoteId, onRenewed, className }: RenewQuoteBu
   }
 
   return (
-    <Button 
-      onClick={handleRenew} 
-      disabled={isRenewing}
-      className={className}
-    >
+    <Button onClick={handleRenew} disabled={isRenewing} className={className}>
       <RefreshCw className={`w-4 h-4 mr-2 ${isRenewing ? 'animate-spin' : ''}`} />
       {isRenewing ? 'Renewing...' : 'Renew Quote'}
     </Button>
   );
-}; 
+};

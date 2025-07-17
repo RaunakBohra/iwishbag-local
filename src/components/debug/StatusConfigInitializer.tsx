@@ -53,7 +53,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     showsInQuotesList: true,
     showsInOrdersList: false,
     canBePaid: false,
-    isDefaultQuoteStatus: true
+    isDefaultQuoteStatus: true,
   },
   {
     id: 'sent',
@@ -73,7 +73,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: true,
     showsInOrdersList: false,
-    canBePaid: false
+    canBePaid: false,
   },
   {
     id: 'approved',
@@ -93,7 +93,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     showsInQuotesList: true,
     showsInOrdersList: false,
     canBePaid: true,
-    allowCartActions: true
+    allowCartActions: true,
   },
   {
     id: 'rejected',
@@ -112,7 +112,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: true,
     showsInOrdersList: false,
-    canBePaid: false
+    canBePaid: false,
   },
   {
     id: 'expired',
@@ -131,8 +131,8 @@ const defaultQuoteStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: true,
     showsInOrdersList: false,
-    canBePaid: false
-  }
+    canBePaid: false,
+  },
 ];
 
 const defaultOrderStatuses: StatusConfig[] = [
@@ -151,12 +151,12 @@ const defaultOrderStatuses: StatusConfig[] = [
     triggersEmail: true,
     emailTemplate: 'payment_instructions',
     requiresAction: false,
-    showsInQuotesList: false,  // CRITICAL: Should NOT show in quotes list
-    showsInOrdersList: true,   // CRITICAL: Should show in orders list
+    showsInQuotesList: false, // CRITICAL: Should NOT show in quotes list
+    showsInOrdersList: true, // CRITICAL: Should show in orders list
     canBePaid: false,
     countsAsOrder: true,
     customerMessage: 'Order placed - Please complete payment',
-    customerActionText: 'Pay Now'
+    customerActionText: 'Pay Now',
   },
   {
     id: 'processing',
@@ -175,7 +175,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     requiresAction: true,
     showsInQuotesList: false,
     showsInOrdersList: true,
-    canBePaid: false
+    canBePaid: false,
   },
   {
     id: 'paid',
@@ -195,7 +195,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     showsInQuotesList: false,
     showsInOrdersList: true,
     canBePaid: false,
-    countsAsOrder: true
+    countsAsOrder: true,
   },
   {
     id: 'ordered',
@@ -214,7 +214,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: false,
     showsInOrdersList: true,
-    canBePaid: false
+    canBePaid: false,
   },
   {
     id: 'shipped',
@@ -234,7 +234,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     showsInQuotesList: false,
     showsInOrdersList: true,
     canBePaid: false,
-    countsAsOrder: true
+    countsAsOrder: true,
   },
   {
     id: 'completed',
@@ -255,7 +255,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     showsInOrdersList: true,
     canBePaid: false,
     countsAsOrder: true,
-    isSuccessful: true
+    isSuccessful: true,
   },
   {
     id: 'cancelled',
@@ -274,8 +274,8 @@ const defaultOrderStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: true,
     showsInOrdersList: true,
-    canBePaid: false
-  }
+    canBePaid: false,
+  },
 ];
 
 export const StatusConfigInitializer: React.FC = () => {
@@ -297,9 +297,9 @@ export const StatusConfigInitializer: React.FC = () => {
   const initializeConfigurations = async () => {
     if (!isAdmin) {
       toast({
-        title: "Access Denied",
-        description: "You need admin privileges to initialize status configurations",
-        variant: "destructive"
+        title: 'Access Denied',
+        description: 'You need admin privileges to initialize status configurations',
+        variant: 'destructive',
       });
       return;
     }
@@ -307,48 +307,49 @@ export const StatusConfigInitializer: React.FC = () => {
     setIsInitializing(true);
     try {
       // Insert quote statuses
-      const { error: quoteError } = await supabase
-        .from('system_settings')
-        .upsert({
+      const { error: quoteError } = await supabase.from('system_settings').upsert(
+        {
           setting_key: 'quote_statuses',
           setting_value: JSON.stringify(defaultQuoteStatuses),
           description: 'Quote status configurations',
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'setting_key'
-        });
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'setting_key',
+        },
+      );
 
       if (quoteError) throw quoteError;
 
       // Insert order statuses
-      const { error: orderError } = await supabase
-        .from('system_settings')
-        .upsert({
+      const { error: orderError } = await supabase.from('system_settings').upsert(
+        {
           setting_key: 'order_statuses',
           setting_value: JSON.stringify(defaultOrderStatuses),
           description: 'Order status configurations',
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'setting_key'
-        });
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'setting_key',
+        },
+      );
 
       if (orderError) throw orderError;
 
       toast({
-        title: "Success",
-        description: "Status configurations initialized successfully"
+        title: 'Success',
+        description: 'Status configurations initialized successfully',
       });
 
       // Run diagnostics after initialization
       await runDiagnostics();
-
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Error initializing configurations:', error);
       toast({
-        title: "Initialization Failed",
-        description: errorMessage || "Failed to initialize status configurations",
-        variant: "destructive"
+        title: 'Initialization Failed',
+        description: errorMessage || 'Failed to initialize status configurations',
+        variant: 'destructive',
       });
     } finally {
       setIsInitializing(false);
@@ -367,7 +368,7 @@ export const StatusConfigInitializer: React.FC = () => {
       if (settingsError) throw settingsError;
 
       const hasConfigs = settings?.length === 2;
-      
+
       // Get all quotes
       const { data: allQuotes, error: quotesError } = await supabase
         .from('quotes')
@@ -377,15 +378,15 @@ export const StatusConfigInitializer: React.FC = () => {
       if (quotesError) throw quotesError;
 
       const quotes = allQuotes || [];
-      const paymentPendingQuotes = quotes.filter(q => q.status === 'payment_pending');
+      const paymentPendingQuotes = quotes.filter((q) => q.status === 'payment_pending');
 
       // Simulate filtering logic if configurations exist
       let paymentPendingInQuotesList = false;
       let paymentPendingInOrdersList = false;
 
       if (hasConfigs) {
-        const quoteSettings = settings?.find(s => s.setting_key === 'quote_statuses');
-        const orderSettings = settings?.find(s => s.setting_key === 'order_statuses');
+        const quoteSettings = settings?.find((s) => s.setting_key === 'quote_statuses');
+        const orderSettings = settings?.find((s) => s.setting_key === 'order_statuses');
 
         if (quoteSettings && orderSettings) {
           const quoteStatuses = JSON.parse(quoteSettings.setting_value);
@@ -394,7 +395,7 @@ export const StatusConfigInitializer: React.FC = () => {
           const quotesListStatuses = quoteStatuses
             .filter((s: StatusConfig) => s.showsInQuotesList)
             .map((s: StatusConfig) => s.name);
-          
+
           const ordersListStatuses = orderStatuses
             .filter((s: StatusConfig) => s.showsInOrdersList)
             .map((s: StatusConfig) => s.name);
@@ -407,19 +408,20 @@ export const StatusConfigInitializer: React.FC = () => {
       setDiagnostics({
         hasConfigs,
         quotesCount: quotes.length,
-        ordersCount: quotes.filter(q => ['payment_pending', 'paid', 'ordered', 'shipped', 'completed'].includes(q.status)).length,
+        ordersCount: quotes.filter((q) =>
+          ['payment_pending', 'paid', 'ordered', 'shipped', 'completed'].includes(q.status),
+        ).length,
         paymentPendingQuotes: paymentPendingQuotes.length,
         paymentPendingInQuotesList,
-        paymentPendingInOrdersList
+        paymentPendingInOrdersList,
       });
-
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Error running diagnostics:', error);
       toast({
-        title: "Diagnostics Failed",
-        description: errorMessage || "Failed to run diagnostics",
-        variant: "destructive"
+        title: 'Diagnostics Failed',
+        description: errorMessage || 'Failed to run diagnostics',
+        variant: 'destructive',
       });
     } finally {
       setIsChecking(false);
@@ -429,9 +431,9 @@ export const StatusConfigInitializer: React.FC = () => {
   const createTestData = async () => {
     if (!isAdmin) {
       toast({
-        title: "Access Denied",
-        description: "You need admin privileges to create test data",
-        variant: "destructive"
+        title: 'Access Denied',
+        description: 'You need admin privileges to create test data',
+        variant: 'destructive',
       });
       return;
     }
@@ -443,30 +445,30 @@ export const StatusConfigInitializer: React.FC = () => {
           user_id: user?.id,
           product_name: 'Test Product - Pending Quote',
           status: 'pending',
-          final_total: 100.00,
-          destination_country: 'US'
+          final_total: 100.0,
+          destination_country: 'US',
         },
         {
           user_id: user?.id,
           product_name: 'Test Product - Approved Quote',
           status: 'approved',
-          final_total: 150.00,
-          destination_country: 'US'
+          final_total: 150.0,
+          destination_country: 'US',
         },
         {
           user_id: user?.id,
           product_name: 'Test Product - Payment Pending Order',
           status: 'payment_pending',
-          final_total: 200.00,
-          destination_country: 'US'
+          final_total: 200.0,
+          destination_country: 'US',
         },
         {
           user_id: user?.id,
           product_name: 'Test Product - Paid Order',
           status: 'paid',
-          final_total: 250.00,
-          destination_country: 'US'
-        }
+          final_total: 250.0,
+          destination_country: 'US',
+        },
       ];
 
       const { data: createdQuotes, error } = await supabase
@@ -477,20 +479,19 @@ export const StatusConfigInitializer: React.FC = () => {
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: `Created ${createdQuotes?.length || 0} test quotes`
+        title: 'Success',
+        description: `Created ${createdQuotes?.length || 0} test quotes`,
       });
 
       // Run diagnostics after creating test data
       await runDiagnostics();
-
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Error creating test data:', error);
       toast({
-        title: "Test Data Creation Failed",
-        description: errorMessage || "Failed to create test data",
-        variant: "destructive"
+        title: 'Test Data Creation Failed',
+        description: errorMessage || 'Failed to create test data',
+        variant: 'destructive',
       });
     } finally {
       setIsCreatingTestData(false);
@@ -505,9 +506,7 @@ export const StatusConfigInitializer: React.FC = () => {
     return (
       <Alert>
         <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          You need to be logged in to use this tool.
-        </AlertDescription>
+        <AlertDescription>You need to be logged in to use this tool.</AlertDescription>
       </Alert>
     );
   }
@@ -534,7 +533,7 @@ export const StatusConfigInitializer: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-3">
-            <Button 
+            <Button
               onClick={initializeConfigurations}
               disabled={isInitializing}
               className="flex items-center gap-2"
@@ -547,7 +546,7 @@ export const StatusConfigInitializer: React.FC = () => {
               Initialize Configurations
             </Button>
 
-            <Button 
+            <Button
               onClick={runDiagnostics}
               disabled={isChecking}
               variant="outline"
@@ -561,7 +560,7 @@ export const StatusConfigInitializer: React.FC = () => {
               Run Diagnostics
             </Button>
 
-            <Button 
+            <Button
               onClick={createTestData}
               disabled={isCreatingTestData}
               variant="secondary"
@@ -587,17 +586,17 @@ export const StatusConfigInitializer: React.FC = () => {
                       {diagnostics.hasConfigs ? '✅ Yes' : '❌ No'}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span>Total quotes:</span>
                     <span>{diagnostics.quotesCount}</span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span>Total orders:</span>
                     <span>{diagnostics.ordersCount}</span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span>Payment pending quotes:</span>
                     <span>{diagnostics.paymentPendingQuotes}</span>
@@ -607,19 +606,28 @@ export const StatusConfigInitializer: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span>payment_pending in quotes list:</span>
-                    <span className={diagnostics.paymentPendingInQuotesList ? 'text-red-600' : 'text-green-600'}>
+                    <span
+                      className={
+                        diagnostics.paymentPendingInQuotesList ? 'text-red-600' : 'text-green-600'
+                      }
+                    >
                       {diagnostics.paymentPendingInQuotesList ? '❌ Yes (Issue!)' : '✅ No'}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span>payment_pending in orders list:</span>
-                    <span className={diagnostics.paymentPendingInOrdersList ? 'text-green-600' : 'text-red-600'}>
+                    <span
+                      className={
+                        diagnostics.paymentPendingInOrdersList ? 'text-green-600' : 'text-red-600'
+                      }
+                    >
                       {diagnostics.paymentPendingInOrdersList ? '✅ Yes' : '❌ No (Issue!)'}
                     </span>
                   </div>
 
-                  {!diagnostics.paymentPendingInOrdersList || diagnostics.paymentPendingInQuotesList ? (
+                  {!diagnostics.paymentPendingInOrdersList ||
+                  diagnostics.paymentPendingInQuotesList ? (
                     <Alert className="mt-2">
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>
@@ -630,7 +638,8 @@ export const StatusConfigInitializer: React.FC = () => {
                     <Alert className="mt-2">
                       <CheckCircle className="h-4 w-4" />
                       <AlertDescription className="text-green-700">
-                        Configuration is correct! payment_pending items will show in orders list only.
+                        Configuration is correct! payment_pending items will show in orders list
+                        only.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -643,8 +652,13 @@ export const StatusConfigInitializer: React.FC = () => {
             <h4 className="font-medium mb-2">How this fixes the issue:</h4>
             <ul className="text-sm space-y-1 text-blue-800">
               <li>• Initializes proper status configurations in the database</li>
-              <li>• Sets <code>payment_pending</code> status to show only in orders list</li>
-              <li>• Ensures quotes with <code>payment_pending</code> status appear in orders, not quotes</li>
+              <li>
+                • Sets <code>payment_pending</code> status to show only in orders list
+              </li>
+              <li>
+                • Ensures quotes with <code>payment_pending</code> status appear in orders, not
+                quotes
+              </li>
               <li>• Creates test data to verify the fix works correctly</li>
               <li>• Provides diagnostics to confirm the configuration is working</li>
             </ul>

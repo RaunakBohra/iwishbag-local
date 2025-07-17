@@ -1,11 +1,10 @@
-
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { BankAccount } from "@/hooks/useBankAccountSettings";
-import { Trash2, Edit, Globe } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { BankAccount } from '@/hooks/useBankAccountSettings';
+import { Trash2, Edit, Globe } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BankAccountListItemProps {
   account: BankAccount;
@@ -24,7 +23,7 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
         .select('name, currency')
         .eq('code', account.country_code)
         .single();
-      
+
       if (error) return null;
       return data;
     },
@@ -32,8 +31,8 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
   });
 
   // Render custom fields
-  const customFields = account.custom_fields as Record<string, unknown> || {};
-  const fieldLabels = account.field_labels as Record<string, string> || {};
+  const customFields = (account.custom_fields as Record<string, unknown>) || {};
+  const fieldLabels = (account.field_labels as Record<string, string>) || {};
 
   return (
     <Card>
@@ -57,14 +56,30 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
                 {account.is_active ? 'Active' : 'Inactive'}
               </Badge>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-              <p><strong>Bank:</strong> {account.bank_name}</p>
-              <p><strong>Account Number:</strong> {account.account_number}</p>
-              {account.branch_name && <p><strong>Branch:</strong> {account.branch_name}</p>}
-              {account.swift_code && <p><strong>SWIFT/BIC:</strong> {account.swift_code}</p>}
-              {account.iban && <p><strong>IBAN:</strong> {account.iban}</p>}
-              
+              <p>
+                <strong>Bank:</strong> {account.bank_name}
+              </p>
+              <p>
+                <strong>Account Number:</strong> {account.account_number}
+              </p>
+              {account.branch_name && (
+                <p>
+                  <strong>Branch:</strong> {account.branch_name}
+                </p>
+              )}
+              {account.swift_code && (
+                <p>
+                  <strong>SWIFT/BIC:</strong> {account.swift_code}
+                </p>
+              )}
+              {account.iban && (
+                <p>
+                  <strong>IBAN:</strong> {account.iban}
+                </p>
+              )}
+
               {/* Display custom fields */}
               {Object.entries(customFields).map(([key, value]) => (
                 <p key={key}>
@@ -84,5 +99,5 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
         </div>
       </CardContent>
     </Card>
-  )
+  );
 };

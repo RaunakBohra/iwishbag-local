@@ -1,19 +1,28 @@
-import { useState, useRef, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Send, MessageSquare, Paperclip, FileText, X, Loader2, ChevronDown, ChevronUp } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
-import { Tables } from "@/integrations/supabase/types";
-import { useAdminRole } from "@/hooks/useAdminRole";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState, useRef, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Send,
+  MessageSquare,
+  Paperclip,
+  FileText,
+  X,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { Tables } from '@/integrations/supabase/types';
+import { useAdminRole } from '@/hooks/useAdminRole';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import imageCompression from 'browser-image-compression';
-import { MessageItem } from "./MessageItem";
+import { MessageItem } from './MessageItem';
 
 type Message = Tables<'messages'> & {
   attachment_url?: string | null;
@@ -25,15 +34,12 @@ interface QuoteMessagingProps {
   quoteUserId: string | null;
 }
 
-export const QuoteMessaging = ({
-  quoteId,
-  quoteUserId
-}: QuoteMessagingProps) => {
+export const QuoteMessaging = ({ quoteId, quoteUserId }: QuoteMessagingProps) => {
   const { user } = useAuth();
   const { data: isAdmin } = useAdminRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState('');
   const [attachment, setAttachment] = useState<File | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -50,7 +56,7 @@ export const QuoteMessaging = ({
       if (error) throw error;
       return data;
     },
-    enabled: !!quoteId
+    enabled: !!quoteId,
   });
 
   const sendMessageMutation = useMutation({
@@ -61,7 +67,7 @@ export const QuoteMessaging = ({
 
       if (file) {
         let fileToUpload = file;
-        
+
         // Only compress image files
         if (file.type.startsWith('image/')) {
           const options = {
@@ -69,17 +75,19 @@ export const QuoteMessaging = ({
             maxWidthOrHeight: 2048,
             useWebWorker: true,
             fileType: file.type as 'image/jpeg' | 'image/png' | 'image/webp',
-            initialQuality: 0.85
+            initialQuality: 0.85,
           };
-          
+
           try {
             fileToUpload = await imageCompression(file, options);
-            console.log(`QuoteMessaging - Original: ${(file.size / 1024 / 1024).toFixed(2)}MB, Compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
+            console.log(
+              `QuoteMessaging - Original: ${(file.size / 1024 / 1024).toFixed(2)}MB, Compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`,
+            );
           } catch (compressionError) {
             console.error('Image compression failed, using original:', compressionError);
           }
         }
-        
+
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}-${Date.now()}.${fileExt}`;
         const filePath = `${fileName}`;
@@ -106,7 +114,7 @@ export const QuoteMessaging = ({
           subject: `Message for Quote #${quoteId.substring(0, 8)}`,
           content,
           attachment_url: attachmentUrl,
-          attachment_file_name: attachmentFileName
+          attachment_file_name: attachmentFileName,
         })
         .select()
         .single();
@@ -115,18 +123,18 @@ export const QuoteMessaging = ({
       return data;
     },
     onSuccess: () => {
-      setContent("");
+      setContent('');
       setAttachment(null);
       queryClient.invalidateQueries({ queryKey: ['messages', quoteId] });
-      toast({ title: "Message sent!" });
+      toast({ title: 'Message sent!' });
     },
-    onError: error => {
+    onError: (error) => {
       toast({
-        title: "Error sending message",
+        title: 'Error sending message',
         description: error.message,
-        variant: "destructive"
+        variant: 'destructive',
       });
-    }
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -139,9 +147,9 @@ export const QuoteMessaging = ({
     if (e.target.files && e.target.files.length > 0) {
       if (e.target.files[0].size > 10 * 1024 * 1024) {
         toast({
-          title: "File is too large",
-          description: "Please select a file smaller than 10MB.",
-          variant: "destructive"
+          title: 'File is too large',
+          description: 'Please select a file smaller than 10MB.',
+          variant: 'destructive',
         });
         return;
       }
@@ -150,7 +158,7 @@ export const QuoteMessaging = ({
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -159,7 +167,7 @@ export const QuoteMessaging = ({
 
   // Auto-expand if there are unread messages
   useEffect(() => {
-    if (messages?.some(msg => !msg.is_read && msg.sender_id !== user?.id)) {
+    if (messages?.some((msg) => !msg.is_read && msg.sender_id !== user?.id)) {
       setIsOpen(true);
     }
   }, [messages, user]);
@@ -174,17 +182,11 @@ export const QuoteMessaging = ({
                 <MessageSquare className="h-4 w-4 text-blue-500" />
                 Messages
                 {messages && messages.length > 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    ({messages.length})
-                  </span>
+                  <span className="text-xs text-muted-foreground">({messages.length})</span>
                 )}
               </CardTitle>
               <Button variant="ghost" size="icon" className="h-6 w-6">
-                {isOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
+                {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </div>
           </CardHeader>
@@ -205,8 +207,12 @@ export const QuoteMessaging = ({
                         currentUserId={user?.id}
                         isAdmin={isAdmin}
                         onVerificationUpdate={() => {
-                          queryClient.invalidateQueries({ queryKey: ['messages', quoteId] });
-                          queryClient.invalidateQueries({ queryKey: ['payment-proof-info', quoteId] });
+                          queryClient.invalidateQueries({
+                            queryKey: ['messages', quoteId],
+                          });
+                          queryClient.invalidateQueries({
+                            queryKey: ['payment-proof-info', quoteId],
+                          });
                         }}
                       />
                     </div>
@@ -227,7 +233,7 @@ export const QuoteMessaging = ({
                 <div className="flex gap-1.5">
                   <Textarea
                     value={content}
-                    onChange={e => setContent(e.target.value)}
+                    onChange={(e) => setContent(e.target.value)}
                     placeholder="Type your message..."
                     rows={1}
                     disabled={sendMessageMutation.isPending}
@@ -257,9 +263,7 @@ export const QuoteMessaging = ({
                     {attachment && (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">
                         <FileText className="w-3.5 h-3.5" />
-                        <span className="truncate max-w-[150px]">
-                          {attachment.name}
-                        </span>
+                        <span className="truncate max-w-[150px]">{attachment.name}</span>
                         <Button
                           type="button"
                           variant="ghost"

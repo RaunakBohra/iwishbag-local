@@ -1,6 +1,6 @@
-import { useCartStore } from "@/stores/cartStore";
-import { useToast } from "./use-toast";
-import { Tables } from "@/integrations/supabase/types";
+import { useCartStore } from '@/stores/cartStore';
+import { useToast } from './use-toast';
+import { Tables } from '@/integrations/supabase/types';
 
 type Quote = Tables<'quotes'>;
 
@@ -15,11 +15,8 @@ export const useDashboardBulkActions = ({
   selectedQuoteIds,
   setSelectedQuoteIds,
 }: UseDashboardBulkActionsProps) => {
-  const { 
-    bulkDelete,
-    bulkMove
-  } = useCartStore();
-  
+  const { bulkDelete, bulkMove } = useCartStore();
+
   const { toast } = useToast();
 
   const canAddToCart = (quote: Quote) => {
@@ -27,17 +24,17 @@ export const useDashboardBulkActions = ({
   };
 
   const handleBulkAddToCart = async () => {
-    const idsToAdd = selectedQuoteIds.filter(id => {
-      const quote = quotes.find(q => q.id === id);
+    const idsToAdd = selectedQuoteIds.filter((id) => {
+      const quote = quotes.find((q) => q.id === id);
       return quote && quote.status === 'approved' && !quote.in_cart;
     });
 
     if (idsToAdd.length > 0) {
       try {
         // Convert quotes to cart items and add them
-        const cartItems = idsToAdd.map(id => {
-          const quote = quotes.find(q => q.id === id);
-          
+        const cartItems = idsToAdd.map((id) => {
+          const quote = quotes.find((q) => q.id === id);
+
           // Determine purchase country from the product URL or default to US
           let purchaseCountry = 'US'; // Default
           const productUrl = quote!.product_url || '';
@@ -48,7 +45,7 @@ export const useDashboardBulkActions = ({
           } else if (productUrl.includes('amazon.co.uk')) {
             purchaseCountry = 'GB';
           }
-          
+
           return {
             id: quote!.id,
             quoteId: quote!.id,
@@ -62,43 +59,43 @@ export const useDashboardBulkActions = ({
             inCart: true,
             isSelected: false,
             createdAt: new Date(quote!.created_at),
-            updatedAt: new Date(quote!.updated_at)
+            updatedAt: new Date(quote!.updated_at),
           };
         });
 
         // Add items to cart store
-        cartItems.forEach(item => {
+        cartItems.forEach((item) => {
           useCartStore.getState().addItem(item);
         });
 
         setSelectedQuoteIds([]);
         toast({
-          title: "Items added to cart",
+          title: 'Items added to cart',
           description: `${idsToAdd.length} item(s) successfully added to your cart.`,
           action: {
-            label: "View Cart",
-            onClick: () => window.location.href = "/cart"
-          }
+            label: 'View Cart',
+            onClick: () => (window.location.href = '/cart'),
+          },
         });
       } catch (error) {
         toast({
-          title: "Failed to add items",
-          description: "Please try again or contact support if the problem persists.",
-          variant: "destructive"
+          title: 'Failed to add items',
+          description: 'Please try again or contact support if the problem persists.',
+          variant: 'destructive',
         });
       }
     } else {
       toast({
-        title: "No items to add",
-        description: "Select approved quotes that are not already in your cart.",
-        variant: "destructive"
+        title: 'No items to add',
+        description: 'Select approved quotes that are not already in your cart.',
+        variant: 'destructive',
       });
     }
   };
 
   const handleBulkRemoveFromCart = async () => {
-    const idsToRemove = selectedQuoteIds.filter(id => {
-      const quote = quotes.find(q => q.id === id);
+    const idsToRemove = selectedQuoteIds.filter((id) => {
+      const quote = quotes.find((q) => q.id === id);
       return quote && quote.in_cart;
     });
 
@@ -108,21 +105,21 @@ export const useDashboardBulkActions = ({
         await bulkDelete(idsToRemove);
         setSelectedQuoteIds([]);
         toast({
-          title: "Items removed from cart",
+          title: 'Items removed from cart',
           description: `${idsToRemove.length} item(s) removed from your cart.`,
         });
       } catch (error) {
         toast({
-          title: "Failed to remove items",
-          description: "Please try again or contact support if the problem persists.",
-          variant: "destructive"
+          title: 'Failed to remove items',
+          description: 'Please try again or contact support if the problem persists.',
+          variant: 'destructive',
         });
       }
     } else {
       toast({
-        title: "No items to remove",
-        description: "Select quotes that are already in your cart.",
-        variant: "destructive"
+        title: 'No items to remove',
+        description: 'Select quotes that are already in your cart.',
+        variant: 'destructive',
       });
     }
   };

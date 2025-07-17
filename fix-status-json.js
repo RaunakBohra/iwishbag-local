@@ -9,7 +9,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function fixStatusJSON() {
   console.log('Checking system_settings table for invalid JSON...');
-  
+
   try {
     // Get current settings
     const { data, error } = await supabase
@@ -32,23 +32,23 @@ async function fixStatusJSON() {
       } catch (e) {
         console.log(`❌ ${setting.setting_key} has invalid JSON:`, e.message);
         console.log('Invalid JSON content:', setting.setting_value);
-        
+
         // Try to fix common issues like trailing commas
         let fixedJSON = setting.setting_value;
-        
+
         // Remove trailing commas before closing brackets/braces
         fixedJSON = fixedJSON.replace(/,(\s*[\]}])/g, '$1');
-        
+
         try {
           JSON.parse(fixedJSON);
           console.log(`🔧 Fixed JSON for ${setting.setting_key}`);
-          
+
           // Update the database with fixed JSON
           const { error: updateError } = await supabase
             .from('system_settings')
             .update({ setting_value: fixedJSON })
             .eq('setting_key', setting.setting_key);
-            
+
           if (updateError) {
             console.error('Error updating fixed JSON:', updateError);
           } else {
@@ -56,19 +56,20 @@ async function fixStatusJSON() {
           }
         } catch (fixError) {
           console.log(`❌ Could not fix JSON for ${setting.setting_key}:`, fixError.message);
-          
+
           // If we can't fix it, reset to defaults
           console.log(`🔄 Resetting ${setting.setting_key} to defaults...`);
-          
-          const defaultStatuses = setting.setting_key === 'quote_statuses' 
-            ? getDefaultQuoteStatuses() 
-            : getDefaultOrderStatuses();
-            
+
+          const defaultStatuses =
+            setting.setting_key === 'quote_statuses'
+              ? getDefaultQuoteStatuses()
+              : getDefaultOrderStatuses();
+
           const { error: resetError } = await supabase
             .from('system_settings')
             .update({ setting_value: JSON.stringify(defaultStatuses) })
             .eq('setting_key', setting.setting_key);
-            
+
           if (resetError) {
             console.error('Error resetting to defaults:', resetError);
           } else {
@@ -77,7 +78,7 @@ async function fixStatusJSON() {
         }
       }
     }
-    
+
     console.log('✅ JSON validation and fixes complete!');
   } catch (error) {
     console.error('Error in fixStatusJSON:', error);
@@ -103,7 +104,7 @@ function getDefaultQuoteStatuses() {
       showsInQuotesList: true,
       showsInOrdersList: false,
       canBePaid: false,
-      isDefaultQuoteStatus: true
+      isDefaultQuoteStatus: true,
     },
     // Add other default statuses...
   ];
@@ -128,7 +129,7 @@ function getDefaultOrderStatuses() {
       requiresAction: true,
       showsInQuotesList: false,
       showsInOrdersList: true,
-      canBePaid: false
+      canBePaid: false,
     },
     // Add other default statuses...
   ];

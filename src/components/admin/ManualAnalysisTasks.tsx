@@ -7,9 +7,28 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { ExternalLink, Clock, CheckCircle, XCircle, AlertCircle, Edit3 } from 'lucide-react';
 
@@ -44,7 +63,11 @@ export const ManualAnalysisTasks = () => {
   const { toast } = useToast();
 
   // Fetch manual analysis tasks
-  const { data: tasks, isLoading, error } = useQuery({
+  const {
+    data: tasks,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['manual-analysis-tasks'],
     queryFn: async () => {
       try {
@@ -59,19 +82,25 @@ export const ManualAnalysisTasks = () => {
         console.warn('Manual analysis tasks table not available:', error);
         return [] as ManualAnalysisTask[];
       }
-    }
+    },
   });
 
   // Update task status
-  const updateTaskMutation = useMutation({
-    mutationFn: async ({ taskId, updates }: { taskId: string; updates: Partial<ManualAnalysisTask> }) => {
+  const _updateTaskMutation = useMutation({
+    mutationFn: async ({
+      taskId,
+      updates,
+    }: {
+      taskId: string;
+      updates: Partial<ManualAnalysisTask>;
+    }) => {
       try {
         const { error } = await supabase
           .from('manual_analysis_tasks')
           .update({
             ...updates,
             updated_at: new Date().toISOString(),
-            completed_at: updates.status === 'completed' ? new Date().toISOString() : undefined
+            completed_at: updates.status === 'completed' ? new Date().toISOString() : undefined,
           })
           .eq('id', taskId);
 
@@ -84,22 +113,28 @@ export const ManualAnalysisTasks = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manual-analysis-tasks'] });
       toast({
-        title: "Task Updated",
-        description: "Manual analysis task has been updated successfully.",
+        title: 'Task Updated',
+        description: 'Manual analysis task has been updated successfully.',
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Update Failed",
+        title: 'Update Failed',
         description: error.message,
-        variant: "destructive"
+        variant: 'destructive',
       });
-    }
+    },
   });
 
   // Complete task with analysis result
   const completeTaskMutation = useMutation({
-    mutationFn: async ({ taskId, analysisResult }: { taskId: string; analysisResult: AnalysisResult }) => {
+    mutationFn: async ({
+      taskId,
+      analysisResult,
+    }: {
+      taskId: string;
+      analysisResult: AnalysisResult;
+    }) => {
       try {
         const { error } = await supabase
           .from('manual_analysis_tasks')
@@ -107,7 +142,7 @@ export const ManualAnalysisTasks = () => {
             status: 'completed',
             analysis_result: analysisResult,
             completed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq('id', taskId);
 
@@ -122,17 +157,17 @@ export const ManualAnalysisTasks = () => {
       setIsEditDialogOpen(false);
       setSelectedTask(null);
       toast({
-        title: "Task Completed",
-        description: "Manual analysis task has been completed successfully.",
+        title: 'Task Completed',
+        description: 'Manual analysis task has been completed successfully.',
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Completion Failed",
+        title: 'Completion Failed',
         description: error.message,
-        variant: "destructive"
+        variant: 'destructive',
       });
-    }
+    },
   });
 
   const getStatusIcon = (status: string) => {
@@ -152,15 +187,15 @@ export const ManualAnalysisTasks = () => {
 
   const getStatusBadge = (status: string) => {
     // For manual analysis tasks, we'll use a custom mapping since these are not quote/order statuses
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      pending: "outline",
-      in_progress: "secondary",
-      completed: "default",
-      failed: "destructive"
+    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      pending: 'outline',
+      in_progress: 'secondary',
+      completed: 'default',
+      failed: 'destructive',
     };
 
     return (
-      <Badge variant={variants[status] || "outline"}>
+      <Badge variant={variants[status] || 'outline'}>
         {getStatusIcon(status)}
         <span className="ml-1 capitalize">{status.replace('_', ' ')}</span>
       </Badge>
@@ -185,25 +220,27 @@ export const ManualAnalysisTasks = () => {
       imageUrl: formData.imageUrl,
       description: formData.description,
       brand: formData.brand,
-      dimensions: formData.dimensions ? {
-        length: parseFloat(formData.dimensions.length),
-        width: parseFloat(formData.dimensions.width),
-        height: parseFloat(formData.dimensions.height)
-      } : undefined
+      dimensions: formData.dimensions
+        ? {
+            length: parseFloat(formData.dimensions.length),
+            width: parseFloat(formData.dimensions.width),
+            height: parseFloat(formData.dimensions.height),
+          }
+        : undefined,
     };
 
     completeTaskMutation.mutate({
       taskId: selectedTask.id,
-      analysisResult
+      analysisResult,
     });
   };
 
   const stats = {
     total: tasks?.length || 0,
-    pending: tasks?.filter(t => t.status === 'pending').length || 0,
-    inProgress: tasks?.filter(t => t.status === 'in_progress').length || 0,
-    completed: tasks?.filter(t => t.status === 'completed').length || 0,
-    failed: tasks?.filter(t => t.status === 'failed').length || 0
+    pending: tasks?.filter((t) => t.status === 'pending').length || 0,
+    inProgress: tasks?.filter((t) => t.status === 'in_progress').length || 0,
+    completed: tasks?.filter((t) => t.status === 'completed').length || 0,
+    failed: tasks?.filter((t) => t.status === 'failed').length || 0,
   };
 
   if (isLoading) {
@@ -223,7 +260,9 @@ export const ManualAnalysisTasks = () => {
       <Card>
         <CardHeader>
           <CardTitle>Manual Analysis Tasks</CardTitle>
-          <CardDescription>Manual analysis tasks feature is not available in the current database schema.</CardDescription>
+          <CardDescription>
+            Manual analysis tasks feature is not available in the current database schema.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
@@ -274,9 +313,7 @@ export const ManualAnalysisTasks = () => {
       <Card>
         <CardHeader>
           <CardTitle>Manual Analysis Tasks</CardTitle>
-          <CardDescription>
-            Products that require manual analysis and pricing
-          </CardDescription>
+          <CardDescription>Products that require manual analysis and pricing</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -293,13 +330,9 @@ export const ManualAnalysisTasks = () => {
               {tasks?.map((task) => (
                 <TableRow key={task.id}>
                   <TableCell>
-                    <div className="font-medium">
-                      {task.product_name || 'Unknown Product'}
-                    </div>
+                    <div className="font-medium">{task.product_name || 'Unknown Product'}</div>
                     {task.notes && (
-                      <div className="text-sm text-muted-foreground mt-1">
-                        {task.notes}
-                      </div>
+                      <div className="text-sm text-muted-foreground mt-1">{task.notes}</div>
                     )}
                   </TableCell>
                   <TableCell>
@@ -317,12 +350,8 @@ export const ManualAnalysisTasks = () => {
                       <span className="text-muted-foreground">No URL</span>
                     )}
                   </TableCell>
-                  <TableCell>
-                    {getStatusBadge(task.status)}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(task.created_at).toLocaleDateString()}
-                  </TableCell>
+                  <TableCell>{getStatusBadge(task.status)}</TableCell>
+                  <TableCell>{new Date(task.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <Button
                       variant="outline"
@@ -346,17 +375,18 @@ export const ManualAnalysisTasks = () => {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Complete Manual Analysis</DialogTitle>
-            <DialogDescription>
-              Provide product details for manual analysis
-            </DialogDescription>
+            <DialogDescription>Provide product details for manual analysis</DialogDescription>
           </DialogHeader>
-          
+
           {selectedTask && (
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              handleCompleteTask(Object.fromEntries(formData));
-            }} className="space-y-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                handleCompleteTask(Object.fromEntries(formData));
+              }}
+              className="space-y-4"
+            >
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="productName">Product Name</Label>
@@ -369,25 +399,11 @@ export const ManualAnalysisTasks = () => {
                 </div>
                 <div>
                   <Label htmlFor="price">Price (USD)</Label>
-                  <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                  />
+                  <Input id="price" name="price" type="number" step="0.01" min="0" required />
                 </div>
                 <div>
                   <Label htmlFor="weight">Weight (kg)</Label>
-                  <Input
-                    id="weight"
-                    name="weight"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                  />
+                  <Input id="weight" name="weight" type="number" step="0.01" min="0" required />
                 </div>
                 <div>
                   <Label htmlFor="category">Category</Label>
@@ -436,11 +452,7 @@ export const ManualAnalysisTasks = () => {
 
               <div>
                 <Label htmlFor="brand">Brand</Label>
-                <Input
-                  id="brand"
-                  name="brand"
-                  placeholder="Product brand"
-                />
+                <Input id="brand" name="brand" placeholder="Product brand" />
               </div>
 
               <div>
@@ -456,48 +468,23 @@ export const ManualAnalysisTasks = () => {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="length">Length (cm)</Label>
-                  <Input
-                    id="length"
-                    name="dimensions.length"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                  />
+                  <Input id="length" name="dimensions.length" type="number" step="0.1" min="0" />
                 </div>
                 <div>
                   <Label htmlFor="width">Width (cm)</Label>
-                  <Input
-                    id="width"
-                    name="dimensions.width"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                  />
+                  <Input id="width" name="dimensions.width" type="number" step="0.1" min="0" />
                 </div>
                 <div>
                   <Label htmlFor="height">Height (cm)</Label>
-                  <Input
-                    id="height"
-                    name="dimensions.height"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                  />
+                  <Input id="height" name="dimensions.height" type="number" step="0.1" min="0" />
                 </div>
               </div>
 
               <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditDialogOpen(false)}
-                >
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={completeTaskMutation.isPending}
-                >
+                <Button type="submit" disabled={completeTaskMutation.isPending}>
                   {completeTaskMutation.isPending ? 'Completing...' : 'Complete Analysis'}
                 </Button>
               </div>
@@ -507,4 +494,4 @@ export const ManualAnalysisTasks = () => {
       </Dialog>
     </div>
   );
-}; 
+};

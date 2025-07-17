@@ -34,9 +34,19 @@ class PaymentGatewayService {
 
   // Fallback gateway codes for when database is unavailable
   private readonly FALLBACK_GATEWAY_CODES = [
-    'payu', 'esewa', 'khalti', 'fonepay', 'airwallex', 
-    'bank_transfer', 'cod', 'razorpay', 'paypal', 'upi', 'paytm', 
-    'grabpay', 'alipay'
+    'payu',
+    'esewa',
+    'khalti',
+    'fonepay',
+    'airwallex',
+    'bank_transfer',
+    'cod',
+    'razorpay',
+    'paypal',
+    'upi',
+    'paytm',
+    'grabpay',
+    'alipay',
   ] as const;
 
   private constructor() {}
@@ -52,7 +62,7 @@ class PaymentGatewayService {
    * Check if cache is still valid
    */
   private isCacheValid(): boolean {
-    return (Date.now() - this.cacheTimestamp) < this.CACHE_DURATION;
+    return Date.now() - this.cacheTimestamp < this.CACHE_DURATION;
   }
 
   /**
@@ -88,7 +98,7 @@ class PaymentGatewayService {
       this.cacheTimestamp = Date.now();
 
       // Update individual gateway cache
-      gateways?.forEach(gateway => {
+      gateways?.forEach((gateway) => {
         this.gatewayCache.set(gateway.code, gateway);
       });
 
@@ -105,9 +115,7 @@ class PaymentGatewayService {
   async getActiveGatewayCodes(): Promise<string[]> {
     try {
       const gateways = await this.getAllGateways();
-      return gateways
-        .filter(g => g.is_active)
-        .map(g => g.code);
+      return gateways.filter((g) => g.is_active).map((g) => g.code);
     } catch (error) {
       console.error('Error getting active gateway codes:', error);
       return [...this.FALLBACK_GATEWAY_CODES];
@@ -119,9 +127,7 @@ class PaymentGatewayService {
    */
   getActiveGatewayCodesSync(): string[] {
     if (this.allGatewaysCache && this.isCacheValid()) {
-      return this.allGatewaysCache
-        .filter(g => g.is_active)
-        .map(g => g.code);
+      return this.allGatewaysCache.filter((g) => g.is_active).map((g) => g.code);
     }
     return [...this.FALLBACK_GATEWAY_CODES];
   }
@@ -136,7 +142,7 @@ class PaymentGatewayService {
 
     // If not in cache, fetch all gateways (which will populate cache)
     const allGateways = await this.getAllGateways();
-    return allGateways.find(g => g.code === code) || null;
+    return allGateways.find((g) => g.code === code) || null;
   }
 
   /**
@@ -144,9 +150,7 @@ class PaymentGatewayService {
    */
   async getGatewaysByPriority(): Promise<PaymentGatewayInfo[]> {
     const gateways = await this.getAllGateways();
-    return gateways
-      .filter(g => g.is_active)
-      .sort((a, b) => a.priority - b.priority);
+    return gateways.filter((g) => g.is_active).sort((a, b) => a.priority - b.priority);
   }
 
   /**
@@ -213,17 +217,15 @@ class PaymentGatewayService {
     try {
       const countryPreferences = await this.getCountryPaymentPreferences(countryCode);
       const allGateways = await this.getAllGateways();
-      
+
       if (countryPreferences.length === 0) {
         // No country-specific preferences, use global priority
-        return allGateways
-          .filter(g => g.is_active)
-          .sort((a, b) => a.priority - b.priority);
+        return allGateways.filter((g) => g.is_active).sort((a, b) => a.priority - b.priority);
       }
 
       // Create a map of gateway codes to preferences
       const preferenceMap = new Map<string, CountryPaymentPreference>();
-      countryPreferences.forEach(pref => {
+      countryPreferences.forEach((pref) => {
         preferenceMap.set(pref.gateway_code, pref);
       });
 
@@ -231,14 +233,16 @@ class PaymentGatewayService {
       const preferredGateways: PaymentGatewayInfo[] = [];
       const otherGateways: PaymentGatewayInfo[] = [];
 
-      allGateways.filter(g => g.is_active).forEach(gateway => {
-        const preference = preferenceMap.get(gateway.code);
-        if (preference) {
-          preferredGateways.push(gateway);
-        } else {
-          otherGateways.push(gateway);
-        }
-      });
+      allGateways
+        .filter((g) => g.is_active)
+        .forEach((gateway) => {
+          const preference = preferenceMap.get(gateway.code);
+          if (preference) {
+            preferredGateways.push(gateway);
+          } else {
+            otherGateways.push(gateway);
+          }
+        });
 
       // Sort preferred gateways by country preference priority
       preferredGateways.sort((a, b) => {
@@ -263,7 +267,7 @@ class PaymentGatewayService {
    */
   async isValidGatewayCode(code: string): Promise<boolean> {
     const gateways = await this.getAllGateways();
-    return gateways.some(g => g.code === code && g.is_active);
+    return gateways.some((g) => g.code === code && g.is_active);
   }
 
   /**
@@ -283,7 +287,7 @@ class PaymentGatewayService {
       test_mode: true,
       priority: index + 1,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     }));
   }
 
@@ -292,20 +296,20 @@ class PaymentGatewayService {
    */
   private getFallbackGatewayName(code: string): string {
     const names: Record<string, string> = {
-      'stripe': 'Stripe',
-      'payu': 'PayU',
-      'esewa': 'eSewa',
-      'khalti': 'Khalti',
-      'fonepay': 'Fonepay',
-      'airwallex': 'Airwallex',
-      'bank_transfer': 'Bank Transfer',
-      'cod': 'Cash on Delivery',
-      'razorpay': 'Razorpay',
-      'paypal': 'PayPal',
-      'upi': 'UPI',
-      'paytm': 'Paytm',
-      'grabpay': 'GrabPay',
-      'alipay': 'Alipay'
+      stripe: 'Stripe',
+      payu: 'PayU',
+      esewa: 'eSewa',
+      khalti: 'Khalti',
+      fonepay: 'Fonepay',
+      airwallex: 'Airwallex',
+      bank_transfer: 'Bank Transfer',
+      cod: 'Cash on Delivery',
+      razorpay: 'Razorpay',
+      paypal: 'PayPal',
+      upi: 'UPI',
+      paytm: 'Paytm',
+      grabpay: 'GrabPay',
+      alipay: 'Alipay',
     };
     return names[code] || code;
   }
@@ -316,7 +320,7 @@ class PaymentGatewayService {
   async isGatewaySupportedForCurrency(gatewayCode: string, currency: string): Promise<boolean> {
     const gateway = await this.getGateway(gatewayCode);
     if (!gateway) return false;
-    
+
     return gateway.supported_currencies.includes(currency);
   }
 
@@ -326,7 +330,7 @@ class PaymentGatewayService {
   async isGatewaySupportedForCountry(gatewayCode: string, countryCode: string): Promise<boolean> {
     const gateway = await this.getGateway(gatewayCode);
     if (!gateway) return false;
-    
+
     return gateway.supported_countries.includes(countryCode);
   }
 }
@@ -338,4 +342,5 @@ export const paymentGatewayService = PaymentGatewayService.getInstance();
 export const getAllGateways = () => paymentGatewayService.getAllGateways();
 export const getActiveGatewayCodes = () => paymentGatewayService.getActiveGatewayCodes();
 export const getGateway = (code: string) => paymentGatewayService.getGateway(code);
-export const getRecommendedGateway = (countryCode: string) => paymentGatewayService.getRecommendedGateway(countryCode);
+export const getRecommendedGateway = (countryCode: string) =>
+  paymentGatewayService.getRecommendedGateway(countryCode);

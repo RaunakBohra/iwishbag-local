@@ -1,10 +1,10 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { createCorsHeaders } from '../_shared/cors.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createCorsHeaders } from '../_shared/cors.ts';
 
 serve(async (req) => {
   const corsHeaders = createCorsHeaders(req);
-  
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -12,7 +12,7 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // Parse query parameters from Khalti callback
@@ -32,7 +32,7 @@ serve(async (req) => {
       tidx,
       amount,
       mobile,
-      status
+      status,
     });
 
     if (!pidx) {
@@ -41,20 +41,23 @@ serve(async (req) => {
         status: 302,
         headers: {
           ...corsHeaders,
-          'Location': '/payment-failure?error=missing_pidx&gateway=khalti'
-        }
+          Location: '/payment-failure?error=missing_pidx&gateway=khalti',
+        },
       });
     }
 
     // Call our webhook function to verify the payment
-    const webhookResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/khalti-webhook`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-        'Content-Type': 'application/json'
+    const webhookResponse = await fetch(
+      `${Deno.env.get('SUPABASE_URL')}/functions/v1/khalti-webhook`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ pidx }),
       },
-      body: JSON.stringify({ pidx })
-    });
+    );
 
     if (!webhookResponse.ok) {
       console.error('❌ Webhook verification failed');
@@ -62,8 +65,8 @@ serve(async (req) => {
         status: 302,
         headers: {
           ...corsHeaders,
-          'Location': `/payment-failure?error=verification_failed&gateway=khalti&pidx=${pidx}`
-        }
+          Location: `/payment-failure?error=verification_failed&gateway=khalti&pidx=${pidx}`,
+        },
       });
     }
 
@@ -77,8 +80,8 @@ serve(async (req) => {
         status: 302,
         headers: {
           ...corsHeaders,
-          'Location': `/payment-success?gateway=khalti&pidx=${pidx}&txn=${txnId || pidx}`
-        }
+          Location: `/payment-success?gateway=khalti&pidx=${pidx}&txn=${txnId || pidx}`,
+        },
       });
     } else if (webhookResult.success && webhookResult.status === 'pending') {
       // Payment is pending
@@ -86,8 +89,8 @@ serve(async (req) => {
         status: 302,
         headers: {
           ...corsHeaders,
-          'Location': `/payment-pending?gateway=khalti&pidx=${pidx}&txn=${txnId || pidx}`
-        }
+          Location: `/payment-pending?gateway=khalti&pidx=${pidx}&txn=${txnId || pidx}`,
+        },
       });
     } else {
       // Payment failed or other status
@@ -95,19 +98,18 @@ serve(async (req) => {
         status: 302,
         headers: {
           ...corsHeaders,
-          'Location': `/payment-failure?gateway=khalti&pidx=${pidx}&status=${webhookResult.status || 'failed'}`
-        }
+          Location: `/payment-failure?gateway=khalti&pidx=${pidx}&status=${webhookResult.status || 'failed'}`,
+        },
       });
     }
-
   } catch (error) {
     console.error('❌ Khalti callback error:', error);
     return new Response(null, {
       status: 302,
       headers: {
         ...corsHeaders,
-        'Location': '/payment-failure?error=callback_error&gateway=khalti'
-      }
+        Location: '/payment-failure?error=callback_error&gateway=khalti',
+      },
     });
   }
 });

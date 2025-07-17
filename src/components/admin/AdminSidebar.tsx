@@ -1,5 +1,20 @@
-import { NavLink } from "react-router-dom";
-import { BarChart3, Users, FileText, Globe, Settings, Building, Package, FileCog, Landmark, UserCheck, LayoutDashboard, BookText, ChevronDown, Zap, Cog, Route, Receipt } from "lucide-react";
+import { NavLink } from 'react-router-dom';
+import {
+  BarChart3,
+  FileText,
+  Globe,
+  Settings,
+  Package,
+  FileCog,
+  Landmark,
+  UserCheck,
+  LayoutDashboard,
+  BookText,
+  ChevronDown,
+  Route,
+  Receipt,
+  Edit,
+} from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -10,101 +25,104 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import React from "react";
+} from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import React from 'react';
 
 // Group menu items by category
 const menuGroups = [
   {
-    title: "Overview",
+    title: 'Overview',
     items: [
       {
-        title: "Dashboard",
-        url: "/admin",
+        title: 'Dashboard',
+        url: '/admin',
         icon: LayoutDashboard,
       },
-    ]
+    ],
   },
   {
-    title: "Management",
+    title: 'Management',
     items: [
       {
-        title: "Quote Management",
-        url: "/admin/quotes",
+        title: 'Quote Management',
+        url: '/admin/quotes',
         icon: FileText,
       },
       {
-        title: "Order Management",
-        url: "/admin/orders",
+        title: 'Order Management',
+        url: '/admin/orders',
         icon: Package,
       },
       {
-        title: "Customer Management",
-        url: "/admin/customers",
+        title: 'Customer Management',
+        url: '/admin/customers',
         icon: UserCheck,
       },
       {
-        title: "Payment Proofs",
-        url: "/admin/payment-proofs",
+        title: 'Payment Proofs',
+        url: '/admin/payment-proofs',
         icon: Receipt,
       },
-    ]
+      {
+        title: 'Blog Management',
+        url: '/admin/blog',
+        icon: Edit,
+      },
+    ],
   },
   {
-    title: "Settings",
+    title: 'Settings',
     items: [
       {
-        title: "Email Templates",
-        url: "/admin/email-templates",
+        title: 'Email Templates',
+        url: '/admin/email-templates',
         icon: BookText,
       },
       {
-        title: "Quote Templates",
-        url: "/admin/templates",
+        title: 'Quote Templates',
+        url: '/admin/templates',
         icon: FileCog,
       },
       {
-        title: "Status Management",
-        url: "/admin/status-management",
+        title: 'Status Management',
+        url: '/admin/status-management',
         icon: Settings,
       },
       {
-        title: "Shipping Routes",
-        url: "/admin/shipping-routes",
+        title: 'Shipping Routes',
+        url: '/admin/shipping-routes',
         icon: Route,
       },
       {
-        title: "Country Settings",
-        url: "/admin/countries",
+        title: 'Country Settings',
+        url: '/admin/countries',
         icon: Globe,
       },
       {
-        title: "Customs Categories",
-        url: "/admin/customs",
+        title: 'Customs Categories',
+        url: '/admin/customs',
         icon: Settings,
       },
       {
-        title: "Bank Accounts",
-        url: "/admin/bank-accounts",
+        title: 'Bank Accounts',
+        url: '/admin/bank-accounts',
         icon: Landmark,
       },
-    ]
+    ],
   },
 ];
 
 export const AdminSidebar = () => {
   const { state } = useSidebar();
-  const isCollapsed = state === "collapsed";
+  const isCollapsed = state === 'collapsed';
   const [openGroups, setOpenGroups] = useState<string[]>(['Overview']); // Keep Overview open by default
 
   const toggleGroup = (groupTitle: string) => {
-    setOpenGroups(prev => 
-      prev.includes(groupTitle) 
-        ? prev.filter(g => g !== groupTitle)
-        : [...prev, groupTitle]
+    setOpenGroups((prev) =>
+      prev.includes(groupTitle) ? prev.filter((g) => g !== groupTitle) : [...prev, groupTitle],
     );
   };
 
@@ -126,11 +144,13 @@ export const AdminSidebar = () => {
                         to={group.items[0].url}
                         className={({ isActive }) =>
                           `flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${
-                            isActive ? "bg-accent text-accent-foreground font-medium" : ""
+                            isActive ? 'bg-accent text-accent-foreground font-medium' : ''
                           }`
                         }
                       >
-                        {React.createElement(group.items[0].icon, { className: "h-4 w-4 shrink-0" })}
+                        {React.createElement(group.items[0].icon, {
+                          className: 'h-4 w-4 shrink-0',
+                        })}
                         {!isCollapsed && <span>{group.items[0].title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
@@ -152,9 +172,11 @@ export const AdminSidebar = () => {
                             <BarChart3 className="h-4 w-4" />
                             {group.title}
                           </span>
-                          <ChevronDown className={`h-4 w-4 transition-transform ${
-                            openGroups.includes(group.title) ? "rotate-180" : ""
-                          }`} />
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform ${
+                              openGroups.includes(group.title) ? 'rotate-180' : ''
+                            }`}
+                          />
                         </Button>
                       </CollapsibleTrigger>
                     )}
@@ -167,11 +189,13 @@ export const AdminSidebar = () => {
                                 to={item.url}
                                 className={({ isActive }) =>
                                   `flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${
-                                    isActive ? "bg-accent text-accent-foreground font-medium" : ""
+                                    isActive ? 'bg-accent text-accent-foreground font-medium' : ''
                                   }`
                                 }
                               >
-                                {React.createElement(item.icon, { className: "h-4 w-4 shrink-0" })}
+                                {React.createElement(item.icon, {
+                                  className: 'h-4 w-4 shrink-0',
+                                })}
                                 {!isCollapsed && <span>{item.title}</span>}
                               </NavLink>
                             </SidebarMenuButton>
@@ -185,7 +209,6 @@ export const AdminSidebar = () => {
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
-        
       </SidebarContent>
     </Sidebar>
   );

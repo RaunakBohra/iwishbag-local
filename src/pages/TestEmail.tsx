@@ -15,33 +15,35 @@ export default function TestEmail() {
     to: '',
     subject: 'Test Email from iwishBag',
     html: '<h1>Test Email</h1><p>This is a test email from iwishBag system.</p>',
-    from: 'noreply@whyteclub.com'
+    from: 'noreply@whyteclub.com',
   });
 
   const testEmailFunction = async () => {
     setIsLoading(true);
-    
+
     try {
       // Get access token
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
         toast({
-          title: "Not authenticated",
-          description: "You need to be logged in to test email functionality",
-          variant: "destructive"
+          title: 'Not authenticated',
+          description: 'You need to be logged in to test email functionality',
+          variant: 'destructive',
         });
         return;
       }
 
       console.log('Testing email function with:', formData);
-      
+
       // Call the Edge Function
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: formData,
         headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       console.log('Edge Function response:', { data, error });
@@ -51,17 +53,16 @@ export default function TestEmail() {
       }
 
       toast({
-        title: "Email sent successfully!",
-        description: "Check your email inbox and the browser console for details.",
+        title: 'Email sent successfully!',
+        description: 'Check your email inbox and the browser console for details.',
       });
-      
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Email test error:', error);
       toast({
-        title: "Email test failed",
+        title: 'Email test failed',
         description: errorMessage || 'An error occurred while sending the test email',
-        variant: "destructive"
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -70,18 +71,18 @@ export default function TestEmail() {
 
   const testDirectResendAPI = async () => {
     setIsLoading(true);
-    
+
     try {
       // This tests the Resend API directly from the browser
       // Note: This should only be used for testing as it exposes the API key
-      
+
       const resendApiKey = prompt('Enter your Resend API key (for testing only):');
       if (!resendApiKey) return;
 
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${resendApiKey}`,
+          Authorization: `Bearer ${resendApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -100,17 +101,17 @@ export default function TestEmail() {
       }
 
       toast({
-        title: "Direct API test successful!",
-        description: "Email sent directly via Resend API.",
+        title: 'Direct API test successful!',
+        description: 'Email sent directly via Resend API.',
       });
-      
     } catch (error) {
       console.error('Direct API test error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred while testing Resend API';
+      const errorMessage =
+        error instanceof Error ? error.message : 'An error occurred while testing Resend API';
       toast({
-        title: "Direct API test failed",
+        title: 'Direct API test failed',
         description: errorMessage,
-        variant: "destructive"
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -134,7 +135,7 @@ export default function TestEmail() {
               placeholder="recipient@example.com"
             />
           </div>
-          
+
           <div>
             <Label htmlFor="from">From Email</Label>
             <Input
@@ -144,7 +145,7 @@ export default function TestEmail() {
               onChange={(e) => setFormData({ ...formData, from: e.target.value })}
             />
           </div>
-          
+
           <div>
             <Label htmlFor="subject">Subject</Label>
             <Input
@@ -153,7 +154,7 @@ export default function TestEmail() {
               onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
             />
           </div>
-          
+
           <div>
             <Label htmlFor="html">HTML Content</Label>
             <Textarea
@@ -163,10 +164,10 @@ export default function TestEmail() {
               rows={5}
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Button 
-              onClick={testEmailFunction} 
+            <Button
+              onClick={testEmailFunction}
               disabled={isLoading || !formData.to}
               className="w-full"
             >
@@ -179,9 +180,9 @@ export default function TestEmail() {
                 'Test Edge Function Email'
               )}
             </Button>
-            
-            <Button 
-              onClick={testDirectResendAPI} 
+
+            <Button
+              onClick={testDirectResendAPI}
               disabled={isLoading || !formData.to}
               variant="outline"
               className="w-full"
@@ -189,7 +190,7 @@ export default function TestEmail() {
               Test Direct Resend API (Debug Only)
             </Button>
           </div>
-          
+
           <div className="mt-4 p-4 bg-gray-100 rounded text-sm">
             <p className="font-semibold mb-2">Debug Steps:</p>
             <ol className="list-decimal list-inside space-y-1">

@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-import { useAdminRole } from "@/hooks/useAdminRole";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAdminRole } from '@/hooks/useAdminRole';
 
 interface SystemSetting {
   id: string;
@@ -44,18 +44,18 @@ export const useSystemSettings = () => {
         .from('system_settings')
         .update({ setting_value: value })
         .eq('setting_key', settingKey);
-      
+
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['system-settings'] });
-      toast({ title: "Setting updated successfully" });
+      toast({ title: 'Setting updated successfully' });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Error updating setting", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: 'Error updating setting',
+        description: error.message,
+        variant: 'destructive',
       });
     },
     onSettled: () => {
@@ -69,7 +69,7 @@ export const useSystemSettings = () => {
   };
 
   const getSetting = (key: string): string => {
-    const setting = settings?.find(s => s.setting_key === key);
+    const setting = settings?.find((s) => s.setting_key === key);
     return setting?.setting_value || '';
   };
 

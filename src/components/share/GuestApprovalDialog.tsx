@@ -39,19 +39,22 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
   const [currentView, setCurrentView] = useState<'options' | 'signin' | 'signup'>('options');
   const { toast } = useToast();
   const { user } = useAuth();
-  
+
   // Store pending action when auth modal is shown
   useEffect(() => {
     if (currentView === 'signin' || currentView === 'signup') {
       const currentPath = window.location.pathname;
-      sessionStorage.setItem('pendingQuoteAction', JSON.stringify({
-        action: 'approve',
-        quoteId,
-        shareToken: currentPath.split('/').pop()
-      }));
+      sessionStorage.setItem(
+        'pendingQuoteAction',
+        JSON.stringify({
+          action: 'approve',
+          quoteId,
+          shareToken: currentPath.split('/').pop(),
+        }),
+      );
     }
   }, [currentView, quoteId]);
-  
+
   // Handle successful authentication
   const handleAuthSuccess = () => {
     // The pending action will be processed by QuoteDetailUnified component
@@ -60,23 +63,22 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
     if (onOpenChange) onOpenChange(false);
   };
 
-
   const handleGuestCheckout = async () => {
     // Validate email
     if (!guestEmail) {
       setEmailError('Email is required');
       return;
     }
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(guestEmail)) {
       setEmailError('Please enter a valid email');
       return;
     }
-    
+
     setEmailError('');
     setIsSubmitting(true);
-    
+
     try {
       // Update quote with email and approve
       const { error } = await supabase
@@ -84,15 +86,15 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
         .update({
           email: guestEmail,
           status: 'approved',
-          approved_at: new Date().toISOString()
+          approved_at: new Date().toISOString(),
         })
         .eq('id', quoteId);
 
       if (error) throw error;
 
       toast({
-        title: "Quote Approved!",
-        description: "Redirecting to checkout...",
+        title: 'Quote Approved!',
+        description: 'Redirecting to checkout...',
       });
 
       // Redirect to guest checkout
@@ -102,9 +104,9 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
     } catch (error) {
       console.error('Error approving quote:', error);
       toast({
-        title: "Error",
-        description: "Failed to approve quote. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to approve quote. Please try again.',
+        variant: 'destructive',
       });
       setIsSubmitting(false);
     }
@@ -112,7 +114,7 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
 
   const handleReject = async () => {
     setIsSubmitting(true);
-    
+
     try {
       const updateData = {
         status: 'rejected',
@@ -131,26 +133,28 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
       }
 
       if (!data || data.length === 0) {
-        throw new Error('No quote was updated. The quote may have expired or the link may be invalid.');
+        throw new Error(
+          'No quote was updated. The quote may have expired or the link may be invalid.',
+        );
       }
 
       toast({
-        title: "Quote Rejected",
-        description: "Thank you for your response.",
+        title: 'Quote Rejected',
+        description: 'Thank you for your response.',
       });
 
       // Call onSuccess to refresh the quote data
       onSuccess();
-      
+
       if (onClose) onClose();
       if (onOpenChange) onOpenChange(false);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Error rejecting quote:', error);
       toast({
-        title: "Error",
-        description: "Failed to reject quote. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to reject quote. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
@@ -192,8 +196,8 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
             )}
           </DialogTitle>
           <DialogDescription>
-            {action === 'approve' 
-              ? currentView === 'options' 
+            {action === 'approve'
+              ? currentView === 'options'
                 ? 'Choose how you would like to proceed with this quote.'
                 : currentView === 'signin'
                   ? 'Sign in to your account to continue with this quote.'
@@ -255,9 +259,7 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
                       }}
                       className={emailError ? 'border-red-500' : ''}
                     />
-                    {emailError && (
-                      <p className="text-sm text-red-500 mt-1">{emailError}</p>
-                    )}
+                    {emailError && <p className="text-sm text-red-500 mt-1">{emailError}</p>}
                   </div>
                   <Button
                     onClick={handleGuestCheckout}
@@ -284,7 +286,7 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
               </div>
             </div>
           ) : (
-            <AuthModal 
+            <AuthModal
               mode={currentView as 'signin' | 'signup'}
               onSuccess={handleAuthSuccess}
               onBack={() => setCurrentView('options')}

@@ -20,25 +20,25 @@ export const StatusConfigFixer: React.FC = () => {
         .from('quotes')
         .select('id, display_id, status, product_name')
         .eq('status', 'payment_pending');
-      
+
       if (error) {
         console.error('Error fetching payment_pending quotes:', error);
         return [];
       }
       return data || [];
-    }
+    },
   });
 
   // Check current configuration
-  const paymentPendingInQuotes = quoteStatuses.find(s => s.name === 'payment_pending');
-  const paymentPendingInOrders = orderStatuses.find(s => s.name === 'payment_pending');
+  const paymentPendingInQuotes = quoteStatuses.find((s) => s.name === 'payment_pending');
+  const paymentPendingInOrders = orderStatuses.find((s) => s.name === 'payment_pending');
 
   const fixStatusConfiguration = async () => {
     setIsFixing(true);
     try {
       // Ensure payment_pending is in order statuses with correct configuration
       const correctOrderStatuses = [
-        ...orderStatuses.filter(s => s.name !== 'payment_pending'),
+        ...orderStatuses.filter((s) => s.name !== 'payment_pending'),
         {
           id: 'payment_pending',
           name: 'payment_pending',
@@ -54,8 +54,8 @@ export const StatusConfigFixer: React.FC = () => {
           triggersEmail: true,
           emailTemplate: 'payment_instructions',
           requiresAction: false,
-          showsInQuotesList: false,  // KEY FIX: Should NOT show in quotes
-          showsInOrdersList: true,   // KEY FIX: Should show in orders
+          showsInQuotesList: false, // KEY FIX: Should NOT show in quotes
+          showsInOrdersList: true, // KEY FIX: Should show in orders
           canBePaid: false,
           allowEdit: false,
           allowApproval: false,
@@ -74,35 +74,37 @@ export const StatusConfigFixer: React.FC = () => {
           customerMessage: 'Order placed - Please complete payment',
           customerActionText: 'Pay Now',
           cssClass: 'status-payment-pending',
-          badgeVariant: 'outline'
-        }
+          badgeVariant: 'outline',
+        },
       ];
 
       // Remove payment_pending from quote statuses if it exists there
-      const correctQuoteStatuses = quoteStatuses.filter(s => s.name !== 'payment_pending');
+      const correctQuoteStatuses = quoteStatuses.filter((s) => s.name !== 'payment_pending');
 
       // Save the corrected configurations
-      const { error: quoteError } = await supabase
-        .from('system_settings')
-        .upsert({
+      const { error: quoteError } = await supabase.from('system_settings').upsert(
+        {
           setting_key: 'quote_statuses',
           setting_value: JSON.stringify(correctQuoteStatuses),
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'setting_key'
-        });
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'setting_key',
+        },
+      );
 
       if (quoteError) throw quoteError;
 
-      const { error: orderError } = await supabase
-        .from('system_settings')
-        .upsert({
+      const { error: orderError } = await supabase.from('system_settings').upsert(
+        {
           setting_key: 'order_statuses',
           setting_value: JSON.stringify(correctOrderStatuses),
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'setting_key'
-        });
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'setting_key',
+        },
+      );
 
       if (orderError) throw orderError;
 
@@ -110,17 +112,16 @@ export const StatusConfigFixer: React.FC = () => {
       await refreshData();
 
       toast({
-        title: "Status Configuration Fixed",
-        description: "payment_pending status now correctly shows in orders list only"
+        title: 'Status Configuration Fixed',
+        description: 'payment_pending status now correctly shows in orders list only',
       });
-
     } catch (error: unknown) {
       console.error('Error fixing status configuration:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast({
-        title: "Fix Failed",
-        description: errorMessage || "Failed to fix status configuration",
-        variant: "destructive"
+        title: 'Fix Failed',
+        description: errorMessage || 'Failed to fix status configuration',
+        variant: 'destructive',
       });
     } finally {
       setIsFixing(false);
@@ -139,19 +140,19 @@ export const StatusConfigFixer: React.FC = () => {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-sm">payment_pending in quote statuses:</span>
-              <Badge variant={paymentPendingInQuotes ? "destructive" : "outline"}>
-                {paymentPendingInQuotes ? "YES (WRONG)" : "NO (CORRECT)"}
+              <Badge variant={paymentPendingInQuotes ? 'destructive' : 'outline'}>
+                {paymentPendingInQuotes ? 'YES (WRONG)' : 'NO (CORRECT)'}
               </Badge>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm">payment_pending in order statuses:</span>
-              <Badge variant={paymentPendingInOrders ? "default" : "destructive"}>
-                {paymentPendingInOrders ? "YES (CORRECT)" : "NO (WRONG)"}
+              <Badge variant={paymentPendingInOrders ? 'default' : 'destructive'}>
+                {paymentPendingInOrders ? 'YES (CORRECT)' : 'NO (WRONG)'}
               </Badge>
             </div>
             {paymentPendingInOrders && (
               <div className="text-xs text-muted-foreground ml-4">
-                showsInQuotesList: {String(paymentPendingInOrders.showsInQuotesList)} | 
+                showsInQuotesList: {String(paymentPendingInOrders.showsInQuotesList)} |
                 showsInOrdersList: {String(paymentPendingInOrders.showsInOrdersList)}
               </div>
             )}
@@ -162,10 +163,11 @@ export const StatusConfigFixer: React.FC = () => {
         {paymentPendingQuotes && paymentPendingQuotes.length > 0 && (
           <div className="space-y-2">
             <h4 className="font-medium">
-              Quotes with payment_pending status ({paymentPendingQuotes.length}):
+              Quotes with payment_pending status ({paymentPendingQuotes.length}
+              ):
             </h4>
             <div className="text-sm space-y-1">
-              {paymentPendingQuotes.slice(0, 5).map(quote => (
+              {paymentPendingQuotes.slice(0, 5).map((quote) => (
                 <div key={quote.id} className="text-xs">
                   {quote.display_id} - {quote.product_name?.substring(0, 40)}...
                 </div>
@@ -181,22 +183,25 @@ export const StatusConfigFixer: React.FC = () => {
 
         {/* Fix Button */}
         <div className="pt-2">
-          <Button 
+          <Button
             onClick={fixStatusConfiguration}
             disabled={isFixing}
             variant={
-              (paymentPendingInQuotes || !paymentPendingInOrders || 
-               paymentPendingInOrders?.showsInQuotesList) ? "default" : "outline"
+              paymentPendingInQuotes ||
+              !paymentPendingInOrders ||
+              paymentPendingInOrders?.showsInQuotesList
+                ? 'default'
+                : 'outline'
             }
           >
-            {isFixing ? "Fixing..." : "Fix Status Configuration"}
+            {isFixing ? 'Fixing...' : 'Fix Status Configuration'}
           </Button>
         </div>
 
         {/* Status Summary */}
         <div className="text-xs text-muted-foreground border-t pt-2">
-          <strong>Expected behavior:</strong> Quotes with "payment_pending" status should appear 
-          in the Orders list only, not in the Quotes list.
+          <strong>Expected behavior:</strong> Quotes with "payment_pending" status should appear in
+          the Orders list only, not in the Quotes list.
         </div>
       </CardContent>
     </Card>

@@ -1,10 +1,10 @@
-import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Message } from "./types";
-import { Receipt, CheckCircle, XCircle, Eye, MessageSquare } from "lucide-react";
-import { useState } from "react";
+import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Message } from './types';
+import { Receipt, CheckCircle, XCircle, Eye, MessageSquare } from 'lucide-react';
+import { useState } from 'react';
 
 // Extended Message type for payment proof messages
 interface PaymentProofMessage extends Message {
@@ -22,7 +22,12 @@ interface MessageItemProps {
   onVerificationUpdate?: () => void;
 }
 
-export const MessageItem = ({ message, currentUserId, isAdmin, onVerificationUpdate }: MessageItemProps) => {
+export const MessageItem = ({
+  message,
+  currentUserId,
+  isAdmin,
+  onVerificationUpdate,
+}: MessageItemProps) => {
   const navigate = useNavigate();
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const isUserSender = message.sender_id === currentUserId;
@@ -30,13 +35,13 @@ export const MessageItem = ({ message, currentUserId, isAdmin, onVerificationUpd
   const paymentProofMessage = message as PaymentProofMessage;
   const isPaymentProof = paymentProofMessage.message_type === 'payment_proof';
   const verificationStatus = paymentProofMessage.verification_status || 'pending';
-  
+
   const handleMessageClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking on buttons
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
-    
+
     if (message.quote_id) {
       if (isAdmin) {
         navigate(`/admin/quotes/${message.quote_id}`);
@@ -48,10 +53,14 @@ export const MessageItem = ({ message, currentUserId, isAdmin, onVerificationUpd
 
   const getVerificationStatusColor = (status: string) => {
     switch (status) {
-      case 'verified': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'confirmed': return 'bg-green-100 text-green-800 border-green-300';
-      case 'rejected': return 'bg-red-100 text-red-800 border-red-300';
-      default: return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'verified':
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'confirmed':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'rejected':
+        return 'bg-red-100 text-red-800 border-red-300';
+      default:
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
     }
   };
 
@@ -60,18 +69,16 @@ export const MessageItem = ({ message, currentUserId, isAdmin, onVerificationUpd
       key={message.id}
       onClick={handleMessageClick}
       className={cn(
-        "rounded-lg p-4 max-w-[80%] w-fit transition-colors",
-        isUserSender ? "bg-primary/10" : "bg-muted",
-        isUnread && "border-2 border-primary",
-        message.quote_id && "cursor-pointer hover:bg-gray-200",
-        isPaymentProof && "border-green-500 bg-green-50"
+        'rounded-lg p-4 max-w-[80%] w-fit transition-colors',
+        isUserSender ? 'bg-primary/10' : 'bg-muted',
+        isUnread && 'border-2 border-primary',
+        message.quote_id && 'cursor-pointer hover:bg-gray-200',
+        isPaymentProof && 'border-green-500 bg-green-50',
       )}
     >
       <div className="flex items-center gap-2 justify-between w-full">
         <div className="flex items-center gap-2">
-          <p className="font-semibold text-sm">
-            {isUserSender ? "You" : "Support"}
-          </p>
+          <p className="font-semibold text-sm">{isUserSender ? 'You' : 'Support'}</p>
           {isPaymentProof && (
             <div className="flex items-center gap-2">
               <Badge variant="default" className="bg-green-600 hover:bg-green-700 gap-1">
@@ -88,12 +95,10 @@ export const MessageItem = ({ message, currentUserId, isAdmin, onVerificationUpd
           {new Date(message.created_at).toLocaleString()}
         </span>
       </div>
-      
+
       <h3 className="font-semibold mt-2">{message.subject}</h3>
-      <p className="text-sm text-foreground/80 whitespace-pre-wrap mt-1">
-        {message.content}
-      </p>
-      
+      <p className="text-sm text-foreground/80 whitespace-pre-wrap mt-1">{message.content}</p>
+
       {/* Attachment Display */}
       {message.attachment_url && message.attachment_file_name && (
         <div className="mt-3 p-2 bg-gray-50 rounded border">
@@ -101,9 +106,9 @@ export const MessageItem = ({ message, currentUserId, isAdmin, onVerificationUpd
             <span className="text-sm text-gray-700 truncate">
               📎 {message.attachment_file_name}
             </span>
-            <a 
-              href={message.attachment_url} 
-              target="_blank" 
+            <a
+              href={message.attachment_url}
+              target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:text-blue-800 text-sm"
             >
@@ -146,11 +151,11 @@ export const MessageItem = ({ message, currentUserId, isAdmin, onVerificationUpd
           Related to Quote #{message.quote_id.substring(0, 8)}
         </p>
       )}
-      
+
       {isUserSender && (
         <div className="flex justify-end mt-2">
-          <Badge variant={message.is_read ? "secondary" : "default"}>
-            {message.is_read ? "Read" : "Sent"}
+          <Badge variant={message.is_read ? 'secondary' : 'default'}>
+            {message.is_read ? 'Read' : 'Sent'}
           </Badge>
         </div>
       )}

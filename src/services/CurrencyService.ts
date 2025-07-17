@@ -45,7 +45,7 @@ class CurrencyService {
    * Check if cache is still valid
    */
   private isCacheValid(): boolean {
-    return (Date.now() - this.cacheTimestamp) < this.CACHE_DURATION;
+    return Date.now() - this.cacheTimestamp < this.CACHE_DURATION;
   }
 
   /**
@@ -69,7 +69,9 @@ class CurrencyService {
     try {
       const { data: countrySettings, error } = await supabase
         .from('country_settings')
-        .select('currency, minimum_payment_amount, decimal_places, thousand_separator, decimal_separator')
+        .select(
+          'currency, minimum_payment_amount, decimal_places, thousand_separator, decimal_separator',
+        )
         .not('currency', 'is', null)
         .order('currency');
 
@@ -80,8 +82,8 @@ class CurrencyService {
 
       // Group by currency and get the most complete data for each
       const currencyMap = new Map<string, Currency>();
-      
-      countrySettings.forEach(cs => {
+
+      countrySettings.forEach((cs) => {
         const existing = currencyMap.get(cs.currency);
         const currency: Currency = {
           code: cs.currency,
@@ -91,13 +93,15 @@ class CurrencyService {
           min_payment_amount: cs.minimum_payment_amount ?? undefined,
           thousand_separator: cs.thousand_separator ?? ',',
           decimal_separator: cs.decimal_separator ?? '.',
-          is_active: true
+          is_active: true,
         };
-        
+
         // Keep the one with more complete data (prefer non-null values)
-        if (!existing || 
-            (cs.minimum_payment_amount && !existing.min_payment_amount) ||
-            (cs.decimal_places && !existing.decimal_places)) {
+        if (
+          !existing ||
+          (cs.minimum_payment_amount && !existing.min_payment_amount) ||
+          (cs.decimal_places && !existing.decimal_places)
+        ) {
           currencyMap.set(cs.currency, currency);
         }
       });
@@ -109,7 +113,7 @@ class CurrencyService {
       this.cacheTimestamp = Date.now();
 
       // Update individual currency cache
-      currencies.forEach(currency => {
+      currencies.forEach((currency) => {
         this.currencyCache.set(currency.code, currency);
       });
 
@@ -130,7 +134,7 @@ class CurrencyService {
 
     // If not in cache, fetch all currencies (which will populate cache)
     const allCurrencies = await this.getAllCurrencies();
-    return allCurrencies.find(c => c.code === code) || null;
+    return allCurrencies.find((c) => c.code === code) || null;
   }
 
   /**
@@ -153,7 +157,7 @@ class CurrencyService {
       }
 
       const map = new Map<string, string>();
-      countrySettings.forEach(cs => {
+      countrySettings.forEach((cs) => {
         if (cs.code && cs.currency) {
           map.set(cs.code, cs.currency);
         }
@@ -185,7 +189,7 @@ class CurrencyService {
     if (this.countryCurrencyMapCache.has(countryCode) && this.isCacheValid()) {
       return this.countryCurrencyMapCache.get(countryCode) || 'USD';
     }
-    
+
     // Fall back to hardcoded mapping
     const fallbackMap = this.getFallbackCountryCurrencyMap();
     return fallbackMap.get(countryCode) || 'USD';
@@ -204,7 +208,7 @@ class CurrencyService {
 
     return {
       default: defaultCurrency,
-      all: allCurrencies
+      all: allCurrencies,
     };
   }
 
@@ -228,26 +232,26 @@ class CurrencyService {
   private getCurrencySymbolSync(currencyCode: string): string {
     // Hardcoded symbols as fallback
     const symbols: Record<string, string> = {
-      'USD': '$',
-      'EUR': '€',
-      'GBP': '£',
-      'INR': '₹',
-      'NPR': '₨',
-      'CAD': 'C$',
-      'AUD': 'A$',
-      'JPY': '¥',
-      'CNY': '¥',
-      'SGD': 'S$',
-      'AED': 'د.إ',
-      'SAR': 'ر.س',
-      'EGP': 'ج.م',
-      'TRY': '₺',
-      'IDR': 'Rp',
-      'MYR': 'RM',
-      'PHP': '₱',
-      'THB': '฿',
-      'VND': '₫',
-      'KRW': '₩',
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      INR: '₹',
+      NPR: '₨',
+      CAD: 'C$',
+      AUD: 'A$',
+      JPY: '¥',
+      CNY: '¥',
+      SGD: 'S$',
+      AED: 'د.إ',
+      SAR: 'ر.س',
+      EGP: 'ج.م',
+      TRY: '₺',
+      IDR: 'Rp',
+      MYR: 'RM',
+      PHP: '₱',
+      THB: '฿',
+      VND: '₫',
+      KRW: '₩',
     };
     return symbols[currencyCode] || currencyCode;
   }
@@ -257,26 +261,26 @@ class CurrencyService {
    */
   private getCurrencyNameSync(currencyCode: string): string {
     const names: Record<string, string> = {
-      'USD': 'US Dollar',
-      'EUR': 'Euro',
-      'GBP': 'British Pound',
-      'INR': 'Indian Rupee',
-      'NPR': 'Nepalese Rupee',
-      'CAD': 'Canadian Dollar',
-      'AUD': 'Australian Dollar',
-      'JPY': 'Japanese Yen',
-      'CNY': 'Chinese Yuan',
-      'SGD': 'Singapore Dollar',
-      'AED': 'UAE Dirham',
-      'SAR': 'Saudi Riyal',
-      'EGP': 'Egyptian Pound',
-      'TRY': 'Turkish Lira',
-      'IDR': 'Indonesian Rupiah',
-      'MYR': 'Malaysian Ringgit',
-      'PHP': 'Philippine Peso',
-      'THB': 'Thai Baht',
-      'VND': 'Vietnamese Dong',
-      'KRW': 'South Korean Won',
+      USD: 'US Dollar',
+      EUR: 'Euro',
+      GBP: 'British Pound',
+      INR: 'Indian Rupee',
+      NPR: 'Nepalese Rupee',
+      CAD: 'Canadian Dollar',
+      AUD: 'Australian Dollar',
+      JPY: 'Japanese Yen',
+      CNY: 'Chinese Yuan',
+      SGD: 'Singapore Dollar',
+      AED: 'UAE Dirham',
+      SAR: 'Saudi Riyal',
+      EGP: 'Egyptian Pound',
+      TRY: 'Turkish Lira',
+      IDR: 'Indonesian Rupiah',
+      MYR: 'Malaysian Ringgit',
+      PHP: 'Philippine Peso',
+      THB: 'Thai Baht',
+      VND: 'Vietnamese Dong',
+      KRW: 'South Korean Won',
     };
     return names[currencyCode] || currencyCode;
   }
@@ -320,14 +324,32 @@ class CurrencyService {
    * Fallback currencies when database is unavailable
    */
   private getFallbackCurrencies(): Currency[] {
-    const fallbackCurrencyCodes = ['USD', 'EUR', 'GBP', 'INR', 'NPR', 'CAD', 'AUD', 'JPY', 'CNY', 'SGD', 'AED', 'SAR', 'IDR', 'MYR', 'PHP', 'THB', 'VND'];
-    
-    return fallbackCurrencyCodes.map(code => ({
+    const fallbackCurrencyCodes = [
+      'USD',
+      'EUR',
+      'GBP',
+      'INR',
+      'NPR',
+      'CAD',
+      'AUD',
+      'JPY',
+      'CNY',
+      'SGD',
+      'AED',
+      'SAR',
+      'IDR',
+      'MYR',
+      'PHP',
+      'THB',
+      'VND',
+    ];
+
+    return fallbackCurrencyCodes.map((code) => ({
       code,
       name: this.getCurrencyNameSync(code),
       symbol: this.getCurrencySymbolSync(code),
       decimal_places: this.getCurrencyDecimalPlacesSync(code),
-      is_active: true
+      is_active: true,
     }));
   }
 
@@ -405,7 +427,7 @@ class CurrencyService {
    */
   async isValidCurrency(currencyCode: string): Promise<boolean> {
     const allCurrencies = await this.getAllCurrencies();
-    return allCurrencies.some(c => c.code === currencyCode);
+    return allCurrencies.some((c) => c.code === currencyCode);
   }
 
   /**
@@ -418,12 +440,12 @@ class CurrencyService {
     formatted: string;
   }> {
     const currency = await this.getCurrency(currencyCode);
-    
+
     return {
       code: currencyCode,
       name: currency?.name || this.getCurrencyNameSync(currencyCode),
       symbol: currency?.symbol || this.getCurrencySymbolSync(currencyCode),
-      formatted: `${currency?.name || this.getCurrencyNameSync(currencyCode)} (${currencyCode})`
+      formatted: `${currency?.name || this.getCurrencyNameSync(currencyCode)} (${currencyCode})`,
     };
   }
 
@@ -456,26 +478,26 @@ class CurrencyService {
    */
   getMinimumPaymentAmountSync(currencyCode: string): number {
     const minimumAmounts: Record<string, number> = {
-      'USD': 10,
-      'EUR': 10,
-      'GBP': 8,
-      'INR': 750,
-      'NPR': 1200,
-      'CAD': 15,
-      'AUD': 15,
-      'JPY': 1100,
-      'CNY': 70,
-      'SGD': 15,
-      'AED': 40,
-      'SAR': 40,
-      'EGP': 200,
-      'TRY': 100,
-      'IDR': 150000,
-      'MYR': 45,
-      'PHP': 550,
-      'THB': 350,
-      'VND': 240000,
-      'KRW': 12000
+      USD: 10,
+      EUR: 10,
+      GBP: 8,
+      INR: 750,
+      NPR: 1200,
+      CAD: 15,
+      AUD: 15,
+      JPY: 1100,
+      CNY: 70,
+      SGD: 15,
+      AED: 40,
+      SAR: 40,
+      EGP: 200,
+      TRY: 100,
+      IDR: 150000,
+      MYR: 45,
+      PHP: 550,
+      THB: 350,
+      VND: 240000,
+      KRW: 12000,
     };
     return minimumAmounts[currencyCode] || 10;
   }
@@ -492,7 +514,7 @@ class CurrencyService {
     const options = {
       decimalPlaces: 2,
       thousandSeparator: ',',
-      decimalSeparator: '.'
+      decimalSeparator: '.',
     };
 
     // Currency-specific overrides
@@ -515,17 +537,19 @@ class CurrencyService {
   formatAmount(amount: number, currencyCode: string): string {
     const currency = this.getCurrencySymbolSync(currencyCode);
     const options = this.getCurrencyFormatOptions(currencyCode);
-    
+
     // Handle null, undefined, or NaN values
-    const safeAmount = (amount == null || isNaN(amount)) ? 0 : amount;
-    
+    const safeAmount = amount == null || isNaN(amount) ? 0 : amount;
+
     // Round to appropriate decimal places
-    const rounded = Math.round(safeAmount * Math.pow(10, options.decimalPlaces)) / Math.pow(10, options.decimalPlaces);
-    
+    const rounded =
+      Math.round(safeAmount * Math.pow(10, options.decimalPlaces)) /
+      Math.pow(10, options.decimalPlaces);
+
     // Format with separators
     const parts = rounded.toFixed(options.decimalPlaces).split('.');
     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, options.thousandSeparator);
-    
+
     const formatted = parts.join(options.decimalSeparator);
     return `${currency}${formatted}`;
   }
@@ -567,8 +591,13 @@ export const currencyService = CurrencyService.getInstance();
 
 // Export convenience functions for backward compatibility
 export const getAllCurrencies = () => currencyService.getAllCurrencies();
-export const getCurrencyForCountry = (countryCode: string) => currencyService.getCurrencyForCountry(countryCode);
-export const getCurrencyForCountrySync = (countryCode: string) => currencyService.getCurrencyForCountrySync(countryCode);
-export const getAvailableCurrenciesForCountry = (countryCode: string) => currencyService.getAvailableCurrenciesForCountry(countryCode);
-export const isValidCurrency = (currencyCode: string) => currencyService.isValidCurrency(currencyCode);
-export const getCurrencyDisplayInfo = (currencyCode: string) => currencyService.getCurrencyDisplayInfo(currencyCode);
+export const getCurrencyForCountry = (countryCode: string) =>
+  currencyService.getCurrencyForCountry(countryCode);
+export const getCurrencyForCountrySync = (countryCode: string) =>
+  currencyService.getCurrencyForCountrySync(countryCode);
+export const getAvailableCurrenciesForCountry = (countryCode: string) =>
+  currencyService.getAvailableCurrenciesForCountry(countryCode);
+export const isValidCurrency = (currencyCode: string) =>
+  currencyService.isValidCurrency(currencyCode);
+export const getCurrencyDisplayInfo = (currencyCode: string) =>
+  currencyService.getCurrencyDisplayInfo(currencyCode);

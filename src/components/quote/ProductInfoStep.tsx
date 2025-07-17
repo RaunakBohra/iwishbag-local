@@ -60,7 +60,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
       if (firstCountry) {
         const updatedProducts = products.map((product, index) => ({
           ...product,
-          country: index === 0 ? product.country : firstCountry
+          country: index === 0 ? product.country : firstCountry,
         }));
         setProducts(updatedProducts);
       }
@@ -68,30 +68,30 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
   }, [products[0]?.country]);
 
   const handleChange = (idx, field, value) => {
-    const updated = products.map((p, i) => i === idx ? { ...p, [field]: value } : p);
+    const updated = products.map((p, i) => (i === idx ? { ...p, [field]: value } : p));
     setProducts(updated);
   };
 
   const addProduct = () => {
-    const newProduct = { 
-      name: '', 
-      url: '', 
-      file: null, 
-      quantity: 1, 
-      price: '', 
-      weight: '', 
+    const newProduct = {
+      name: '',
+      url: '',
+      file: null,
+      quantity: 1,
+      price: '',
+      weight: '',
       country: products[0]?.country || '', // Auto-sync for both quote types
-      notes: ''
+      notes: '',
     };
     setProducts([...products, newProduct]);
   };
 
-  const removeProduct = idx => setProducts(products.filter((_, i) => i !== idx));
+  const removeProduct = (idx) => setProducts(products.filter((_, i) => i !== idx));
 
   const updateProduct = (index, field, value) => {
     const newProducts = [...products];
     newProducts[index] = { ...newProducts[index], [field]: value };
-    
+
     // Auto-sync countries for both quote types when first product changes
     if (field === 'country' && index === 0) {
       newProducts.forEach((product, i) => {
@@ -100,7 +100,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
         }
       });
     }
-    
+
     setProducts(newProducts);
   };
 
@@ -111,18 +111,14 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `product-images/${fileName}`;
 
-    const { error } = await supabase.storage
-      .from('product-images')
-      .upload(filePath, file);
+    const { error } = await supabase.storage.from('product-images').upload(filePath, file);
 
     if (error) {
       console.error('Error uploading file:', error);
       return;
     }
 
-    const { data } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(filePath);
+    const { data } = supabase.storage.from('product-images').getPublicUrl(filePath);
 
     updateProduct(index, 'file', file);
     updateProduct(index, 'url', data.publicUrl);
@@ -131,20 +127,22 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
   const validate = () => {
     const newErrors = {};
     setCountryValidationError('');
-    
+
     // Only validate country consistency for combined quotes
     if (quoteType === 'combined' && products.length > 1) {
       const firstCountry = products[0]?.country;
-      const differentCountries = products.some((product, index) => 
-        index > 0 && product.country && product.country !== firstCountry
+      const differentCountries = products.some(
+        (product, index) => index > 0 && product.country && product.country !== firstCountry,
       );
-      
+
       if (differentCountries) {
-        setCountryValidationError('Combined quotes require all products to be from the same country. Please select the same country for all products or switch to separate quotes.');
+        setCountryValidationError(
+          'Combined quotes require all products to be from the same country. Please select the same country for all products or switch to separate quotes.',
+        );
         return false;
       }
     }
-    
+
     products.forEach((product, index) => {
       if (!product.url && !product.file) {
         newErrors[`url-${index}`] = 'Either URL or file upload is required';
@@ -172,9 +170,10 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
     if (quoteType === 'combined') {
       return {
         type: 'info',
-        message: 'All products must be from the same country for combined shipping and better rates.',
+        message:
+          'All products must be from the same country for combined shipping and better rates.',
         icon: Info,
-        color: 'blue'
+        color: 'blue',
       };
     }
     return null; // No message for separate quotes
@@ -184,12 +183,12 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
     if (quoteType === 'combined' && index > 0) {
       return {
         disabled: true,
-        className: "w-full border rounded p-2 bg-gray-100 text-gray-500 cursor-not-allowed",
-        title: "Auto-synced to first product's country"
+        className: 'w-full border rounded p-2 bg-gray-100 text-gray-500 cursor-not-allowed',
+        title: "Auto-synced to first product's country",
       };
     }
     return {
-      className: "w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      className: 'w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
     };
   };
 
@@ -204,69 +203,67 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
           How would you like your quote?
         </h3>
         <div className="flex flex-row flex-wrap gap-3 sm:gap-4">
-          <div 
+          <div
             className={`flex-1 min-w-[180px] p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
-              quoteType === 'separate' 
-                ? 'border-green-500 bg-green-50' 
+              quoteType === 'separate'
+                ? 'border-green-500 bg-green-50'
                 : 'border-gray-200 hover:border-gray-300'
             }`}
             onClick={() => setQuoteType('separate')}
           >
             <div className="flex items-center mb-2">
-              <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                quoteType === 'separate' 
-                  ? 'border-green-500 bg-green-500' 
-                  : 'border-gray-300'
-              }`}>
+              <div
+                className={`w-4 h-4 rounded-full border-2 mr-3 ${
+                  quoteType === 'separate' ? 'border-green-500 bg-green-500' : 'border-gray-300'
+                }`}
+              >
                 {quoteType === 'separate' && (
                   <div className="w-2 h-2 bg-white rounded-full m-0.5"></div>
                 )}
               </div>
               <span className="font-medium">Separate Quotes</span>
             </div>
-            <p className="text-sm text-gray-600 ml-7">
-              Get individual quotes for each item
-            </p>
+            <p className="text-sm text-gray-600 ml-7">Get individual quotes for each item</p>
           </div>
-          
-          <div 
+
+          <div
             className={`flex-1 min-w-[180px] p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
-              quoteType === 'combined' 
-                ? 'border-green-500 bg-green-50' 
+              quoteType === 'combined'
+                ? 'border-green-500 bg-green-50'
                 : 'border-gray-200 hover:border-gray-300'
             }`}
             onClick={() => setQuoteType('combined')}
           >
             <div className="flex items-center mb-2">
-              <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                quoteType === 'combined' 
-                  ? 'border-green-500 bg-green-500' 
-                  : 'border-gray-300'
-              }`}>
+              <div
+                className={`w-4 h-4 rounded-full border-2 mr-3 ${
+                  quoteType === 'combined' ? 'border-green-500 bg-green-500' : 'border-gray-300'
+                }`}
+              >
                 {quoteType === 'combined' && (
                   <div className="w-2 h-2 bg-white rounded-full m-0.5"></div>
                 )}
               </div>
               <span className="font-medium">Combined Quote</span>
             </div>
-            <p className="text-sm text-gray-600 ml-7">
-              Get one quote for all items together
-            </p>
+            <p className="text-sm text-gray-600 ml-7">Get one quote for all items together</p>
           </div>
         </div>
 
         {/* Quote Type Information Message - Only for Combined Quotes */}
         {quoteTypeMessage && (
-          <div className={`mt-4 p-3 sm:p-4 rounded-lg border border-${quoteTypeMessage.color}-200 bg-${quoteTypeMessage.color}-50`}>
+          <div
+            className={`mt-4 p-3 sm:p-4 rounded-lg border border-${quoteTypeMessage.color}-200 bg-${quoteTypeMessage.color}-50`}
+          >
             <div className="flex items-start gap-3">
-              <quoteTypeMessage.icon className={`h-5 w-5 text-${quoteTypeMessage.color}-600 mt-0.5 flex-shrink-0`} />
+              <quoteTypeMessage.icon
+                className={`h-5 w-5 text-${quoteTypeMessage.color}-600 mt-0.5 flex-shrink-0`}
+              />
               <div className="text-sm">
                 <p className={`font-medium text-${quoteTypeMessage.color}-800 mb-1`}>
                   Combined Quote Requirements
                 </p>
-                <p className={`text-${quoteTypeMessage.color}-700`}>
-                  {quoteTypeMessage.message}
-                </p>
+                <p className={`text-${quoteTypeMessage.color}-700`}>{quoteTypeMessage.message}</p>
               </div>
             </div>
           </div>
@@ -364,7 +361,9 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
               </div>
 
               <div className="mt-3 sm:mt-4">
-                <label className="block text-sm font-medium mb-1">Product URL or File Upload *</label>
+                <label className="block text-sm font-medium mb-1">
+                  Product URL or File Upload *
+                </label>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="url"
@@ -388,7 +387,9 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                   <p className="text-red-500 text-xs mt-1">{errors[`url-${index}`]}</p>
                 )}
                 {product.file && (
-                  <p className="text-green-600 text-xs mt-1">✓ File uploaded: {product.file.name}</p>
+                  <p className="text-green-600 text-xs mt-1">
+                    ✓ File uploaded: {product.file.name}
+                  </p>
                 )}
               </div>
 
@@ -399,7 +400,9 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     type="number"
                     min="1"
                     value={product.quantity}
-                    onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value) || 1)}
+                    onChange={(e) =>
+                      updateProduct(index, 'quantity', parseInt(e.target.value) || 1)
+                    }
                     className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   {errors[`quantity-${index}`] && (
@@ -460,8 +463,6 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
         </div>
       </div>
 
-
-
       <div className="flex justify-end">
         <button
           type="button"
@@ -473,4 +474,4 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
       </div>
     </div>
   );
-} 
+}

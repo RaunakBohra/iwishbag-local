@@ -1,12 +1,11 @@
-
-import React from "react";
-import { QuotesTable } from "./QuotesTable";
-import { Tables } from "@/integrations/supabase/types";
-import { DashboardBulkActions } from "./DashboardBulkActions";
-import { QuotesSearch } from "./QuotesSearch";
-import { useUserProfile } from "@/hooks/useUserProfile";
-import { useAllCountries } from "@/hooks/useAllCountries";
-import { useDashboardBulkActions } from "@/hooks/useDashboardBulkActions";
+import React from 'react';
+import { QuotesTable } from './QuotesTable';
+import { Tables } from '@/integrations/supabase/types';
+import { DashboardBulkActions } from './DashboardBulkActions';
+import { QuotesSearch } from './QuotesSearch';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAllCountries } from '@/hooks/useAllCountries';
+import { useDashboardBulkActions } from '@/hooks/useDashboardBulkActions';
 
 type Quote = Tables<'quotes'>;
 
@@ -29,7 +28,7 @@ export const DashboardQuotesTab = ({
   onSelectAll,
   onBulkAction,
   setSelectedQuoteIds,
-  searchTerm = "",
+  searchTerm = '',
   onSearchChange,
   isSearching = false,
 }: DashboardQuotesTabProps) => {
@@ -37,10 +36,10 @@ export const DashboardQuotesTab = ({
   const { data: allCountries } = useAllCountries();
 
   const {
-    handleBulkAddToCart,
-    handleBulkRemoveFromCart,
-    isAddingBulk,
-    isRemovingBulk,
+    handleBulkAddToCart: _handleBulkAddToCart,
+    handleBulkRemoveFromCart: _handleBulkRemoveFromCart,
+    isAddingBulk: _isAddingBulk,
+    isRemovingBulk: _isRemovingBulk,
   } = useDashboardBulkActions({
     quotes,
     selectedQuoteIds,
@@ -56,14 +55,14 @@ export const DashboardQuotesTab = ({
           isSearching={isSearching}
         />
       )}
-      
+
       <DashboardBulkActions
         selectedQuoteIds={selectedQuoteIds}
         onBulkAction={onBulkAction}
         userProfile={userProfile}
         allCountries={allCountries}
       />
-      
+
       <QuotesTable
         quotes={quotes}
         selectedQuoteIds={selectedQuoteIds}

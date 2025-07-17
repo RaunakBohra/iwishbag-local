@@ -1,14 +1,14 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  PaymentGateway, 
-  PaymentGatewayConfig, 
-  PaymentRequest, 
+import {
+  PaymentGateway,
+  PaymentGatewayConfig,
+  PaymentRequest,
   PaymentResponse,
   CountryPaymentMethods,
   PaymentMethodDisplay,
-  FALLBACK_GATEWAY_CODES 
+  FALLBACK_GATEWAY_CODES,
 } from '@/types/payment';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,7 +27,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: false,
     processing_time: 'Instant',
-    fees: '2.9% + $0.30'
+    fees: '2.9% + $0.30',
   },
   payu: {
     code: 'payu',
@@ -37,7 +37,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: false,
     processing_time: '5-15 minutes',
-    fees: '2.5%'
+    fees: '2.5%',
   },
   esewa: {
     code: 'esewa',
@@ -47,7 +47,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: false, // eSewa generates QR on their payment page
     processing_time: '5-30 minutes',
-    fees: '1.5%'
+    fees: '1.5%',
   },
   khalti: {
     code: 'khalti',
@@ -57,7 +57,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: true,
     processing_time: '5-30 minutes',
-    fees: '1.5%'
+    fees: '1.5%',
   },
   fonepay: {
     code: 'fonepay',
@@ -67,7 +67,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: false, // Fonepay generates QR on their payment page
     processing_time: '5-30 minutes',
-    fees: '1.5%'
+    fees: '1.5%',
   },
   airwallex: {
     code: 'airwallex',
@@ -77,7 +77,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: false,
     processing_time: 'Instant to 24 hours',
-    fees: '1.8% + $0.30'
+    fees: '1.8% + $0.30',
   },
   bank_transfer: {
     code: 'bank_transfer',
@@ -87,7 +87,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: false,
     processing_time: '1-3 business days',
-    fees: 'No additional fees'
+    fees: 'No additional fees',
   },
   cod: {
     code: 'cod',
@@ -97,7 +97,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: false,
     processing_time: 'Pay upon delivery',
-    fees: 'No additional fees'
+    fees: 'No additional fees',
   },
   razorpay: {
     code: 'razorpay',
@@ -107,7 +107,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: false,
     processing_time: 'Instant',
-    fees: '2%'
+    fees: '2%',
   },
   paypal: {
     code: 'paypal',
@@ -117,7 +117,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: false,
     processing_time: 'Instant',
-    fees: '3.9% + $0.30'
+    fees: '3.9% + $0.30',
   },
   upi: {
     code: 'upi',
@@ -127,7 +127,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: true,
     processing_time: 'Instant',
-    fees: 'No additional fees'
+    fees: 'No additional fees',
   },
   paytm: {
     code: 'paytm',
@@ -137,7 +137,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: true,
     processing_time: '5-15 minutes',
-    fees: '1.99%'
+    fees: '1.99%',
   },
   grabpay: {
     code: 'grabpay',
@@ -147,7 +147,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: true,
     requires_qr: true,
     processing_time: '5-15 minutes',
-    fees: '1.5%'
+    fees: '1.5%',
   },
   alipay: {
     code: 'alipay',
@@ -157,8 +157,8 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     is_mobile_only: false,
     requires_qr: true,
     processing_time: '5-15 minutes',
-    fees: '1.8%'
-  }
+    fees: '1.8%',
+  },
 };
 
 // Helper function to format fees from database values
@@ -166,7 +166,7 @@ const formatFeeFromGatewayConfig = (gateway: PaymentGatewayConfig): string => {
   if (gateway.code === 'bank_transfer' || gateway.code === 'cod' || gateway.code === 'upi') {
     return 'No additional fees';
   }
-  
+
   let feeString = '';
   if (gateway.fee_percent > 0) {
     feeString = `${gateway.fee_percent}%`;
@@ -175,7 +175,7 @@ const formatFeeFromGatewayConfig = (gateway: PaymentGatewayConfig): string => {
     if (feeString) feeString += ' + ';
     feeString += `$${gateway.fee_fixed}`;
   }
-  
+
   return feeString || 'No additional fees';
 };
 
@@ -209,7 +209,10 @@ export interface PaymentMethodDisplay {
 }
 
 // Standalone function to get payment methods by currency
-export const getPaymentMethodsByCurrency = async (currency: string, codEnabled: boolean = false): Promise<PaymentGateway[]> => {
+export const getPaymentMethodsByCurrency = async (
+  currency: string,
+  codEnabled: boolean = false,
+): Promise<PaymentGateway[]> => {
   const { data: gateways, error } = await supabase
     .from('payment_gateways')
     .select('code, supported_currencies, is_active, test_mode, config')
@@ -220,69 +223,75 @@ export const getPaymentMethodsByCurrency = async (currency: string, codEnabled: 
     return ['bank_transfer']; // Return at least bank transfer as fallback
   }
 
-  const filteredGateways = gateways
-    .filter(gateway => {
-      // Only filter by currency
-      const currencyMatch = gateway.supported_currencies.includes(currency);
-      
-      // Don't filter bank_transfer and cod here - they'll be handled separately
-      if (gateway.code === 'bank_transfer' || gateway.code === 'cod') {
-        return false;
+  const filteredGateways = gateways.filter((gateway) => {
+    // Only filter by currency
+    const currencyMatch = gateway.supported_currencies.includes(currency);
+
+    // Don't filter bank_transfer and cod here - they'll be handled separately
+    if (gateway.code === 'bank_transfer' || gateway.code === 'cod') {
+      return false;
+    }
+
+    let hasKeys = true;
+    if (gateway.code === 'stripe') {
+      const pk = gateway.test_mode
+        ? gateway.config?.test_publishable_key
+        : gateway.config?.live_publishable_key;
+      hasKeys = !!pk;
+    } else if (gateway.code === 'payu') {
+      // Check for PayU configuration
+      const hasMerchantId = !!gateway.config?.merchant_id;
+      const hasMerchantKey = !!gateway.config?.merchant_key;
+      const hasSaltKey = !!gateway.config?.salt_key;
+      hasKeys = hasMerchantId && hasMerchantKey && hasSaltKey;
+
+      // TEMPORARY: Allow PayU without configuration for testing
+      if (!hasKeys) {
+        hasKeys = true;
       }
-      
-      let hasKeys = true;
-      if (gateway.code === 'stripe') {
-        const pk = gateway.test_mode ? gateway.config?.test_publishable_key : gateway.config?.live_publishable_key;
-        hasKeys = !!pk;
-      } else if (gateway.code === 'payu') {
-        // Check for PayU configuration
-        const hasMerchantId = !!gateway.config?.merchant_id;
-        const hasMerchantKey = !!gateway.config?.merchant_key;
-        const hasSaltKey = !!gateway.config?.salt_key;
-        hasKeys = hasMerchantId && hasMerchantKey && hasSaltKey;
-        
-        // TEMPORARY: Allow PayU without configuration for testing
-        if (!hasKeys) {
-          hasKeys = true;
-        }
-      } else if (gateway.code === 'airwallex') {
-        const apiKey = gateway.test_mode ? gateway.config?.test_api_key : (gateway.config?.live_api_key || gateway.config?.api_key);
-        const clientId = gateway.config?.client_id;
-        hasKeys = !!apiKey && !!clientId;
-        
-        if (!hasKeys) {
-          console.log('⚠️ Airwallex configuration missing in getPaymentMethodsByCurrency. Required: api_key and client_id', {
+    } else if (gateway.code === 'airwallex') {
+      const apiKey = gateway.test_mode
+        ? gateway.config?.test_api_key
+        : gateway.config?.live_api_key || gateway.config?.api_key;
+      const clientId = gateway.config?.client_id;
+      hasKeys = !!apiKey && !!clientId;
+
+      if (!hasKeys) {
+        console.log(
+          '⚠️ Airwallex configuration missing in getPaymentMethodsByCurrency. Required: api_key and client_id',
+          {
             test_mode: gateway.test_mode,
             hasApiKey: !!apiKey,
             hasClientId: !!clientId,
-            configKeys: Object.keys(gateway.config || {})
-          });
-        } else {
-          console.log('✅ Airwallex configuration valid in getPaymentMethodsByCurrency', {
-            test_mode: gateway.test_mode,
-            hasApiKey: !!apiKey,
-            hasClientId: !!clientId
-          });
-        }
+            configKeys: Object.keys(gateway.config || {}),
+          },
+        );
+      } else {
+        console.log('✅ Airwallex configuration valid in getPaymentMethodsByCurrency', {
+          test_mode: gateway.test_mode,
+          hasApiKey: !!apiKey,
+          hasClientId: !!clientId,
+        });
       }
-      
-      return currencyMatch && hasKeys;
-    });
+    }
 
-  const finalMethods = filteredGateways.map(gateway => gateway.code as PaymentGateway);
+    return currencyMatch && hasKeys;
+  });
+
+  const finalMethods = filteredGateways.map((gateway) => gateway.code as PaymentGateway);
 
   // Add Bank Transfer only if it supports the currency
-  const bankTransferGateway = gateways.find(g => g.code === 'bank_transfer');
+  const bankTransferGateway = gateways.find((g) => g.code === 'bank_transfer');
   if (bankTransferGateway && bankTransferGateway.supported_currencies.includes(currency)) {
     finalMethods.push('bank_transfer');
   }
 
   // Add COD only if enabled AND supports the currency
-  const codGateway = gateways.find(g => g.code === 'cod');
+  const codGateway = gateways.find((g) => g.code === 'cod');
   if (codEnabled && codGateway && codGateway.supported_currencies.includes(currency)) {
     finalMethods.push('cod');
   }
-  
+
   // Remove duplicates
   return [...new Set(finalMethods)];
 };
@@ -291,21 +300,20 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const paymentMonitoring = usePaymentMonitoring({ componentName: 'PaymentGateways' });
+  const paymentMonitoring = usePaymentMonitoring({
+    componentName: 'PaymentGateways',
+  });
 
   // Fetch all payment gateways (admin only)
   const { data: allGateways, isLoading: gatewaysLoading } = useQuery({
     queryKey: ['payment-gateways'],
     queryFn: async (): Promise<PaymentGatewayConfig[]> => {
-      const { data, error } = await supabase
-        .from('payment_gateways')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.from('payment_gateways').select('*').order('name');
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user
+    enabled: !!user,
   });
 
   // Get available payment methods for user's country
@@ -322,7 +330,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
       if (error) throw error;
       return data;
     },
-    enabled: !!user
+    enabled: !!user,
   });
 
   // Debug the enabled condition
@@ -330,43 +338,50 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
   // Get available payment methods for current user or guest with country-specific logic
   const { data: availableMethods, isLoading: methodsLoading } = useQuery({
-    queryKey: user 
-      ? ['available-payment-methods', 'authenticated', userProfile?.preferred_display_currency, userProfile?.country, userProfile?.cod_enabled, user.id]
+    queryKey: user
+      ? [
+          'available-payment-methods',
+          'authenticated',
+          userProfile?.preferred_display_currency,
+          userProfile?.country,
+          userProfile?.cod_enabled,
+          user.id,
+        ]
       : ['available-payment-methods', 'guest', overrideCurrency, guestShippingCountry],
     queryFn: async (): Promise<PaymentGateway[]> => {
       // Use override currency if provided (for guest checkout), otherwise use user's preferred currency
       const currencyCode = overrideCurrency || userProfile?.preferred_display_currency;
       // Use guest shipping country or user's country
       const countryCode = guestShippingCountry || userProfile?.country;
-      
+
       if (!currencyCode) {
         console.log('Payment methods not available: missing currency data', {
           overrideCurrency,
           userProfileCurrency: userProfile?.preferred_display_currency,
-          user: !!user
+          user: !!user,
         });
         return [];
       }
 
       // Debug logging for development
       if (import.meta.env.DEV) {
-        console.log('🚀 Enhanced payment gateway query starting:', { 
-          currencyCode, 
+        console.log('🚀 Enhanced payment gateway query starting:', {
+          currencyCode,
           countryCode,
           isGuest: !user,
           overrideCurrency,
-          guestShippingCountry 
+          guestShippingCountry,
         });
       }
-      
+
       // Log payment methods loading
       logInfo(LogCategory.PAYMENT_PROCESSING, 'Loading available payment methods', {
         metadata: {
           currencyCode,
           countryCode,
           isGuest: !user,
-          userId: user?.id
-        }
+          userId: user?.id,
+        },
       });
 
       // First, try to get country-specific configuration
@@ -379,8 +394,13 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
           .single();
 
         if (!countryError && countrySettings?.available_gateways) {
-          console.log('✅ Using country-specific gateway configuration for', countryCode, ':', countrySettings.available_gateways);
-          
+          console.log(
+            '✅ Using country-specific gateway configuration for',
+            countryCode,
+            ':',
+            countrySettings.available_gateways,
+          );
+
           // Filter country gateways by currency support and active status
           const { data: gateways, error: gatewaysError } = await supabase
             .from('payment_gateways')
@@ -390,69 +410,85 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
           if (!gatewaysError && gateways) {
             countryGateways = gateways
-              .filter(gateway => {
+              .filter((gateway) => {
                 // Check currency support
                 const currencyMatch = gateway.supported_currencies.includes(currencyCode);
-                
+
                 // Special handling for COD - check user preference
                 if (gateway.code === 'cod') {
                   if (user && !userProfile?.cod_enabled) {
                     return false; // User has COD disabled
                   }
                 }
-                
+
                 // Check gateway configuration for PayPal and others
                 let hasValidConfig = true;
                 if (gateway.code === 'paypal') {
-                  const clientId = gateway.test_mode ? gateway.config?.client_id_sandbox : gateway.config?.client_id_live;
-                  const clientSecret = gateway.test_mode ? gateway.config?.client_secret_sandbox : gateway.config?.client_secret_live;
+                  const clientId = gateway.test_mode
+                    ? gateway.config?.client_id_sandbox
+                    : gateway.config?.client_id_live;
+                  const clientSecret = gateway.test_mode
+                    ? gateway.config?.client_secret_sandbox
+                    : gateway.config?.client_secret_live;
                   hasValidConfig = !!clientId && !!clientSecret;
-                  
+
                   // Allow PayPal without configuration for testing
                   if (!hasValidConfig) {
                     console.log('⚠️ PayPal configuration missing, but allowing for testing');
                     hasValidConfig = true;
                   }
                 } else if (gateway.code === 'stripe') {
-                  const pk = gateway.test_mode ? gateway.config?.test_publishable_key : gateway.config?.live_publishable_key;
+                  const pk = gateway.test_mode
+                    ? gateway.config?.test_publishable_key
+                    : gateway.config?.live_publishable_key;
                   hasValidConfig = !!pk;
                 } else if (gateway.code === 'payu') {
                   const hasMerchantId = !!gateway.config?.merchant_id;
                   const hasMerchantKey = !!gateway.config?.merchant_key;
                   const hasSaltKey = !!gateway.config?.salt_key;
                   hasValidConfig = hasMerchantId && hasMerchantKey && hasSaltKey;
-                  
+
                   // TEMPORARY: Allow PayU without configuration for testing
                   if (!hasValidConfig) {
                     console.log('⚠️ PayU configuration missing, but allowing for testing');
                     hasValidConfig = true;
                   }
                 } else if (gateway.code === 'airwallex') {
-                  const apiKey = gateway.test_mode ? gateway.config?.test_api_key : (gateway.config?.live_api_key || gateway.config?.api_key);
+                  const apiKey = gateway.test_mode
+                    ? gateway.config?.test_api_key
+                    : gateway.config?.live_api_key || gateway.config?.api_key;
                   const clientId = gateway.config?.client_id;
                   hasValidConfig = !!apiKey && !!clientId;
-                  
+
                   if (!hasValidConfig) {
-                    console.log('⚠️ Airwallex configuration missing. Required: api_key and client_id', {
-                      test_mode: gateway.test_mode,
-                      hasApiKey: !!apiKey,
-                      hasClientId: !!clientId,
-                      configKeys: Object.keys(gateway.config || {})
-                    });
+                    console.log(
+                      '⚠️ Airwallex configuration missing. Required: api_key and client_id',
+                      {
+                        test_mode: gateway.test_mode,
+                        hasApiKey: !!apiKey,
+                        hasClientId: !!clientId,
+                        configKeys: Object.keys(gateway.config || {}),
+                      },
+                    );
                   } else {
                     console.log('✅ Airwallex configuration valid', {
                       test_mode: gateway.test_mode,
                       hasApiKey: !!apiKey,
-                      hasClientId: !!clientId
+                      hasClientId: !!clientId,
                     });
                   }
                 }
-                
+
                 return currencyMatch && hasValidConfig;
               })
-              .map(gateway => gateway.code as PaymentGateway);
+              .map((gateway) => gateway.code as PaymentGateway);
 
-            console.log('🎯 Country-specific available methods for', countryCode, ':', countryGateways);
+            console.log(
+              '🎯 Country-specific available methods for',
+              countryCode,
+              ':',
+              countryGateways,
+            );
             return countryGateways;
           }
         }
@@ -460,7 +496,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
       // Fallback to global gateway selection if no country-specific config
       console.log('🔄 Falling back to global gateway selection');
-      
+
       const { data: gateways, error } = await supabase
         .from('payment_gateways')
         .select('code, supported_countries, supported_currencies, is_active, test_mode, config')
@@ -474,105 +510,122 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
         console.error('❌ No payment gateways returned from database');
         return [];
       }
-      
+
       console.log('✅ Payment gateways fetched:', gateways.length, 'gateways');
 
-      const filteredGateways = gateways
-        .filter(gateway => {
-          // Filter by currency and optionally by country
-          const currencyMatch = gateway.supported_currencies.includes(currencyCode);
-          const countryMatch = !countryCode || gateway.supported_countries.includes(countryCode);
-          
-          // Don't filter bank_transfer and cod here - they'll be handled separately
-          if (gateway.code === 'bank_transfer' || gateway.code === 'cod') {
-            return false;
-          }
-          
-          let hasKeys = true;
-          if (gateway.code === 'stripe') {
-            const pk = gateway.test_mode ? gateway.config?.test_publishable_key : gateway.config?.live_publishable_key;
-            hasKeys = !!pk;
-          } else if (gateway.code === 'payu') {
-            const hasMerchantId = !!gateway.config?.merchant_id;
-            const hasMerchantKey = !!gateway.config?.merchant_key;
-            const hasSaltKey = !!gateway.config?.salt_key;
-            hasKeys = hasMerchantId && hasMerchantKey && hasSaltKey;
-            
-            // TEMPORARY: Allow PayU without configuration for testing
-            if (!hasKeys) {
-              console.log('⚠️ PayU configuration missing, but allowing for testing');
-              hasKeys = true;
-            }
-          } else if (gateway.code === 'paypal') {
-            const clientId = gateway.test_mode ? gateway.config?.client_id_sandbox : gateway.config?.client_id_live;
-            const clientSecret = gateway.test_mode ? gateway.config?.client_secret_sandbox : gateway.config?.client_secret_live;
-            hasKeys = !!clientId && !!clientSecret;
-            
-            // Allow PayPal without configuration for testing
-            if (!hasKeys) {
-              console.log('⚠️ PayPal configuration missing, but allowing for testing');
-              hasKeys = true;
-            }
-          } else if (gateway.code === 'airwallex') {
-            const apiKey = gateway.test_mode ? gateway.config?.test_api_key : (gateway.config?.live_api_key || gateway.config?.api_key);
-            const clientId = gateway.config?.client_id;
-            hasKeys = !!apiKey && !!clientId;
-            
-            if (!hasKeys) {
-              console.log('⚠️ Airwallex configuration missing. Required: api_key and client_id', {
-                test_mode: gateway.test_mode,
-                hasApiKey: !!apiKey,
-                hasClientId: !!clientId,
-                configKeys: Object.keys(gateway.config || {})
-              });
-            } else {
-              console.log('✅ Airwallex configuration valid', {
-                test_mode: gateway.test_mode,
-                hasApiKey: !!apiKey,
-                hasClientId: !!clientId
-              });
-            }
-          }
-          
-          return currencyMatch && countryMatch && hasKeys;
-        });
+      const filteredGateways = gateways.filter((gateway) => {
+        // Filter by currency and optionally by country
+        const currencyMatch = gateway.supported_currencies.includes(currencyCode);
+        const countryMatch = !countryCode || gateway.supported_countries.includes(countryCode);
 
-      const finalMethods = filteredGateways.map(gateway => gateway.code as PaymentGateway);
+        // Don't filter bank_transfer and cod here - they'll be handled separately
+        if (gateway.code === 'bank_transfer' || gateway.code === 'cod') {
+          return false;
+        }
+
+        let hasKeys = true;
+        if (gateway.code === 'stripe') {
+          const pk = gateway.test_mode
+            ? gateway.config?.test_publishable_key
+            : gateway.config?.live_publishable_key;
+          hasKeys = !!pk;
+        } else if (gateway.code === 'payu') {
+          const hasMerchantId = !!gateway.config?.merchant_id;
+          const hasMerchantKey = !!gateway.config?.merchant_key;
+          const hasSaltKey = !!gateway.config?.salt_key;
+          hasKeys = hasMerchantId && hasMerchantKey && hasSaltKey;
+
+          // TEMPORARY: Allow PayU without configuration for testing
+          if (!hasKeys) {
+            console.log('⚠️ PayU configuration missing, but allowing for testing');
+            hasKeys = true;
+          }
+        } else if (gateway.code === 'paypal') {
+          const clientId = gateway.test_mode
+            ? gateway.config?.client_id_sandbox
+            : gateway.config?.client_id_live;
+          const clientSecret = gateway.test_mode
+            ? gateway.config?.client_secret_sandbox
+            : gateway.config?.client_secret_live;
+          hasKeys = !!clientId && !!clientSecret;
+
+          // Allow PayPal without configuration for testing
+          if (!hasKeys) {
+            console.log('⚠️ PayPal configuration missing, but allowing for testing');
+            hasKeys = true;
+          }
+        } else if (gateway.code === 'airwallex') {
+          const apiKey = gateway.test_mode
+            ? gateway.config?.test_api_key
+            : gateway.config?.live_api_key || gateway.config?.api_key;
+          const clientId = gateway.config?.client_id;
+          hasKeys = !!apiKey && !!clientId;
+
+          if (!hasKeys) {
+            console.log('⚠️ Airwallex configuration missing. Required: api_key and client_id', {
+              test_mode: gateway.test_mode,
+              hasApiKey: !!apiKey,
+              hasClientId: !!clientId,
+              configKeys: Object.keys(gateway.config || {}),
+            });
+          } else {
+            console.log('✅ Airwallex configuration valid', {
+              test_mode: gateway.test_mode,
+              hasApiKey: !!apiKey,
+              hasClientId: !!clientId,
+            });
+          }
+        }
+
+        return currencyMatch && countryMatch && hasKeys;
+      });
+
+      const finalMethods = filteredGateways.map((gateway) => gateway.code as PaymentGateway);
 
       // Add Bank Transfer only if it supports the currency
-      const bankTransferGateway = gateways.find(g => g.code === 'bank_transfer');
+      const bankTransferGateway = gateways.find((g) => g.code === 'bank_transfer');
       if (bankTransferGateway && bankTransferGateway.supported_currencies.includes(currencyCode)) {
         finalMethods.push('bank_transfer');
       }
 
       // Add COD based on user preference OR guest shipping country
-      const codGateway = gateways.find(g => g.code === 'cod');
+      const codGateway = gateways.find((g) => g.code === 'cod');
       if (codGateway && codGateway.supported_currencies.includes(currencyCode)) {
         // For authenticated users: check user preference
         if (user && userProfile?.cod_enabled) {
           finalMethods.push('cod');
         }
         // For guests: check if shipping country supports COD
-        else if (!user && guestShippingCountry && codGateway.supported_countries.includes(guestShippingCountry)) {
+        else if (
+          !user &&
+          guestShippingCountry &&
+          codGateway.supported_countries.includes(guestShippingCountry)
+        ) {
           finalMethods.push('cod');
         }
       }
-      
+
       // Remove duplicates
       const uniqueMethods = [...new Set(finalMethods)];
-      
+
       // Debug logging for development
       if (import.meta.env.DEV) {
-        console.log('🎯 Available payment methods for', currencyCode, countryCode || 'global', ':', uniqueMethods);
-        console.log('🔧 Query context:', { 
-          isGuest: !user, 
-          overrideCurrency, 
+        console.log(
+          '🎯 Available payment methods for',
+          currencyCode,
+          countryCode || 'global',
+          ':',
+          uniqueMethods,
+        );
+        console.log('🔧 Query context:', {
+          isGuest: !user,
+          overrideCurrency,
           guestShippingCountry,
           userProfileCurrency: userProfile?.preferred_display_currency,
-          userCountry: userProfile?.country
+          userCountry: userProfile?.country,
         });
       }
-      
+
       return uniqueMethods;
     },
     enabled: isQueryEnabled,
@@ -586,9 +639,9 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
           metadata: {
             isGuest: !user,
             overrideCurrency,
-            guestShippingCountry
-          }
-        }
+            guestShippingCountry,
+          },
+        },
       );
     },
     onSuccess: (data) => {
@@ -597,13 +650,13 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
         metadata: {
           methodsCount: data.length,
           methods: data,
-          isGuest: !user
-        }
+          isGuest: !user,
+        },
       });
     },
     staleTime: 1000 * 60 * 5, // 5 minutes - prevent excessive refetching
     retry: 3,
-    retryDelay: 1000
+    retryDelay: 1000,
   });
 
   // Create payment mutation
@@ -611,7 +664,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
     mutationFn: async (paymentRequest: PaymentRequest): Promise<PaymentResponse> => {
       // Generate payment ID for tracking
       const paymentId = `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // Start payment monitoring
       paymentMonitoring.monitorPaymentStart({
         paymentId,
@@ -621,8 +674,8 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
         quoteId: paymentRequest.quoteIds?.[0], // First quote ID
         metadata: {
           quoteCount: paymentRequest.quoteIds?.length,
-          checkoutType: paymentRequest.metadata?.checkout_type
-        }
+          checkoutType: paymentRequest.metadata?.checkout_type,
+        },
       });
 
       try {
@@ -634,14 +687,14 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
             paymentId,
             false,
             PaymentErrorCode.PAYMENT_PROCESSING_FAILED,
-            error.message
+            error.message,
           );
           throw error;
         }
 
         // For guest checkout, we'll use the anon key instead of user's access token
         let authToken: string;
-        
+
         if (paymentRequest.metadata?.checkout_type === 'guest') {
           // For guest checkout, use the anon key
           authToken = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -651,22 +704,24 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
               paymentId,
               false,
               PaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-              error.message
+              error.message,
             );
             throw error;
           }
         } else {
           // For authenticated users, get the session token
-          const { data: { session } } = await supabase.auth.getSession();
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
           authToken = session?.access_token || '';
-          
+
           if (!authToken) {
             const error = new Error('User is not authenticated.');
             paymentMonitoring.monitorPaymentComplete(
               paymentId,
               false,
               PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS,
-              error.message
+              error.message,
             );
             throw error;
           }
@@ -680,11 +735,11 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
             paymentId,
             false,
             PaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-            error.message
+            error.message,
           );
           throw error;
         }
-        
+
         // Route to appropriate payment function based on gateway
         let functionUrl = `${supabaseUrl}/functions/v1/create-payment`;
         if (paymentRequest.gateway === 'paypal') {
@@ -699,39 +754,39 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
             functionUrl,
             gateway: paymentRequest.gateway,
             amount: paymentRequest.amount,
-            currency: paymentRequest.currency
+            currency: paymentRequest.currency,
           },
-          paymentId
+          paymentId,
         );
 
         // Monitor the API call
         const response = await paymentMonitoring.monitorGatewayCall(
           'create_payment',
           async () => {
-            return await fetch(
-              functionUrl,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${authToken}`,
-                },
-                body: JSON.stringify({ ...paymentRequest, paymentId }),
-              }
-            );
+            return await fetch(functionUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify({ ...paymentRequest, paymentId }),
+            });
           },
-          paymentId
+          paymentId,
         );
 
         const data = await response.json();
-        
+
         // Debug PayU response
         if (paymentRequest.gateway === 'payu') {
           console.log('🔍 PayU raw response:', data);
           console.log('🔍 PayU formData present?', !!data.formData);
-          console.log('🔍 PayU formData keys:', data.formData ? Object.keys(data.formData) : 'None');
+          console.log(
+            '🔍 PayU formData keys:',
+            data.formData ? Object.keys(data.formData) : 'None',
+          );
         }
-        
+
         if (!response.ok) {
           // Log detailed error information
           console.error(`❌ Payment creation failed:`, {
@@ -740,46 +795,37 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
             details: data?.details,
             code: data?.code,
             gateway: paymentRequest.gateway,
-            functionUrl
+            functionUrl,
           });
-          
+
           const error = new Error(data?.error || 'Failed to create payment');
-          const errorCode = data?.code === 'GATEWAY_ERROR' 
-            ? PaymentErrorCode[`${paymentRequest.gateway.toUpperCase()}_API_ERROR` as keyof typeof PaymentErrorCode] || PaymentErrorCode.PAYMENT_PROCESSING_FAILED
-            : PaymentErrorCode.PAYMENT_PROCESSING_FAILED;
-          
-          paymentMonitoring.monitorPaymentComplete(
-            paymentId,
-            false,
-            errorCode,
-            error.message,
-            {
-              responseStatus: response.status,
-              responseData: data
-            }
-          );
+          const errorCode =
+            data?.code === 'GATEWAY_ERROR'
+              ? PaymentErrorCode[
+                  `${paymentRequest.gateway.toUpperCase()}_API_ERROR` as keyof typeof PaymentErrorCode
+                ] || PaymentErrorCode.PAYMENT_PROCESSING_FAILED
+              : PaymentErrorCode.PAYMENT_PROCESSING_FAILED;
+
+          paymentMonitoring.monitorPaymentComplete(paymentId, false, errorCode, error.message, {
+            responseStatus: response.status,
+            responseData: data,
+          });
           throw error;
         }
 
         // Payment created successfully
-        paymentMonitoring.monitorPaymentComplete(
-          paymentId,
-          true,
-          undefined,
-          undefined,
-          {
-            transactionId: data.transactionId || data.order_id,
-            redirectUrl: data.url || data.stripeCheckoutUrl || data.approval_url || data.approvalUrl
-          }
-        );
-        
+        paymentMonitoring.monitorPaymentComplete(paymentId, true, undefined, undefined, {
+          transactionId: data.transactionId || data.order_id,
+          redirectUrl: data.url || data.stripeCheckoutUrl || data.approval_url || data.approvalUrl,
+        });
+
         // Ensure PayU response has all required fields
         if (paymentRequest.gateway === 'payu') {
           console.log('✅ PayU payment response complete:', {
             hasUrl: !!data.url,
             hasFormData: !!data.formData,
             formDataKeys: data.formData ? Object.keys(data.formData).length : 0,
-            transactionId: data.transactionId
+            transactionId: data.transactionId,
           });
         }
 
@@ -788,56 +834,58 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
         // If payment monitoring wasn't completed in the specific error handlers, complete it here
         if (paymentMonitoring && paymentId) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown payment error';
-          
+
           // Check if this is a network error
-          const errorCode = errorMessage.includes('fetch') || errorMessage.includes('network')
-            ? PaymentErrorCode.GATEWAY_TIMEOUT
-            : PaymentErrorCode.PAYMENT_PROCESSING_FAILED;
-          
-          paymentMonitoring.monitorPaymentComplete(
-            paymentId,
-            false,
-            errorCode,
-            errorMessage
-          );
+          const errorCode =
+            errorMessage.includes('fetch') || errorMessage.includes('network')
+              ? PaymentErrorCode.GATEWAY_TIMEOUT
+              : PaymentErrorCode.PAYMENT_PROCESSING_FAILED;
+
+          paymentMonitoring.monitorPaymentComplete(paymentId, false, errorCode, errorMessage);
         }
-        
+
         throw error;
       }
     },
     onSuccess: (data, variables) => {
       const paymentId = data?.paymentId;
-      
+
       if (!data) {
         toast({
           title: 'Payment Error',
           description: 'No response received from payment gateway',
           variant: 'destructive',
         });
-        
+
         // Log this unexpected scenario
         paymentMonitoring.logPaymentError(
           'empty_response',
           new Error('No response received from payment gateway'),
           { gateway: variables.gateway },
-          paymentId
+          paymentId,
         );
         return;
       }
-      
-      if (data.success !== false) { // Treat as success if not explicitly false
+
+      if (data.success !== false) {
+        // Treat as success if not explicitly false
         // Log successful redirect
         paymentMonitoring.logPaymentEvent(
           'payment_redirect',
           {
             gateway: variables.gateway,
-            hasRedirectUrl: !!(data.url || data.stripeCheckoutUrl || data.approval_url || data.approvalUrl),
+            hasRedirectUrl: !!(
+              data.url ||
+              data.stripeCheckoutUrl ||
+              data.approval_url ||
+              data.approvalUrl
+            ),
             hasQrCode: !!data.qrCode,
-            transactionId: data.transactionId || data.order_id
+            transactionId: data.transactionId || data.order_id,
           },
-          paymentId
+          paymentId,
         );
-        
+
         if (variables.gateway === 'stripe' && data.stripeCheckoutUrl) {
           window.location.href = data.stripeCheckoutUrl;
         } else if (variables.gateway === 'paypal' && data.approval_url) {
@@ -876,11 +924,11 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
           new Error(data?.error || 'Payment failed'),
           {
             gateway: variables.gateway,
-            responseData: data
+            responseData: data,
           },
-          paymentId
+          paymentId,
         );
-        
+
         toast({
           title: 'Payment Failed',
           description: data?.error || 'Unable to create payment',
@@ -890,28 +938,24 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
     },
     onError: (error: Error, variables) => {
       // Log payment error - monitoring completion already handled in mutationFn
-      paymentMonitoring.logPaymentError(
-        'payment_mutation_error',
-        error,
-        {
-          gateway: variables.gateway,
-          amount: variables.amount,
-          currency: variables.currency
-        }
-      );
-      
+      paymentMonitoring.logPaymentError('payment_mutation_error', error, {
+        gateway: variables.gateway,
+        amount: variables.amount,
+        currency: variables.currency,
+      });
+
       toast({
         title: 'Payment Error',
         description: error.message,
         variant: 'destructive',
       });
-    }
+    },
   });
 
   // Get payment method display info with dynamic fees
   const getPaymentMethodDisplay = (gateway: PaymentGateway): PaymentMethodDisplay => {
     const baseDisplay = PAYMENT_METHOD_DISPLAYS[gateway];
-    
+
     // If no display definition exists, create a default one
     if (!baseDisplay) {
       console.warn(`No display definition found for payment gateway: ${gateway}`);
@@ -922,21 +966,21 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
         is_mobile_only: false,
         requires_qr: false,
         processing_time: 'Processing time varies',
-        fees: 'Fees may apply'
+        fees: 'Fees may apply',
       };
     }
-    
+
     // Try to get dynamic fees from database gateways
     if (allGateways) {
-      const gatewayConfig = allGateways.find(g => g.code === gateway);
+      const gatewayConfig = allGateways.find((g) => g.code === gateway);
       if (gatewayConfig) {
         return {
           ...baseDisplay,
-          fees: formatFeeFromGatewayConfig(gatewayConfig)
+          fees: formatFeeFromGatewayConfig(gatewayConfig),
         };
       }
     }
-    
+
     // Fallback to hardcoded display
     return baseDisplay;
   };
@@ -944,8 +988,8 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
   // Get all payment method displays for available methods
   const getAvailablePaymentMethods = (): PaymentMethodDisplay[] => {
     if (!availableMethods) return [];
-    
-    return availableMethods.map(method => getPaymentMethodDisplay(method));
+
+    return availableMethods.map((method) => getPaymentMethodDisplay(method));
   };
 
   // Check if payment method requires mobile app
@@ -969,7 +1013,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
     try {
       // Use country-specific recommendation if country is provided
       const targetCountry = countryCode || guestShippingCountry || userProfile?.country;
-      
+
       if (targetCountry) {
         // Try to get country-specific default gateway
         const { data: countrySettings } = await supabase
@@ -978,8 +1022,16 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
           .eq('code', targetCountry)
           .single();
 
-        if (countrySettings?.default_gateway && availableMethods.includes(countrySettings.default_gateway)) {
-          console.log('✅ Using country-specific default gateway:', countrySettings.default_gateway, 'for', targetCountry);
+        if (
+          countrySettings?.default_gateway &&
+          availableMethods.includes(countrySettings.default_gateway)
+        ) {
+          console.log(
+            '✅ Using country-specific default gateway:',
+            countrySettings.default_gateway,
+            'for',
+            targetCountry,
+          );
           return countrySettings.default_gateway;
         }
 
@@ -987,7 +1039,12 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
         if (countrySettings?.available_gateways) {
           for (const gateway of countrySettings.available_gateways) {
             if (availableMethods.includes(gateway)) {
-              console.log('✅ Using country-specific available gateway:', gateway, 'for', targetCountry);
+              console.log(
+                '✅ Using country-specific available gateway:',
+                gateway,
+                'for',
+                targetCountry,
+              );
               return gateway;
             }
           }
@@ -1005,8 +1062,20 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
       // Final fallback to hardcoded priority with PayPal prioritized
       const fallbackOrder: PaymentGateway[] = [
-        'stripe', 'paypal', 'razorpay', 'airwallex', 'payu', 'upi', 'paytm', 
-        'esewa', 'khalti', 'fonepay', 'grabpay', 'alipay', 'bank_transfer', 'cod'
+        'stripe',
+        'paypal',
+        'razorpay',
+        'airwallex',
+        'payu',
+        'upi',
+        'paytm',
+        'esewa',
+        'khalti',
+        'fonepay',
+        'grabpay',
+        'alipay',
+        'bank_transfer',
+        'cod',
       ];
 
       for (const method of fallbackOrder) {
@@ -1031,7 +1100,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
     // Use cache-based gateway codes for synchronous operation
     const gatewayCodesFromCache = paymentGatewayService.getActiveGatewayCodesSync();
-    
+
     // Find first available method from cached priority order
     for (const code of gatewayCodesFromCache) {
       if (availableMethods.includes(code)) {
@@ -1041,8 +1110,20 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
     // Final fallback to hardcoded priority
     const fallbackOrder: PaymentGateway[] = [
-      'stripe', 'paypal', 'razorpay', 'airwallex', 'payu', 'upi', 'paytm', 
-      'esewa', 'khalti', 'fonepay', 'grabpay', 'alipay', 'bank_transfer', 'cod'
+      'stripe',
+      'paypal',
+      'razorpay',
+      'airwallex',
+      'payu',
+      'upi',
+      'paytm',
+      'esewa',
+      'khalti',
+      'fonepay',
+      'grabpay',
+      'alipay',
+      'bank_transfer',
+      'cod',
     ];
 
     for (const method of fallbackOrder) {
@@ -1055,7 +1136,9 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
   };
 
   // Validate payment request
-  const validatePaymentRequest = (request: PaymentRequest): { isValid: boolean; errors: string[] } => {
+  const validatePaymentRequest = (
+    request: PaymentRequest,
+  ): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
     // Null check for request object
@@ -1072,7 +1155,12 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
       errors.push('Currency is required');
     }
 
-    if (!request.amount || request.amount <= 0 || isNaN(request.amount) || !isFinite(request.amount)) {
+    if (
+      !request.amount ||
+      request.amount <= 0 ||
+      isNaN(request.amount) ||
+      !isFinite(request.amount)
+    ) {
       errors.push('Valid amount is required');
     }
 
@@ -1095,15 +1183,15 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   };
 
   // Get fallback payment methods
   const getFallbackMethods = (excludeGateway?: PaymentGateway): PaymentGateway[] => {
     if (!availableMethods) return ['bank_transfer', 'cod'];
-    
-    return availableMethods.filter(method => method !== excludeGateway);
+
+    return availableMethods.filter((method) => method !== excludeGateway);
   };
 
   // Cleanup on unmount
@@ -1118,16 +1206,16 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
     allGateways,
     availableMethods,
     userProfile,
-    
+
     // Loading states
     gatewaysLoading,
     methodsLoading,
-    
+
     // Mutations
     createPayment: createPaymentMutation.mutate,
     createPaymentAsync: createPaymentMutation.mutateAsync,
     isCreatingPayment: createPaymentMutation.isPending,
-    
+
     // Helper functions
     getPaymentMethodDisplay,
     getAvailablePaymentMethods,
@@ -1137,11 +1225,11 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
     getRecommendedPaymentMethodSync,
     validatePaymentRequest,
     getFallbackMethods,
-    
+
     // Payment method displays
     PAYMENT_METHOD_DISPLAYS,
-    
+
     // Monitoring
-    paymentMonitoring
+    paymentMonitoring,
   };
-}; 
+};

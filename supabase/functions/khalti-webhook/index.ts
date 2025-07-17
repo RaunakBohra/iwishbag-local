@@ -1,6 +1,6 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { createCorsHeaders } from '../_shared/cors.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createCorsHeaders } from '../_shared/cors.ts';
 
 interface KhaltiLookupRequest {
   pidx: string;
@@ -20,7 +20,7 @@ interface KhaltiLookupResponse {
 
 serve(async (req) => {
   const corsHeaders = createCorsHeaders(req);
-  
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -28,7 +28,7 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     const { pidx }: KhaltiLookupRequest = await req.json();
@@ -36,7 +36,7 @@ serve(async (req) => {
     if (!pidx) {
       return new Response(JSON.stringify({ error: 'Missing pidx parameter' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -53,7 +53,7 @@ serve(async (req) => {
       console.error('❌ Khalti gateway config error:', gatewayError);
       return new Response(JSON.stringify({ error: 'Khalti gateway config not found' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -61,47 +61,58 @@ serve(async (req) => {
     const testMode = khaltiGateway.test_mode;
     const khaltiConfig = {
       secret_key: testMode ? config.test_secret_key : config.live_secret_key,
-      base_url: testMode ? config.sandbox_base_url : config.production_base_url
+      base_url: testMode ? config.sandbox_base_url : config.production_base_url,
     };
 
     if (!khaltiConfig.secret_key) {
       return new Response(JSON.stringify({ error: 'Khalti secret key not found' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     // Lookup payment status from Khalti
     // Ensure proper URL format - remove double slashes
-    const baseUrl = khaltiConfig.base_url.endsWith('/') ? khaltiConfig.base_url.slice(0, -1) : khaltiConfig.base_url;
+    const baseUrl = khaltiConfig.base_url.endsWith('/')
+      ? khaltiConfig.base_url.slice(0, -1)
+      : khaltiConfig.base_url;
     const khaltiResponse = await fetch(`${baseUrl}/epayment/lookup/`, {
       method: 'POST',
       headers: {
-        'Authorization': `Key ${khaltiConfig.secret_key}`,
-        'Content-Type': 'application/json'
+        Authorization: `Key ${khaltiConfig.secret_key}`,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ pidx })
+      body: JSON.stringify({ pidx }),
     });
 
     if (!khaltiResponse.ok) {
       const errorData = await khaltiResponse.json();
       console.error('❌ Khalti lookup error:', errorData);
-      return new Response(JSON.stringify({ 
-        error: `Khalti lookup failed: ${JSON.stringify(errorData)}` 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return new Response(
+        JSON.stringify({
+          error: `Khalti lookup failed: ${JSON.stringify(errorData)}`,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     const khaltiData: KhaltiLookupResponse = await khaltiResponse.json();
     console.log('✅ Khalti lookup successful:', khaltiData);
 
     // Map Khalti status to our system status
-    const paymentStatus = khaltiData.status === 'Completed' ? 'completed' : 
-                         khaltiData.status === 'Pending' ? 'pending' : 
-                         khaltiData.status === 'Expired' ? 'expired' : 
-                         khaltiData.status === 'User canceled' ? 'cancelled' : 'failed';
+    const paymentStatus =
+      khaltiData.status === 'Completed'
+        ? 'completed'
+        : khaltiData.status === 'Pending'
+          ? 'pending'
+          : khaltiData.status === 'Expired'
+            ? 'expired'
+            : khaltiData.status === 'User canceled'
+              ? 'cancelled'
+              : 'failed';
 
     // Extract purchase order ID to find the quote
     const purchaseOrderId = khaltiData.purchase_order_id;
@@ -115,12 +126,15 @@ serve(async (req) => {
 
     if (quoteIds.length === 0) {
       console.error('❌ No quote IDs found in purchase order name:', purchaseOrderName);
-      return new Response(JSON.stringify({ 
-        error: 'Could not extract quote IDs from purchase order' 
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return new Response(
+        JSON.stringify({
+          error: 'Could not extract quote IDs from purchase order',
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     console.log('📋 Found quote IDs:', quoteIds);
@@ -128,7 +142,7 @@ serve(async (req) => {
     // Update quote status if payment is successful
     if (khaltiData.status === 'Completed') {
       console.log('💰 Payment completed, updating quote status to paid');
-      
+
       // Update all quotes in the payment to paid status
       const { error: updateError } = await supabaseAdmin
         .from('quotes')
@@ -143,40 +157,41 @@ serve(async (req) => {
             amount: khaltiData.total_amount,
             fee: khaltiData.fee,
             purchase_order_id: purchaseOrderId,
-            payment_date: new Date().toISOString()
+            payment_date: new Date().toISOString(),
           }),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .in('id', quoteIds);
 
       if (updateError) {
         console.error('❌ Error updating quote status:', updateError);
-        return new Response(JSON.stringify({ 
-          error: `Failed to update quote status: ${updateError.message}` 
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Failed to update quote status: ${updateError.message}`,
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
       }
 
       console.log('✅ Quote status updated successfully');
     }
 
     // Create payment transaction record for tracking
-    const { error: transactionError } = await supabaseAdmin
-      .from('payment_transactions')
-      .insert({
-        gateway: 'khalti',
-        gateway_transaction_id: khaltiData.transaction_id || khaltiData.pidx,
-        amount: khaltiData.total_amount / 100, // Convert paisa to NPR
-        currency: 'NPR',
-        status: paymentStatus,
-        purchase_order_id: purchaseOrderId,
-        gateway_response: khaltiData,
-        completed_at: khaltiData.status === 'Completed' ? new Date().toISOString() : null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+    const { error: transactionError } = await supabaseAdmin.from('payment_transactions').insert({
+      gateway: 'khalti',
+      gateway_transaction_id: khaltiData.transaction_id || khaltiData.pidx,
+      amount: khaltiData.total_amount / 100, // Convert paisa to NPR
+      currency: 'NPR',
+      status: paymentStatus,
+      purchase_order_id: purchaseOrderId,
+      gateway_response: khaltiData,
+      completed_at: khaltiData.status === 'Completed' ? new Date().toISOString() : null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
 
     if (transactionError) {
       console.error('⚠️ Warning: Could not create payment transaction record:', transactionError);
@@ -184,25 +199,31 @@ serve(async (req) => {
     }
 
     // Return success response
-    return new Response(JSON.stringify({
-      success: true,
-      status: paymentStatus,
-      khalti_response: khaltiData,
-      quotes_updated: khaltiData.status === 'Completed' ? quoteIds.length : 0,
-      message: khaltiData.status === 'Completed' 
-        ? 'Payment completed and quotes updated successfully' 
-        : `Payment status: ${khaltiData.status}`
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        status: paymentStatus,
+        khalti_response: khaltiData,
+        quotes_updated: khaltiData.status === 'Completed' ? quoteIds.length : 0,
+        message:
+          khaltiData.status === 'Completed'
+            ? 'Payment completed and quotes updated successfully'
+            : `Payment status: ${khaltiData.status}`,
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   } catch (error) {
     console.error('❌ Khalti webhook error:', error);
-    return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Unknown error occurred' 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   }
 });

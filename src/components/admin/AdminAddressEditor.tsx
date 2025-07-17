@@ -6,41 +6,73 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Edit, 
-  Save, 
-  X, 
-  AlertTriangle, 
-  CheckCircle, 
-  Lock, 
-  Unlock, 
+import {
+  Edit,
+  Save,
+  X,
+  AlertTriangle,
+  CheckCircle,
+  Lock,
+  Unlock,
   History,
   User,
   MapPin,
   Phone,
-  Mail
+  Mail,
 } from 'lucide-react';
 import { ShippingAddress, AddressFormData } from '@/types/address';
-import { validateAddress, normalizeAddress, compareAddresses, getAddressChangeSummary } from '@/lib/addressValidation';
+import { validateAddress, normalizeAddress, compareAddresses } from '@/lib/addressValidation';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { useAddressHistory } from '@/hooks/useAddressHistory';
 
 // Validation schema for admin address form (allows country changes)
 const adminAddressFormSchema = z.object({
-  fullName: z.string().min(2, 'Full name must be at least 2 characters').max(100, 'Full name must be no more than 100 characters'),
-  streetAddress: z.string().min(5, 'Street address must be at least 5 characters').max(200, 'Street address must be no more than 200 characters'),
-  city: z.string().min(2, 'City must be at least 2 characters').max(100, 'City must be no more than 100 characters'),
+  fullName: z
+    .string()
+    .min(2, 'Full name must be at least 2 characters')
+    .max(100, 'Full name must be no more than 100 characters'),
+  streetAddress: z
+    .string()
+    .min(5, 'Street address must be at least 5 characters')
+    .max(200, 'Street address must be no more than 200 characters'),
+  city: z
+    .string()
+    .min(2, 'City must be at least 2 characters')
+    .max(100, 'City must be no more than 100 characters'),
   state: z.string().max(100, 'State must be no more than 100 characters').optional(),
-  postalCode: z.string().min(3, 'Postal code must be at least 3 characters').max(20, 'Postal code must be no more than 20 characters'),
+  postalCode: z
+    .string()
+    .min(3, 'Postal code must be at least 3 characters')
+    .max(20, 'Postal code must be no more than 20 characters'),
   country: z.string().length(2, 'Country must be a 2-letter country code'),
-  phone: z.string().regex(/^[+]?[1-9]\d{0,15}$/, 'Invalid phone number format').optional().or(z.literal('')),
+  phone: z
+    .string()
+    .regex(/^[+]?[1-9]\d{0,15}$/, 'Invalid phone number format')
+    .optional()
+    .or(z.literal('')),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
-  changeReason: z.string().min(1, 'Please provide a reason for this change').max(500, 'Reason must be no more than 500 characters'),
+  changeReason: z
+    .string()
+    .min(1, 'Please provide a reason for this change')
+    .max(500, 'Reason must be no more than 500 characters'),
 });
 
 interface AdminAddressEditorProps {
@@ -86,7 +118,7 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
   });
 
   const watchedCountry = form.watch('country');
-  const selectedCountry = countries?.find(c => c.code === watchedCountry);
+  const selectedCountry = countries?.find((c) => c.code === watchedCountry);
 
   const handleSubmit = (data: AddressFormData & { changeReason: string }) => {
     // Clear previous validation messages
@@ -109,10 +141,12 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
     // Check for significant changes
     if (currentAddress) {
       const changes = compareAddresses(currentAddress, normalizedAddress);
-      const hasCountryChange = changes.some(c => c.field === 'country');
-      
+      const hasCountryChange = changes.some((c) => c.field === 'country');
+
       if (hasCountryChange && !data.changeReason.includes('country')) {
-        setValidationErrors(['Please provide a specific reason for changing the country as it affects shipping costs and delivery times']);
+        setValidationErrors([
+          'Please provide a specific reason for changing the country as it affects shipping costs and delivery times',
+        ]);
         return;
       }
     }
@@ -139,7 +173,8 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
           Admin Address Management
         </CardTitle>
         <CardDescription>
-          Manage shipping address with full administrative privileges. All changes are logged for audit purposes.
+          Manage shipping address with full administrative privileges. All changes are logged for
+          audit purposes.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -158,7 +193,8 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
                   <Alert className="border-orange-200 bg-orange-50">
                     <Lock className="h-4 w-4 text-orange-600" />
                     <AlertDescription className="text-orange-800">
-                      <strong>Address is locked</strong> - {lockReason || 'Cannot be modified by customers'}
+                      <strong>Address is locked</strong> -{' '}
+                      {lockReason || 'Cannot be modified by customers'}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -317,10 +353,10 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
                     <FormItem>
                       <FormLabel>Reason for Change *</FormLabel>
                       <FormControl>
-                        <Textarea 
+                        <Textarea
                           placeholder="Please provide a reason for this address change..."
                           className="min-h-[80px]"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -333,7 +369,8 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
                   <Alert className="bg-blue-50 border-blue-200">
                     <CheckCircle className="h-4 w-4 text-blue-600" />
                     <AlertDescription className="text-blue-800">
-                      Shipping to <strong>{selectedCountry.name}</strong> ({selectedCountry.currency})
+                      Shipping to <strong>{selectedCountry.name}</strong> (
+                      {selectedCountry.currency})
                     </AlertDescription>
                   </Alert>
                 )}
@@ -372,7 +409,12 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
                     <Save className="h-4 w-4 mr-2" />
                     {isLoading ? 'Saving...' : 'Update Address'}
                   </Button>
-                  <Button type="button" variant="outline" onClick={handleCancel} disabled={isLoading}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancel}
+                    disabled={isLoading}
+                  >
                     <X className="h-4 w-4 mr-2" />
                     Cancel
                   </Button>
@@ -386,9 +428,7 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
               <div className="flex items-center gap-2">
                 <History className="h-5 w-5" />
                 <h3 className="text-lg font-semibold">Address Change History</h3>
-                {hasChanges && (
-                  <Badge variant="secondary">{history.length} changes</Badge>
-                )}
+                {hasChanges && <Badge variant="secondary">{history.length} changes</Badge>}
               </div>
 
               {!hasChanges ? (
@@ -397,7 +437,7 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
                 </Alert>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {history.map((change, index) => (
+                  {history.map((change) => (
                     <Card key={change.id} className="border-l-4 border-l-blue-500">
                       <CardContent className="pt-4">
                         <div className="flex items-start justify-between">
@@ -414,7 +454,7 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
                             <Badge variant="destructive">Country Changed</Badge>
                           )}
                         </div>
-                        
+
                         {change.changeSummary && (
                           <div className="mt-2 text-sm">
                             <p className="font-medium">Changes:</p>
@@ -439,7 +479,7 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
           <TabsContent value="actions" className="space-y-4">
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Address Actions</h3>
-              
+
               {/* Current Status */}
               <Card>
                 <CardContent className="pt-4">
@@ -447,8 +487,8 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
                     <Lock className="h-4 w-4" />
                     <span className="font-medium">Current Status</span>
                   </div>
-                  <Badge variant={isLocked ? "destructive" : "default"}>
-                    {isLocked ? "Locked" : "Unlocked"}
+                  <Badge variant={isLocked ? 'destructive' : 'default'}>
+                    {isLocked ? 'Locked' : 'Unlocked'}
                   </Badge>
                   {isLocked && lockReason && (
                     <p className="text-sm text-muted-foreground mt-1">{lockReason}</p>
@@ -459,8 +499,8 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
               {/* Actions */}
               <div className="space-y-2">
                 {isLocked && onUnlock && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={handleUnlock}
                     disabled={isLoading}
                     className="w-full"
@@ -470,17 +510,13 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
                   </Button>
                 )}
 
-                <Button 
-                  variant="outline" 
-                  onClick={() => setActiveTab('edit')}
-                  className="w-full"
-                >
+                <Button variant="outline" onClick={() => setActiveTab('edit')} className="w-full">
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Address
                 </Button>
 
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setActiveTab('history')}
                   className="w-full"
                 >
@@ -494,4 +530,4 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

@@ -7,26 +7,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
+import {
   RefreshCw,
   DollarSign,
-  AlertCircle,
   CheckCircle,
   Clock,
   XCircle,
   Search,
-  Filter,
   Download,
   RotateCcw,
-  Eye,
-  FileText,
-  Calendar,
-  User,
-  CreditCard
+  CreditCard,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
@@ -100,18 +99,23 @@ export const PayPalRefundManagement: React.FC = () => {
     reason_description: '',
     admin_notes: '',
     customer_note: '',
-    notify_customer: true
+    notify_customer: true,
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
   // Fetch PayPal transactions
-  const { data: transactions, isLoading: transactionsLoading, refetch: refetchTransactions } = useQuery({
+  const {
+    data: transactions,
+    isLoading: transactionsLoading,
+    refetch: refetchTransactions,
+  } = useQuery({
     queryKey: ['paypal-transactions-refund'],
     queryFn: async (): Promise<PayPalTransaction[]> => {
       const { data, error } = await supabase
         .from('payment_transactions')
-        .select(`
+        .select(
+          `
           id,
           paypal_capture_id,
           paypal_order_id,
@@ -125,20 +129,25 @@ export const PayPalRefundManagement: React.FC = () => {
           quote_id,
           user_id,
           quotes(product_name, user_id)
-        `)
+        `,
+        )
         .eq('payment_method', 'paypal')
         .eq('status', 'completed')
         .not('paypal_capture_id', 'is.null')
         .order('created_at', { ascending: false })
         .limit(50);
-      
+
       if (error) throw error;
       return data || [];
-    }
+    },
   });
 
   // Fetch PayPal refunds
-  const { data: refunds, isLoading: refundsLoading, refetch: refetchRefunds } = useQuery({
+  const {
+    data: refunds,
+    isLoading: refundsLoading,
+    refetch: refetchRefunds,
+  } = useQuery({
     queryKey: ['paypal-refunds'],
     queryFn: async (): Promise<PayPalRefund[]> => {
       const { data, error } = await supabase
@@ -146,10 +155,10 @@ export const PayPalRefundManagement: React.FC = () => {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
-      
+
       if (error) throw error;
       return data || [];
-    }
+    },
   });
 
   // Fetch refund reasons
@@ -161,26 +170,29 @@ export const PayPalRefundManagement: React.FC = () => {
         .select('*')
         .eq('is_active', true)
         .order('display_order');
-      
+
       if (error) throw error;
       return data || [];
-    }
+    },
   });
 
   // Process refund mutation
   const processRefundMutation = useMutation({
     mutationFn: async (refundData: RefundFormData) => {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/paypal-refund`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/paypal-refund`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify(refundData),
         },
-        body: JSON.stringify(refundData),
-      });
+      );
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data?.error || 'Failed to process refund');
       }
@@ -192,7 +204,9 @@ export const PayPalRefundManagement: React.FC = () => {
         title: 'Refund Processed',
         description: `Refund of ${formatCurrency(data.refund_amount, refundFormData.currency)} has been initiated.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['paypal-transactions-refund'] });
+      queryClient.invalidateQueries({
+        queryKey: ['paypal-transactions-refund'],
+      });
       queryClient.invalidateQueries({ queryKey: ['paypal-refunds'] });
       setShowRefundDialog(false);
       setSelectedTransaction(null);
@@ -204,7 +218,7 @@ export const PayPalRefundManagement: React.FC = () => {
         description: error.message,
         variant: 'destructive',
       });
-    }
+    },
   });
 
   const resetRefundForm = () => {
@@ -215,7 +229,7 @@ export const PayPalRefundManagement: React.FC = () => {
       reason_description: '',
       admin_notes: '',
       customer_note: '',
-      notify_customer: true
+      notify_customer: true,
     });
   };
 
@@ -227,8 +241,9 @@ export const PayPalRefundManagement: React.FC = () => {
       reason_code: '',
       reason_description: '',
       admin_notes: '',
-      customer_note: 'Your refund has been processed and will appear in your account within 3-5 business days.',
-      notify_customer: true
+      customer_note:
+        'Your refund has been processed and will appear in your account within 3-5 business days.',
+      notify_customer: true,
     });
     setShowRefundDialog(true);
   };
@@ -249,47 +264,74 @@ export const PayPalRefundManagement: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'COMPLETED':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Completed</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Completed
+          </Badge>
+        );
       case 'PENDING':
-        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800">
+            <Clock className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
+        );
       case 'FAILED':
-        return <Badge className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
+        return (
+          <Badge className="bg-red-100 text-red-800">
+            <XCircle className="h-3 w-3 mr-1" />
+            Failed
+          </Badge>
+        );
       case 'CANCELLED':
-        return <Badge className="bg-gray-100 text-gray-800"><XCircle className="h-3 w-3 mr-1" />Cancelled</Badge>;
+        return (
+          <Badge className="bg-gray-100 text-gray-800">
+            <XCircle className="h-3 w-3 mr-1" />
+            Cancelled
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   const getRefundTypeBadge = (type: string) => {
-    return type === 'FULL' 
-      ? <Badge className="bg-blue-100 text-blue-800">Full Refund</Badge>
-      : <Badge className="bg-orange-100 text-orange-800">Partial Refund</Badge>;
+    return type === 'FULL' ? (
+      <Badge className="bg-blue-100 text-blue-800">Full Refund</Badge>
+    ) : (
+      <Badge className="bg-orange-100 text-orange-800">Partial Refund</Badge>
+    );
   };
 
-  const filteredTransactions = transactions?.filter(transaction => {
-    const productName = transaction.quotes?.product_name || 'Test Transaction';
-    const matchesSearch = searchQuery === '' || 
-      transaction.paypal_capture_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.paypal_order_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      productName.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'refundable' && !transaction.is_fully_refunded) ||
-      (statusFilter === 'refunded' && transaction.is_fully_refunded) ||
-      (statusFilter === 'partial' && transaction.refund_count > 0 && !transaction.is_fully_refunded);
-    
-    return matchesSearch && matchesStatus;
-  }) || [];
+  const filteredTransactions =
+    transactions?.filter((transaction) => {
+      const productName = transaction.quotes?.product_name || 'Test Transaction';
+      const matchesSearch =
+        searchQuery === '' ||
+        transaction.paypal_capture_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        transaction.paypal_order_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        productName.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'refundable' && !transaction.is_fully_refunded) ||
+        (statusFilter === 'refunded' && transaction.is_fully_refunded) ||
+        (statusFilter === 'partial' &&
+          transaction.refund_count > 0 &&
+          !transaction.is_fully_refunded);
+
+      return matchesSearch && matchesStatus;
+    }) || [];
 
   const refundStats = React.useMemo(() => {
     if (!refunds) return null;
 
     const totalRefunds = refunds.length;
-    const completedRefunds = refunds.filter(r => r.status === 'COMPLETED').length;
-    const pendingRefunds = refunds.filter(r => r.status === 'PENDING').length;
+    const completedRefunds = refunds.filter((r) => r.status === 'COMPLETED').length;
+    const pendingRefunds = refunds.filter((r) => r.status === 'PENDING').length;
     const totalAmount = refunds
-      .filter(r => r.status === 'COMPLETED')
+      .filter((r) => r.status === 'COMPLETED')
       .reduce((sum, r) => sum + r.refund_amount, 0);
 
     return {
@@ -297,7 +339,7 @@ export const PayPalRefundManagement: React.FC = () => {
       completedRefunds,
       pendingRefunds,
       totalAmount,
-      successRate: totalRefunds > 0 ? (completedRefunds / totalRefunds * 100).toFixed(1) : '0'
+      successRate: totalRefunds > 0 ? ((completedRefunds / totalRefunds) * 100).toFixed(1) : '0',
     };
   }, [refunds]);
 
@@ -310,10 +352,9 @@ export const PayPalRefundManagement: React.FC = () => {
           <p className="text-muted-foreground">
             Process refunds and track refund history for PayPal transactions
           </p>
-          
         </div>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={() => {
             refetchTransactions();
             refetchRefunds();
@@ -334,9 +375,7 @@ export const PayPalRefundManagement: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{refundStats.totalRefunds}</div>
-              <p className="text-xs text-muted-foreground">
-                {refundStats.pendingRefunds} pending
-              </p>
+              <p className="text-xs text-muted-foreground">{refundStats.pendingRefunds} pending</p>
             </CardContent>
           </Card>
 
@@ -359,12 +398,8 @@ export const PayPalRefundManagement: React.FC = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                ${refundStats.totalAmount.toFixed(2)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                All currencies in USD
-              </p>
+              <div className="text-2xl font-bold">${refundStats.totalAmount.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">All currencies in USD</p>
             </CardContent>
           </Card>
 
@@ -375,11 +410,12 @@ export const PayPalRefundManagement: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${refundStats.completedRefunds > 0 ? (refundStats.totalAmount / refundStats.completedRefunds).toFixed(2) : '0.00'}
+                $
+                {refundStats.completedRefunds > 0
+                  ? (refundStats.totalAmount / refundStats.completedRefunds).toFixed(2)
+                  : '0.00'}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Per refund
-              </p>
+              <p className="text-xs text-muted-foreground">Per refund</p>
             </CardContent>
           </Card>
         </div>
@@ -419,7 +455,7 @@ export const PayPalRefundManagement: React.FC = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="status-filter">Filter by Status</Label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -468,31 +504,40 @@ export const PayPalRefundManagement: React.FC = () => {
                           {transaction.is_fully_refunded ? (
                             <Badge className="bg-red-100 text-red-800">Fully Refunded</Badge>
                           ) : transaction.refund_count > 0 ? (
-                            <Badge className="bg-orange-100 text-orange-800">Partially Refunded</Badge>
+                            <Badge className="bg-orange-100 text-orange-800">
+                              Partially Refunded
+                            </Badge>
                           ) : (
                             <Badge className="bg-green-100 text-green-800">Refundable</Badge>
                           )}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {transaction.quotes?.product_name || 'Test Transaction'} • {format(new Date(transaction.created_at), 'MMM d, yyyy')}
+                          {transaction.quotes?.product_name || 'Test Transaction'} •{' '}
+                          {format(new Date(transaction.created_at), 'MMM d, yyyy')}
                         </div>
                         {transaction.refund_count > 0 && (
                           <div className="text-sm text-muted-foreground">
-                            Refunded: {formatCurrency(transaction.total_refunded, transaction.currency)} of {formatCurrency(transaction.amount, transaction.currency)}
+                            Refunded:{' '}
+                            {formatCurrency(transaction.total_refunded, transaction.currency)} of{' '}
+                            {formatCurrency(transaction.amount, transaction.currency)}
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <div className="font-medium">
                             {formatCurrency(transaction.amount, transaction.currency)}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            Available: {formatCurrency(transaction.amount - (transaction.total_refunded || 0), transaction.currency)}
+                            Available:{' '}
+                            {formatCurrency(
+                              transaction.amount - (transaction.total_refunded || 0),
+                              transaction.currency,
+                            )}
                           </div>
                         </div>
-                        
+
                         <Button
                           size="sm"
                           onClick={() => handleRefundTransaction(transaction)}
@@ -539,31 +584,29 @@ export const PayPalRefundManagement: React.FC = () => {
                           {getRefundTypeBadge(refund.refund_type)}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          Original: {refund.original_transaction_id} • {format(new Date(refund.created_at), 'MMM d, yyyy h:mm a')}
+                          Original: {refund.original_transaction_id} •{' '}
+                          {format(new Date(refund.created_at), 'MMM d, yyyy h:mm a')}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           Reason: {refund.reason_description || refund.reason_code}
                         </div>
                       </div>
-                      
+
                       <div className="text-right">
                         <div className="font-medium">
                           {formatCurrency(refund.refund_amount, refund.currency)}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {refund.status === 'COMPLETED' && refund.completed_at 
+                          {refund.status === 'COMPLETED' && refund.completed_at
                             ? `Completed ${format(new Date(refund.completed_at), 'MMM d, yyyy')}`
-                            : 'Processing...'
-                          }
+                            : 'Processing...'}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No refunds found
-                </div>
+                <div className="text-center py-8 text-muted-foreground">No refunds found</div>
               )}
             </CardContent>
           </Card>
@@ -576,10 +619,11 @@ export const PayPalRefundManagement: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Process PayPal Refund</DialogTitle>
             <p className="text-sm text-muted-foreground">
-              Process a full or partial refund for this PayPal transaction. The refund will be sent directly to the customer's PayPal account.
+              Process a full or partial refund for this PayPal transaction. The refund will be sent
+              directly to the customer's PayPal account.
             </p>
           </DialogHeader>
-          
+
           {selectedTransaction && (
             <div className="space-y-6">
               {/* Transaction Details */}
@@ -591,7 +635,9 @@ export const PayPalRefundManagement: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="font-medium">Capture ID:</span>
-                      <p className="text-muted-foreground">{selectedTransaction.paypal_capture_id}</p>
+                      <p className="text-muted-foreground">
+                        {selectedTransaction.paypal_capture_id}
+                      </p>
                     </div>
                     <div>
                       <span className="font-medium">Order ID:</span>
@@ -599,21 +645,30 @@ export const PayPalRefundManagement: React.FC = () => {
                     </div>
                     <div>
                       <span className="font-medium">Amount:</span>
-                      <p className="text-muted-foreground">{formatCurrency(selectedTransaction.amount, selectedTransaction.currency)}</p>
+                      <p className="text-muted-foreground">
+                        {formatCurrency(selectedTransaction.amount, selectedTransaction.currency)}
+                      </p>
                     </div>
                     <div>
                       <span className="font-medium">Available to Refund:</span>
                       <p className="text-muted-foreground">
-                        {formatCurrency(selectedTransaction.amount - (selectedTransaction.total_refunded || 0), selectedTransaction.currency)}
+                        {formatCurrency(
+                          selectedTransaction.amount - (selectedTransaction.total_refunded || 0),
+                          selectedTransaction.currency,
+                        )}
                       </p>
                     </div>
                     <div>
                       <span className="font-medium">Product:</span>
-                      <p className="text-muted-foreground">{selectedTransaction.quotes?.product_name || 'Test Transaction'}</p>
+                      <p className="text-muted-foreground">
+                        {selectedTransaction.quotes?.product_name || 'Test Transaction'}
+                      </p>
                     </div>
                     <div>
                       <span className="font-medium">Date:</span>
-                      <p className="text-muted-foreground">{format(new Date(selectedTransaction.created_at), 'MMM d, yyyy')}</p>
+                      <p className="text-muted-foreground">
+                        {format(new Date(selectedTransaction.created_at), 'MMM d, yyyy')}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -630,10 +685,12 @@ export const PayPalRefundManagement: React.FC = () => {
                       step="0.01"
                       placeholder={`Max: ${(selectedTransaction.amount - (selectedTransaction.total_refunded || 0)).toFixed(2)}`}
                       value={refundFormData.refund_amount || ''}
-                      onChange={(e) => setRefundFormData({
-                        ...refundFormData,
-                        refund_amount: e.target.value ? parseFloat(e.target.value) : undefined
-                      })}
+                      onChange={(e) =>
+                        setRefundFormData({
+                          ...refundFormData,
+                          refund_amount: e.target.value ? parseFloat(e.target.value) : undefined,
+                        })
+                      }
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       Leave empty for full refund
@@ -642,13 +699,16 @@ export const PayPalRefundManagement: React.FC = () => {
 
                   <div>
                     <Label htmlFor="reason_code">Refund Reason *</Label>
-                    <Select 
-                      value={refundFormData.reason_code} 
-                      onValueChange={(value) => setRefundFormData({
-                        ...refundFormData,
-                        reason_code: value,
-                        reason_description: refundReasons?.find(r => r.code === value)?.description || ''
-                      })}
+                    <Select
+                      value={refundFormData.reason_code}
+                      onValueChange={(value) =>
+                        setRefundFormData({
+                          ...refundFormData,
+                          reason_code: value,
+                          reason_description:
+                            refundReasons?.find((r) => r.code === value)?.description || '',
+                        })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a reason" />
@@ -670,10 +730,12 @@ export const PayPalRefundManagement: React.FC = () => {
                     id="reason_description"
                     placeholder="Provide additional details about the refund reason..."
                     value={refundFormData.reason_description}
-                    onChange={(e) => setRefundFormData({
-                      ...refundFormData,
-                      reason_description: e.target.value
-                    })}
+                    onChange={(e) =>
+                      setRefundFormData({
+                        ...refundFormData,
+                        reason_description: e.target.value,
+                      })
+                    }
                   />
                 </div>
 
@@ -683,10 +745,12 @@ export const PayPalRefundManagement: React.FC = () => {
                     id="customer_note"
                     placeholder="Note that will be visible to the customer..."
                     value={refundFormData.customer_note}
-                    onChange={(e) => setRefundFormData({
-                      ...refundFormData,
-                      customer_note: e.target.value
-                    })}
+                    onChange={(e) =>
+                      setRefundFormData({
+                        ...refundFormData,
+                        customer_note: e.target.value,
+                      })
+                    }
                   />
                 </div>
 
@@ -696,10 +760,12 @@ export const PayPalRefundManagement: React.FC = () => {
                     id="admin_notes"
                     placeholder="Internal notes for admin reference..."
                     value={refundFormData.admin_notes}
-                    onChange={(e) => setRefundFormData({
-                      ...refundFormData,
-                      admin_notes: e.target.value
-                    })}
+                    onChange={(e) =>
+                      setRefundFormData({
+                        ...refundFormData,
+                        admin_notes: e.target.value,
+                      })
+                    }
                   />
                 </div>
               </div>
@@ -709,7 +775,7 @@ export const PayPalRefundManagement: React.FC = () => {
                 <Button variant="outline" onClick={() => setShowRefundDialog(false)}>
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   onClick={handleSubmitRefund}
                   disabled={processRefundMutation.isPending || !refundFormData.reason_code}
                 >

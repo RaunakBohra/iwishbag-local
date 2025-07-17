@@ -1,21 +1,27 @@
-import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tables } from "@/integrations/supabase/types";
-import { TrendingUp, DollarSign, Users, Globe, Filter, Download } from "lucide-react";
-import { OverviewMetrics } from "../dashboard/analytics/OverviewMetrics";
-import { TrendAnalysis } from "../dashboard/analytics/TrendAnalysis";
-import { StatusDistribution } from "../dashboard/analytics/StatusDistribution";
-import { RevenueAnalytics } from "../dashboard/analytics/RevenueAnalytics";
-import { ConversionFunnel } from "../dashboard/analytics/ConversionFunnel";
-import { PredictiveInsights } from "../dashboard/analytics/PredictiveInsights";
-import { useAllCountries } from "@/hooks/useAllCountries";
+import { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tables } from '@/integrations/supabase/types';
+import { Filter, Download } from 'lucide-react';
+import { OverviewMetrics } from '../dashboard/analytics/OverviewMetrics';
+import { TrendAnalysis } from '../dashboard/analytics/TrendAnalysis';
+import { StatusDistribution } from '../dashboard/analytics/StatusDistribution';
+import { RevenueAnalytics } from '../dashboard/analytics/RevenueAnalytics';
+import { ConversionFunnel } from '../dashboard/analytics/ConversionFunnel';
+import { PredictiveInsights } from '../dashboard/analytics/PredictiveInsights';
+import { useAllCountries } from '@/hooks/useAllCountries';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
-import { Badge } from "@/components/ui/badge";
+import { Badge } from '@/components/ui/badge';
 
 type Quote = Tables<'quotes'>;
 
@@ -28,14 +34,17 @@ export const EnhancedAdminAnalytics = ({ quotes, orders }: EnhancedAdminAnalytic
   const [dateFilter, setDateFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
+  const [customDateRange, setCustomDateRange] = useState({
+    start: '',
+    end: '',
+  });
 
   const { data: allCountries } = useAllCountries();
   const { quoteStatuses, orderStatuses } = useStatusManagement();
 
   // Get all available statuses for filtering
   const allStatuses = [...(quoteStatuses || []), ...(orderStatuses || [])]
-    .filter(status => status.isActive)
+    .filter((status) => status.isActive)
     .sort((a, b) => a.order - b.order);
 
   const filteredData = useMemo(() => {
@@ -61,27 +70,31 @@ export const EnhancedAdminAnalytics = ({ quotes, orders }: EnhancedAdminAnalytic
           break;
       }
 
-      filtered = filtered.filter(quote => {
+      filtered = filtered.filter((quote) => {
         const quoteDate = new Date(quote.created_at);
-        return quoteDate >= startDate && 
-               (dateFilter !== 'custom' || !customDateRange.end || quoteDate <= new Date(customDateRange.end));
+        return (
+          quoteDate >= startDate &&
+          (dateFilter !== 'custom' ||
+            !customDateRange.end ||
+            quoteDate <= new Date(customDateRange.end))
+        );
       });
     }
 
     // Country filtering
     if (countryFilter !== 'all') {
-      filtered = filtered.filter(quote => quote.destination_country === countryFilter);
+      filtered = filtered.filter((quote) => quote.destination_country === countryFilter);
     }
 
     // Status filtering
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(quote => quote.status === statusFilter);
+      filtered = filtered.filter((quote) => quote.status === statusFilter);
     }
 
-    const filteredOrders = orders.filter(order => {
+    const filteredOrders = orders.filter((order) => {
       const orderDate = new Date(order.created_at);
       let includeByDate = true;
-      
+
       if (dateFilter !== 'all') {
         const now = new Date();
         let startDate = new Date();
@@ -101,11 +114,15 @@ export const EnhancedAdminAnalytics = ({ quotes, orders }: EnhancedAdminAnalytic
             break;
         }
 
-        includeByDate = orderDate >= startDate && 
-                      (dateFilter !== 'custom' || !customDateRange.end || orderDate <= new Date(customDateRange.end));
+        includeByDate =
+          orderDate >= startDate &&
+          (dateFilter !== 'custom' ||
+            !customDateRange.end ||
+            orderDate <= new Date(customDateRange.end));
       }
 
-      const includeByCountry = countryFilter === 'all' || order.destination_country === countryFilter;
+      const includeByCountry =
+        countryFilter === 'all' || order.destination_country === countryFilter;
 
       return includeByDate && includeByCountry;
     });
@@ -114,16 +131,20 @@ export const EnhancedAdminAnalytics = ({ quotes, orders }: EnhancedAdminAnalytic
   }, [quotes, orders, dateFilter, countryFilter, statusFilter, customDateRange]);
 
   const exportData = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "ID,Email,Status,Country,Total,Created At\n"
-      + filteredData.quotes.map(quote => 
-          `${quote.display_id},${quote.email},${quote.status},${quote.destination_country},${quote.final_total || 0},${quote.created_at}`
-        ).join("\n");
-    
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      'ID,Email,Status,Country,Total,Created At\n' +
+      filteredData.quotes
+        .map(
+          (quote) =>
+            `${quote.display_id},${quote.email},${quote.status},${quote.destination_country},${quote.final_total || 0},${quote.created_at}`,
+        )
+        .join('\n');
+
     const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "quotes_export.csv");
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'quotes_export.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -176,7 +197,12 @@ export const EnhancedAdminAnalytics = ({ quotes, orders }: EnhancedAdminAnalytic
                     id="start-date"
                     type="date"
                     value={customDateRange.start}
-                    onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
+                    onChange={(e) =>
+                      setCustomDateRange((prev) => ({
+                        ...prev,
+                        start: e.target.value,
+                      }))
+                    }
                   />
                 </div>
                 <div>
@@ -185,7 +211,12 @@ export const EnhancedAdminAnalytics = ({ quotes, orders }: EnhancedAdminAnalytic
                     id="end-date"
                     type="date"
                     value={customDateRange.end}
-                    onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
+                    onChange={(e) =>
+                      setCustomDateRange((prev) => ({
+                        ...prev,
+                        end: e.target.value,
+                      }))
+                    }
                   />
                 </div>
               </>
@@ -222,9 +253,7 @@ export const EnhancedAdminAnalytics = ({ quotes, orders }: EnhancedAdminAnalytic
                         <Badge variant={status.color} className="text-xs">
                           {status.label}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          ({status.category})
-                        </span>
+                        <span className="text-xs text-muted-foreground">({status.category})</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -245,23 +274,23 @@ export const EnhancedAdminAnalytics = ({ quotes, orders }: EnhancedAdminAnalytic
           <TabsTrigger value="funnel">Funnel</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="trends" className="space-y-4">
           <TrendAnalysis quotes={filteredData.quotes} orders={filteredData.orders} />
         </TabsContent>
-        
+
         <TabsContent value="distribution" className="space-y-4">
           <StatusDistribution quotes={filteredData.quotes} />
         </TabsContent>
-        
+
         <TabsContent value="revenue" className="space-y-4">
           <RevenueAnalytics quotes={filteredData.quotes} orders={filteredData.orders} />
         </TabsContent>
-        
+
         <TabsContent value="funnel" className="space-y-4">
           <ConversionFunnel quotes={filteredData.quotes} />
         </TabsContent>
-        
+
         <TabsContent value="insights" className="space-y-4">
           <PredictiveInsights quotes={filteredData.quotes} orders={filteredData.orders} />
         </TabsContent>

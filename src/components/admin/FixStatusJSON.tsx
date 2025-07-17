@@ -26,7 +26,7 @@ export const FixStatusJSON = () => {
       showsInQuotesList: true,
       showsInOrdersList: false,
       canBePaid: false,
-      isDefaultQuoteStatus: true
+      isDefaultQuoteStatus: true,
     },
     {
       id: 'sent',
@@ -46,7 +46,7 @@ export const FixStatusJSON = () => {
       requiresAction: false,
       showsInQuotesList: true,
       showsInOrdersList: false,
-      canBePaid: false
+      canBePaid: false,
     },
     {
       id: 'approved',
@@ -65,7 +65,7 @@ export const FixStatusJSON = () => {
       requiresAction: false,
       showsInQuotesList: true,
       showsInOrdersList: false,
-      canBePaid: true
+      canBePaid: true,
     },
     {
       id: 'rejected',
@@ -84,7 +84,7 @@ export const FixStatusJSON = () => {
       requiresAction: false,
       showsInQuotesList: true,
       showsInOrdersList: false,
-      canBePaid: false
+      canBePaid: false,
     },
     {
       id: 'expired',
@@ -103,8 +103,8 @@ export const FixStatusJSON = () => {
       requiresAction: false,
       showsInQuotesList: true,
       showsInOrdersList: false,
-      canBePaid: false
-    }
+      canBePaid: false,
+    },
   ];
 
   const defaultOrderStatuses: StatusConfig[] = [
@@ -125,7 +125,7 @@ export const FixStatusJSON = () => {
       requiresAction: true,
       showsInQuotesList: false,
       showsInOrdersList: true,
-      canBePaid: false
+      canBePaid: false,
     },
     {
       id: 'ordered',
@@ -144,7 +144,7 @@ export const FixStatusJSON = () => {
       requiresAction: false,
       showsInQuotesList: false,
       showsInOrdersList: true,
-      canBePaid: false
+      canBePaid: false,
     },
     {
       id: 'shipped',
@@ -163,7 +163,7 @@ export const FixStatusJSON = () => {
       requiresAction: false,
       showsInQuotesList: false,
       showsInOrdersList: true,
-      canBePaid: false
+      canBePaid: false,
     },
     {
       id: 'completed',
@@ -182,7 +182,7 @@ export const FixStatusJSON = () => {
       requiresAction: false,
       showsInQuotesList: false,
       showsInOrdersList: true,
-      canBePaid: false
+      canBePaid: false,
     },
     {
       id: 'cancelled',
@@ -201,8 +201,8 @@ export const FixStatusJSON = () => {
       requiresAction: false,
       showsInQuotesList: true,
       showsInOrdersList: true,
-      canBePaid: false
-    }
+      canBePaid: false,
+    },
   ];
 
   const fixStatusJSON = async () => {
@@ -231,32 +231,32 @@ export const FixStatusJSON = () => {
         } catch (e: unknown) {
           const errorMessage = e instanceof Error ? e.message : String(e);
           messages.push(`❌ ${setting.setting_key} has invalid JSON: ${errorMessage}`);
-          
+
           // Try to fix common issues
           let fixedJSON = setting.setting_value;
-          
+
           // Fix trailing commas
           fixedJSON = fixedJSON.replace(/,(\s*[\]}])/g, '$1');
-          
+
           // Fix missing quotes around keys
           fixedJSON = fixedJSON.replace(/(\w+):/g, '"$1":');
-          
+
           // Fix single quotes to double quotes
           fixedJSON = fixedJSON.replace(/'/g, '"');
-          
+
           try {
             JSON.parse(fixedJSON);
             messages.push(`🔧 Fixed JSON for ${setting.setting_key}`);
-            
+
             // Update the database with fixed JSON
             const { error: updateError } = await supabase
               .from('system_settings')
-              .update({ 
+              .update({
                 setting_value: fixedJSON,
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
               })
               .eq('setting_key', setting.setting_key);
-              
+
             if (updateError) {
               messages.push(`❌ Error updating fixed JSON: ${updateError.message}`);
             } else {
@@ -266,22 +266,24 @@ export const FixStatusJSON = () => {
             const errorMessage = fixError instanceof Error ? fixError.message : String(fixError);
             messages.push(`❌ Could not fix JSON for ${setting.setting_key}: ${errorMessage}`);
             messages.push(`🔄 Resetting ${setting.setting_key} to defaults...`);
-            
+
             // Reset to defaults
-            const defaultStatuses = setting.setting_key === 'quote_statuses' 
-              ? defaultQuoteStatuses 
-              : defaultOrderStatuses;
-              
-            const { error: resetError } = await supabase
-              .from('system_settings')
-              .upsert({
+            const defaultStatuses =
+              setting.setting_key === 'quote_statuses'
+                ? defaultQuoteStatuses
+                : defaultOrderStatuses;
+
+            const { error: resetError } = await supabase.from('system_settings').upsert(
+              {
                 setting_key: setting.setting_key,
                 setting_value: JSON.stringify(defaultStatuses),
-                updated_at: new Date().toISOString()
-              }, {
-                onConflict: 'setting_key'
-              });
-              
+                updated_at: new Date().toISOString(),
+              },
+              {
+                onConflict: 'setting_key',
+              },
+            );
+
             if (resetError) {
               messages.push(`❌ Error resetting to defaults: ${resetError.message}`);
             } else {
@@ -294,37 +296,43 @@ export const FixStatusJSON = () => {
       // If no settings exist, create them
       if (!data || data.length === 0) {
         messages.push('📝 No existing settings found, creating defaults...');
-        
-        const { error: quoteError } = await supabase
-          .from('system_settings')
-          .upsert({
+
+        const { error: quoteError } = await supabase.from('system_settings').upsert(
+          {
             setting_key: 'quote_statuses',
             setting_value: JSON.stringify(defaultQuoteStatuses),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'setting_key'
-          });
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'setting_key',
+          },
+        );
 
-        const { error: orderError } = await supabase
-          .from('system_settings')
-          .upsert({
+        const { error: orderError } = await supabase.from('system_settings').upsert(
+          {
             setting_key: 'order_statuses',
             setting_value: JSON.stringify(defaultOrderStatuses),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'setting_key'
-          });
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'setting_key',
+          },
+        );
 
         if (quoteError || orderError) {
-          messages.push(`❌ Error creating defaults: ${quoteError?.message || orderError?.message}`);
+          messages.push(
+            `❌ Error creating defaults: ${quoteError?.message || orderError?.message}`,
+          );
         } else {
           messages.push('✅ Created default status settings');
         }
       }
-      
+
       messages.push('');
-      messages.push('🎉 Fix complete! You can now refresh the Status Management page to see if the error is resolved.');
-      
+      messages.push(
+        '🎉 Fix complete! You can now refresh the Status Management page to see if the error is resolved.',
+      );
+
       setResult(messages.join('\n'));
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -341,17 +349,14 @@ export const FixStatusJSON = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          This tool will check and fix any invalid JSON in your status settings that may be causing the parsing error.
+          This tool will check and fix any invalid JSON in your status settings that may be causing
+          the parsing error.
         </p>
-        
-        <Button 
-          onClick={fixStatusJSON} 
-          disabled={isFixing}
-          className="w-full"
-        >
+
+        <Button onClick={fixStatusJSON} disabled={isFixing} className="w-full">
           {isFixing ? 'Fixing...' : 'Fix Status JSON'}
         </Button>
-        
+
         {result && (
           <div className="mt-4 p-4 bg-muted rounded-lg">
             <pre className="text-sm whitespace-pre-wrap">{result}</pre>

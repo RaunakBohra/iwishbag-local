@@ -4,9 +4,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { useStatusManagement } from "@/hooks/useStatusManagement";
-import { StatusBadge } from "@/components/dashboard/StatusBadge";
+} from '@/components/ui/select';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 interface StatusFilterProps {
   onStatusChange: (status: string) => void;
@@ -17,7 +17,7 @@ export const StatusFilter = ({ onStatusChange }: StatusFilterProps) => {
 
   // Get only quote statuses for filtering
   const availableQuoteStatuses = (quoteStatuses || [])
-    .filter(status => status.isActive)
+    .filter((status) => status.isActive)
     .sort((a, b) => a.order - b.order);
 
   return (

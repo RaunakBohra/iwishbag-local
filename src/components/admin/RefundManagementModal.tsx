@@ -1,15 +1,35 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import { RefreshCcw, AlertCircle, CreditCard, Building, FileText, Loader2, CheckCircle } from 'lucide-react';
+import {
+  RefreshCcw,
+  AlertCircle,
+  CreditCard,
+  Building,
+  FileText,
+  Loader2,
+  CheckCircle,
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -61,7 +81,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
   isOpen,
   onClose,
   quote,
-  payments
+  payments,
 }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -75,19 +95,19 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
 
   const maxRefundable = quote.amount_paid;
   const refundablePayments = payments.length > 0 ? payments : [];
-  
+
   console.log('RefundManagementModal - Debug Info:', {
     quote: quote,
     allPayments: payments,
     refundablePayments: refundablePayments,
-    maxRefundable: maxRefundable
+    maxRefundable: maxRefundable,
   });
 
   const handleRefundTypeChange = (value: string) => {
     setRefundType(value as RefundType);
     if (value === 'full') {
       setRefundAmount(maxRefundable.toString());
-      setSelectedPayments(refundablePayments.map(p => p.id));
+      setSelectedPayments(refundablePayments.map((p) => p.id));
     } else {
       setRefundAmount('');
       setSelectedPayments([]);
@@ -101,54 +121,60 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
     }
     return <FileText className="h-4 w-4" />;
   };
-  
+
   // Check if payment amount is suspicious (same numeric value but different currency)
   const isSuspiciousAmount = (payment: Payment) => {
     const paymentCurrency = payment.currency || quote.currency;
     const tolerance = 0.01; // Allow small differences due to rounding
-    
+
     // Check if payment amount equals quote amount but currencies differ
-    if (Math.abs(payment.amount - quote.final_total) < tolerance && 
-        paymentCurrency !== quote.currency) {
+    if (
+      Math.abs(payment.amount - quote.final_total) < tolerance &&
+      paymentCurrency !== quote.currency
+    ) {
       return true;
     }
-    
+
     // Check if payment amount equals any common currency amount
     // (e.g., 100 USD recorded as 100 INR)
     const roundNumbers = [100, 500, 1000, 5000, 10000];
-    if (roundNumbers.includes(Math.round(payment.amount)) && 
-        paymentCurrency !== quote.currency) {
+    if (roundNumbers.includes(Math.round(payment.amount)) && paymentCurrency !== quote.currency) {
       return true;
     }
-    
+
     return false;
   };
 
   const calculateRefundBreakdown = (): RefundBreakdownItem[] => {
     if (!refundAmount || !selectedPayments.length) return [];
-    
+
     const amount = parseFloat(refundAmount);
     let remaining = amount;
     const breakdown = [];
-    
+
     // Check for mixed currencies in selected payments
-    const selectedPaymentObjects = selectedPayments.map(id => payments.find(p => p.id === id)).filter(Boolean);
-    const currencies = [...new Set(selectedPaymentObjects.map(p => p?.currency || quote.currency))];
-    
+    const selectedPaymentObjects = selectedPayments
+      .map((id) => payments.find((p) => p.id === id))
+      .filter(Boolean);
+    const currencies = [
+      ...new Set(selectedPaymentObjects.map((p) => p?.currency || quote.currency)),
+    ];
+
     if (currencies.length > 1) {
       toast({
-        title: "Mixed Currency Warning",
-        description: "You've selected payments in different currencies. Please select payments in the same currency for refund.",
-        variant: "destructive"
+        title: 'Mixed Currency Warning',
+        description:
+          "You've selected payments in different currencies. Please select payments in the same currency for refund.",
+        variant: 'destructive',
       });
       return [];
     }
-    
+
     // Allocate refund amount across selected payments
     for (const paymentId of selectedPayments) {
-      const payment = payments.find(p => p.id === paymentId);
+      const payment = payments.find((p) => p.id === paymentId);
       if (!payment) continue;
-      
+
       const refundFromPayment = Math.min(remaining, payment.amount);
       if (refundFromPayment > 0) {
         breakdown.push({
@@ -156,23 +182,23 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
           amount: refundFromPayment,
           method: payment.method,
           gateway: payment.gateway,
-          currency: payment.currency || quote.currency
+          currency: payment.currency || quote.currency,
         });
         remaining -= refundFromPayment;
       }
-      
+
       if (remaining <= 0) break;
     }
-    
+
     return breakdown;
   };
 
   const processRefund = async () => {
     if (!refundAmount || !selectedPayments.length || !reason) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
-        variant: "destructive"
+        title: 'Missing Information',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
       });
       return;
     }
@@ -181,22 +207,23 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
     try {
       const amount = parseFloat(refundAmount);
       const breakdown = calculateRefundBreakdown();
-      
+
       // Additional validation for currency safety
       if (breakdown.length === 0) {
         setIsProcessing(false);
         return; // Already showed error in calculateRefundBreakdown
       }
-      
+
       // Check if refund currency matches payment currency
       const refundCurrency = breakdown[0]?.currency || quote.currency;
-      const paymentCurrency = payments.find(p => p.id === breakdown[0]?.paymentId)?.currency || quote.currency;
-      
+      const paymentCurrency =
+        payments.find((p) => p.id === breakdown[0]?.paymentId)?.currency || quote.currency;
+
       if (refundCurrency !== paymentCurrency) {
         toast({
-          title: "Currency Mismatch",
+          title: 'Currency Mismatch',
           description: `Cannot process refund. Payment was in ${paymentCurrency} but refund is being processed in ${refundCurrency}.`,
-          variant: "destructive"
+          variant: 'destructive',
         });
         setIsProcessing(false);
         return;
@@ -210,23 +237,23 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
 
       // Check if this is an automated gateway refund (PayU or PayPal)
       if (refundMethod === 'original' && breakdown.length === 1) {
-        const gatewayPayment = payments.find(p => p.id === breakdown[0].paymentId);
+        const gatewayPayment = payments.find((p) => p.id === breakdown[0].paymentId);
         const gateway = breakdown[0].gateway || breakdown[0].method;
-        
+
         console.log('Gateway payment for refund:', gatewayPayment);
         console.log('Gateway type:', gateway);
         console.log('Transaction reference:', gatewayPayment?.reference);
-        
+
         if (!gatewayPayment?.reference) {
           console.error('Transaction ID not found!', {
             paymentId: breakdown[0].paymentId,
             payment: gatewayPayment,
-            gateway: gateway
+            gateway: gateway,
           });
           toast({
-            title: "Missing Payment Reference",
+            title: 'Missing Payment Reference',
             description: `Cannot find ${gateway} transaction ID. Please process this refund manually.`,
-            variant: "destructive"
+            variant: 'destructive',
           });
           // Continue with manual refund process
         } else if (gateway === 'payu') {
@@ -235,41 +262,52 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
             console.log('Calling PayU refund with:', {
               paymentId: gatewayPayment.reference,
               amount: amount,
-              refundType: refundType
+              refundType: refundType,
             });
-            
+
             // Call PayU refund Edge Function
-            const { data: refundResult, error: refundError } = await supabase.functions.invoke('payu-refund', {
-              body: {
-                paymentId: gatewayPayment.reference, // PayU transaction ID (mihpayid)
-                amount: amount,
-                refundType: refundType === 'full' ? 'full' : 'partial',
-                reason: reason,
-                notes: internalNotes,
-                quoteId: quote.id,
-                notifyCustomer: true
-              }
-            });
+            const { data: refundResult, error: refundError } = await supabase.functions.invoke(
+              'payu-refund',
+              {
+                body: {
+                  paymentId: gatewayPayment.reference, // PayU transaction ID (mihpayid)
+                  amount: amount,
+                  refundType: refundType === 'full' ? 'full' : 'partial',
+                  reason: reason,
+                  notes: internalNotes,
+                  quoteId: quote.id,
+                  notifyCustomer: true,
+                },
+              },
+            );
 
             if (refundError) {
               throw refundError;
             }
 
             console.log('PayU refund result:', refundResult);
-            
+
             if (refundResult?.success) {
               // PayU refund successful - Edge Function already recorded in database
               // Just refresh the UI and close modal
-              
+
               // Invalidate queries to refresh UI
-              queryClient.invalidateQueries({ queryKey: ['payment-history', quote.id] });
-              queryClient.invalidateQueries({ queryKey: ['all-payments', quote.id] });
-              queryClient.invalidateQueries({ queryKey: ['payment-transaction', quote.id] });
-              queryClient.invalidateQueries({ queryKey: ['payment-ledger', quote.id] });
+              queryClient.invalidateQueries({
+                queryKey: ['payment-history', quote.id],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ['all-payments', quote.id],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ['payment-transaction', quote.id],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ['payment-ledger', quote.id],
+              });
               queryClient.invalidateQueries({ queryKey: ['quotes'] });
 
               toast({
-                title: "PayU Refund Initiated",
+                title: 'PayU Refund Initiated',
                 description: `Successfully initiated PayU refund of ${quote.currency} ${amount.toFixed(2)}. Refund ID: ${refundResult.refundId || refundResult.request_id}`,
               });
 
@@ -281,11 +319,12 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
             }
           } catch (payuError) {
             console.error('PayU refund error:', payuError);
-            const errorMessage = payuError instanceof Error ? payuError.message : 'Failed to process PayU refund';
+            const errorMessage =
+              payuError instanceof Error ? payuError.message : 'Failed to process PayU refund';
             toast({
-              title: "PayU Refund Failed",
-              description: errorMessage + ". Please try again or contact support.",
-              variant: "destructive"
+              title: 'PayU Refund Failed',
+              description: errorMessage + '. Please try again or contact support.',
+              variant: 'destructive',
             });
             setIsProcessing(false);
             return; // Stop here - don't record the refund in database
@@ -295,46 +334,57 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
           try {
             // For PayPal refunds, we need to pass the actual payment transaction ID, not the PayPal order ID
             // The gatewayPayment.id is the payment ledger ID, we need to find the actual payment_transaction
-            
+
             console.log('Finding PayPal payment transaction for refund:', {
               ledgerPaymentId: gatewayPayment.id,
               reference: gatewayPayment.reference,
               amount: amount,
-              currency: 'USD' // PayPal transactions are in USD
+              currency: 'USD', // PayPal transactions are in USD
             });
-            
+
             // Call PayPal refund Edge Function - use the payment ledger ID which will be looked up
-            const { data: refundResult, error: refundError } = await supabase.functions.invoke('paypal-refund', {
-              body: {
-                paymentTransactionId: gatewayPayment.id, // Use payment ledger ID - function will look up the transaction
-                refundAmount: amount,
-                currency: gatewayPayment.currency || 'USD', // Use payment currency, default to USD for PayPal
-                reason: reason,
-                note: internalNotes,
-                quoteId: quote.id,
-                userId: userData.user.id
-              }
-            });
+            const { data: refundResult, error: refundError } = await supabase.functions.invoke(
+              'paypal-refund',
+              {
+                body: {
+                  paymentTransactionId: gatewayPayment.id, // Use payment ledger ID - function will look up the transaction
+                  refundAmount: amount,
+                  currency: gatewayPayment.currency || 'USD', // Use payment currency, default to USD for PayPal
+                  reason: reason,
+                  note: internalNotes,
+                  quoteId: quote.id,
+                  userId: userData.user.id,
+                },
+              },
+            );
 
             if (refundError) {
               throw refundError;
             }
 
             console.log('PayPal refund result:', refundResult);
-            
+
             if (refundResult?.success) {
               // PayPal refund successful - Edge Function already recorded in database
               // Just refresh the UI and close modal
-              
+
               // Invalidate queries to refresh UI
-              queryClient.invalidateQueries({ queryKey: ['payment-history', quote.id] });
-              queryClient.invalidateQueries({ queryKey: ['all-payments', quote.id] });
-              queryClient.invalidateQueries({ queryKey: ['payment-transaction', quote.id] });
-              queryClient.invalidateQueries({ queryKey: ['payment-ledger', quote.id] });
+              queryClient.invalidateQueries({
+                queryKey: ['payment-history', quote.id],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ['all-payments', quote.id],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ['payment-transaction', quote.id],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ['payment-ledger', quote.id],
+              });
               queryClient.invalidateQueries({ queryKey: ['quotes'] });
 
               toast({
-                title: "PayPal Refund Successful",
+                title: 'PayPal Refund Successful',
                 description: `Successfully processed PayPal refund of ${quote.currency} ${amount.toFixed(2)}. Refund ID: ${refundResult.refundId}`,
               });
 
@@ -346,11 +396,14 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
             }
           } catch (paypalError) {
             console.error('PayPal refund error:', paypalError);
-            const errorMessage = paypalError instanceof Error ? paypalError.message : 'Failed to process PayPal refund';
+            const errorMessage =
+              paypalError instanceof Error
+                ? paypalError.message
+                : 'Failed to process PayPal refund';
             toast({
-              title: "PayPal Refund Failed",
-              description: errorMessage + ". Please try again or contact support.",
-              variant: "destructive"
+              title: 'PayPal Refund Failed',
+              description: errorMessage + '. Please try again or contact support.',
+              variant: 'destructive',
             });
             setIsProcessing(false);
             return; // Stop here - don't record the refund in database
@@ -361,29 +414,30 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
       // Create refund record in payment_ledger for manual refunds (non-gateway refunds)
       // Note: PayU refunds are recorded by the Edge Function, not here
       const refundReference = `REF-${Date.now()}`;
-      
+
       // Try to use payment_ledger if it exists
-      let ledgerRecordCreated = false;
+      const _ledgerRecordCreated = false;
       try {
         const { data: refundRecord, error: ledgerError } = await supabase
           .from('payment_ledger')
           .insert({
             quote_id: quote.id,
             payment_type: refundType === 'credit_note' ? 'credit_note' : 'refund',
-            payment_method: refundMethod === 'original' ? breakdown[0]?.method || 'manual' : refundMethod,
+            payment_method:
+              refundMethod === 'original' ? breakdown[0]?.method || 'manual' : refundMethod,
             amount: -amount, // Negative for refunds
             currency: quote.currency,
             status: 'completed',
             payment_date: new Date().toISOString(),
             reference_number: refundReference,
             notes: `${reason} - ${internalNotes}`.trim(),
-            created_by: userData.user.id
+            created_by: userData.user.id,
           })
           .select()
           .single();
-        
+
         if (!ledgerError) {
-          ledgerRecordCreated = true;
+          const _ledgerRecordCreated = true;
           console.log('Payment ledger entry created:', refundRecord.id);
         } else {
           console.error('Payment ledger error:', ledgerError);
@@ -402,29 +456,27 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
             .from('gateway_refunds')
             .select('id')
             .limit(1);
-          
+
           if (!tableCheckError || tableCheckError.code !== '42P01') {
             // Table exists, create the entry
-            await supabase
-              .from('gateway_refunds')
-              .insert({
-                gateway_refund_id: refundReference,
-                gateway_transaction_id: breakdown[0].reference || refundReference,
-                gateway_code: breakdown[0].gateway || 'manual',
-                quote_id: quote.id,
-                refund_amount: amount,
-                original_amount: breakdown[0].amount,
-                currency: quote.currency,
-                refund_type: refundType === 'full' ? 'FULL' : 'PARTIAL',
-                reason_code: 'CUSTOMER_REQUEST',
-                reason_description: reason,
-                admin_notes: internalNotes,
-                status: 'completed',
-                gateway_status: 'COMPLETED',
-                gateway_response: { manual: true, breakdown: breakdown },
-                refund_date: new Date().toISOString(),
-                processed_by: userData.user.id
-              });
+            await supabase.from('gateway_refunds').insert({
+              gateway_refund_id: refundReference,
+              gateway_transaction_id: breakdown[0].reference || refundReference,
+              gateway_code: breakdown[0].gateway || 'manual',
+              quote_id: quote.id,
+              refund_amount: amount,
+              original_amount: breakdown[0].amount,
+              currency: quote.currency,
+              refund_type: refundType === 'full' ? 'FULL' : 'PARTIAL',
+              reason_code: 'CUSTOMER_REQUEST',
+              reason_description: reason,
+              admin_notes: internalNotes,
+              status: 'completed',
+              gateway_status: 'COMPLETED',
+              gateway_response: { manual: true, breakdown: breakdown },
+              refund_date: new Date().toISOString(),
+              processed_by: userData.user.id,
+            });
           }
         } catch (gwError) {
           console.warn('Could not create gateway_refunds entry:', gwError);
@@ -436,8 +488,12 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
         .from('quotes')
         .update({
           amount_paid: quote.amount_paid - amount,
-          payment_status: quote.amount_paid - amount <= 0 ? 'unpaid' : 
-                         quote.amount_paid - amount < quote.final_total ? 'partial' : 'paid'
+          payment_status:
+            quote.amount_paid - amount <= 0
+              ? 'unpaid'
+              : quote.amount_paid - amount < quote.final_total
+                ? 'partial'
+                : 'paid',
         })
         .eq('id', quote.id);
 
@@ -446,41 +502,45 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
       // If credit note, create credit note record (optional)
       if (refundType === 'credit_note') {
         try {
-          await supabase
-            .from('credit_notes')
-            .insert({
-              quote_id: quote.id,
-              credit_amount: amount,
-              currency: quote.currency,
-              reason: reason,
-              notes: internalNotes,
-              status: 'active',
-              created_by: userData.user.id
-            });
+          await supabase.from('credit_notes').insert({
+            quote_id: quote.id,
+            credit_amount: amount,
+            currency: quote.currency,
+            reason: reason,
+            notes: internalNotes,
+            status: 'active',
+            created_by: userData.user.id,
+          });
         } catch (creditError) {
-          console.warn('credit_notes table not available, skipping credit note record:', creditError);
+          console.warn(
+            'credit_notes table not available, skipping credit note record:',
+            creditError,
+          );
         }
       }
 
       // Invalidate queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ['payment-history', quote.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['payment-history', quote.id],
+      });
       queryClient.invalidateQueries({ queryKey: ['all-payments', quote.id] });
-      queryClient.invalidateQueries({ queryKey: ['payment-transaction', quote.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['payment-transaction', quote.id],
+      });
 
       toast({
-        title: "Refund Processed",
+        title: 'Refund Processed',
         description: `Successfully processed ${refundType} refund of ${quote.currency} ${amount.toFixed(2)}`,
       });
 
       onClose();
-
     } catch (error) {
       console.error('Error processing refund:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to process refund';
       toast({
-        title: "Refund Failed",
-        description: errorMessage + ". Please try again.",
-        variant: "destructive"
+        title: 'Refund Failed',
+        description: errorMessage + '. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsProcessing(false);
@@ -498,12 +558,13 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
         </DialogHeader>
 
         {/* Suspicious Amount Warning */}
-        {payments.some(p => isSuspiciousAmount(p)) && (
+        {payments.some((p) => isSuspiciousAmount(p)) && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Warning:</strong> Some payments show amounts that may have been recorded incorrectly 
-              (e.g., INR amount stored as USD). Please verify the actual payment amounts before processing refunds.
+              <strong>Warning:</strong> Some payments show amounts that may have been recorded
+              incorrectly (e.g., INR amount stored as USD). Please verify the actual payment amounts
+              before processing refunds.
             </AlertDescription>
           </Alert>
         )}
@@ -514,25 +575,33 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Total Paid</p>
-                <p className="font-semibold">{quote.currency} {quote.amount_paid.toFixed(2)}</p>
+                <p className="font-semibold">
+                  {quote.currency} {quote.amount_paid.toFixed(2)}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Max Refundable</p>
-                <p className="font-semibold text-orange-600">{quote.currency} {maxRefundable.toFixed(2)}</p>
+                <p className="font-semibold text-orange-600">
+                  {quote.currency} {maxRefundable.toFixed(2)}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Payment Methods & Currencies</p>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {[...new Set(payments.map(p => p.method))].map(method => (
+                  {[...new Set(payments.map((p) => p.method))].map((method) => (
                     <Badge key={method} variant="outline" className="text-xs">
                       {method}
                     </Badge>
                   ))}
                   {/* Show unique currencies if different from quote currency */}
-                  {[...new Set(payments.map(p => p.currency || quote.currency))]
-                    .filter(curr => curr !== quote.currency)
-                    .map(curr => (
-                      <Badge key={curr} variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                  {[...new Set(payments.map((p) => p.currency || quote.currency))]
+                    .filter((curr) => curr !== quote.currency)
+                    .map((curr) => (
+                      <Badge
+                        key={curr}
+                        variant="secondary"
+                        className="text-xs bg-blue-100 text-blue-800"
+                      >
                         {curr}
                       </Badge>
                     ))}
@@ -548,15 +617,21 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
               <div className="grid grid-cols-3 gap-4 mt-2">
                 <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                   <RadioGroupItem value="full" id="full" />
-                  <Label htmlFor="full" className="cursor-pointer">Full Refund</Label>
+                  <Label htmlFor="full" className="cursor-pointer">
+                    Full Refund
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                   <RadioGroupItem value="partial" id="partial" />
-                  <Label htmlFor="partial" className="cursor-pointer">Partial Refund</Label>
+                  <Label htmlFor="partial" className="cursor-pointer">
+                    Partial Refund
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                   <RadioGroupItem value="credit_note" id="credit_note" />
-                  <Label htmlFor="credit_note" className="cursor-pointer">Credit Note</Label>
+                  <Label htmlFor="credit_note" className="cursor-pointer">
+                    Credit Note
+                  </Label>
                 </div>
               </div>
             </RadioGroup>
@@ -599,68 +674,77 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
                 </AlertDescription>
               </Alert>
             ) : (
-            <div className="space-y-2 mt-2">
-              {payments.map(payment => (
-                <div
-                  key={payment.id}
-                  className={`p-3 border rounded-lg ${
-                    !payment.canRefund ? 'opacity-50' : 'cursor-pointer hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedPayments.includes(payment.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedPayments([...selectedPayments, payment.id]);
-                          } else {
-                            setSelectedPayments(selectedPayments.filter(id => id !== payment.id));
-                          }
-                        }}
-                        disabled={!payment.canRefund || refundType === 'full'}
-                        className="cursor-pointer"
-                      />
-                      <div className="flex items-center gap-2">
-                        {getPaymentIcon(payment.method)}
-                        <div>
-                          <div className="text-sm font-medium flex items-center gap-2">
-                            <span>{payment.gateway} - </span>
-                            <span className="font-bold">
-                              {payment.currency || quote.currency} {payment.amount.toFixed(2)}
-                            </span>
-                            {(payment.currency && payment.currency !== quote.currency) && (
-                              <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
-                                Different Currency
-                              </Badge>
-                            )}
-                            {((payment.gateway === 'payu' || payment.method === 'payu' || payment.gateway === 'paypal' || payment.method === 'paypal') && payment.canRefund) && (
-                              <Badge variant="success" className="text-xs">
-                                Auto-refund available
-                              </Badge>
-                            )}
-                            {isSuspiciousAmount(payment) && (
-                              <Badge variant="destructive" className="text-xs">
-                                ⚠️ Amount mismatch
-                              </Badge>
-                            )}
+              <div className="space-y-2 mt-2">
+                {payments.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className={`p-3 border rounded-lg ${
+                      !payment.canRefund ? 'opacity-50' : 'cursor-pointer hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedPayments.includes(payment.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedPayments([...selectedPayments, payment.id]);
+                            } else {
+                              setSelectedPayments(
+                                selectedPayments.filter((id) => id !== payment.id),
+                              );
+                            }
+                          }}
+                          disabled={!payment.canRefund || refundType === 'full'}
+                          className="cursor-pointer"
+                        />
+                        <div className="flex items-center gap-2">
+                          {getPaymentIcon(payment.method)}
+                          <div>
+                            <div className="text-sm font-medium flex items-center gap-2">
+                              <span>{payment.gateway} - </span>
+                              <span className="font-bold">
+                                {payment.currency || quote.currency} {payment.amount.toFixed(2)}
+                              </span>
+                              {payment.currency && payment.currency !== quote.currency && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs bg-orange-50 text-orange-700 border-orange-200"
+                                >
+                                  Different Currency
+                                </Badge>
+                              )}
+                              {(payment.gateway === 'payu' ||
+                                payment.method === 'payu' ||
+                                payment.gateway === 'paypal' ||
+                                payment.method === 'paypal') &&
+                                payment.canRefund && (
+                                  <Badge variant="success" className="text-xs">
+                                    Auto-refund available
+                                  </Badge>
+                                )}
+                              {isSuspiciousAmount(payment) && (
+                                <Badge variant="destructive" className="text-xs">
+                                  ⚠️ Amount mismatch
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Ref: {payment.reference} • {payment.date.toLocaleDateString()}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Ref: {payment.reference} • {payment.date.toLocaleDateString()}
-                          </p>
                         </div>
                       </div>
+                      {!payment.canRefund && (
+                        <Badge variant="secondary" className="text-xs">
+                          Non-refundable
+                        </Badge>
+                      )}
                     </div>
-                    {!payment.canRefund && (
-                      <Badge variant="secondary" className="text-xs">
-                        Non-refundable
-                      </Badge>
-                    )}
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
             )}
           </div>
 
@@ -668,7 +752,10 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
           {refundType !== 'credit_note' && (
             <div>
               <Label htmlFor="refund-method">Refund Method</Label>
-              <Select value={refundMethod} onValueChange={(v) => setRefundMethod(v as RefundMethod)}>
+              <Select
+                value={refundMethod}
+                onValueChange={(v) => setRefundMethod(v as RefundMethod)}
+              >
                 <SelectTrigger id="refund-method" className="mt-2">
                   <SelectValue />
                 </SelectTrigger>
@@ -716,23 +803,25 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
 
           {/* Gateway Auto-Refund Notice */}
           {(() => {
-            const breakdown = refundAmount && selectedPayments.length > 0 
-              ? calculateRefundBreakdown() 
-              : [];
+            const breakdown =
+              refundAmount && selectedPayments.length > 0 ? calculateRefundBreakdown() : [];
             const gateway = breakdown.length === 1 ? breakdown[0]?.gateway : null;
-            const isAutoRefund = refundMethod === 'original' && breakdown.length === 1 && 
+            const isAutoRefund =
+              refundMethod === 'original' &&
+              breakdown.length === 1 &&
               (gateway === 'payu' || gateway === 'paypal');
-            
+
             if (isAutoRefund) {
               const refundTimeline = gateway === 'payu' ? '5-7 business days' : '3-5 business days';
               const gatewayName = gateway === 'payu' ? 'PayU' : 'PayPal';
-              
+
               return (
                 <Alert className="border-green-200 bg-green-50">
                   <CheckCircle className="h-4 w-4 text-green-600" />
                   <AlertDescription className="text-green-800">
-                    <strong>Automatic {gatewayName} Refund Available!</strong> This refund will be automatically processed through {gatewayName}'s API. 
-                    The customer will receive the refund to their original payment method within {refundTimeline}.
+                    <strong>Automatic {gatewayName} Refund Available!</strong> This refund will be
+                    automatically processed through {gatewayName}'s API. The customer will receive
+                    the refund to their original payment method within {refundTimeline}.
                   </AlertDescription>
                 </Alert>
               );
@@ -750,7 +839,9 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
                   {calculateRefundBreakdown().map((item, index) => (
                     <div key={index} className="flex justify-between">
                       <span>{item.gateway}</span>
-                      <span>{quote.currency} {item.amount.toFixed(2)}</span>
+                      <span>
+                        {quote.currency} {item.amount.toFixed(2)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -774,19 +865,20 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
                 parsedAmount: parseFloat(refundAmount),
                 amountExceedsMax: parseFloat(refundAmount) > maxRefundable,
                 amountIsZeroOrNegative: parseFloat(refundAmount) <= 0,
-                isDisabled: isProcessing ||
-                  !refundAmount || 
-                  !selectedPayments.length || 
+                isDisabled:
+                  isProcessing ||
+                  !refundAmount ||
+                  !selectedPayments.length ||
                   !reason ||
                   parseFloat(refundAmount) > maxRefundable ||
-                  parseFloat(refundAmount) <= 0
+                  parseFloat(refundAmount) <= 0,
               });
               processRefund();
             }}
             disabled={
               isProcessing ||
-              !refundAmount || 
-              !selectedPayments.length || 
+              !refundAmount ||
+              !selectedPayments.length ||
               !reason ||
               parseFloat(refundAmount) > maxRefundable ||
               parseFloat(refundAmount) <= 0

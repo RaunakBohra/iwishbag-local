@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Camera, Upload, Check } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Camera, Upload, Check } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import imageCompression from 'browser-image-compression';
 import {
   Dialog,
@@ -12,7 +12,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 
 interface PaymentProofButtonProps {
   quoteId: string;
@@ -20,11 +20,7 @@ interface PaymentProofButtonProps {
   recipientId?: string | null;
 }
 
-export const PaymentProofButton = ({ 
-  quoteId, 
-  orderId,
-  recipientId 
-}: PaymentProofButtonProps) => {
+export const PaymentProofButton = ({ quoteId, orderId, recipientId }: PaymentProofButtonProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -34,13 +30,14 @@ export const PaymentProofButton = ({
 
   const uploadProofMutation = useMutation({
     mutationFn: async (file: File) => {
-      if (!user) throw new Error('Authentication required. Please sign in to upload payment proof.');
-      
+      if (!user)
+        throw new Error('Authentication required. Please sign in to upload payment proof.');
+
       setUploading(true);
-      
+
       try {
         let fileToUpload = file;
-        
+
         // Only compress images, not PDFs
         if (file.type.startsWith('image/')) {
           const options = {
@@ -48,12 +45,14 @@ export const PaymentProofButton = ({
             maxWidthOrHeight: 2048,
             useWebWorker: true,
             fileType: file.type as 'image/jpeg' | 'image/png' | 'image/webp',
-            initialQuality: 0.85
+            initialQuality: 0.85,
           };
-          
+
           try {
             fileToUpload = await imageCompression(file, options);
-            console.log(`Payment proof - Original: ${(file.size / 1024 / 1024).toFixed(2)}MB, Compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
+            console.log(
+              `Payment proof - Original: ${(file.size / 1024 / 1024).toFixed(2)}MB, Compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`,
+            );
           } catch (compressionError) {
             console.error('Image compression failed, using original:', compressionError);
             // Continue with original file if compression fails
@@ -64,16 +63,16 @@ export const PaymentProofButton = ({
         // Upload file with retry logic
         const fileExt = file.name.split('.').pop();
         const fileName = `payment-proof-${user.id}-${Date.now()}.${fileExt}`;
-        
+
         let uploadAttempts = 0;
         const maxAttempts = 3;
         let uploadError: Error | null = null;
-        
+
         while (uploadAttempts < maxAttempts) {
           const { error } = await supabase.storage
             .from('message-attachments')
             .upload(fileName, fileToUpload);
-          
+
           if (!error) {
             uploadError = null;
             break;
@@ -82,33 +81,31 @@ export const PaymentProofButton = ({
             uploadAttempts++;
             if (uploadAttempts < maxAttempts) {
               // Wait before retry
-              await new Promise(resolve => setTimeout(resolve, 1000 * uploadAttempts));
+              await new Promise((resolve) => setTimeout(resolve, 1000 * uploadAttempts));
             }
           }
         }
-        
+
         if (uploadError) {
           throw new Error(`Upload failed after ${maxAttempts} attempts: ${uploadError.message}`);
         }
-        
+
         const { data: urlData } = supabase.storage
           .from('message-attachments')
           .getPublicUrl(fileName);
 
         // Create message with payment proof
-        const { error: messageError } = await supabase
-          .from('messages')
-          .insert({
-            sender_id: user.id,
-            recipient_id: recipientId,
-            quote_id: quoteId,
-            subject: `Payment Proof for Order ${orderId}`,
-            content: `Payment proof uploaded for Order #${orderId}`,
-            attachment_url: urlData.publicUrl,
-            attachment_file_name: file.name,
-            message_type: 'payment_proof',
-            verification_status: 'pending' // Ensure new submissions are marked as pending
-          });
+        const { error: messageError } = await supabase.from('messages').insert({
+          sender_id: user.id,
+          recipient_id: recipientId,
+          quote_id: quoteId,
+          subject: `Payment Proof for Order ${orderId}`,
+          content: `Payment proof uploaded for Order #${orderId}`,
+          attachment_url: urlData.publicUrl,
+          attachment_file_name: file.name,
+          message_type: 'payment_proof',
+          verification_status: 'pending', // Ensure new submissions are marked as pending
+        });
 
         if (messageError) {
           throw new Error(`Failed to save payment proof record: ${messageError.message}`);
@@ -121,7 +118,7 @@ export const PaymentProofButton = ({
           console.warn('Admin notification failed:', notifyError);
           // Don't throw error for notification failure
         }
-        
+
         return { success: true };
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -135,18 +132,18 @@ export const PaymentProofButton = ({
       setShowSuccess(true);
       queryClient.invalidateQueries({ queryKey: ['messages', quoteId] });
       toast({
-        title: "Payment proof uploaded!",
-        description: "Your payment proof has been sent to our team for verification.",
+        title: 'Payment proof uploaded!',
+        description: 'Your payment proof has been sent to our team for verification.',
       });
-      
+
       // Hide success dialog after 3 seconds
       setTimeout(() => setShowSuccess(false), 3000);
     },
     onError: (error) => {
       toast({
-        title: "Upload failed",
-        description: error.message || "Failed to upload payment proof. Please try again.",
-        variant: "destructive",
+        title: 'Upload failed',
+        description: error.message || 'Failed to upload payment proof. Please try again.',
+        variant: 'destructive',
       });
     },
   });
@@ -159,19 +156,19 @@ export const PaymentProofButton = ({
         .from('profiles')
         .select('id, email')
         .eq('role', 'admin');
-      
+
       if (adminError) throw adminError;
-      
+
       // Create notification for each admin
       if (admins && admins.length > 0) {
-        const notifications = admins.map(admin => ({
+        const notifications = admins.map((admin) => ({
           user_id: admin.id,
           title: 'New Payment Proof Uploaded',
           message: `Payment proof has been uploaded for Order #${orderId}`,
           type: 'payment_proof',
-          data: { orderId, quoteId }
+          data: { orderId, quoteId },
         }));
-        
+
         // In a real implementation, you would insert these notifications
         // For now, we'll log them
         console.log('Admin notifications created:', notifications);
@@ -190,11 +187,11 @@ export const PaymentProofButton = ({
 
     // Validate file type - allow both images and PDFs for receipts
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
-    if (!allowedTypes.some(type => file.type.includes(type))) {
+    if (!allowedTypes.some((type) => file.type.includes(type))) {
       toast({
-        title: "Invalid file type",
-        description: "Please upload an image file (JPG, PNG, WebP) or PDF document",
-        variant: "destructive",
+        title: 'Invalid file type',
+        description: 'Please upload an image file (JPG, PNG, WebP) or PDF document',
+        variant: 'destructive',
       });
       return;
     }
@@ -204,9 +201,9 @@ export const PaymentProofButton = ({
     if (file.size > maxSize) {
       const maxSizeMB = file.type === 'application/pdf' ? '15MB' : '10MB';
       toast({
-        title: "File too large",
+        title: 'File too large',
         description: `Please select a file smaller than ${maxSizeMB}`,
-        variant: "destructive",
+        variant: 'destructive',
       });
       return;
     }
@@ -214,9 +211,9 @@ export const PaymentProofButton = ({
     // Check if user is authenticated before proceeding
     if (!user) {
       toast({
-        title: "Authentication required",
-        description: "Please sign in to upload payment proof",
-        variant: "destructive",
+        title: 'Authentication required',
+        description: 'Please sign in to upload payment proof',
+        variant: 'destructive',
       });
       return;
     }
@@ -244,7 +241,7 @@ export const PaymentProofButton = ({
           </>
         )}
       </Button>
-      
+
       <input
         ref={fileInputRef}
         type="file"
@@ -262,8 +259,8 @@ export const PaymentProofButton = ({
               Payment Proof Uploaded
             </DialogTitle>
             <DialogDescription>
-              Your payment proof has been successfully uploaded and sent to our team for verification. 
-              You will receive an email once your payment is confirmed.
+              Your payment proof has been successfully uploaded and sent to our team for
+              verification. You will receive an email once your payment is confirmed.
             </DialogDescription>
           </DialogHeader>
         </DialogContent>

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Truck, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryOption } from '@/types/shipping';
-import { formatDualCurrency, getCountryCurrency } from '@/lib/currencyUtils';
+import { formatDualCurrency } from '@/lib/currencyUtils';
 
 interface DeliveryOptionsDisplayProps {
   routeId: number;
@@ -13,11 +13,11 @@ interface DeliveryOptionsDisplayProps {
   exchangeRate?: number;
 }
 
-export const DeliveryOptionsDisplay = ({ 
-  routeId, 
-  purchaseCountry = 'US', 
-  deliveryCountry = 'US', 
-  exchangeRate 
+export const DeliveryOptionsDisplay = ({
+  routeId,
+  purchaseCountry = 'US',
+  deliveryCountry = 'US',
+  exchangeRate,
 }: DeliveryOptionsDisplayProps) => {
   const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +38,7 @@ export const DeliveryOptionsDisplay = ({
         }
 
         if (data?.delivery_options) {
-          const options = Array.isArray(data.delivery_options) 
+          const options = Array.isArray(data.delivery_options)
             ? data.delivery_options.filter((opt: DeliveryOption) => opt.active)
             : [];
           setDeliveryOptions(options);
@@ -66,11 +66,7 @@ export const DeliveryOptionsDisplay = ({
   }
 
   if (error) {
-    return (
-      <div className="text-sm text-red-600">
-        Error loading delivery options: {error}
-      </div>
-    );
+    return <div className="text-sm text-red-600">Error loading delivery options: {error}</div>;
   }
 
   if (!deliveryOptions || deliveryOptions.length === 0) {
@@ -98,14 +94,22 @@ export const DeliveryOptionsDisplay = ({
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    <span>{option.min_days}-{option.max_days} days</span>
+                    <span>
+                      {option.min_days}-{option.max_days} days
+                    </span>
                   </div>
                   <div className="flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
                     {(() => {
-                      const dualCurrency = formatDualCurrency(option.price, purchaseCountry, deliveryCountry, exchangeRate);
-                      const showDualCurrency = purchaseCountry !== deliveryCountry && exchangeRate && exchangeRate !== 1;
-                      
+                      const dualCurrency = formatDualCurrency(
+                        option.price,
+                        purchaseCountry,
+                        deliveryCountry,
+                        exchangeRate,
+                      );
+                      const showDualCurrency =
+                        purchaseCountry !== deliveryCountry && exchangeRate && exchangeRate !== 1;
+
                       return showDualCurrency ? (
                         <div className="text-xs">
                           <div>{dualCurrency.purchase}</div>
@@ -124,4 +128,4 @@ export const DeliveryOptionsDisplay = ({
       ))}
     </div>
   );
-}; 
+};

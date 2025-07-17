@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug eSewa Backend</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Debug eSewa Backend Response</h1>
+    
+    <div class="debug-section">
+        <h3>Test Backend Response</h3>
+        <button onclick="testBackend()">Test Backend eSewa Creation</button>
+        <div id="backendResult"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Compare with Working Test</h3>
+        <div id="comparison"></div>
+    </div>
+
+    <script>
+        async function testBackend() {
+            const resultDiv = document.getElementById('backendResult');
+            const comparisonDiv = document.getElementById('comparison');
+            
+            resultDiv.innerHTML = '<p>Testing backend...</p>';
+            
+            try {
+                // Call create-payment endpoint
+                const response = await fetch('/functions/v1/create-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        quoteIds: ['test-quote-id'],
+                        gateway: 'esewa',
+                        amount: 100,
+                        currency: 'NPR',
+                        success_url: window.location.origin + '/payment-callback/esewa-success',
+                        cancel_url: window.location.origin + '/payment-callback/esewa-failure',
+                        customerInfo: {
+                            name: 'Test Customer',
+                            email: 'test@example.com',
+                            phone: '9806800001'
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Display backend response
+                resultDiv.innerHTML = `
+                    <h4>Backend Response:</h4>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                // Compare with working test
+                const expectedUrl = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+                const expectedSignedFields = 'total_amount,transaction_uuid,product_code,';
+                
+                if (data.success && data.formData) {
+                    const checks = {
+                        url_correct: data.url === expectedUrl,
+                        method_correct: data.method === 'POST',
+                        signed_fields_correct: data.formData.signed_field_names === expectedSignedFields,
+                        has_signature: !!data.formData.signature,
+                        has_transaction_uuid: !!data.formData.transaction_uuid,
+                        has_product_code: !!data.formData.product_code,
+                        has_total_amount: !!data.formData.total_amount,
+                        amount_is_number: !isNaN(Number(data.formData.total_amount))
+                    };
+                    
+                    const allPassed = Object.values(checks).every(check => check === true);
+                    
+                    comparisonDiv.innerHTML = `
+                        <h4>Validation Results:</h4>
+                        <div class="${allPassed ? 'success' : 'error'}">
+                            <strong>Overall Status: ${allPassed ? 'PASS' : 'FAIL'}</strong>
+                        </div>
+                        <ul>
+                            ${Object.entries(checks).map(([key, passed]) => 
+                                `<li class="${passed ? 'success' : 'error'}">
+                                    ${key.replace(/_/g, ' ').toUpperCase()}: ${passed ? 'PASS' : 'FAIL'}
+                                </li>`
+                            ).join('')}
+                        </ul>
+                        
+                        <h4>Expected vs Actual:</h4>
+                        <table border="1" style="border-collapse: collapse; width: 100%;">
+                            <tr>
+                                <th>Field</th>
+                                <th>Expected</th>
+                                <th>Actual</th>
+                                <th>Match</th>
+                            </tr>
+                            <tr>
+                                <td>URL</td>
+                                <td>${expectedUrl}</td>
+                                <td>${data.url || 'MISSING'}</td>
+                                <td class="${checks.url_correct ? 'success' : 'error'}">${checks.url_correct ? '✓' : '✗'}</td>
+                            </tr>
+                            <tr>
+                                <td>Method</td>
+                                <td>POST</td>
+                                <td>${data.method || 'MISSING'}</td>
+                                <td class="${checks.method_correct ? 'success' : 'error'}">${checks.method_correct ? '✓' : '✗'}</td>
+                            </tr>
+                            <tr>
+                                <td>Signed Fields</td>
+                                <td>${expectedSignedFields}</td>
+                                <td>${data.formData?.signed_field_names || 'MISSING'}</td>
+                                <td class="${checks.signed_fields_correct ? 'success' : 'error'}">${checks.signed_fields_correct ? '✓' : '✗'}</td>
+                            </tr>
+                        </table>
+                    `;
+                    
+                    if (allPassed) {
+                        // Create test form
+                        const testForm = document.createElement('form');
+                        testForm.method = 'POST';
+                        testForm.action = data.url;
+                        testForm.target = '_blank';
+                        
+                        Object.entries(data.formData).forEach(([key, value]) => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = key;
+                            input.value = String(value);
+                            testForm.appendChild(input);
+                        });
+                        
+                        const submitBtn = document.createElement('button');
+                        submitBtn.type = 'submit';
+                        submitBtn.textContent = 'Test eSewa Payment (Backend Generated)';
+                        submitBtn.style.margin = '10px 0';
+                        submitBtn.style.padding = '10px 20px';
+                        submitBtn.style.backgroundColor = '#28a745';
+                        submitBtn.style.color = 'white';
+                        submitBtn.style.border = 'none';
+                        submitBtn.style.cursor = 'pointer';
+                        submitBtn.style.borderRadius = '4px';
+                        testForm.appendChild(submitBtn);
+                        
+                        comparisonDiv.appendChild(testForm);
+                    }
+                } else {
+                    comparisonDiv.innerHTML = `
+                        <div class="error">
+                            <strong>Backend Response Error:</strong>
+                            <p>${data.error || 'Unknown error'}</p>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>Request Error:</strong>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

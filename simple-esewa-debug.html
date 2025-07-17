@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple eSewa Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; margin: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Simple eSewa Debug</h1>
+    
+    <div class="section">
+        <h3>Test 1: Direct Form (Like your working test)</h3>
+        <button id="btn1">Test Direct Form</button>
+        <div id="result1"></div>
+    </div>
+    
+    <div class="section">
+        <h3>Test 2: Hidden Form (Like checkout)</h3>
+        <button id="btn2">Test Hidden Form</button>
+        <div id="result2"></div>
+    </div>
+    
+    <div class="section">
+        <h3>Test 3: New Window (Current fix)</h3>
+        <button id="btn3">Test New Window</button>
+        <div id="result3"></div>
+    </div>
+
+    <script>
+        function createFormData() {
+            const currentTime = new Date();
+            const transactionUuid = currentTime.toISOString().slice(2, 10).replace(/-/g, '') + '-' + 
+                                  currentTime.getHours() + currentTime.getMinutes() + currentTime.getSeconds();
+            
+            return {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: transactionUuid,
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code',
+                signature: 'placeholder_signature'
+            };
+        }
+        
+        // Test 1: Direct Form
+        document.getElementById('btn1').addEventListener('click', function() {
+            const resultDiv = document.getElementById('result1');
+            resultDiv.innerHTML = '<p>Testing direct form...</p>';
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.target = '_blank';
+            
+            const formData = createFormData();
+            
+            Object.entries(formData).forEach(function(entry) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = entry[0];
+                input.value = entry[1];
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            
+            resultDiv.innerHTML = '<div class="success"><p>✅ Direct form created</p><p>Method: ' + form.method + '</p><p>Action: ' + form.action + '</p><p>Fields: ' + form.elements.length + '</p></div>';
+            
+            setTimeout(function() {
+                form.submit();
+                resultDiv.innerHTML += '<p>✅ Form submitted</p>';
+            }, 1000);
+        });
+        
+        // Test 2: Hidden Form
+        document.getElementById('btn2').addEventListener('click', function() {
+            const resultDiv = document.getElementById('result2');
+            resultDiv.innerHTML = '<p>Testing hidden form...</p>';
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.target = '_blank';
+            form.style.display = 'none';
+            
+            const formData = createFormData();
+            
+            Object.entries(formData).forEach(function(entry) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = entry[0];
+                input.value = entry[1];
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            
+            resultDiv.innerHTML = '<div class="success"><p>✅ Hidden form created</p><p>Method: ' + form.method + '</p><p>Action: ' + form.action + '</p><p>Display: ' + form.style.display + '</p><p>Fields: ' + form.elements.length + '</p></div>';
+            
+            setTimeout(function() {
+                try {
+                    form.submit();
+                    resultDiv.innerHTML += '<p>✅ Form submitted via form.submit()</p>';
+                } catch (error) {
+                    resultDiv.innerHTML += '<p class="error">❌ form.submit() failed: ' + error.message + '</p>';
+                }
+            }, 1000);
+        });
+        
+        // Test 3: New Window
+        document.getElementById('btn3').addEventListener('click', function() {
+            const resultDiv = document.getElementById('result3');
+            resultDiv.innerHTML = '<p>Testing new window...</p>';
+            
+            const formData = createFormData();
+            
+            let formInputs = '';
+            Object.entries(formData).forEach(function(entry) {
+                formInputs += '<input type="hidden" name="' + entry[0] + '" value="' + entry[1] + '">';
+            });
+            
+            const formHTML = '<!DOCTYPE html>' +
+                            '<html>' +
+                            '<head><title>eSewa Payment</title></head>' +
+                            '<body>' +
+                            '<div>Redirecting to eSewa...</div>' +
+                            '<form id="esewaForm" method="POST" action="https://rc-epay.esewa.com.np/api/epay/main/v2/form" style="display: none;">' +
+                            formInputs +
+                            '</form>' +
+                            '<script>' +
+                            'console.log("Form created in new window");' +
+                            'console.log("Method:", document.getElementById("esewaForm").method);' +
+                            'console.log("Action:", document.getElementById("esewaForm").action);' +
+                            'setTimeout(function() { document.getElementById("esewaForm").submit(); }, 100);' +
+                            '</script>' +
+                            '</body>' +
+                            '</html>';
+            
+            const paymentWindow = window.open('', '_blank', 'width=800,height=600');
+            if (paymentWindow) {
+                paymentWindow.document.write(formHTML);
+                paymentWindow.document.close();
+                
+                resultDiv.innerHTML = '<div class="success"><p>✅ New window created</p><p>Form will submit in new window</p></div>';
+            } else {
+                resultDiv.innerHTML = '<div class="error"><p>❌ Failed to open new window</p><p>Check if pop-ups are blocked</p></div>';
+            }
+        });
+    </script>
+</body>
+</html>

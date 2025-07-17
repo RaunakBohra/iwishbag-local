@@ -7,4 +7,4 @@ export default function ShippingRoutesPage() {
       <ShippingRouteManager />
     </div>
   );
-} 
+}

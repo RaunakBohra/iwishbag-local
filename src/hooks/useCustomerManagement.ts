@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface CustomerProfile {
   id: string;
@@ -32,26 +32,13 @@ export const useCustomerManagement = () => {
     queryFn: async () => {
       try {
         console.log('[CustomerManagement] Using direct database query...');
-        
+
         // Direct database query to get profiles with addresses
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
-          .select(`
-            id,
-            full_name,
-            cod_enabled,
-            internal_notes,
-            created_at,
-            user_addresses (
-              id,
-              address_line1,
-              address_line2,
-              city,
-              country,
-              postal_code,
-              is_default
-            )
-          `);
+          .select(
+            'id, full_name, cod_enabled, internal_notes, created_at, user_addresses(id, address_line1, address_line2, city, country, postal_code, is_default)',
+          );
 
         if (profilesError) {
           console.error('[CustomerManagement] Direct query error:', profilesError);
@@ -61,15 +48,18 @@ export const useCustomerManagement = () => {
         console.log('[CustomerManagement] Raw profiles data:', profiles);
 
         // Use mock emails for now to test the full_name field
-        const customersWithEmails = profiles?.map(profile => {
-          const email = `user-${profile.id}@example.com`;
-          console.log(`[CustomerManagement] Profile ${profile.id}: full_name="${profile.full_name}", email="${email}"`);
-          
-          return {
-            ...profile,
-            email
-          };
-        }) || [];
+        const customersWithEmails =
+          profiles?.map((profile) => {
+            const email = `user-${profile.id}@example.com`;
+            console.log(
+              `[CustomerManagement] Profile ${profile.id}: full_name="${profile.full_name}", email="${email}"`,
+            );
+
+            return {
+              ...profile,
+              email,
+            };
+          }) || [];
 
         console.log('[CustomerManagement] Final customers data:', customersWithEmails);
         return customersWithEmails;
@@ -77,7 +67,7 @@ export const useCustomerManagement = () => {
         console.error('[CustomerManagement] Error fetching customers:', error);
         throw error;
       }
-    }
+    },
   });
 
   const updateCodMutation = useMutation({
@@ -87,25 +77,25 @@ export const useCustomerManagement = () => {
         .update({ cod_enabled: codEnabled })
         .eq('id', userId)
         .select();
-      
+
       if (error) {
         throw error;
       }
-      
+
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
       toast({
-        title: "Success",
-        description: "COD status updated successfully",
+        title: 'Success',
+        description: 'COD status updated successfully',
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to update COD status",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to update COD status',
+        variant: 'destructive',
       });
     },
   });
@@ -121,15 +111,15 @@ export const useCustomerManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
       toast({
-        title: "Success",
-        description: "Internal notes updated successfully",
+        title: 'Success',
+        description: 'Internal notes updated successfully',
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to update internal notes",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update internal notes',
+        variant: 'destructive',
       });
       console.error('Notes update error:', error);
     },
@@ -146,15 +136,15 @@ export const useCustomerManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
       toast({
-        title: "Success",
-        description: "Customer name updated successfully",
+        title: 'Success',
+        description: 'Customer name updated successfully',
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to update customer name",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update customer name',
+        variant: 'destructive',
       });
       console.error('Profile update error:', error);
     },
@@ -165,6 +155,6 @@ export const useCustomerManagement = () => {
     isLoading,
     updateCodMutation,
     updateNotesMutation,
-    updateProfileMutation
+    updateProfileMutation,
   };
 };

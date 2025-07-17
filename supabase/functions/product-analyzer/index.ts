@@ -1,27 +1,30 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createCorsHeaders } from '../_shared/cors.ts';
-serve(async (req)=>{
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
-      headers: createCorsHeaders(req)
+      headers: createCorsHeaders(req),
     });
   }
   try {
     const { url, productName } = await req.json();
     if (!url) {
-      return new Response(JSON.stringify({
-        error: 'URL is required'
-      }), {
-        status: 400,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      });
+      return new Response(
+        JSON.stringify({
+          error: 'URL is required',
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
     }
     // Get ScraperAPI key from environment
-    let scraperApiKey = "33a27d4eb3da57503b7819845dca495e";
+    const scraperApiKey = '33a27d4eb3da57503b7819845dca495e';
     // Uncomment below for production:
     // let scraperApiKey = Deno.env.get('SCRAPER_API_KEY');
     console.log('ScraperAPI key found:', !!scraperApiKey);
@@ -32,22 +35,25 @@ serve(async (req)=>{
         status: 200,
         headers: {
           ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
     }
     // Detect platform
     const platform = detectPlatform(url);
     if (!platform) {
-      return new Response(JSON.stringify({
-        error: 'Unsupported platform. Currently supporting Amazon and eBay.'
-      }), {
-        status: 400,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      });
+      return new Response(
+        JSON.stringify({
+          error: 'Unsupported platform. Currently supporting Amazon and eBay.',
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
     }
     // Use ScraperAPI to get real data
     const analysis = await scrapeProduct(url, platform, scraperApiKey);
@@ -55,21 +61,24 @@ serve(async (req)=>{
       status: 200,
       headers: {
         ...createCorsHeaders(req),
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     });
   } catch (error) {
     console.error('Product analysis error:', error);
-    return new Response(JSON.stringify({
-      error: 'Internal server error',
-      details: error.message
-    }), {
-      status: 500,
-      headers: {
-        ...createCorsHeaders(req),
-        'Content-Type': 'application/json'
-      }
-    });
+    return new Response(
+      JSON.stringify({
+        error: 'Internal server error',
+        details: error.message,
+      }),
+      {
+        status: 500,
+        headers: {
+          ...createCorsHeaders(req),
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
 });
 function detectPlatform(url) {
@@ -78,7 +87,7 @@ function detectPlatform(url) {
     if (hostname.includes('amazon')) return 'amazon';
     if (hostname.includes('ebay')) return 'ebay';
     return null;
-  } catch  {
+  } catch {
     return null;
   }
 }
@@ -91,9 +100,9 @@ async function scrapeProduct(url, platform, apiKey) {
     const response = await fetch(scraperUrl, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+        Accept: 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
     });
     if (!response.ok) {
       throw new Error(`ScraperAPI request failed: ${response.status} ${response.statusText}`);
@@ -103,7 +112,9 @@ async function scrapeProduct(url, platform, apiKey) {
     console.log(`ScraperAPI response preview: ${responseText.substring(0, 200)}...`);
     // Check if response is HTML instead of JSON
     if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
-      console.error('ScraperAPI returned HTML instead of JSON. Amazon may be blocking the request.');
+      console.error(
+        'ScraperAPI returned HTML instead of JSON. Amazon may be blocking the request.',
+      );
       throw new Error('ScraperAPI returned HTML - Amazon blocking detected');
     }
     let data;
@@ -139,11 +150,11 @@ function parseScrapedData(data, platform, originalUrl) {
     dimensions: {
       length: 10,
       width: 5,
-      height: 2
+      height: 2,
     },
     shippingWeight: 1,
     averageRating: data.average_rating || 0,
-    totalReviews: data.total_reviews || 0
+    totalReviews: data.total_reviews || 0,
   };
   // Parse price from pricing field
   if (data.pricing) {
@@ -162,8 +173,8 @@ function parseScrapedData(data, platform, originalUrl) {
     }
   }
   // Parse weight from product_information
-  if (data.product_information && data.product_information["Item Weight"]) {
-    const weightStr = data.product_information["Item Weight"];
+  if (data.product_information && data.product_information['Item Weight']) {
+    const weightStr = data.product_information['Item Weight'];
     const weightMatch = weightStr.match(/([\d,]+\.?\d*)\s*(lbs|kg|pounds|kilograms)/i);
     if (weightMatch) {
       const weight = parseFloat(weightMatch[1].replace(/,/g, ''));
@@ -188,14 +199,16 @@ function parseScrapedData(data, platform, originalUrl) {
     }
   }
   // Parse dimensions from product_information
-  if (data.product_information && data.product_information["Product Dimensions"]) {
-    const dimensionsStr = data.product_information["Product Dimensions"];
-    const dimensionsMatch = dimensionsStr.match(/([\d,]+\.?\d*)\s*[xX]\s*([\d,]+\.?\d*)\s*[xX]\s*([\d,]+\.?\d*)/);
+  if (data.product_information && data.product_information['Product Dimensions']) {
+    const dimensionsStr = data.product_information['Product Dimensions'];
+    const dimensionsMatch = dimensionsStr.match(
+      /([\d,]+\.?\d*)\s*[xX]\s*([\d,]+\.?\d*)\s*[xX]\s*([\d,]+\.?\d*)/,
+    );
     if (dimensionsMatch) {
       analysis.dimensions = {
         length: parseFloat(dimensionsMatch[1].replace(/,/g, '')),
         width: parseFloat(dimensionsMatch[2].replace(/,/g, '')),
-        height: parseFloat(dimensionsMatch[3].replace(/,/g, ''))
+        height: parseFloat(dimensionsMatch[3].replace(/,/g, '')),
       };
     }
   }
@@ -223,14 +236,14 @@ function parseEbayData(data, analysis) {
 }
 async function getMockAnalysis(url, productName) {
   // Simulate processing delay
-  await new Promise((resolve)=>setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
   const platform = detectPlatform(url) || 'amazon';
   // Extract product ID from Amazon URL for more realistic mock data
   let extractedProductId = '';
   try {
     const urlObj = new URL(url);
     const pathParts = urlObj.pathname.split('/');
-    const dpIndex = pathParts.findIndex((part)=>part === 'dp');
+    const dpIndex = pathParts.findIndex((part) => part === 'dp');
     if (dpIndex !== -1 && pathParts[dpIndex + 1]) {
       extractedProductId = pathParts[dpIndex + 1];
     }
@@ -246,10 +259,11 @@ async function getMockAnalysis(url, productName) {
       imageUrl: `https://images-na.ssl-images-amazon.com/images/P/${extractedProductId || 'B08N5WRWNW'}.L.jpg`,
       category: 'Electronics',
       brand: 'Amazon Brand',
-      description: 'This is a realistic product description for Amazon products. Features include high quality, reliable performance, and excellent customer reviews.',
+      description:
+        'This is a realistic product description for Amazon products. Features include high quality, reliable performance, and excellent customer reviews.',
       averageRating: 4.2 + Math.random() * 0.8,
       totalReviews: Math.floor(Math.random() * 5000) + 100,
-      shippingCost: Math.floor(Math.random() * 15) + 5
+      shippingCost: Math.floor(Math.random() * 15) + 5,
     },
     ebay: {
       name: productName || `eBay Product ${extractedProductId || 'Sample'}`,
@@ -258,11 +272,12 @@ async function getMockAnalysis(url, productName) {
       imageUrl: `https://i.ebayimg.com/images/g/${extractedProductId || 'sample'}/s-l1600.jpg`,
       category: 'Collectibles',
       brand: 'eBay Seller',
-      description: 'Authentic product from trusted eBay seller. Fast shipping and excellent condition.',
+      description:
+        'Authentic product from trusted eBay seller. Fast shipping and excellent condition.',
       averageRating: 4.0 + Math.random() * 1.0,
       totalReviews: Math.floor(Math.random() * 1000) + 50,
-      shippingCost: Math.floor(Math.random() * 10) + 3
-    }
+      shippingCost: Math.floor(Math.random() * 10) + 3,
+    },
   };
   const productData = mockProducts[platform] || mockProducts.amazon;
   return {
@@ -279,13 +294,13 @@ async function getMockAnalysis(url, productName) {
     dimensions: {
       length: Math.floor(Math.random() * 20) + 10,
       width: Math.floor(Math.random() * 15) + 5,
-      height: Math.floor(Math.random() * 10) + 2
+      height: Math.floor(Math.random() * 10) + 2,
     },
     shippingWeight: productData.weight,
     platform: platform,
     averageRating: productData.averageRating,
     totalReviews: productData.totalReviews,
     shippingCost: productData.shippingCost,
-    shippingCurrency: 'USD'
+    shippingCurrency: 'USD',
   };
 }

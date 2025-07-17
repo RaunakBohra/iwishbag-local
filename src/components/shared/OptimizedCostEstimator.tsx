@@ -1,30 +1,24 @@
-import React, { useState, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import React, { useState, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/integrations/supabase/client";
-import { usePurchaseCountries } from "@/hooks/usePurchaseCountries";
-import { useCountryWithCurrency } from "@/hooks/useCountryWithCurrency";
-import { useUserCurrency } from "@/hooks/useUserCurrency";
-import { quoteCalculatorService } from "@/services/QuoteCalculatorService";
-import { useToast } from "@/components/ui/use-toast";
-import { Calculator, Package, Globe, DollarSign } from "lucide-react";
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
+import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
+import { useCountryWithCurrency } from '@/hooks/useCountryWithCurrency';
+import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { quoteCalculatorService } from '@/services/QuoteCalculatorService';
+import { useToast } from '@/components/ui/use-toast';
+import { Calculator, Package, Globe, DollarSign } from 'lucide-react';
 
 interface CostEstimate {
   itemTotal: number;
@@ -44,20 +38,20 @@ interface OptimizedCostEstimatorProps {
   className?: string;
 }
 
-export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({ 
+export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
   variant = 'tools',
-  className = ""
+  className = '',
 }) => {
   const [formData, setFormData] = useState({
-    purchaseCountry: "",
-    destinationCountry: "",
-    itemPrice: "",
-    itemWeight: "",
-    customsCategory: "",
+    purchaseCountry: '',
+    destinationCountry: '',
+    itemPrice: '',
+    itemWeight: '',
+    customsCategory: '',
   });
   const [estimate, setEstimate] = useState<CostEstimate | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   const { formatAmount } = useUserCurrency();
   const { toast } = useToast();
@@ -66,10 +60,7 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
   const { data: countryData, isLoading: countriesLoading } = useQuery({
     queryKey: ['cost-estimator-countries'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("country_settings")
-        .select("*")
-        .order("name");
+      const { data, error } = await supabase.from('country_settings').select('*').order('name');
       if (error) throw error;
       return data;
     },
@@ -81,19 +72,16 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
   const countries = useMemo(() => {
     if (!countryData) return { purchase: [], shipping: [] };
     return {
-      purchase: countryData.filter(c => c.purchase_allowed),
-      shipping: countryData.filter(c => c.shipping_allowed)
+      purchase: countryData.filter((c) => c.purchase_allowed),
+      shipping: countryData.filter((c) => c.shipping_allowed),
     };
   }, [countryData]);
 
   // Memoized query for customs categories
   const { data: customsCategories, isLoading: categoriesLoading } = useQuery({
-    queryKey: ["customs-categories"],
+    queryKey: ['customs-categories'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("customs_categories")
-        .select("*")
-        .order("name");
+      const { data, error } = await supabase.from('customs_categories').select('*').order('name');
       if (error) throw error;
       return data;
     },
@@ -116,43 +104,46 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
 
   // Optimized form update handler
   const updateFormData = useCallback((field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setError(""); // Clear error on input change
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setError(''); // Clear error on input change
   }, []);
 
   // Memoized calculate handler
   const handleCalculate = useCallback(async () => {
     if (!isFormValid) {
-      setError("Please fill in all required fields");
+      setError('Please fill in all required fields');
       return;
     }
 
     if (!countryData || countryData.length === 0) {
-      setError("Country data is still loading. Please try again.");
+      setError('Country data is still loading. Please try again.');
       return;
     }
 
     setIsCalculating(true);
-    setError("");
+    setError('');
 
     try {
-      const { purchaseCountry, destinationCountry, itemPrice, itemWeight, customsCategory } = formData;
-      
+      const { purchaseCountry, destinationCountry, itemPrice, itemWeight, customsCategory } =
+        formData;
+
       // Get country settings for the purchase country
-      const countrySettings = countryData?.find(c => c.code === purchaseCountry);
+      const countrySettings = countryData?.find((c) => c.code === purchaseCountry);
       if (!countrySettings) {
         throw new Error(`Country settings not found for ${purchaseCountry}`);
       }
 
       // Create calculation parameters following the expected format
       const calculationParams = {
-        items: [{
-          id: '1',
-          item_price: parseFloat(itemPrice) || 0,
-          item_weight: parseFloat(itemWeight) || 0,
-          quantity: 1,
-          product_name: 'Product'
-        }],
+        items: [
+          {
+            id: '1',
+            item_price: parseFloat(itemPrice) || 0,
+            item_weight: parseFloat(itemWeight) || 0,
+            quantity: 1,
+            product_name: 'Product',
+          },
+        ],
         originCountry: purchaseCountry,
         destinationCountry: destinationCountry,
         currency: countrySettings.currency || 'USD',
@@ -162,13 +153,14 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
         handling_charge: 0,
         discount: 0,
         insurance_amount: 0,
-        customs_percentage: customsCategory ? 
-          (customsCategories?.find(c => c.id === customsCategory)?.duty_percent || 0) : 0,
-        countrySettings: countrySettings
+        customs_percentage: customsCategory
+          ? customsCategories?.find((c) => c.id === customsCategory)?.duty_percent || 0
+          : 0,
+        countrySettings: countrySettings,
       };
 
       const result = await quoteCalculatorService.calculateQuote(calculationParams);
-      
+
       if (!result.success || !result.breakdown) {
         throw new Error(result.error?.message || 'Calculation failed');
       }
@@ -181,11 +173,11 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
         serviceFee: result.breakdown.payment_gateway_fee,
         total: result.breakdown.final_total,
         breakdown: result.breakdown,
-        currency: countrySettings.currency || 'USD'
+        currency: countrySettings.currency || 'USD',
       };
 
       setEstimate(estimateData);
-      
+
       // Track estimation (analytics)
       if (typeof window !== 'undefined' && window.gtag) {
         window.gtag('event', 'cost_estimation', {
@@ -193,16 +185,16 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
           destination_country: destinationCountry,
           item_price: itemPrice,
           item_weight: itemWeight,
-          category: customsCategory
+          category: customsCategory,
         });
       }
     } catch (error) {
-      console.error("Error calculating estimate:", error);
-      setError(error instanceof Error ? error.message : "Failed to calculate estimate");
+      console.error('Error calculating estimate:', error);
+      setError(error instanceof Error ? error.message : 'Failed to calculate estimate');
       toast({
-        title: "Calculation Error",
-        description: error instanceof Error ? error.message : "Failed to calculate estimate",
-        variant: "destructive",
+        title: 'Calculation Error',
+        description: error instanceof Error ? error.message : 'Failed to calculate estimate',
+        variant: 'destructive',
       });
     } finally {
       setIsCalculating(false);
@@ -212,14 +204,14 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
   // Reset form
   const handleReset = useCallback(() => {
     setFormData({
-      purchaseCountry: "",
-      destinationCountry: "",
-      itemPrice: "",
-      itemWeight: "",
-      customsCategory: "",
+      purchaseCountry: '',
+      destinationCountry: '',
+      itemPrice: '',
+      itemWeight: '',
+      customsCategory: '',
     });
     setEstimate(null);
-    setError("");
+    setError('');
   }, []);
 
   const isLoading = countriesLoading || categoriesLoading;
@@ -246,9 +238,7 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
           <Calculator className="h-5 w-5" />
           {variant === 'landing' ? 'Quick Cost Estimator' : 'Shipping Cost Calculator'}
         </CardTitle>
-        <CardDescription>
-          Get an instant estimate of shipping costs and fees
-        </CardDescription>
+        <CardDescription>Get an instant estimate of shipping costs and fees</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Purchase Country */}
@@ -334,9 +324,7 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
         {/* Customs Category (Optional) */}
         {customsCategories && customsCategories.length > 0 && (
           <div className="space-y-2">
-            <Label htmlFor="customs-category">
-              Customs Category (Optional)
-            </Label>
+            <Label htmlFor="customs-category">Customs Category (Optional)</Label>
             <Select
               value={formData.customsCategory}
               onValueChange={(value) => updateFormData('customsCategory', value)}
@@ -369,13 +357,10 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
             disabled={!isFormValid || isCalculating}
             className="flex-1"
           >
-            {isCalculating ? "Calculating..." : "Calculate Estimate"}
+            {isCalculating ? 'Calculating...' : 'Calculate Estimate'}
           </Button>
           {estimate && (
-            <Button
-              onClick={handleReset}
-              variant="outline"
-            >
+            <Button onClick={handleReset} variant="outline">
               Reset
             </Button>
           )}
@@ -388,39 +373,52 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Item Cost:</span>
-                <span className="font-medium">{estimate.currency} {estimate.itemTotal.toFixed(2)}</span>
+                <span className="font-medium">
+                  {estimate.currency} {estimate.itemTotal.toFixed(2)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping:</span>
-                <span className="font-medium">{estimate.currency} {estimate.shippingCost.toFixed(2)}</span>
+                <span className="font-medium">
+                  {estimate.currency} {estimate.shippingCost.toFixed(2)}
+                </span>
               </div>
               {estimate.customsDuty > 0 && (
                 <div className="flex justify-between">
                   <span>Customs & Duties:</span>
-                  <span className="font-medium">{estimate.currency} {estimate.customsDuty.toFixed(2)}</span>
+                  <span className="font-medium">
+                    {estimate.currency} {estimate.customsDuty.toFixed(2)}
+                  </span>
                 </div>
               )}
               {estimate.serviceFee > 0 && (
                 <div className="flex justify-between">
                   <span>Payment Gateway Fee:</span>
-                  <span className="font-medium">{estimate.currency} {estimate.serviceFee.toFixed(2)}</span>
+                  <span className="font-medium">
+                    {estimate.currency} {estimate.serviceFee.toFixed(2)}
+                  </span>
                 </div>
               )}
               {estimate.breakdown && estimate.breakdown.vat > 0 && (
                 <div className="flex justify-between">
                   <span>VAT:</span>
-                  <span className="font-medium">{estimate.currency} {estimate.breakdown.vat.toFixed(2)}</span>
+                  <span className="font-medium">
+                    {estimate.currency} {estimate.breakdown.vat.toFixed(2)}
+                  </span>
                 </div>
               )}
               <div className="border-t pt-2 mt-2">
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total Estimate:</span>
-                  <span className="text-green-600">{estimate.currency} {estimate.total.toFixed(2)}</span>
+                  <span className="text-green-600">
+                    {estimate.currency} {estimate.total.toFixed(2)}
+                  </span>
                 </div>
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-3">
-              * This is an estimate. Final costs may vary based on actual product details and shipping options.
+              * This is an estimate. Final costs may vary based on actual product details and
+              shipping options.
             </p>
           </div>
         )}

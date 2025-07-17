@@ -1,7 +1,19 @@
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { LogOut, MessageSquare, ShoppingCart, LayoutDashboard, User, Menu, Search, MoreVertical, Building, Home, Package, Settings } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import {
+  LogOut,
+  MessageSquare,
+  ShoppingCart,
+  LayoutDashboard,
+  User,
+  Menu,
+  MoreVertical,
+  Building,
+  Home,
+  Package,
+  Settings,
+} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,16 +21,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
-import { useAdminRole } from "@/hooks/useAdminRole";
-import { CartDrawer } from "@/components/cart/CartDrawer";
-import { useSidebar } from "@/components/ui/sidebar";
-import { AdminSearch } from "@/components/admin/AdminSearch";
-import { useState } from "react";
+} from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Badge } from '@/components/ui/badge';
+import { useAdminRole } from '@/hooks/useAdminRole';
+import { CartDrawer } from '@/components/cart/CartDrawer';
+import { useSidebar } from '@/hooks/use-sidebar';
+import { AdminSearch } from '@/components/admin/AdminSearch';
+import { useState } from 'react';
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -28,11 +40,11 @@ const Header = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const { data: hasAdminRole } = useAdminRole();
-  
+
   // Default homepage settings
   const homePageSettings = {
     website_logo_url: null,
-    company_name: "iwishBag"
+    company_name: 'iwishBag',
   };
 
   // Check if we're in admin area
@@ -43,19 +55,19 @@ const Header = () => {
     queryFn: async () => {
       if (!user) return 0;
       let query = supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_read', false)
-          .neq('sender_id', user.id);
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_read', false)
+        .neq('sender_id', user.id);
       if (hasAdminRole) {
-          query = query.is('recipient_id', null);
+        query = query.is('recipient_id', null);
       } else {
-          query = query.eq('recipient_id', user.id);
+        query = query.eq('recipient_id', user.id);
       }
       const { count, error } = await query;
       if (error) {
-          console.error('Error fetching unread messages count:', error);
-          return 0;
+        console.error('Error fetching unread messages count:', error);
+        return 0;
       }
       return count || 0;
     },
@@ -63,7 +75,7 @@ const Header = () => {
     refetchInterval: 60000,
   });
 
-  const { data: approvedQuotesCount } = useQuery({
+  const { data: _approvedQuotesCount } = useQuery({
     queryKey: ['approved-quotes-count', user?.id],
     queryFn: async () => {
       if (!user) return 0;
@@ -72,7 +84,7 @@ const Header = () => {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('status', 'approved');
-      
+
       if (error) {
         console.error('Error fetching approved quotes count:', error);
         return 0;
@@ -85,7 +97,7 @@ const Header = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/");
+    navigate('/');
   };
 
   const getDisplayName = () => {
@@ -121,18 +133,18 @@ const Header = () => {
               <span className="sr-only">Toggle menu</span>
             </Button>
           )}
-          
+
           {/* Logo */}
           <Link to="/" className="flex items-center min-w-0 flex-shrink-0">
             {homePageSettings?.website_logo_url ? (
-              <img 
-                src={homePageSettings.website_logo_url} 
-                alt="Logo" 
-                className="h-8 sm:h-9 w-auto object-contain transition-transform hover:scale-105" 
+              <img
+                src={homePageSettings.website_logo_url}
+                alt="Logo"
+                className="h-8 sm:h-9 w-auto object-contain transition-transform hover:scale-105"
               />
             ) : (
               <span className="font-bold text-lg sm:text-xl lg:text-2xl bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                {homePageSettings?.company_name || "WishBag"}
+                {homePageSettings?.company_name || 'WishBag'}
               </span>
             )}
           </Link>
@@ -141,7 +153,7 @@ const Header = () => {
           {user && !isAdminArea && (
             <nav className="hidden md:flex items-center space-x-2 lg:space-x-3">
               <Button
-                variant={location.pathname === '/quote' ? "default" : "ghost"}
+                variant={location.pathname === '/quote' ? 'default' : 'ghost'}
                 size="sm"
                 className="h-8 px-3 text-sm font-medium"
                 onClick={() => navigate('/quote')}
@@ -150,7 +162,7 @@ const Header = () => {
                 Get Quote
               </Button>
               <Button
-                variant={location.pathname === '/quote-auto' ? "default" : "ghost"}
+                variant={location.pathname === '/quote-auto' ? 'default' : 'ghost'}
                 size="sm"
                 className="h-8 px-3 text-sm font-medium"
                 onClick={() => navigate('/quote-auto')}
@@ -165,7 +177,7 @@ const Header = () => {
           {user && isAdminArea && (
             <nav className="hidden md:flex items-center space-x-2 lg:space-x-3">
               <Button
-                variant={location.pathname.includes('/admin/quotes') ? "default" : "ghost"}
+                variant={location.pathname.includes('/admin/quotes') ? 'default' : 'ghost'}
                 size="sm"
                 className="h-8 px-3 text-sm font-medium"
                 onClick={() => navigate('/admin/quotes')}
@@ -174,7 +186,7 @@ const Header = () => {
                 Quotes
               </Button>
               <Button
-                variant={location.pathname.includes('/admin/orders') ? "default" : "ghost"}
+                variant={location.pathname.includes('/admin/orders') ? 'default' : 'ghost'}
                 size="sm"
                 className="h-8 px-3 text-sm font-medium"
                 onClick={() => navigate('/admin/orders')}
@@ -190,28 +202,28 @@ const Header = () => {
         <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4 min-w-0">
           {/* Admin Search - only show in admin area */}
           {isAdminArea && (
-              <div className="hidden sm:block">
-                <AdminSearch />
-              </div>
+            <div className="hidden sm:block">
+              <AdminSearch />
+            </div>
           )}
-          
+
           {user ? (
             <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4">
               {/* Desktop View - Show all actions */}
               <div className="hidden sm:flex items-center space-x-1 md:space-x-2 lg:space-x-3">
                 <CartDrawer />
-                
+
                 {/* Messages with improved badge */}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="relative hover:bg-accent flex-shrink-0 h-9 w-9 transition-colors" 
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative hover:bg-accent flex-shrink-0 h-9 w-9 transition-colors"
                   onClick={() => navigate('/messages')}
                 >
                   <MessageSquare className="h-4 w-4" />
                   {unreadMessagesCount && unreadMessagesCount > 0 && (
-                    <Badge 
-                      variant="destructive" 
+                    <Badge
+                      variant="destructive"
                       className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs font-medium animate-pulse"
                     >
                       {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
@@ -219,7 +231,6 @@ const Header = () => {
                   )}
                 </Button>
 
-              
                 {/* Separator */}
                 <div className="h-6 w-px bg-border mx-1 md:mx-2 lg:mx-3" />
               </div>
@@ -229,10 +240,17 @@ const Header = () => {
                 <CartDrawer />
                 <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative hover:bg-accent flex-shrink-0 h-9 w-9">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="relative hover:bg-accent flex-shrink-0 h-9 w-9"
+                    >
                       <MoreVertical className="h-4 w-4" />
                       {unreadMessagesCount > 0 && (
-                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-2 w-2 p-0 rounded-full" />
+                        <Badge
+                          variant="destructive"
+                          className="absolute -top-1 -right-1 h-2 w-2 p-0 rounded-full"
+                        />
                       )}
                     </Button>
                   </SheetTrigger>
@@ -270,10 +288,12 @@ const Header = () => {
                           )}
                         </Button>
                       </div>
-                      
+
                       <div className="space-y-2">
                         {/* Account Section */}
-                        <div className="mb-1 mt-2 text-xs font-semibold text-muted-foreground tracking-wide uppercase">Account</div>
+                        <div className="mb-1 mt-2 text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                          Account
+                        </div>
                         <Button
                           variant="outline"
                           className="w-full justify-start"
@@ -302,7 +322,9 @@ const Header = () => {
                         </Button>
                         <div className="border-t border-gray-200 my-3" />
                         {/* Orders & Quotes Section */}
-                        <div className="mb-1 text-xs font-semibold text-muted-foreground tracking-wide uppercase">Orders & Quotes</div>
+                        <div className="mb-1 text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                          Orders & Quotes
+                        </div>
                         <Button
                           variant="default"
                           className="w-full justify-start"
@@ -338,7 +360,9 @@ const Header = () => {
                         {hasAdminRole && (
                           <>
                             <div className="border-t border-gray-200 my-3" />
-                            <div className="mb-1 text-xs font-semibold text-muted-foreground tracking-wide uppercase">Admin</div>
+                            <div className="mb-1 text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                              Admin
+                            </div>
                             <Button
                               variant="outline"
                               className="w-full justify-start"
@@ -355,8 +379,28 @@ const Header = () => {
                           </>
                         )}
                         <div className="border-t border-gray-200 my-3" />
+                        {/* Information Section */}
+                        <div className="mb-1 text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                          Information
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => {
+                            navigate('/blog');
+                            setIsSheetOpen(false);
+                          }}
+                        >
+                          <MessageSquare className="mr-3 h-4 w-4" />
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">Blog</span>
+                          </div>
+                        </Button>
+                        <div className="border-t border-gray-200 my-3" />
                         {/* Settings Section */}
-                        <div className="mb-1 text-xs font-semibold text-muted-foreground tracking-wide uppercase">Settings</div>
+                        <div className="mb-1 text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+                          Settings
+                        </div>
                         {/* Sign Out at the bottom */}
                         <div className="border-t border-gray-200 my-3" />
                         <Button
@@ -378,10 +422,10 @@ const Header = () => {
 
               {/* Desktop User Menu - Enhanced with better styling */}
               <div className="hidden sm:block">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
                       className="px-2 md:px-3 py-2 text-left hover:bg-accent min-w-0 h-9 rounded-md transition-colors"
                     >
                       <div className="flex items-center space-x-2 min-w-0">
@@ -395,17 +439,19 @@ const Header = () => {
                           </span>
                         </div>
                       </div>
-                  </Button>
-                </DropdownMenuTrigger>
+                    </Button>
+                  </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-60 md:w-64 p-2">
                     <DropdownMenuLabel className="font-semibold">My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem asChild className="cursor-pointer rounded-md">
                       <Link to="/dashboard" className="flex items-center w-full">
                         <LayoutDashboard className="mr-3 h-4 w-4" />
                         <div className="flex flex-col">
                           <span className="font-medium">Dashboard</span>
-                          <span className="text-xs text-muted-foreground">View your quotes and orders</span>
+                          <span className="text-xs text-muted-foreground">
+                            View your quotes and orders
+                          </span>
                         </div>
                       </Link>
                     </DropdownMenuItem>
@@ -423,7 +469,18 @@ const Header = () => {
                         <Home className="mr-3 h-4 w-4" />
                         <div className="flex flex-col">
                           <span className="font-medium">Shipping Address</span>
-                          <span className="text-xs text-muted-foreground">Manage your shipping addresses</span>
+                          <span className="text-xs text-muted-foreground">
+                            Manage your shipping addresses
+                          </span>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-md">
+                      <Link to="/blog" className="flex items-center w-full">
+                        <MessageSquare className="mr-3 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">Blog</span>
+                          <span className="text-xs text-muted-foreground">Tips and guides</span>
                         </div>
                       </Link>
                     </DropdownMenuItem>
@@ -435,15 +492,17 @@ const Header = () => {
                             <Building className="mr-3 h-4 w-4" />
                             <div className="flex flex-col">
                               <span className="font-medium">Admin Dashboard</span>
-                              <span className="text-xs text-muted-foreground">Manage the platform</span>
+                              <span className="text-xs text-muted-foreground">
+                                Manage the platform
+                              </span>
                             </div>
-                    </Link>
-                  </DropdownMenuItem>
+                          </Link>
+                        </DropdownMenuItem>
                       </>
                     )}
-                  <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={handleSignOut} 
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleSignOut}
                       className="cursor-pointer rounded-md text-destructive focus:text-destructive"
                     >
                       <LogOut className="mr-3 h-4 w-4" />
@@ -451,24 +510,32 @@ const Header = () => {
                         <span className="font-medium">Sign Out</span>
                         <span className="text-xs text-muted-foreground">End your session</span>
                       </div>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           ) : (
             /* Guest User Actions - Enhanced styling */
             <div className="flex items-center space-x-2 md:space-x-3">
-              <Button 
-                asChild 
-                variant="ghost" 
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="hidden sm:inline-flex h-8 px-3 md:px-4 text-sm font-medium hover:bg-accent"
+              >
+                <Link to="/blog">Blog</Link>
+              </Button>
+              <Button
+                asChild
+                variant="ghost"
                 size="sm"
                 className="hidden sm:inline-flex h-8 px-3 md:px-4 text-sm font-medium hover:bg-accent"
               >
                 <Link to="/quote">Get Quote</Link>
               </Button>
-              <Button 
-                asChild 
+              <Button
+                asChild
                 variant="default"
                 size="sm"
                 className="h-8 px-3 md:px-4 text-sm font-medium"

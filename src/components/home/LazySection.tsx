@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
 interface LazySectionProps {
   children: React.ReactNode;
@@ -7,11 +7,11 @@ interface LazySectionProps {
   fallback?: React.ReactNode;
 }
 
-export const LazySection = ({ 
-  children, 
-  threshold = 0.1, 
-  rootMargin = "50px",
-  fallback = <div className="h-96 bg-gray-50 animate-pulse rounded-lg" />
+export const LazySection = ({
+  children,
+  threshold = 0.1,
+  rootMargin = '50px',
+  fallback = <div className="h-96 bg-gray-50 animate-pulse rounded-lg" />,
 }: LazySectionProps) => {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -27,8 +27,8 @@ export const LazySection = ({
       },
       {
         threshold,
-        rootMargin
-      }
+        rootMargin,
+      },
     );
 
     if (sectionRef.current) {
@@ -40,9 +40,5 @@ export const LazySection = ({
     };
   }, [threshold, rootMargin]);
 
-  return (
-    <div ref={sectionRef}>
-      {isVisible ? children : fallback}
-    </div>
-  );
+  return <div ref={sectionRef}>{isVisible ? children : fallback}</div>;
 };

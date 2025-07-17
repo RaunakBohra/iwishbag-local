@@ -1,70 +1,90 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Search, ArrowLeft, Truck, CheckCircle, Clock, DollarSign, Package, Eye, Calendar, Download, MessageSquare, AlertTriangle, TrendingUp } from 'lucide-react';
+import {
+  ShoppingCart,
+  Search,
+  ArrowLeft,
+  Truck,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  Package,
+  Eye,
+  Calendar,
+  Download,
+  MessageSquare,
+  AlertTriangle,
+  TrendingUp,
+} from 'lucide-react';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
-import { StatusBadge } from "@/components/dashboard/StatusBadge";
-import { formatDistanceToNow } from "date-fns";
-import { useQuoteDisplayCurrency } from "@/hooks/useQuoteDisplayCurrency";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
+import { formatDistanceToNow } from 'date-fns';
+import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
-import { useToast } from "@/components/ui/use-toast";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Tables } from "@/integrations/supabase/types";
+import { useToast } from '@/components/ui/use-toast';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { Tables } from '@/integrations/supabase/types';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { useQuoteRoute } from '@/hooks/useQuoteRoute';
 
 export default function Orders() {
-  const {
-    orders,
-    isLoading,
-    searchTerm,
-    handleSearchChange,
-    isSearching,
-  } = useDashboardState();
+  const { orders, isLoading, searchTerm, handleSearchChange, isSearching } = useDashboardState();
 
   const { data: countries } = useAllCountries();
   const { orderStatuses } = useStatusManagement();
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
-  
+
   // For summary statistics, use the first order's currency display
   const firstOrder = orders?.[0];
-  const { formatAmount: formatSummaryAmount } = useQuoteDisplayCurrency({ quote: firstOrder });
+  const { formatAmount: formatSummaryAmount } = useQuoteDisplayCurrency({
+    quote: firstOrder,
+  });
 
   // Filter orders based on status and search
-  const filteredOrders = orders?.filter(order => {
-    // Status filter
-    if (statusFilter !== 'all' && order.status !== statusFilter) return false;
-    
-    // Payment status filter
-    if (paymentStatusFilter !== 'all' && order.payment_status !== paymentStatusFilter) return false;
-    
-    // Search filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      const productMatch = order.product_name?.toLowerCase().includes(searchLower);
-      const productUrlMatch = order.product_url?.toLowerCase().includes(searchLower);
-      const orderIdMatch = order.order_display_id?.toLowerCase().includes(searchLower);
-      const quoteIdMatch = order.display_id?.toLowerCase().includes(searchLower);
-      
-      // Get country name for search
-      const countryName = countries?.find(c => c.code === order.destination_country)?.name;
-      const countryMatch = countryName?.toLowerCase().includes(searchLower);
-      
-      if (!productMatch && !productUrlMatch && !orderIdMatch && !quoteIdMatch && !countryMatch) return false;
-    }
-    
-    return true;
-  }) || [];
+  const filteredOrders =
+    orders?.filter((order) => {
+      // Status filter
+      if (statusFilter !== 'all' && order.status !== statusFilter) return false;
+
+      // Payment status filter
+      if (paymentStatusFilter !== 'all' && order.payment_status !== paymentStatusFilter)
+        return false;
+
+      // Search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const productMatch = order.product_name?.toLowerCase().includes(searchLower);
+        const productUrlMatch = order.product_url?.toLowerCase().includes(searchLower);
+        const orderIdMatch = order.order_display_id?.toLowerCase().includes(searchLower);
+        const quoteIdMatch = order.display_id?.toLowerCase().includes(searchLower);
+
+        // Get country name for search
+        const countryName = countries?.find((c) => c.code === order.destination_country)?.name;
+        const countryMatch = countryName?.toLowerCase().includes(searchLower);
+
+        if (!productMatch && !productUrlMatch && !orderIdMatch && !quoteIdMatch && !countryMatch)
+          return false;
+      }
+
+      return true;
+    }) || [];
 
   // Calculate statistics
   const statistics = useMemo(() => {
@@ -72,14 +92,15 @@ export default function Orders() {
     const totalValue = filteredOrders.reduce((sum, order) => sum + (order.final_total || 0), 0);
     const totalPaid = filteredOrders.reduce((sum, order) => sum + (order.amount_paid || 0), 0);
     const totalOutstanding = totalValue - totalPaid;
-    
+
     const paymentStatusCounts = {
-      unpaid: filteredOrders.filter(o => !o.payment_status || o.payment_status === 'unpaid').length,
-      partial: filteredOrders.filter(o => o.payment_status === 'partial').length,
-      paid: filteredOrders.filter(o => o.payment_status === 'paid').length,
-      overpaid: filteredOrders.filter(o => o.payment_status === 'overpaid').length,
+      unpaid: filteredOrders.filter((o) => !o.payment_status || o.payment_status === 'unpaid')
+        .length,
+      partial: filteredOrders.filter((o) => o.payment_status === 'partial').length,
+      paid: filteredOrders.filter((o) => o.payment_status === 'paid').length,
+      overpaid: filteredOrders.filter((o) => o.payment_status === 'overpaid').length,
     };
-    
+
     return {
       totalOrders,
       totalValue,
@@ -93,37 +114,40 @@ export default function Orders() {
   const exportToCSV = () => {
     if (!filteredOrders || filteredOrders.length === 0) {
       toast({
-        title: "No data to export",
-        description: "There are no orders to export.",
-        variant: "destructive",
+        title: 'No data to export',
+        description: 'There are no orders to export.',
+        variant: 'destructive',
       });
       return;
     }
 
-    const csvData = filteredOrders.map(order => ({
+    const csvData = filteredOrders.map((order) => ({
       'Order ID': order.order_display_id || order.display_id || order.id.slice(0, 8),
-      'Product': order.product_name || 'N/A',
-      'Status': order.status,
+      Product: order.product_name || 'N/A',
+      Status: order.status,
       'Payment Status': order.payment_status || 'unpaid',
-      'Total': order.final_total || 0,
-      'Paid': order.amount_paid || 0,
-      'Outstanding': (order.final_total || 0) - (order.amount_paid || 0),
+      Total: order.final_total || 0,
+      Paid: order.amount_paid || 0,
+      Outstanding: (order.final_total || 0) - (order.amount_paid || 0),
       'Payment Method': order.payment_method || 'N/A',
-      'Country': countries?.find(c => c.code === order.destination_country)?.name || order.destination_country || 'N/A',
-      'Created': new Date(order.created_at).toLocaleDateString(),
+      Country:
+        countries?.find((c) => c.code === order.destination_country)?.name ||
+        order.destination_country ||
+        'N/A',
+      Created: new Date(order.created_at).toLocaleDateString(),
     }));
 
     const headers = Object.keys(csvData[0]);
     const csvContent = [
       headers.join(','),
-      ...csvData.map(row => 
-        headers.map(header => {
-          const value = row[header as keyof typeof row];
-          return typeof value === 'string' && value.includes(',') 
-            ? `"${value}"` 
-            : value;
-        }).join(',')
-      )
+      ...csvData.map((row) =>
+        headers
+          .map((header) => {
+            const value = row[header as keyof typeof row];
+            return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;
+          })
+          .join(','),
+      ),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -134,7 +158,7 @@ export default function Orders() {
     URL.revokeObjectURL(link.href);
 
     toast({
-      title: "Export successful",
+      title: 'Export successful',
       description: `${filteredOrders.length} orders exported to CSV`,
     });
   };
@@ -159,7 +183,10 @@ export default function Orders() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Link to="/dashboard" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+          >
             <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
           </Link>
@@ -168,12 +195,7 @@ export default function Orders() {
             <p className="text-gray-500 text-sm">Track your order status and delivery</p>
           </div>
         </div>
-        <Button 
-          onClick={exportToCSV} 
-          variant="outline"
-          size="sm"
-          className="gap-2"
-        >
+        <Button onClick={exportToCSV} variant="outline" size="sm" className="gap-2">
           <Download className="h-4 w-4" />
           Export
         </Button>
@@ -193,7 +215,7 @@ export default function Orders() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -205,25 +227,29 @@ export default function Orders() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Amount Paid</p>
-                  <p className="text-2xl font-bold text-green-600">{formatSummaryAmount(statistics.totalPaid)}</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {formatSummaryAmount(statistics.totalPaid)}
+                  </p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-600 opacity-50" />
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Outstanding</p>
-                  <p className="text-2xl font-bold text-orange-600">{formatSummaryAmount(statistics.totalOutstanding)}</p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {formatSummaryAmount(statistics.totalOutstanding)}
+                  </p>
                 </div>
                 <AlertTriangle className="h-8 w-8 text-orange-600 opacity-50" />
               </div>
@@ -285,10 +311,9 @@ export default function Orders() {
             <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
             <p className="text-gray-500 mb-4">
-              {searchTerm || statusFilter !== 'all' 
+              {searchTerm || statusFilter !== 'all'
                 ? 'Try adjusting your search or filters'
-                : 'You haven\'t placed any orders yet'
-              }
+                : "You haven't placed any orders yet"}
             </p>
             {!searchTerm && statusFilter === 'all' && (
               <Link to="/quote">
@@ -307,14 +332,17 @@ export default function Orders() {
 }
 
 // Separate component for order item to handle message count query
-function OrderItem({ order, countries }: { 
-  order: Tables<'quotes'> & { quote_items?: Tables<'quote_items'>[] }, 
-  countries: { code: string; name: string }[] | undefined
+function OrderItem({
+  order,
+  countries,
+}: {
+  order: Tables<'quotes'> & { quote_items?: Tables<'quote_items'>[] };
+  countries: { code: string; name: string }[] | undefined;
 }) {
   const { formatAmount } = useQuoteDisplayCurrency({ quote: order });
   // Get route information using unified hook
   const route = useQuoteRoute(order);
-  
+
   // Get message count for this order
   const { data: messageCount = 0 } = useQuery({
     queryKey: ['order-messages-count', order.id],
@@ -335,34 +363,28 @@ function OrderItem({ order, countries }: {
         <div className="flex-1">
           <div className="flex items-start justify-between mb-2">
             <div>
-              <h3 className="font-semibold text-lg">
-                {order.product_name || 'Product Order'}
-              </h3>
+              <h3 className="font-semibold text-lg">{order.product_name || 'Product Order'}</h3>
               <p className="text-gray-500 text-sm">
                 Order #{order.order_display_id || order.display_id || order.id.slice(0, 8)}
               </p>
             </div>
             <StatusBadge status={order.status} category="order" />
           </div>
-          
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-gray-500">Total:</span>
-              <span className="ml-1 font-medium">
-                {formatAmount(order.final_total || 0)}
-              </span>
+              <span className="ml-1 font-medium">{formatAmount(order.final_total || 0)}</span>
             </div>
             <div>
               <span className="text-gray-500">Ordered:</span>
-              <span className="ml-1">
-                {new Date(order.created_at).toLocaleDateString()}
-              </span>
+              <span className="ml-1">{new Date(order.created_at).toLocaleDateString()}</span>
             </div>
             {route && (
               <div>
                 <span className="text-gray-500">Route:</span>
-                <ShippingRouteDisplay 
-                  origin={route.origin} 
+                <ShippingRouteDisplay
+                  origin={route.origin}
                   destination={route.destination}
                   className="ml-1 inline-flex"
                   showIcon={false}
@@ -383,26 +405,31 @@ function OrderItem({ order, countries }: {
                 <span className="ml-1 capitalize">{order.payment_method.replace('_', ' ')}</span>
               </div>
             )}
-            
+
             {/* Payment Status Badge */}
             {order.payment_status && (
-              <Badge variant={
-                order.payment_status === 'paid' ? 'default' :
-                order.payment_status === 'partial' ? 'warning' :
-                order.payment_status === 'overpaid' ? 'secondary' :
-                'outline'
-              } className="text-xs">
+              <Badge
+                variant={
+                  order.payment_status === 'paid'
+                    ? 'default'
+                    : order.payment_status === 'partial'
+                      ? 'warning'
+                      : order.payment_status === 'overpaid'
+                        ? 'secondary'
+                        : 'outline'
+                }
+                className="text-xs"
+              >
                 {order.payment_status === 'partial' && order.amount_paid && order.final_total
                   ? `Partial: ${formatAmount(order.amount_paid)} of ${formatAmount(order.final_total)}`
                   : order.payment_status === 'overpaid' && order.overpayment_amount
-                  ? `Overpaid: +${formatAmount(order.overpayment_amount)}`
-                  : order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)
-                }
+                    ? `Overpaid: +${formatAmount(order.overpayment_amount)}`
+                    : order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
               </Badge>
             )}
           </div>
         </div>
-        
+
         <div className="flex gap-2">
           {/* Message Count Indicator */}
           {messageCount > 0 && (
@@ -410,19 +437,25 @@ function OrderItem({ order, countries }: {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link to={`/dashboard/orders/${order.id}`}>
-                    <Button size="sm" variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                    >
                       <MessageSquare className="h-3 w-3 mr-1" />
                       {messageCount}
                     </Button>
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{messageCount} message{messageCount !== 1 ? 's' : ''}</p>
+                  <p>
+                    {messageCount} message{messageCount !== 1 ? 's' : ''}
+                  </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
-          
+
           <Link to={`/dashboard/orders/${order.id}`}>
             <Button variant="outline" size="sm">
               View Details
@@ -437,4 +470,4 @@ function OrderItem({ order, countries }: {
       </div>
     </div>
   );
-} 
+}

@@ -1,22 +1,22 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
   'Access-Control-Allow-Headers': 'authorization, content-type',
   'Access-Control-Allow-Methods': 'POST',
   'Access-Control-Max-Age': '86400',
-}
+};
 
 interface PaymentLinkEmailRequest {
-  to: string
-  customerName: string
-  orderNumber: string
-  amount: number
-  currency: string
-  paymentUrl: string
-  expiryDate: string
-  from?: string
+  to: string;
+  customerName: string;
+  orderNumber: string;
+  amount: number;
+  currency: string;
+  paymentUrl: string;
+  expiryDate: string;
+  from?: string;
 }
 
 // Email template for payment links
@@ -27,16 +27,19 @@ function generatePaymentLinkEmailTemplate({
   currency,
   paymentUrl,
   expiryDate,
-}: Omit<PaymentLinkEmailRequest, 'to' | 'from'>): { subject: string; html: string } {
+}: Omit<PaymentLinkEmailRequest, 'to' | 'from'>): {
+  subject: string;
+  html: string;
+} {
   const currencySymbols: { [key: string]: string } = {
-    'USD': '$',
-    'INR': '₹',
-    'EUR': '€',
-    'GBP': '£',
-    'NPR': 'Rs.',
-    'CAD': 'C$',
-    'AUD': 'A$',
-    'SGD': 'S$',
+    USD: '$',
+    INR: '₹',
+    EUR: '€',
+    GBP: '£',
+    NPR: 'Rs.',
+    CAD: 'C$',
+    AUD: 'A$',
+    SGD: 'S$',
   };
 
   const symbol = currencySymbols[currency] || currency + ' ';
@@ -248,19 +251,19 @@ function generatePaymentLinkEmailTemplate({
 }
 
 serve(async (req) => {
-  console.log("🔵 === SEND-PAYMENT-LINK-EMAIL FUNCTION STARTED ===");
-  
+  console.log('🔵 === SEND-PAYMENT-LINK-EMAIL FUNCTION STARTED ===');
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
+    return new Response(null, {
       status: 204,
-      headers: corsHeaders 
-    })
+      headers: corsHeaders,
+    });
   }
 
   try {
     const body = await req.json();
-    console.log("🔵 Payment link email request:", JSON.stringify(body, null, 2));
+    console.log('🔵 Payment link email request:', JSON.stringify(body, null, 2));
 
     const {
       to,
@@ -270,21 +273,22 @@ serve(async (req) => {
       currency,
       paymentUrl,
       expiryDate,
-      from = 'payments@iwishbag.com'
+      from = 'payments@iwishbag.com',
     }: PaymentLinkEmailRequest = body;
 
     // Validate required fields
     if (!to || !orderNumber || !amount || !currency || !paymentUrl || !expiryDate) {
-      console.log("❌ Missing required fields");
+      console.log('❌ Missing required fields');
       return new Response(
-        JSON.stringify({ 
-          error: 'Missing required fields: to, orderNumber, amount, currency, paymentUrl, expiryDate' 
+        JSON.stringify({
+          error:
+            'Missing required fields: to, orderNumber, amount, currency, paymentUrl, expiryDate',
         }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     // Generate email template
@@ -298,80 +302,83 @@ serve(async (req) => {
     });
 
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Send email using the existing send-email function
-    console.log("🔵 Calling send-email function...");
+    console.log('🔵 Calling send-email function...');
     const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-email', {
       body: {
         to,
         subject,
         html,
-        from
-      }
+        from,
+      },
     });
 
     if (emailError) {
-      console.error("❌ Error sending email:", emailError);
+      console.error('❌ Error sending email:', emailError);
       return new Response(
-        JSON.stringify({ error: 'Failed to send payment link email', details: emailError.message }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        JSON.stringify({
+          error: 'Failed to send payment link email',
+          details: emailError.message,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
       );
     }
 
-    console.log("✅ Payment link email sent successfully");
-    
+    console.log('✅ Payment link email sent successfully');
+
     // Log the email activity in the database
     try {
-      const { error: logError } = await supabase
-        .from('email_logs')
-        .insert({
-          recipient: to,
-          subject,
-          email_type: 'payment_link',
-          status: 'sent',
-          metadata: {
-            orderNumber,
-            amount,
-            currency,
-            expiryDate,
-            paymentUrl: paymentUrl.substring(0, 50) + '...' // Log partial URL for privacy
-          }
-        });
+      const { error: logError } = await supabase.from('email_logs').insert({
+        recipient: to,
+        subject,
+        email_type: 'payment_link',
+        status: 'sent',
+        metadata: {
+          orderNumber,
+          amount,
+          currency,
+          expiryDate,
+          paymentUrl: paymentUrl.substring(0, 50) + '...', // Log partial URL for privacy
+        },
+      });
 
       if (logError) {
-        console.error("⚠️ Failed to log email activity:", logError);
+        console.error('⚠️ Failed to log email activity:', logError);
         // Don't fail the request for logging errors
       }
     } catch (logError) {
-      console.error("⚠️ Error logging email activity:", logError);
+      console.error('⚠️ Error logging email activity:', logError);
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: 'Payment link email sent successfully',
-        emailResult 
+        emailResult,
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
     );
-
   } catch (error) {
-    console.error("❌ Top-level function error:", error);
+    console.error('❌ Top-level function error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    )
+      JSON.stringify({
+        error: 'Internal server error',
+        details: error.message,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   }
-})
+});

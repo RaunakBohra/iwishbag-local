@@ -48,7 +48,11 @@ PAYPAL_FUNCTION_EXISTS=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_
 
 if [ "$PAYPAL_FUNCTION_EXISTS" = "f" ]; then
     echo "💳 Applying PayPal atomic payment function..."
-    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "supabase/migrations/20250716000001_process_paypal_payment_atomic.sql"
+    if [ -f "supabase/migrations/20250716000001_process_paypal_payment_atomic.sql" ]; then
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "supabase/migrations/20250716000001_process_paypal_payment_atomic.sql"
+    else
+        echo "⚠️  PayPal atomic payment function migration not found, skipping..."
+    fi
 fi
 
 # Check if Stripe atomic functions exist, if not apply them
@@ -56,7 +60,11 @@ STRIPE_FUNCTION_EXISTS=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_
 
 if [ "$STRIPE_FUNCTION_EXISTS" = "f" ]; then
     echo "💳 Applying Stripe atomic payment functions..."
-    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "supabase/migrations/20250715100000_add_atomic_stripe_functions.sql"
+    if [ -f "supabase/migrations/20250715100000_add_atomic_stripe_functions.sql" ]; then
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "supabase/migrations/20250715100000_add_atomic_stripe_functions.sql"
+    else
+        echo "⚠️  Stripe atomic payment functions migration not found, skipping..."
+    fi
 fi
 
 # Check if user profile trigger exists

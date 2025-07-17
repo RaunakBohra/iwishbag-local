@@ -26,12 +26,10 @@ export const ProductImage: React.FC<ProductImageProps> = ({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button className={`${sizeClasses[size]} rounded-lg overflow-hidden border hover:opacity-80 transition-opacity`}>
-          <img
-            src={imageUrl}
-            alt={productName}
-            className="w-full h-full object-cover"
-          />
+        <button
+          className={`${sizeClasses[size]} rounded-lg overflow-hidden border hover:opacity-80 transition-opacity`}
+        >
+          <img src={imageUrl} alt={productName} className="w-full h-full object-cover" />
         </button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">

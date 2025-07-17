@@ -59,14 +59,16 @@ export function formatBankDetailsForEmail(account: BankAccountType): string {
 
   // Add QR code image if available
   if (account.payment_qr_url) {
-    details.push(`<br><div style="margin: 15px 0;"><strong>Payment QR Code:</strong><br><img src="${account.payment_qr_url}" alt="Payment QR Code" style="max-width: 200px; height: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"></div>`);
+    details.push(
+      `<br><div style="margin: 15px 0;"><strong>Payment QR Code:</strong><br><img src="${account.payment_qr_url}" alt="Payment QR Code" style="max-width: 200px; height: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"></div>`,
+    );
   }
 
   // Add custom fields if available
   if (account.custom_fields && typeof account.custom_fields === 'object') {
     const customFieldsData = account.custom_fields as Record<string, unknown>;
     const fieldLabels = (account.field_labels || {}) as Record<string, string>;
-    
+
     Object.entries(customFieldsData).forEach(([key, value]) => {
       if (value) {
         const label = fieldLabels[key] || key;
@@ -77,7 +79,9 @@ export function formatBankDetailsForEmail(account: BankAccountType): string {
 
   // Add instructions at the end if available
   if (account.instructions) {
-    details.push(`<br><div style="background: #f8f9fa; padding: 10px; border-radius: 5px; border-left: 4px solid #007bff;"><strong>Payment Instructions:</strong><br>${account.instructions}</div>`);
+    details.push(
+      `<br><div style="background: #f8f9fa; padding: 10px; border-radius: 5px; border-left: 4px solid #007bff;"><strong>Payment Instructions:</strong><br>${account.instructions}</div>`,
+    );
   }
 
   return details.join('<br>');
@@ -114,7 +118,7 @@ export function formatBankDetailsForText(account: BankAccountType): string {
   if (account.custom_fields && typeof account.custom_fields === 'object') {
     const customFieldsData = account.custom_fields as Record<string, unknown>;
     const fieldLabels = (account.field_labels || {}) as Record<string, string>;
-    
+
     Object.entries(customFieldsData).forEach(([key, value]) => {
       if (value) {
         const label = fieldLabels[key] || key;
@@ -134,7 +138,7 @@ export function formatBankDetailsForText(account: BankAccountType): string {
 /**
  * Gets bank details as HTML for email templates
  * This function should be called when sending bank transfer emails
- * 
+ *
  * Usage example in email service:
  * const bankDetails = await getBankDetailsForCurrency(order.currency);
  * const emailContent = emailTemplate.replace('{{bank_details}}', bankDetails);

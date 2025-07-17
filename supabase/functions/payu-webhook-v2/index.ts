@@ -1,13 +1,13 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { createHash } from "node:crypto"
-import { createWebhookHeaders } from '../_shared/cors.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createHash } from 'node:crypto';
+import { createWebhookHeaders } from '../_shared/cors.ts';
 
 // Database type for type safety
-type Database = Record<string, unknown>
+type Database = Record<string, unknown>;
 
 // Get webhook headers (empty object for webhooks)
-const corsHeaders = createWebhookHeaders()
+const corsHeaders = createWebhookHeaders();
 
 interface PayUWebhookPayload {
   // Common fields
@@ -20,7 +20,7 @@ interface PayUWebhookPayload {
   phone?: string;
   hash?: string;
   status?: string;
-  
+
   // Payment specific fields
   mihpayid?: string;
   mode?: string;
@@ -29,23 +29,23 @@ interface PayUWebhookPayload {
   cardCategory?: string;
   cardnum?: string;
   issuing_bank?: string;
-  
+
   // UDF fields (User Defined Fields)
   udf1?: string; // Usually contains quote_id
   udf2?: string;
   udf3?: string;
   udf4?: string;
   udf5?: string;
-  
+
   // Error fields
   error?: string;
   error_Message?: string;
-  
+
   // Additional fields
   addedon?: string;
   payment_source?: string;
   unmappedstatus?: string;
-  
+
   // Payment link specific fields
   invoice_id?: string;
   payment_link_id?: string;
@@ -103,10 +103,10 @@ const processedRequests = new Map<string, number>();
  */
 async function verifyPayUHash(data: PayUWebhookPayload, saltKey: string): Promise<boolean> {
   const verificationTimeout = 5000; // 5 seconds timeout for hash verification
-  
+
   const verificationPromise = new Promise<boolean>((resolve, reject) => {
     setTimeout(() => reject(new Error('Hash verification timeout')), verificationTimeout);
-    
+
     try {
       const {
         key,
@@ -120,7 +120,7 @@ async function verifyPayUHash(data: PayUWebhookPayload, saltKey: string): Promis
         udf3,
         udf4,
         udf5,
-        hash: receivedHash
+        hash: receivedHash,
       } = data;
 
       // Reconstruct hash string for verification
@@ -128,7 +128,11 @@ async function verifyPayUHash(data: PayUWebhookPayload, saltKey: string): Promis
       const hashString = [
         saltKey,
         data.status || '',
-        '', '', '', '', '', // Reserved fields
+        '',
+        '',
+        '',
+        '',
+        '', // Reserved fields
         udf5 || '',
         udf4 || '',
         udf3 || '',
@@ -139,27 +143,27 @@ async function verifyPayUHash(data: PayUWebhookPayload, saltKey: string): Promis
         productinfo || '',
         amount || '',
         txnid || '',
-        key || ''
+        key || '',
       ].join('|');
 
       const calculatedHash = createHash('sha512').update(hashString).digest('hex');
-      
-      console.log("🔵 Hash verification:");
-      console.log("  - Hash string:", hashString);
-      console.log("  - Calculated hash:", calculatedHash);
-      console.log("  - Received hash:", receivedHash);
-      
+
+      console.log('🔵 Hash verification:');
+      console.log('  - Hash string:', hashString);
+      console.log('  - Calculated hash:', calculatedHash);
+      console.log('  - Received hash:', receivedHash);
+
       resolve(calculatedHash.toLowerCase() === receivedHash?.toLowerCase());
     } catch (error) {
-      console.error("❌ Hash verification error:", error);
+      console.error('❌ Hash verification error:', error);
       resolve(false);
     }
   });
-  
+
   try {
     return await verificationPromise;
   } catch (error) {
-    console.error("❌ Hash verification timeout or error:", error);
+    console.error('❌ Hash verification timeout or error:', error);
     return false;
   }
 }
@@ -168,9 +172,9 @@ async function verifyPayUHash(data: PayUWebhookPayload, saltKey: string): Promis
  * Process payment status update
  */
 async function processPaymentStatusUpdate(
-  supabaseAdmin: SupabaseClient<Database>, 
+  supabaseAdmin: SupabaseClient<Database>,
   webhookData: PayUWebhookPayload,
-  webhookLogEntry: WebhookLogEntry
+  webhookLogEntry: WebhookLogEntry,
 ): Promise<PaymentStatusUpdateResult> {
   const {
     txnid,
@@ -183,18 +187,23 @@ async function processPaymentStatusUpdate(
     error: payuError,
     error_Message,
     invoice_id,
-    payment_link_id
+    payment_link_id,
   } = webhookData;
 
   try {
-    const processed: ProcessedWebhookResult = { payment_transaction: null, payment_link: null, quote: null };
+    const processed: ProcessedWebhookResult = {
+      payment_transaction: null,
+      payment_link: null,
+      quote: null,
+    };
 
     // Use atomic function for successful payments with quote_id
     if (status === 'success' && quoteId && amount && parseFloat(amount) > 0) {
-      console.log("🔄 Processing payment atomically...");
-      
-      const { data: result, error: rpcError } = await supabaseAdmin
-        .rpc('process_payu_payment_atomic', {
+      console.log('🔄 Processing payment atomically...');
+
+      const { data: result, error: rpcError } = await supabaseAdmin.rpc(
+        'process_payu_payment_atomic',
+        {
           p_transaction_id: txnid || '',
           p_gateway_transaction_id: mihpayid || '',
           p_amount: parseFloat(amount),
@@ -205,30 +214,32 @@ async function processPaymentStatusUpdate(
           p_customer_email: email || '',
           p_customer_name: firstname || '',
           p_payment_method: 'payu',
-          p_notes: `PayU payment via ${webhookData.mode || 'unknown'} mode (₹${amount} INR)`
-        });
-      
+          p_notes: `PayU payment via ${webhookData.mode || 'unknown'} mode (₹${amount} INR)`,
+        },
+      );
+
       if (rpcError || !result || !result[0]?.success) {
         const errorMessage = rpcError?.message || result?.[0]?.error_message || 'Unknown error';
-        console.error("❌ Atomic payment processing failed:", errorMessage);
+        console.error('❌ Atomic payment processing failed:', errorMessage);
         return { success: false, error: errorMessage };
       }
-      
+
       const processingResult = result[0] as AtomicProcessingResult;
-      console.log("✅ Payment processed atomically:", {
+      console.log('✅ Payment processed atomically:', {
         payment_transaction_id: processingResult.payment_transaction_id,
         quote_updated: processingResult.quote_updated,
-        payment_ledger_entry_id: processingResult.payment_ledger_entry_id
+        payment_ledger_entry_id: processingResult.payment_ledger_entry_id,
       });
-      
+
       // Set processed result
-      processed.payment_transaction = processingResult.payment_transaction_id ? { id: processingResult.payment_transaction_id } : null;
+      processed.payment_transaction = processingResult.payment_transaction_id
+        ? { id: processingResult.payment_transaction_id }
+        : null;
       processed.quote = processingResult.quote_updated ? { id: quoteId } : null;
-      
     } else {
       // Fallback to individual updates for non-success payments or those without quote_id
-      console.log("🔄 Processing payment with individual updates...");
-      
+      console.log('🔄 Processing payment with individual updates...');
+
       // Update payment transaction if exists
       if (mihpayid || txnid) {
         const { data: transaction, error: txError } = await supabaseAdmin
@@ -238,7 +249,9 @@ async function processPaymentStatusUpdate(
             gateway_response: webhookData,
             updated_at: new Date().toISOString(),
             ...(mihpayid && { gateway_transaction_id: mihpayid }),
-            ...(payuError && { error_message: `${payuError}: ${error_Message}` })
+            ...(payuError && {
+              error_message: `${payuError}: ${error_Message}`,
+            }),
           })
           .eq('transaction_id', txnid)
           .or(`gateway_transaction_id.eq.${mihpayid}`)
@@ -246,10 +259,10 @@ async function processPaymentStatusUpdate(
           .single();
 
         if (txError) {
-          console.log("⚠️ Transaction not found or update failed:", txError.message);
+          console.log('⚠️ Transaction not found or update failed:', txError.message);
         } else {
           processed.payment_transaction = transaction ? { id: transaction.id } : null;
-          console.log("✅ Payment transaction updated");
+          console.log('✅ Payment transaction updated');
         }
       }
     }
@@ -262,17 +275,19 @@ async function processPaymentStatusUpdate(
           status: mapPayUStatusToLinkStatus(status),
           gateway_response: webhookData,
           updated_at: new Date().toISOString(),
-          ...(status === 'success' && { completed_at: new Date().toISOString() })
+          ...(status === 'success' && {
+            completed_at: new Date().toISOString(),
+          }),
         })
         .or(`gateway_link_id.eq.${invoice_id || txnid},id.eq.${payment_link_id}`)
         .select()
         .single();
 
       if (linkError) {
-        console.log("⚠️ Payment link not found or update failed:", linkError.message);
+        console.log('⚠️ Payment link not found or update failed:', linkError.message);
       } else {
         processed.payment_link = paymentLink ? { id: paymentLink.id } : null;
-        console.log("✅ Payment link updated");
+        console.log('✅ Payment link updated');
       }
     }
 
@@ -282,14 +297,13 @@ async function processPaymentStatusUpdate(
     // Send notification for failed payments
     if (status === 'failure' || status === 'cancel') {
       // You could add email notification logic here
-      console.log("📧 Payment failed - notification should be sent");
+      console.log('📧 Payment failed - notification should be sent');
     }
 
     return { success: true, processed };
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error("❌ Error processing payment status update:", error);
+    console.error('❌ Error processing payment status update:', error);
     return { success: false, error: errorMessage };
   }
 }
@@ -299,13 +313,13 @@ async function processPaymentStatusUpdate(
  */
 function mapPayUStatusToInternal(payuStatus?: string): string {
   const statusMap: { [key: string]: string } = {
-    'success': 'completed',
-    'failure': 'failed',
-    'pending': 'pending',
-    'cancel': 'cancelled',
-    'in progress': 'processing'
+    success: 'completed',
+    failure: 'failed',
+    pending: 'pending',
+    cancel: 'cancelled',
+    'in progress': 'processing',
   };
-  
+
   return statusMap[payuStatus?.toLowerCase() || ''] || 'unknown';
 }
 
@@ -314,30 +328,32 @@ function mapPayUStatusToInternal(payuStatus?: string): string {
  */
 function mapPayUStatusToLinkStatus(payuStatus?: string): string {
   const statusMap: { [key: string]: string } = {
-    'success': 'completed',
-    'failure': 'failed',
-    'pending': 'pending',
-    'cancel': 'cancelled',
-    'in progress': 'active'
+    success: 'completed',
+    failure: 'failed',
+    pending: 'pending',
+    cancel: 'cancelled',
+    'in progress': 'active',
   };
-  
+
   return statusMap[payuStatus?.toLowerCase() || ''] || 'active';
 }
 
 /**
  * Log webhook error
  */
-async function logWebhookError(supabaseAdmin: SupabaseClient<Database>, webhookLogEntry: WebhookLogEntry, errorMessage: string) {
+async function logWebhookError(
+  supabaseAdmin: SupabaseClient<Database>,
+  webhookLogEntry: WebhookLogEntry,
+  errorMessage: string,
+) {
   try {
-    await supabaseAdmin
-      .from('webhook_logs')
-      .insert({
-        ...webhookLogEntry,
-        response_status: 400,
-        error_message: errorMessage
-      });
+    await supabaseAdmin.from('webhook_logs').insert({
+      ...webhookLogEntry,
+      response_status: 400,
+      error_message: errorMessage,
+    });
   } catch (error) {
-    console.error("❌ Failed to log webhook error:", error);
+    console.error('❌ Failed to log webhook error:', error);
   }
 }
 
@@ -345,13 +361,16 @@ async function logWebhookError(supabaseAdmin: SupabaseClient<Database>, webhookL
  * Create error response
  */
 function createErrorResponse(message: string, status: number): Response {
-  return new Response(JSON.stringify({
-    success: false,
-    error: message
-  }), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: message,
+    }),
+    {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    },
+  );
 }
 
 /**
@@ -361,14 +380,13 @@ async function processWebhookRequest(
   req: Request,
   supabaseAdmin: SupabaseClient<Database>,
   requestId: string,
-  startTime: number
+  startTime: number,
 ): Promise<Response> {
   try {
-
     // Parse webhook payload with size validation
     let webhookData: PayUWebhookPayload;
     const contentType = req.headers.get('content-type') || '';
-    
+
     if (contentType.includes('application/json')) {
       const rawBody = await req.text();
       if (rawBody.length > WEBHOOK_CONFIG.MAX_BODY_SIZE) {
@@ -384,31 +402,37 @@ async function processWebhookRequest(
       }
     }
 
-    console.log("🔵 Webhook payload received:", JSON.stringify(webhookData, null, 2));
-    
+    console.log('🔵 Webhook payload received:', JSON.stringify(webhookData, null, 2));
+
     // Validate required payload fields
     if (!webhookData.txnid) {
       throw new Error('Missing required field: txnid');
     }
-    
+
     // Replay attack prevention
     const replayKey = `${webhookData.txnid}_${webhookData.status}_${webhookData.amount}`;
     const now = Date.now();
-    
+
     if (processedRequests.has(replayKey)) {
       const lastProcessed = processedRequests.get(replayKey)!;
       if (now - lastProcessed < WEBHOOK_CONFIG.REPLAY_WINDOW) {
-        console.log("🔁 Duplicate request detected, ignoring");
-        return new Response(JSON.stringify({ success: true, message: 'Duplicate request ignored' }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        console.log('🔁 Duplicate request detected, ignoring');
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: 'Duplicate request ignored',
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
       }
     }
-    
+
     // Mark request as processed
     processedRequests.set(replayKey, now);
-    
+
     // Clean up old entries (keep map size manageable)
     for (const [key, timestamp] of processedRequests.entries()) {
       if (now - timestamp > WEBHOOK_CONFIG.REPLAY_WINDOW) {
@@ -430,7 +454,7 @@ async function processWebhookRequest(
       error,
       error_Message,
       invoice_id,
-      payment_link_id
+      payment_link_id,
     } = webhookData;
 
     // Log webhook request with enhanced information
@@ -441,9 +465,9 @@ async function processWebhookRequest(
       request_body: webhookData,
       quote_id: quoteId || null,
       transaction_id: mihpayid || txnid || null,
-      processed_at: new Date().toISOString()
+      processed_at: new Date().toISOString(),
     };
-    
+
     // Add request metadata to log entry
     webhookLogEntry.request_headers['x-request-id'] = requestId;
     webhookLogEntry.request_headers['x-processing-start'] = startTime.toString();
@@ -456,7 +480,7 @@ async function processWebhookRequest(
       .single();
 
     if (!payuGateway) {
-      console.error("❌ PayU gateway configuration not found");
+      console.error('❌ PayU gateway configuration not found');
       await logWebhookError(supabaseAdmin, webhookLogEntry, 'PayU gateway configuration not found');
       return createErrorResponse('Gateway configuration not found', 500);
     }
@@ -468,65 +492,63 @@ async function processWebhookRequest(
     if (hash && saltKey) {
       const isValidHash = await verifyPayUHash(webhookData, saltKey);
       if (!isValidHash) {
-        console.error("❌ Invalid PayU hash");
+        console.error('❌ Invalid PayU hash');
         await logWebhookError(supabaseAdmin, webhookLogEntry, 'Invalid PayU hash');
         return createErrorResponse('Invalid hash', 400);
       }
-      console.log("✅ PayU hash verified successfully");
+      console.log('✅ PayU hash verified successfully');
     }
 
     // Process payment status update
     const result = await processPaymentStatusUpdate(supabaseAdmin, webhookData, webhookLogEntry);
-    
+
     if (!result.success) {
       return createErrorResponse(result.error || 'Failed to process payment update', 500);
     }
 
     // Log successful processing
-    await supabaseAdmin
-      .from('webhook_logs')
-      .insert({
-        ...webhookLogEntry,
-        response_status: 200,
-        response_body: { success: true, processed: result.processed }
-      });
-
-    const processingTime = Date.now() - startTime;
-    console.log("✅ Webhook processed successfully in", processingTime, "ms");
-
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Webhook processed successfully',
-      processed: result.processed,
-      processing_time_ms: processingTime
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    await supabaseAdmin.from('webhook_logs').insert({
+      ...webhookLogEntry,
+      response_status: 200,
+      response_body: { success: true, processed: result.processed },
     });
 
+    const processingTime = Date.now() - startTime;
+    console.log('✅ Webhook processed successfully in', processingTime, 'ms');
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'Webhook processed successfully',
+        processed: result.processed,
+        processing_time_ms: processingTime,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error("❌ Webhook processing error:", error);
-    
+    console.error('❌ Webhook processing error:', error);
+
     // Log error
     try {
       const supabaseAdmin: SupabaseClient<Database> = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       );
-      
-      await supabaseAdmin
-        .from('webhook_logs')
-        .insert({
-          gateway_code: 'payu',
-          webhook_type: 'payment_status',
-          request_headers: Object.fromEntries(req.headers.entries()),
-          response_status: 500,
-          error_message: errorMessage,
-          processed_at: new Date().toISOString()
-        });
+
+      await supabaseAdmin.from('webhook_logs').insert({
+        gateway_code: 'payu',
+        webhook_type: 'payment_status',
+        request_headers: Object.fromEntries(req.headers.entries()),
+        response_status: 500,
+        error_message: errorMessage,
+        processed_at: new Date().toISOString(),
+      });
     } catch (logError) {
-      console.error("❌ Failed to log webhook error:", logError);
+      console.error('❌ Failed to log webhook error:', logError);
     }
 
     return createErrorResponse('Internal server error', 500);
@@ -536,65 +558,65 @@ async function processWebhookRequest(
 serve(async (req) => {
   const startTime = Date.now();
   const requestId = crypto.randomUUID();
-  
-  console.log("🔵 === PAYU WEBHOOK V2 FUNCTION STARTED ===");
-  console.log("🔵 Request ID:", requestId);
-  console.log("🔵 Request method:", req.method);
-  console.log("🔵 Request URL:", req.url);
-  console.log("🔵 Request headers:", Object.fromEntries(req.headers.entries()));
-  
+
+  console.log('🔵 === PAYU WEBHOOK V2 FUNCTION STARTED ===');
+  console.log('🔵 Request ID:', requestId);
+  console.log('🔵 Request method:', req.method);
+  console.log('🔵 Request URL:', req.url);
+  console.log('🔵 Request headers:', Object.fromEntries(req.headers.entries()));
+
   // Security timeout
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => reject(new Error('Request timeout')), WEBHOOK_CONFIG.MAX_PROCESSING_TIME);
   });
-  
+
   // Webhooks should only accept POST requests
   if (req.method !== 'POST') {
-    console.error("❌ Invalid request method:", req.method);
+    console.error('❌ Invalid request method:', req.method);
     return createErrorResponse('Method not allowed', 405);
   }
-  
+
   // Basic security headers validation
-  const missingHeaders = WEBHOOK_CONFIG.REQUIRED_HEADERS.filter(header => !req.headers.get(header));
+  const missingHeaders = WEBHOOK_CONFIG.REQUIRED_HEADERS.filter(
+    (header) => !req.headers.get(header),
+  );
   if (missingHeaders.length > 0) {
-    console.error("❌ Missing required headers:", missingHeaders);
+    console.error('❌ Missing required headers:', missingHeaders);
     return createErrorResponse('Missing required headers', 400);
   }
 
   try {
     const supabaseAdmin: SupabaseClient<Database> = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
-    
+
     // Wrap processing in timeout
     const processPromise = processWebhookRequest(req, supabaseAdmin, requestId, startTime);
     const result = await Promise.race([processPromise, timeoutPromise]);
-    
+
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error("❌ Webhook processing error:", error);
-    
+    console.error('❌ Webhook processing error:', error);
+
     // Log error
     try {
       const supabaseAdmin: SupabaseClient<Database> = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       );
-      
-      await supabaseAdmin
-        .from('webhook_logs')
-        .insert({
-          gateway_code: 'payu',
-          webhook_type: 'payment_status',
-          request_headers: Object.fromEntries(req.headers.entries()),
-          response_status: 500,
-          error_message: errorMessage,
-          processed_at: new Date().toISOString()
-        });
+
+      await supabaseAdmin.from('webhook_logs').insert({
+        gateway_code: 'payu',
+        webhook_type: 'payment_status',
+        request_headers: Object.fromEntries(req.headers.entries()),
+        response_status: 500,
+        error_message: errorMessage,
+        processed_at: new Date().toISOString(),
+      });
     } catch (logError) {
-      console.error("❌ Failed to log webhook error:", logError);
+      console.error('❌ Failed to log webhook error:', logError);
     }
 
     return createErrorResponse('Internal server error', 500);

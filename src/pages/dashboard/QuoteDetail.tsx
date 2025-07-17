@@ -9,39 +9,28 @@ import { useQuoteState } from '@/hooks/useQuoteState';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useCartStore } from '@/stores/cartStore';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
-import { QuoteBreakdown } from '@/components/dashboard/QuoteBreakdown';
-import { DeliveryTimeline } from '@/components/dashboard/DeliveryTimeline';
 import { AddressEditForm } from '@/components/forms/AddressEditForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
-import { 
-  ArrowLeft, 
-  Package, 
-  Truck, 
-  CheckCircle, 
-  Clock, 
-  DollarSign, 
-  MapPin, 
+import {
+  ArrowLeft,
+  Package,
+  Truck,
+  CheckCircle,
+  MapPin,
   Calendar,
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
   Download,
   MessageCircle,
   Edit,
-  Eye,
-  EyeOff,
   Globe,
   Weight,
   ShoppingCart,
   AlertCircle,
   XCircle,
   HelpCircle,
-  Sparkles,
   Info,
   Receipt,
   BookOpen,
@@ -50,18 +39,13 @@ import {
   Shield,
   CreditCard,
   Gift,
-  Star,
   Zap,
-  Target,
-  TrendingUp,
   User,
   Building,
-  Phone
+  Phone,
 } from 'lucide-react';
 import { ShippingAddress } from '@/types/address';
 import { QuoteStepper } from '@/components/dashboard/QuoteStepper';
-import type { QuoteStep } from '@/components/dashboard/QuoteStepper';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { QuoteMessaging } from '@/components/messaging/QuoteMessaging';
 import { CustomerRejectQuoteDialog } from '@/components/dashboard/CustomerRejectQuoteDialog';
@@ -77,9 +61,9 @@ export default function QuoteDetail() {
   const { user } = useAuth();
   // Will get formatAmount from useQuoteDisplayCurrency when quote is loaded
   const { data: countries } = useAllCountries();
-  const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
+  const { data: _isAdmin, isLoading: _isAdminLoading } = useAdminRole();
   const { getStatusConfig } = useStatusManagement();
-  const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
+  const [isBreakdownExpanded, _setIsBreakdownExpanded] = useState(false);
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
   const [isHelpOpen, setHelpOpen] = useState(false);
   const [isMobileHelpOpen, setMobileHelpOpen] = useState(false);
@@ -90,25 +74,32 @@ export default function QuoteDetail() {
 
   // Use the existing quote state hook for approve/reject functionality
   const { approveQuote, rejectQuote, addToCart, isUpdating } = useQuoteState(id || '');
-  
+
   // Subscribe to cart store to make quote detail reactive to cart changes
   const cartItems = useCartStore((state) => state.items);
-  
+
   // Helper function to check if this quote is in cart
   const isQuoteInCart = (quoteId: string) => {
-    return cartItems.some(item => item.quoteId === quoteId);
+    return cartItems.some((item) => item.quoteId === quoteId);
   };
 
-  const { data: quote, isLoading, error, refetch } = useQuery({
+  const {
+    data: quote,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['quote-detail', id],
     queryFn: async () => {
       if (!id || !user) return null;
       const { data, error } = await supabase
         .from('quotes')
-        .select(`
+        .select(
+          `
           *,
           quote_items (*)
-        `)
+        `,
+        )
         .eq('id', id)
         .single();
 
@@ -143,22 +134,23 @@ export default function QuoteDetail() {
 
   // Get country name for display
   const countryName = useMemo(() => {
-    return countries?.find(c => c.code === quote?.destination_country)?.name || quote?.destination_country;
+    return (
+      countries?.find((c) => c.code === quote?.destination_country)?.name ||
+      quote?.destination_country
+    );
   }, [countries, quote?.destination_country]);
 
   // Currency formatting is now handled by useQuoteDisplayCurrency hook
 
-
-
   // Calculate delivery timeline
-  const getDeliveryTimeline = () => {
+  const _getDeliveryTimeline = () => {
     const created = new Date(quote?.created_at || '');
-    const estimatedDelivery = new Date(created.getTime() + (14 * 24 * 60 * 60 * 1000)); // 14 days
-    
+    const estimatedDelivery = new Date(created.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days
+
     return {
       created: created.toLocaleDateString(),
       estimatedDelivery: estimatedDelivery.toLocaleDateString(),
-      daysRemaining: Math.ceil((estimatedDelivery.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+      daysRemaining: Math.ceil((estimatedDelivery.getTime() - Date.now()) / (24 * 60 * 60 * 1000)),
     };
   };
 
@@ -190,7 +182,7 @@ export default function QuoteDetail() {
     return statusConfig.allowCartActions ?? false;
   }, [statusConfig, quote?.status]);
 
-  const canReject = useMemo(() => {
+  const _canReject = useMemo(() => {
     if (!statusConfig) return ['sent', 'approved'].includes(quote?.status || ''); // fallback
     return statusConfig.allowRejection ?? false;
   }, [statusConfig, quote?.status]);
@@ -213,10 +205,10 @@ export default function QuoteDetail() {
   // Mapping function for quote state (inlined from QuoteBreakdown)
   const getQuoteUIState = (quote: Record<string, unknown>) => {
     const { status, in_cart } = quote;
-    
+
     let step: 'review' | 'approve' | 'cart' | 'checkout' | 'rejected' = 'review';
     let summaryStatus: 'pending' | 'approved' | 'rejected' | 'in_cart' = 'pending';
-    
+
     if (status === 'pending') {
       step = 'review';
       summaryStatus = 'pending';
@@ -232,17 +224,22 @@ export default function QuoteDetail() {
     } else if (status === 'rejected') {
       step = 'rejected';
       summaryStatus = 'rejected';
-    } else if (status === 'paid' || status === 'ordered' || status === 'shipped' || status === 'completed') {
+    } else if (
+      status === 'paid' ||
+      status === 'ordered' ||
+      status === 'shipped' ||
+      status === 'completed'
+    ) {
       step = 'checkout';
       summaryStatus = 'approved';
     }
-    
+
     return { step, rejected: step === 'rejected' };
   };
 
   // --- Delivery Window Calculation ---
-  const [deliveryWindow, setDeliveryWindow] = React.useState<{ 
-    label: string; 
+  const [deliveryWindow, setDeliveryWindow] = React.useState<{
+    label: string;
     days: string;
     timeline: {
       minDate: Date;
@@ -260,9 +257,9 @@ export default function QuoteDetail() {
       if (!quote?.shipping_route_id) {
         // Fallback calculation
         const created = new Date(quote?.created_at || '');
-        const minDate = new Date(created.getTime() + (10 * 24 * 60 * 60 * 1000)); // 10 days
-        const maxDate = new Date(created.getTime() + (18 * 24 * 60 * 60 * 1000)); // 18 days
-        
+        const minDate = new Date(created.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 days
+        const maxDate = new Date(created.getTime() + 18 * 24 * 60 * 60 * 1000); // 18 days
+
         setDeliveryWindow({
           label: `${minDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${maxDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
           days: '10-18 days',
@@ -273,8 +270,8 @@ export default function QuoteDetail() {
             totalMaxDays: 18,
             processingDays: 2,
             customsDays: 3,
-            shippingDays: 5
-          }
+            shippingDays: 5,
+          },
         });
         return;
       }
@@ -295,15 +292,16 @@ export default function QuoteDetail() {
         const processingDays = route.processing_days || 2;
         const customsDays = route.customs_clearance_days || 3;
         const shippingDays = 5; // Default shipping days
-        
+
         const totalMinDays = processingDays + customsDays + shippingDays;
         const totalMaxDays = totalMinDays + 3; // Add buffer
-        
-        const minDate = new Date(created.getTime() + (totalMinDays * 24 * 60 * 60 * 1000));
-        const maxDate = new Date(created.getTime() + (totalMaxDays * 24 * 60 * 60 * 1000));
-        
-        const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        
+
+        const minDate = new Date(created.getTime() + totalMinDays * 24 * 60 * 60 * 1000);
+        const maxDate = new Date(created.getTime() + totalMaxDays * 24 * 60 * 60 * 1000);
+
+        const formatDate = (d: Date) =>
+          d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
         setDeliveryWindow({
           label: `${formatDate(minDate)} - ${formatDate(maxDate)}`,
           days: `${totalMinDays}-${totalMaxDays} days`,
@@ -314,18 +312,19 @@ export default function QuoteDetail() {
             totalMaxDays,
             processingDays,
             customsDays,
-            shippingDays
-          }
+            shippingDays,
+          },
         });
       } catch (error) {
         console.error('Error calculating delivery window:', error);
         // Fallback calculation
         const created = new Date(quote?.created_at || '');
-        const minDate = new Date(created.getTime() + (10 * 24 * 60 * 60 * 1000));
-        const maxDate = new Date(created.getTime() + (18 * 24 * 60 * 60 * 1000));
-        
-        const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        
+        const minDate = new Date(created.getTime() + 10 * 24 * 60 * 60 * 1000);
+        const maxDate = new Date(created.getTime() + 18 * 24 * 60 * 60 * 1000);
+
+        const formatDate = (d: Date) =>
+          d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
         setDeliveryWindow({
           label: `${formatDate(minDate)} - ${formatDate(maxDate)}`,
           days: '10-18 days',
@@ -336,8 +335,8 @@ export default function QuoteDetail() {
             totalMaxDays: 18,
             processingDays: 2,
             customsDays: 3,
-            shippingDays: 5
-          }
+            shippingDays: 5,
+          },
         });
       }
     }
@@ -348,7 +347,8 @@ export default function QuoteDetail() {
   }, [quote]);
 
   const formatDateRange = (minDate: Date, maxDate: Date) => {
-    const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const formatDate = (d: Date) =>
+      d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     return `${formatDate(minDate)} - ${formatDate(maxDate)}`;
   };
 
@@ -381,7 +381,9 @@ export default function QuoteDetail() {
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">Quote Not Found</h2>
-            <p className="text-gray-600 mb-4">The quote you're looking for doesn't exist or you don't have permission to view it.</p>
+            <p className="text-gray-600 mb-4">
+              The quote you're looking for doesn't exist or you don't have permission to view it.
+            </p>
             <Link to="/dashboard/quotes">
               <Button>Back to Quotes</Button>
             </Link>
@@ -446,7 +448,12 @@ export default function QuoteDetail() {
     setIsBreakdownOpen(false);
   };
 
-  const renderBreakdownRow = (label: string, amount: number | null, isDiscount = false, icon?: React.ReactNode) => {
+  const renderBreakdownRow = (
+    label: string,
+    amount: number | null,
+    isDiscount = false,
+    icon?: React.ReactNode,
+  ) => {
     if (!amount || amount === 0) return null;
     const sign = isDiscount ? '-' : '+';
     return (
@@ -457,18 +464,23 @@ export default function QuoteDetail() {
             <span className="text-xs sm:text-sm">{label}</span>
           </div>
         </div>
-        <span className="font-medium text-xs sm:text-sm">{sign}{formatAmount(amount)}</span>
+        <span className="font-medium text-xs sm:text-sm">
+          {sign}
+          {formatAmount(amount)}
+        </span>
       </div>
     );
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className={`container px-4 sm:px-6 py-4 sm:py-6 lg:py-8 animate-in fade-in duration-500 ${isMobile ? 'pb-24' : ''}`}>
+      <div
+        className={`container px-4 sm:px-6 py-4 sm:py-6 lg:py-8 animate-in fade-in duration-500 ${isMobile ? 'pb-24' : ''}`}
+      >
         {/* Header */}
         <div className="mb-6 sm:mb-8 animate-in slide-in-from-top duration-700">
-          <Link 
-            to="/dashboard/quotes" 
+          <Link
+            to="/dashboard/quotes"
             className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-all duration-200 hover:scale-105 group"
           >
             <div className="p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm group-hover:shadow-md transition-all duration-200 mr-3">
@@ -476,7 +488,7 @@ export default function QuoteDetail() {
             </div>
             <span className="font-medium">Back to Quotes</span>
           </Link>
-          
+
           {/* Mobile-optimized header layout */}
           <div className="space-y-4">
             {/* Quote ID and Status Row */}
@@ -507,7 +519,10 @@ export default function QuoteDetail() {
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Status Stepper */}
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-4 sm:p-6">
-              <QuoteStepper currentStep={getQuoteUIState(quote).step} rejected={getQuoteUIState(quote).step === 'rejected'} />
+              <QuoteStepper
+                currentStep={getQuoteUIState(quote).step}
+                rejected={getQuoteUIState(quote).step === 'rejected'}
+              />
             </div>
 
             {/* Product Hero Card */}
@@ -526,33 +541,48 @@ export default function QuoteDetail() {
                     {/* Horizontally scrollable product cards */}
                     <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                       {quote.quote_items.map((item) => (
-                        <div key={item.id} className="flex flex-col items-center min-w-[140px] max-w-[160px] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50 shadow-sm hover:shadow-md transition-all duration-200">
+                        <div
+                          key={item.id}
+                          className="flex flex-col items-center min-w-[140px] max-w-[160px] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50 shadow-sm hover:shadow-md transition-all duration-200"
+                        >
                           <div className="text-sm font-medium text-center truncate w-full">
                             {item.product_url ? (
-                              <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{item.product_name}</a>
+                              <a
+                                href={item.product_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                              >
+                                {item.product_name}
+                              </a>
                             ) : (
                               item.product_name
                             )}
                           </div>
-                          <div className="text-xs text-muted-foreground mt-1 bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-full inline-block">Qty: {item.quantity}</div>
+                          <div className="text-xs text-muted-foreground mt-1 bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-full inline-block">
+                            Qty: {item.quantity}
+                          </div>
                           {/* Product Notes Blue Box */}
-                          {item.options && (() => {
-                            try {
-                              const options = JSON.parse(item.options);
-                              return options.notes ? (
-                                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
-                                  <span className="font-medium text-blue-800">Notes:</span> {options.notes}
-                                </div>
-                              ) : null;
-                            } catch {
-                              // If not JSON, treat as plain text notes
-                              return (
-                                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
-                                  <span className="font-medium text-blue-800">Notes:</span> {item.options}
-                                </div>
-                              );
-                            }
-                          })()}
+                          {item.options &&
+                            (() => {
+                              try {
+                                const options = JSON.parse(item.options);
+                                return options.notes ? (
+                                  <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
+                                    <span className="font-medium text-blue-800">Notes:</span>{' '}
+                                    {options.notes}
+                                  </div>
+                                ) : null;
+                              } catch {
+                                // If not JSON, treat as plain text notes
+                                return (
+                                  <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
+                                    <span className="font-medium text-blue-800">Notes:</span>{' '}
+                                    {item.options}
+                                  </div>
+                                );
+                              }
+                            })()}
                         </div>
                       ))}
                     </div>
@@ -561,52 +591,78 @@ export default function QuoteDetail() {
                       <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50 flex flex-col justify-between">
                         <div className="flex items-center gap-2 mb-2">
                           <Package className="h-4 w-4 text-gray-600" />
-                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Cost of Goods</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                            Cost of Goods
+                          </span>
                         </div>
-                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatAmount(quote.item_price)}</span>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                          {formatAmount(quote.item_price)}
+                        </span>
                       </div>
                       <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50 flex flex-col justify-between">
                         <div className="flex items-center gap-2 mb-2">
                           <Receipt className="h-4 w-4 text-gray-600" />
-                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Quote Total</span>
-                          <button 
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                            Quote Total
+                          </span>
+                          <button
                             onClick={handleOpenBreakdown}
                             className="cursor-pointer hover:scale-110 transition-transform duration-200"
                           >
                             <Info className="h-3 w-3 text-gray-500 hover:text-gray-700" />
                           </button>
                         </div>
-                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatAmount(quote.final_total)}</span>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                          {formatAmount(quote.final_total)}
+                        </span>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
                       <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
                         <div className="flex items-center gap-2 mb-2">
                           <Weight className="h-4 w-4 text-gray-600" />
-                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Weight</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                            Weight
+                          </span>
                         </div>
-                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{quote.item_weight || 0} kg</span>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                          {quote.item_weight || 0} kg
+                        </span>
                       </div>
                       <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
                         <div className="flex items-center gap-2 mb-2">
                           <Globe className="h-4 w-4 text-gray-600" />
-                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Country</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                            Country
+                          </span>
                         </div>
-                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{countryName}</span>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                          {countryName}
+                        </span>
                       </div>
                       <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
                         <div className="flex items-center gap-2 mb-2">
                           <Package className="h-4 w-4 text-gray-600" />
-                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Items</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                            Items
+                          </span>
                         </div>
-                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{quote.quote_items.reduce((sum, item) => sum + (item.quantity || 0), 0)}</span>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                          {quote.quote_items.reduce((sum, item) => sum + (item.quantity || 0), 0)}
+                        </span>
                       </div>
                       <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
                         <div className="flex items-center gap-2 mb-2">
                           <Calendar className="h-4 w-4 text-gray-600" />
-                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Delivery</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                            Delivery
+                          </span>
                         </div>
-                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{deliveryWindow ? `${deliveryWindow.label} (${deliveryWindow.days})` : '—'}</span>
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                          {deliveryWindow
+                            ? `${deliveryWindow.label} (${deliveryWindow.days})`
+                            : '—'}
+                        </span>
                       </div>
                     </div>
                   </>
@@ -615,7 +671,11 @@ export default function QuoteDetail() {
                     {/* Product Image - Only show if image exists */}
                     {quote.image_url && (
                       <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-gray-100 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-2xl flex items-center justify-center flex-shrink-0 hover:scale-105 transition-transform duration-200 shadow-lg">
-                        <img src={quote.image_url} alt={quote.product_name} className="w-full h-full object-cover rounded-2xl" />
+                        <img
+                          src={quote.image_url}
+                          alt={quote.product_name}
+                          className="w-full h-full object-cover rounded-2xl"
+                        />
                       </div>
                     )}
                     {/* Product Info + Status + Price */}
@@ -623,51 +683,73 @@ export default function QuoteDetail() {
                       <div className="flex flex-col gap-3">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                           <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent truncate">
-                            {quote.quote_items && quote.quote_items[0] && quote.quote_items[0].product_url ? (
-                              <a href={quote.quote_items[0].product_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{quote.product_name || 'Product Name'}</a>
+                            {quote.quote_items &&
+                            quote.quote_items[0] &&
+                            quote.quote_items[0].product_url ? (
+                              <a
+                                href={quote.quote_items[0].product_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                              >
+                                {quote.product_name || 'Product Name'}
+                              </a>
                             ) : (
                               quote.product_name || 'Product Name'
                             )}
                           </h3>
                         </div>
                         {/* Product Notes Blue Box for single product */}
-                        {quote.quote_items && quote.quote_items[0] && quote.quote_items[0].options && (() => {
-                          try {
-                            const options = JSON.parse(quote.quote_items[0].options);
-                            return options.notes ? (
-                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
-                                <span className="font-medium text-blue-800">Notes:</span> {options.notes}
-                              </div>
-                            ) : null;
-                          } catch {
-                            // If not JSON, treat as plain text notes
-                            return (
-                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
-                                <span className="font-medium text-blue-800">Notes:</span> {quote.quote_items[0].options}
-                              </div>
-                            );
-                          }
-                        })()}
+                        {quote.quote_items &&
+                          quote.quote_items[0] &&
+                          quote.quote_items[0].options &&
+                          (() => {
+                            try {
+                              const options = JSON.parse(quote.quote_items[0].options);
+                              return options.notes ? (
+                                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
+                                  <span className="font-medium text-blue-800">Notes:</span>{' '}
+                                  {options.notes}
+                                </div>
+                              ) : null;
+                            } catch {
+                              // If not JSON, treat as plain text notes
+                              return (
+                                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
+                                  <span className="font-medium text-blue-800">Notes:</span>{' '}
+                                  {quote.quote_items[0].options}
+                                </div>
+                              );
+                            }
+                          })()}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
                             <div className="flex items-center gap-2 mb-2">
                               <Package className="h-4 w-4 text-gray-600" />
-                              <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Cost of Goods</span>
+                              <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                                Cost of Goods
+                              </span>
                             </div>
-                            <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatAmount(quote.item_price)}</span>
+                            <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                              {formatAmount(quote.item_price)}
+                            </span>
                           </div>
                           <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
                             <div className="flex items-center gap-2 mb-2">
                               <Receipt className="h-4 w-4 text-gray-600" />
-                              <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Quote Total</span>
-                              <button 
+                              <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                                Quote Total
+                              </span>
+                              <button
                                 onClick={handleOpenBreakdown}
                                 className="cursor-pointer hover:scale-110 transition-transform duration-200"
                               >
                                 <Info className="h-3 w-3 text-gray-500 hover:text-gray-700" />
                               </button>
                             </div>
-                            <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatAmount(quote.final_total)}</span>
+                            <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                              {formatAmount(quote.final_total)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -675,30 +757,53 @@ export default function QuoteDetail() {
                         <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
                           <div className="flex items-center gap-2 mb-1">
                             <Globe className="h-3 w-3 text-gray-600" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Country</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                              Country
+                            </span>
                           </div>
-                          <div className="font-bold text-gray-900 dark:text-gray-100">{countryName}</div>
+                          <div className="font-bold text-gray-900 dark:text-gray-100">
+                            {countryName}
+                          </div>
                         </div>
                         <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
                           <div className="flex items-center gap-2 mb-1">
                             <Weight className="h-3 w-3 text-gray-600" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Weight</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                              Weight
+                            </span>
                           </div>
-                          <div className="font-bold text-gray-900 dark:text-gray-100">{quote.item_weight || 0} kg</div>
+                          <div className="font-bold text-gray-900 dark:text-gray-100">
+                            {quote.item_weight || 0} kg
+                          </div>
                         </div>
                         <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
                           <div className="flex items-center gap-2 mb-1">
                             <Package className="h-3 w-3 text-gray-600" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Quantity</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                              Quantity
+                            </span>
                           </div>
-                          <div className="font-bold text-gray-900 dark:text-gray-100">{Array.isArray(quote.quote_items) ? quote.quote_items.reduce((sum, item) => sum + (item.quantity || 0), 0) : (quote.quantity || 1)}</div>
+                          <div className="font-bold text-gray-900 dark:text-gray-100">
+                            {Array.isArray(quote.quote_items)
+                              ? quote.quote_items.reduce(
+                                  (sum, item) => sum + (item.quantity || 0),
+                                  0,
+                                )
+                              : quote.quantity || 1}
+                          </div>
                         </div>
                         <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
                           <div className="flex items-center gap-2 mb-1">
                             <Calendar className="h-3 w-3 text-gray-600" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Delivery</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                              Delivery
+                            </span>
                           </div>
-                          <div className="font-bold text-gray-900 dark:text-gray-100">{deliveryWindow ? `${deliveryWindow.label} (${deliveryWindow.days})` : '—'}</div>
+                          <div className="font-bold text-gray-900 dark:text-gray-100">
+                            {deliveryWindow
+                              ? `${deliveryWindow.label} (${deliveryWindow.days})`
+                              : '—'}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -712,33 +817,51 @@ export default function QuoteDetail() {
               <div className="md:block hidden">
                 <Popover open={isHelpOpen} onOpenChange={setHelpOpen}>
                   <PopoverTrigger asChild>
-                                    <button className="text-base font-medium flex items-center gap-2 text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 border border-gray-200/50 dark:border-gray-600/50 shadow-sm hover:shadow-md px-4 py-2 rounded-xl transition-all duration-200 hover:scale-105" type="button">
-                  <HelpCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" /> Need Help?
-                </button>
+                    <button
+                      className="text-base font-medium flex items-center gap-2 text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 border border-gray-200/50 dark:border-gray-600/50 shadow-sm hover:shadow-md px-4 py-2 rounded-xl transition-all duration-200 hover:scale-105"
+                      type="button"
+                    >
+                      <HelpCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" /> Need Help?
+                    </button>
                   </PopoverTrigger>
-                  <PopoverContent align="center" className="w-64 p-3 backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl rounded-2xl">
+                  <PopoverContent
+                    align="center"
+                    className="w-64 p-3 backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl rounded-2xl"
+                  >
                     <div className="space-y-2">
-                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" onClick={handleMessageSupport}>
+                      <button
+                        className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
+                        onClick={handleMessageSupport}
+                      >
                         <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
                           <MessageCircle className="w-4 h-4 text-blue-600" />
                         </div>
                         Message Support
                       </button>
                       {canCancel && (
-                        <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105" onClick={handleCancelQuote}>
+                        <button
+                          className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105"
+                          onClick={handleCancelQuote}
+                        >
                           <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
                             <XCircle className="w-4 h-4 text-red-600" />
                           </div>
                           Cancel Quote
                         </button>
                       )}
-                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" onClick={handleFAQ}>
+                      <button
+                        className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
+                        onClick={handleFAQ}
+                      >
                         <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50">
                           <BookOpen className="w-4 h-4 text-green-600" />
                         </div>
                         FAQ
                       </button>
-                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" onClick={handleRequestChanges}>
+                      <button
+                        className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
+                        onClick={handleRequestChanges}
+                      >
                         <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
                           <Edit2 className="w-4 h-4 text-purple-600" />
                         </div>
@@ -754,13 +877,14 @@ export default function QuoteDetail() {
                   type="button"
                   onClick={() => setMobileHelpOpen(true)}
                 >
-                  <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" /> Need Help?
+                  <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" />{' '}
+                  Need Help?
                 </button>
                 <Dialog open={isMobileHelpOpen} onOpenChange={setMobileHelpOpen}>
                   <DialogContent className="sm:max-w-[350px] backdrop-blur-xl bg-white/95 border border-white/30 shadow-2xl rounded-2xl">
                     <div className="space-y-2">
-                      <button 
-                        className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" 
+                      <button
+                        className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
                         onClick={handleMessageSupport}
                       >
                         <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
@@ -769,8 +893,8 @@ export default function QuoteDetail() {
                         Message Support
                       </button>
                       {canCancel && (
-                        <button 
-                          className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105" 
+                        <button
+                          className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105"
                           onClick={handleCancelQuote}
                         >
                           <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
@@ -779,8 +903,8 @@ export default function QuoteDetail() {
                           Cancel Quote
                         </button>
                       )}
-                      <button 
-                        className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" 
+                      <button
+                        className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
                         onClick={handleFAQ}
                       >
                         <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50">
@@ -788,8 +912,8 @@ export default function QuoteDetail() {
                         </div>
                         FAQ
                       </button>
-                      <button 
-                        className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105" 
+                      <button
+                        className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
                         onClick={handleRequestChanges}
                       >
                         <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
@@ -820,7 +944,11 @@ export default function QuoteDetail() {
                     </div>
                     Quote Breakdown
                   </h2>
-                  <Button variant="outline" size="sm" className="gap-2 hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200/50">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200/50"
+                  >
                     <Download className="h-4 w-4" />
                     Download PDF
                   </Button>
@@ -828,44 +956,54 @@ export default function QuoteDetail() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Items Section */}
                   <div className="space-y-4">
-                    <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Items</h3>
+                    <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      Items
+                    </h3>
                     <div className="space-y-3">
                       {quote.quote_items?.map((item) => (
-                        <div key={item.id} className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200/50 dark:border-gray-600/50 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200">
+                        <div
+                          key={item.id}
+                          className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200/50 dark:border-gray-600/50 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200"
+                        >
                           <div className="flex justify-between items-start">
                             <div className="flex items-center gap-3">
                               {item.image_url && (
-                                <img 
-                                  src={item.image_url} 
+                                <img
+                                  src={item.image_url}
                                   alt={item.product_name}
                                   className="w-12 h-12 rounded-lg object-cover shadow-sm"
                                 />
                               )}
-                              <div className={item.image_url ? "" : "flex-1"}>
+                              <div className={item.image_url ? '' : 'flex-1'}>
                                 <div className="font-semibold text-sm">{item.product_name}</div>
-                                <div className="text-muted-foreground text-xs bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-full inline-block">Quantity: {item.quantity}</div>
+                                <div className="text-muted-foreground text-xs bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-full inline-block">
+                                  Quantity: {item.quantity}
+                                </div>
                               </div>
                             </div>
-                            <span className="font-bold text-sm bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{formatAmount(item.item_price * item.quantity)}</span>
+                            <span className="font-bold text-sm bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                              {formatAmount(item.item_price * item.quantity)}
+                            </span>
                           </div>
                           {/* Product Notes */}
-                          {item.options && (() => {
-                            try {
-                              const options = JSON.parse(item.options);
-                              return options.notes ? (
-                                <div className="mt-3 pt-3 border-t border-gray-200/50 dark:border-gray-600/50">
-                                  <div className="flex items-start gap-2">
-                                    <Edit2 className="h-3 w-3 text-gray-500 mt-0.5 flex-shrink-0" />
-                                    <div className="text-xs text-gray-600 dark:text-gray-300 bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-lg">
-                                      <span className="font-medium">Notes:</span> {options.notes}
+                          {item.options &&
+                            (() => {
+                              try {
+                                const options = JSON.parse(item.options);
+                                return options.notes ? (
+                                  <div className="mt-3 pt-3 border-t border-gray-200/50 dark:border-gray-600/50">
+                                    <div className="flex items-start gap-2">
+                                      <Edit2 className="h-3 w-3 text-gray-500 mt-0.5 flex-shrink-0" />
+                                      <div className="text-xs text-gray-600 dark:text-gray-300 bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-lg">
+                                        <span className="font-medium">Notes:</span> {options.notes}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              ) : null;
-                            } catch {
-                              return null;
-                            }
-                          })()}
+                                ) : null;
+                              } catch {
+                                return null;
+                              }
+                            })()}
                         </div>
                       ))}
                     </div>
@@ -873,28 +1011,94 @@ export default function QuoteDetail() {
 
                   {/* Charges & Fees Section */}
                   <div className="space-y-4">
-                    <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Charges & Fees</h3>
+                    <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      Charges & Fees
+                    </h3>
                     <div className="space-y-3 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/50">
-                      {renderBreakdownRow("Total Item Price", quote.item_price, false, <Package className="h-4 w-4 text-blue-600" />)}
-                      {renderBreakdownRow("Sales Tax", quote.sales_tax_price, false, <Percent className="h-4 w-4 text-green-600" />)}
-                      {renderBreakdownRow("Merchant Shipping", quote.merchant_shipping_price, false, <Truck className="h-4 w-4 text-orange-600" />)}
-                      {renderBreakdownRow("International Shipping", quote.international_shipping, false, <Truck className="h-4 w-4 text-indigo-600" />)}
-                      {renderBreakdownRow("Customs & ECS", quote.customs_and_ecs, false, <Shield className="h-4 w-4 text-purple-600" />)}
-                      {renderBreakdownRow("Domestic Shipping", quote.domestic_shipping, false, <Truck className="h-4 w-4 text-teal-600" />)}
-                      {renderBreakdownRow("Handling Charge", quote.handling_charge, false, <Package className="h-4 w-4 text-amber-600" />)}
-                      {renderBreakdownRow("Insurance", quote.insurance_amount, false, <Shield className="h-4 w-4 text-emerald-600" />)}
-                      {renderBreakdownRow("Payment Gateway Fee", quote.payment_gateway_fee, false, <CreditCard className="h-4 w-4 text-rose-600" />)}
-                      {renderBreakdownRow("Discount", quote.discount, true, <Gift className="h-4 w-4 text-green-600" />)}
+                      {renderBreakdownRow(
+                        'Total Item Price',
+                        quote.item_price,
+                        false,
+                        <Package className="h-4 w-4 text-blue-600" />,
+                      )}
+                      {renderBreakdownRow(
+                        'Sales Tax',
+                        quote.sales_tax_price,
+                        false,
+                        <Percent className="h-4 w-4 text-green-600" />,
+                      )}
+                      {renderBreakdownRow(
+                        'Merchant Shipping',
+                        quote.merchant_shipping_price,
+                        false,
+                        <Truck className="h-4 w-4 text-orange-600" />,
+                      )}
+                      {renderBreakdownRow(
+                        'International Shipping',
+                        quote.international_shipping,
+                        false,
+                        <Truck className="h-4 w-4 text-indigo-600" />,
+                      )}
+                      {renderBreakdownRow(
+                        'Customs & ECS',
+                        quote.customs_and_ecs,
+                        false,
+                        <Shield className="h-4 w-4 text-purple-600" />,
+                      )}
+                      {renderBreakdownRow(
+                        'Domestic Shipping',
+                        quote.domestic_shipping,
+                        false,
+                        <Truck className="h-4 w-4 text-teal-600" />,
+                      )}
+                      {renderBreakdownRow(
+                        'Handling Charge',
+                        quote.handling_charge,
+                        false,
+                        <Package className="h-4 w-4 text-amber-600" />,
+                      )}
+                      {renderBreakdownRow(
+                        'Insurance',
+                        quote.insurance_amount,
+                        false,
+                        <Shield className="h-4 w-4 text-emerald-600" />,
+                      )}
+                      {renderBreakdownRow(
+                        'Payment Gateway Fee',
+                        quote.payment_gateway_fee,
+                        false,
+                        <CreditCard className="h-4 w-4 text-rose-600" />,
+                      )}
+                      {renderBreakdownRow(
+                        'Discount',
+                        quote.discount,
+                        true,
+                        <Gift className="h-4 w-4 text-green-600" />,
+                      )}
                     </div>
                     <Separator className="bg-gradient-to-r from-blue-200 to-purple-200" />
                     <div className="space-y-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 rounded-xl p-4 border border-green-200/50 dark:border-green-700/50">
-                      {renderBreakdownRow("Subtotal", quote.sub_total, false, <Receipt className="h-4 w-4 text-green-600" />)}
-                      {renderBreakdownRow("VAT", quote.vat, false, <Percent className="h-4 w-4 text-emerald-600" />)}
+                      {renderBreakdownRow(
+                        'Subtotal',
+                        quote.sub_total,
+                        false,
+                        <Receipt className="h-4 w-4 text-green-600" />,
+                      )}
+                      {renderBreakdownRow(
+                        'VAT',
+                        quote.vat,
+                        false,
+                        <Percent className="h-4 w-4 text-emerald-600" />,
+                      )}
                     </div>
                     <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 border border-purple-300/50 dark:border-purple-600/50 rounded-xl p-6 shadow-lg">
                       <div className="flex justify-between items-center font-bold text-lg">
-                        <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Total Amount</span>
-                        <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-xl">{formatAmount(quote.final_total)}</span>
+                        <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                          Total Amount
+                        </span>
+                        <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-xl">
+                          {formatAmount(quote.final_total)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -941,17 +1145,17 @@ export default function QuoteDetail() {
                   {/* Expiration Timer */}
                   {canShowExpiration && quote.expires_at && (
                     <div className="flex items-center justify-center p-3 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg">
-                      <QuoteExpirationTimer 
+                      <QuoteExpirationTimer
                         expiresAt={quote.expires_at}
                         compact={true}
                         className="text-center text-red-700"
                       />
                     </div>
                   )}
-                  
+
                   {canApprove && (
                     <>
-                      <Button 
+                      <Button
                         className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
                         onClick={handleApprove}
                         disabled={isUpdating}
@@ -959,7 +1163,7 @@ export default function QuoteDetail() {
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Approve Quote
                       </Button>
-                      <Button 
+                      <Button
                         variant="outline"
                         className="w-full hover:scale-105 transition-all duration-200 border-red-200 text-red-600 hover:bg-red-50"
                         onClick={handleReject}
@@ -970,9 +1174,9 @@ export default function QuoteDetail() {
                       </Button>
                     </>
                   )}
-                  
+
                   {isRejectedOrCancelled && (
-                    <Button 
+                    <Button
                       className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
                       onClick={handleApprove}
                       disabled={isUpdating}
@@ -981,9 +1185,9 @@ export default function QuoteDetail() {
                       Re-Approve Quote
                     </Button>
                   )}
-                  
+
                   {canAddToCart && !isQuoteInCart(quote.id) && (
-                    <Button 
+                    <Button
                       className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
                       onClick={handleAddToCart}
                       disabled={isUpdating}
@@ -992,7 +1196,7 @@ export default function QuoteDetail() {
                       Add to Cart
                     </Button>
                   )}
-                  
+
                   {isQuoteInCart(quote.id) && (
                     <Link to="/cart">
                       <Button className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl">
@@ -1001,9 +1205,9 @@ export default function QuoteDetail() {
                       </Button>
                     </Link>
                   )}
-                  
+
                   {canRenew && quote.renewal_count < 1 && (
-                    <RenewQuoteButton 
+                    <RenewQuoteButton
                       quoteId={quote.id}
                       onRenewed={() => {
                         // Refetch the quote data to update the UI
@@ -1027,9 +1231,9 @@ export default function QuoteDetail() {
                     Shipping Address
                   </span>
                   {isOwner && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="hover:scale-105 transition-all duration-200 bg-white/50 hover:bg-white/80"
                       onClick={() => setIsAddressDialogOpen(true)}
                     >
@@ -1045,19 +1249,27 @@ export default function QuoteDetail() {
                       <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
                         <User className="h-3 w-3 text-gray-600" />
                       </div>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">{shippingAddress.fullName}</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">
+                        {shippingAddress.fullName}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
                         <MapPin className="h-3 w-3 text-gray-600" />
                       </div>
-                      <p className="text-gray-700 dark:text-gray-300">{shippingAddress.streetAddress}</p>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        {shippingAddress.streetAddress}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
                         <Building className="h-3 w-3 text-gray-600" />
                       </div>
-                      <p className="text-gray-700 dark:text-gray-300">{shippingAddress.city}{shippingAddress.state ? `, ${shippingAddress.state}` : ''} {shippingAddress.postalCode}</p>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        {shippingAddress.city}
+                        {shippingAddress.state ? `, ${shippingAddress.state}` : ''}{' '}
+                        {shippingAddress.postalCode}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
@@ -1070,7 +1282,9 @@ export default function QuoteDetail() {
                         <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
                           <Phone className="h-3 w-3 text-gray-600" />
                         </div>
-                        <p className="text-gray-700 dark:text-gray-300">📞 {shippingAddress.phone}</p>
+                        <p className="text-gray-700 dark:text-gray-300">
+                          📞 {shippingAddress.phone}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1083,9 +1297,9 @@ export default function QuoteDetail() {
                       <p className="font-medium">No shipping address set</p>
                     </div>
                     {isOwner && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200/50"
                         onClick={() => setIsAddressDialogOpen(true)}
                       >
@@ -1111,7 +1325,9 @@ export default function QuoteDetail() {
               onSave={async (updatedAddress) => {
                 await supabase
                   .from('quotes')
-                  .update({ shipping_address: updatedAddress as Record<string, unknown> })
+                  .update({
+                    shipping_address: updatedAddress as Record<string, unknown>,
+                  })
                   .eq('id', quote.id);
                 setIsAddressDialogOpen(false);
                 refetch();
@@ -1139,4 +1355,4 @@ export default function QuoteDetail() {
       )}
     </div>
   );
-} 
+}

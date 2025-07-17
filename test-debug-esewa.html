@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug eSewa Issue</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Debug eSewa Issue</h1>
+    
+    <div class="section">
+        <h3>Method 1: Direct eSewa Test (Working)</h3>
+        <button onclick="testWorkingEsewa()">Test Working eSewa</button>
+        <div id="result1"></div>
+    </div>
+    
+    <div class="section">
+        <h3>Method 2: Dynamic Form Test (Should match working)</h3>
+        <button onclick="testDynamicForm()">Test Dynamic Form</button>
+        <div id="result2"></div>
+    </div>
+    
+    <div class="section">
+        <h3>Method 3: New Window Test (Checkout approach)</h3>
+        <button onclick="testNewWindow()">Test New Window</button>
+        <div id="result3"></div>
+    </div>
+
+    <script>
+        function testWorkingEsewa() {
+            const resultDiv = document.getElementById('result1');
+            resultDiv.innerHTML = '<p>Testing working eSewa...</p>';
+            
+            // This is exactly like your working test-esewa-v2.html
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.target = '_blank';
+            
+            const currentTime = new Date();
+            const transactionUuid = currentTime.toISOString().slice(2, 10).replace(/-/g, '') + '-' + 
+                                  currentTime.getHours() + currentTime.getMinutes() + currentTime.getSeconds();
+            
+            const formData = {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: transactionUuid,
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code',
+                signature: 'placeholder_signature'
+            };
+            
+            Object.entries(formData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            
+            resultDiv.innerHTML = '<div class="success"><p>✅ Working eSewa form created</p><p>Method: ' + form.method + '</p><p>Action: ' + form.action + '</p><p>Fields: ' + form.elements.length + '</p></div>';
+            
+            setTimeout(() => {
+                form.submit();
+                resultDiv.innerHTML += '<p>✅ Form submitted</p>';
+            }, 1000);
+        }
+        
+        function testDynamicForm() {
+            const resultDiv = document.getElementById('result2');
+            resultDiv.innerHTML = '<p>Testing dynamic form...</p>';
+            
+            // This replicates the checkout approach
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.target = '_blank';
+            form.style.display = 'none';
+            
+            // Force POST method
+            form.setAttribute('method', 'POST');
+            
+            const currentTime = new Date();
+            const transactionUuid = currentTime.toISOString().slice(2, 10).replace(/-/g, '') + '-' + 
+                                  currentTime.getHours() + currentTime.getMinutes() + currentTime.getSeconds();
+            
+            const formData = {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: transactionUuid,
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code',
+                signature: 'placeholder_signature'
+            };
+            
+            Object.entries(formData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = String(value);
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            
+            resultDiv.innerHTML = '<div class="success"><p>✅ Dynamic form created</p><p>Method: ' + form.method + '</p><p>getAttribute method: ' + form.getAttribute('method') + '</p><p>Action: ' + form.action + '</p><p>Display: ' + form.style.display + '</p><p>Fields: ' + form.elements.length + '</p></div>';
+            
+            setTimeout(() => {
+                try {
+                    form.submit();
+                    resultDiv.innerHTML += '<p>✅ Form submitted via form.submit()</p>';
+                } catch (error) {
+                    resultDiv.innerHTML += '<p>❌ form.submit() failed: ' + error.message + '</p>';
+                }
+            }, 1000);
+        }
+        
+        function testNewWindow() {
+            const resultDiv = document.getElementById('result3');
+            resultDiv.innerHTML = '<p>Testing new window approach...</p>';
+            
+            const currentTime = new Date();
+            const transactionUuid = currentTime.toISOString().slice(2, 10).replace(/-/g, '') + '-' + 
+                                  currentTime.getHours() + currentTime.getMinutes() + currentTime.getSeconds();
+            
+            const formData = {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: transactionUuid,
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code',
+                signature: 'placeholder_signature'
+            };
+            
+            const formInputs = Object.entries(formData).map(([key, value]) => 
+                '<input type="hidden" name="' + key + '" value="' + String(value) + '">'
+            ).join('');
+            
+            const formHTML = '<!DOCTYPE html><html><head><title>eSewa Payment</title><style>body { font-family: Arial, sans-serif; text-align: center; padding: 50px; } .loading { font-size: 18px; color: #666; }</style></head><body><div class="loading">Redirecting to eSewa...</div><form id="esewaForm" method="POST" action="https://rc-epay.esewa.com.np/api/epay/main/v2/form" style="display: none;">' + formInputs + '</form><script>console.log("Form created in new window"); console.log("Method:", document.getElementById("esewaForm").method); console.log("Action:", document.getElementById("esewaForm").action); setTimeout(() => { document.getElementById("esewaForm").submit(); }, 100);</script></body></html>';
+            
+            const paymentWindow = window.open('', '_blank', 'width=800,height=600');
+            if (paymentWindow) {
+                paymentWindow.document.write(formHTML);
+                paymentWindow.document.close();
+                
+                resultDiv.innerHTML = '<div class="success"><p>✅ New window created</p><p>Form will submit in new window</p></div>';
+            } else {
+                resultDiv.innerHTML = '<div class="error"><p>❌ Failed to open new window</p><p>Check if pop-ups are blocked</p></div>';
+            }
+        }
+    </script>
+</body>
+</html>

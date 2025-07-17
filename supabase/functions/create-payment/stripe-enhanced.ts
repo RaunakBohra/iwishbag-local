@@ -40,54 +40,55 @@ export async function createStripePaymentEnhanced(params: {
   quotes: Quote[];
   supabaseAdmin: SupabaseClient;
 }) {
-  const { stripe, amount, currency, quoteIds, userId, customerInfo, quotes, supabaseAdmin } = params;
-  
+  const { stripe, amount, currency, quoteIds, userId, customerInfo, quotes, supabaseAdmin } =
+    params;
+
   // Convert amount to smallest currency unit
   const currencyMultiplier = getCurrencyMultiplier(currency);
   const amountInSmallestUnit = Math.round(amount * currencyMultiplier);
-  
+
   // Get customer details from quotes if not provided
-  let customerDetails: CustomerDetails = {
+  const customerDetails: CustomerDetails = {
     name: customerInfo?.name || '',
     email: customerInfo?.email || '',
     phone: customerInfo?.phone || '',
-    address: null
+    address: null,
   };
-  
+
   // Fetch full quote details including shipping address
   if (quotes && quotes.length > 0) {
     const { data: fullQuotes } = await supabaseAdmin
       .from('quotes')
       .select('email, customer_name, customer_phone, shipping_address')
       .in('id', quoteIds);
-    
+
     if (fullQuotes && fullQuotes.length > 0) {
       const firstQuote = fullQuotes[0];
-      
+
       // Use quote data if customer info not provided
       customerDetails.email = customerDetails.email || firstQuote.email || '';
       customerDetails.name = customerDetails.name || firstQuote.customer_name || '';
       customerDetails.phone = customerDetails.phone || firstQuote.customer_phone || '';
-      
+
       // Extract shipping address
       if (firstQuote.shipping_address) {
         const shippingAddr = firstQuote.shipping_address;
         customerDetails.name = customerDetails.name || shippingAddr.fullName || '';
         customerDetails.phone = customerDetails.phone || shippingAddr.phone || '';
         customerDetails.email = customerDetails.email || shippingAddr.email || '';
-        
+
         // Format address for Stripe
         customerDetails.address = {
           line1: shippingAddr.streetAddress || '',
           city: shippingAddr.city || '',
           state: shippingAddr.state || '',
           postal_code: shippingAddr.postalCode || '',
-          country: shippingAddr.country || shippingAddr.destination_country || 'US'
+          country: shippingAddr.country || shippingAddr.destination_country || 'US',
         };
       }
     }
   }
-  
+
   // Prepare metadata
   const paymentMetadata = {
     quote_ids: quoteIds.join(','),
@@ -98,7 +99,7 @@ export async function createStripePaymentEnhanced(params: {
     original_amount: amount.toString(),
     original_currency: currency,
   };
-  
+
   // Create or retrieve Stripe customer
   let stripeCustomer = null;
   if (customerDetails.email) {
@@ -106,9 +107,9 @@ export async function createStripePaymentEnhanced(params: {
       // Search for existing customer
       const existingCustomers = await stripe.customers.list({
         email: customerDetails.email,
-        limit: 1
+        limit: 1,
       });
-      
+
       if (existingCustomers.data.length > 0) {
         stripeCustomer = existingCustomers.data[0];
         // Update customer details if needed
@@ -118,8 +119,8 @@ export async function createStripePaymentEnhanced(params: {
           address: customerDetails.address || stripeCustomer.address,
           metadata: {
             user_id: userId,
-            last_quote_id: quoteIds[0]
-          }
+            last_quote_id: quoteIds[0],
+          },
         });
       } else {
         // Create new customer
@@ -130,8 +131,8 @@ export async function createStripePaymentEnhanced(params: {
           address: customerDetails.address,
           metadata: {
             user_id: userId,
-            first_quote_id: quoteIds[0]
-          }
+            first_quote_id: quoteIds[0],
+          },
         });
       }
     } catch (error) {
@@ -139,7 +140,7 @@ export async function createStripePaymentEnhanced(params: {
       // Continue without customer - payment will still work
     }
   }
-  
+
   // Create PaymentIntent with enhanced details
   const paymentIntentData: Stripe.PaymentIntentCreateParams = {
     amount: amountInSmallestUnit,
@@ -151,48 +152,64 @@ export async function createStripePaymentEnhanced(params: {
       enabled: true,
     },
   };
-  
+
   // Add customer if available
   if (stripeCustomer) {
     paymentIntentData.customer = stripeCustomer.id;
   }
-  
+
   // Add shipping address if available
   if (customerDetails.address && customerDetails.address.line1) {
     paymentIntentData.shipping = {
       name: customerDetails.name || 'Customer',
       phone: customerDetails.phone || undefined,
-      address: customerDetails.address
+      address: customerDetails.address,
     };
   }
-  
+
   const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
-  
+
   console.log('Enhanced Stripe PaymentIntent created:', {
     id: paymentIntent.id,
     amount: amountInSmallestUnit,
     currency: currency,
     customer: stripeCustomer?.id || 'none',
     has_shipping: !!paymentIntentData.shipping,
-    customer_email: customerDetails.email ? customerDetails.email.substring(0, 3) + '***' : 'none'
+    customer_email: customerDetails.email ? customerDetails.email.substring(0, 3) + '***' : 'none',
   });
-  
+
   return {
     success: true,
     client_secret: paymentIntent.client_secret,
     transactionId: paymentIntent.id,
-    customer_id: stripeCustomer?.id
+    customer_id: stripeCustomer?.id,
   };
 }
 
 function getCurrencyMultiplier(currency: string): number {
   // Currencies that don't use decimal places
-  const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND', 'CLP', 'PYG', 'UGX', 'RWF', 'GNF', 'XAF', 'XOF', 'XPF', 'MGA', 'BIF', 'KMF', 'DJF'];
-  
+  const zeroDecimalCurrencies = [
+    'JPY',
+    'KRW',
+    'VND',
+    'CLP',
+    'PYG',
+    'UGX',
+    'RWF',
+    'GNF',
+    'XAF',
+    'XOF',
+    'XPF',
+    'MGA',
+    'BIF',
+    'KMF',
+    'DJF',
+  ];
+
   if (zeroDecimalCurrencies.includes(currency.toUpperCase())) {
     return 1;
   }
-  
+
   // Most currencies use 2 decimal places (multiply by 100)
   return 100;
 }

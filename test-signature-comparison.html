@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Signature Comparison Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; margin: 5px; }
+        .test-section { border: 1px solid #ccc; padding: 15px; margin: 10px 0; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        pre { background: #f0f0f0; padding: 10px; border-radius: 4px; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+    <h1>eSewa Signature Comparison Test</h1>
+    <p>This compares Web Crypto API (backend) vs CryptoJS (manual test) signatures</p>
+    
+    <div class="test-section">
+        <h3>Signature Generation Test</h3>
+        <button onclick="testSignatureGeneration()">Test Signature Generation</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // CryptoJS approach (from working manual test)
+        function generateCryptoJSSignature(total_amount, transaction_uuid, product_code) {
+            const signatureString = `total_amount=${total_amount},transaction_uuid=${transaction_uuid},product_code=${product_code}`;
+            const secretKey = '8gBm/:&EnhH.1/q';
+            
+            console.log('🔐 CryptoJS signature generation:');
+            console.log('  String to sign:', signatureString);
+            console.log('  Secret key:', secretKey);
+            
+            const hash = CryptoJS.HmacSHA256(signatureString, secretKey);
+            const signature = CryptoJS.enc.Base64.stringify(hash);
+            
+            console.log('  Generated signature:', signature);
+            return signature;
+        }
+
+        // Web Crypto API approach (backend equivalent)
+        async function generateWebCryptoSignature(total_amount, transaction_uuid, product_code) {
+            const signatureString = `total_amount=${total_amount},transaction_uuid=${transaction_uuid},product_code=${product_code}`;
+            const secretKey = '8gBm/:&EnhH.1/q';
+            
+            console.log('🔐 Web Crypto API signature generation:');
+            console.log('  String to sign:', signatureString);
+            console.log('  Secret key:', secretKey);
+            
+            // Create HMAC-SHA256 hash (same as backend)
+            const encoder = new TextEncoder();
+            const keyData = encoder.encode(secretKey);
+            const messageData = encoder.encode(signatureString);
+
+            // Import the secret key for HMAC
+            const cryptoKey = await crypto.subtle.importKey(
+                'raw',
+                keyData,
+                { name: 'HMAC', hash: 'SHA-256' },
+                false,
+                ['sign']
+            );
+
+            // Generate the signature
+            const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+
+            // Convert to base64
+            const signatureArray = Array.from(new Uint8Array(signatureBuffer));
+            const signature = btoa(String.fromCharCode(...signatureArray));
+            
+            console.log('  Generated signature:', signature);
+            return signature;
+        }
+
+        async function testSignatureGeneration() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing signature generation...</p>';
+            
+            try {
+                // Test parameters (same as working test)
+                const testParams = {
+                    total_amount: '100',
+                    transaction_uuid: '250717-114500',
+                    product_code: 'EPAYTEST'
+                };
+                
+                // Generate both signatures
+                const cryptoJSSignature = generateCryptoJSSignature(
+                    testParams.total_amount,
+                    testParams.transaction_uuid,
+                    testParams.product_code
+                );
+                
+                const webCryptoSignature = await generateWebCryptoSignature(
+                    testParams.total_amount,
+                    testParams.transaction_uuid,
+                    testParams.product_code
+                );
+                
+                const signaturesMatch = cryptoJSSignature === webCryptoSignature;
+                
+                console.log('🔍 Signature comparison:');
+                console.log('  CryptoJS signature:', cryptoJSSignature);
+                console.log('  Web Crypto signature:', webCryptoSignature);
+                console.log('  Signatures match:', signaturesMatch);
+                
+                resultDiv.innerHTML = `
+                    <div class="${signaturesMatch ? 'success' : 'error'}">
+                        <h4>${signaturesMatch ? '✅' : '❌'} Signature Comparison Results</h4>
+                        
+                        <p><strong>Test Parameters:</strong></p>
+                        <pre>total_amount: ${testParams.total_amount}
+transaction_uuid: ${testParams.transaction_uuid}
+product_code: ${testParams.product_code}</pre>
+
+                        <p><strong>CryptoJS Signature (Manual Test):</strong></p>
+                        <pre>${cryptoJSSignature}</pre>
+                        
+                        <p><strong>Web Crypto API Signature (Backend):</strong></p>
+                        <pre>${webCryptoSignature}</pre>
+                        
+                        <p><strong>Match:</strong> ${signaturesMatch ? '✅ YES' : '❌ NO'}</p>
+                        
+                        ${!signaturesMatch ? '<p class="error">❌ <strong>Signature mismatch detected!</strong><br>This explains why the checkout fails while manual test works.</p>' : '<p class="success">✅ <strong>Signatures match!</strong><br>The issue is not with signature generation.</p>'}
+                    </div>
+                `;
+                
+                if (!signaturesMatch) {
+                    resultDiv.innerHTML += `
+                        <div class="warning">
+                            <h4>⚠️ Debug Information</h4>
+                            <p><strong>CryptoJS Length:</strong> ${cryptoJSSignature.length}</p>
+                            <p><strong>Web Crypto Length:</strong> ${webCryptoSignature.length}</p>
+                            <p><strong>First 20 chars CryptoJS:</strong> ${cryptoJSSignature.substring(0, 20)}</p>
+                            <p><strong>First 20 chars Web Crypto:</strong> ${webCryptoSignature.substring(0, 20)}</p>
+                        </div>
+                    `;
+                }
+                
+                // Test with current timestamp
+                const currentTime = new Date();
+                const currentTransactionUuid = currentTime.toISOString().slice(2, 10).replace(/-/g, '') + '-' + 
+                                             currentTime.getHours().toString().padStart(2, '0') + 
+                                             currentTime.getMinutes().toString().padStart(2, '0') + 
+                                             currentTime.getSeconds().toString().padStart(2, '0');
+                
+                const currentCryptoJSSignature = generateCryptoJSSignature('100', currentTransactionUuid, 'EPAYTEST');
+                const currentWebCryptoSignature = await generateWebCryptoSignature('100', currentTransactionUuid, 'EPAYTEST');
+                const currentMatch = currentCryptoJSSignature === currentWebCryptoSignature;
+                
+                resultDiv.innerHTML += `
+                    <div class="test-section">
+                        <h4>🕐 Current Timestamp Test</h4>
+                        <p><strong>Transaction UUID:</strong> ${currentTransactionUuid}</p>
+                        <p><strong>CryptoJS:</strong> ${currentCryptoJSSignature}</p>
+                        <p><strong>Web Crypto:</strong> ${currentWebCryptoSignature}</p>
+                        <p><strong>Match:</strong> ${currentMatch ? '✅ YES' : '❌ NO'}</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Test Failed</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        console.log('Signature comparison test loaded');
+    </script>
+</body>
+</html>

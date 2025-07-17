@@ -1,8 +1,13 @@
 import { supabase } from '@/integrations/supabase/client';
 import { ShippingAddress, AddressUpdateRequest } from '@/types/address';
-import { validateAddress, validateCountryChange, normalizeAddress, compareAddresses } from './addressValidation';
+import {
+  validateAddress,
+  validateCountryChange,
+  normalizeAddress,
+  compareAddresses,
+} from './addressValidation';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from '@/hooks/use-toast';
 
 /**
  * Updates a quote's shipping address with validation and audit trail
@@ -11,8 +16,12 @@ export async function updateQuoteAddress(
   quoteId: string,
   newAddress: ShippingAddress,
   userId: string,
-  reason?: string
-): Promise<{ success: boolean; error?: string; changes?: Record<string, unknown>[] }> {
+  reason?: string,
+): Promise<{
+  success: boolean;
+  error?: string;
+  changes?: Record<string, unknown>[];
+}> {
   try {
     // Get current quote data
     const { data: quote, error: quoteError } = await supabase
@@ -27,7 +36,10 @@ export async function updateQuoteAddress(
 
     // Check if address is locked
     if (quote.address_locked) {
-      return { success: false, error: 'Address is locked and cannot be modified' };
+      return {
+        success: false,
+        error: 'Address is locked and cannot be modified',
+      };
     }
 
     // Normalize the new address
@@ -36,9 +48,9 @@ export async function updateQuoteAddress(
     // Validate the address
     const validation = validateAddress(normalizedAddress);
     if (!validation.isValid) {
-      return { 
-        success: false, 
-        error: `Address validation failed: ${validation.errors.join(', ')}` 
+      return {
+        success: false,
+        error: `Address validation failed: ${validation.errors.join(', ')}`,
       };
     }
 
@@ -53,8 +65,12 @@ export async function updateQuoteAddress(
 
     // Check country change permissions
     const oldCountry = quote.shipping_address?.country || quote.destination_country;
-    const countryValidation = validateCountryChange(oldCountry, normalizedAddress.country, currentRole);
-    
+    const countryValidation = validateCountryChange(
+      oldCountry,
+      normalizedAddress.country,
+      currentRole,
+    );
+
     if (!countryValidation.allowed) {
       return { success: false, error: countryValidation.reason };
     }
@@ -74,7 +90,10 @@ export async function updateQuoteAddress(
       .eq('id', quoteId);
 
     if (updateError) {
-      return { success: false, error: `Failed to update address: ${updateError.message}` };
+      return {
+        success: false,
+        error: `Failed to update address: ${updateError.message}`,
+      };
     }
 
     return { success: true, changes };
@@ -87,7 +106,9 @@ export async function updateQuoteAddress(
 /**
  * Locks a quote's address after payment completion
  */
-export async function lockAddressAfterPayment(quoteId: string): Promise<{ success: boolean; error?: string }> {
+export async function lockAddressAfterPayment(
+  quoteId: string,
+): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase
       .from('quotes')
@@ -99,7 +120,10 @@ export async function lockAddressAfterPayment(quoteId: string): Promise<{ succes
       .in('status', ['paid', 'ordered', 'shipped', 'completed']);
 
     if (error) {
-      return { success: false, error: `Failed to lock address: ${error.message}` };
+      return {
+        success: false,
+        error: `Failed to lock address: ${error.message}`,
+      };
     }
 
     return { success: true };
@@ -113,9 +137,9 @@ export async function lockAddressAfterPayment(quoteId: string): Promise<{ succes
  * Unlocks a quote's address (admin only)
  */
 export async function unlockAddress(
-  quoteId: string, 
-  adminUserId: string, 
-  reason?: string
+  quoteId: string,
+  adminUserId: string,
+  reason?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Verify admin role
@@ -126,7 +150,10 @@ export async function unlockAddress(
       .single();
 
     if (userRole?.role !== 'admin') {
-      return { success: false, error: 'Only administrators can unlock addresses' };
+      return {
+        success: false,
+        error: 'Only administrators can unlock addresses',
+      };
     }
 
     const { error } = await supabase
@@ -139,7 +166,10 @@ export async function unlockAddress(
       .eq('id', quoteId);
 
     if (error) {
-      return { success: false, error: `Failed to unlock address: ${error.message}` };
+      return {
+        success: false,
+        error: `Failed to unlock address: ${error.message}`,
+      };
     }
 
     return { success: true };
@@ -152,11 +182,14 @@ export async function unlockAddress(
 /**
  * Gets address change history for a quote
  */
-export async function getAddressHistory(quoteId: string): Promise<{ data?: Record<string, unknown>[]; error?: string }> {
+export async function getAddressHistory(
+  quoteId: string,
+): Promise<{ data?: Record<string, unknown>[]; error?: string }> {
   try {
     const { data, error } = await supabase
       .from('quote_address_history')
-      .select(`
+      .select(
+        `
         id,
         old_address,
         new_address,
@@ -164,7 +197,8 @@ export async function getAddressHistory(quoteId: string): Promise<{ data?: Recor
         changed_at,
         change_reason,
         change_type
-      `)
+      `,
+      )
       .eq('quote_id', quoteId)
       .order('changed_at', { ascending: false });
 
@@ -183,9 +217,14 @@ export async function getAddressHistory(quoteId: string): Promise<{ data?: Recor
  * Checks if a user can edit a quote's address
  */
 export async function checkAddressPermissions(
-  quoteId: string, 
-  userId: string
-): Promise<{ canEdit: boolean; canChangeCountry: boolean; isLocked: boolean; reason?: string }> {
+  quoteId: string,
+  userId: string,
+): Promise<{
+  canEdit: boolean;
+  canChangeCountry: boolean;
+  isLocked: boolean;
+  reason?: string;
+}> {
   try {
     // Get quote data
     const { data: quote, error: quoteError } = await supabase
@@ -195,12 +234,22 @@ export async function checkAddressPermissions(
       .single();
 
     if (quoteError || !quote) {
-      return { canEdit: false, canChangeCountry: false, isLocked: true, reason: 'Quote not found' };
+      return {
+        canEdit: false,
+        canChangeCountry: false,
+        isLocked: true,
+        reason: 'Quote not found',
+      };
     }
 
     // Check if address is locked
     if (quote.address_locked) {
-      return { canEdit: false, canChangeCountry: false, isLocked: true, reason: 'Address is locked after payment' };
+      return {
+        canEdit: false,
+        canChangeCountry: false,
+        isLocked: true,
+        reason: 'Address is locked after payment',
+      };
     }
 
     // Get user role
@@ -217,7 +266,12 @@ export async function checkAddressPermissions(
     const isAdmin = currentRole === 'admin';
 
     if (!isOwner && !isAdmin) {
-      return { canEdit: false, canChangeCountry: false, isLocked: false, reason: 'You can only edit your own quotes' };
+      return {
+        canEdit: false,
+        canChangeCountry: false,
+        isLocked: false,
+        reason: 'You can only edit your own quotes',
+      };
     }
 
     return {
@@ -227,7 +281,12 @@ export async function checkAddressPermissions(
     };
   } catch (error) {
     console.error('Error checking address permissions:', error);
-    return { canEdit: false, canChangeCountry: false, isLocked: true, reason: 'Error checking permissions' };
+    return {
+      canEdit: false,
+      canChangeCountry: false,
+      isLocked: true,
+      reason: 'Error checking permissions',
+    };
   }
 }
 
@@ -237,17 +296,17 @@ export async function checkAddressPermissions(
 export async function createInitialAddress(
   quoteId: string,
   address: ShippingAddress,
-  userId: string
+  userId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Normalize and validate address
     const normalizedAddress = normalizeAddress(address);
     const validation = validateAddress(normalizedAddress);
-    
+
     if (!validation.isValid) {
-      return { 
-        success: false, 
-        error: `Address validation failed: ${validation.errors.join(', ')}` 
+      return {
+        success: false,
+        error: `Address validation failed: ${validation.errors.join(', ')}`,
       };
     }
 
@@ -262,7 +321,10 @@ export async function createInitialAddress(
       .eq('id', quoteId);
 
     if (error) {
-      return { success: false, error: `Failed to create address: ${error.message}` };
+      return {
+        success: false,
+        error: `Failed to create address: ${error.message}`,
+      };
     }
 
     return { success: true };
@@ -279,7 +341,7 @@ export async function bulkUpdateAddresses(
   quoteIds: string[],
   address: ShippingAddress,
   adminUserId: string,
-  reason?: string
+  reason?: string,
 ): Promise<{ success: boolean; updated: number; errors: string[] }> {
   try {
     // Verify admin role
@@ -290,18 +352,22 @@ export async function bulkUpdateAddresses(
       .single();
 
     if (userRole?.role !== 'admin') {
-      return { success: false, updated: 0, errors: ['Only administrators can perform bulk updates'] };
+      return {
+        success: false,
+        updated: 0,
+        errors: ['Only administrators can perform bulk updates'],
+      };
     }
 
     // Normalize and validate address
     const normalizedAddress = normalizeAddress(address);
     const validation = validateAddress(normalizedAddress);
-    
+
     if (!validation.isValid) {
-      return { 
-        success: false, 
-        updated: 0, 
-        errors: [`Address validation failed: ${validation.errors.join(', ')}`] 
+      return {
+        success: false,
+        updated: 0,
+        errors: [`Address validation failed: ${validation.errors.join(', ')}`],
       };
     }
 
@@ -330,14 +396,18 @@ export async function bulkUpdateAddresses(
       }
     }
 
-    return { 
-      success: updated > 0, 
-      updated, 
-      errors 
+    return {
+      success: updated > 0,
+      updated,
+      errors,
     };
   } catch (error) {
     console.error('Error in bulk address update:', error);
-    return { success: false, updated: 0, errors: ['An unexpected error occurred'] };
+    return {
+      success: false,
+      updated: 0,
+      errors: ['An unexpected error occurred'],
+    };
   }
 }
 
@@ -356,16 +426,16 @@ export function extractShippingAddressFromNotes(internalNotes: string | null): {
   countryCode?: string;
 } | null {
   if (!internalNotes) return null;
-  
+
   try {
     const parsed = JSON.parse(internalNotes);
     if (parsed.shipping_address) {
       return parsed.shipping_address;
     }
   } catch (error) {
-    console.error("Error parsing shipping address from internal_notes:", error);
+    console.error('Error parsing shipping address from internal_notes:', error);
   }
-  
+
   return null;
 }
 
@@ -387,8 +457,8 @@ export function formatShippingAddress(address: {
     address.streetAddress,
     address.addressLine2,
     `${address.city}, ${address.state} ${address.postalCode}`,
-    address.country
+    address.country,
   ].filter(Boolean);
-  
+
   return parts.join('\n');
-} 
+}

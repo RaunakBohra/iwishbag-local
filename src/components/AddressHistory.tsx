@@ -3,16 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { 
-  History, 
-  ChevronDown, 
-  ChevronUp, 
-  User, 
-  MapPin, 
-  Phone, 
+import {
+  History,
+  ChevronDown,
+  ChevronUp,
+  User,
+  MapPin,
+  Phone,
   Mail,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
 } from 'lucide-react';
 import { AddressChange } from '@/types/address';
 import { getAddressChangeSummary, compareAddresses } from '@/lib/addressValidation';
@@ -61,9 +61,7 @@ export const AddressHistory: React.FC<AddressHistoryProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-center py-4">
-            No address changes recorded yet.
-          </p>
+          <p className="text-muted-foreground text-center py-4">No address changes recorded yet.</p>
         </CardContent>
       </Card>
     );
@@ -126,11 +124,7 @@ export const AddressHistory: React.FC<AddressHistoryProps> = ({
             <Badge variant="secondary">{history.length}</Badge>
           </CardTitle>
           {!showFullHistory && history.length > 3 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-            >
+            <Button variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)}>
               {isExpanded ? (
                 <>
                   <ChevronUp className="h-4 w-4 mr-1" />
@@ -148,9 +142,13 @@ export const AddressHistory: React.FC<AddressHistoryProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {(isExpanded ? history : displayHistory).map((change, index) => {
+          {(isExpanded ? history : displayHistory).map((change) => {
             // Calculate changes between this and previous entry
-            let changes: { field: keyof ShippingAddress; oldValue: string; newValue: string }[] = [];
+            let changes: {
+              field: keyof ShippingAddress;
+              oldValue: string;
+              newValue: string;
+            }[] = [];
             if (change.oldAddress && change.newAddress) {
               changes = compareAddresses(change.oldAddress, change.newAddress);
             } else if (change.newAddress && !change.oldAddress) {
@@ -163,7 +161,7 @@ export const AddressHistory: React.FC<AddressHistoryProps> = ({
             }
 
             const changeSummary = getAddressChangeSummary(changes);
-            const hasCountryChange = changes.some(c => c.field === 'country');
+            const hasCountryChange = changes.some((c) => c.field === 'country');
             const isSignificantChange = changes.length > 2 || hasCountryChange;
 
             return (
@@ -184,12 +182,8 @@ export const AddressHistory: React.FC<AddressHistoryProps> = ({
                       <Badge className={getChangeColor(change.changeType)}>
                         {change.changeType}
                       </Badge>
-                      {hasCountryChange && (
-                        <Badge variant="destructive">Country Changed</Badge>
-                      )}
-                      {isSignificantChange && (
-                        <Badge variant="outline">Significant</Badge>
-                      )}
+                      {hasCountryChange && <Badge variant="destructive">Country Changed</Badge>}
+                      {isSignificantChange && <Badge variant="outline">Significant</Badge>}
                     </div>
                   </div>
 
@@ -221,13 +215,27 @@ export const AddressHistory: React.FC<AddressHistoryProps> = ({
                       <CollapsibleContent className="mt-2">
                         <div className="space-y-1 text-xs">
                           {changes.map((changeDetail, changeIndex) => (
-                            <div key={changeIndex} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                            <div
+                              key={changeIndex}
+                              className="flex items-center gap-2 p-2 bg-gray-50 rounded"
+                            >
                               <span className="font-medium min-w-[80px]">
-                                {changeDetail.field === 'fullName' && <User className="h-3 w-3 inline mr-1" />}
-                                {changeDetail.field === 'streetAddress' && <MapPin className="h-3 w-3 inline mr-1" />}
-                                {changeDetail.field === 'phone' && <Phone className="h-3 w-3 inline mr-1" />}
-                                {changeDetail.field === 'email' && <Mail className="h-3 w-3 inline mr-1" />}
-                                {changeDetail.field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
+                                {changeDetail.field === 'fullName' && (
+                                  <User className="h-3 w-3 inline mr-1" />
+                                )}
+                                {changeDetail.field === 'streetAddress' && (
+                                  <MapPin className="h-3 w-3 inline mr-1" />
+                                )}
+                                {changeDetail.field === 'phone' && (
+                                  <Phone className="h-3 w-3 inline mr-1" />
+                                )}
+                                {changeDetail.field === 'email' && (
+                                  <Mail className="h-3 w-3 inline mr-1" />
+                                )}
+                                {changeDetail.field
+                                  .replace(/([A-Z])/g, ' $1')
+                                  .replace(/^./, (str) => str.toUpperCase())}
+                                :
                               </span>
                               <span className="text-gray-500">
                                 {changeDetail.oldValue ? `"${changeDetail.oldValue}"` : '(empty)'}
@@ -264,12 +272,10 @@ export const AddressHistory: React.FC<AddressHistoryProps> = ({
         {/* Show More/Less for full history view */}
         {showFullHistory && history.length > 5 && (
           <div className="mt-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              Showing {history.length} total changes
-            </p>
+            <p className="text-sm text-muted-foreground">Showing {history.length} total changes</p>
           </div>
         )}
       </CardContent>
     </Card>
   );
-}; 
+};

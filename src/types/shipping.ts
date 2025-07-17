@@ -143,4 +143,4 @@ export interface ShippingRouteFormData {
   restrictedItems?: string[];
   requiresDocumentation: boolean;
   isActive: boolean;
-} 
+}

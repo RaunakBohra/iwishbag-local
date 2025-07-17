@@ -135,7 +135,7 @@ async function generatePayUHash({
   const data = encoder.encode(hashString);
   const hashBuffer = await crypto.subtle.digest('SHA-512', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 
   // v2: reversed salt, same pipe count
   const reversedSalt = salt.split('').reverse().join('');
@@ -162,9 +162,7 @@ async function generatePayUHash({
   const dataV2 = encoder.encode(hashStringV2);
   const hashBufferV2 = await crypto.subtle.digest('SHA-512', dataV2);
   const hashArrayV2 = Array.from(new Uint8Array(hashBufferV2));
-  const hashHexV2 = hashArrayV2
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  const hashHexV2 = hashArrayV2.map((b) => b.toString(16).padStart(2, '0')).join('');
 
   return {
     v1: hashHex,
@@ -211,7 +209,7 @@ function getCurrencyMultiplier(currency: string): number {
   }
 }
 
-serve(async req => {
+serve(async (req) => {
   const corsHeaders = createCorsHeaders(req);
 
   // Handle CORS preflight requests
@@ -224,38 +222,30 @@ serve(async req => {
       'create-payment',
       async (logger, paymentMonitoring) => {
         try {
-          logger.info(
-            EdgeLogCategory.EDGE_FUNCTION,
-            'Payment creation function started',
-            {
-              metadata: {
-                method: req.method,
-                userAgent: req.headers.get('user-agent'),
-                origin: req.headers.get('origin'),
-              },
-            }
-          );
+          logger.info(EdgeLogCategory.EDGE_FUNCTION, 'Payment creation function started', {
+            metadata: {
+              method: req.method,
+              userAgent: req.headers.get('user-agent'),
+              origin: req.headers.get('origin'),
+            },
+          });
 
           const paymentRequest: PaymentRequest = await req.json();
 
           // Extract and sanitize request data for logging
           const sanitizedRequest = sanitizeForLogging(paymentRequest);
 
-          logger.info(
-            EdgeLogCategory.PAYMENT_PROCESSING,
-            'Payment request received',
-            {
-              metadata: {
-                gateway: paymentRequest.gateway,
-                amount: paymentRequest.amount,
-                currency: paymentRequest.currency,
-                quoteIds: paymentRequest.quoteIds,
-                hasCustomerInfo: !!paymentRequest.customerInfo,
-                metadataKeys: Object.keys(paymentRequest.metadata || {}),
-                hasAuthToken: !!req.headers.get('Authorization'),
-              },
-            }
-          );
+          logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Payment request received', {
+            metadata: {
+              gateway: paymentRequest.gateway,
+              amount: paymentRequest.amount,
+              currency: paymentRequest.currency,
+              quoteIds: paymentRequest.quoteIds,
+              hasCustomerInfo: !!paymentRequest.customerInfo,
+              metadataKeys: Object.keys(paymentRequest.metadata || {}),
+              hasAuthToken: !!req.headers.get('Authorization'),
+            },
+          });
 
           const {
             quoteIds,
@@ -292,13 +282,9 @@ serve(async req => {
               paymentId,
               false,
               EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
-              'Missing quoteIds'
+              'Missing quoteIds',
             );
-            return createErrorResponse(
-              new Error('Missing quoteIds'),
-              400,
-              logger
-            );
+            return createErrorResponse(new Error('Missing quoteIds'), 400, logger);
           }
 
           if (!gateway) {
@@ -306,18 +292,14 @@ serve(async req => {
               paymentId,
               false,
               EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
-              'Missing payment gateway'
+              'Missing payment gateway',
             );
-            return createErrorResponse(
-              new Error('Missing payment gateway'),
-              400,
-              logger
-            );
+            return createErrorResponse(new Error('Missing payment gateway'), 400, logger);
           }
 
           const supabaseAdmin = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
           );
 
           // --- Authentication and Authorization ---
@@ -335,7 +317,7 @@ serve(async req => {
             const supabaseClient = createClient(
               Deno.env.get('SUPABASE_URL') ?? '',
               Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-              { global: { headers: { Authorization: `Bearer ${token}` } } }
+              { global: { headers: { Authorization: `Bearer ${token}` } } },
             );
             const {
               data: { user },
@@ -370,28 +352,21 @@ serve(async req => {
           // Check guest session if no authenticated user
           if (!userId && guestSessionToken) {
             // Validate guest session token
-            const { data: guestSession, error: guestError } =
-              await supabaseAdmin
-                .from('guest_checkout_sessions')
-                .select('id, quote_id, status')
-                .eq('session_token', guestSessionToken)
-                .eq('status', 'active')
-                .single();
+            const { data: guestSession, error: guestError } = await supabaseAdmin
+              .from('guest_checkout_sessions')
+              .select('id, quote_id, status')
+              .eq('session_token', guestSessionToken)
+              .eq('status', 'active')
+              .single();
 
             if (guestError || !guestSession) {
-              console.error(
-                'Invalid or expired guest session token:',
-                guestError?.message
-              );
+              console.error('Invalid or expired guest session token:', guestError?.message);
             } else if (guestSession.quote_id !== quoteIds[0]) {
               // Ensure guest session matches the primary quote
               console.error('Guest session quote ID mismatch.');
             } else {
               isGuestSessionValid = true;
-              console.log(
-                'Valid guest session for quote ID:',
-                guestSession.quote_id
-              );
+              console.log('Valid guest session for quote ID:', guestSession.quote_id);
             }
           }
 
@@ -400,118 +375,88 @@ serve(async req => {
               paymentId,
               false,
               EdgePaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS,
-              'No valid user or guest session provided'
+              'No valid user or guest session provided',
             );
             return createErrorResponse(
-              new Error(
-                'Unauthorized: No valid user or guest session provided'
-              ),
+              new Error('Unauthorized: No valid user or guest session provided'),
               401,
-              logger
+              logger,
             );
           }
 
-          logger.info(
-            EdgeLogCategory.PAYMENT_PROCESSING,
-            'Authentication successful',
-            {
-              paymentId,
-              userId,
-              metadata: {
-                hasAuthenticatedUser: !!userId,
-                hasGuestSession: isGuestSessionValid,
-                quoteCount: quoteIds.length,
-              },
-            }
-          );
+          logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Authentication successful', {
+            paymentId,
+            userId,
+            metadata: {
+              hasAuthenticatedUser: !!userId,
+              hasGuestSession: isGuestSessionValid,
+              quoteCount: quoteIds.length,
+            },
+          });
 
           // --- End Authentication and Authorization ---
 
           // Fetch quotes and verify ownership
           const { data: quotes, error: quotesError } = await supabaseAdmin
             .from('quotes')
-            .select(
-              'id, user_id, product_name, final_total, quantity, final_currency'
-            )
+            .select('id, user_id, product_name, final_total, quantity, final_currency')
             .in('id', quoteIds);
 
           if (quotesError) {
             console.error('Error fetching quotes:', quotesError);
-            return new Response(
-              JSON.stringify({ error: 'Failed to fetch quotes' }),
-              {
-                status: 500,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              }
-            );
+            return new Response(JSON.stringify({ error: 'Failed to fetch quotes' }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
           }
 
           if (!quotes || quotes.length === 0) {
-            return new Response(
-              JSON.stringify({ error: 'No quotes found for provided IDs' }),
-              {
-                status: 404,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              }
-            );
+            return new Response(JSON.stringify({ error: 'No quotes found for provided IDs' }), {
+              status: 404,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
           }
 
           // Verify ownership
-          const quotesToUse = quotes.filter(quote => {
+          const quotesToUse = quotes.filter((quote) => {
             if (userId && quote.user_id === userId) {
               return true;
             }
             // For guest sessions, only allow if it's the single quote linked to the session
-            if (
-              isGuestSessionValid &&
-              quoteIds.length === 1 &&
-              quote.id === quoteIds[0]
-            ) {
+            if (isGuestSessionValid && quoteIds.length === 1 && quote.id === quoteIds[0]) {
               return true;
             }
             return false;
           });
 
           if (quotesToUse.length !== quoteIds.length) {
-            console.error(
-              'Ownership verification failed. User/guest does not own all quotes.'
-            );
+            console.error('Ownership verification failed. User/guest does not own all quotes.');
             return new Response(
               JSON.stringify({
-                error:
-                  'Forbidden: You do not have access to all specified quotes.',
+                error: 'Forbidden: You do not have access to all specified quotes.',
               }),
               {
                 status: 403,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              }
+              },
             );
           }
 
           // Calculate total amount if not provided
           const totalAmount =
-            amount ||
-            quotesToUse.reduce(
-              (sum, quote) => sum + (quote.final_total || 0),
-              0
-            );
-          const totalCurrency =
-            currency || quotesToUse[0]?.final_currency || 'USD';
+            amount || quotesToUse.reduce((sum, quote) => sum + (quote.final_total || 0), 0);
+          const totalCurrency = currency || quotesToUse[0]?.final_currency || 'USD';
 
           let responseData: PaymentResponse;
 
           switch (gateway) {
             case 'payu':
               try {
-                logger.info(
-                  EdgeLogCategory.PAYMENT_PROCESSING,
-                  'Starting PayU payment creation',
-                  {
-                    paymentId,
-                    userId,
-                    metadata: { amount: totalAmount, currency: totalCurrency },
-                  }
-                );
+                logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Starting PayU payment creation', {
+                  paymentId,
+                  userId,
+                  metadata: { amount: totalAmount, currency: totalCurrency },
+                });
 
                 // Fetch PayU config from payment_gateways table
                 const { data: payuGateway, error: payuGatewayError } =
@@ -525,7 +470,7 @@ serve(async req => {
                         .eq('code', 'payu')
                         .single();
                     },
-                    paymentId
+                    paymentId,
                   );
 
                 if (payuGatewayError || !payuGateway) {
@@ -533,13 +478,9 @@ serve(async req => {
                     paymentId,
                     false,
                     EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-                    'PayU gateway config missing'
+                    'PayU gateway config missing',
                   );
-                  return createErrorResponse(
-                    new Error('PayU gateway config missing'),
-                    500,
-                    logger
-                  );
+                  return createErrorResponse(new Error('PayU gateway config missing'), 500, logger);
                 }
 
                 const config = payuGateway.config || {};
@@ -557,22 +498,17 @@ serve(async req => {
                     paymentId,
                     false,
                     EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-                    'PayU merchant key or salt key missing'
+                    'PayU merchant key or salt key missing',
                   );
-                  return createErrorResponse(
-                    new Error('PayU configuration missing'),
-                    500,
-                    logger
-                  );
+                  return createErrorResponse(new Error('PayU configuration missing'), 500, logger);
                 }
 
                 // Get India's exchange rate for USD to INR conversion
-                const { data: indiaSettings, error: countryError } =
-                  await supabaseAdmin
-                    .from('country_settings')
-                    .select('rate_from_usd')
-                    .eq('code', 'IN')
-                    .single();
+                const { data: indiaSettings, error: countryError } = await supabaseAdmin
+                  .from('country_settings')
+                  .select('rate_from_usd')
+                  .eq('code', 'IN')
+                  .single();
 
                 if (countryError || !indiaSettings) {
                   console.error('Error fetching India settings:', countryError);
@@ -586,16 +522,14 @@ serve(async req => {
                         ...corsHeaders,
                         'Content-Type': 'application/json',
                       },
-                    }
+                    },
                   );
                 }
 
                 // Check if amount is already in INR or needs conversion from USD
                 const exchangeRate = indiaSettings.rate_from_usd;
                 if (exchangeRate === null || exchangeRate === undefined) {
-                  console.error(
-                    'Error: Exchange rate for INR conversion is missing.'
-                  );
+                  console.error('Error: Exchange rate for INR conversion is missing.');
                   return new Response(
                     JSON.stringify({
                       error: 'Failed to get exchange rate for INR conversion',
@@ -606,7 +540,7 @@ serve(async req => {
                         ...corsHeaders,
                         'Content-Type': 'application/json',
                       },
-                    }
+                    },
                   );
                 }
                 let amountInINR: number;
@@ -619,7 +553,7 @@ serve(async req => {
                   // Convert from USD (or other currency) to INR
                   amountInINR = totalAmount * exchangeRate;
                   console.log(
-                    `Converting ${totalAmount} ${totalCurrency} to ${amountInINR} INR (rate: ${exchangeRate})`
+                    `Converting ${totalAmount} ${totalCurrency} to ${amountInINR} INR (rate: ${exchangeRate})`,
                   );
                 }
 
@@ -627,8 +561,7 @@ serve(async req => {
                 if (amountInINR < 1) {
                   return new Response(
                     JSON.stringify({
-                      error:
-                        'Amount too small for PayU. Minimum amount is ₹1 INR.',
+                      error: 'Amount too small for PayU. Minimum amount is ₹1 INR.',
                     }),
                     {
                       status: 400,
@@ -636,14 +569,13 @@ serve(async req => {
                         ...corsHeaders,
                         'Content-Type': 'application/json',
                       },
-                    }
+                    },
                   );
                 }
 
                 // Get customer information from request or fetch from database
                 let customerName = customerInfo?.name || 'Customer';
-                let customerEmail =
-                  customerInfo?.email || 'customer@example.com';
+                let customerEmail = customerInfo?.email || 'customer@example.com';
                 let customerPhone = customerInfo?.phone || '9999999999';
 
                 // If customerInfo not provided, try to get from quotes
@@ -651,7 +583,7 @@ serve(async req => {
                   !customerInfo &&
                   quotesToUse &&
                   quotesToUse.length > 0 &&
-                  !quoteIds.some(id => id.startsWith('test-'))
+                  !quoteIds.some((id) => id.startsWith('test-'))
                 ) {
                   // Fetch full quote details including shipping address
                   const { data: fullQuotes } = await supabaseAdmin
@@ -670,8 +602,10 @@ serve(async req => {
                       firstQuote.shipping_address &&
                       typeof firstQuote.shipping_address === 'object'
                     ) {
-                      const shippingAddress =
-                        firstQuote.shipping_address as Record<string, unknown>;
+                      const shippingAddress = firstQuote.shipping_address as Record<
+                        string,
+                        unknown
+                      >;
                       customerPhone = shippingAddress.phone || customerPhone;
                     }
                   }
@@ -681,9 +615,7 @@ serve(async req => {
                 const txnid = `PAYU_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
                 // Create product info with more details
-                const productNames = quotesToUse
-                  .map(q => q.product_name || 'Product')
-                  .join(', ');
+                const productNames = quotesToUse.map((q) => q.product_name || 'Product').join(', ');
                 const productinfo = `Order: ${productNames} (${quoteIds.join(',')})`;
 
                 console.log('PayU Payment Details:', {
@@ -704,8 +636,7 @@ serve(async req => {
                 const formattedAmount = amountInINR.toFixed(2);
 
                 // Extract guest session token from metadata if available
-                const guestSessionToken =
-                  paymentRequest.metadata?.guest_session_token || '';
+                const guestSessionToken = paymentRequest.metadata?.guest_session_token || '';
 
                 const hashResult = await generatePayUHash({
                   merchantKey: payuConfig.merchant_key,
@@ -764,7 +695,7 @@ serve(async req => {
                       exchangeRate: totalCurrency === 'INR' ? 1 : exchangeRate,
                       testMode,
                     },
-                  }
+                  },
                 );
 
                 // Don't complete payment monitoring here - let webhook handle completion
@@ -783,24 +714,20 @@ serve(async req => {
               } catch (error) {
                 const errorCode = mapGatewayError(
                   'payu',
-                  error instanceof Error ? error : new Error('PayU error')
+                  error instanceof Error ? error : new Error('PayU error'),
                 );
 
                 paymentMonitoring.completePaymentMonitoring(
                   paymentId,
                   false,
                   errorCode,
-                  error instanceof Error
-                    ? error.message
-                    : 'PayU payment creation failed'
+                  error instanceof Error ? error.message : 'PayU payment creation failed',
                 );
 
                 logger.error(
                   EdgeLogCategory.PAYMENT_PROCESSING,
                   'PayU payment creation failed',
-                  error instanceof Error
-                    ? error
-                    : new Error('PayU payment creation failed'),
+                  error instanceof Error ? error : new Error('PayU payment creation failed'),
                   {
                     paymentId,
                     userId,
@@ -809,16 +736,14 @@ serve(async req => {
                       amount: totalAmount,
                       currency: totalCurrency,
                     },
-                  }
+                  },
                 );
 
                 return createErrorResponse(
-                  error instanceof Error
-                    ? error
-                    : new Error('PayU payment creation failed'),
+                  error instanceof Error ? error : new Error('PayU payment creation failed'),
                   500,
                   logger,
-                  { gateway: 'payu', paymentId }
+                  { gateway: 'payu', paymentId },
                 );
               }
               break;
@@ -832,7 +757,7 @@ serve(async req => {
                     paymentId,
                     userId,
                     metadata: { amount: totalAmount, currency: totalCurrency },
-                  }
+                  },
                 );
 
                 // Fetch Khalti config from payment_gateways table
@@ -847,7 +772,7 @@ serve(async req => {
                         .eq('code', 'khalti')
                         .single();
                     },
-                    paymentId
+                    paymentId,
                   );
 
                 if (khaltiGatewayError || !khaltiGateway) {
@@ -855,27 +780,21 @@ serve(async req => {
                     paymentId,
                     false,
                     EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-                    'Khalti gateway config missing'
+                    'Khalti gateway config missing',
                   );
                   return createErrorResponse(
                     new Error('Khalti gateway config missing'),
                     500,
-                    logger
+                    logger,
                   );
                 }
 
                 const config = khaltiGateway.config || {};
                 const testMode = khaltiGateway.test_mode;
                 const khaltiConfig = {
-                  public_key: testMode
-                    ? config.test_public_key
-                    : config.live_public_key,
-                  secret_key: testMode
-                    ? config.test_secret_key
-                    : config.live_secret_key,
-                  base_url: testMode
-                    ? config.sandbox_base_url
-                    : config.production_base_url,
+                  public_key: testMode ? config.test_public_key : config.live_public_key,
+                  secret_key: testMode ? config.test_secret_key : config.live_secret_key,
+                  base_url: testMode ? config.sandbox_base_url : config.production_base_url,
                 };
 
                 console.log('Khalti config:', {
@@ -889,9 +808,7 @@ serve(async req => {
                 const isDemoMode = config.demo_mode === true;
 
                 if (isDemoMode) {
-                  console.warn(
-                    '⚠️ Khalti is in DEMO MODE. Using mock response for testing.'
-                  );
+                  console.warn('⚠️ Khalti is in DEMO MODE. Using mock response for testing.');
                 }
 
                 if (!khaltiConfig.public_key || !khaltiConfig.secret_key) {
@@ -899,29 +816,28 @@ serve(async req => {
                     paymentId,
                     false,
                     EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-                    'Khalti API keys missing'
+                    'Khalti API keys missing',
                   );
                   return createErrorResponse(
                     new Error('Khalti configuration missing'),
                     500,
-                    logger
+                    logger,
                   );
                 }
 
                 // Get Nepal's exchange rate for USD to NPR conversion
-                const { data: nepalSettings, error: countryError } =
-                  await supabaseAdmin
-                    .from('country_settings')
-                    .select('rate_from_usd')
-                    .eq('code', 'NP')
-                    .single();
+                const { data: nepalSettings, error: countryError } = await supabaseAdmin
+                  .from('country_settings')
+                  .select('rate_from_usd')
+                  .eq('code', 'NP')
+                  .single();
 
                 if (countryError || !nepalSettings) {
                   console.error('Error fetching Nepal settings:', countryError);
                   return createErrorResponse(
                     new Error('Failed to get exchange rate for NPR conversion'),
                     500,
-                    logger
+                    logger,
                   );
                 }
 
@@ -935,7 +851,7 @@ serve(async req => {
                 } else {
                   amountInNPR = totalAmount * exchangeRate;
                   console.log(
-                    `Converting ${totalAmount} ${totalCurrency} to ${amountInNPR} NPR (rate: ${exchangeRate})`
+                    `Converting ${totalAmount} ${totalCurrency} to ${amountInNPR} NPR (rate: ${exchangeRate})`,
                   );
                 }
 
@@ -945,18 +861,15 @@ serve(async req => {
                 // Check minimum amount (Khalti requires at least 1000 paisa = 10 NPR)
                 if (amountInPaisa < 1000) {
                   return createErrorResponse(
-                    new Error(
-                      'Amount too small for Khalti. Minimum amount is NPR 10.'
-                    ),
+                    new Error('Amount too small for Khalti. Minimum amount is NPR 10.'),
                     400,
-                    logger
+                    logger,
                   );
                 }
 
                 // Get customer information
                 let customerName = customerInfo?.name || 'Customer';
-                let customerEmail =
-                  customerInfo?.email || 'customer@example.com';
+                let customerEmail = customerInfo?.email || 'customer@example.com';
                 let customerPhone = customerInfo?.phone || '9999999999';
 
                 // If customerInfo not provided, try to get from quotes
@@ -964,7 +877,7 @@ serve(async req => {
                   !customerInfo &&
                   quotesToUse &&
                   quotesToUse.length > 0 &&
-                  !quoteIds.some(id => id.startsWith('test-'))
+                  !quoteIds.some((id) => id.startsWith('test-'))
                 ) {
                   const { data: fullQuotes } = await supabaseAdmin
                     .from('quotes')
@@ -981,8 +894,10 @@ serve(async req => {
                       firstQuote.shipping_address &&
                       typeof firstQuote.shipping_address === 'object'
                     ) {
-                      const shippingAddress =
-                        firstQuote.shipping_address as Record<string, unknown>;
+                      const shippingAddress = firstQuote.shipping_address as Record<
+                        string,
+                        unknown
+                      >;
                       customerPhone = shippingAddress.phone || customerPhone;
                     }
                   }
@@ -992,9 +907,7 @@ serve(async req => {
                 const purchaseOrderId = `KHALTI_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
                 // Create product info
-                const productNames = quotesToUse
-                  .map(q => q.product_name || 'Product')
-                  .join(', ');
+                const productNames = quotesToUse.map((q) => q.product_name || 'Product').join(', ');
                 const purchaseOrderName = `Order: ${productNames} (${quoteIds.join(',')})`;
 
                 const khaltiBaseUrl = success_url.includes('localhost')
@@ -1040,9 +953,7 @@ serve(async req => {
                   khaltiData = {
                     pidx: `DEMO_${purchaseOrderId}`,
                     payment_url: `https://demo.khalti.com/payment/test?pidx=DEMO_${purchaseOrderId}`,
-                    expires_at: new Date(
-                      Date.now() + 60 * 60 * 1000
-                    ).toISOString(), // 1 hour from now
+                    expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour from now
                   };
                   console.log('📱 Demo mode: Returning mock Khalti response');
                 } else {
@@ -1072,14 +983,14 @@ serve(async req => {
                         paymentId,
                         false,
                         EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
-                        'Khalti authentication failed. Please check your API credentials.'
+                        'Khalti authentication failed. Please check your API credentials.',
                       );
                       return createErrorResponse(
                         new Error(
-                          'Khalti authentication failed. The API credentials may be incorrect or expired. Please contact support to update the Khalti configuration.'
+                          'Khalti authentication failed. The API credentials may be incorrect or expired. Please contact support to update the Khalti configuration.',
                         ),
                         401,
-                        logger
+                        logger,
                       );
                     }
 
@@ -1087,14 +998,12 @@ serve(async req => {
                       paymentId,
                       false,
                       EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
-                      `Khalti API error: ${JSON.stringify(errorData)}`
+                      `Khalti API error: ${JSON.stringify(errorData)}`,
                     );
                     return createErrorResponse(
-                      new Error(
-                        `Khalti API error: ${JSON.stringify(errorData)}`
-                      ),
+                      new Error(`Khalti API error: ${JSON.stringify(errorData)}`),
                       500,
-                      logger
+                      logger,
                     );
                   }
 
@@ -1118,7 +1027,7 @@ serve(async req => {
                       testMode,
                       pidx: khaltiData.pidx,
                     },
-                  }
+                  },
                 );
 
                 // Don't complete payment monitoring here - let webhook handle completion
@@ -1145,32 +1054,25 @@ serve(async req => {
                   paymentId,
                   false,
                   EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
-                  error instanceof Error ? error.message : 'Unknown error'
+                  error instanceof Error ? error.message : 'Unknown error',
                 );
 
-                logger.error(
-                  EdgeLogCategory.PAYMENT_PROCESSING,
-                  'Khalti payment creation failed',
-                  {
-                    error:
-                      error instanceof Error ? error.message : 'Unknown error',
-                    paymentId,
-                    userId,
-                    metadata: {
-                      gateway: 'khalti',
-                      amount: totalAmount,
-                      currency: totalCurrency,
-                    },
-                  }
-                );
+                logger.error(EdgeLogCategory.PAYMENT_PROCESSING, 'Khalti payment creation failed', {
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                  paymentId,
+                  userId,
+                  metadata: {
+                    gateway: 'khalti',
+                    amount: totalAmount,
+                    currency: totalCurrency,
+                  },
+                });
 
                 return createErrorResponse(
-                  error instanceof Error
-                    ? error
-                    : new Error('Khalti payment creation failed'),
+                  error instanceof Error ? error : new Error('Khalti payment creation failed'),
                   500,
                   logger,
-                  { gateway: 'khalti', paymentId }
+                  { gateway: 'khalti', paymentId },
                 );
               }
               break;
@@ -1184,7 +1086,7 @@ serve(async req => {
                     paymentId,
                     userId,
                     metadata: { amount: totalAmount, currency: totalCurrency },
-                  }
+                  },
                 );
 
                 // Fetch Stripe config from payment_gateways table
@@ -1199,7 +1101,7 @@ serve(async req => {
                         .eq('code', 'stripe')
                         .single();
                     },
-                    paymentId
+                    paymentId,
                   );
 
                 if (stripeGatewayError || !stripeGateway) {
@@ -1207,12 +1109,12 @@ serve(async req => {
                     paymentId,
                     false,
                     EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-                    'Stripe gateway config missing'
+                    'Stripe gateway config missing',
                   );
                   return createErrorResponse(
                     new Error('Stripe gateway config missing'),
                     500,
-                    logger
+                    logger,
                   );
                 }
 
@@ -1229,12 +1131,12 @@ serve(async req => {
                     paymentId,
                     false,
                     EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-                    'Stripe secret key not configured'
+                    'Stripe secret key not configured',
                   );
                   return createErrorResponse(
                     new Error('Stripe secret key not configured in database'),
                     500,
-                    logger
+                    logger,
                   );
                 }
 
@@ -1258,7 +1160,7 @@ serve(async req => {
                       supabaseAdmin,
                     });
                   },
-                  paymentId
+                  paymentId,
                 );
 
                 if (!result.success) {
@@ -1266,13 +1168,13 @@ serve(async req => {
                     paymentId,
                     false,
                     EdgePaymentErrorCode.STRIPE_API_ERROR,
-                    result.error || 'Stripe payment creation failed'
+                    result.error || 'Stripe payment creation failed',
                   );
                   return createErrorResponse(
                     new Error(result.error || 'Stripe payment creation failed'),
                     400,
                     logger,
-                    { gateway: 'stripe', paymentId }
+                    { gateway: 'stripe', paymentId },
                   );
                 }
 
@@ -1289,20 +1191,14 @@ serve(async req => {
                       currency: totalCurrency,
                       testMode,
                     },
-                  }
+                  },
                 );
 
-                paymentMonitoring.completePaymentMonitoring(
-                  paymentId,
-                  true,
-                  undefined,
-                  undefined,
-                  {
-                    transactionId: result.transactionId,
-                    gateway: 'stripe',
-                    customerId: result.customer_id,
-                  }
-                );
+                paymentMonitoring.completePaymentMonitoring(paymentId, true, undefined, undefined, {
+                  transactionId: result.transactionId,
+                  gateway: 'stripe',
+                  customerId: result.customer_id,
+                });
 
                 responseData = {
                   success: result.success,
@@ -1314,24 +1210,20 @@ serve(async req => {
               } catch (error) {
                 const errorCode = mapGatewayError(
                   'stripe',
-                  error instanceof Error ? error : new Error('Stripe error')
+                  error instanceof Error ? error : new Error('Stripe error'),
                 );
 
                 paymentMonitoring.completePaymentMonitoring(
                   paymentId,
                   false,
                   errorCode,
-                  error instanceof Error
-                    ? error.message
-                    : 'Stripe payment creation failed'
+                  error instanceof Error ? error.message : 'Stripe payment creation failed',
                 );
 
                 logger.error(
                   EdgeLogCategory.PAYMENT_PROCESSING,
                   'Stripe payment creation failed',
-                  error instanceof Error
-                    ? error
-                    : new Error('Stripe payment creation failed'),
+                  error instanceof Error ? error : new Error('Stripe payment creation failed'),
                   {
                     paymentId,
                     userId,
@@ -1340,16 +1232,14 @@ serve(async req => {
                       amount: totalAmount,
                       currency: totalCurrency,
                     },
-                  }
+                  },
                 );
 
                 return createErrorResponse(
-                  error instanceof Error
-                    ? error
-                    : new Error('Stripe payment creation failed'),
+                  error instanceof Error ? error : new Error('Stripe payment creation failed'),
                   500,
                   logger,
-                  { gateway: 'stripe', paymentId }
+                  { gateway: 'stripe', paymentId },
                 );
               }
               break;
@@ -1359,18 +1249,14 @@ serve(async req => {
                 console.log('💳 Starting Airwallex payment creation');
 
                 // Fetch Airwallex config from payment_gateways table
-                const { data: airwallexGateway, error: airwallexGatewayError } =
-                  await supabaseAdmin
-                    .from('payment_gateways')
-                    .select('config, test_mode')
-                    .eq('code', 'airwallex')
-                    .single();
+                const { data: airwallexGateway, error: airwallexGatewayError } = await supabaseAdmin
+                  .from('payment_gateways')
+                  .select('config, test_mode')
+                  .eq('code', 'airwallex')
+                  .single();
 
                 if (airwallexGatewayError || !airwallexGateway) {
-                  console.error(
-                    '❌ Airwallex gateway config error:',
-                    airwallexGatewayError
-                  );
+                  console.error('❌ Airwallex gateway config error:', airwallexGatewayError);
                   return new Response(
                     JSON.stringify({
                       error: 'Airwallex gateway config missing',
@@ -1381,7 +1267,7 @@ serve(async req => {
                         ...corsHeaders,
                         'Content-Type': 'application/json',
                       },
-                    }
+                    },
                   );
                 }
 
@@ -1406,38 +1292,35 @@ serve(async req => {
                         ...corsHeaders,
                         'Content-Type': 'application/json',
                       },
-                    }
+                    },
                   );
                 }
 
                 // Secure debugging: Log credential metadata without exposing secrets
                 const apiKeyHash = await crypto.subtle.digest(
                   'SHA-256',
-                  new TextEncoder().encode(airwallexApiKey)
+                  new TextEncoder().encode(airwallexApiKey),
                 );
                 const apiKeyHashHex = Array.from(new Uint8Array(apiKeyHash))
-                  .map(b => b.toString(16).padStart(2, '0'))
+                  .map((b) => b.toString(16).padStart(2, '0'))
                   .join('');
 
-                console.log(
-                  '🔐 Airwallex configuration loaded (secure debug)',
-                  {
-                    testMode: airwallexTestMode,
-                    hasApiKey: !!airwallexApiKey,
-                    hasClientId: !!airwallexClientId,
-                    apiKeyLength: airwallexApiKey.length,
-                    apiKeyLast4: airwallexApiKey.slice(-4),
-                    apiKeyHash: apiKeyHashHex.slice(0, 8), // First 8 chars of hash
-                    clientIdLength: airwallexClientId.length,
-                    clientIdLast4: airwallexClientId.slice(-4),
-                    configKeys: Object.keys(airwallexConfig),
-                    selectedKeyType: airwallexTestMode
-                      ? 'test_api_key'
-                      : airwallexConfig.live_api_key
-                        ? 'live_api_key'
-                        : 'api_key',
-                  }
-                );
+                console.log('🔐 Airwallex configuration loaded (secure debug)', {
+                  testMode: airwallexTestMode,
+                  hasApiKey: !!airwallexApiKey,
+                  hasClientId: !!airwallexClientId,
+                  apiKeyLength: airwallexApiKey.length,
+                  apiKeyLast4: airwallexApiKey.slice(-4),
+                  apiKeyHash: apiKeyHashHex.slice(0, 8), // First 8 chars of hash
+                  clientIdLength: airwallexClientId.length,
+                  clientIdLast4: airwallexClientId.slice(-4),
+                  configKeys: Object.keys(airwallexConfig),
+                  selectedKeyType: airwallexTestMode
+                    ? 'test_api_key'
+                    : airwallexConfig.live_api_key
+                      ? 'live_api_key'
+                      : 'api_key',
+                });
 
                 // Call the Airwallex API module to create payment intent
                 const result = await createAirwallexPaymentIntent({
@@ -1457,8 +1340,7 @@ serve(async req => {
                 if (!result.success) {
                   return new Response(
                     JSON.stringify({
-                      error:
-                        result.error || 'Airwallex payment creation failed',
+                      error: result.error || 'Airwallex payment creation failed',
                     }),
                     {
                       status: 400,
@@ -1466,7 +1348,7 @@ serve(async req => {
                         ...corsHeaders,
                         'Content-Type': 'application/json',
                       },
-                    }
+                    },
                   );
                 }
 
@@ -1502,7 +1384,7 @@ serve(async req => {
                       ...corsHeaders,
                       'Content-Type': 'application/json',
                     },
-                  }
+                  },
                 );
               }
               break;
@@ -1516,7 +1398,7 @@ serve(async req => {
                     paymentId,
                     userId,
                     metadata: { amount: totalAmount, currency: totalCurrency },
-                  }
+                  },
                 );
 
                 // Fetch Fonepay config from database
@@ -1531,7 +1413,7 @@ serve(async req => {
                         .eq('code', 'fonepay')
                         .single();
                     },
-                    paymentId
+                    paymentId,
                   );
 
                 if (fonepayGatewayError || !fonepayGateway) {
@@ -1539,12 +1421,12 @@ serve(async req => {
                     paymentId,
                     false,
                     EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-                    'Fonepay gateway config missing'
+                    'Fonepay gateway config missing',
                   );
                   return createErrorResponse(
                     new Error('Fonepay gateway config missing'),
                     500,
-                    logger
+                    logger,
                   );
                 }
 
@@ -1561,29 +1443,28 @@ serve(async req => {
                     paymentId,
                     false,
                     EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-                    'Fonepay configuration incomplete'
+                    'Fonepay configuration incomplete',
                   );
                   return createErrorResponse(
                     new Error('Fonepay configuration incomplete'),
                     500,
-                    logger
+                    logger,
                   );
                 }
 
                 // Get Nepal's exchange rate for USD to NPR conversion
-                const { data: nepalSettings, error: countryError } =
-                  await supabaseAdmin
-                    .from('country_settings')
-                    .select('rate_from_usd')
-                    .eq('code', 'NP')
-                    .single();
+                const { data: nepalSettings, error: countryError } = await supabaseAdmin
+                  .from('country_settings')
+                  .select('rate_from_usd')
+                  .eq('code', 'NP')
+                  .single();
 
                 if (countryError || !nepalSettings) {
                   console.error('Error fetching Nepal settings:', countryError);
                   return createErrorResponse(
                     new Error('Failed to get exchange rate for NPR conversion'),
                     500,
-                    logger
+                    logger,
                   );
                 }
 
@@ -1597,7 +1478,7 @@ serve(async req => {
                 } else {
                   amountInNPR = totalAmount * exchangeRate;
                   console.log(
-                    `Converting ${totalAmount} ${totalCurrency} to ${amountInNPR} NPR (rate: ${exchangeRate})`
+                    `Converting ${totalAmount} ${totalCurrency} to ${amountInNPR} NPR (rate: ${exchangeRate})`,
                   );
                 }
 
@@ -1606,8 +1487,7 @@ serve(async req => {
 
                 // Get customer information
                 let customerName = customerInfo?.name || 'Customer';
-                let customerEmail =
-                  customerInfo?.email || 'customer@example.com';
+                let customerEmail = customerInfo?.email || 'customer@example.com';
                 let customerPhone = customerInfo?.phone || '9999999999';
 
                 // If we have quote IDs, try to get customer info from quotes
@@ -1628,8 +1508,10 @@ serve(async req => {
                       firstQuote.shipping_address &&
                       typeof firstQuote.shipping_address === 'object'
                     ) {
-                      const shippingAddress =
-                        firstQuote.shipping_address as Record<string, unknown>;
+                      const shippingAddress = firstQuote.shipping_address as Record<
+                        string,
+                        unknown
+                      >;
                       customerPhone = shippingAddress.phone || customerPhone;
                     }
                   }
@@ -1680,23 +1562,14 @@ serve(async req => {
                   keyData,
                   { name: 'HMAC', hash: 'SHA-512' },
                   false,
-                  ['sign']
+                  ['sign'],
                 );
 
-                const hashBuffer = await crypto.subtle.sign(
-                  'HMAC',
-                  cryptoKey,
-                  messageData
-                );
+                const hashBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
                 const hashArray = Array.from(new Uint8Array(hashBuffer));
-                const hashHex = hashArray
-                  .map(b => b.toString(16).padStart(2, '0'))
-                  .join('');
+                const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 
-                console.log(
-                  '✅ Fonepay hash generated:',
-                  hashHex.substring(0, 20) + '...'
-                );
+                console.log('✅ Fonepay hash generated:', hashHex.substring(0, 20) + '...');
 
                 // Build Fonepay payment URL
                 const fonepayUrl = fonepayTestMode
@@ -1714,18 +1587,12 @@ serve(async req => {
 
                 console.log('🚀 Fonepay payment URL generated');
 
-                paymentMonitoring.completePaymentMonitoring(
-                  paymentId,
-                  true,
-                  undefined,
-                  undefined,
-                  {
-                    gateway: 'fonepay',
-                    transactionId: prn,
-                    amount: amountInNPR,
-                    currency: 'NPR',
-                  }
-                );
+                paymentMonitoring.completePaymentMonitoring(paymentId, true, undefined, undefined, {
+                  gateway: 'fonepay',
+                  transactionId: prn,
+                  amount: amountInNPR,
+                  currency: 'NPR',
+                });
 
                 responseData = {
                   success: true,
@@ -1741,15 +1608,14 @@ serve(async req => {
                   paymentId,
                   false,
                   EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
-                  error instanceof Error ? error.message : 'Unknown error'
+                  error instanceof Error ? error.message : 'Unknown error',
                 );
 
                 logger.error(
                   EdgeLogCategory.PAYMENT_PROCESSING,
                   'Fonepay payment creation failed',
                   {
-                    error:
-                      error instanceof Error ? error.message : 'Unknown error',
+                    error: error instanceof Error ? error.message : 'Unknown error',
                     paymentId,
                     userId,
                     metadata: {
@@ -1757,16 +1623,14 @@ serve(async req => {
                       amount: totalAmount,
                       currency: totalCurrency,
                     },
-                  }
+                  },
                 );
 
                 return createErrorResponse(
-                  error instanceof Error
-                    ? error
-                    : new Error('Fonepay payment creation failed'),
+                  error instanceof Error ? error : new Error('Fonepay payment creation failed'),
                   500,
                   logger,
-                  { gateway: 'fonepay', paymentId }
+                  { gateway: 'fonepay', paymentId },
                 );
               }
               break;
@@ -1780,19 +1644,13 @@ serve(async req => {
                   paymentId,
                   userId,
                   metadata: { amount: totalAmount, currency: totalCurrency },
-                }
+                },
               );
 
-              paymentMonitoring.completePaymentMonitoring(
-                paymentId,
-                true,
-                undefined,
-                undefined,
-                {
-                  gateway,
-                  paymentMethod: 'manual',
-                }
-              );
+              paymentMonitoring.completePaymentMonitoring(paymentId, true, undefined, undefined, {
+                gateway,
+                paymentMethod: 'manual',
+              });
 
               // For manual methods, just return success without transactionId to avoid showing payment status tracker
               responseData = { success: true, paymentId };
@@ -1803,24 +1661,23 @@ serve(async req => {
                 console.log('💳 Processing eSewa payment (v2 API)');
 
                 // Get Nepal country settings for exchange rate
-                const { data: nepalSettings, error: nepalError } =
-                  await supabaseAdmin
-                    .from('country_settings')
-                    .select('rate_from_usd')
-                    .eq('code', 'NP')
-                    .single();
+                const { data: nepalSettings, error: nepalError } = await supabaseAdmin
+                  .from('country_settings')
+                  .select('rate_from_usd')
+                  .eq('code', 'NP')
+                  .single();
 
                 if (nepalError || !nepalSettings) {
                   paymentMonitoring.completePaymentMonitoring(
                     paymentId,
                     false,
                     EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-                    'Nepal exchange rate not found'
+                    'Nepal exchange rate not found',
                   );
                   return createErrorResponse(
                     new Error('Nepal exchange rate not found'),
                     500,
-                    logger
+                    logger,
                   );
                 }
 
@@ -1834,29 +1691,28 @@ serve(async req => {
                 } else {
                   amountInNPR = totalAmount * exchangeRate;
                   console.log(
-                    `Converting ${totalAmount} ${totalCurrency} to ${amountInNPR} NPR (rate: ${exchangeRate})`
+                    `Converting ${totalAmount} ${totalCurrency} to ${amountInNPR} NPR (rate: ${exchangeRate})`,
                   );
                 }
 
                 // Get eSewa gateway configuration (v2)
-                const { data: esewaGateway, error: esewaGatewayError } =
-                  await supabaseAdmin
-                    .from('payment_gateways')
-                    .select('config, test_mode')
-                    .eq('code', 'esewa')
-                    .single();
+                const { data: esewaGateway, error: esewaGatewayError } = await supabaseAdmin
+                  .from('payment_gateways')
+                  .select('config, test_mode')
+                  .eq('code', 'esewa')
+                  .single();
 
                 if (esewaGatewayError || !esewaGateway) {
                   paymentMonitoring.completePaymentMonitoring(
                     paymentId,
                     false,
                     EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-                    'eSewa gateway config missing'
+                    'eSewa gateway config missing',
                   );
                   return createErrorResponse(
                     new Error('eSewa gateway config missing'),
                     500,
-                    logger
+                    logger,
                   );
                 }
 
@@ -1873,24 +1729,27 @@ serve(async req => {
                     paymentId,
                     false,
                     EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-                    'eSewa product code or secret key missing'
+                    'eSewa product code or secret key missing',
                   );
                   return createErrorResponse(
                     new Error('eSewa product code or secret key missing'),
                     500,
-                    logger
+                    logger,
                   );
                 }
 
                 // Generate unique transaction UUID for this transaction
                 const currentTime = new Date();
-                const transactionUuid = currentTime.toISOString().slice(2, 10).replace(/-/g, '') + 
-                  '-' + currentTime.getHours() + currentTime.getMinutes() + currentTime.getSeconds();
+                const transactionUuid =
+                  currentTime.toISOString().slice(2, 10).replace(/-/g, '') +
+                  '-' +
+                  currentTime.getHours() +
+                  currentTime.getMinutes() +
+                  currentTime.getSeconds();
 
                 // Get customer information
                 let customerName = customerInfo?.name || 'Customer';
-                let customerEmail =
-                  customerInfo?.email || 'customer@example.com';
+                let customerEmail = customerInfo?.email || 'customer@example.com';
 
                 if (quoteIds && quoteIds.length > 0) {
                   const { data: fullQuotes } = await supabaseAdmin
@@ -1913,36 +1772,36 @@ serve(async req => {
                 const baseUrl = new URL(success_url).origin;
                 const successUrl = `${baseUrl}/payment-callback/esewa-success`;
                 const failureUrl = `${baseUrl}/payment-callback/esewa-failure`;
+                
+                // For testing: use simple URLs like in the working test
+                const testSuccessUrl = `${baseUrl}/payment-callback/esewa-success`;
+                const testFailureUrl = `${baseUrl}/payment-callback/esewa-failure`;
 
                 // Generate HMAC-SHA256 signature for v2 API
                 const signatureString = `total_amount=${formattedAmount},transaction_uuid=${transactionUuid},product_code=${esewaConfig.product_code}`;
                 console.log('🔐 Signature string:', signatureString);
-                
+
                 // Create HMAC-SHA256 hash
                 const encoder = new TextEncoder();
                 const keyData = encoder.encode(esewaConfig.secret_key);
                 const messageData = encoder.encode(signatureString);
-                
+
                 // Import the secret key for HMAC
                 const cryptoKey = await crypto.subtle.importKey(
                   'raw',
                   keyData,
                   { name: 'HMAC', hash: 'SHA-256' },
                   false,
-                  ['sign']
+                  ['sign'],
                 );
-                
+
                 // Generate the signature
-                const signatureBuffer = await crypto.subtle.sign(
-                  'HMAC',
-                  cryptoKey,
-                  messageData
-                );
-                
+                const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+
                 // Convert to base64
                 const signatureArray = Array.from(new Uint8Array(signatureBuffer));
                 const signatureBase64 = btoa(String.fromCharCode(...signatureArray));
-                
+
                 console.log('🔏 Generated signature:', signatureBase64);
 
                 // eSewa v2 payment parameters
@@ -1954,8 +1813,8 @@ serve(async req => {
                   product_code: esewaConfig.product_code,
                   product_service_charge: '0',
                   product_delivery_charge: '0',
-                  success_url: successUrl,
-                  failure_url: failureUrl,
+                  success_url: testSuccessUrl,
+                  failure_url: testFailureUrl,
                   signed_field_names: 'total_amount,transaction_uuid,product_code',
                   signature: signatureBase64,
                 };
@@ -1971,23 +1830,27 @@ serve(async req => {
 
                 // Determine eSewa v2 URL based on test mode
                 const esewaTestMode = esewaGateway.test_mode ?? true;
-                const esewaUrl = esewaTestMode
-                  ? esewaConfig.test_url
-                  : esewaConfig.live_url;
+                
+                // Fix URL corruption issue - hardcode correct URLs
+                const esewaUrl = esewaTestMode 
+                  ? 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'  // Test environment
+                  : 'https://epay.esewa.com.np/api/epay/main/v2/form';    // Live environment
 
                 console.log('🌐 eSewa v2 URL:', esewaUrl);
                 console.log('🧪 Test mode:', esewaTestMode);
+                console.log('🔍 URL validation:', {
+                  url: esewaUrl,
+                  length: esewaUrl.length,
+                  includes_epay: esewaUrl.includes('epay'),
+                  includes_spaces: esewaUrl.includes('  '),
+                  url_encoded: encodeURIComponent(esewaUrl)
+                });
 
                 // Create form data for POST submission (eSewa v2 with signature)
                 const formData = paymentParams;
 
-                console.log(
-                  '🚀 eSewa v2 payment form generated with HMAC-SHA256 signature'
-                );
-                console.log(
-                  '📦 Complete form data being sent:',
-                  JSON.stringify(formData, null, 2)
-                );
+                console.log('🚀 eSewa v2 payment form generated with HMAC-SHA256 signature');
+                console.log('📦 Complete form data being sent:', JSON.stringify(formData, null, 2));
 
                 // Don't complete payment monitoring here - let callback handle completion
                 // This way monitoring shows "pending" until callback confirms payment
@@ -2008,28 +1871,19 @@ serve(async req => {
                   paymentId,
                   false,
                   EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
-                  error instanceof Error
-                    ? error.message
-                    : 'eSewa payment creation failed'
+                  error instanceof Error ? error.message : 'eSewa payment creation failed',
                 );
 
-                logger.error(
-                  EdgeLogCategory.PAYMENT_PROCESSING,
-                  'eSewa payment creation failed',
-                  {
-                    error:
-                      error instanceof Error ? error.message : 'Unknown error',
-                    paymentId,
-                    userId,
-                  }
-                );
+                logger.error(EdgeLogCategory.PAYMENT_PROCESSING, 'eSewa payment creation failed', {
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                  paymentId,
+                  userId,
+                });
 
                 return createErrorResponse(
-                  error instanceof Error
-                    ? error
-                    : new Error('eSewa payment creation failed'),
+                  error instanceof Error ? error : new Error('eSewa payment creation failed'),
                   500,
-                  logger
+                  logger,
                 );
               }
               break;
@@ -2039,13 +1893,9 @@ serve(async req => {
                 paymentId,
                 false,
                 EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
-                `Unsupported gateway: ${gateway}`
+                `Unsupported gateway: ${gateway}`,
               );
-              return createErrorResponse(
-                new Error(`Unsupported gateway: ${gateway}`),
-                400,
-                logger
-              );
+              return createErrorResponse(new Error(`Unsupported gateway: ${gateway}`), 400, logger);
           }
 
           logger.info(
@@ -2059,7 +1909,7 @@ serve(async req => {
                 responseType: typeof responseData,
                 hasTransactionId: !!responseData.transactionId,
               },
-            }
+            },
           );
 
           return createSuccessResponse(responseData, 200, logger, {
@@ -2071,32 +1921,27 @@ serve(async req => {
           logger.error(
             EdgeLogCategory.EDGE_FUNCTION,
             'Unexpected error in payment creation',
-            error instanceof Error
-              ? error
-              : new Error('Unknown payment creation error')
+            error instanceof Error ? error : new Error('Unknown payment creation error'),
           );
 
           return createErrorResponse(
             error instanceof Error ? error : new Error('Internal server error'),
             500,
-            logger
+            logger,
           );
         }
       },
-      req
+      req,
     );
 
     // Add CORS headers to the response from withEdgeMonitoring
     return addCorsHeaders(response);
   } catch (error) {
     console.error('Function error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return new Response(JSON.stringify({ error: error.message || 'Internal server error' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   // Helper function to add CORS headers to any response

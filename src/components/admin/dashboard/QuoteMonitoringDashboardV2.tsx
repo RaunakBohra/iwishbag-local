@@ -4,13 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Activity,
-  RefreshCw,
-  CheckCircle,
-  AlertCircle,
-  TrendingUp
-} from 'lucide-react';
+import { Activity, RefreshCw, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
 import { useQuoteMonitoring } from '@/hooks/useQuoteMonitoring';
 import { cn } from '@/lib/utils';
 
@@ -26,9 +20,9 @@ export function QuoteMonitoringDashboardV2() {
     isLoading,
     isError,
     refetchAll,
-    queries
+    queries,
   } = useQuoteMonitoring({
-    refetchInterval: 30000 // 30 seconds
+    refetchInterval: 30000, // 30 seconds
   });
 
   if (isError) {
@@ -45,9 +39,10 @@ export function QuoteMonitoringDashboardV2() {
     );
   }
 
-  const isRefetching = queries.performance.isRefetching || 
-                       queries.business.isRefetching || 
-                       queries.alerts.isRefetching;
+  const isRefetching =
+    queries.performance.isRefetching ||
+    queries.business.isRefetching ||
+    queries.alerts.isRefetching;
 
   return (
     <div className="space-y-6">
@@ -55,16 +50,9 @@ export function QuoteMonitoringDashboardV2() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Quote Monitoring</h2>
-          <p className="text-muted-foreground">
-            Real-time system performance and health metrics
-          </p>
+          <p className="text-muted-foreground">Real-time system performance and health metrics</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={refetchAll}
-          disabled={isRefetching}
-        >
+        <Button variant="outline" size="sm" onClick={refetchAll} disabled={isRefetching}>
           <RefreshCw className={cn('h-4 w-4 mr-2', isRefetching && 'animate-spin')} />
           Refresh
         </Button>
@@ -106,10 +94,7 @@ export function QuoteMonitoringDashboardV2() {
                 <div className="text-2xl font-bold">
                   {performanceMetrics?.successRate.toFixed(1)}%
                 </div>
-                <Progress 
-                  value={performanceMetrics?.successRate || 0} 
-                  className="h-1 mt-2"
-                />
+                <Progress value={performanceMetrics?.successRate || 0} className="h-1 mt-2" />
               </>
             )}
           </CardContent>
@@ -184,32 +169,26 @@ export function QuoteMonitoringDashboardV2() {
                   <div className="flex justify-between text-sm">
                     <span>Average Calculation Time</span>
                     <span className="font-medium">
-                      {Math.round(performanceMetrics?.averageCalculationTime || 0)}ms
+                      {Math.round(performanceMetrics?.averageCalculationTime || 0)}
+                      ms
                     </span>
                   </div>
-                  <Progress 
-                    value={Math.min((performanceMetrics?.averageCalculationTime || 0) / 50, 100)} 
+                  <Progress
+                    value={Math.min((performanceMetrics?.averageCalculationTime || 0) / 50, 100)}
                     className="h-2 mt-1"
                   />
                 </div>
                 <div>
                   <div className="flex justify-between text-sm">
                     <span>Error Rate</span>
-                    <span className="font-medium">
-                      {performanceMetrics?.errorRate.toFixed(2)}%
-                    </span>
+                    <span className="font-medium">{performanceMetrics?.errorRate.toFixed(2)}%</span>
                   </div>
-                  <Progress 
-                    value={performanceMetrics?.errorRate || 0} 
-                    className="h-2 mt-1"
-                  />
+                  <Progress value={performanceMetrics?.errorRate || 0} className="h-2 mt-1" />
                 </div>
                 <div>
                   <div className="flex justify-between text-sm">
                     <span>Slow Calculations</span>
-                    <span className="font-medium">
-                      {performanceMetrics?.slowCalculations || 0}
-                    </span>
+                    <span className="font-medium">{performanceMetrics?.slowCalculations || 0}</span>
                   </div>
                 </div>
               </div>
@@ -234,7 +213,7 @@ export function QuoteMonitoringDashboardV2() {
               <p className="text-sm text-muted-foreground">No errors recorded</p>
             ) : (
               <div className="space-y-3">
-                {performanceMetrics?.topErrors.map(({ code, count }: any) => (
+                {performanceMetrics?.topErrors.map(({ code, count }) => (
                   <div key={code} className="flex justify-between items-center">
                     <span className="font-mono text-xs">{code}</span>
                     <Badge variant="outline">{count}</Badge>

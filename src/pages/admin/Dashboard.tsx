@@ -1,50 +1,26 @@
-import React from "react";
-import { RecentActivity } from "@/components/admin/RecentActivity";
-import { DashboardSkeleton } from "@/components/admin/DashboardSkeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { 
-  BarChart3, 
-  Users, 
-  FileText, 
-  Package, 
-  TrendingUp, 
+import React from 'react';
+import { DashboardSkeleton } from '@/components/admin/DashboardSkeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import {
+  Users,
+  FileText,
+  Package,
+  TrendingUp,
   ShoppingCart,
   Mail,
-  Settings,
-  DollarSign,
-  Clock,
   CheckCircle,
-  AlertCircle,
-  CreditCard
-} from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
-import { ManualAnalysisTasks } from "@/components/admin/ManualAnalysisTasks";
-import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
-import { SimpleEnhancedAnalytics } from "@/components/admin/SimpleEnhancedAnalytics";
-import { AdminSidebar } from "@/components/admin/AdminSidebar";
-import { AdminBottomNav } from "@/components/admin/AdminBottomNav";
-import { useStatusManagement } from "@/hooks/useStatusManagement";
+  CreditCard,
+} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { ManualAnalysisTasks } from '@/components/admin/ManualAnalysisTasks';
+import { AdminAnalytics } from '@/components/admin/AdminAnalytics';
+import { SimpleEnhancedAnalytics } from '@/components/admin/SimpleEnhancedAnalytics';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 
-import { useAdminRole } from "@/hooks/useAdminRole";
-import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
-import { Tables } from "@/integrations/supabase/types";
-import { CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { QuoteManagementPage } from "@/components/admin/QuoteManagementPage";
-
-import { SystemSettings } from "@/components/admin/SystemSettings";
-import { PaymentGatewayManagement } from "@/components/admin/PaymentGatewayManagement";
-import { CountrySettings } from "@/components/admin/CountrySettings";
-import { BankAccountSettings } from "@/components/admin/BankAccountSettings";
-import { EmailTemplateManager } from "@/components/admin/EmailTemplateManager";
-import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Globe, RefreshCw, UserCheck } from "lucide-react";
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -57,21 +33,9 @@ const AdminDashboard = () => {
       // Only select needed columns for analytics to reduce data transfer
       const { data, error } = await supabase
         .from('quotes')
-        .select(`
-          id,
-          display_id,
-          email,
-          status,
-          destination_country,
-          final_total,
-          final_currency,
-          created_at,
-          product_name,
-          quantity,
-          payment_method,
-          payment_status,
-          user_id
-        `)
+        .select(
+          'id, display_id, email, status, destination_country, final_total, final_currency, created_at, product_name, quantity, payment_method, payment_status, user_id',
+        )
         .order('created_at', { ascending: false })
         .limit(1000); // Limit to prevent excessive data loading
       if (error) throw error;
@@ -86,21 +50,9 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('quotes')
-        .select(`
-          id,
-          display_id,
-          email,
-          status,
-          destination_country,
-          final_total,
-          final_currency,
-          created_at,
-          product_name,
-          quantity,
-          payment_method,
-          payment_status,
-          user_id
-        `)
+        .select(
+          'id, display_id, email, status, destination_country, final_total, final_currency, created_at, product_name, quantity, payment_method, payment_status, user_id',
+        )
         .in('status', getStatusesForOrdersList())
         .order('created_at', { ascending: false })
         .limit(500); // Limit orders
@@ -117,9 +69,15 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const [quotesResult, ordersResult, customersResult, pendingQuotesResult] = await Promise.all([
         supabase.from('quotes').select('*', { count: 'exact', head: true }),
-        supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', getStatusesForOrdersList()),
+        supabase
+          .from('quotes')
+          .select('*', { count: 'exact', head: true })
+          .in('status', getStatusesForOrdersList()),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', getStatusesForQuotesList()),
+        supabase
+          .from('quotes')
+          .select('*', { count: 'exact', head: true })
+          .in('status', getStatusesForQuotesList()),
       ]);
 
       // Try to get payment data, but handle gracefully if table doesn't exist
@@ -127,8 +85,11 @@ const AdminDashboard = () => {
       let revenueResult = { data: [] };
       try {
         const [paymentData, revenueData] = await Promise.all([
-          supabase.from('payment_transactions').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
-          supabase.from('payment_transactions').select('amount').eq('status', 'completed')
+          supabase
+            .from('payment_transactions')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'completed'),
+          supabase.from('payment_transactions').select('amount').eq('status', 'completed'),
         ]);
         paymentResult = paymentData;
         revenueResult = revenueData;
@@ -137,7 +98,8 @@ const AdminDashboard = () => {
       }
 
       // Calculate total revenue from completed payments
-      const totalRevenue = revenueResult.data?.reduce((sum, transaction) => sum + (transaction.amount || 0), 0) || 0;
+      const totalRevenue =
+        revenueResult.data?.reduce((sum, transaction) => sum + (transaction.amount || 0), 0) || 0;
 
       return {
         totalQuotes: quotesResult.count || 0,
@@ -155,39 +117,39 @@ const AdminDashboard = () => {
 
   const quickActions = [
     {
-      title: "View Quotes",
-      description: "Manage customer quotes",
+      title: 'View Quotes',
+      description: 'Manage customer quotes',
       icon: FileText,
-      href: "/admin/quotes",
-      color: "bg-blue-500/10 text-blue-600",
+      href: '/admin/quotes',
+      color: 'bg-blue-500/10 text-blue-600',
     },
     {
-      title: "Manage Orders",
-      description: "Track and process orders",
+      title: 'Manage Orders',
+      description: 'Track and process orders',
       icon: Package,
-      href: "/admin/orders",
-      color: "bg-green-500/10 text-green-600",
+      href: '/admin/orders',
+      color: 'bg-green-500/10 text-green-600',
     },
     {
-      title: "Customer Analytics",
-      description: "View customer insights",
+      title: 'Customer Analytics',
+      description: 'View customer insights',
       icon: Users,
-      href: "/admin/customers",
-      color: "bg-purple-500/10 text-purple-600",
+      href: '/admin/customers',
+      color: 'bg-purple-500/10 text-purple-600',
     },
     {
-      title: "Email Templates",
-      description: "Manage email campaigns",
+      title: 'Email Templates',
+      description: 'Manage email campaigns',
       icon: Mail,
-      href: "/admin/email-templates",
-      color: "bg-red-500/10 text-red-600",
+      href: '/admin/email-templates',
+      color: 'bg-red-500/10 text-red-600',
     },
     {
-      title: "Payment Management",
-      description: "Manage payment transactions",
+      title: 'Payment Management',
+      description: 'Manage payment transactions',
       icon: CreditCard,
-      href: "/admin/payment-management",
-      color: "bg-teal-500/10 text-teal-600",
+      href: '/admin/payment-management',
+      color: 'bg-teal-500/10 text-teal-600',
     },
   ];
 
@@ -202,7 +164,9 @@ const AdminDashboard = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Monitor and manage your international shopping platform</p>
+          <p className="text-muted-foreground">
+            Monitor and manage your international shopping platform
+          </p>
         </div>
       </div>
 
@@ -218,9 +182,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalQuotes || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              All time quote requests
-            </p>
+            <p className="text-xs text-muted-foreground">All time quote requests</p>
           </CardContent>
         </Card>
 
@@ -231,9 +193,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalOrders || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Orders in progress
-            </p>
+            <p className="text-xs text-muted-foreground">Orders in progress</p>
           </CardContent>
         </Card>
 
@@ -244,9 +204,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalCustomers || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Registered users
-            </p>
+            <p className="text-xs text-muted-foreground">Registered users</p>
           </CardContent>
         </Card>
 
@@ -257,9 +215,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalPayments || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Successful transactions
-            </p>
+            <p className="text-xs text-muted-foreground">Successful transactions</p>
           </CardContent>
         </Card>
       </div>
@@ -276,8 +232,8 @@ const AdminDashboard = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold">{action.title}</h3>
                   <p className="text-sm text-muted-foreground">{action.description}</p>
-        </div>
-      </div>
+                </div>
+              </div>
               <Button
                 variant="outline"
                 className="w-full mt-4"
@@ -312,7 +268,7 @@ const AdminDashboard = () => {
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <span className="text-sm">Payment Gateway: Connected</span>
             </div>
-      </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -326,9 +282,7 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats?.totalQuotes || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.pendingQuotes || 0} pending
-                </p>
+                <p className="text-xs text-muted-foreground">{stats?.pendingQuotes || 0} pending</p>
               </CardContent>
             </Card>
             <Card>
@@ -338,9 +292,7 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats?.totalOrders || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.activeOrders || 0} active
-                </p>
+                <p className="text-xs text-muted-foreground">{stats?.activeOrders || 0} active</p>
               </CardContent>
             </Card>
             <Card>
@@ -361,20 +313,17 @@ const AdminDashboard = () => {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${(stats?.totalRevenue || 0).toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">
-                  This month
-                </p>
+                <div className="text-2xl font-bold">
+                  ${(stats?.totalRevenue || 0).toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground">This month</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Enhanced Analytics */}
           {!quotesLoading && !ordersLoading && allQuotes && allOrders ? (
-            <SimpleEnhancedAnalytics 
-              quotes={allQuotes} 
-              orders={allOrders} 
-            />
+            <SimpleEnhancedAnalytics quotes={allQuotes} orders={allOrders} />
           ) : (
             <AdminAnalytics />
           )}
@@ -384,4 +333,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard; 
+export default AdminDashboard;

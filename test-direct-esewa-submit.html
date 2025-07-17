@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct eSewa Submit Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Direct eSewa Submit Test</h1>
+    <p>This will test different ways to submit the form to eSewa</p>
+    
+    <div class="section">
+        <h3>Method 1: form.submit()</h3>
+        <button onclick="testFormSubmit()">Test form.submit()</button>
+    </div>
+    
+    <div class="section">
+        <h3>Method 2: button.click()</h3>
+        <button onclick="testButtonClick()">Test button.click()</button>
+    </div>
+    
+    <div class="section">
+        <h3>Method 3: Direct fetch POST</h3>
+        <button onclick="testFetchPost()">Test fetch POST</button>
+    </div>
+    
+    <div class="section">
+        <h3>Console Output</h3>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function addOutput(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += message + '<br>';
+            console.log(message);
+        }
+        
+        function testFormSubmit() {
+            addOutput('🧪 Testing form.submit() method...');
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.target = '_blank';
+            form.style.display = 'none';
+            
+            // Add test data
+            const testData = {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: '250117-' + Date.now(),
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code,',
+                signature: 'test_signature'
+            };
+            
+            Object.entries(testData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            
+            addOutput('✅ Form created, submitting...');
+            try {
+                form.submit();
+                addOutput('✅ Form submitted successfully');
+            } catch (error) {
+                addOutput('❌ Form submission failed: ' + error.message);
+            }
+        }
+        
+        function testButtonClick() {
+            addOutput('🧪 Testing button.click() method...');
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.target = '_blank';
+            form.style.display = 'none';
+            
+            // Add test data
+            const testData = {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: '250117-' + Date.now(),
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code,',
+                signature: 'test_signature'
+            };
+            
+            Object.entries(testData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            
+            const submitButton = document.createElement('button');
+            submitButton.type = 'submit';
+            submitButton.style.display = 'none';
+            form.appendChild(submitButton);
+            
+            document.body.appendChild(form);
+            
+            addOutput('✅ Form created, clicking submit button...');
+            try {
+                submitButton.click();
+                addOutput('✅ Button clicked successfully');
+            } catch (error) {
+                addOutput('❌ Button click failed: ' + error.message);
+            }
+        }
+        
+        async function testFetchPost() {
+            addOutput('🧪 Testing fetch POST method...');
+            
+            const testData = {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: '250117-' + Date.now(),
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code,',
+                signature: 'test_signature'
+            };
+            
+            const formData = new FormData();
+            Object.entries(testData).forEach(([key, value]) => {
+                formData.append(key, value);
+            });
+            
+            try {
+                const response = await fetch('https://rc-epay.esewa.com.np/api/epay/main/v2/form', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                addOutput('✅ Fetch response status: ' + response.status);
+                addOutput('✅ Fetch response ok: ' + response.ok);
+                
+                if (response.ok) {
+                    // Open result in new tab
+                    const responseText = await response.text();
+                    const newTab = window.open('', '_blank');
+                    newTab.document.write(responseText);
+                }
+            } catch (error) {
+                addOutput('❌ Fetch failed: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

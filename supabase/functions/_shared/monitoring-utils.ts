@@ -8,13 +8,16 @@ import { EdgePaymentMonitoring, EdgePaymentErrorCode } from './edge-payment-moni
 /**
  * Creates a logger and payment monitoring instance for an Edge Function
  */
-export function createEdgeMonitoring(functionName: string, requestId?: string): {
+export function createEdgeMonitoring(
+  functionName: string,
+  requestId?: string,
+): {
   logger: EdgeLogger;
   paymentMonitoring: EdgePaymentMonitoring;
 } {
   const logger = new EdgeLogger(functionName, requestId);
   const paymentMonitoring = new EdgePaymentMonitoring(logger);
-  
+
   return { logger, paymentMonitoring };
 }
 
@@ -24,7 +27,7 @@ export function createEdgeMonitoring(functionName: string, requestId?: string): 
 export async function withEdgeMonitoring<T>(
   functionName: string,
   handler: (logger: EdgeLogger, paymentMonitoring: EdgePaymentMonitoring) => Promise<T>,
-  request?: Request
+  request?: Request,
 ): Promise<T> {
   const requestId = generateRequestId(request);
   const { logger, paymentMonitoring } = createEdgeMonitoring(functionName, requestId);
@@ -36,8 +39,8 @@ export async function withEdgeMonitoring<T>(
         userAgent: request?.headers.get('user-agent'),
         origin: request?.headers.get('origin'),
         method: request?.method,
-        url: request?.url
-      }
+        url: request?.url,
+      },
     });
 
     // Execute the handler
@@ -46,8 +49,8 @@ export async function withEdgeMonitoring<T>(
     // Log function success
     logger.logFunctionEnd(true, {
       metadata: {
-        resultType: typeof result
-      }
+        resultType: typeof result,
+      },
     });
 
     return result;
@@ -59,15 +62,15 @@ export async function withEdgeMonitoring<T>(
       error instanceof Error ? error : new Error('Unknown function error'),
       {
         metadata: {
-          errorType: error instanceof Error ? error.name : 'Unknown'
-        }
-      }
+          errorType: error instanceof Error ? error.name : 'Unknown',
+        },
+      },
     );
 
     logger.logFunctionEnd(false, {
       metadata: {
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
     });
 
     // Cleanup any active monitoring
@@ -83,15 +86,16 @@ export async function withEdgeMonitoring<T>(
 export function generateRequestId(request?: Request): string {
   if (request) {
     // Try to get request ID from headers
-    const headerRequestId = request.headers.get('x-request-id') || 
-                          request.headers.get('request-id') ||
-                          request.headers.get('x-trace-id');
-    
+    const headerRequestId =
+      request.headers.get('x-request-id') ||
+      request.headers.get('request-id') ||
+      request.headers.get('x-trace-id');
+
     if (headerRequestId) {
       return headerRequestId;
     }
   }
-  
+
   return `edge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
@@ -100,15 +104,17 @@ export function generateRequestId(request?: Request): string {
  */
 export function extractPaymentId(body: any): string | undefined {
   if (!body) return undefined;
-  
+
   // Try common payment ID fields
-  return body.paymentId || 
-         body.payment_id || 
-         body.id || 
-         body.transactionId || 
-         body.transaction_id ||
-         body.intent_id ||
-         body.payment_intent_id;
+  return (
+    body.paymentId ||
+    body.payment_id ||
+    body.id ||
+    body.transactionId ||
+    body.transaction_id ||
+    body.intent_id ||
+    body.payment_intent_id
+  );
 }
 
 /**
@@ -117,11 +123,8 @@ export function extractPaymentId(body: any): string | undefined {
 export function extractUserId(body: any, authUser: any): string | undefined {
   if (authUser?.id) return authUser.id;
   if (!body) return undefined;
-  
-  return body.userId || 
-         body.user_id ||
-         body.customerId ||
-         body.customer_id;
+
+  return body.userId || body.user_id || body.customerId || body.customer_id;
 }
 
 /**
@@ -129,7 +132,7 @@ export function extractUserId(body: any, authUser: any): string | undefined {
  */
 export function mapGatewayError(gateway: string, error: Error): EdgePaymentErrorCode {
   const errorMessage = error.message.toLowerCase();
-  
+
   // Gateway-specific error mapping
   if (gateway === 'stripe') {
     if (errorMessage.includes('card_declined')) return EdgePaymentErrorCode.PAYMENT_DECLINED;
@@ -139,25 +142,25 @@ export function mapGatewayError(gateway: string, error: Error): EdgePaymentError
     if (errorMessage.includes('fraudulent')) return EdgePaymentErrorCode.FRAUD_DETECTED;
     return EdgePaymentErrorCode.STRIPE_API_ERROR;
   }
-  
+
   if (gateway === 'paypal') {
     if (errorMessage.includes('declined')) return EdgePaymentErrorCode.PAYMENT_DECLINED;
     if (errorMessage.includes('insufficient')) return EdgePaymentErrorCode.INSUFFICIENT_FUNDS;
     return EdgePaymentErrorCode.PAYPAL_API_ERROR;
   }
-  
+
   if (gateway === 'payu') {
     if (errorMessage.includes('declined')) return EdgePaymentErrorCode.PAYMENT_DECLINED;
     if (errorMessage.includes('insufficient')) return EdgePaymentErrorCode.INSUFFICIENT_FUNDS;
     return EdgePaymentErrorCode.PAYU_API_ERROR;
   }
-  
+
   if (gateway === 'airwallex') {
     if (errorMessage.includes('declined')) return EdgePaymentErrorCode.PAYMENT_DECLINED;
     if (errorMessage.includes('insufficient')) return EdgePaymentErrorCode.INSUFFICIENT_FUNDS;
     return EdgePaymentErrorCode.AIRWALLEX_API_ERROR;
   }
-  
+
   // Generic error mapping
   if (errorMessage.includes('timeout')) return EdgePaymentErrorCode.GATEWAY_TIMEOUT;
   if (errorMessage.includes('unavailable')) return EdgePaymentErrorCode.GATEWAY_UNAVAILABLE;
@@ -168,7 +171,7 @@ export function mapGatewayError(gateway: string, error: Error): EdgePaymentError
     return EdgePaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS;
   }
   if (errorMessage.includes('duplicate')) return EdgePaymentErrorCode.DUPLICATE_PAYMENT;
-  
+
   return EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED;
 }
 
@@ -179,34 +182,29 @@ export function createErrorResponse(
   error: Error,
   status: number = 500,
   logger?: EdgeLogger,
-  context?: Record<string, unknown>
+  context?: Record<string, unknown>,
 ): Response {
   const errorResponse = {
     error: error.message,
     timestamp: new Date().toISOString(),
-    requestId: logger?.id
+    requestId: logger?.id,
   };
 
   if (logger) {
-    logger.error(
-      EdgeLogCategory.EDGE_FUNCTION,
-      'Function error response',
-      error,
-      {
-        metadata: {
-          status,
-          ...context
-        }
-      }
-    );
+    logger.error(EdgeLogCategory.EDGE_FUNCTION, 'Function error response', error, {
+      metadata: {
+        status,
+        ...context,
+      },
+    });
   }
 
   return new Response(JSON.stringify(errorResponse), {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'X-Request-ID': logger?.id || 'unknown'
-    }
+      'X-Request-ID': logger?.id || 'unknown',
+    },
   });
 }
 
@@ -217,34 +215,30 @@ export function createSuccessResponse(
   data: any,
   status: number = 200,
   logger?: EdgeLogger,
-  context?: Record<string, unknown>
+  context?: Record<string, unknown>,
 ): Response {
   const response = {
     ...data,
     timestamp: new Date().toISOString(),
-    requestId: logger?.id
+    requestId: logger?.id,
   };
 
   if (logger) {
-    logger.info(
-      EdgeLogCategory.EDGE_FUNCTION,
-      'Function success response',
-      {
-        metadata: {
-          status,
-          hasData: !!data,
-          ...context
-        }
-      }
-    );
+    logger.info(EdgeLogCategory.EDGE_FUNCTION, 'Function success response', {
+      metadata: {
+        status,
+        hasData: !!data,
+        ...context,
+      },
+    });
   }
 
   return new Response(JSON.stringify(response), {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'X-Request-ID': logger?.id || 'unknown'
-    }
+      'X-Request-ID': logger?.id || 'unknown',
+    },
   });
 }
 
@@ -256,7 +250,7 @@ export function validateWebhookSignature(
   signature: string,
   secret: string,
   gateway: string,
-  logger: EdgeLogger
+  logger: EdgeLogger,
 ): boolean {
   try {
     logger.debug(EdgeLogCategory.WEBHOOK_PROCESSING, `Validating ${gateway} webhook signature`, {
@@ -264,8 +258,8 @@ export function validateWebhookSignature(
         gateway,
         hasPayload: !!payload,
         hasSignature: !!signature,
-        hasSecret: !!secret
-      }
+        hasSecret: !!secret,
+      },
     });
 
     // Gateway-specific signature validation logic would go here
@@ -276,7 +270,7 @@ export function validateWebhookSignature(
 
     // Add actual signature validation logic for each gateway
     logger.info(EdgeLogCategory.WEBHOOK_PROCESSING, `${gateway} webhook signature validated`, {
-      metadata: { gateway }
+      metadata: { gateway },
     });
 
     return true;
@@ -288,9 +282,9 @@ export function validateWebhookSignature(
       {
         metadata: {
           gateway,
-          errorType: error instanceof Error ? error.name : 'Unknown'
-        }
-      }
+          errorType: error instanceof Error ? error.name : 'Unknown',
+        },
+      },
     );
     return false;
   }
@@ -303,9 +297,20 @@ export function sanitizeForLogging(data: any): any {
   if (!data || typeof data !== 'object') return data;
 
   const sensitiveFields = [
-    'password', 'token', 'secret', 'key', 'api_key', 'client_secret',
-    'card_number', 'cvv', 'ssn', 'social_security', 'credit_card',
-    'bank_account', 'routing_number', 'account_number'
+    'password',
+    'token',
+    'secret',
+    'key',
+    'api_key',
+    'client_secret',
+    'card_number',
+    'cvv',
+    'ssn',
+    'social_security',
+    'credit_card',
+    'bank_account',
+    'routing_number',
+    'account_number',
   ];
 
   const sanitized = { ...data };

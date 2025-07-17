@@ -1,16 +1,15 @@
-import { useMemo, useState, useEffect } from "react";
-import React from "react";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ImageUpload } from "@/components/ui/image-upload";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Control, useWatch } from "react-hook-form";
-import { AdminQuoteFormValues } from "@/components/admin/admin-quote-form-validation";
-import { Button } from "@/components/ui/button";
-import { ExternalLink, Trash2 } from "lucide-react";
-import { Tables } from "@/integrations/supabase/types";
-import { convertWeight } from "@/lib/weightUtils";
+import { useState, useEffect } from 'react';
+import React from 'react';
+import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { ImageUpload } from '@/components/ui/image-upload';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Control, useWatch } from 'react-hook-form';
+import { AdminQuoteFormValues } from '@/components/admin/admin-quote-form-validation';
+import { Button } from '@/components/ui/button';
+import { ExternalLink, Trash2 } from 'lucide-react';
+import { Tables } from '@/integrations/supabase/types';
+import { convertWeight } from '@/lib/weightUtils';
 
 type CountrySetting = Tables<'country_settings'>;
 
@@ -24,27 +23,26 @@ interface EditableAdminQuoteItemCardProps {
   countryCurrency?: string;
 }
 
-export const EditableAdminQuoteItemCard = ({ 
-  index, 
-  control, 
-  allCountries, 
-  onDelete, 
+export const EditableAdminQuoteItemCard = ({
+  index,
+  control,
+  allCountries: _allCountries,
+  onDelete,
   routeWeightUnit,
   smartWeightUnit = 'kg',
-  countryCurrency = 'USD'
+  countryCurrency = 'USD',
 }: EditableAdminQuoteItemCardProps) => {
   const handleNumberInputWheel = (e: React.WheelEvent) => {
     (e.currentTarget as HTMLInputElement).blur();
   };
 
   const [weightInputValues, setWeightInputValues] = useState<Record<number, string>>({});
-  const [currencySymbol, setCurrencySymbol] = useState('$');
-  const [displayWeightUnit, setDisplayWeightUnit] = useState<'kg' | 'lb'>('kg');
+  const [displayWeightUnit] = useState<'kg' | 'lb'>('kg');
 
   // Get the current field value for weight
   const weightField = useWatch({
     control,
-    name: `items.${index}.item_weight`
+    name: `items.${index}.item_weight`,
   });
 
   // Update input value when field value changes externally (e.g., from form reset)
@@ -61,9 +59,9 @@ export const EditableAdminQuoteItemCard = ({
     };
 
     const expectedDisplayValue = getDisplayValue();
-    setWeightInputValues(prev => ({
+    setWeightInputValues((prev) => ({
       ...prev,
-      [index]: expectedDisplayValue
+      [index]: expectedDisplayValue,
     }));
   }, [weightField, displayWeightUnit, index]);
 
@@ -73,17 +71,17 @@ export const EditableAdminQuoteItemCard = ({
   // Get currency symbol - using country currency
   const getCurrencySymbol = (currency: string) => {
     const symbols: { [key: string]: string } = {
-      'USD': '$',
-      'EUR': '€',
-      'GBP': '£',
-      'INR': '₹',
-      'CAD': 'C$',
-      'AUD': 'A$',
-      'JPY': '¥',
-      'CNY': '¥',
-      'SGD': 'S$',
-      'AED': 'د.إ',
-      'SAR': 'ر.س',
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      INR: '₹',
+      CAD: 'C$',
+      AUD: 'A$',
+      JPY: '¥',
+      CNY: '¥',
+      SGD: 'S$',
+      AED: 'د.إ',
+      SAR: 'ر.س',
     };
     return symbols[currency] || currency;
   };
@@ -130,9 +128,16 @@ export const EditableAdminQuoteItemCard = ({
             name={`items.${index}.product_name`}
             render={({ field }) => (
               <FormItem className="m-0">
-                <FormLabel className="text-xs font-medium text-muted-foreground">Product Name</FormLabel>
+                <FormLabel className="text-xs font-medium text-muted-foreground">
+                  Product Name
+                </FormLabel>
                 <FormControl>
-                  <Input {...field} value={field.value || ''} placeholder="Product Name" className="h-9 mt-1" />
+                  <Input
+                    {...field}
+                    value={field.value || ''}
+                    placeholder="Product Name"
+                    className="h-9 mt-1"
+                  />
                 </FormControl>
               </FormItem>
             )}
@@ -148,9 +153,16 @@ export const EditableAdminQuoteItemCard = ({
               name={`items.${index}.product_url`}
               render={({ field }) => (
                 <FormItem className="m-0 flex-1">
-                  <FormLabel className="text-xs font-medium text-muted-foreground">Product URL</FormLabel>
+                  <FormLabel className="text-xs font-medium text-muted-foreground">
+                    Product URL
+                  </FormLabel>
                   <FormControl>
-                    <Input {...field} value={field.value || ''} placeholder="https://..." className="h-9 mt-1 w-full" />
+                    <Input
+                      {...field}
+                      value={field.value || ''}
+                      placeholder="https://..."
+                      className="h-9 mt-1 w-full"
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -176,14 +188,18 @@ export const EditableAdminQuoteItemCard = ({
             name={`items.${index}.item_price`}
             render={({ field }) => (
               <FormItem className="m-0">
-                <FormLabel className="text-xs font-medium text-muted-foreground">Price ({currencySymbolFinal})</FormLabel>
+                <FormLabel className="text-xs font-medium text-muted-foreground">
+                  Price ({currencySymbolFinal})
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     step="0.01"
                     {...field}
                     value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : '')}
+                    onChange={(e) =>
+                      field.onChange(e.target.value ? parseFloat(e.target.value) : '')
+                    }
                     onWheel={handleNumberInputWheel}
                     className="h-9 mt-1"
                   />
@@ -236,15 +252,15 @@ export const EditableAdminQuoteItemCard = ({
                   field.onChange(null);
                   return;
                 }
-                
+
                 const sanitized = restrictTo2Decimals(value);
                 const numValue = parseFloat(sanitized);
                 if (isNaN(numValue)) return;
-                
+
                 // Format to 2 decimals
                 const formattedValue = numValue.toFixed(2);
                 e.target.value = formattedValue;
-                
+
                 // Now convert and update the field value
                 if (displayWeightUnit && displayWeightUnit !== 'kg') {
                   // Convert from display unit to kg for storage
@@ -269,9 +285,9 @@ export const EditableAdminQuoteItemCard = ({
                       value={currentInputValue}
                       onChange={(e) => {
                         const value = e.target.value;
-                        setWeightInputValues(prev => ({
+                        setWeightInputValues((prev) => ({
                           ...prev,
-                          [index]: value
+                          [index]: value,
                         }));
                         handleChange(value);
                       }}
@@ -291,7 +307,9 @@ export const EditableAdminQuoteItemCard = ({
             name={`items.${index}.quantity`}
             render={({ field }) => (
               <FormItem className="m-0">
-                <FormLabel className="text-xs font-medium text-muted-foreground">Quantity</FormLabel>
+                <FormLabel className="text-xs font-medium text-muted-foreground">
+                  Quantity
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -325,10 +343,12 @@ export const EditableAdminQuoteItemCard = ({
                 // If parsing fails, treat as plain text (legacy format)
                 notes = field.value || '';
               }
-              
+
               return (
                 <FormItem className="m-0 w-full">
-                  <FormLabel className="text-xs font-medium text-muted-foreground">Customer Notes</FormLabel>
+                  <FormLabel className="text-xs font-medium text-muted-foreground">
+                    Customer Notes
+                  </FormLabel>
                   <FormControl>
                     <Input
                       value={notes}

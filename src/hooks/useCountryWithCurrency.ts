@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 
 interface Country {
@@ -10,11 +9,11 @@ interface Country {
 export const useCountryWithCurrency = (countries: Country[] | undefined) => {
   return useMemo(() => {
     if (!countries) return [];
-    
-    return countries.map(country => ({
+
+    return countries.map((country) => ({
       ...country,
       displayName: `${country.name} (${country.currency?.toUpperCase() || 'USD'})`,
-      currencyCode: country.currency || 'USD'
+      currencyCode: country.currency || 'USD',
     }));
   }, [countries]);
 };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Calculator, AlertTriangle, Info } from 'lucide-react';
+import { Calculator, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CurrencyEstimateIndicatorProps {
@@ -19,7 +19,7 @@ export function CurrencyEstimateIndicator({
   exchangeRateSource = 'cached',
   showTooltip = true,
   variant = 'default',
-  className = ''
+  className = '',
 }: CurrencyEstimateIndicatorProps) {
   // Don't show indicator for transactional amounts
   if (isTransactional) {
@@ -31,16 +31,15 @@ export function CurrencyEstimateIndicator({
 
   const getIndicatorContent = () => {
     if (variant === 'minimal') {
-      return (
-        <span className="text-xs text-orange-600 font-medium">
-          Est.
-        </span>
-      );
+      return <span className="text-xs text-orange-600 font-medium">Est.</span>;
     }
 
     if (variant === 'compact') {
       return (
-        <Badge variant="secondary" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+        <Badge
+          variant="secondary"
+          className="text-xs bg-orange-50 text-orange-700 border-orange-200"
+        >
           <Calculator className="h-2 w-2 mr-1" />
           Est.
         </Badge>
@@ -70,8 +69,11 @@ export function CurrencyEstimateIndicator({
           Currency Estimate
         </div>
         <div className="text-sm space-y-1">
-          <p>This amount is for display purposes only and represents an estimate based on current exchange rates.</p>
-          
+          <p>
+            This amount is for display purposes only and represents an estimate based on current
+            exchange rates.
+          </p>
+
           <div className="bg-orange-50 p-2 rounded border mt-2">
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-3 w-3 text-orange-600 mt-0.5 flex-shrink-0" />
@@ -89,17 +91,24 @@ export function CurrencyEstimateIndicator({
           <div className="pt-2 border-t">
             <div className="text-xs text-gray-600 space-y-1">
               <div>
-                <strong>Rate Source:</strong> {exchangeRateSource === 'live' ? 'Live' : exchangeRateSource === 'cached' ? 'Cached' : 'Fallback'}
+                <strong>Rate Source:</strong>{' '}
+                {exchangeRateSource === 'live'
+                  ? 'Live'
+                  : exchangeRateSource === 'cached'
+                    ? 'Cached'
+                    : 'Fallback'}
               </div>
               {exchangeRateAge > 0 && (
-                <div className={cn(
-                  "flex items-center gap-1",
-                  isVeryStale ? "text-red-600" : isStale ? "text-orange-600" : "text-gray-600"
-                )}>
+                <div
+                  className={cn(
+                    'flex items-center gap-1',
+                    isVeryStale ? 'text-red-600' : isStale ? 'text-orange-600' : 'text-gray-600',
+                  )}
+                >
                   {(isStale || isVeryStale) && <AlertTriangle className="h-2 w-2" />}
                   <strong>Updated:</strong> {formatAge(exchangeRateAge)}
-                  {isVeryStale && " (Very Stale)"}
-                  {isStale && !isVeryStale && " (Stale)"}
+                  {isVeryStale && ' (Very Stale)'}
+                  {isStale && !isVeryStale && ' (Stale)'}
                 </div>
               )}
             </div>
@@ -118,9 +127,7 @@ export function CurrencyEstimateIndicator({
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger className={className}>
-          {content}
-        </TooltipTrigger>
+        <TooltipTrigger className={className}>{content}</TooltipTrigger>
         <TooltipContent side="top" className="max-w-sm">
           {getTooltipContent()}
         </TooltipContent>
@@ -146,7 +153,7 @@ export function AmountWithEstimate({
   exchangeRateAge = 0,
   exchangeRateSource = 'cached',
   showCurrency = true,
-  className = ''
+  className = '',
 }: AmountWithEstimateProps) {
   const formatAmount = (value: number, curr: string) => {
     // Simple formatting - you can replace with your currency formatting utility
@@ -155,7 +162,7 @@ export function AmountWithEstimate({
   };
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn('flex items-center gap-2', className)}>
       <span className="font-medium">
         {showCurrency ? formatAmount(amount, currency) : amount.toLocaleString()}
       </span>

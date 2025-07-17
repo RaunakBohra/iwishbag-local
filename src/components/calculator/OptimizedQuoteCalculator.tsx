@@ -1,15 +1,27 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { adminQuoteFormSchema, AdminQuoteFormValues } from '@/components/admin/admin-quote-form-validation';
-import { useOptimizedQuoteCalculation, useRealTimeQuoteCalculation } from '@/hooks/useOptimizedQuoteCalculation';
+import {
+  adminQuoteFormSchema,
+  AdminQuoteFormValues,
+} from '@/components/admin/admin-quote-form-validation';
+import {
+  useOptimizedQuoteCalculation,
+  useRealTimeQuoteCalculation,
+} from '@/hooks/useOptimizedQuoteCalculation';
 import { QuoteCalculationParams, QuoteCalculationResult } from '@/services/QuoteCalculatorService';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,22 +43,24 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
   initialData,
   onCalculationComplete,
   realTimeMode = true,
-  showPerformanceMetrics = false
+  showPerformanceMetrics = false,
 }) => {
   const { data: allCountries } = useAllCountries();
-  const [lastCalculationTime, setLastCalculationTime] = useState<number>(0);
+  const [_lastCalculationTime, setLastCalculationTime] = useState<number>(0);
 
   // Form setup
   const form = useForm<AdminQuoteFormValues>({
     resolver: zodResolver(adminQuoteFormSchema),
     defaultValues: {
-      items: [{ 
-        id: '1', 
-        item_price: 100, 
-        item_weight: 1, 
-        quantity: 1, 
-        product_name: 'Sample Product' 
-      }],
+      items: [
+        {
+          id: '1',
+          item_price: 100,
+          item_weight: 1,
+          quantity: 1,
+          product_name: 'Sample Product',
+        },
+      ],
       origin_country: '',
       destination_country: '',
       currency: '',
@@ -58,13 +72,13 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
       discount: 0,
       insurance_amount: 0,
       customs_percentage: 6,
-      ...initialData
-    }
+      ...initialData,
+    },
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: 'items'
+    name: 'items',
   });
 
   // Watch form values for real-time calculations
@@ -78,19 +92,19 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
     error,
     performanceMetrics,
     cacheStats,
-    clearCache
+    clearCache,
   } = useOptimizedQuoteCalculation({
     onCalculationComplete: (result) => {
       setLastCalculationTime(Date.now());
       onCalculationComplete?.(result);
-    }
+    },
   });
 
   // Prepare calculation parameters
   const calculationParams = useMemo((): QuoteCalculationParams | null => {
     if (!allCountries || !watchedValues.origin_country) return null;
 
-    const countrySettings = allCountries.find(c => c.code === watchedValues.origin_country);
+    const countrySettings = allCountries.find((c) => c.code === watchedValues.origin_country);
     if (!countrySettings) return null;
 
     return {
@@ -105,7 +119,7 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
       discount: watchedValues.discount,
       insurance_amount: watchedValues.insurance_amount,
       customs_percentage: watchedValues.customs_percentage,
-      countrySettings
+      countrySettings,
     };
   }, [
     watchedValues.items,
@@ -119,24 +133,19 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
     watchedValues.discount,
     watchedValues.insurance_amount,
     watchedValues.customs_percentage,
-    allCountries
+    allCountries,
   ]);
 
   // Real-time calculation
-  const {
-    result: realTimeResult,
-    isCalculating: isRealTimeCalculating
-  } = useRealTimeQuoteCalculation(
-    realTimeMode ? calculationParams : null,
-    {
+  const { result: realTimeResult, isCalculating: isRealTimeCalculating } =
+    useRealTimeQuoteCalculation(realTimeMode ? calculationParams : null, {
       debounceMs: 800,
       enabled: realTimeMode,
       onCalculationComplete: (result) => {
         setLastCalculationTime(Date.now());
         onCalculationComplete?.(result);
-      }
-    }
-  );
+      },
+    });
 
   // Use real-time result if available, otherwise use manual calculation result
   const displayResult = realTimeMode ? realTimeResult : calculationResult;
@@ -149,7 +158,7 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
   const currencyDisplay = useQuoteCurrencyDisplay({
     originCountry,
     destinationCountry,
-    isAdminView: true
+    isAdminView: true,
   });
 
   // Manual calculation trigger
@@ -166,7 +175,7 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
       item_price: 0,
       item_weight: 0,
       quantity: 1,
-      product_name: ''
+      product_name: '',
     });
   }, [append]);
 
@@ -248,17 +257,11 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="currency">Currency</Label>
-                  <Input
-                    {...form.register('currency')}
-                    placeholder="USD"
-                  />
+                  <Input {...form.register('currency')} placeholder="USD" />
                 </div>
                 <div>
                   <Label htmlFor="final_currency">Final Currency</Label>
-                  <Input
-                    {...form.register('final_currency')}
-                    placeholder="USD"
-                  />
+                  <Input {...form.register('final_currency')} placeholder="USD" />
                 </div>
               </div>
             </CardContent>
@@ -282,18 +285,24 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                     placeholder="Product name"
                   />
                   <Input
-                    {...form.register(`items.${index}.item_price`, { valueAsNumber: true })}
+                    {...form.register(`items.${index}.item_price`, {
+                      valueAsNumber: true,
+                    })}
                     type="number"
                     placeholder="Price"
                   />
                   <Input
-                    {...form.register(`items.${index}.item_weight`, { valueAsNumber: true })}
+                    {...form.register(`items.${index}.item_weight`, {
+                      valueAsNumber: true,
+                    })}
                     type="number"
                     placeholder="Weight"
                   />
                   <div className="flex gap-1">
                     <Input
-                      {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
+                      {...form.register(`items.${index}.quantity`, {
+                        valueAsNumber: true,
+                      })}
                       type="number"
                       placeholder="Qty"
                     />
@@ -323,7 +332,9 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                 <div>
                   <Label htmlFor="sales_tax_price">Sales Tax</Label>
                   <Input
-                    {...form.register('sales_tax_price', { valueAsNumber: true })}
+                    {...form.register('sales_tax_price', {
+                      valueAsNumber: true,
+                    })}
                     type="number"
                     placeholder="0"
                   />
@@ -331,7 +342,9 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                 <div>
                   <Label htmlFor="merchant_shipping_price">Merchant Shipping</Label>
                   <Input
-                    {...form.register('merchant_shipping_price', { valueAsNumber: true })}
+                    {...form.register('merchant_shipping_price', {
+                      valueAsNumber: true,
+                    })}
                     type="number"
                     placeholder="0"
                   />
@@ -339,7 +352,9 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                 <div>
                   <Label htmlFor="domestic_shipping">Domestic Shipping</Label>
                   <Input
-                    {...form.register('domestic_shipping', { valueAsNumber: true })}
+                    {...form.register('domestic_shipping', {
+                      valueAsNumber: true,
+                    })}
                     type="number"
                     placeholder="0"
                   />
@@ -347,7 +362,9 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                 <div>
                   <Label htmlFor="handling_charge">Handling Charge</Label>
                   <Input
-                    {...form.register('handling_charge', { valueAsNumber: true })}
+                    {...form.register('handling_charge', {
+                      valueAsNumber: true,
+                    })}
                     type="number"
                     placeholder="0"
                   />
@@ -355,7 +372,9 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                 <div>
                   <Label htmlFor="insurance_amount">Insurance</Label>
                   <Input
-                    {...form.register('insurance_amount', { valueAsNumber: true })}
+                    {...form.register('insurance_amount', {
+                      valueAsNumber: true,
+                    })}
                     type="number"
                     placeholder="0"
                   />
@@ -372,7 +391,9 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
               <div>
                 <Label htmlFor="customs_percentage">Customs Percentage (%)</Label>
                 <Input
-                  {...form.register('customs_percentage', { valueAsNumber: true })}
+                  {...form.register('customs_percentage', {
+                    valueAsNumber: true,
+                  })}
                   type="number"
                   placeholder="6"
                   step="0.1"
@@ -383,8 +404,8 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
 
           {/* Manual Calculate Button */}
           {!realTimeMode && (
-            <Button 
-              onClick={handleCalculate} 
+            <Button
+              onClick={handleCalculate}
               disabled={isCalculating || !calculationParams}
               className="w-full"
             >
@@ -451,12 +472,10 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                         </div>
                       </div>
                     </div>
-                    
+
                     {displayResult.warnings && displayResult.warnings.length > 0 && (
                       <Alert>
-                        <AlertDescription>
-                          {displayResult.warnings.join(', ')}
-                        </AlertDescription>
+                        <AlertDescription>{displayResult.warnings.join(', ')}</AlertDescription>
                       </Alert>
                     )}
                   </TabsContent>
@@ -465,26 +484,29 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                     <div className="flex justify-between py-1 border-b font-medium text-sm">
                       <span>Description</span>
                       <span className="text-right">
-                        Amount ({getCurrencySymbolFromCountry(originCountry)}/{getCurrencySymbolFromCountry(destinationCountry)})
+                        Amount ({getCurrencySymbolFromCountry(originCountry)}/
+                        {getCurrencySymbolFromCountry(destinationCountry)})
                       </span>
                     </div>
-                    {([
-                      ['Items Total', displayResult.breakdown.total_item_price],
-                      ['Sales Tax', displayResult.breakdown.sales_tax_price],
-                      ['Merchant Shipping', displayResult.breakdown.merchant_shipping_price],
-                      ['International Shipping', displayResult.breakdown.international_shipping],
-                      ['Customs & ECS', displayResult.breakdown.customs_and_ecs],
-                      ['Domestic Shipping', displayResult.breakdown.domestic_shipping],
-                      ['Handling Charge', displayResult.breakdown.handling_charge],
-                      ['Insurance', displayResult.breakdown.insurance_amount],
-                      ['Discount', displayResult.breakdown.discount],
-                      ['Payment Gateway Fee', displayResult.breakdown.payment_gateway_fee],
-                      ['VAT', displayResult.breakdown.vat]
-                    ] as const).map(([label, amount]) => {
+                    {(
+                      [
+                        ['Items Total', displayResult.breakdown.total_item_price],
+                        ['Sales Tax', displayResult.breakdown.sales_tax_price],
+                        ['Merchant Shipping', displayResult.breakdown.merchant_shipping_price],
+                        ['International Shipping', displayResult.breakdown.international_shipping],
+                        ['Customs & ECS', displayResult.breakdown.customs_and_ecs],
+                        ['Domestic Shipping', displayResult.breakdown.domestic_shipping],
+                        ['Handling Charge', displayResult.breakdown.handling_charge],
+                        ['Insurance', displayResult.breakdown.insurance_amount],
+                        ['Discount', displayResult.breakdown.discount],
+                        ['Payment Gateway Fee', displayResult.breakdown.payment_gateway_fee],
+                        ['VAT', displayResult.breakdown.vat],
+                      ] as const
+                    ).map(([label, amount]) => {
                       if (!amount || amount === 0) return null;
                       const isDiscount = label === 'Discount';
-                      const displayAmount = isDiscount ? -Math.abs(amount) : amount;
-                      
+                      const _displayAmount = isDiscount ? -Math.abs(amount) : amount;
+
                       return (
                         <div key={label} className="flex justify-between py-1 border-b">
                           <span className="text-sm">{label}</span>
@@ -527,9 +549,16 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                       <div>Rate Source: {displayResult.breakdown.exchange_rate_source}</div>
                       <div>Shipping Method: {displayResult.breakdown.shipping_method}</div>
                       <div>Total Weight: {displayResult.breakdown.total_item_weight} kg</div>
-                      <div>Calculated: {new Date(displayResult.breakdown.calculation_timestamp).toLocaleTimeString()}</div>
+                      <div>
+                        Calculated:{' '}
+                        {new Date(
+                          displayResult.breakdown.calculation_timestamp,
+                        ).toLocaleTimeString()}
+                      </div>
                       {displayResult.performance && (
-                        <div>Calculation Time: {displayResult.performance.calculation_time_ms}ms</div>
+                        <div>
+                          Calculation Time: {displayResult.performance.calculation_time_ms}ms
+                        </div>
                       )}
                     </div>
                   </TabsContent>
@@ -542,7 +571,9 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                 </Alert>
               ) : (
                 <div className="text-center text-gray-500 py-8">
-                  {realTimeMode ? 'Enter values to see real-time calculation' : 'Click calculate to see results'}
+                  {realTimeMode
+                    ? 'Enter values to see real-time calculation'
+                    : 'Click calculate to see results'}
                 </div>
               )}
             </CardContent>
@@ -566,12 +597,16 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <div className="text-gray-600">Cache Hit Rate</div>
-                    <div className="font-semibold">{performanceMetrics.cacheHitRate.toFixed(1)}%</div>
+                    <div className="font-semibold">
+                      {performanceMetrics.cacheHitRate.toFixed(1)}%
+                    </div>
                     <Progress value={performanceMetrics.cacheHitRate} className="mt-1" />
                   </div>
                   <div>
                     <div className="text-gray-600">Avg Calculation Time</div>
-                    <div className="font-semibold">{performanceMetrics.averageCalculationTime.toFixed(0)}ms</div>
+                    <div className="font-semibold">
+                      {performanceMetrics.averageCalculationTime.toFixed(0)}ms
+                    </div>
                   </div>
                   <div>
                     <div className="text-gray-600">Total Calculations</div>

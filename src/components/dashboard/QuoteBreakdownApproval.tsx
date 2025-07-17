@@ -1,6 +1,6 @@
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Check, X } from 'lucide-react';
 
 interface QuoteBreakdownApprovalProps {
   canApproveReject: boolean;
@@ -20,17 +20,13 @@ export const QuoteBreakdownApproval: React.FC<QuoteBreakdownApprovalProps> = ({
   if (!canApproveReject) return null;
   return (
     <div className="flex space-x-3 pt-4">
-      <Button
-        onClick={() => onApprove(quoteId)}
-        disabled={isProcessing}
-        className="flex-1"
-      >
+      <Button onClick={() => onApprove(quoteId)} disabled={isProcessing} className="flex-1">
         <Check className="h-4 w-4 mr-2" />
         Approve & Add to Cart
       </Button>
       <Button
         variant="outline"
-        onClick={() => onReject("")}
+        onClick={() => onReject('')}
         disabled={isProcessing}
         className="flex-1"
       >

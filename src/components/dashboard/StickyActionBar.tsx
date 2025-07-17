@@ -24,17 +24,17 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
   onApprove,
   onReject,
   onAddToCart,
-  onRenewed
+  onRenewed,
 }) => {
   // Subscribe to cart store to make sticky bar reactive to cart changes
   const cartItems = useCartStore((state) => state.items);
   const { getStatusConfig } = useStatusManagement();
 
   if (!isOwner) return null;
-  
+
   // Helper function to check if this quote is in cart
   const isQuoteInCart = (quoteId: string) => {
-    return cartItems.some(item => item.quoteId === quoteId);
+    return cartItems.some((item) => item.quoteId === quoteId);
   };
 
   // Get dynamic status configuration
@@ -48,7 +48,7 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
     if (statusConfig.allowApproval && statusConfig.allowRejection) {
       return (
         <div className="flex gap-2">
-          <Button 
+          <Button
             className="flex-1 hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
             onClick={onApprove}
             disabled={isUpdating}
@@ -56,7 +56,7 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
             <CheckCircle className="h-4 w-4 mr-2" />
             Approve
           </Button>
-          <Button 
+          <Button
             variant="outline"
             className="flex-1 hover:scale-105 transition-all duration-200 border-red-200 text-red-600 hover:bg-red-50"
             onClick={onReject}
@@ -72,7 +72,7 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
     // Show re-approval button for rejected/cancelled statuses
     if (statusConfig.allowApproval && !statusConfig.allowRejection) {
       return (
-        <Button 
+        <Button
           className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
           onClick={onApprove}
           disabled={isUpdating}
@@ -87,7 +87,7 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
     if (statusConfig.allowCartActions) {
       if (!isQuoteInCart(quote.id)) {
         return (
-          <Button 
+          <Button
             className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"
             onClick={onAddToCart}
             disabled={isUpdating}
@@ -111,7 +111,7 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
     // Show renewal button for expired quotes
     if (statusConfig.allowRenewal && quote.renewal_count < 1) {
       return (
-        <Button 
+        <Button
           className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl"
           onClick={onRenewed}
           disabled={isUpdating}
@@ -130,7 +130,7 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
     if (statusConfig?.showExpiration && quote.expires_at) {
       return (
         <div className="flex items-center justify-center p-2 mb-2 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg">
-          <QuoteExpirationTimer 
+          <QuoteExpirationTimer
             expiresAt={quote.expires_at}
             compact={true}
             className="text-center text-red-700 text-sm"
@@ -149,4 +149,4 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
       </div>
     </div>
   );
-}; 
+};

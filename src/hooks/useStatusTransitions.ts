@@ -1,14 +1,20 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-import { useStatusManagement } from "./useStatusManagement";
-import { useEmailSettings } from "./useEmailSettings";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+import { useStatusManagement } from './useStatusManagement';
+import { useEmailSettings } from './useEmailSettings';
 
 export interface StatusTransitionEvent {
   quoteId: string;
   fromStatus: string;
   toStatus: string;
-  trigger: 'payment_received' | 'quote_sent' | 'order_shipped' | 'quote_expired' | 'manual' | 'auto_calculation';
+  trigger:
+    | 'payment_received'
+    | 'quote_sent'
+    | 'order_shipped'
+    | 'quote_expired'
+    | 'manual'
+    | 'auto_calculation';
   metadata?: Record<string, unknown>;
 }
 
@@ -34,9 +40,9 @@ export const useStatusTransitions = () => {
       // Update the quote status
       const { error } = await supabase
         .from('quotes')
-        .update({ 
+        .update({
           status: toStatus,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', quoteId);
 
@@ -52,7 +58,9 @@ export const useStatusTransitions = () => {
     },
     onSuccess: (data, event) => {
       // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['admin-quote', event.quoteId] });
+      queryClient.invalidateQueries({
+        queryKey: ['admin-quote', event.quoteId],
+      });
       queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
@@ -60,35 +68,35 @@ export const useStatusTransitions = () => {
       // Show success toast
       const statusConfig = getStatusConfig(data.newStatus, 'quote');
       toast({
-        title: "Status Updated",
+        title: 'Status Updated',
         description: `Quote status automatically changed to "${statusConfig?.label || data.newStatus}"`,
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Status Update Failed",
+        title: 'Status Update Failed',
         description: error.message,
-        variant: "destructive"
+        variant: 'destructive',
       });
-    }
+    },
   });
 
   // Log status transition to database
   const logStatusTransition = async (event: StatusTransitionEvent) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      await supabase
-        .from('status_transitions')
-        .insert({
-          quote_id: event.quoteId,
-          from_status: event.fromStatus,
-          to_status: event.toStatus,
-          trigger: event.trigger,
-          metadata: event.metadata || {},
-          changed_by: user?.id || null,
-          changed_at: new Date().toISOString()
-        });
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      await supabase.from('status_transitions').insert({
+        quote_id: event.quoteId,
+        from_status: event.fromStatus,
+        to_status: event.toStatus,
+        trigger: event.trigger,
+        metadata: event.metadata || {},
+        changed_by: user?.id || null,
+        changed_at: new Date().toISOString(),
+      });
     } catch (error) {
       console.warn('Failed to log status transition:', error);
       // Don't throw error as this is just logging
@@ -96,7 +104,9 @@ export const useStatusTransitions = () => {
   };
 
   // Get email template for status notification
-  const getStatusEmailTemplate = async (status: string): Promise<Record<string, unknown> | null> => {
+  const getStatusEmailTemplate = async (
+    status: string,
+  ): Promise<Record<string, unknown> | null> => {
     try {
       const { data, error } = await supabase
         .from('email_templates')
@@ -109,7 +119,7 @@ export const useStatusTransitions = () => {
         // Fallback to default template
         return {
           subject: `Quote Status Update - ${status}`,
-          html_content: generateDefaultStatusEmail(status)
+          html_content: generateDefaultStatusEmail(status),
         };
       }
 
@@ -118,7 +128,7 @@ export const useStatusTransitions = () => {
       console.warn('Failed to get status email template:', error);
       return {
         subject: `Quote Status Update - ${status}`,
-        html_content: generateDefaultStatusEmail(status)
+        html_content: generateDefaultStatusEmail(status),
       };
     }
   };
@@ -130,11 +140,12 @@ export const useStatusTransitions = () => {
       approved: 'Your quote has been approved! You can now proceed with payment.',
       rejected: 'Your quote has been rejected. Please contact us for more information.',
       shipped: 'Your order has been shipped and is on its way!',
-      completed: 'Your order has been delivered successfully!'
+      completed: 'Your order has been delivered successfully!',
     };
 
-    const message = statusMessages[status as keyof typeof statusMessages] || 
-                   `Your quote status has been updated to ${status}.`;
+    const message =
+      statusMessages[status as keyof typeof statusMessages] ||
+      `Your quote status has been updated to ${status}.`;
 
     return `
       <html>
@@ -191,10 +202,12 @@ export const useStatusTransitions = () => {
 
       // Get email template
       const template = await getStatusEmailTemplate(event.toStatus);
-      
+
       // Only send notifications for certain statuses
-      const shouldNotify = ['sent', 'approved', 'rejected', 'shipped', 'completed'].includes(event.toStatus);
-      
+      const shouldNotify = ['sent', 'approved', 'rejected', 'shipped', 'completed'].includes(
+        event.toStatus,
+      );
+
       if (shouldNotify) {
         // Replace template variables
         const emailSubject = template.subject
@@ -220,10 +233,12 @@ export const useStatusTransitions = () => {
               subject: emailSubject,
               html: emailHtml,
             },
-            headers: { Authorization: `Bearer ${accessToken}` }
+            headers: { Authorization: `Bearer ${accessToken}` },
           });
-          
-          console.log(`Status notification email sent for quote ${event.quoteId} to ${quote.email}`);
+
+          console.log(
+            `Status notification email sent for quote ${event.quoteId} to ${quote.email}`,
+          );
         }
       }
     } catch (error) {
@@ -235,7 +250,10 @@ export const useStatusTransitions = () => {
   // Helper function to get access token
   const getAccessToken = async () => {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
       if (error) {
         console.warn('Error getting session:', error);
         return null;
@@ -255,7 +273,7 @@ export const useStatusTransitions = () => {
         fromStatus: currentStatus,
         toStatus: 'paid',
         trigger: 'payment_received',
-        metadata: { payment_method: 'stripe' }
+        metadata: { payment_method: 'stripe' },
       });
     }
   };
@@ -266,7 +284,7 @@ export const useStatusTransitions = () => {
         quoteId,
         fromStatus: currentStatus,
         toStatus: 'sent',
-        trigger: 'quote_sent'
+        trigger: 'quote_sent',
       });
     }
   };
@@ -277,7 +295,7 @@ export const useStatusTransitions = () => {
         quoteId,
         fromStatus: currentStatus,
         toStatus: 'shipped',
-        trigger: 'order_shipped'
+        trigger: 'order_shipped',
       });
     }
   };
@@ -288,7 +306,7 @@ export const useStatusTransitions = () => {
         quoteId,
         fromStatus: currentStatus,
         toStatus: 'expired',
-        trigger: 'quote_expired'
+        trigger: 'quote_expired',
       });
     }
   };
@@ -299,7 +317,7 @@ export const useStatusTransitions = () => {
         quoteId,
         fromStatus: currentStatus,
         toStatus: 'calculated',
-        trigger: 'auto_calculation'
+        trigger: 'auto_calculation',
       });
     }
   };
@@ -311,6 +329,6 @@ export const useStatusTransitions = () => {
     handleOrderShipped,
     handleQuoteExpired,
     handleAutoCalculation,
-    isTransitioning: transitionStatusMutation.isPending
+    isTransitioning: transitionStatusMutation.isPending,
   };
-}; 
+};

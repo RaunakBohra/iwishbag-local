@@ -1,5 +1,5 @@
 import React from 'react';
-import { convertWeight, getDisplayWeight } from '@/lib/weightUtils';
+import { getDisplayWeight } from '@/lib/weightUtils';
 
 interface WeightDisplayProps {
   weight: number | null | undefined;
@@ -14,7 +14,7 @@ export const WeightDisplay: React.FC<WeightDisplayProps> = ({
   routeWeightUnit,
   showOriginal = true,
   compact = false,
-  className = ''
+  className = '',
 }) => {
   const displayWeight = getDisplayWeight(weight, routeWeightUnit);
   const isConverted = routeWeightUnit && routeWeightUnit !== 'kg';
@@ -32,17 +32,14 @@ export const WeightDisplay: React.FC<WeightDisplayProps> = ({
     <div className={`space-y-1 ${className}`}>
       <div className="font-semibold">
         {displayWeight.value.toFixed(2)} {displayWeight.unit.toUpperCase()}
-        {isConverted && (
-          <span className="text-xs text-blue-600 ml-1">
-            (Route Unit)
-          </span>
-        )}
+        {isConverted && <span className="text-xs text-blue-600 ml-1">(Route Unit)</span>}
       </div>
       {showOriginal && isConverted && (
         <div className="text-xs text-muted-foreground">
-          Original: {displayWeight.originalValue.toFixed(2)} {displayWeight.originalUnit.toUpperCase()}
+          Original: {displayWeight.originalValue.toFixed(2)}{' '}
+          {displayWeight.originalUnit.toUpperCase()}
         </div>
       )}
     </div>
   );
-}; 
+};

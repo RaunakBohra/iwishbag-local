@@ -11,7 +11,7 @@ export default defineConfig({
     css: true,
     reporter: ['verbose'],
     coverage: {
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'node_modules/',
         'src/test/',
@@ -19,13 +19,25 @@ export default defineConfig({
         '**/*.config.*',
         '**/coverage/**',
         '**/dist/**',
-        '**/build/**'
-      ]
-    }
+        '**/build/**',
+        'src/main.tsx',
+        'src/vite-env.d.ts',
+        '**/*.test.ts',
+        '**/*.test.tsx',
+      ],
+      thresholds: {
+        global: {
+          statements: 70,
+          branches: 70,
+          functions: 70,
+          lines: 70,
+        },
+      },
+    },
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src')
-    }
-  }
+      '@': resolve(__dirname, './src'),
+    },
+  },
 });

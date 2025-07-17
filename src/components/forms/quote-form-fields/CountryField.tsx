@@ -1,11 +1,16 @@
-
 import React from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Control, FieldValues, Path } from "react-hook-form";
-import { usePurchaseCountries } from "@/hooks/usePurchaseCountries";
-import { useShippingCountries } from "@/hooks/useShippingCountries";
-import { useCountryWithCurrency } from "@/hooks/useCountryWithCurrency";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Control, FieldValues, Path } from 'react-hook-form';
+import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
+import { useShippingCountries } from '@/hooks/useShippingCountries';
+import { useCountryWithCurrency } from '@/hooks/useCountryWithCurrency';
 
 interface CountryFieldProps<TFieldValues extends FieldValues = FieldValues> {
   control: Control<TFieldValues>;
@@ -15,13 +20,19 @@ interface CountryFieldProps<TFieldValues extends FieldValues = FieldValues> {
   label?: string;
 }
 
-export const CountryField = <TFieldValues extends FieldValues = FieldValues>({ control, isLoading, filter, name = "countryCode" as Path<TFieldValues>, label }: CountryFieldProps<TFieldValues>) => {
+export const CountryField = <TFieldValues extends FieldValues = FieldValues>({
+  control,
+  isLoading,
+  filter,
+  name = 'countryCode' as Path<TFieldValues>,
+  label,
+}: CountryFieldProps<TFieldValues>) => {
   const { data: purchaseCountries, isLoading: purchaseLoading } = usePurchaseCountries();
   const { data: shippingCountries, isLoading: shippingLoading } = useShippingCountries();
-  
+
   const rawCountries = filter === 'shipping' ? shippingCountries : purchaseCountries;
   const countriesLoading = filter === 'shipping' ? shippingLoading : purchaseLoading;
-  
+
   const countries = useCountryWithCurrency(rawCountries);
 
   return (
@@ -33,16 +44,22 @@ export const CountryField = <TFieldValues extends FieldValues = FieldValues>({ c
           <FormLabel>
             {label || (filter === 'shipping' ? 'Shipping Country' : 'Purchase Country')}
           </FormLabel>
-          <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoading || countriesLoading}>
+          <Select
+            onValueChange={field.onChange}
+            value={field.value || ''}
+            disabled={isLoading || countriesLoading}
+          >
             <FormControl>
               <SelectTrigger>
-                <SelectValue placeholder={
-                  countriesLoading 
-                    ? "Loading countries..." 
-                    : filter === 'shipping' 
-                      ? "Select shipping destination" 
-                      : "Select your country"
-                } />
+                <SelectValue
+                  placeholder={
+                    countriesLoading
+                      ? 'Loading countries...'
+                      : filter === 'shipping'
+                        ? 'Select shipping destination'
+                        : 'Select your country'
+                  }
+                />
               </SelectTrigger>
             </FormControl>
             <SelectContent>

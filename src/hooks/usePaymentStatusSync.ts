@@ -17,7 +17,7 @@ export function usePaymentStatusSync({
   enabled = true,
   onPaymentStatusChange,
   onPaymentConfirmed,
-  onPaymentFailed
+  onPaymentFailed,
 }: PaymentStatusSyncOptions) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -28,7 +28,9 @@ export function usePaymentStatusSync({
    */
   const invalidatePaymentQueries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['payment-ledger', quoteId] });
-    queryClient.invalidateQueries({ queryKey: ['payment-transactions', quoteId] });
+    queryClient.invalidateQueries({
+      queryKey: ['payment-transactions', quoteId],
+    });
     queryClient.invalidateQueries({ queryKey: ['payment-links', quoteId] });
     queryClient.invalidateQueries({ queryKey: ['quotes'] });
     queryClient.invalidateQueries({ queryKey: ['quote', quoteId] });
@@ -37,142 +39,155 @@ export function usePaymentStatusSync({
   /**
    * Handle payment status updates
    */
-  const handlePaymentStatusUpdate = useCallback((payload: {
-    new: PaymentTransaction;
-    old: PaymentTransaction;
-    eventType: string;
-  }) => {
-    const { new: newRecord, old: oldRecord, eventType } = payload;
-    
-    console.log('Payment status update received:', {
-      eventType,
-      quoteId: newRecord?.quote_id,
-      oldStatus: oldRecord?.status,
-      newStatus: newRecord?.status
-    });
+  const handlePaymentStatusUpdate = useCallback(
+    (payload: { new: PaymentTransaction; old: PaymentTransaction; eventType: string }) => {
+      const { new: newRecord, old: oldRecord, eventType } = payload;
 
-    // Only process updates for the current quote
-    if (newRecord?.quote_id !== quoteId) {
-      return;
-    }
-
-    // Invalidate queries to refresh data
-    invalidatePaymentQueries();
-
-    // Call status change callback
-    onPaymentStatusChange?.(newRecord?.status, newRecord);
-
-    // Handle specific status changes
-    if (newRecord?.status === 'completed' && oldRecord?.status !== 'completed') {
-      onPaymentConfirmed?.(newRecord);
-      
-      toast({
-        title: "Payment Confirmed",
-        description: `Payment of ${newRecord.currency} ${newRecord.amount} has been confirmed.`,
+      console.log('Payment status update received:', {
+        eventType,
+        quoteId: newRecord?.quote_id,
+        oldStatus: oldRecord?.status,
+        newStatus: newRecord?.status,
       });
-    } else if (newRecord?.status === 'failed' && oldRecord?.status !== 'failed') {
-      onPaymentFailed?.(newRecord);
-      
-      toast({
-        title: "Payment Failed",
-        description: "Payment attempt was unsuccessful. Please try again.",
-        variant: "destructive",
-      });
-    } else if (newRecord?.status === 'refunded') {
-      toast({
-        title: "Payment Refunded",
-        description: `Refund of ${newRecord.currency} ${newRecord.amount} has been processed.`,
-      });
-    }
-  }, [quoteId, onPaymentStatusChange, onPaymentConfirmed, onPaymentFailed, invalidatePaymentQueries, toast]);
+
+      // Only process updates for the current quote
+      if (newRecord?.quote_id !== quoteId) {
+        return;
+      }
+
+      // Invalidate queries to refresh data
+      invalidatePaymentQueries();
+
+      // Call status change callback
+      onPaymentStatusChange?.(newRecord?.status, newRecord);
+
+      // Handle specific status changes
+      if (newRecord?.status === 'completed' && oldRecord?.status !== 'completed') {
+        onPaymentConfirmed?.(newRecord);
+
+        toast({
+          title: 'Payment Confirmed',
+          description: `Payment of ${newRecord.currency} ${newRecord.amount} has been confirmed.`,
+        });
+      } else if (newRecord?.status === 'failed' && oldRecord?.status !== 'failed') {
+        onPaymentFailed?.(newRecord);
+
+        toast({
+          title: 'Payment Failed',
+          description: 'Payment attempt was unsuccessful. Please try again.',
+          variant: 'destructive',
+        });
+      } else if (newRecord?.status === 'refunded') {
+        toast({
+          title: 'Payment Refunded',
+          description: `Refund of ${newRecord.currency} ${newRecord.amount} has been processed.`,
+        });
+      }
+    },
+    [
+      quoteId,
+      onPaymentStatusChange,
+      onPaymentConfirmed,
+      onPaymentFailed,
+      invalidatePaymentQueries,
+      toast,
+    ],
+  );
 
   /**
    * Handle payment ledger updates
    */
-  const handlePaymentLedgerUpdate = useCallback((payload: {
-    new: Record<string, unknown>;
-    old: Record<string, unknown>;
-    eventType: string;
-  }) => {
-    const { new: newRecord, eventType } = payload;
-    
-    console.log('Payment ledger update received:', {
-      eventType,
-      quoteId: newRecord?.quote_id,
-      transactionType: newRecord?.transaction_type,
-      amount: newRecord?.amount
-    });
+  const handlePaymentLedgerUpdate = useCallback(
+    (payload: {
+      new: Record<string, unknown>;
+      old: Record<string, unknown>;
+      eventType: string;
+    }) => {
+      const { new: newRecord, eventType } = payload;
 
-    // Only process updates for the current quote
-    if (newRecord?.quote_id !== quoteId) {
-      return;
-    }
+      console.log('Payment ledger update received:', {
+        eventType,
+        quoteId: newRecord?.quote_id,
+        transactionType: newRecord?.transaction_type,
+        amount: newRecord?.amount,
+      });
 
-    // Invalidate queries to refresh data
-    invalidatePaymentQueries();
-
-    // Show notification for new payment ledger entries
-    if (eventType === 'INSERT') {
-      const transactionType = newRecord?.transaction_type || newRecord?.payment_type;
-      const amount = newRecord?.amount;
-      const currency = newRecord?.currency || 'USD';
-
-      if (transactionType === 'payment' || transactionType === 'customer_payment') {
-        toast({
-          title: "Payment Recorded",
-          description: `New payment of ${currency} ${amount} has been recorded.`,
-        });
-      } else if (transactionType === 'refund' || transactionType === 'partial_refund') {
-        toast({
-          title: "Refund Processed",
-          description: `Refund of ${currency} ${amount} has been processed.`,
-        });
+      // Only process updates for the current quote
+      if (newRecord?.quote_id !== quoteId) {
+        return;
       }
-    }
-  }, [quoteId, invalidatePaymentQueries, toast]);
+
+      // Invalidate queries to refresh data
+      invalidatePaymentQueries();
+
+      // Show notification for new payment ledger entries
+      if (eventType === 'INSERT') {
+        const transactionType = newRecord?.transaction_type || newRecord?.payment_type;
+        const amount = newRecord?.amount;
+        const currency = newRecord?.currency || 'USD';
+
+        if (transactionType === 'payment' || transactionType === 'customer_payment') {
+          toast({
+            title: 'Payment Recorded',
+            description: `New payment of ${currency} ${amount} has been recorded.`,
+          });
+        } else if (transactionType === 'refund' || transactionType === 'partial_refund') {
+          toast({
+            title: 'Refund Processed',
+            description: `Refund of ${currency} ${amount} has been processed.`,
+          });
+        }
+      }
+    },
+    [quoteId, invalidatePaymentQueries, toast],
+  );
 
   /**
    * Handle payment link status updates
    */
-  const handlePaymentLinkUpdate = useCallback((payload: {
-    new: Record<string, unknown>;
-    old: Record<string, unknown>;
-    eventType: string;
-  }) => {
-    const { new: newRecord, old: oldRecord, eventType } = payload;
-    
-    console.log('Payment link update received:', {
-      eventType,
-      quoteId: newRecord?.quote_id,
-      status: newRecord?.status,
-      linkId: newRecord?.id
-    });
+  const handlePaymentLinkUpdate = useCallback(
+    (payload: {
+      new: Record<string, unknown>;
+      old: Record<string, unknown>;
+      eventType: string;
+    }) => {
+      const { new: newRecord, old: oldRecord, eventType } = payload;
 
-    // Only process updates for the current quote
-    if (newRecord?.quote_id !== quoteId) {
-      return;
-    }
-
-    // Invalidate payment link queries
-    queryClient.invalidateQueries({ queryKey: ['payment-links', quoteId] });
-
-    // Show notification for payment link status changes
-    if (newRecord?.status === 'completed' && oldRecord?.status !== 'completed') {
-      toast({
-        title: "Payment Link Used",
-        description: "Customer has successfully completed payment using the payment link.",
+      console.log('Payment link update received:', {
+        eventType,
+        quoteId: newRecord?.quote_id,
+        status: newRecord?.status,
+        linkId: newRecord?.id,
       });
-      
-      // Also invalidate other payment queries since payment was completed
-      invalidatePaymentQueries();
-    } else if (newRecord?.status === 'expired' && oldRecord?.status !== 'expired') {
-      toast({
-        title: "Payment Link Expired",
-        description: "A payment link has expired. Consider generating a new one if payment is still needed.",
-        variant: "destructive",
-      });
-    }
-  }, [quoteId, queryClient, invalidatePaymentQueries, toast]);
+
+      // Only process updates for the current quote
+      if (newRecord?.quote_id !== quoteId) {
+        return;
+      }
+
+      // Invalidate payment link queries
+      queryClient.invalidateQueries({ queryKey: ['payment-links', quoteId] });
+
+      // Show notification for payment link status changes
+      if (newRecord?.status === 'completed' && oldRecord?.status !== 'completed') {
+        toast({
+          title: 'Payment Link Used',
+          description: 'Customer has successfully completed payment using the payment link.',
+        });
+
+        // Also invalidate other payment queries since payment was completed
+        invalidatePaymentQueries();
+      } else if (newRecord?.status === 'expired' && oldRecord?.status !== 'expired') {
+        toast({
+          title: 'Payment Link Expired',
+          description:
+            'A payment link has expired. Consider generating a new one if payment is still needed.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [quoteId, queryClient, invalidatePaymentQueries, toast],
+  );
 
   /**
    * Setup real-time subscriptions
@@ -195,9 +210,9 @@ export function usePaymentStatusSync({
           event: '*',
           schema: 'public',
           table: 'payment_transactions',
-          filter: `quote_id=eq.${quoteId}`
+          filter: `quote_id=eq.${quoteId}`,
         },
-        handlePaymentStatusUpdate
+        handlePaymentStatusUpdate,
       )
       .subscribe();
 
@@ -210,9 +225,9 @@ export function usePaymentStatusSync({
           event: '*',
           schema: 'public',
           table: 'payment_ledger',
-          filter: `quote_id=eq.${quoteId}`
+          filter: `quote_id=eq.${quoteId}`,
         },
-        handlePaymentLedgerUpdate
+        handlePaymentLedgerUpdate,
       )
       .subscribe();
 
@@ -225,9 +240,9 @@ export function usePaymentStatusSync({
           event: '*',
           schema: 'public',
           table: 'payment_links',
-          filter: `quote_id=eq.${quoteId}`
+          filter: `quote_id=eq.${quoteId}`,
         },
-        handlePaymentLinkUpdate
+        handlePaymentLinkUpdate,
       )
       .subscribe();
 
@@ -240,29 +255,31 @@ export function usePaymentStatusSync({
           event: 'UPDATE',
           schema: 'public',
           table: 'quotes',
-          filter: `id=eq.${quoteId}`
+          filter: `id=eq.${quoteId}`,
         },
         (payload) => {
           const { new: newRecord, old: oldRecord } = payload;
-          
+
           // Check if payment-related fields changed
-          if (newRecord?.status !== oldRecord?.status && 
-              ['paid', 'partially_paid'].includes(newRecord?.status)) {
+          if (
+            newRecord?.status !== oldRecord?.status &&
+            ['paid', 'partially_paid'].includes(newRecord?.status)
+          ) {
             console.log('Quote payment status changed:', {
               oldStatus: oldRecord?.status,
-              newStatus: newRecord?.status
+              newStatus: newRecord?.status,
             });
-            
+
             invalidatePaymentQueries();
-            
+
             if (newRecord?.status === 'paid') {
               toast({
-                title: "Order Fully Paid",
-                description: "All payments for this order have been completed.",
+                title: 'Order Fully Paid',
+                description: 'All payments for this order have been completed.',
               });
             }
           }
-        }
+        },
       )
       .subscribe();
 
@@ -270,20 +287,20 @@ export function usePaymentStatusSync({
     return () => {
       console.log('Cleaning up payment status subscriptions for quote:', quoteId);
       setIsMonitoring(false);
-      
+
       transactionsSubscription.unsubscribe();
       ledgerSubscription.unsubscribe();
       linksSubscription.unsubscribe();
       quoteSubscription.unsubscribe();
     };
   }, [
-    enabled, 
-    quoteId, 
-    handlePaymentStatusUpdate, 
-    handlePaymentLedgerUpdate, 
+    enabled,
+    quoteId,
+    handlePaymentStatusUpdate,
+    handlePaymentLedgerUpdate,
     handlePaymentLinkUpdate,
     invalidatePaymentQueries,
-    toast
+    toast,
   ]);
 
   /**
@@ -292,10 +309,10 @@ export function usePaymentStatusSync({
   const checkPaymentStatus = useCallback(async () => {
     try {
       console.log('Manually checking payment status for quote:', quoteId);
-      
+
       // Call the payment verification function
       const { data, error } = await supabase.functions.invoke('verify-payment-status', {
-        body: { quoteId }
+        body: { quoteId },
       });
 
       if (error) {
@@ -316,6 +333,6 @@ export function usePaymentStatusSync({
   return {
     isMonitoring,
     checkPaymentStatus,
-    invalidatePaymentQueries
+    invalidatePaymentQueries,
   };
 }

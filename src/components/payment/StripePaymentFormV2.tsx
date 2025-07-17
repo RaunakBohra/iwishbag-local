@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import {
-  Elements,
-  PaymentElement,
-  useStripe,
-  useElements,
-} from '@stripe/react-stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -26,12 +21,12 @@ interface StripePaymentFormProps {
 }
 
 // Payment form component that uses PaymentElement
-function PaymentForm({ 
-  amount, 
+function PaymentForm({
+  amount,
   currency = 'USD',
-  onSuccess, 
+  onSuccess,
   onError,
-  returnUrl = window.location.href
+  returnUrl = window.location.href,
 }: Omit<StripePaymentFormProps, 'client_secret' | 'className'>) {
   const stripe = useStripe();
   const elements = useElements();
@@ -88,7 +83,7 @@ function PaymentForm({
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CheckCircle2 className={cn("h-5 w-5", succeeded ? "text-green-500" : "text-gray-400")} />
+          <CheckCircle2 className={cn('h-5 w-5', succeeded ? 'text-green-500' : 'text-gray-400')} />
           Secure Payment
         </CardTitle>
         <CardDescription>
@@ -98,14 +93,14 @@ function PaymentForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* PaymentElement shows all available payment methods */}
-          <PaymentElement 
+          <PaymentElement
             options={{
               layout: 'tabs', // Shows payment methods as tabs
               defaultValues: {
                 billingDetails: {
                   // You can pre-fill billing details here if available
-                }
-              }
+                },
+              },
             }}
           />
 
@@ -125,11 +120,7 @@ function PaymentForm({
             </Alert>
           )}
 
-          <Button
-            type="submit"
-            disabled={!stripe || processing || succeeded}
-            className="w-full"
-          >
+          <Button type="submit" disabled={!stripe || processing || succeeded} className="w-full">
             {processing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -146,8 +137,8 @@ function PaymentForm({
           </Button>
 
           <p className="text-xs text-center text-muted-foreground mt-4">
-            Your payment information is encrypted and secure. We support cards, 
-            digital wallets, and bank payments depending on your location.
+            Your payment information is encrypted and secure. We support cards, digital wallets, and
+            bank payments depending on your location.
           </p>
         </form>
       </CardContent>
@@ -156,14 +147,14 @@ function PaymentForm({
 }
 
 // Main wrapper component that provides Stripe Elements context
-export function StripePaymentFormV2({ 
-  client_secret, 
-  amount, 
+export function StripePaymentFormV2({
+  client_secret,
+  amount,
   currency = 'USD',
-  onSuccess, 
+  onSuccess,
   onError,
   className,
-  returnUrl
+  returnUrl,
 }: StripePaymentFormProps) {
   const options = {
     clientSecret: client_secret,
@@ -191,14 +182,14 @@ export function StripePaymentFormV2({
           borderColor: '#0570de',
           boxShadow: '0px 1px 1px rgba(0, 0, 0, 0.03), 0px 0px 0px 2px #c7e0ff',
         },
-      }
+      },
     },
   };
 
   return (
     <Elements stripe={stripePromise} options={options}>
       <div className={className}>
-        <PaymentForm 
+        <PaymentForm
           amount={amount}
           currency={currency}
           onSuccess={onSuccess}

@@ -56,16 +56,13 @@ export function GuestCurrencyProvider({ children, shareToken }: GuestCurrencyPro
   const value = {
     guestCurrency,
     setGuestCurrency,
-    clearGuestCurrency
+    clearGuestCurrency,
   };
 
-  return (
-    <GuestCurrencyContext.Provider value={value}>
-      {children}
-    </GuestCurrencyContext.Provider>
-  );
+  return <GuestCurrencyContext.Provider value={value}>{children}</GuestCurrencyContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useGuestCurrency() {
   const context = useContext(GuestCurrencyContext);
   if (context === undefined) {

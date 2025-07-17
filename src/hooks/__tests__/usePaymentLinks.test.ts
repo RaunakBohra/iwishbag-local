@@ -8,24 +8,24 @@ import { useToast } from '@/components/ui/use-toast';
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     functions: {
-      invoke: vi.fn()
+      invoke: vi.fn(),
     },
-    from: vi.fn()
-  }
+    from: vi.fn(),
+  },
 }));
 
 vi.mock('@/components/ui/use-toast', () => ({
-  useToast: vi.fn()
+  useToast: vi.fn(),
 }));
 
 // Mock navigator.clipboard
 const mockClipboard = {
-  writeText: vi.fn()
+  writeText: vi.fn(),
 };
 
 Object.defineProperty(navigator, 'clipboard', {
   value: mockClipboard,
-  writable: true
+  writable: true,
 });
 
 type MockSupabaseClient = {
@@ -44,22 +44,22 @@ const mockUseToast = useToast as unknown as vi.MockedFunction<() => MockToast>;
 
 describe('usePaymentLinks', () => {
   let mockToast: ReturnType<typeof vi.fn>;
-  
+
   // Mock data
   const mockCustomerInfo = {
     name: 'John Doe',
     email: 'john@example.com',
-    phone: '+1234567890'
+    phone: '+1234567890',
   };
 
   const mockPaymentLinkParams = {
     quoteId: 'quote-123',
-    amount: 100.50,
+    amount: 100.5,
     currency: 'USD',
     customerInfo: mockCustomerInfo,
     description: 'Test payment',
     expiryDays: 7,
-    gateway: 'payu' as const
+    gateway: 'payu' as const,
   };
 
   const mockPaymentLinkResponse = {
@@ -70,9 +70,9 @@ describe('usePaymentLinks', () => {
     shortUrl: 'https://short.ly/pay123',
     expiresAt: '2024-01-08T00:00:00Z',
     amountInINR: '8300.00',
-    originalAmount: 100.50,
+    originalAmount: 100.5,
     originalCurrency: 'USD',
-    exchangeRate: 82.5
+    exchangeRate: 82.5,
   };
 
   const mockPaymentLinks = [
@@ -85,7 +85,7 @@ describe('usePaymentLinks', () => {
       currency: 'USD',
       status: 'active',
       created_at: '2024-01-01T00:00:00Z',
-      expires_at: '2024-01-08T00:00:00Z'
+      expires_at: '2024-01-08T00:00:00Z',
     },
     {
       id: 'link-2',
@@ -97,14 +97,14 @@ describe('usePaymentLinks', () => {
       status: 'cancelled',
       created_at: '2024-01-02T00:00:00Z',
       expires_at: '2024-01-09T00:00:00Z',
-      cancelled_at: '2024-01-03T00:00:00Z'
-    }
+      cancelled_at: '2024-01-03T00:00:00Z',
+    },
   ];
 
   beforeEach(() => {
     mockToast = vi.fn();
     mockUseToast.mockReturnValue({ toast: mockToast });
-    
+
     vi.clearAllMocks();
   });
 
@@ -127,7 +127,7 @@ describe('usePaymentLinks', () => {
     test('should create PayU payment link successfully', async () => {
       mockSupabase.functions.invoke.mockResolvedValue({
         data: mockPaymentLinkResponse,
-        error: null
+        error: null,
       });
 
       mockClipboard.writeText.mockResolvedValue(undefined);
@@ -139,8 +139,8 @@ describe('usePaymentLinks', () => {
         response = await result.current.createPaymentLink(mockPaymentLinkParams);
       });
 
-      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-payment-link', {
-        body: mockPaymentLinkParams
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-payu-payment-link-v2', {
+        body: mockPaymentLinkParams,
       });
 
       expect(response).toEqual(mockPaymentLinkResponse);
@@ -148,13 +148,13 @@ describe('usePaymentLinks', () => {
 
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Payment link created!',
-        description: 'Payment link has been generated successfully'
+        description: 'Payment link has been generated successfully',
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith(mockPaymentLinkResponse.shortUrl);
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Link copied!',
-        description: 'Payment link has been copied to your clipboard'
+        description: 'Payment link has been copied to your clipboard',
       });
     });
 
@@ -164,7 +164,7 @@ describe('usePaymentLinks', () => {
         customFields: [{ key: 'value' }],
         partialPaymentAllowed: true,
         template: 'branded' as const,
-        apiMethod: 'rest' as const
+        apiMethod: 'rest' as const,
       };
 
       mockSupabase.functions.invoke.mockResolvedValue({
@@ -174,10 +174,10 @@ describe('usePaymentLinks', () => {
           features: {
             customFields: true,
             partialPayment: true,
-            template: 'branded'
-          }
+            template: 'branded',
+          },
         },
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -187,25 +187,25 @@ describe('usePaymentLinks', () => {
       });
 
       expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-payu-payment-link-v2', {
-        body: advancedParams
+        body: advancedParams,
       });
     });
 
     test('should create PayPal payment link', async () => {
       const paypalParams = {
         ...mockPaymentLinkParams,
-        gateway: 'paypal' as const
+        gateway: 'paypal' as const,
       };
 
       const paypalResponse = {
         success: true,
         linkId: 'paypal-link-123',
-        paymentUrl: 'https://paypal.com/pay/link123'
+        paymentUrl: 'https://paypal.com/pay/link123',
       };
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: paypalResponse,
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -215,14 +215,14 @@ describe('usePaymentLinks', () => {
       });
 
       expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-paypal-payment-link', {
-        body: paypalParams
+        body: paypalParams,
       });
     });
 
     test('should handle unsupported gateway', async () => {
       const unsupportedParams = {
         ...mockPaymentLinkParams,
-        gateway: 'stripe' as const
+        gateway: 'stripe' as const,
       };
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -236,19 +236,19 @@ describe('usePaymentLinks', () => {
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Not implemented',
         description: 'stripe payment links are not yet implemented',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     });
 
     test('should handle successful response without shortUrl', async () => {
       const responseWithoutShortUrl = {
         ...mockPaymentLinkResponse,
-        shortUrl: undefined
+        shortUrl: undefined,
       };
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: responseWithoutShortUrl,
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -259,7 +259,7 @@ describe('usePaymentLinks', () => {
 
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Payment link created!',
-        description: 'Payment link has been generated successfully'
+        description: 'Payment link has been generated successfully',
       });
 
       expect(mockClipboard.writeText).not.toHaveBeenCalled();
@@ -268,7 +268,7 @@ describe('usePaymentLinks', () => {
     test('should handle clipboard write failure gracefully', async () => {
       mockSupabase.functions.invoke.mockResolvedValue({
         data: mockPaymentLinkResponse,
-        error: null
+        error: null,
       });
 
       mockClipboard.writeText.mockRejectedValue(new Error('Clipboard access denied'));
@@ -282,11 +282,11 @@ describe('usePaymentLinks', () => {
       });
 
       expect(consoleSpy).toHaveBeenCalledWith('Failed to copy to clipboard:', expect.any(Error));
-      
+
       // Should still show success toast for link creation
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Payment link created!',
-        description: 'Payment link has been generated successfully'
+        description: 'Payment link has been generated successfully',
       });
 
       consoleSpy.mockRestore();
@@ -296,7 +296,7 @@ describe('usePaymentLinks', () => {
       const mockError = new Error('Function invocation failed');
       mockSupabase.functions.invoke.mockResolvedValue({
         data: null,
-        error: mockError
+        error: mockError,
       });
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -313,23 +313,23 @@ describe('usePaymentLinks', () => {
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Error creating payment link',
         description: 'Function invocation failed',
-        variant: 'destructive'
+        variant: 'destructive',
       });
 
       consoleSpy.mockRestore();
     });
 
     test('should handle error with context details', async () => {
-      const errorWithContext = new Error('Detailed error') as Error & { 
-        context?: { body?: unknown } 
+      const errorWithContext = new Error('Detailed error') as Error & {
+        context?: { body?: unknown };
       };
-      errorWithContext.context = { 
-        body: { details: 'Additional error information' } 
+      errorWithContext.context = {
+        body: { details: 'Additional error information' },
       };
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: null,
-        error: errorWithContext
+        error: errorWithContext,
       });
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -363,7 +363,7 @@ describe('usePaymentLinks', () => {
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Error creating payment link',
         description: 'Unexpected error',
-        variant: 'destructive'
+        variant: 'destructive',
       });
 
       consoleSpy.mockRestore();
@@ -371,7 +371,7 @@ describe('usePaymentLinks', () => {
 
     test('should manage loading state correctly', async () => {
       let resolvePromise: (value: any) => void;
-      const promise = new Promise(resolve => {
+      const promise = new Promise((resolve) => {
         resolvePromise = resolve;
       });
 
@@ -397,13 +397,13 @@ describe('usePaymentLinks', () => {
     });
 
     test('should handle browser without clipboard API', async () => {
-      // Temporarily remove clipboard API
+      // Mock a browser without clipboard API by setting it to undefined
       const originalClipboard = navigator.clipboard;
-      delete (navigator as any).clipboard;
+      (navigator as any).clipboard = undefined;
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: mockPaymentLinkResponse,
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -414,17 +414,14 @@ describe('usePaymentLinks', () => {
 
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Payment link created!',
-        description: 'Payment link has been generated successfully'
+        description: 'Payment link has been generated successfully',
       });
 
-      // Should not attempt clipboard operations
+      // Should not attempt clipboard operations, so only 1 toast call
       expect(mockToast).toHaveBeenCalledTimes(1);
 
       // Restore clipboard
-      Object.defineProperty(navigator, 'clipboard', {
-        value: originalClipboard,
-        writable: true
-      });
+      (navigator as any).clipboard = originalClipboard;
     });
   });
 
@@ -434,8 +431,8 @@ describe('usePaymentLinks', () => {
         select: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({
           data: mockPaymentLinks,
-          error: null
-        })
+          error: null,
+        }),
       };
 
       mockSupabase.from.mockReturnValue(mockQuery);
@@ -449,7 +446,9 @@ describe('usePaymentLinks', () => {
 
       expect(mockSupabase.from).toHaveBeenCalledWith('payment_links');
       expect(mockQuery.select).toHaveBeenCalledWith('*');
-      expect(mockQuery.order).toHaveBeenCalledWith('created_at', { ascending: false });
+      expect(mockQuery.order).toHaveBeenCalledWith('created_at', {
+        ascending: false,
+      });
       expect(response).toEqual(mockPaymentLinks);
     });
 
@@ -459,8 +458,8 @@ describe('usePaymentLinks', () => {
         order: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({
           data: [mockPaymentLinks[0]],
-          error: null
-        })
+          error: null,
+        }),
       };
 
       mockSupabase.from.mockReturnValue(mockQuery);
@@ -482,8 +481,8 @@ describe('usePaymentLinks', () => {
         select: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({
           data: null,
-          error: mockError
-        })
+          error: mockError,
+        }),
       };
 
       mockSupabase.from.mockReturnValue(mockQuery);
@@ -502,7 +501,7 @@ describe('usePaymentLinks', () => {
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Error fetching payment links',
         description: 'Database error',
-        variant: 'destructive'
+        variant: 'destructive',
       });
 
       consoleSpy.mockRestore();
@@ -534,8 +533,8 @@ describe('usePaymentLinks', () => {
         select: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({
           data: null,
-          error: errorWithoutMessage
-        })
+          error: errorWithoutMessage,
+        }),
       };
 
       mockSupabase.from.mockReturnValue(mockQuery);
@@ -549,7 +548,7 @@ describe('usePaymentLinks', () => {
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Error fetching payment links',
         description: 'Something went wrong',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     });
   });
@@ -559,8 +558,8 @@ describe('usePaymentLinks', () => {
       const mockQuery = {
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({
-          error: null
-        })
+          error: null,
+        }),
       };
 
       mockSupabase.from.mockReturnValue(mockQuery);
@@ -575,14 +574,14 @@ describe('usePaymentLinks', () => {
       expect(mockSupabase.from).toHaveBeenCalledWith('payment_links');
       expect(mockQuery.update).toHaveBeenCalledWith({
         status: 'cancelled',
-        cancelled_at: expect.any(String)
+        cancelled_at: expect.any(String),
       });
       expect(mockQuery.eq).toHaveBeenCalledWith('id', 'link-123');
       expect(response).toBe(true);
 
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Payment link cancelled',
-        description: 'The payment link has been cancelled successfully'
+        description: 'The payment link has been cancelled successfully',
       });
     });
 
@@ -591,8 +590,8 @@ describe('usePaymentLinks', () => {
       const mockQuery = {
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({
-          error: mockError
-        })
+          error: mockError,
+        }),
       };
 
       mockSupabase.from.mockReturnValue(mockQuery);
@@ -611,7 +610,7 @@ describe('usePaymentLinks', () => {
       expect(mockToast).toHaveBeenCalledWith({
         title: 'Error cancelling payment link',
         description: 'Database error',
-        variant: 'destructive'
+        variant: 'destructive',
       });
 
       consoleSpy.mockRestore();
@@ -641,8 +640,8 @@ describe('usePaymentLinks', () => {
       const mockQuery = {
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({
-          error: null
-        })
+          error: null,
+        }),
       };
 
       mockSupabase.from.mockReturnValue(mockQuery);
@@ -664,12 +663,12 @@ describe('usePaymentLinks', () => {
       const basicParams = {
         ...mockPaymentLinkParams,
         template: 'default' as const,
-        apiMethod: undefined
+        apiMethod: undefined,
       };
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: mockPaymentLinkResponse,
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -679,19 +678,19 @@ describe('usePaymentLinks', () => {
       });
 
       expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-payment-link', {
-        body: basicParams
+        body: basicParams,
       });
     });
 
     test('should use v2 function when customFields are provided', async () => {
       const paramsWithCustomFields = {
         ...mockPaymentLinkParams,
-        customFields: [{ customerRef: 'REF123' }]
+        customFields: [{ customerRef: 'REF123' }],
       };
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: mockPaymentLinkResponse,
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -701,19 +700,19 @@ describe('usePaymentLinks', () => {
       });
 
       expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-payu-payment-link-v2', {
-        body: paramsWithCustomFields
+        body: paramsWithCustomFields,
       });
     });
 
     test('should use v2 function when partialPaymentAllowed is true', async () => {
       const paramsWithPartialPayment = {
         ...mockPaymentLinkParams,
-        partialPaymentAllowed: true
+        partialPaymentAllowed: true,
       };
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: mockPaymentLinkResponse,
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -723,19 +722,19 @@ describe('usePaymentLinks', () => {
       });
 
       expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-payu-payment-link-v2', {
-        body: paramsWithPartialPayment
+        body: paramsWithPartialPayment,
       });
     });
 
     test('should use v2 function when template is not default', async () => {
       const paramsWithBrandedTemplate = {
         ...mockPaymentLinkParams,
-        template: 'minimal' as const
+        template: 'minimal' as const,
       };
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: mockPaymentLinkResponse,
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -745,19 +744,19 @@ describe('usePaymentLinks', () => {
       });
 
       expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-payu-payment-link-v2', {
-        body: paramsWithBrandedTemplate
+        body: paramsWithBrandedTemplate,
       });
     });
 
     test('should use v2 function when apiMethod is rest', async () => {
       const paramsWithRestAPI = {
         ...mockPaymentLinkParams,
-        apiMethod: 'rest' as const
+        apiMethod: 'rest' as const,
       };
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: mockPaymentLinkResponse,
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -767,7 +766,7 @@ describe('usePaymentLinks', () => {
       });
 
       expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-payu-payment-link-v2', {
-        body: paramsWithRestAPI
+        body: paramsWithRestAPI,
       });
     });
 
@@ -776,12 +775,12 @@ describe('usePaymentLinks', () => {
         quoteId: 'quote-123',
         amount: 100,
         currency: 'USD',
-        customerInfo: mockCustomerInfo
+        customerInfo: mockCustomerInfo,
       };
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: mockPaymentLinkResponse,
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -790,8 +789,8 @@ describe('usePaymentLinks', () => {
         await result.current.createPaymentLink(paramsWithoutGateway);
       });
 
-      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-payment-link', {
-        body: paramsWithoutGateway
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-payu-payment-link-v2', {
+        body: paramsWithoutGateway,
       });
     });
   });
@@ -800,12 +799,12 @@ describe('usePaymentLinks', () => {
     test('should handle empty customFields array as not triggering v2', async () => {
       const paramsWithEmptyCustomFields = {
         ...mockPaymentLinkParams,
-        customFields: []
+        customFields: [],
       };
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: mockPaymentLinkResponse,
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -814,20 +813,20 @@ describe('usePaymentLinks', () => {
         await result.current.createPaymentLink(paramsWithEmptyCustomFields);
       });
 
-      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-payment-link', {
-        body: paramsWithEmptyCustomFields
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('create-payu-payment-link-v2', {
+        body: paramsWithEmptyCustomFields,
       });
     });
 
     test('should handle failed response with success false', async () => {
       const failedResponse = {
         success: false,
-        error: 'Payment link creation failed'
+        error: 'Payment link creation failed',
       };
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: failedResponse,
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -841,15 +840,15 @@ describe('usePaymentLinks', () => {
       // Should not show success toast
       expect(mockToast).not.toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'Payment link created!'
-        })
+          title: 'Payment link created!',
+        }),
       );
     });
 
     test('should handle undefined data response', async () => {
       mockSupabase.functions.invoke.mockResolvedValue({
         data: undefined,
-        error: null
+        error: null,
       });
 
       const { result } = renderHook(() => usePaymentLinks());
@@ -859,15 +858,19 @@ describe('usePaymentLinks', () => {
         response = await result.current.createPaymentLink(mockPaymentLinkParams);
       });
 
-      expect(response).toBeUndefined();
+      expect(response).toBeNull();
     });
 
     test('should handle concurrent payment link creation', async () => {
       let resolveFirst: (value: any) => void;
       let resolveSecond: (value: any) => void;
-      
-      const firstPromise = new Promise(resolve => { resolveFirst = resolve; });
-      const secondPromise = new Promise(resolve => { resolveSecond = resolve; });
+
+      const firstPromise = new Promise((resolve) => {
+        resolveFirst = resolve;
+      });
+      const secondPromise = new Promise((resolve) => {
+        resolveSecond = resolve;
+      });
 
       mockSupabase.functions.invoke
         .mockReturnValueOnce(firstPromise)
@@ -880,27 +883,35 @@ describe('usePaymentLinks', () => {
       let secondResponse: any;
 
       act(() => {
-        result.current.createPaymentLink(mockPaymentLinkParams).then(res => {
+        result.current.createPaymentLink(mockPaymentLinkParams).then((res) => {
           firstResponse = res;
         });
-        result.current.createPaymentLink({
-          ...mockPaymentLinkParams,
-          quoteId: 'quote-456'
-        }).then(res => {
-          secondResponse = res;
-        });
+        result.current
+          .createPaymentLink({
+            ...mockPaymentLinkParams,
+            quoteId: 'quote-456',
+          })
+          .then((res) => {
+            secondResponse = res;
+          });
       });
 
       expect(result.current.isCreating).toBe(true);
 
       // Resolve first
       await act(async () => {
-        resolveFirst({ data: { ...mockPaymentLinkResponse, linkId: 'link-1' }, error: null });
+        resolveFirst({
+          data: { ...mockPaymentLinkResponse, linkId: 'link-1' },
+          error: null,
+        });
       });
 
       // Resolve second
       await act(async () => {
-        resolveSecond({ data: { ...mockPaymentLinkResponse, linkId: 'link-2' }, error: null });
+        resolveSecond({
+          data: { ...mockPaymentLinkResponse, linkId: 'link-2' },
+          error: null,
+        });
       });
 
       expect(result.current.isCreating).toBe(false);

@@ -8,7 +8,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,18 +18,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  MoreHorizontal, 
-  ArrowUpDown, 
-  Mail, 
-  Eye, 
+import {
+  MoreHorizontal,
+  ArrowUpDown,
   Star,
   DollarSign,
   ShoppingCart,
   Calendar,
   MapPin,
   User,
-  Activity
+  Activity,
 } from 'lucide-react';
 import { CustomerCodToggle } from './CustomerCodToggle';
 import { CustomerEmailDialog } from './CustomerEmailDialog';
@@ -46,7 +43,7 @@ export type Customer = {
   cod_enabled: boolean;
   internal_notes: string | null;
   created_at: string;
-  user_addresses: { 
+  user_addresses: {
     id: string;
     address_line1: string;
     address_line2: string | null;
@@ -85,15 +82,18 @@ export const EnhancedCustomerTable = ({
   onCustomerSelect,
   isUpdating,
 }: EnhancedCustomerTableProps) => {
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: 'ascending' | 'descending';
+  } | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
 
   const sortedCustomers = [...customers].sort((a, b) => {
     if (!sortConfig) return 0;
     const { key, direction } = sortConfig;
-    
+
     let aValue: string | number | Date, bValue: string | number | Date;
-    
+
     switch (key) {
       case 'name':
         aValue = a.full_name || '';
@@ -108,15 +108,19 @@ export const EnhancedCustomerTable = ({
         bValue = new Date(b.created_at);
         break;
       case 'total_spent': {
-        const aAnalytics = customerAnalytics?.find(analytics => analytics.customerId === a.id);
-        const bAnalytics = customerAnalytics?.find(analytics => analytics.customerId === b.id);
+        const aAnalytics = customerAnalytics?.find((analytics) => analytics.customerId === a.id);
+        const bAnalytics = customerAnalytics?.find((analytics) => analytics.customerId === b.id);
         aValue = aAnalytics?.totalSpent || 0;
         bValue = bAnalytics?.totalSpent || 0;
         break;
       }
       case 'order_count': {
-        const aOrderAnalytics = customerAnalytics?.find(analytics => analytics.customerId === a.id);
-        const bOrderAnalytics = customerAnalytics?.find(analytics => analytics.customerId === b.id);
+        const aOrderAnalytics = customerAnalytics?.find(
+          (analytics) => analytics.customerId === a.id,
+        );
+        const bOrderAnalytics = customerAnalytics?.find(
+          (analytics) => analytics.customerId === b.id,
+        );
         aValue = aOrderAnalytics?.orderCount || 0;
         bValue = bOrderAnalytics?.orderCount || 0;
         break;
@@ -129,7 +133,7 @@ export const EnhancedCustomerTable = ({
         aValue = a[key as keyof Customer];
         bValue = b[key as keyof Customer];
     }
-    
+
     if (aValue < bValue) return direction === 'ascending' ? -1 : 1;
     if (aValue > bValue) return direction === 'ascending' ? 1 : -1;
     return 0;
@@ -144,13 +148,14 @@ export const EnhancedCustomerTable = ({
   };
 
   const getCustomerStatus = (customer: Customer) => {
-    if (customer.internal_notes?.includes("VIP")) return { label: "VIP", variant: "default" as const };
-    if (customer.cod_enabled) return { label: "Active", variant: "secondary" as const };
-    return { label: "Inactive", variant: "outline" as const };
+    if (customer.internal_notes?.includes('VIP'))
+      return { label: 'VIP', variant: 'default' as const };
+    if (customer.cod_enabled) return { label: 'Active', variant: 'secondary' as const };
+    return { label: 'Inactive', variant: 'outline' as const };
   };
 
   const getCustomerAnalytics = (customerId: string) => {
-    return customerAnalytics?.find(analytics => analytics.customerId === customerId);
+    return customerAnalytics?.find((analytics) => analytics.customerId === customerId);
   };
 
   const handleCustomerSelect = (customerId: string) => {
@@ -198,10 +203,10 @@ export const EnhancedCustomerTable = ({
               const analytics = getCustomerAnalytics(customer.id);
               const status = getCustomerStatus(customer);
               const isExpanded = selectedCustomer === customer.id;
-              
+
               return (
                 <React.Fragment key={customer.id}>
-                  <TableRow 
+                  <TableRow
                     className={`cursor-pointer hover:bg-muted/50 ${isExpanded ? 'bg-muted/30' : ''}`}
                     onClick={() => handleCustomerSelect(customer.id)}
                   >
@@ -215,7 +220,7 @@ export const EnhancedCustomerTable = ({
                         <div>
                           <div className="font-medium flex items-center gap-2">
                             {customer.full_name || 'Unnamed User'}
-                            {customer.internal_notes?.includes("VIP") && (
+                            {customer.internal_notes?.includes('VIP') && (
                               <Star className="h-4 w-4 text-yellow-500" />
                             )}
                           </div>
@@ -227,10 +232,9 @@ export const EnhancedCustomerTable = ({
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">
-                          {customer.user_addresses[0] ? 
-                            `${customer.user_addresses[0].city}, ${customer.user_addresses[0].country}` : 
-                            'N/A'
-                          }
+                          {customer.user_addresses[0]
+                            ? `${customer.user_addresses[0].city}, ${customer.user_addresses[0].country}`
+                            : 'N/A'}
                         </span>
                       </div>
                     </TableCell>
@@ -253,18 +257,14 @@ export const EnhancedCustomerTable = ({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">
-                          {analytics?.orderCount || 0}
-                        </span>
+                        <span className="font-medium">{analytics?.orderCount || 0}</span>
                         <span className="text-xs text-muted-foreground">
                           ({analytics?.quoteCount || 0} quotes)
                         </span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={status.variant}>
-                        {status.label}
-                      </Badge>
+                      <Badge variant={status.variant}>{status.label}</Badge>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -286,7 +286,10 @@ export const EnhancedCustomerTable = ({
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
-                              const newNotes = prompt('Enter new notes:', customer.internal_notes || '');
+                              const newNotes = prompt(
+                                'Enter new notes:',
+                                customer.internal_notes || '',
+                              );
                               if (newNotes !== null) onUpdateNotes(customer.id, newNotes);
                             }}
                           >
@@ -294,9 +297,9 @@ export const EnhancedCustomerTable = ({
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem>
-                            <CustomerEmailDialog 
-                              customerEmail={customer.email} 
-                              customerName={customer.full_name || undefined} 
+                            <CustomerEmailDialog
+                              customerEmail={customer.email}
+                              customerName={customer.full_name || undefined}
                             />
                           </DropdownMenuItem>
                           <DropdownMenuItem>
@@ -311,7 +314,7 @@ export const EnhancedCustomerTable = ({
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                  
+
                   {/* Expanded Customer Details */}
                   {isExpanded && (
                     <TableRow key={`${customer.id}-expanded`}>
@@ -328,8 +331,12 @@ export const EnhancedCustomerTable = ({
                               </CardHeader>
                               <CardContent className="space-y-3">
                                 <div className="flex justify-between">
-                                  <span className="text-sm text-muted-foreground">Total Spent:</span>
-                                  <span className="font-medium">${analytics?.totalSpent.toFixed(2) || '0.00'}</span>
+                                  <span className="text-sm text-muted-foreground">
+                                    Total Spent:
+                                  </span>
+                                  <span className="font-medium">
+                                    ${analytics?.totalSpent.toFixed(2) || '0.00'}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-sm text-muted-foreground">Orders:</span>
@@ -341,15 +348,18 @@ export const EnhancedCustomerTable = ({
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-sm text-muted-foreground">Avg Order:</span>
-                                  <span className="font-medium">${analytics?.avgOrderValue.toFixed(2) || '0.00'}</span>
+                                  <span className="font-medium">
+                                    ${analytics?.avgOrderValue.toFixed(2) || '0.00'}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-sm text-muted-foreground">Last Activity:</span>
+                                  <span className="text-sm text-muted-foreground">
+                                    Last Activity:
+                                  </span>
                                   <span className="font-medium">
-                                    {analytics?.lastActivity ? 
-                                      format(analytics.lastActivity, 'MMM dd, yyyy') : 
-                                      'Never'
-                                    }
+                                    {analytics?.lastActivity
+                                      ? format(analytics.lastActivity, 'MMM dd, yyyy')
+                                      : 'Never'}
                                   </span>
                                 </div>
                               </CardContent>
@@ -365,11 +375,16 @@ export const EnhancedCustomerTable = ({
                               </CardHeader>
                               <CardContent>
                                 <div>
-                                  <p className="text-sm font-medium text-muted-foreground mb-2">Shipping Addresses</p>
+                                  <p className="text-sm font-medium text-muted-foreground mb-2">
+                                    Shipping Addresses
+                                  </p>
                                   {customer.user_addresses && customer.user_addresses.length > 0 ? (
                                     <div className="space-y-1">
                                       {customer.user_addresses.map((address) => (
-                                        <div key={address.id} className="flex items-center space-x-2">
+                                        <div
+                                          key={address.id}
+                                          className="flex items-center space-x-2"
+                                        >
                                           <MapPin className="h-4 w-4 text-muted-foreground" />
                                           <span className="text-sm">
                                             {`${address.address_line1}${address.address_line2 ? `, ${address.address_line2}` : ''}, ${address.city}, ${address.destination_country || ''}`}
@@ -383,7 +398,9 @@ export const EnhancedCustomerTable = ({
                                       ))}
                                     </div>
                                   ) : (
-                                    <p className="text-sm text-muted-foreground">No addresses saved.</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      No addresses saved.
+                                    </p>
                                   )}
                                 </div>
                               </CardContent>
@@ -414,9 +431,9 @@ export const EnhancedCustomerTable = ({
                                   />
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <CustomerEmailDialog 
-                                    customerEmail={customer.email} 
-                                    customerName={customer.full_name || undefined} 
+                                  <CustomerEmailDialog
+                                    customerEmail={customer.email}
+                                    customerName={customer.full_name || undefined}
                                   />
                                 </div>
                               </CardContent>
@@ -434,4 +451,4 @@ export const EnhancedCustomerTable = ({
       </div>
     </div>
   );
-}; 
+};

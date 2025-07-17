@@ -1,25 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { 
-  FileText, 
-  Package, 
-  User, 
-  Clock, 
-  TrendingUp, 
-  DollarSign, 
-  Activity, 
-  ShoppingCart, 
-  Truck, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle 
-} from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { useUserCurrency } from "@/hooks/useUserCurrency";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Clock, Activity, CheckCircle, TrendingUp } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { useUserCurrency } from '@/hooks/useUserCurrency';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
-import { useStatusManagement } from "@/hooks/useStatusManagement";
+import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 export const RecentActivity = () => {
   const { formatAmount } = useUserCurrency();
@@ -30,7 +16,8 @@ export const RecentActivity = () => {
     queryFn: async () => {
       const { data: recentQuotes, error } = await supabase
         .from('quotes')
-        .select(`
+        .select(
+          `
           id,
           email,
           final_total,
@@ -39,16 +26,17 @@ export const RecentActivity = () => {
           created_at,
           product_name,
           destination_country
-        `)
+        `,
+        )
         .order('created_at', { ascending: false })
         .limit(10);
 
       if (error) throw error;
       return recentQuotes || [];
-    }
+    },
   });
 
-  const getStatusColor = (status: string) => {
+  const _getStatusColor = (status: string) => {
     const statusConfig = getStatusConfig(status, 'quote') || getStatusConfig(status, 'order');
     if (statusConfig) {
       switch (statusConfig.color) {
@@ -107,7 +95,10 @@ export const RecentActivity = () => {
             const isOrder = orderStatuses.includes(quote.status || '');
 
             return (
-              <div key={quote.id} className="flex items-center justify-between p-3 border rounded-lg">
+              <div
+                key={quote.id}
+                className="flex items-center justify-between p-3 border rounded-lg"
+              >
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${isOrder ? 'bg-green-100' : 'bg-blue-100'}`}>
                     {getActivityIcon(quote.status || 'pending')}
@@ -115,26 +106,25 @@ export const RecentActivity = () => {
                   <div>
                     <p className="font-medium text-sm">{quote.email}</p>
                     <p className="text-xs text-muted-foreground">
-                      {getActivityTitle(quote.status || 'pending')} • {formatDistanceToNow(new Date(quote.created_at), { addSuffix: true })}
+                      {getActivityTitle(quote.status || 'pending')} •{' '}
+                      {formatDistanceToNow(new Date(quote.created_at), {
+                        addSuffix: true,
+                      })}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-sm">
-                    {formatAmount(displayAmount)}
-                  </p>
-                  <StatusBadge 
-                    status={quote.status || 'pending'} 
-                    category={isOrder ? 'order' : 'quote'} 
+                  <p className="font-medium text-sm">{formatAmount(displayAmount)}</p>
+                  <StatusBadge
+                    status={quote.status || 'pending'}
+                    category={isOrder ? 'order' : 'quote'}
                   />
                 </div>
               </div>
             );
           })}
           {(!recentQuotes || recentQuotes.length === 0) && (
-            <p className="text-center text-muted-foreground py-4">
-              No recent activity
-            </p>
+            <p className="text-center text-muted-foreground py-4">No recent activity</p>
           )}
         </div>
       </CardContent>

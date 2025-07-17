@@ -1,0 +1,9 @@
+{
+  "levels": {
+    "moderate": false,
+    "high": true,
+    "critical": true
+  },
+  "passOnEmpty": true,
+  "allowlist": []
+}

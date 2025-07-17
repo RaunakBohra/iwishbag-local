@@ -1,25 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { 
-  Activity, 
-  ShoppingCart, 
-  FileText, 
-  DollarSign, 
-  Calendar, 
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Activity,
+  ShoppingCart,
+  FileText,
+  DollarSign,
+  Calendar,
   MapPin,
   User,
   Mail,
   Phone,
   Package,
   Truck,
-  CheckCircle,
-  Clock,
-  AlertCircle
-} from "lucide-react";
-import { format } from "date-fns";
+} from 'lucide-react';
+import { format } from 'date-fns';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 interface CustomerActivityTimelineProps {
@@ -63,20 +59,20 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
       const { data, error } = await supabase.functions.invoke('get-users-with-emails');
 
       if (error) throw error;
-      
+
       if (!data?.data) {
         throw new Error('No customer data found');
       }
 
       const customers = data.data as CustomerProfile[];
-      const customer = customers.find(c => c.id === customerId);
-      
+      const customer = customers.find((c) => c.id === customerId);
+
       if (!customer) {
         throw new Error('Customer not found');
       }
 
       return customer;
-    }
+    },
   });
 
   const { data: quotes } = useQuery({
@@ -87,10 +83,10 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
         .select('*')
         .eq('user_id', customerId)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data;
-    }
+    },
   });
 
   const { data: orders } = useQuery({
@@ -102,10 +98,10 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
         .eq('user_id', customerId)
         .in('status', ['paid', 'ordered', 'shipped', 'completed'])
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data;
-    }
+    },
   });
 
   // Combine and sort all activities
@@ -119,12 +115,12 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
       title: 'Customer Registered',
       description: 'Customer joined the platform',
       date: new Date(customer.created_at),
-      status: 'completed'
+      status: 'completed',
     });
   }
 
   // Add quotes
-  quotes?.forEach(quote => {
+  quotes?.forEach((quote) => {
     activities.push({
       id: `quote-${quote.id}`,
       type: 'quote',
@@ -136,13 +132,13 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
       metadata: {
         quoteId: quote.id,
         productName: quote.product_name,
-        status: quote.status
-      }
+        status: quote.status,
+      },
     });
   });
 
   // Add orders (paid quotes)
-  orders?.forEach(order => {
+  orders?.forEach((order) => {
     activities.push({
       id: `order-${order.id}`,
       type: 'order',
@@ -154,8 +150,8 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
       metadata: {
         orderId: order.id,
         productName: order.product_name,
-        status: order.status
-      }
+        status: order.status,
+      },
     });
   });
 
@@ -181,7 +177,9 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
 
   const getStatusBadge = (status?: string) => {
     if (!status) return null;
-    const category = ['paid', 'ordered', 'shipped', 'completed', 'cancelled'].includes(status) ? 'order' : 'quote';
+    const category = ['paid', 'ordered', 'shipped', 'completed', 'cancelled'].includes(status)
+      ? 'order'
+      : 'quote';
     return <StatusBadge status={status} category={category} />;
   };
 
@@ -217,17 +215,16 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
                 <div className="text-sm text-muted-foreground">{customer.id}</div>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">
-                {customer.user_addresses?.[0] ? 
-                  `${customer.user_addresses[0].city}, ${customer.user_addresses[0].country}` : 
-                  'No address'
-                }
+                {customer.user_addresses?.[0]
+                  ? `${customer.user_addresses[0].city}, ${customer.user_addresses[0].country}`
+                  : 'No address'}
               </span>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">
@@ -259,35 +256,29 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
                   <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-full flex items-center justify-center">
                     {getActivityIcon(activity.type)}
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h4 className="font-medium">{activity.title}</h4>
                       {getStatusBadge(activity.status)}
                     </div>
-                    
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {activity.description}
-                    </p>
-                    
+
+                    <p className="text-sm text-muted-foreground mt-1">{activity.description}</p>
+
                     {activity.amount && (
                       <div className="flex items-center gap-2 mt-2">
                         <DollarSign className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm font-medium">
-                          ${activity.amount.toFixed(2)}
-                        </span>
+                        <span className="text-sm font-medium">${activity.amount.toFixed(2)}</span>
                       </div>
                     )}
-                    
+
                     <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
                       <Calendar className="h-3 w-3" />
                       {format(activity.date, 'MMM dd, yyyy HH:mm')}
                     </div>
                   </div>
-                  
-                  <div className="flex-shrink-0">
-                    {getStatusBadge(activity.status)}
-                  </div>
+
+                  <div className="flex-shrink-0">{getStatusBadge(activity.status)}</div>
                 </div>
               ))}
             </div>
@@ -323,4 +314,4 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
       </Card>
     </div>
   );
-}; 
+};

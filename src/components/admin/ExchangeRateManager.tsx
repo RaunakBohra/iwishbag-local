@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -8,9 +8,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useAllCountries } from '../../hooks/useAllCountries';
-import { getCurrencySymbolFromCountry, getCountryCurrency, getExchangeRate } from '../../lib/currencyUtils';
-import { AlertCircle, CheckCircle, RefreshCw, TrendingUp, Globe, ArrowRightLeft } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import {
+  getCurrencySymbolFromCountry,
+  getCountryCurrency,
+  getExchangeRate,
+} from '../../lib/currencyUtils';
+import { RefreshCw, TrendingUp, Globe, ArrowRightLeft } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../ui/dialog';
 import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
 
 interface ExchangeRateData {
@@ -32,14 +43,14 @@ export function ExchangeRateManager() {
   const [newRate, setNewRate] = useState({
     origin_country: '',
     destination_country: '',
-    exchange_rate: 1
+    exchange_rate: 1,
   });
 
   useEffect(() => {
     fetchExchangeRates();
-  }, []);
+  }, [fetchExchangeRates]);
 
-  const fetchExchangeRates = async () => {
+  const fetchExchangeRates = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -50,12 +61,13 @@ export function ExchangeRateManager() {
         .order('destination_country');
 
       if (error) throw error;
-      
-      const formattedRates = data?.map(rate => ({
-        ...rate,
-        last_updated: rate.updated_at,
-        source: 'manual' as const
-      })) || [];
+
+      const formattedRates =
+        data?.map((rate) => ({
+          ...rate,
+          last_updated: rate.updated_at,
+          source: 'manual' as const,
+        })) || [];
 
       setRates(formattedRates);
     } catch (error) {
@@ -63,20 +75,20 @@ export function ExchangeRateManager() {
       toast({
         title: 'Error',
         description: 'Failed to fetch exchange rates',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   const updateExchangeRate = async (id: number, newExchangeRate: number) => {
     try {
       const { error } = await supabase
         .from('shipping_routes')
-        .update({ 
+        .update({
           exchange_rate: newExchangeRate,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', id);
 
@@ -84,7 +96,7 @@ export function ExchangeRateManager() {
 
       toast({
         title: 'Success',
-        description: 'Exchange rate updated successfully'
+        description: 'Exchange rate updated successfully',
       });
 
       fetchExchangeRates();
@@ -93,7 +105,7 @@ export function ExchangeRateManager() {
       toast({
         title: 'Error',
         description: 'Failed to update exchange rate',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     }
   };
@@ -103,7 +115,7 @@ export function ExchangeRateManager() {
       toast({
         title: 'Error',
         description: 'Please select both origin and destination countries',
-        variant: 'destructive'
+        variant: 'destructive',
       });
       return;
     }
@@ -122,38 +134,40 @@ export function ExchangeRateManager() {
         await updateExchangeRate(existingRoute.id, newRate.exchange_rate);
       } else {
         // Create new route with minimal data
-        const { error } = await supabase
-          .from('shipping_routes')
-          .insert({
-            origin_country: newRate.origin_country,
-            destination_country: newRate.destination_country,
-            exchange_rate: newRate.exchange_rate,
-            base_shipping_cost: 0,
-            cost_per_kg: 0,
-            cost_percentage: 0,
-            processing_days: 2,
-            customs_clearance_days: 3,
-            weight_unit: 'kg',
-            is_active: true
-          });
+        const { error } = await supabase.from('shipping_routes').insert({
+          origin_country: newRate.origin_country,
+          destination_country: newRate.destination_country,
+          exchange_rate: newRate.exchange_rate,
+          base_shipping_cost: 0,
+          cost_per_kg: 0,
+          cost_percentage: 0,
+          processing_days: 2,
+          customs_clearance_days: 3,
+          weight_unit: 'kg',
+          is_active: true,
+        });
 
         if (error) throw error;
 
         toast({
           title: 'Success',
-          description: 'New exchange rate created successfully'
+          description: 'New exchange rate created successfully',
         });
       }
 
       setIsCreateDialogOpen(false);
-      setNewRate({ origin_country: '', destination_country: '', exchange_rate: 1 });
+      setNewRate({
+        origin_country: '',
+        destination_country: '',
+        exchange_rate: 1,
+      });
       fetchExchangeRates();
     } catch (error) {
       console.error('Error creating exchange rate:', error);
       toast({
         title: 'Error',
         description: 'Failed to create exchange rate',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     }
   };
@@ -161,26 +175,30 @@ export function ExchangeRateManager() {
   const testExchangeRate = async (originCountry: string, destinationCountry: string) => {
     try {
       const result = await getExchangeRate(originCountry, destinationCountry);
-      
-      const confidence = result.confidence === 'high' ? 'success' : 
-                        result.confidence === 'medium' ? 'warning' : 'destructive';
-      
+
+      const confidence =
+        result.confidence === 'high'
+          ? 'success'
+          : result.confidence === 'medium'
+            ? 'warning'
+            : 'destructive';
+
       toast({
         title: `Exchange Rate Test`,
         description: `${originCountry} → ${destinationCountry}: ${result.rate} (${result.source})`,
-        variant: confidence === 'destructive' ? 'destructive' : 'default'
+        variant: confidence === 'destructive' ? 'destructive' : 'default',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Test Failed',
         description: 'Could not test exchange rate',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     }
   };
 
   const getRateStatus = (rate: ExchangeRateData) => {
-    const daysSinceUpdate = rate.last_updated 
+    const daysSinceUpdate = rate.last_updated
       ? Math.floor((Date.now() - new Date(rate.last_updated).getTime()) / (1000 * 60 * 60 * 24))
       : 0;
 
@@ -230,7 +248,12 @@ export function ExchangeRateManager() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="origin">Origin Country</Label>
-                    <Select value={newRate.origin_country} onValueChange={(value) => setNewRate(prev => ({ ...prev, origin_country: value }))}>
+                    <Select
+                      value={newRate.origin_country}
+                      onValueChange={(value) =>
+                        setNewRate((prev) => ({ ...prev, origin_country: value }))
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select origin" />
                       </SelectTrigger>
@@ -245,7 +268,15 @@ export function ExchangeRateManager() {
                   </div>
                   <div>
                     <Label htmlFor="destination">Destination Country</Label>
-                    <Select value={newRate.destination_country} onValueChange={(value) => setNewRate(prev => ({ ...prev, destination_country: value }))}>
+                    <Select
+                      value={newRate.destination_country}
+                      onValueChange={(value) =>
+                        setNewRate((prev) => ({
+                          ...prev,
+                          destination_country: value,
+                        }))
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select destination" />
                       </SelectTrigger>
@@ -266,12 +297,19 @@ export function ExchangeRateManager() {
                     type="number"
                     step="0.0001"
                     value={newRate.exchange_rate}
-                    onChange={(e) => setNewRate(prev => ({ ...prev, exchange_rate: parseFloat(e.target.value) || 1 }))}
+                    onChange={(e) =>
+                      setNewRate((prev) => ({
+                        ...prev,
+                        exchange_rate: parseFloat(e.target.value) || 1,
+                      }))
+                    }
                     placeholder="1.0000"
                   />
                   {newRate.origin_country && newRate.destination_country && (
                     <div className="text-xs text-gray-500 mt-1">
-                      1 {getCurrencySymbolFromCountry(newRate.origin_country)} = {newRate.exchange_rate} {getCurrencySymbolFromCountry(newRate.destination_country)}
+                      1 {getCurrencySymbolFromCountry(newRate.origin_country)} ={' '}
+                      {newRate.exchange_rate}{' '}
+                      {getCurrencySymbolFromCountry(newRate.destination_country)}
                     </div>
                   )}
                 </div>
@@ -279,9 +317,7 @@ export function ExchangeRateManager() {
                   <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={createNewRate}>
-                    Save Rate
-                  </Button>
+                  <Button onClick={createNewRate}>Save Rate</Button>
                 </div>
               </div>
             </DialogContent>
@@ -294,7 +330,7 @@ export function ExchangeRateManager() {
           const status = getRateStatus(rate);
           const originCurrency = getCountryCurrency(rate.origin_country);
           const destinationCurrency = getCountryCurrency(rate.destination_country);
-          
+
           return (
             <Card key={rate.id}>
               <CardContent className="pt-6">
@@ -302,45 +338,57 @@ export function ExchangeRateManager() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-gray-500" />
-                      <ShippingRouteDisplay 
-                        origin={rate.origin_country} 
+                      <ShippingRouteDisplay
+                        origin={rate.origin_country}
                         destination={rate.destination_country}
                         className="font-medium"
                         showIcon={false}
                       />
                       <ArrowRightLeft className="h-3 w-3 text-gray-400" />
-                      <ShippingRouteDisplay 
-                        origin={originCurrency} 
+                      <ShippingRouteDisplay
+                        origin={originCurrency}
                         destination={destinationCurrency}
                         className="text-sm text-gray-600"
                         showIcon={false}
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={status.color === 'success' ? 'default' : status.color === 'warning' ? 'secondary' : 'destructive'}>
+                      <Badge
+                        variant={
+                          status.color === 'success'
+                            ? 'default'
+                            : status.color === 'warning'
+                              ? 'secondary'
+                              : 'destructive'
+                        }
+                      >
                         {status.label}
                       </Badge>
                       <span className="text-xs text-gray-500">
-                        Last updated: {rate.last_updated ? new Date(rate.last_updated).toLocaleDateString() : 'Never'}
+                        Last updated:{' '}
+                        {rate.last_updated
+                          ? new Date(rate.last_updated).toLocaleDateString()
+                          : 'Never'}
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <div className="font-mono text-lg font-semibold">
-                        1 {getCurrencySymbolFromCountry(rate.origin_country)} = {rate.exchange_rate} {getCurrencySymbolFromCountry(rate.destination_country)}
+                        1 {getCurrencySymbolFromCountry(rate.origin_country)} = {rate.exchange_rate}{' '}
+                        {getCurrencySymbolFromCountry(rate.destination_country)}
                       </div>
-                      <div className="text-sm text-gray-500">
-                        Rate: {rate.exchange_rate}
-                      </div>
+                      <div className="text-sm text-gray-500">Rate: {rate.exchange_rate}</div>
                     </div>
-                    
+
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => testExchangeRate(rate.origin_country, rate.destination_country)}
+                        onClick={() =>
+                          testExchangeRate(rate.origin_country, rate.destination_country)
+                        }
                       >
                         Test
                       </Button>
@@ -349,7 +397,10 @@ export function ExchangeRateManager() {
                         size="sm"
                         onClick={() => {
                           const routeText = `${rate.origin_country} → ${rate.destination_country}`;
-                          const newRate = prompt(`Enter new exchange rate for ${routeText}:`, rate.exchange_rate.toString());
+                          const newRate = prompt(
+                            `Enter new exchange rate for ${routeText}:`,
+                            rate.exchange_rate.toString(),
+                          );
                           if (newRate && !isNaN(parseFloat(newRate)) && rate.id) {
                             updateExchangeRate(rate.id, parseFloat(newRate));
                           }
@@ -371,7 +422,9 @@ export function ExchangeRateManager() {
           <CardContent className="text-center py-8">
             <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">No exchange rates configured yet.</p>
-            <p className="text-sm text-gray-500 mt-2">Create your first exchange rate to get started.</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Create your first exchange rate to get started.
+            </p>
           </CardContent>
         </Card>
       )}

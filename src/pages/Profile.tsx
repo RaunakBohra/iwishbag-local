@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { useAllCountries } from "@/hooks/useAllCountries";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { useAllCountries } from '@/hooks/useAllCountries';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Card,
   CardContent,
@@ -16,7 +16,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -24,21 +24,21 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
+} from '@/components/ui/form';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { 
-  User, 
-  Settings, 
-  Globe, 
-  DollarSign, 
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import {
+  User,
+  Settings,
+  Globe,
+  DollarSign,
   MapPin,
   CheckCircle,
   AlertCircle,
@@ -57,22 +57,22 @@ import {
   Truck,
   HelpCircle,
   Lock,
-  LogOut
-} from "lucide-react";
-import { AnimatedSection } from "@/components/shared/AnimatedSection";
-import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
-import { AddressList } from "@/components/profile/AddressList";
-import { Link } from "react-router-dom";
-import { format } from "date-fns";
-import { currencyService, type Currency } from "@/services/CurrencyService";
-import { usePaymentGateways } from "@/hooks/usePaymentGateways";
+  LogOut,
+} from 'lucide-react';
+import { AnimatedSection } from '@/components/shared/AnimatedSection';
+import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
+import { AddressList } from '@/components/profile/AddressList';
+import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
+import { currencyService, type Currency } from '@/services/CurrencyService';
+import { usePaymentGateways } from '@/hooks/usePaymentGateways';
 
 const profileFormSchema = z.object({
-  full_name: z.string().min(1, "Full name is required"),
+  full_name: z.string().min(1, 'Full name is required'),
   email: z.string().email().optional(),
-  phone: z.string().min(8, "Phone number is required"),
-  country: z.string().min(1, "Country is required"),
-  preferred_display_currency: z.string().min(1, "Preferred currency is required"),
+  phone: z.string().min(8, 'Phone number is required'),
+  country: z.string().min(1, 'Country is required'),
+  preferred_display_currency: z.string().min(1, 'Preferred currency is required'),
   preferred_payment_gateway: z.string().optional(),
 });
 
@@ -92,16 +92,16 @@ const Profile = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["profile", user?.id],
+    queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user) return null;
       const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
         .maybeSingle();
       if (error && error.code !== 'PGRST116') {
-          throw new Error(error.message);
+        throw new Error(error.message);
       }
       return data;
     },
@@ -110,25 +110,19 @@ const Profile = () => {
 
   // Fetch user stats
   const { data: stats } = useQuery({
-    queryKey: ["user-stats", user?.id],
+    queryKey: ['user-stats', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      
+
       const [ordersResult, quotesResult] = await Promise.all([
-        supabase
-          .from("orders")
-          .select("id", { count: 'exact' })
-          .eq("user_id", user.id),
-        supabase
-          .from("quotes")
-          .select("id", { count: 'exact' })
-          .eq("user_id", user.id)
+        supabase.from('orders').select('id', { count: 'exact' }).eq('user_id', user.id),
+        supabase.from('quotes').select('id', { count: 'exact' }).eq('user_id', user.id),
       ]);
 
       return {
         totalOrders: ordersResult.count || 0,
         totalQuotes: quotesResult.count || 0,
-        memberSince: user.created_at
+        memberSince: user.created_at,
       };
     },
     enabled: !!user,
@@ -136,7 +130,7 @@ const Profile = () => {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (values: ProfileFormValues) => {
-      if (!user) throw new Error("User not authenticated");
+      if (!user) throw new Error('User not authenticated');
 
       // Check if profile exists
       const { data: existingProfile, error: selectError } = await supabase
@@ -152,44 +146,44 @@ const Profile = () => {
       if (existingProfile) {
         // Profile exists, so update it
         const { error } = await supabase
-          .from("profiles")
+          .from('profiles')
           .update({
             full_name: values.full_name,
             phone: values.phone,
             country: values.country,
             preferred_display_currency: values.preferred_display_currency,
-            preferred_payment_gateway: values.preferred_payment_gateway === 'auto' ? null : values.preferred_payment_gateway,
+            preferred_payment_gateway:
+              values.preferred_payment_gateway === 'auto' ? null : values.preferred_payment_gateway,
           })
-          .eq("id", user.id);
+          .eq('id', user.id);
         if (error) throw new Error(`Error updating profile: ${error.message}`);
       } else {
         // Profile doesn't exist, so insert it
-        const { error } = await supabase
-          .from("profiles")
-          .insert({
-            id: user.id,
-            full_name: values.full_name,
-            phone: values.phone,
-            country: values.country,
-            preferred_display_currency: values.preferred_display_currency,
-            preferred_payment_gateway: values.preferred_payment_gateway === 'auto' ? null : values.preferred_payment_gateway,
-          });
+        const { error } = await supabase.from('profiles').insert({
+          id: user.id,
+          full_name: values.full_name,
+          phone: values.phone,
+          country: values.country,
+          preferred_display_currency: values.preferred_display_currency,
+          preferred_payment_gateway:
+            values.preferred_payment_gateway === 'auto' ? null : values.preferred_payment_gateway,
+        });
         if (error) throw new Error(`Error creating profile: ${error.message}`);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["user-profile", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['user-profile', user?.id] });
       toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated.",
+        title: 'Profile updated',
+        description: 'Your profile has been successfully updated.',
       });
     },
     onError: (error) => {
       toast({
-        title: "Error updating profile",
+        title: 'Error updating profile',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
@@ -197,12 +191,12 @@ const Profile = () => {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      full_name: "",
-      email: user?.email || "",
-      phone: "",
-      country: "US",
-      preferred_display_currency: "USD",
-      preferred_payment_gateway: "auto",
+      full_name: '',
+      email: user?.email || '',
+      phone: '',
+      country: 'US',
+      preferred_display_currency: 'USD',
+      preferred_payment_gateway: 'auto',
     },
   });
 
@@ -225,19 +219,20 @@ const Profile = () => {
   useEffect(() => {
     if (profile) {
       // Get name from profile, or fallback to user metadata, or email prefix
-      const displayName = profile.full_name || 
-                         user?.user_metadata?.name || 
-                         user?.user_metadata?.full_name || 
-                         user?.email?.split('@')[0] || 
-                         "";
-      
+      const displayName =
+        profile.full_name ||
+        user?.user_metadata?.name ||
+        user?.user_metadata?.full_name ||
+        user?.email?.split('@')[0] ||
+        '';
+
       form.reset({
         full_name: displayName,
-        email: user?.email || "",
-        phone: profile.phone || "",
-        country: profile.country || "US",
-        preferred_display_currency: profile.preferred_display_currency || "USD",
-        preferred_payment_gateway: profile.preferred_payment_gateway || "auto",
+        email: user?.email || '',
+        phone: profile.phone || '',
+        country: profile.country || 'US',
+        preferred_display_currency: profile.preferred_display_currency || 'USD',
+        preferred_payment_gateway: profile.preferred_payment_gateway || 'auto',
       });
     }
   }, [profile, user, form]);
@@ -249,54 +244,54 @@ const Profile = () => {
   // Get available currencies for selected country
   const getAvailableCurrencies = (countryCode: string) => {
     let currencies = [];
-    
+
     // Return all available currencies from database instead of just the country's currency
     if (availableCurrencies.length > 0) {
-      currencies = availableCurrencies.map(c => c.code);
+      currencies = availableCurrencies.map((c) => c.code);
     } else if (allCountries) {
       // Get unique currencies from all countries as fallback
-      currencies = [...new Set(allCountries.map(c => c.currency).filter(Boolean))];
+      currencies = [...new Set(allCountries.map((c) => c.currency).filter(Boolean))];
     } else {
       // Final fallback
       currencies = ['USD', 'EUR', 'GBP', 'INR', 'NPR'];
     }
-    
+
     // Always ensure the current profile currency is included
     const currentCurrency = form.watch('preferred_display_currency');
     if (currentCurrency && !currencies.includes(currentCurrency)) {
       currencies.push(currentCurrency);
     }
-    
+
     return currencies;
   };
 
   // Get country name by code
   const getCountryName = (countryCode: string) => {
     if (!allCountries) return countryCode;
-    const country = allCountries.find(c => c.code === countryCode);
+    const country = allCountries.find((c) => c.code === countryCode);
     return country?.name || countryCode;
   };
 
   // Get currency name by code
   const getCurrencyName = (currencyCode: string) => {
     // Try to get from loaded currencies first
-    const currency = availableCurrencies.find(c => c.code === currencyCode);
+    const currency = availableCurrencies.find((c) => c.code === currencyCode);
     if (currency) {
       return currency.name;
     }
-    
+
     // Fallback to hardcoded names
     const currencyNames: Record<string, string> = {
-      'USD': 'US Dollar',
-      'EUR': 'Euro',
-      'GBP': 'British Pound',
-      'INR': 'Indian Rupee',
-      'NPR': 'Nepalese Rupee',
-      'CAD': 'Canadian Dollar',
-      'AUD': 'Australian Dollar',
-      'JPY': 'Japanese Yen',
-      'CNY': 'Chinese Yuan',
-      'SGD': 'Singapore Dollar',
+      USD: 'US Dollar',
+      EUR: 'Euro',
+      GBP: 'British Pound',
+      INR: 'Indian Rupee',
+      NPR: 'Nepalese Rupee',
+      CAD: 'Canadian Dollar',
+      AUD: 'Australian Dollar',
+      JPY: 'Japanese Yen',
+      CNY: 'Chinese Yuan',
+      SGD: 'Singapore Dollar',
     };
     return currencyNames[currencyCode] || currencyCode;
   };
@@ -306,14 +301,14 @@ const Profile = () => {
     if (!profile) return 0;
     let completed = 0;
     const fields = ['full_name', 'phone', 'country', 'preferred_display_currency'];
-    fields.forEach(field => {
+    fields.forEach((field) => {
       if (profile[field as keyof typeof profile]) completed++;
     });
     // Bonus points for optional fields
     if (profile.preferred_payment_gateway) completed += 0.5;
     return Math.round((completed / fields.length) * 100);
   };
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
@@ -362,7 +357,9 @@ const Profile = () => {
               <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-8 text-white">
                 <div className="flex flex-col md:flex-row items-center gap-6">
                   <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-4xl font-bold">
-                    {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase()}
+                    {profile?.full_name
+                      ? profile.full_name.charAt(0).toUpperCase()
+                      : user?.email?.charAt(0).toUpperCase()}
                   </div>
                   <div className="text-center md:text-left flex-1">
                     <h1 className="text-3xl font-bold">
@@ -390,7 +387,7 @@ const Profile = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Profile Completion */}
                 <div className="mt-6">
                   <div className="flex items-center justify-between mb-2">
@@ -400,7 +397,7 @@ const Profile = () => {
                     </span>
                   </div>
                   <div className="w-full bg-white/20 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-white h-2 rounded-full transition-all duration-500"
                       style={{ width: `${calculateProfileCompletion()}%` }}
                     />
@@ -421,25 +418,37 @@ const Profile = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Link to="/dashboard/orders" className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Link
+                    to="/dashboard/orders"
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
                     <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
                       <Package className="h-6 w-6 text-blue-600" />
                     </div>
                     <span className="text-sm font-medium">View Orders</span>
                   </Link>
-                  <Link to="/dashboard/quotes" className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Link
+                    to="/dashboard/quotes"
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
                     <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
                       <FileText className="h-6 w-6 text-purple-600" />
                     </div>
                     <span className="text-sm font-medium">View Quotes</span>
                   </Link>
-                  <Link to="/profile/address" className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Link
+                    to="/profile/address"
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
                     <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
                       <MapPin className="h-6 w-6 text-green-600" />
                     </div>
                     <span className="text-sm font-medium">Addresses</span>
                   </Link>
-                  <Link to="/help" className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Link
+                    to="/help"
+                    className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
                     <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
                       <HelpCircle className="h-6 w-6 text-orange-600" />
                     </div>
@@ -454,7 +463,6 @@ const Profile = () => {
           <AnimatedSection animation="fadeInUp" delay={200}>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                
                 {/* Personal Information */}
                 <Card className="hover:shadow-lg transition-shadow">
                   <CardHeader>
@@ -480,7 +488,11 @@ const Profile = () => {
                               Full Name
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="Your full name" {...field} className="hover:border-primary transition-colors" />
+                              <Input
+                                placeholder="Your full name"
+                                {...field}
+                                className="hover:border-primary transition-colors"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -496,7 +508,12 @@ const Profile = () => {
                               Phone Number
                             </FormLabel>
                             <FormControl>
-                              <Input type="tel" placeholder="+1 234 567 8901" {...field} className="hover:border-primary transition-colors" />
+                              <Input
+                                type="tel"
+                                placeholder="+1 234 567 8901"
+                                {...field}
+                                className="hover:border-primary transition-colors"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -535,7 +552,8 @@ const Profile = () => {
                       Regional & Currency Settings
                     </CardTitle>
                     <CardDescription>
-                      Configure your country and currency preferences for better payment options and pricing.
+                      Configure your country and currency preferences for better payment options and
+                      pricing.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -549,7 +567,11 @@ const Profile = () => {
                               <MapPin className="h-4 w-4 text-gray-500" />
                               Country
                             </FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value} disabled={updateProfileMutation.isPending}>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              disabled={updateProfileMutation.isPending}
+                            >
                               <FormControl>
                                 <SelectTrigger className="hover:border-primary transition-colors">
                                   <SelectValue placeholder="Select your country" />
@@ -584,7 +606,11 @@ const Profile = () => {
                               <DollarSign className="h-4 w-4 text-gray-500" />
                               Preferred Currency
                             </FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value} disabled={updateProfileMutation.isPending}>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              disabled={updateProfileMutation.isPending}
+                            >
                               <FormControl>
                                 <SelectTrigger className="hover:border-primary transition-colors">
                                   <SelectValue placeholder="Select your preferred currency" />
@@ -618,7 +644,11 @@ const Profile = () => {
                               <CreditCard className="h-4 w-4 text-gray-500" />
                               Preferred Payment Method
                             </FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value} disabled={updateProfileMutation.isPending || methodsLoading}>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              disabled={updateProfileMutation.isPending || methodsLoading}
+                            >
                               <FormControl>
                                 <SelectTrigger className="hover:border-primary transition-colors">
                                   <SelectValue placeholder="Choose preferred payment method (optional)" />
@@ -648,8 +678,7 @@ const Profile = () => {
                             <p className="text-xs text-gray-500 mt-1">
                               {field.value === 'auto' || !field.value
                                 ? "We'll automatically select the best payment method for your location and order."
-                                : `You've chosen ${getAvailablePaymentMethods().find(m => m.code === field.value)?.name} as your preferred payment method.`
-                              }
+                                : `You've chosen ${getAvailablePaymentMethods().find((m) => m.code === field.value)?.name} as your preferred payment method.`}
                             </p>
                             <FormMessage />
                           </FormItem>
@@ -679,10 +708,13 @@ const Profile = () => {
                           </div>
                           <div>
                             <p className="text-xs text-gray-500">Currency</p>
-                            <p className="font-medium">{getCurrencyName(form.watch('preferred_display_currency'))} ({form.watch('preferred_display_currency')})</p>
+                            <p className="font-medium">
+                              {getCurrencyName(form.watch('preferred_display_currency'))} (
+                              {form.watch('preferred_display_currency')})
+                            </p>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
                             <CreditCard className="h-4 w-4 text-purple-600" />
@@ -690,10 +722,12 @@ const Profile = () => {
                           <div>
                             <p className="text-xs text-gray-500">Payment Method</p>
                             <p className="font-medium">
-                              {form.watch('preferred_payment_gateway') === 'auto' || !form.watch('preferred_payment_gateway')
+                              {form.watch('preferred_payment_gateway') === 'auto' ||
+                              !form.watch('preferred_payment_gateway')
                                 ? 'Auto-select (Recommended)'
-                                : getAvailablePaymentMethods().find(m => m.code === form.watch('preferred_payment_gateway'))?.name || 'Unknown'
-                              }
+                                : getAvailablePaymentMethods().find(
+                                    (m) => m.code === form.watch('preferred_payment_gateway'),
+                                  )?.name || 'Unknown'}
                             </p>
                           </div>
                         </div>
@@ -705,17 +739,20 @@ const Profile = () => {
                 {/* Save Button */}
                 <Card>
                   <CardFooter>
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       disabled={updateProfileMutation.isPending || currencyLoading}
                       className="group"
                     >
                       <Save className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
-                      {updateProfileMutation.isPending ? "Saving..." : currencyLoading ? "Loading..." : "Save Profile"}
+                      {updateProfileMutation.isPending
+                        ? 'Saving...'
+                        : currencyLoading
+                          ? 'Loading...'
+                          : 'Save Profile'}
                     </Button>
                   </CardFooter>
                 </Card>
-
               </form>
             </Form>
           </AnimatedSection>
@@ -735,13 +772,12 @@ const Profile = () => {
                   </div>
                   Payment Methods
                 </CardTitle>
-                <CardDescription>
-                  Manage your saved payment methods
-                </CardDescription>
+                <CardDescription>Manage your saved payment methods</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600 mb-4">
-                  No saved payment methods. Payment methods will be saved when you make your first purchase.
+                  No saved payment methods. Payment methods will be saved when you make your first
+                  purchase.
                 </p>
                 <Link to="/dashboard/orders">
                   <Button variant="outline" className="w-full">
@@ -762,9 +798,7 @@ const Profile = () => {
                   </div>
                   Recent Activity
                 </CardTitle>
-                <CardDescription>
-                  Your recent orders and quotes
-                </CardDescription>
+                <CardDescription>Your recent orders and quotes</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -813,9 +847,7 @@ const Profile = () => {
                   </div>
                   Security & Privacy
                 </CardTitle>
-                <CardDescription>
-                  Manage your account security and privacy settings
-                </CardDescription>
+                <CardDescription>Manage your account security and privacy settings</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
@@ -831,14 +863,14 @@ const Profile = () => {
                     <Bell className="h-4 w-4 mr-2" />
                     Notification Settings
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="justify-start text-destructive hover:text-destructive"
                     onClick={() => {
                       signOut();
                       toast({
-                        title: "Signed out successfully",
-                        description: "You have been signed out of your account.",
+                        title: 'Signed out successfully',
+                        description: 'You have been signed out of your account.',
                       });
                     }}
                   >
@@ -860,9 +892,7 @@ const Profile = () => {
                   </div>
                   Notifications & Communications
                 </CardTitle>
-                <CardDescription>
-                  Manage how we communicate with you
-                </CardDescription>
+                <CardDescription>Manage how we communicate with you</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600 mb-4">
@@ -886,9 +916,7 @@ const Profile = () => {
                   </div>
                   Help & Support
                 </CardTitle>
-                <CardDescription>
-                  Get help with your account
-                </CardDescription>
+                <CardDescription>Get help with your account</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2">

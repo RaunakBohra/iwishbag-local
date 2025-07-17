@@ -3,19 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  AlertTriangle, 
-  CheckCircle, 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
+import {
+  AlertTriangle,
+  CheckCircle,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
   RefreshCw,
-  Calendar,
   Activity,
   PieChart,
   BarChart3,
   AlertCircle,
-  Clock
+  Clock,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -66,13 +65,15 @@ export function CurrencyMonitoringDashboard() {
 
       const { data, error } = await supabase
         .from('payment_ledger')
-        .select(`
+        .select(
+          `
           currency,
           amount,
           payment_type,
           status,
           payment_date
-        `)
+        `,
+        )
         .gte('payment_date', startDate.toISOString())
         .eq('status', 'completed');
 
@@ -80,11 +81,11 @@ export function CurrencyMonitoringDashboard() {
 
       // Process data into currency statistics
       const statsMap = new Map<string, CurrencyStats>();
-      
-      data?.forEach(payment => {
+
+      data?.forEach((payment) => {
         const currency = payment.currency;
         const amount = parseFloat(payment.amount);
-        
+
         if (!statsMap.has(currency)) {
           statsMap.set(currency, {
             currency,
@@ -94,12 +95,12 @@ export function CurrencyMonitoringDashboard() {
             paymentCount: 0,
             refundCount: 0,
             averageAmount: 0,
-            lastPaymentDate: undefined
+            lastPaymentDate: undefined,
           });
         }
 
         const stats = statsMap.get(currency)!;
-        
+
         if (payment.payment_type === 'customer_payment') {
           stats.totalPayments += amount;
           stats.paymentCount += 1;
@@ -108,13 +109,13 @@ export function CurrencyMonitoringDashboard() {
           stats.totalRefunds += amount;
           stats.refundCount += 1;
         }
-        
+
         stats.netAmount = stats.totalPayments - stats.totalRefunds;
         stats.averageAmount = stats.paymentCount > 0 ? stats.totalPayments / stats.paymentCount : 0;
       });
 
       return Array.from(statsMap.values()).sort((a, b) => b.netAmount - a.netAmount);
-    }
+    },
   });
 
   // Fetch currency mismatches
@@ -127,7 +128,7 @@ export function CurrencyMonitoringDashboard() {
 
       const { data, error } = await supabase.rpc('get_currency_mismatches', {
         start_date: startDate.toISOString(),
-        end_date: new Date().toISOString()
+        end_date: new Date().toISOString(),
       });
 
       if (error) {
@@ -135,12 +136,13 @@ export function CurrencyMonitoringDashboard() {
         return [];
       }
 
-      return (data as CurrencyMismatch[]).map(mismatch => ({
+      return (data as CurrencyMismatch[]).map((mismatch) => ({
         ...mismatch,
-        suspicious: Math.abs(mismatch.quote_amount - mismatch.payment_amount) < 0.01 &&
-                   mismatch.quote_currency !== mismatch.payment_currency
+        suspicious:
+          Math.abs(mismatch.quote_amount - mismatch.payment_amount) < 0.01 &&
+          mismatch.quote_currency !== mismatch.payment_currency,
       }));
-    }
+    },
   });
 
   // Fetch exchange rate alerts
@@ -156,7 +158,7 @@ export function CurrencyMonitoringDashboard() {
           previous_rate: 83.1,
           change_percent: 2.53,
           last_updated: new Date().toISOString(),
-          alert_threshold: 2.0
+          alert_threshold: 2.0,
         },
         {
           currency: 'EUR',
@@ -164,20 +166,24 @@ export function CurrencyMonitoringDashboard() {
           previous_rate: 0.89,
           change_percent: 3.37,
           last_updated: new Date().toISOString(),
-          alert_threshold: 3.0
-        }
+          alert_threshold: 3.0,
+        },
       ];
 
-      return mockAlerts.filter(alert => Math.abs(alert.change_percent) >= alert.alert_threshold);
-    }
+      return mockAlerts.filter((alert) => Math.abs(alert.change_percent) >= alert.alert_threshold);
+    },
   });
 
   const getSeverityColor = (severity: 'low' | 'medium' | 'high') => {
     switch (severity) {
-      case 'high': return 'text-red-600 bg-red-50 border-red-200';
-      case 'medium': return 'text-orange-600 bg-orange-50 border-orange-200';
-      case 'low': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'high':
+        return 'text-red-600 bg-red-50 border-red-200';
+      case 'medium':
+        return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'low':
+        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
 
@@ -195,11 +201,13 @@ export function CurrencyMonitoringDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Currency Monitoring</h2>
-          <p className="text-gray-600">Monitor exchange rates, currency mismatches, and payment analytics</p>
+          <p className="text-gray-600">
+            Monitor exchange rates, currency mismatches, and payment analytics
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <select 
-            value={selectedTimeRange} 
+          <select
+            value={selectedTimeRange}
             onChange={(e) => setSelectedTimeRange(e.target.value as '7d' | '30d' | '90d')}
             className="border rounded px-3 py-2"
           >
@@ -222,7 +230,8 @@ export function CurrencyMonitoringDashboard() {
               <div>
                 <p className="text-sm text-gray-600">Active Alerts</p>
                 <p className="text-2xl font-bold text-red-600">
-                  {(exchangeRateAlerts?.length || 0) + (currencyMismatches?.filter(m => m.suspicious).length || 0)}
+                  {(exchangeRateAlerts?.length || 0) +
+                    (currencyMismatches?.filter((m) => m.suspicious).length || 0)}
                 </p>
               </div>
               <AlertTriangle className="h-8 w-8 text-red-600" />
@@ -249,9 +258,7 @@ export function CurrencyMonitoringDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Active Currencies</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {currencyStats?.length || 0}
-                </p>
+                <p className="text-2xl font-bold text-blue-600">{currencyStats?.length || 0}</p>
               </div>
               <DollarSign className="h-8 w-8 text-blue-600" />
             </div>
@@ -264,7 +271,9 @@ export function CurrencyMonitoringDashboard() {
               <div>
                 <p className="text-sm text-gray-600">Total Net Volume</p>
                 <p className="text-2xl font-bold text-green-600">
-                  ${currencyStats?.reduce((sum, stat) => sum + stat.netAmount, 0).toLocaleString() || '0'}
+                  $
+                  {currencyStats?.reduce((sum, stat) => sum + stat.netAmount, 0).toLocaleString() ||
+                    '0'}
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-green-600" />
@@ -296,7 +305,10 @@ export function CurrencyMonitoringDashboard() {
               ) : (
                 <div className="space-y-4">
                   {currencyStats?.map((stat) => (
-                    <div key={stat.currency} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div
+                      key={stat.currency}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
                       <div className="flex items-center gap-4">
                         <div>
                           <Badge variant="outline" className="font-mono">
@@ -315,9 +327,7 @@ export function CurrencyMonitoringDashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold">
-                          ${stat.netAmount.toLocaleString()}
-                        </div>
+                        <div className="font-bold">${stat.netAmount.toLocaleString()}</div>
                         <div className="text-sm text-gray-600">
                           Avg: ${stat.averageAmount.toLocaleString()}
                         </div>
@@ -351,12 +361,9 @@ export function CurrencyMonitoringDashboard() {
                   {currencyMismatches?.map((mismatch, index) => {
                     const severity = getMismatchSeverity(mismatch);
                     return (
-                      <div 
-                        key={index} 
-                        className={cn(
-                          "p-4 border rounded-lg",
-                          getSeverityColor(severity)
-                        )}
+                      <div
+                        key={index}
+                        className={cn('p-4 border rounded-lg', getSeverityColor(severity))}
                       >
                         <div className="flex items-center justify-between">
                           <div>
@@ -371,12 +378,20 @@ export function CurrencyMonitoringDashboard() {
                               )}
                             </div>
                             <div className="mt-2 text-sm">
-                              <div>Quote: {mismatch.quote_currency} {mismatch.quote_amount.toLocaleString()}</div>
-                              <div>Payment: {mismatch.payment_currency} {mismatch.payment_amount.toLocaleString()}</div>
+                              <div>
+                                Quote: {mismatch.quote_currency}{' '}
+                                {mismatch.quote_amount.toLocaleString()}
+                              </div>
+                              <div>
+                                Payment: {mismatch.payment_currency}{' '}
+                                {mismatch.payment_amount.toLocaleString()}
+                              </div>
                             </div>
                           </div>
                           <div className="text-right text-sm text-gray-600">
-                            {formatDistanceToNow(new Date(mismatch.created_at), { addSuffix: true })}
+                            {formatDistanceToNow(new Date(mismatch.created_at), {
+                              addSuffix: true,
+                            })}
                           </div>
                         </div>
                       </div>
@@ -407,14 +422,20 @@ export function CurrencyMonitoringDashboard() {
               ) : (
                 <div className="space-y-3">
                   {exchangeRateAlerts?.map((alert) => (
-                    <div key={alert.currency} className="p-4 border border-orange-200 bg-orange-50 rounded-lg">
+                    <div
+                      key={alert.currency}
+                      className="p-4 border border-orange-200 bg-orange-50 rounded-lg"
+                    >
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="font-mono">
                               {alert.currency}
                             </Badge>
-                            <Badge variant={alert.change_percent > 0 ? "secondary" : "destructive"} className="text-xs">
+                            <Badge
+                              variant={alert.change_percent > 0 ? 'secondary' : 'destructive'}
+                              className="text-xs"
+                            >
                               {alert.change_percent > 0 ? (
                                 <TrendingUp className="h-2 w-2 mr-1" />
                               ) : (
@@ -430,7 +451,9 @@ export function CurrencyMonitoringDashboard() {
                         </div>
                         <div className="text-right text-sm text-gray-600">
                           <Clock className="h-3 w-3 inline mr-1" />
-                          {formatDistanceToNow(new Date(alert.last_updated), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(alert.last_updated), {
+                            addSuffix: true,
+                          })}
                         </div>
                       </div>
                     </div>
@@ -453,9 +476,7 @@ export function CurrencyMonitoringDashboard() {
               <div className="text-center py-8 text-gray-500">
                 <BarChart3 className="h-12 w-12 mx-auto mb-2" />
                 Advanced analytics coming soon
-                <p className="text-sm mt-2">
-                  This section will include detailed charts and trends
-                </p>
+                <p className="text-sm mt-2">This section will include detailed charts and trends</p>
               </div>
             </CardContent>
           </Card>

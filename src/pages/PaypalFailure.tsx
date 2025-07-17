@@ -3,16 +3,16 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  XCircle, 
-  ArrowLeft, 
+import {
+  XCircle,
+  ArrowLeft,
   RefreshCw,
   HelpCircle,
   Home,
   ShoppingCart,
   AlertCircle,
   Mail,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,25 +29,25 @@ const PaypalFailure: React.FC = () => {
     const token = searchParams.get('token');
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
-    
-    console.log('🔴 PayPal payment cancelled/failed:', { 
-      token, 
-      error, 
-      errorDescription 
+
+    console.log('🔴 PayPal payment cancelled/failed:', {
+      token,
+      error,
+      errorDescription,
     });
 
     // Show appropriate toast message
     if (error) {
       toast({
-        title: "Payment Failed",
-        description: errorDescription || "There was an error processing your PayPal payment.",
-        variant: "destructive"
+        title: 'Payment Failed',
+        description: errorDescription || 'There was an error processing your PayPal payment.',
+        variant: 'destructive',
       });
     } else {
       toast({
-        title: "Payment Cancelled",
-        description: "You cancelled the PayPal payment. Your order has not been placed.",
-        variant: "default"
+        title: 'Payment Cancelled',
+        description: 'You cancelled the PayPal payment. Your order has not been placed.',
+        variant: 'default',
       });
     }
   }, [searchParams, toast]);
@@ -81,7 +81,7 @@ const PaypalFailure: React.FC = () => {
                 Your PayPal payment could not be completed
               </p>
             </div>
-            
+
             <CardContent className="p-6">
               <div className="space-y-6">
                 {/* Error Information */}
@@ -136,24 +136,34 @@ const PaypalFailure: React.FC = () => {
                     </h3>
                     <div className="text-sm space-y-3">
                       <div className="flex items-start gap-2">
-                        <Badge variant="secondary" className="bg-blue-100">1</Badge>
+                        <Badge variant="secondary" className="bg-blue-100">
+                          1
+                        </Badge>
                         <div>
                           <p className="font-medium">Try Again</p>
-                          <p className="text-gray-600">Return to your cart and try the payment again</p>
+                          <p className="text-gray-600">
+                            Return to your cart and try the payment again
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-start gap-2">
-                        <Badge variant="secondary" className="bg-blue-100">2</Badge>
+                        <Badge variant="secondary" className="bg-blue-100">
+                          2
+                        </Badge>
                         <div>
                           <p className="font-medium">Use a Different Payment Method</p>
                           <p className="text-gray-600">We accept multiple payment options</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-2">
-                        <Badge variant="secondary" className="bg-blue-100">3</Badge>
+                        <Badge variant="secondary" className="bg-blue-100">
+                          3
+                        </Badge>
                         <div>
                           <p className="font-medium">Contact Support</p>
-                          <p className="text-gray-600">Our team can help resolve any payment issues</p>
+                          <p className="text-gray-600">
+                            Our team can help resolve any payment issues
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -169,9 +179,7 @@ const PaypalFailure: React.FC = () => {
                         Order Token: {searchParams.get('token')}
                       </p>
                       {searchParams.get('error') && (
-                        <p className="text-xs text-red-600">
-                          Error: {searchParams.get('error')}
-                        </p>
+                        <p className="text-xs text-red-600">Error: {searchParams.get('error')}</p>
                       )}
                     </div>
                   </AnimatedSection>
@@ -184,7 +192,11 @@ const PaypalFailure: React.FC = () => {
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Try Payment Again
                     </Button>
-                    <Button onClick={handleContactSupport} variant="outline" className="w-full sm:w-auto">
+                    <Button
+                      onClick={handleContactSupport}
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                    >
                       <Mail className="h-4 w-4 mr-2" />
                       Contact Support
                     </Button>
@@ -213,6 +225,5 @@ const PaypalFailure: React.FC = () => {
     </div>
   );
 };
-
 
 export default PaypalFailure;

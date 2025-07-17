@@ -21,7 +21,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const getSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
@@ -38,7 +40,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     getSession();
 
     try {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
@@ -63,31 +67,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // First, sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
+
       // Clear all auth state
       setSession(null);
       setUser(null);
-      
+
       // Clear all stored data
       localStorage.clear(); // Clear all localStorage
       sessionStorage.clear(); // Clear all sessionStorage
-      
+
       // Clear any Supabase specific storage
       localStorage.removeItem('supabase.auth.token');
       localStorage.removeItem('sb-htycplcuyoqfukhrughf-auth-token');
-      
+
       // Clear any cached data
       if ('caches' in window) {
         try {
           const cacheNames = await caches.keys();
-          await Promise.all(
-            cacheNames.map(cacheName => caches.delete(cacheName))
-          );
+          await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
         } catch (e) {
           logger.error('Error clearing cache', e, 'Auth');
         }
       }
-      
+
       // Force a complete page reload
       window.location.href = '/';
     } catch (error) {
@@ -106,13 +108,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signOut,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

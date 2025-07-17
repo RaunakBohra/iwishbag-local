@@ -1,98 +1,109 @@
-import { OptimizedCostEstimator } from "@/components/shared/OptimizedCostEstimator";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ParallaxSection } from "@/components/shared/ParallaxSection";
-import { AnimatedSection } from "@/components/shared/AnimatedSection";
-import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
-import { Button } from "@/components/ui/button";
-import { Calculator, Globe, Shield, Zap, TrendingUp, Package, DollarSign, Info } from "lucide-react";
-import { Link } from "react-router-dom";
+import { OptimizedCostEstimator } from '@/components/shared/OptimizedCostEstimator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ParallaxSection } from '@/components/shared/ParallaxSection';
+import { AnimatedSection } from '@/components/shared/AnimatedSection';
+import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
+import { Button } from '@/components/ui/button';
+import {
+  Calculator,
+  Globe,
+  Shield,
+  Zap,
+  TrendingUp,
+  Package,
+  DollarSign,
+  Info,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const CostEstimatorPage = () => {
   const features = [
     {
       icon: Calculator,
-      title: "Accurate Calculations",
-      description: "Real-time cost estimation with all fees included",
-      color: "from-blue-500 to-blue-600"
+      title: 'Accurate Calculations',
+      description: 'Real-time cost estimation with all fees included',
+      color: 'from-blue-500 to-blue-600',
     },
     {
       icon: Globe,
-      title: "Global Coverage",
-      description: "Support for 100+ countries and currencies",
-      color: "from-green-500 to-green-600"
+      title: 'Global Coverage',
+      description: 'Support for 100+ countries and currencies',
+      color: 'from-green-500 to-green-600',
     },
     {
       icon: Shield,
-      title: "Transparent Pricing",
-      description: "No hidden fees or surprise charges",
-      color: "from-purple-500 to-purple-600"
+      title: 'Transparent Pricing',
+      description: 'No hidden fees or surprise charges',
+      color: 'from-purple-500 to-purple-600',
     },
     {
       icon: Zap,
-      title: "Instant Results",
-      description: "Get your quote in seconds, not hours",
-      color: "from-orange-500 to-orange-600"
-    }
+      title: 'Instant Results',
+      description: 'Get your quote in seconds, not hours',
+      color: 'from-orange-500 to-orange-600',
+    },
   ];
 
   const stats = [
-    { value: 500000, label: "Calculations Made", suffix: "+" },
-    { value: 98, label: "Accuracy Rate", suffix: "%" },
-    { value: 3, label: "Average Time", suffix: " sec" }
+    { value: 500000, label: 'Calculations Made', suffix: '+' },
+    { value: 98, label: 'Accuracy Rate', suffix: '%' },
+    { value: 3, label: 'Average Time', suffix: ' sec' },
   ];
 
   const steps = [
     {
-      number: "1",
-      title: "Enter Product Details",
-      description: "Product URL, price, weight, and category"
+      number: '1',
+      title: 'Enter Product Details',
+      description: 'Product URL, price, weight, and category',
     },
     {
-      number: "2",
-      title: "Select Destination",
-      description: "Choose your country and shipping method"
+      number: '2',
+      title: 'Select Destination',
+      description: 'Choose your country and shipping method',
     },
     {
-      number: "3",
-      title: "Get Instant Quote",
-      description: "See total cost with all fees included"
+      number: '3',
+      title: 'Get Instant Quote',
+      description: 'See total cost with all fees included',
     },
     {
-      number: "4",
-      title: "Place Your Order",
-      description: "Proceed with confidence knowing the exact cost"
-    }
+      number: '4',
+      title: 'Place Your Order',
+      description: 'Proceed with confidence knowing the exact cost',
+    },
   ];
 
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <ParallaxSection 
+      <ParallaxSection
         className="min-h-[500px] flex items-center"
         backgroundImage="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1920&h=1080&fit=crop"
         overlayOpacity={0.7}
       >
         <div className="container py-20">
-          <AnimatedSection animation="fadeInUp" className="text-center text-white max-w-4xl mx-auto">
+          <AnimatedSection
+            animation="fadeInUp"
+            className="text-center text-white max-w-4xl mx-auto"
+          >
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm mb-6">
               <Calculator className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              Cost Estimator
-            </h1>
+            <h1 className="text-5xl md:text-6xl font-bold mb-6">Cost Estimator</h1>
             <p className="text-xl md:text-2xl mb-8 text-gray-200">
               Calculate your total international shopping cost instantly with complete transparency
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" variant="secondary" asChild>
-                <a href="#calculator">
-                  Start Calculating
-                </a>
+                <a href="#calculator">Start Calculating</a>
               </Button>
-              <Button size="lg" variant="outline" className="bg-transparent text-white border-white hover:bg-white hover:text-blue-600" asChild>
-                <Link to="/quote">
-                  Get Full Quote
-                </Link>
+              <Button
+                size="lg"
+                variant="outline"
+                className="bg-transparent text-white border-white hover:bg-white hover:text-blue-600"
+                asChild
+              >
+                <Link to="/quote">Get Full Quote</Link>
               </Button>
             </div>
           </AnimatedSection>
@@ -123,9 +134,7 @@ const CostEstimatorPage = () => {
       <section className="py-20">
         <div className="container">
           <AnimatedSection animation="fadeInUp" className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Why Use Our Calculator?
-            </h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Use Our Calculator?</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Get accurate cost estimates before you buy
             </p>
@@ -133,14 +142,12 @@ const CostEstimatorPage = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => (
-              <AnimatedSection
-                key={index}
-                animation="fadeInUp"
-                delay={index * 100}
-              >
+              <AnimatedSection key={index} animation="fadeInUp" delay={index * 100}>
                 <Card className="h-full hover:shadow-lg transition-all duration-300 group">
                   <CardContent className="p-6 text-center">
-                    <div className={`w-16 h-16 rounded-full bg-gradient-to-r ${feature.color} flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform`}>
+                    <div
+                      className={`w-16 h-16 rounded-full bg-gradient-to-r ${feature.color} flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform`}
+                    >
                       <feature.icon className="w-8 h-8 text-white" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
@@ -159,14 +166,12 @@ const CostEstimatorPage = () => {
           <AnimatedSection animation="fadeInUp">
             <div className="w-full max-w-3xl mx-auto">
               <div className="text-center mb-8">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  Calculate Your Cost
-                </h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">Calculate Your Cost</h2>
                 <p className="text-xl text-muted-foreground">
                   Enter your details below for an instant estimate
                 </p>
               </div>
-              
+
               <Card className="shadow-2xl border-0 overflow-hidden">
                 <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-1">
                   <div className="bg-background rounded-t-lg">
@@ -182,7 +187,7 @@ const CostEstimatorPage = () => {
                   </div>
                 </div>
               </Card>
-              
+
               <AnimatedSection animation="fadeIn" delay={300} className="mt-6 text-center">
                 <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
                   <Info className="w-4 h-4" />
@@ -198,9 +203,7 @@ const CostEstimatorPage = () => {
       <section className="py-20">
         <div className="container">
           <AnimatedSection animation="fadeInUp" className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              How It Works
-            </h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Simple steps to get your cost estimate
             </p>
@@ -217,7 +220,7 @@ const CostEstimatorPage = () => {
                 {index < steps.length - 1 && (
                   <div className="hidden lg:block absolute top-12 left-full w-full h-0.5 bg-gradient-to-r from-primary to-transparent" />
                 )}
-                
+
                 <div className="text-center">
                   <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold mb-4 mx-auto transform hover:scale-110 transition-transform">
                     {step.number}
@@ -236,9 +239,7 @@ const CostEstimatorPage = () => {
         <div className="container">
           <AnimatedSection animation="fadeInUp" className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                Understanding Your Costs
-              </h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Understanding Your Costs</h2>
               <p className="text-xl text-muted-foreground">
                 Complete breakdown of international shopping expenses
               </p>
@@ -248,28 +249,28 @@ const CostEstimatorPage = () => {
               {[
                 {
                   icon: Package,
-                  title: "Product Cost",
-                  items: ["Original product price", "Local taxes if applicable", "Seller fees"],
-                  color: "text-blue-600"
+                  title: 'Product Cost',
+                  items: ['Original product price', 'Local taxes if applicable', 'Seller fees'],
+                  color: 'text-blue-600',
                 },
                 {
                   icon: Globe,
-                  title: "Shipping Fees",
-                  items: ["International shipping", "Handling charges", "Insurance (optional)"],
-                  color: "text-green-600"
+                  title: 'Shipping Fees',
+                  items: ['International shipping', 'Handling charges', 'Insurance (optional)'],
+                  color: 'text-green-600',
                 },
                 {
                   icon: DollarSign,
-                  title: "Customs & Duties",
-                  items: ["Import duties", "Customs clearance", "Local taxes"],
-                  color: "text-purple-600"
+                  title: 'Customs & Duties',
+                  items: ['Import duties', 'Customs clearance', 'Local taxes'],
+                  color: 'text-purple-600',
                 },
                 {
                   icon: TrendingUp,
-                  title: "Service Fees",
-                  items: ["Processing fee", "Currency conversion", "Payment gateway"],
-                  color: "text-orange-600"
-                }
+                  title: 'Service Fees',
+                  items: ['Processing fee', 'Currency conversion', 'Payment gateway'],
+                  color: 'text-orange-600',
+                },
               ].map((category, index) => (
                 <AnimatedSection key={index} animation="fadeInLeft" delay={index * 100}>
                   <Card className="h-full hover:shadow-lg transition-shadow">
@@ -301,9 +302,7 @@ const CostEstimatorPage = () => {
       <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <div className="container">
           <AnimatedSection animation="fadeInUp" className="text-center max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
-              Ready to Shop Globally?
-            </h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Shop Globally?</h2>
             <p className="text-xl mb-8 text-blue-100">
               Start with our calculator and get transparent pricing for your international purchases
             </p>
@@ -311,7 +310,12 @@ const CostEstimatorPage = () => {
               <Button size="lg" variant="secondary" asChild>
                 <Link to="/quote">Get Started</Link>
               </Button>
-              <Button size="lg" variant="outline" className="bg-transparent text-white border-white hover:bg-white hover:text-blue-600" asChild>
+              <Button
+                size="lg"
+                variant="outline"
+                className="bg-transparent text-white border-white hover:bg-white hover:text-blue-600"
+                asChild
+              >
                 <Link to="/contact">Need Help?</Link>
               </Button>
             </div>

@@ -1,10 +1,10 @@
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  GuestCheckoutSession, 
-  CreateGuestSessionRequest, 
-  UpdateGuestSessionRequest, 
+import {
+  GuestCheckoutSession,
+  CreateGuestSessionRequest,
+  UpdateGuestSessionRequest,
   GuestSessionResponse,
-  GuestSessionService 
+  GuestSessionService,
 } from '@/types/guestCheckout';
 
 /**
@@ -12,7 +12,6 @@ import {
  * Prevents quote contamination by storing guest details temporarily
  */
 class GuestCheckoutServiceImpl implements GuestSessionService {
-  
   /**
    * Generate a unique session token
    */
@@ -26,7 +25,7 @@ class GuestCheckoutServiceImpl implements GuestSessionService {
   async createSession(request: CreateGuestSessionRequest): Promise<GuestSessionResponse> {
     try {
       const sessionToken = this.generateSessionToken();
-      
+
       const { data, error } = await supabase
         .from('guest_checkout_sessions')
         .insert({
@@ -53,7 +52,10 @@ class GuestCheckoutServiceImpl implements GuestSessionService {
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in createSession:', error);
-      return { success: false, error: 'Failed to create guest checkout session' };
+      return {
+        success: false,
+        error: 'Failed to create guest checkout session',
+      };
     }
   }
 
@@ -70,8 +72,10 @@ class GuestCheckoutServiceImpl implements GuestSessionService {
       if (request.guest_name !== undefined) updateData.guest_name = request.guest_name;
       if (request.guest_email !== undefined) updateData.guest_email = request.guest_email;
       if (request.guest_phone !== undefined) updateData.guest_phone = request.guest_phone;
-      if (request.shipping_address !== undefined) updateData.shipping_address = request.shipping_address;
-      if (request.payment_currency !== undefined) updateData.payment_currency = request.payment_currency;
+      if (request.shipping_address !== undefined)
+        updateData.shipping_address = request.shipping_address;
+      if (request.payment_currency !== undefined)
+        updateData.payment_currency = request.payment_currency;
       if (request.payment_method !== undefined) updateData.payment_method = request.payment_method;
       if (request.payment_amount !== undefined) updateData.payment_amount = request.payment_amount;
       if (request.status !== undefined) updateData.status = request.status;
@@ -90,13 +94,19 @@ class GuestCheckoutServiceImpl implements GuestSessionService {
       }
 
       if (!data) {
-        return { success: false, error: 'Session not found or already completed' };
+        return {
+          success: false,
+          error: 'Session not found or already completed',
+        };
       }
 
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in updateSession:', error);
-      return { success: false, error: 'Failed to update guest checkout session' };
+      return {
+        success: false,
+        error: 'Failed to update guest checkout session',
+      };
     }
   }
 
@@ -141,7 +151,7 @@ class GuestCheckoutServiceImpl implements GuestSessionService {
         .from('guest_checkout_sessions')
         .update({
           status: 'completed',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('session_token', sessionToken)
         .eq('status', 'active')
@@ -154,13 +164,19 @@ class GuestCheckoutServiceImpl implements GuestSessionService {
       }
 
       if (!data) {
-        return { success: false, error: 'Session not found or already completed' };
+        return {
+          success: false,
+          error: 'Session not found or already completed',
+        };
       }
 
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in completeSession:', error);
-      return { success: false, error: 'Failed to complete guest checkout session' };
+      return {
+        success: false,
+        error: 'Failed to complete guest checkout session',
+      };
     }
   }
 
@@ -173,7 +189,7 @@ class GuestCheckoutServiceImpl implements GuestSessionService {
         .from('guest_checkout_sessions')
         .update({
           status: 'expired',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('session_token', sessionToken)
         .neq('status', 'completed') // Don't expire completed sessions
@@ -188,7 +204,10 @@ class GuestCheckoutServiceImpl implements GuestSessionService {
       return { success: true, session: data };
     } catch (error) {
       console.error('Error in expireSession:', error);
-      return { success: false, error: 'Failed to expire guest checkout session' };
+      return {
+        success: false,
+        error: 'Failed to expire guest checkout session',
+      };
     }
   }
 
@@ -231,7 +250,7 @@ class GuestCheckoutServiceImpl implements GuestSessionService {
   }> {
     try {
       const { data, error } = await supabase.rpc('cleanup_guest_sessions_with_logging', {
-        triggered_by: triggeredBy
+        triggered_by: triggeredBy,
       });
 
       if (error) {
@@ -253,8 +272,8 @@ class GuestCheckoutServiceImpl implements GuestSessionService {
           completedAnonymized: result.completed_anonymized,
           anonymizedDeleted: result.anonymized_deleted,
           totalProcessed: result.total_processed,
-          durationMs: result.duration_ms
-        }
+          durationMs: result.duration_ms,
+        },
       };
     } catch (error) {
       console.error('Error in enhancedCleanup:', error);

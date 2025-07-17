@@ -6,7 +6,8 @@ dotenv.config();
 
 // Your Supabase credentials
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://grgvlrvywsfmnmkxrecd.supabase.co';
-const supabaseServiceKey = process.env.VITE_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceKey =
+  process.env.VITE_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseServiceKey) {
   console.error('❌ VITE_SUPABASE_SERVICE_KEY not found in .env file');
@@ -20,23 +21,126 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function runMigrations() {
   console.log('🚀 Starting PayPal migration to cloud database...\n');
-  
+
   const results = {
     success: [],
-    failed: []
+    failed: [],
   };
 
   // 1. Add PayPal gateway
   console.log('📝 Step 1: Adding PayPal gateway...');
   try {
-    const { error } = await supabase
-      .from('payment_gateways')
-      .upsert({
+    const { error } = await supabase.from('payment_gateways').upsert(
+      {
         name: 'PayPal',
         code: 'paypal',
         is_active: true,
-        supported_countries: ['US','CA','GB','AU','DE','FR','IT','ES','NL','BE','AT','CH','SE','NO','DK','FI','PL','CZ','HU','SG','MY','TH','PH','VN','IN','NP','BD','LK','PK','AE','SA','KW','QA','BH','OM','JO','LB','EG','MA','TN','DZ','NG','GH','KE','UG','TZ','ZA','BR','MX','AR','CL','CO','PE','UY','PY','BO','EC','VE'],
-        supported_currencies: ['USD','EUR','GBP','CAD','AUD','JPY','SGD','MYR','THB','PHP','VND','INR','NPR','BDT','LKR','PKR','AED','SAR','KWD','QAR','BHD','OMR','JOD','LBP','EGP','MAD','TND','DZD','NGN','GHS','KES','UGX','TZS','ZAR','BRL','MXN','ARS','CLP','COP','PEN','UYU','PYG','BOB','VES'],
+        supported_countries: [
+          'US',
+          'CA',
+          'GB',
+          'AU',
+          'DE',
+          'FR',
+          'IT',
+          'ES',
+          'NL',
+          'BE',
+          'AT',
+          'CH',
+          'SE',
+          'NO',
+          'DK',
+          'FI',
+          'PL',
+          'CZ',
+          'HU',
+          'SG',
+          'MY',
+          'TH',
+          'PH',
+          'VN',
+          'IN',
+          'NP',
+          'BD',
+          'LK',
+          'PK',
+          'AE',
+          'SA',
+          'KW',
+          'QA',
+          'BH',
+          'OM',
+          'JO',
+          'LB',
+          'EG',
+          'MA',
+          'TN',
+          'DZ',
+          'NG',
+          'GH',
+          'KE',
+          'UG',
+          'TZ',
+          'ZA',
+          'BR',
+          'MX',
+          'AR',
+          'CL',
+          'CO',
+          'PE',
+          'UY',
+          'PY',
+          'BO',
+          'EC',
+          'VE',
+        ],
+        supported_currencies: [
+          'USD',
+          'EUR',
+          'GBP',
+          'CAD',
+          'AUD',
+          'JPY',
+          'SGD',
+          'MYR',
+          'THB',
+          'PHP',
+          'VND',
+          'INR',
+          'NPR',
+          'BDT',
+          'LKR',
+          'PKR',
+          'AED',
+          'SAR',
+          'KWD',
+          'QAR',
+          'BHD',
+          'OMR',
+          'JOD',
+          'LBP',
+          'EGP',
+          'MAD',
+          'TND',
+          'DZD',
+          'NGN',
+          'GHS',
+          'KES',
+          'UGX',
+          'TZS',
+          'ZAR',
+          'BRL',
+          'MXN',
+          'ARS',
+          'CLP',
+          'COP',
+          'PEN',
+          'UYU',
+          'PYG',
+          'BOB',
+          'VES',
+        ],
         fee_percent: 3.49,
         fee_fixed: 0.49,
         priority: 2,
@@ -50,12 +154,14 @@ async function runMigrations() {
           supported_funding_sources: ['paypal', 'card', 'venmo', 'applepay', 'googlepay'],
           supported_payment_methods: ['paypal', 'card'],
           merchant_account_id: '',
-          partner_attribution_id: 'iwishBag_Cart_SPB'
+          partner_attribution_id: 'iwishBag_Cart_SPB',
         },
-        test_mode: true
-      }, {
-        onConflict: 'code'
-      });
+        test_mode: true,
+      },
+      {
+        onConflict: 'code',
+      },
+    );
 
     if (error) throw error;
     console.log('✅ PayPal gateway added successfully');
@@ -69,9 +175,9 @@ async function runMigrations() {
   console.log('\n📝 Step 2: Adding preferred_payment_gateway column to profiles...');
   try {
     const { error } = await supabase.rpc('exec_sql', {
-      sql: `ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferred_payment_gateway TEXT;`
+      sql: `ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferred_payment_gateway TEXT;`,
     });
-    
+
     if (error && !error.message.includes('already exists')) throw error;
     console.log('✅ Profile column added successfully');
     results.success.push('Profile column added');
@@ -85,7 +191,7 @@ async function runMigrations() {
   const countryColumns = [
     `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS available_gateways TEXT[] DEFAULT ARRAY['bank_transfer'];`,
     `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS default_gateway TEXT DEFAULT 'bank_transfer';`,
-    `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS gateway_config JSONB DEFAULT '{}';`
+    `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS gateway_config JSONB DEFAULT '{}';`,
   ];
 
   for (const sql of countryColumns) {
@@ -102,7 +208,7 @@ async function runMigrations() {
 
   // 4. Update country configurations
   console.log('\n📝 Step 4: Updating country configurations...');
-  
+
   const countryUpdates = [
     {
       code: 'US',
@@ -111,8 +217,8 @@ async function runMigrations() {
       gateway_config: {
         paypal_priority: 1,
         stripe_priority: 2,
-        preferred_for_amount_above: 50.00
-      }
+        preferred_for_amount_above: 50.0,
+      },
     },
     {
       code: 'IN',
@@ -123,8 +229,8 @@ async function runMigrations() {
         paypal_priority: 2,
         razorpay_priority: 3,
         upi_priority: 4,
-        preferred_for_amount_above: 500.00
-      }
+        preferred_for_amount_above: 500.0,
+      },
     },
     {
       code: 'NP',
@@ -135,9 +241,9 @@ async function runMigrations() {
         esewa_priority: 2,
         khalti_priority: 3,
         fonepay_priority: 4,
-        preferred_for_amount_above: 100.00
-      }
-    }
+        preferred_for_amount_above: 100.0,
+      },
+    },
   ];
 
   for (const update of countryUpdates) {
@@ -147,7 +253,7 @@ async function runMigrations() {
         .update({
           available_gateways: update.available_gateways,
           default_gateway: update.default_gateway,
-          gateway_config: update.gateway_config
+          gateway_config: update.gateway_config,
         })
         .eq('code', update.code);
 
@@ -201,7 +307,7 @@ async function runMigrations() {
           RETURN country_settings_rec.default_gateway;
         END;
         $$ LANGUAGE plpgsql SECURITY DEFINER;
-      `
+      `,
     },
     {
       name: 'is_gateway_available',
@@ -225,8 +331,8 @@ async function runMigrations() {
           RETURN gateway_code = ANY(available_gateways);
         END;
         $$ LANGUAGE plpgsql SECURITY DEFINER;
-      `
-    }
+      `,
+    },
   ];
 
   for (const func of functions) {
@@ -243,7 +349,7 @@ async function runMigrations() {
 
   // 6. Verify setup
   console.log('\n🔍 Verifying setup...');
-  
+
   // Check PayPal gateway
   const { data: paypalGateway } = await supabase
     .from('payment_gateways')
@@ -260,40 +366,42 @@ async function runMigrations() {
   console.log('\n📊 Migration Summary:');
   console.log('===================');
   console.log(`✅ Successful operations: ${results.success.length}`);
-  results.success.forEach(op => console.log(`   - ${op}`));
-  
+  results.success.forEach((op) => console.log(`   - ${op}`));
+
   if (results.failed.length > 0) {
     console.log(`\n❌ Failed operations: ${results.failed.length}`);
-    results.failed.forEach(op => console.log(`   - ${op}`));
+    results.failed.forEach((op) => console.log(`   - ${op}`));
   }
 
   console.log('\n📊 Verification Results:');
   console.log('PayPal Gateway:', paypalGateway ? '✅ Added' : '❌ Not found');
   console.log('Countries configured:', countries?.length || 0);
-  
+
   if (countries) {
-    countries.forEach(country => {
-      console.log(`   - ${country.code}: ${country.default_gateway} gateway, ${country.available_gateways.length} available`);
+    countries.forEach((country) => {
+      console.log(
+        `   - ${country.code}: ${country.default_gateway} gateway, ${country.available_gateways.length} available`,
+      );
     });
   }
 
   console.log('\n🎉 PayPal migration completed!');
-  
+
   return {
     success: results.success.length,
     failed: results.failed.length,
     paypalGateway: !!paypalGateway,
-    countriesConfigured: countries?.length || 0
+    countriesConfigured: countries?.length || 0,
   };
 }
 
 // Run the migration
 runMigrations()
-  .then(result => {
+  .then((result) => {
     console.log('\n✅ Migration finished successfully');
     process.exit(0);
   })
-  .catch(error => {
+  .catch((error) => {
     console.error('\n❌ Migration failed:', error);
     process.exit(1);
   });

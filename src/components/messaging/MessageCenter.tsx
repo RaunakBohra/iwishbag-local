@@ -1,7 +1,6 @@
-
-import { useAdminRole } from "@/hooks/useAdminRole";
-import { AdminMessageCenter } from "./AdminMessageCenter";
-import { CustomerMessageCenter } from "./CustomerMessageCenter";
+import { useAdminRole } from '@/hooks/useAdminRole';
+import { AdminMessageCenter } from './AdminMessageCenter';
+import { CustomerMessageCenter } from './CustomerMessageCenter';
 
 export const MessageCenter = () => {
   const { data: hasAdminRole } = useAdminRole();

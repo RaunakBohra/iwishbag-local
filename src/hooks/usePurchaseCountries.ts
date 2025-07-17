@@ -1,6 +1,5 @@
-
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export const usePurchaseCountries = () => {
   return useQuery({
@@ -13,6 +12,6 @@ export const usePurchaseCountries = () => {
         .order('name');
       if (error) throw new Error(error.message);
       return data || [];
-    }
+    },
   });
 };

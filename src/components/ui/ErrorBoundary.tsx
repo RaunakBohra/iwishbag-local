@@ -1,7 +1,7 @@
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, RefreshCw, Home } from "lucide-react";
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -34,16 +34,16 @@ class ErrorBoundaryClass extends React.Component<ErrorBoundaryProps, ErrorBounda
       userAgent: navigator.userAgent,
       url: window.location.href,
     };
-    
+
     // Log to console in development, could be sent to monitoring service in production
-    console.error("Error Boundary caught error:", errorDetails);
-    
+    console.error('Error Boundary caught error:', errorDetails);
+
     // In production, you might want to send this to an error tracking service
-    if (process.env.NODE_ENV === 'production') {
+    if (import.meta.env.PROD) {
       // Example: Send to error tracking service
       // errorTrackingService.captureException(error, { extra: errorDetails });
     }
-    
+
     this.setState({ error, errorInfo });
   }
 
@@ -73,12 +73,15 @@ class ErrorBoundaryClass extends React.Component<ErrorBoundaryProps, ErrorBounda
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-center text-muted-foreground">
-                We encountered an unexpected error. Please try refreshing the page or contact support if the problem persists.
+                We encountered an unexpected error. Please try refreshing the page or contact
+                support if the problem persists.
               </p>
-              
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+
+              {import.meta.env.DEV && this.state.error && (
                 <details className="text-sm">
-                  <summary className="cursor-pointer font-medium">Error Details (Development)</summary>
+                  <summary className="cursor-pointer font-medium">
+                    Error Details (Development)
+                  </summary>
                   <pre className="mt-2 whitespace-pre-wrap rounded bg-muted p-2 text-xs">
                     {this.state.error.toString()}
                     {this.state.errorInfo?.componentStack}
@@ -91,8 +94,8 @@ class ErrorBoundaryClass extends React.Component<ErrorBoundaryProps, ErrorBounda
                   <RefreshCw className="h-4 w-4" />
                   Try Again
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={this.navigateToHome}
                   className="flex items-center gap-2"
                 >
@@ -112,19 +115,18 @@ class ErrorBoundaryClass extends React.Component<ErrorBoundaryProps, ErrorBounda
 
 // Wrapper component that doesn't use useNavigate
 export const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({ children, fallback }) => {
-  return (
-    <ErrorBoundaryClass fallback={fallback}>
-      {children}
-    </ErrorBoundaryClass>
-  );
+  return <ErrorBoundaryClass fallback={fallback}>{children}</ErrorBoundaryClass>;
 };
 
 // Custom fallback component for admin pages
-export const AdminErrorFallback: React.FC<{ error: Error; resetError: () => void }> = ({ error, resetError }) => {
+export const AdminErrorFallback: React.FC<{
+  error: Error;
+  resetError: () => void;
+}> = ({ error, resetError }) => {
   const navigateToAdmin = () => {
     window.location.href = '/admin';
   };
-  
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <Card className="w-full max-w-lg">
@@ -136,10 +138,11 @@ export const AdminErrorFallback: React.FC<{ error: Error; resetError: () => void
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-center text-muted-foreground">
-            We encountered an error while loading the admin panel. This might be due to a temporary issue or configuration problem.
+            We encountered an error while loading the admin panel. This might be due to a temporary
+            issue or configuration problem.
           </p>
-          
-          {process.env.NODE_ENV === 'development' && (
+
+          {import.meta.env.DEV && (
             <details className="text-sm">
               <summary className="cursor-pointer font-medium">Technical Details</summary>
               <pre className="mt-2 whitespace-pre-wrap rounded bg-muted p-3 text-xs overflow-auto max-h-32">
@@ -153,11 +156,7 @@ export const AdminErrorFallback: React.FC<{ error: Error; resetError: () => void
               <RefreshCw className="h-4 w-4" />
               Reload Page
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={navigateToAdmin}
-              className="flex items-center gap-2"
-            >
+            <Button variant="outline" onClick={navigateToAdmin} className="flex items-center gap-2">
               <Home className="h-4 w-4" />
               Back to Dashboard
             </Button>
@@ -169,11 +168,14 @@ export const AdminErrorFallback: React.FC<{ error: Error; resetError: () => void
 };
 
 // Payment Error Boundary - for payment-related errors
-export const PaymentErrorFallback: React.FC<{ error: Error; resetError: () => void }> = ({ error, resetError }) => {
+export const PaymentErrorFallback: React.FC<{
+  error: Error;
+  resetError: () => void;
+}> = ({ error, resetError }) => {
   const navigateToQuotes = () => {
     window.location.href = '/dashboard/quotes';
   };
-  
+
   return (
     <div className="min-h-[400px] flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -185,16 +187,17 @@ export const PaymentErrorFallback: React.FC<{ error: Error; resetError: () => vo
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-center text-muted-foreground">
-            We encountered an error while processing your payment. Your payment was not charged. Please try again or contact support.
+            We encountered an error while processing your payment. Your payment was not charged.
+            Please try again or contact support.
           </p>
-          
+
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
             <Button onClick={resetError} className="flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
               Try Again
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={navigateToQuotes}
               className="flex items-center gap-2"
             >
@@ -209,7 +212,10 @@ export const PaymentErrorFallback: React.FC<{ error: Error; resetError: () => vo
 };
 
 // Quote Form Error Boundary - for quote creation errors
-export const QuoteFormErrorFallback: React.FC<{ error: Error; resetError: () => void }> = ({ error, resetError }) => {
+export const QuoteFormErrorFallback: React.FC<{
+  error: Error;
+  resetError: () => void;
+}> = ({ error, resetError }) => {
   return (
     <div className="min-h-[300px] flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -223,7 +229,7 @@ export const QuoteFormErrorFallback: React.FC<{ error: Error; resetError: () => 
           <p className="text-center text-muted-foreground">
             We encountered an error while loading the quote form. Your data has been preserved.
           </p>
-          
+
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
             <Button onClick={resetError} className="flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
@@ -237,11 +243,14 @@ export const QuoteFormErrorFallback: React.FC<{ error: Error; resetError: () => 
 };
 
 // Dashboard Error Boundary - for dashboard-specific errors
-export const DashboardErrorFallback: React.FC<{ error: Error; resetError: () => void }> = ({ error, resetError }) => {
+export const DashboardErrorFallback: React.FC<{
+  error: Error;
+  resetError: () => void;
+}> = ({ error, resetError }) => {
   const navigateToHome = () => {
     window.location.href = '/';
   };
-  
+
   return (
     <div className="min-h-[500px] flex items-center justify-center p-4">
       <Card className="w-full max-w-lg">
@@ -253,19 +262,16 @@ export const DashboardErrorFallback: React.FC<{ error: Error; resetError: () => 
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-center text-muted-foreground">
-            We encountered an error while loading your dashboard. This might be due to a temporary connectivity issue.
+            We encountered an error while loading your dashboard. This might be due to a temporary
+            connectivity issue.
           </p>
-          
+
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Button onClick={resetError} className="flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
               Reload Dashboard
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={navigateToHome}
-              className="flex items-center gap-2"
-            >
+            <Button variant="outline" onClick={navigateToHome} className="flex items-center gap-2">
               <Home className="h-4 w-4" />
               Go Home
             </Button>

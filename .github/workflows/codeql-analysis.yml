@@ -1,0 +1,37 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '20 1 * * 1' # At 01:20 UTC on Monday
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      # Autobuild attempts to build your code to extract CodeQL data.
+      # If your project has a custom build process, you will need to specify it here.
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      # Performs CodeQL analysis and uploads results to GitHub.
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3

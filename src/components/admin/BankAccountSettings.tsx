@@ -1,17 +1,32 @@
-
-import { useState } from "react";
-import { useBankAccountSettings, BankAccount, BankAccountFormData } from "@/hooks/useBankAccountSettings";
-import { Button } from "@/components/ui/button";
-import { FlexibleBankAccountForm } from "./FlexibleBankAccountForm";
-import { BankAccountListItem } from "./BankAccountListItem";
-import { Plus, Filter } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useShippingCountries } from "@/hooks/useShippingCountries";
+import { useState } from 'react';
+import {
+  useBankAccountSettings,
+  BankAccount,
+  BankAccountFormData,
+} from '@/hooks/useBankAccountSettings';
+import { Button } from '@/components/ui/button';
+import { FlexibleBankAccountForm } from './FlexibleBankAccountForm';
+import { BankAccountListItem } from './BankAccountListItem';
+import { Plus } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useShippingCountries } from '@/hooks/useShippingCountries';
 
 export const BankAccountSettings = () => {
-  const { bankAccounts, isLoadingBankAccounts, createOrUpdateBankAccount, deleteBankAccount, isProcessing } = useBankAccountSettings();
-  const { data: countries, isLoading: countriesLoading } = useShippingCountries();
+  const {
+    bankAccounts,
+    isLoadingBankAccounts,
+    createOrUpdateBankAccount,
+    deleteBankAccount,
+    isProcessing,
+  } = useBankAccountSettings();
+  const { data: countries } = useShippingCountries();
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [countryFilter, setCountryFilter] = useState<string>('all');
@@ -20,7 +35,7 @@ export const BankAccountSettings = () => {
     setEditingAccount(account);
     setIsFormOpen(true);
   };
-  
+
   const handleAddNew = () => {
     setEditingAccount(null);
     setIsFormOpen(true);
@@ -31,37 +46,38 @@ export const BankAccountSettings = () => {
     setIsFormOpen(false);
   };
 
-  const handleSubmit = (data: { data: BankAccountFormData, id?: string }) => {
+  const handleSubmit = (data: { data: BankAccountFormData; id?: string }) => {
     createOrUpdateBankAccount(data, {
       onSuccess: () => {
         handleCancel();
-      }
+      },
     });
   };
-  
+
   const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this bank account?")) {
+    if (window.confirm('Are you sure you want to delete this bank account?')) {
       deleteBankAccount(id);
     }
   };
 
   // Filter bank accounts by country
-  const filteredAccounts = countryFilter === 'all' 
-    ? bankAccounts 
-    : countryFilter === 'fallback'
-    ? bankAccounts.filter(account => account.is_fallback)
-    : bankAccounts.filter(account => account.destination_country === countryFilter);
+  const filteredAccounts =
+    countryFilter === 'all'
+      ? bankAccounts
+      : countryFilter === 'fallback'
+        ? bankAccounts.filter((account) => account.is_fallback)
+        : bankAccounts.filter((account) => account.destination_country === countryFilter);
 
   if (isLoadingBankAccounts) {
     return (
-        <div className="space-y-4">
-            <Skeleton className="h-8 w-48"/>
-            <Skeleton className="h-24 w-full"/>
-            <Skeleton className="h-24 w-full"/>
-        </div>
-    )
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+    );
   }
-  
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -91,7 +107,7 @@ export const BankAccountSettings = () => {
       </div>
 
       {isFormOpen ? (
-        <FlexibleBankAccountForm 
+        <FlexibleBankAccountForm
           editingAccount={editingAccount}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
@@ -100,7 +116,7 @@ export const BankAccountSettings = () => {
       ) : (
         <div className="space-y-4">
           {filteredAccounts.map((account) => (
-            <BankAccountListItem 
+            <BankAccountListItem
               key={account.id}
               account={account}
               onEdit={handleEdit}
@@ -109,10 +125,9 @@ export const BankAccountSettings = () => {
           ))}
           {filteredAccounts.length === 0 && (
             <p>
-              {countryFilter === 'all' 
-                ? "No bank accounts found. Add one to get started."
-                : `No bank accounts found for ${countryFilter === 'fallback' ? 'fallback' : countries?.find(c => c.code === countryFilter)?.name || countryFilter}.`
-              }
+              {countryFilter === 'all'
+                ? 'No bank accounts found. Add one to get started.'
+                : `No bank accounts found for ${countryFilter === 'fallback' ? 'fallback' : countries?.find((c) => c.code === countryFilter)?.name || countryFilter}.`}
             </p>
           )}
         </div>

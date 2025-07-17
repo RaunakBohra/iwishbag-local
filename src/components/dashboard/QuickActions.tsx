@@ -1,7 +1,7 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, MessageSquare, Calculator } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Plus, MessageSquare, Calculator } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const QuickActions = () => {
   return (
@@ -17,14 +17,14 @@ export const QuickActions = () => {
               New Quote
             </Link>
           </Button>
-          
+
           <Button variant="outline" className="h-20 flex-col" asChild>
             <Link to="/cost-estimator">
               <Calculator className="h-6 w-6 mb-2" />
               Cost Estimator
             </Link>
           </Button>
-          
+
           <Button variant="outline" className="h-20 flex-col" asChild>
             <Link to="/messages">
               <MessageSquare className="h-6 w-6 mb-2" />

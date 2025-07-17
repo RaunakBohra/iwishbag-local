@@ -1,24 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  CreditCard, 
-  Smartphone, 
-  Globe, 
-  Landmark, 
-  Banknote, 
-  Shield, 
-  Clock, 
+import {
+  CreditCard,
+  Smartphone,
+  Globe,
+  Landmark,
+  Banknote,
+  Shield,
+  Clock,
   CheckCircle,
   QrCode,
   ExternalLink,
   AlertCircle,
   AlertTriangle,
-  IndianRupee
+  IndianRupee,
 } from 'lucide-react';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
 import { PaymentGateway, PaymentMethodDisplay } from '@/types/payment';
@@ -61,9 +60,9 @@ const PayUAmountNotice = () => (
       <div className="text-sm text-amber-800">
         <p className="font-medium">PayU Amount Display Notice</p>
         <p className="mt-1">
-          PayU may display the amount in paise (smallest currency unit) instead of rupees. 
-          This is normal and the payment will process correctly. 
-          For example: ₹10,334.33 may appear as 1033433.
+          PayU may display the amount in paise (smallest currency unit) instead of rupees. This is
+          normal and the payment will process correctly. For example: ₹10,334.33 may appear as
+          1033433.
         </p>
       </div>
     </div>
@@ -78,28 +77,26 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   showRecommended = true,
   disabled = false,
   availableMethods: propAvailableMethods,
-  methodsLoading: propMethodsLoading
+  methodsLoading: propMethodsLoading,
 }) => {
-  
   // Use payment methods from props if provided, otherwise call hook (for backward compatibility)
-  const { 
-    availableMethods: hookAvailableMethods, 
-    methodsLoading: hookIsLoading, 
-    getRecommendedPaymentMethod, 
-    getPaymentMethodDisplay, 
-    PAYMENT_METHOD_DISPLAYS 
+  const {
+    availableMethods: hookAvailableMethods,
+    methodsLoading: hookIsLoading,
+    getRecommendedPaymentMethod,
+    getPaymentMethodDisplay,
+    PAYMENT_METHOD_DISPLAYS,
   } = usePaymentGateways();
-  
+
   // Prefer props over hook data (for guest checkout)
-  const availableMethods = propAvailableMethods !== undefined ? propAvailableMethods : hookAvailableMethods;
+  const availableMethods =
+    propAvailableMethods !== undefined ? propAvailableMethods : hookAvailableMethods;
   const isLoading = propMethodsLoading !== undefined ? propMethodsLoading : hookIsLoading;
 
   // Ensure selectedMethod is always a valid available method
-  const validSelectedMethod = availableMethods?.includes(selectedMethod) 
-    ? selectedMethod 
+  const validSelectedMethod = availableMethods?.includes(selectedMethod)
+    ? selectedMethod
     : availableMethods?.[0] || 'bank_transfer';
-    
-
 
   // Notify parent if the valid method differs from the prop
   useEffect(() => {
@@ -107,8 +104,6 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       onMethodChange(validSelectedMethod);
     }
   }, [validSelectedMethod, selectedMethod, availableMethods, onMethodChange]);
-
-
 
   if (isLoading) {
     return (
@@ -137,11 +132,10 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   }
 
   // Debug logging removed to prevent console spam
-  
-  const availablePaymentMethods = availableMethods?.map(code => getPaymentMethodDisplay(code)).filter(Boolean) || [];
+
+  const availablePaymentMethods =
+    availableMethods?.map((code) => getPaymentMethodDisplay(code)).filter(Boolean) || [];
   const recommendedMethod = getRecommendedPaymentMethod();
-
-
 
   const handleMethodChange = (method: string) => {
     if (disabled) return;
@@ -152,18 +146,17 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     onMethodChange(paymentMethod);
   };
 
-
   const getMethodFee = (method: PaymentGateway, amount: number) => {
     const display = getPaymentMethodDisplay(method);
     if (display.fees === 'No additional fees') return 0;
-    
+
     // Extract percentage from fees string (e.g., "2.9% + $0.30" -> 2.9)
     const percentMatch = display.fees.match(/(\d+\.?\d*)%/);
     if (percentMatch) {
       const percent = parseFloat(percentMatch[1]);
       return (amount * percent) / 100;
     }
-    
+
     return 0;
   };
 
@@ -178,37 +171,32 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         key={method.code}
         htmlFor={method.code}
         className={cn(
-          "flex items-start space-x-3 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer",
-          isSelected && "border-primary bg-primary/5",
-          disabled && "opacity-50 cursor-not-allowed"
+          'flex items-start space-x-3 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer',
+          isSelected && 'border-primary bg-primary/5',
+          disabled && 'opacity-50 cursor-not-allowed',
         )}
       >
-        <RadioGroupItem 
-          value={method.code} 
-          id={method.code} 
-          className="mt-1"
-          disabled={disabled}
-        />
-        
+        <RadioGroupItem value={method.code} id={method.code} className="mt-1" disabled={disabled} />
+
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             {getIcon(method.icon)}
             <span className="font-medium">{method.name}</span>
-            
+
             {isRecommended && showRecommended && (
               <Badge variant="outline" className="text-xs">
                 <CheckCircle className="w-3 h-3 mr-1" />
                 Recommended
               </Badge>
             )}
-            
+
             {method.is_mobile_only && (
               <Badge variant="secondary" className="text-xs">
                 <Smartphone className="w-3 h-3 mr-1" />
                 Mobile Only
               </Badge>
             )}
-            
+
             {method.requires_qr && (
               <Badge variant="secondary" className="text-xs">
                 <QrCode className="w-3 h-3 mr-1" />
@@ -216,25 +204,29 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
               </Badge>
             )}
           </div>
-          
+
           <p className="text-sm text-muted-foreground mb-2">{method.description}</p>
-          
+
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               <span>{method.processing_time}</span>
             </div>
-            
+
             <div className="flex items-center gap-1">
               <Shield className="h-3 w-3" />
               <span>{method.fees}</span>
             </div>
           </div>
-          
+
           {fee > 0 && (
             <div className="mt-2 text-xs text-muted-foreground">
-              <span>Fee: {fee.toFixed(2)} {currency}</span>
-              <span className="ml-2">Total: {totalWithFee.toFixed(2)} {currency}</span>
+              <span>
+                Fee: {fee.toFixed(2)} {currency}
+              </span>
+              <span className="ml-2">
+                Total: {totalWithFee.toFixed(2)} {currency}
+              </span>
             </div>
           )}
         </div>
@@ -250,21 +242,18 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           Payment Method
         </CardTitle>
       </CardHeader>
-      
-      <CardContent>
-        
 
-        
-        <RadioGroup 
+      <CardContent>
+        <RadioGroup
           key={validSelectedMethod}
-          value={validSelectedMethod} 
+          value={validSelectedMethod}
           onValueChange={handleMethodChange}
           className="space-y-4"
           disabled={disabled}
         >
           {availablePaymentMethods.map(renderPaymentMethod)}
         </RadioGroup>
-        
+
         {availablePaymentMethods.length === 0 && (
           <Alert>
             <AlertTriangle className="h-4 w-4" />
@@ -273,24 +262,22 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             </AlertDescription>
           </Alert>
         )}
-        
-        
+
         {/* QR Code payment instructions */}
         {getPaymentMethodDisplay(validSelectedMethod).requires_qr && (
           <Alert className="mt-4 border-purple-200 bg-purple-50">
             <QrCode className="h-4 w-4 text-purple-600" />
             <AlertDescription className="text-purple-800">
-              <strong>QR Code Payment:</strong> After selecting this method, you'll see a QR code to scan with your mobile app. 
-              The payment will be processed once you complete the transaction in the app.
+              <strong>QR Code Payment:</strong> After selecting this method, you'll see a QR code to
+              scan with your mobile app. The payment will be processed once you complete the
+              transaction in the app.
             </AlertDescription>
           </Alert>
         )}
 
         {/* PayU Amount Display Notice */}
-        {validSelectedMethod === 'payu' && (
-          <PayUAmountNotice />
-        )}
+        {validSelectedMethod === 'payu' && <PayUAmountNotice />}
       </CardContent>
     </Card>
   );
-}; 
+};

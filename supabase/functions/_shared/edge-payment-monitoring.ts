@@ -3,7 +3,13 @@
  * Adapted from PaymentMonitoringService.ts for Deno environment
  */
 
-import { EdgeLogger, EdgeLogCategory, logEdgeInfo, logEdgeError, logEdgeWarn } from './edge-logging.ts';
+import {
+  EdgeLogger,
+  EdgeLogCategory,
+  logEdgeInfo,
+  logEdgeError,
+  logEdgeWarn,
+} from './edge-logging.ts';
 
 // Payment-specific error codes for Edge Functions
 export enum EdgePaymentErrorCode {
@@ -11,39 +17,39 @@ export enum EdgePaymentErrorCode {
   GATEWAY_UNAVAILABLE = 'GATEWAY_UNAVAILABLE',
   GATEWAY_TIMEOUT = 'GATEWAY_TIMEOUT',
   GATEWAY_CONFIGURATION_ERROR = 'GATEWAY_CONFIGURATION_ERROR',
-  
+
   // Transaction Errors
   PAYMENT_DECLINED = 'PAYMENT_DECLINED',
   INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
   CARD_EXPIRED = 'CARD_EXPIRED',
   INVALID_CARD = 'INVALID_CARD',
   FRAUD_DETECTED = 'FRAUD_DETECTED',
-  
+
   // Processing Errors
   PAYMENT_PROCESSING_FAILED = 'PAYMENT_PROCESSING_FAILED',
   WEBHOOK_PROCESSING_FAILED = 'WEBHOOK_PROCESSING_FAILED',
   DUPLICATE_PAYMENT = 'DUPLICATE_PAYMENT',
-  
+
   // Integration Errors
   STRIPE_API_ERROR = 'STRIPE_API_ERROR',
   PAYPAL_API_ERROR = 'PAYPAL_API_ERROR',
   PAYU_API_ERROR = 'PAYU_API_ERROR',
   AIRWALLEX_API_ERROR = 'AIRWALLEX_API_ERROR',
-  
+
   // Status Errors
   PAYMENT_STATUS_MISMATCH = 'PAYMENT_STATUS_MISMATCH',
   PAYMENT_NOT_FOUND = 'PAYMENT_NOT_FOUND',
   INVALID_PAYMENT_STATE = 'INVALID_PAYMENT_STATE',
-  
+
   // Security Errors
   WEBHOOK_SIGNATURE_INVALID = 'WEBHOOK_SIGNATURE_INVALID',
   PAYMENT_TOKEN_EXPIRED = 'PAYMENT_TOKEN_EXPIRED',
   UNAUTHORIZED_PAYMENT_ACCESS = 'UNAUTHORIZED_PAYMENT_ACCESS',
-  
+
   // Edge Function Specific
   FUNCTION_TIMEOUT = 'FUNCTION_TIMEOUT',
   ENVIRONMENT_ERROR = 'ENVIRONMENT_ERROR',
-  DATABASE_CONNECTION_ERROR = 'DATABASE_CONNECTION_ERROR'
+  DATABASE_CONNECTION_ERROR = 'DATABASE_CONNECTION_ERROR',
 }
 
 // Payment monitoring metrics for Edge Functions
@@ -114,7 +120,7 @@ export class EdgePaymentMonitoring {
       success: false,
       functionName: this.logger.function,
       requestId: this.logger.id,
-      webhookEvents: []
+      webhookEvents: [],
     };
 
     this.activePayments.set(params.paymentId, metrics);
@@ -129,8 +135,8 @@ export class EdgePaymentMonitoring {
         gateway: params.gateway,
         amount: params.amount,
         currency: params.currency,
-        ...params.metadata
-      }
+        ...params.metadata,
+      },
     });
 
     // Start performance tracking
@@ -145,13 +151,17 @@ export class EdgePaymentMonitoring {
     success: boolean,
     errorCode?: EdgePaymentErrorCode,
     errorMessage?: string,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
   ): void {
     const metrics = this.activePayments.get(paymentId);
     if (!metrics) {
-      logEdgeWarn(EdgeLogCategory.PAYMENT_PROCESSING, `Payment monitoring not found for: ${paymentId}`, {
-        requestId: this.logger.id
-      });
+      logEdgeWarn(
+        EdgeLogCategory.PAYMENT_PROCESSING,
+        `Payment monitoring not found for: ${paymentId}`,
+        {
+          requestId: this.logger.id,
+        },
+      );
       return;
     }
 
@@ -173,8 +183,8 @@ export class EdgePaymentMonitoring {
       metadata: {
         duration,
         success,
-        gateway: metrics.gateway
-      }
+        gateway: metrics.gateway,
+      },
     });
 
     // Log completion
@@ -187,12 +197,12 @@ export class EdgePaymentMonitoring {
           gateway: metrics.gateway,
           duration,
           amount: metrics.amount,
-          currency: metrics.currency
-        }
+          currency: metrics.currency,
+        },
       });
     } else {
       logEdgeError(
-        EdgeLogCategory.PAYMENT_PROCESSING, 
+        EdgeLogCategory.PAYMENT_PROCESSING,
         `Payment failed: ${errorMessage || 'Unknown error'}`,
         errorMessage ? new Error(errorMessage) : undefined,
         {
@@ -205,9 +215,9 @@ export class EdgePaymentMonitoring {
             duration,
             amount: metrics.amount,
             currency: metrics.currency,
-            ...metadata
-          }
-        }
+            ...metadata,
+          },
+        },
       );
     }
 
@@ -231,23 +241,27 @@ export class EdgePaymentMonitoring {
       startTime: performance.now(),
       success: false,
       functionName: this.logger.function,
-      requestId: this.logger.id
+      requestId: this.logger.id,
     };
 
     this.activeWebhooks.set(params.webhookId, metrics);
 
     // Log webhook start
-    logEdgeInfo(EdgeLogCategory.WEBHOOK_PROCESSING, `Webhook received: ${params.gateway} - ${params.eventType}`, {
-      paymentId: params.paymentId,
-      orderId: params.orderId,
-      requestId: this.logger.id,
-      metadata: {
-        webhookId: params.webhookId,
-        eventType: params.eventType,
-        gateway: params.gateway,
-        ...params.metadata
-      }
-    });
+    logEdgeInfo(
+      EdgeLogCategory.WEBHOOK_PROCESSING,
+      `Webhook received: ${params.gateway} - ${params.eventType}`,
+      {
+        paymentId: params.paymentId,
+        orderId: params.orderId,
+        requestId: this.logger.id,
+        metadata: {
+          webhookId: params.webhookId,
+          eventType: params.eventType,
+          gateway: params.gateway,
+          ...params.metadata,
+        },
+      },
+    );
 
     // Start performance tracking
     this.logger.startPerformance(`webhook.${params.webhookId}`);
@@ -261,13 +275,17 @@ export class EdgePaymentMonitoring {
     success: boolean,
     errorCode?: EdgePaymentErrorCode,
     errorMessage?: string,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
   ): void {
     const metrics = this.activeWebhooks.get(webhookId);
     if (!metrics) {
-      logEdgeWarn(EdgeLogCategory.WEBHOOK_PROCESSING, `Webhook monitoring not found for: ${webhookId}`, {
-        requestId: this.logger.id
-      });
+      logEdgeWarn(
+        EdgeLogCategory.WEBHOOK_PROCESSING,
+        `Webhook monitoring not found for: ${webhookId}`,
+        {
+          requestId: this.logger.id,
+        },
+      );
       return;
     }
 
@@ -290,8 +308,8 @@ export class EdgePaymentMonitoring {
         duration,
         success,
         gateway: metrics.gateway,
-        eventType: metrics.eventType
-      }
+        eventType: metrics.eventType,
+      },
     });
 
     // Log completion
@@ -304,12 +322,12 @@ export class EdgePaymentMonitoring {
           webhookId,
           eventType: metrics.eventType,
           gateway: metrics.gateway,
-          duration
-        }
+          duration,
+        },
       });
     } else {
       logEdgeError(
-        EdgeLogCategory.WEBHOOK_PROCESSING, 
+        EdgeLogCategory.WEBHOOK_PROCESSING,
         `Webhook processing failed: ${errorMessage || 'Unknown error'}`,
         errorMessage ? new Error(errorMessage) : undefined,
         {
@@ -322,9 +340,9 @@ export class EdgePaymentMonitoring {
             eventType: metrics.eventType,
             gateway: metrics.gateway,
             duration,
-            ...metadata
-          }
-        }
+            ...metadata,
+          },
+        },
       );
     }
 
@@ -339,29 +357,33 @@ export class EdgePaymentMonitoring {
     operation: string,
     gateway: string,
     apiCall: () => Promise<T>,
-    paymentId?: string
+    paymentId?: string,
   ): Promise<T> {
     const startTime = performance.now();
-    
+
     this.logger.debug(EdgeLogCategory.PAYMENT_PROCESSING, `Gateway API call: ${operation}`, {
       paymentId,
-      metadata: { gateway, operation }
+      metadata: { gateway, operation },
     });
 
     try {
       const result = await apiCall();
       const duration = performance.now() - startTime;
 
-      logEdgeInfo(EdgeLogCategory.PAYMENT_PROCESSING, `Gateway API call successful: ${gateway}/${operation}`, {
-        paymentId,
-        requestId: this.logger.id,
-        metadata: {
-          gateway,
-          operation,
-          duration,
-          success: true
-        }
-      });
+      logEdgeInfo(
+        EdgeLogCategory.PAYMENT_PROCESSING,
+        `Gateway API call successful: ${gateway}/${operation}`,
+        {
+          paymentId,
+          requestId: this.logger.id,
+          metadata: {
+            gateway,
+            operation,
+            duration,
+            success: true,
+          },
+        },
+      );
 
       return result;
     } catch (error) {
@@ -378,9 +400,9 @@ export class EdgePaymentMonitoring {
             gateway,
             operation,
             duration,
-            success: false
-          }
-        }
+            success: false,
+          },
+        },
       );
 
       throw error;
@@ -390,18 +412,14 @@ export class EdgePaymentMonitoring {
   /**
    * Log a payment event
    */
-  logPaymentEvent(
-    event: string,
-    details: Record<string, unknown>,
-    paymentId?: string
-  ): void {
+  logPaymentEvent(event: string, details: Record<string, unknown>, paymentId?: string): void {
     logEdgeInfo(EdgeLogCategory.PAYMENT_PROCESSING, `Payment event: ${event}`, {
       paymentId,
       requestId: this.logger.id,
       metadata: {
         event,
-        ...details
-      }
+        ...details,
+      },
     });
   }
 
@@ -412,21 +430,16 @@ export class EdgePaymentMonitoring {
     event: string,
     error: Error,
     details?: Record<string, unknown>,
-    paymentId?: string
+    paymentId?: string,
   ): void {
-    logEdgeError(
-      EdgeLogCategory.PAYMENT_PROCESSING,
-      `Payment error: ${event}`,
-      error,
-      {
-        paymentId,
-        requestId: this.logger.id,
-        metadata: {
-          event,
-          ...details
-        }
-      }
-    );
+    logEdgeError(EdgeLogCategory.PAYMENT_PROCESSING, `Payment error: ${event}`, error, {
+      paymentId,
+      requestId: this.logger.id,
+      metadata: {
+        event,
+        ...details,
+      },
+    });
   }
 
   /**
@@ -452,9 +465,9 @@ export class EdgePaymentMonitoring {
           metadata: {
             eventType: params.eventType,
             gateway: params.gateway,
-            ...params.metadata
-          }
-        }
+            ...params.metadata,
+          },
+        },
       );
     } else {
       logEdgeError(
@@ -468,9 +481,9 @@ export class EdgePaymentMonitoring {
           metadata: {
             eventType: params.eventType,
             gateway: params.gateway,
-            ...params.metadata
-          }
-        }
+            ...params.metadata,
+          },
+        },
       );
     }
   }
@@ -485,7 +498,7 @@ export class EdgePaymentMonitoring {
         paymentId,
         false,
         EdgePaymentErrorCode.FUNCTION_TIMEOUT,
-        'Function terminated during payment processing'
+        'Function terminated during payment processing',
       );
     });
 
@@ -495,7 +508,7 @@ export class EdgePaymentMonitoring {
         webhookId,
         false,
         EdgePaymentErrorCode.FUNCTION_TIMEOUT,
-        'Function terminated during webhook processing'
+        'Function terminated during webhook processing',
       );
     });
 

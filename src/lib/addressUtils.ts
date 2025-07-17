@@ -31,23 +31,84 @@ export interface CheckoutAddressForm {
 
 export type UserAddress = Tables<'user_addresses'>;
 
+// Country name to code mapping for normalization
+export const COUNTRY_NAME_TO_CODE: { [key: string]: string } = {
+  Nepal: 'NP',
+  India: 'IN',
+  'United States': 'US',
+  USA: 'US',
+  China: 'CN',
+  Australia: 'AU',
+  'United Kingdom': 'GB',
+  Canada: 'CA',
+  Germany: 'DE',
+  France: 'FR',
+  Japan: 'JP',
+  'South Korea': 'KR',
+  Thailand: 'TH',
+  Malaysia: 'MY',
+  Singapore: 'SG',
+  Philippines: 'PH',
+  Indonesia: 'ID',
+  Vietnam: 'VN',
+  Bangladesh: 'BD',
+  'Sri Lanka': 'LK',
+  Pakistan: 'PK',
+};
+
+/**
+ * Normalizes country names to 2-character ISO codes
+ * Handles both full country names and existing codes
+ */
+export function normalizeCountryCode(country: string | null | undefined): string {
+  if (!country) return 'US';
+
+  // If it's already a 2-character code, ensure it's uppercase
+  if (country.length === 2) {
+    return country.toUpperCase();
+  }
+
+  // If it's a full country name, convert to code
+  if (COUNTRY_NAME_TO_CODE[country]) {
+    return COUNTRY_NAME_TO_CODE[country];
+  }
+
+  // Try to find a partial match (case insensitive)
+  const partialMatch = Object.keys(COUNTRY_NAME_TO_CODE).find(
+    (name) =>
+      name.toLowerCase().includes(country.toLowerCase()) ||
+      country.toLowerCase().includes(name.toLowerCase()),
+  );
+
+  if (partialMatch) {
+    console.log(
+      `Using partial match for ${country}: ${partialMatch} -> ${COUNTRY_NAME_TO_CODE[partialMatch]}`,
+    );
+    return COUNTRY_NAME_TO_CODE[partialMatch];
+  }
+
+  // Log warning for unknown country
+  console.warn(`Unknown country name: ${country}, defaulting to US`);
+  return 'US';
+}
+
 // Unified address interface that all components should use
 export interface UnifiedAddress {
   // Personal info
   fullName: string;
   phone?: string;
   email?: string;
-  
+
   // Address details
   addressLine1: string;
   addressLine2?: string;
   city: string;
   stateProvinceRegion: string;
   postalCode: string;
-  
+
   // Country - always use 2-letter ISO code
   countryCode: string;
-  
+
   // Metadata
   isDefault?: boolean;
 }
@@ -56,9 +117,14 @@ export interface UnifiedAddress {
  * Converts quote shipping address format to checkout form format
  */
 export function quoteAddressToCheckoutForm(
-  quoteAddress: QuoteShippingAddress | null | undefined
+  quoteAddress: QuoteShippingAddress | null | undefined,
 ): CheckoutAddressForm | null {
   if (!quoteAddress) return null;
+
+  const normalizedCountry = normalizeCountryCode(quoteAddress.country);
+  const normalizedDestinationCountry = normalizeCountryCode(
+    quoteAddress.destination_country || quoteAddress.country,
+  );
 
   return {
     address_line1: quoteAddress.streetAddress || '',
@@ -66,30 +132,33 @@ export function quoteAddressToCheckoutForm(
     city: quoteAddress.city || '',
     state_province_region: quoteAddress.state || '',
     postal_code: quoteAddress.postalCode || '',
-    country: quoteAddress.country || '',
-    destination_country: quoteAddress.destination_country || quoteAddress.country || '',
+    country: normalizedCountry,
+    destination_country: normalizedDestinationCountry,
     recipient_name: quoteAddress.fullName || '',
     phone: quoteAddress.phone || '',
-    is_default: false
+    is_default: false,
   };
 }
 
 /**
  * Converts checkout form format to quote shipping address format
  */
-export function checkoutFormToQuoteAddress(
-  formData: CheckoutAddressForm
-): QuoteShippingAddress {
+export function checkoutFormToQuoteAddress(formData: CheckoutAddressForm): QuoteShippingAddress {
+  const normalizedCountry = normalizeCountryCode(formData.country);
+  const normalizedDestinationCountry = normalizeCountryCode(
+    formData.destination_country || formData.country,
+  );
+
   return {
     fullName: formData.recipient_name || '',
     streetAddress: formData.address_line1,
     city: formData.city,
     state: formData.state_province_region,
     postalCode: formData.postal_code,
-    country: formData.country,
-    destination_country: formData.destination_country || formData.country,
+    country: normalizedCountry,
+    destination_country: normalizedDestinationCountry,
     phone: formData.phone || '',
-    email: '' // Email is handled separately in checkout
+    email: '', // Email is handled separately in checkout
   };
 }
 
@@ -98,7 +167,7 @@ export function checkoutFormToQuoteAddress(
  */
 export function createGuestAddress(
   formData: CheckoutAddressForm,
-  email: string
+  email: string,
 ): Omit<UserAddress, 'id' | 'user_id' | 'created_at' | 'updated_at'> {
   return {
     recipient_name: formData.recipient_name || '',
@@ -110,7 +179,7 @@ export function createGuestAddress(
     country: formData.country,
     destination_country: formData.destination_country || formData.country,
     phone: formData.phone || null,
-    is_default: false
+    is_default: false,
   };
 }
 
@@ -119,14 +188,14 @@ export function createGuestAddress(
  */
 export function isAddressComplete(address: CheckoutAddressForm | null): boolean {
   if (!address) return false;
-  
+
   return Boolean(
     address.recipient_name &&
-    address.address_line1 &&
-    address.city &&
-    address.state_province_region &&
-    address.postal_code &&
-    address.country
+      address.address_line1 &&
+      address.city &&
+      address.state_province_region &&
+      address.postal_code &&
+      address.country,
   );
 }
 
@@ -134,9 +203,7 @@ export function isAddressComplete(address: CheckoutAddressForm | null): boolean 
  * Extracts address from quote's shipping_address field
  * Handles both string and object formats
  */
-export function extractQuoteShippingAddress(
-  shippingAddress: unknown
-): QuoteShippingAddress | null {
+export function extractQuoteShippingAddress(shippingAddress: unknown): QuoteShippingAddress | null {
   if (!shippingAddress) return null;
 
   // If it's a string, try to parse it
@@ -172,7 +239,7 @@ export function userAddressToUnified(address: UserAddress): UnifiedAddress {
     stateProvinceRegion: address.state_province_region,
     postalCode: address.postal_code,
     countryCode: address.destination_country || '', // Use destination_country
-    isDefault: address.is_default
+    isDefault: address.is_default,
   };
 }
 
@@ -181,7 +248,7 @@ export function userAddressToUnified(address: UserAddress): UnifiedAddress {
  */
 export function unifiedToUserAddress(
   address: UnifiedAddress,
-  userId: string
+  userId: string,
 ): Omit<Tables<'user_addresses'>, 'id' | 'created_at' | 'updated_at'> {
   return {
     user_id: userId,
@@ -193,7 +260,7 @@ export function unifiedToUserAddress(
     postal_code: address.postalCode,
     destination_country: address.countryCode, // Always use country code
     phone: address.phone || null,
-    is_default: address.isDefault || false
+    is_default: address.isDefault || false,
   };
 }
 
@@ -210,7 +277,7 @@ export function shippingAddressToUnified(address: ShippingAddress): UnifiedAddre
     city: address.city,
     stateProvinceRegion: address.state || '',
     postalCode: address.postalCode,
-    countryCode: address.country // Should be 2-letter code
+    countryCode: address.country, // Should be 2-letter code
   };
 }
 
@@ -226,7 +293,7 @@ export function unifiedToShippingAddress(address: UnifiedAddress): ShippingAddre
     postalCode: address.postalCode,
     country: address.countryCode,
     phone: address.phone,
-    email: address.email
+    email: address.email,
   };
 }
 
@@ -243,7 +310,7 @@ export function quoteShippingToUnified(address: QuoteShippingAddress): UnifiedAd
     city: address.city || '',
     stateProvinceRegion: address.state || '',
     postalCode: address.postalCode || '',
-    countryCode: address.destination_country || ''
+    countryCode: address.destination_country || '',
   };
 }
 
@@ -260,7 +327,7 @@ export function unifiedToQuoteShipping(address: UnifiedAddress): QuoteShippingAd
     country: address.countryCode,
     destination_country: address.countryCode,
     phone: address.phone,
-    email: address.email
+    email: address.email,
   };
 }
 
@@ -269,14 +336,14 @@ export function unifiedToQuoteShipping(address: UnifiedAddress): QuoteShippingAd
  */
 export function isUnifiedAddressComplete(address: UnifiedAddress | null): boolean {
   if (!address) return false;
-  
+
   return Boolean(
     address.fullName &&
-    address.addressLine1 &&
-    address.city &&
-    address.stateProvinceRegion &&
-    address.postalCode &&
-    address.countryCode &&
-    address.countryCode.length === 2 // Ensure it's a 2-letter code
+      address.addressLine1 &&
+      address.city &&
+      address.stateProvinceRegion &&
+      address.postalCode &&
+      address.countryCode &&
+      address.countryCode.length === 2, // Ensure it's a 2-letter code
   );
 }

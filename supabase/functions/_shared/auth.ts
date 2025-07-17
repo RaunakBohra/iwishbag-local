@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Type definitions for authentication
 export type DatabaseUser = {
@@ -15,7 +15,10 @@ export interface AuthResult {
 }
 
 export class AuthError extends Error {
-  constructor(message: string, public status: number = 401) {
+  constructor(
+    message: string,
+    public status: number = 401,
+  ) {
     super(message);
     this.name = 'AuthError';
   }
@@ -33,10 +36,13 @@ export async function authenticateUser(req: Request): Promise<AuthResult> {
   const supabaseClient: DatabaseClient = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    { global: { headers: { Authorization: authHeader } } }
+    { global: { headers: { Authorization: authHeader } } },
   );
 
-  const { data: { user }, error } = await supabaseClient.auth.getUser();
+  const {
+    data: { user },
+    error,
+  } = await supabaseClient.auth.getUser();
   if (error || !user) {
     throw new AuthError('Invalid or expired token', 401);
   }
@@ -64,9 +70,9 @@ export async function requireAdmin(supabaseClient: DatabaseClient, userId: strin
  * Require specific role for the authenticated user
  */
 export async function requireRole(
-  supabaseClient: DatabaseClient, 
-  userId: string, 
-  requiredRole: 'admin' | 'moderator' | 'user'
+  supabaseClient: DatabaseClient,
+  userId: string,
+  requiredRole: 'admin' | 'moderator' | 'user',
 ): Promise<void> {
   const { data: userRole, error } = await supabaseClient
     .from('user_roles')
@@ -91,15 +97,21 @@ export async function requireRole(
 /**
  * Create standardized error response
  */
-export function createAuthErrorResponse(error: AuthError, corsHeaders: Record<string, string>): Response {
-  return new Response(JSON.stringify({
-    success: false,
-    error: error.message,
-    code: error.status
-  }), {
-    status: error.status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
+export function createAuthErrorResponse(
+  error: AuthError,
+  corsHeaders: Record<string, string>,
+): Response {
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: error.message,
+      code: error.status,
+    }),
+    {
+      status: error.status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    },
+  );
 }
 
 /**

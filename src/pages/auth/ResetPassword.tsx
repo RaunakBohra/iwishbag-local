@@ -12,18 +12,21 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
-const resetPasswordSchema = z.object({
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number')
-    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
-  confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const resetPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+      .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+      .regex(/[0-9]/, 'Password must contain at least one number')
+      .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
 
 type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
 
@@ -41,18 +44,20 @@ export default function ResetPassword() {
     register,
     handleSubmit,
     formState: { errors },
-    watch
+    watch,
   } = useForm<ResetPasswordForm>({
-    resolver: zodResolver(resetPasswordSchema)
+    resolver: zodResolver(resetPasswordSchema),
   });
 
   const password = watch('password', '');
 
   useEffect(() => {
     // Enhanced session handling with PASSWORD_RECOVERY event detection
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state change:', event, session);
-      
+
       if (event === 'PASSWORD_RECOVERY') {
         setIsValidSession(true);
         setTokenError(null);
@@ -67,17 +72,21 @@ export default function ResetPassword() {
 
     if (accessToken && type === 'recovery') {
       // Set the session manually if PASSWORD_RECOVERY event wasn't triggered
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: searchParams.get('refresh_token') || '',
-      }).then(({ error }) => {
-        if (!error) {
-          setIsValidSession(true);
-          setTokenError(null);
-        } else {
-          setTokenError('Invalid or expired reset token. Please request a new password reset link.');
-        }
-      });
+      supabase.auth
+        .setSession({
+          access_token: accessToken,
+          refresh_token: searchParams.get('refresh_token') || '',
+        })
+        .then(({ error }) => {
+          if (!error) {
+            setIsValidSession(true);
+            setTokenError(null);
+          } else {
+            setTokenError(
+              'Invalid or expired reset token. Please request a new password reset link.',
+            );
+          }
+        });
     } else if (!accessToken || type !== 'recovery') {
       setTokenError('Invalid or missing reset token. Please request a new password reset link.');
     }
@@ -92,7 +101,7 @@ export default function ResetPassword() {
     if (password.match(/[A-Z]/)) strength++;
     if (password.match(/[0-9]/)) strength++;
     if (password.match(/[^A-Za-z0-9]/)) strength++;
-    
+
     if (strength <= 2) return { text: 'Weak', color: 'text-red-500' };
     if (strength <= 4) return { text: 'Medium', color: 'text-yellow-500' };
     return { text: 'Strong', color: 'text-green-500' };
@@ -126,16 +135,16 @@ export default function ResetPassword() {
 
       // Redirect to login after a short delay
       setTimeout(() => {
-        navigate('/auth', { 
-          state: { 
-            message: 'Password reset successfully. Please login with your new password.' 
-          } 
+        navigate('/auth', {
+          state: {
+            message: 'Password reset successfully. Please login with your new password.',
+          },
         });
       }, 2000);
-
     } catch (error) {
       console.error('Password reset error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to reset password. Please try again.';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to reset password. Please try again.';
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -159,19 +168,17 @@ export default function ResetPassword() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                {tokenError || 'Invalid or expired reset token. Please request a new password reset link.'}
+                {tokenError ||
+                  'Invalid or expired reset token. Please request a new password reset link.'}
               </AlertDescription>
             </Alert>
             <div className="space-y-2">
-              <Button 
-                className="w-full" 
-                onClick={() => navigate('/auth')}
-              >
+              <Button className="w-full" onClick={() => navigate('/auth')}>
                 Back to Login
               </Button>
-              <Button 
+              <Button
                 variant="outline"
-                className="w-full" 
+                className="w-full"
                 onClick={() => navigate('/auth', { state: { showForgot: true } })}
               >
                 Request New Reset Link
@@ -250,9 +257,7 @@ export default function ResetPassword() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-sm text-red-500">{errors.password.message}</p>
-              )}
+              {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
               {password && (
                 <div className="flex items-center space-x-2 text-sm">
                   <span>Password strength:</span>
@@ -276,7 +281,11 @@ export default function ResetPassword() {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
               {errors.confirmPassword && (
@@ -317,11 +326,7 @@ export default function ResetPassword() {
               </ul>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Resetting Password...' : 'Reset Password'}
             </Button>
 

@@ -1,6 +1,6 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { createCorsHeaders } from '../_shared/cors.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createCorsHeaders } from '../_shared/cors.ts';
 
 interface PaymentStatusResponse {
   status: 'pending' | 'processing' | 'completed' | 'failed';
@@ -16,20 +16,20 @@ interface PaymentStatusResponse {
 
 serve(async (req) => {
   const corsHeaders = createCorsHeaders(req, ['GET']);
-  
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const url = new URL(req.url);
     const transactionId = url.pathname.split('/').pop();
-    
+
     if (!transactionId) {
-      return new Response(JSON.stringify({ error: 'Missing transaction ID' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      return new Response(JSON.stringify({ error: 'Missing transaction ID' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -37,7 +37,7 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // First check our payments table for existing payment record
@@ -49,9 +49,9 @@ serve(async (req) => {
 
     if (paymentError && paymentError.code !== 'PGRST116') {
       console.error('Error fetching payment record:', paymentError);
-      return new Response(JSON.stringify({ error: 'Database error' }), { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      return new Response(JSON.stringify({ error: 'Database error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -60,7 +60,7 @@ serve(async (req) => {
     if (paymentRecord) {
       // Payment record exists - return the status
       console.log(`✅ Payment record found with status: ${paymentRecord.status}`);
-      
+
       statusResponse = {
         status: mapPaymentStatus(paymentRecord.status),
         progress: getProgressFromStatus(paymentRecord.status),
@@ -69,14 +69,14 @@ serve(async (req) => {
         transaction_id: paymentRecord.transaction_id,
         amount: paymentRecord.amount,
         currency: paymentRecord.currency,
-        error_message: paymentRecord.error_message || undefined
+        error_message: paymentRecord.error_message || undefined,
       };
     } else {
       // No payment record found - check if we can verify with PayU directly
       console.log('🔍 No payment record found, checking PayU status...');
-      
+
       const payuStatus = await checkPayUStatus(transactionId);
-      
+
       if (payuStatus) {
         statusResponse = payuStatus;
       } else {
@@ -86,7 +86,7 @@ serve(async (req) => {
           progress: 10,
           gateway_status: 'Waiting for payment confirmation...',
           last_update: new Date().toISOString(),
-          transaction_id: transactionId
+          transaction_id: transactionId,
         };
       }
     }
@@ -94,23 +94,27 @@ serve(async (req) => {
     // Add estimated completion time for pending/processing payments
     if (statusResponse.status === 'pending' || statusResponse.status === 'processing') {
       const estimatedMinutes = statusResponse.status === 'pending' ? 5 : 2;
-      statusResponse.estimated_completion = new Date(Date.now() + estimatedMinutes * 60 * 1000).toISOString();
+      statusResponse.estimated_completion = new Date(
+        Date.now() + estimatedMinutes * 60 * 1000,
+      ).toISOString();
     }
 
-    return new Response(JSON.stringify(statusResponse), { 
-      status: 200, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    return new Response(JSON.stringify(statusResponse), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
   } catch (error) {
     console.error('Payment status check error:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Payment status check failed', 
-      details: error.message 
-    }), { 
-      status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-    });
+    return new Response(
+      JSON.stringify({
+        error: 'Payment status check failed',
+        details: error.message,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   }
 });
 
@@ -120,7 +124,7 @@ async function checkPayUStatus(transactionId: string): Promise<PaymentStatusResp
     // Get PayU configuration
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     const { data: payuGateway, error: payuGatewayError } = await supabaseAdmin
@@ -136,14 +140,14 @@ async function checkPayUStatus(transactionId: string): Promise<PaymentStatusResp
 
     const config = payuGateway.config || {};
     const testMode = payuGateway.test_mode;
-    
+
     if (!config.merchant_key || !config.salt_key) {
       console.error('PayU credentials missing');
       return null;
     }
 
     // PayU Verify Payment API
-    const verifyUrl = testMode 
+    const verifyUrl = testMode
       ? 'https://test.payu.in/merchant/postservice?form=2'
       : 'https://info.payu.in/merchant/postservice?form=2';
 
@@ -151,14 +155,14 @@ async function checkPayUStatus(transactionId: string): Promise<PaymentStatusResp
     const verifyHash = await generatePayUVerifyHash(
       config.merchant_key,
       transactionId,
-      config.salt_key
+      config.salt_key,
     );
 
     const verifyData = new URLSearchParams({
       key: config.merchant_key,
       command: 'verify_payment',
       var1: transactionId,
-      hash: verifyHash
+      hash: verifyHash,
     });
 
     console.log(`🔍 Calling PayU verify API for transaction: ${transactionId}`);
@@ -167,9 +171,9 @@ async function checkPayUStatus(transactionId: string): Promise<PaymentStatusResp
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'iwishBag-PayU-Verifier/1.0'
+        'User-Agent': 'iwishBag-PayU-Verifier/1.0',
       },
-      body: verifyData
+      body: verifyData,
     });
 
     if (!response.ok) {
@@ -182,7 +186,7 @@ async function checkPayUStatus(transactionId: string): Promise<PaymentStatusResp
 
     if (result.status === 1 && result.transaction_details) {
       const transaction = result.transaction_details[transactionId];
-      
+
       if (transaction) {
         return {
           status: mapPayUStatus(transaction.status),
@@ -191,7 +195,7 @@ async function checkPayUStatus(transactionId: string): Promise<PaymentStatusResp
           last_update: transaction.addedon || new Date().toISOString(),
           transaction_id: transactionId,
           amount: parseFloat(transaction.amount),
-          currency: 'INR'
+          currency: 'INR',
         };
       }
     }
@@ -204,22 +208,26 @@ async function checkPayUStatus(transactionId: string): Promise<PaymentStatusResp
 }
 
 // Generate hash for PayU verify payment API
-async function generatePayUVerifyHash(merchantKey: string, txnid: string, salt: string): Promise<string> {
+async function generatePayUVerifyHash(
+  merchantKey: string,
+  txnid: string,
+  salt: string,
+): Promise<string> {
   const hashString = `${merchantKey}|verify_payment|${txnid}|${salt}`;
-  
+
   const encoder = new TextEncoder();
   const data = encoder.encode(hashString);
   const hashBuffer = await crypto.subtle.digest('SHA-512', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+
   return hashHex;
 }
 
 // Map various payment statuses to our standard format
 function mapPaymentStatus(status: string): 'pending' | 'processing' | 'completed' | 'failed' {
   const statusLower = status.toLowerCase();
-  
+
   switch (statusLower) {
     case 'success':
     case 'completed':
@@ -241,7 +249,7 @@ function mapPaymentStatus(status: string): 'pending' | 'processing' | 'completed
 // Map PayU specific statuses
 function mapPayUStatus(status: string): 'pending' | 'processing' | 'completed' | 'failed' {
   const statusLower = status.toLowerCase();
-  
+
   switch (statusLower) {
     case 'success':
       return 'completed';
@@ -259,7 +267,7 @@ function mapPayUStatus(status: string): 'pending' | 'processing' | 'completed' |
 // Get progress percentage based on status
 function getProgressFromStatus(status: string): number {
   const statusLower = status.toLowerCase();
-  
+
   switch (statusLower) {
     case 'success':
     case 'completed':
@@ -282,7 +290,7 @@ function getProgressFromStatus(status: string): number {
 // Get user-friendly gateway status message
 function getGatewayStatusMessage(gateway: string, status: string): string {
   const statusLower = status.toLowerCase();
-  
+
   if (gateway === 'payu') {
     switch (statusLower) {
       case 'success':
@@ -299,7 +307,7 @@ function getGatewayStatusMessage(gateway: string, status: string): string {
         return 'Payment status unknown';
     }
   }
-  
+
   // Default messages for other gateways
   switch (statusLower) {
     case 'success':

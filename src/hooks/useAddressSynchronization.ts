@@ -13,11 +13,11 @@ export const useAddressSynchronization = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   const saveQuoteAddressToProfile = useMutation({
-    mutationFn: async ({ 
-      address, 
-      setAsDefault = false 
-    }: { 
-      address: ShippingAddress; 
+    mutationFn: async ({
+      address,
+      setAsDefault = false,
+    }: {
+      address: ShippingAddress;
       setAsDefault?: boolean;
     }) => {
       if (!user?.id) {
@@ -26,7 +26,7 @@ export const useAddressSynchronization = () => {
 
       // Convert shipping address to unified format
       const unifiedAddress = shippingAddressToUnified(address);
-      
+
       // Check if address already exists for this user
       const { data: existingAddresses } = await supabase
         .from('user_addresses')
@@ -51,10 +51,13 @@ export const useAddressSynchronization = () => {
       }
 
       // Convert to user address format and save
-      const userAddress = unifiedToUserAddress({
-        ...unifiedAddress,
-        isDefault: setAsDefault
-      }, user.id);
+      const userAddress = unifiedToUserAddress(
+        {
+          ...unifiedAddress,
+          isDefault: setAsDefault,
+        },
+        user.id,
+      );
 
       const { data, error } = await supabase
         .from('user_addresses')
@@ -101,27 +104,28 @@ export const useAddressSynchronization = () => {
       const results = {
         synced: 0,
         skipped: 0,
-        errors: 0
+        errors: 0,
       };
 
       for (const quote of quotes || []) {
         try {
           if (!quote.shipping_address) continue;
 
-          const shippingAddress = typeof quote.shipping_address === 'string' 
-            ? JSON.parse(quote.shipping_address) 
-            : quote.shipping_address;
+          const shippingAddress =
+            typeof quote.shipping_address === 'string'
+              ? JSON.parse(quote.shipping_address)
+              : quote.shipping_address;
 
           // Ensure country matches quote's destination
           if (shippingAddress.country !== quote.destination_country) {
             shippingAddress.country = quote.destination_country;
           }
 
-          await saveQuoteAddressToProfile.mutateAsync({ 
+          await saveQuoteAddressToProfile.mutateAsync({
             address: shippingAddress,
-            setAsDefault: false 
+            setAsDefault: false,
           });
-          
+
           results.synced++;
         } catch (error) {
           console.error(`Failed to sync address from quote ${quote.id}:`, error);

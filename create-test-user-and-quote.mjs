@@ -15,7 +15,7 @@ async function createTestUserAndQuote() {
     email_confirm: true
   });
   
-  if (authError && \!authError.message.includes('already registered')) {
+  if (authError && !authError.message.includes('already registered')) {
     console.error('Error creating user:', authError);
     return;
   }

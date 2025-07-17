@@ -1,10 +1,10 @@
-import { useMemo } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { Message, User, Conversation } from "@/components/messaging/types";
-import { useCustomerManagement } from "./useCustomerManagement";
+import { useMemo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Message, User, Conversation } from '@/components/messaging/types';
+import { useCustomerManagement } from './useCustomerManagement';
 import imageCompression from 'browser-image-compression';
 
 export const useMessaging = (hasAdminRole: boolean | undefined) => {
@@ -21,15 +21,17 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
     queryKey: ['messages', user?.id, hasAdminRole],
     queryFn: async () => {
       if (!user || hasAdminRole === undefined) return [];
-      
+
       let query = supabase.from('messages').select('*');
 
       if (hasAdminRole) {
         query = query.is('quote_id', null);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: true });
-      
+      const { data, error } = await query.order('created_at', {
+        ascending: true,
+      });
+
       if (error) throw error;
       return data;
     },
@@ -37,7 +39,17 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: async ({ subject, content, recipientId, attachment }: { subject: string; content: string; recipientId?: string | null; attachment?: File | null }) => {
+    mutationFn: async ({
+      subject,
+      content,
+      recipientId,
+      attachment,
+    }: {
+      subject: string;
+      content: string;
+      recipientId?: string | null;
+      attachment?: File | null;
+    }) => {
       if (!user) throw new Error('Not authenticated');
 
       let attachment_url: string | null = null;
@@ -45,7 +57,7 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
 
       if (attachment) {
         let fileToUpload = attachment;
-        
+
         // Only compress image files
         if (attachment.type.startsWith('image/')) {
           const options = {
@@ -53,12 +65,14 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
             maxWidthOrHeight: 2048,
             useWebWorker: true,
             fileType: attachment.type as 'image/jpeg' | 'image/png' | 'image/webp',
-            initialQuality: 0.85
+            initialQuality: 0.85,
           };
-          
+
           try {
             fileToUpload = await imageCompression(attachment, options);
-            console.log(`Message attachment - Original: ${(attachment.size / 1024 / 1024).toFixed(2)}MB, Compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
+            console.log(
+              `Message attachment - Original: ${(attachment.size / 1024 / 1024).toFixed(2)}MB, Compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`,
+            );
           } catch (compressionError) {
             console.error('Image compression failed, using original:', compressionError);
           }
@@ -66,7 +80,7 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
 
         // Standardize to 10MB limit
         if (fileToUpload.size > 10 * 1024 * 1024) {
-          throw new Error("File is too large. Maximum size is 10MB.");
+          throw new Error('File is too large. Maximum size is 10MB.');
         }
 
         const fileExt = attachment.name.split('.').pop();
@@ -84,11 +98,11 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
         const { data: urlData } = supabase.storage
           .from('message-attachments')
           .getPublicUrl(filePath);
-        
+
         attachment_url = urlData.publicUrl;
         attachment_file_name = attachment.name;
       }
-      
+
       const { data, error } = await supabase
         .from('messages')
         .insert({
@@ -101,22 +115,24 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
         })
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       toast({
-        title: "Message sent!",
-        description: hasAdminRole ? "Your message has been sent to the user." : "Your message has been sent to our support team.",
+        title: 'Message sent!',
+        description: hasAdminRole
+          ? 'Your message has been sent to the user.'
+          : 'Your message has been sent to our support team.',
       });
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to send message. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to send message. Please try again.',
+        variant: 'destructive',
       });
       console.error('Error sending message:', error);
     },
@@ -127,10 +143,10 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
 
     const groups: { [key: string]: { userId: string; messages: Message[] } } = {};
 
-    messages.forEach(msg => {
+    messages.forEach((msg) => {
       const otherPartyId = msg.sender_id === user.id ? msg.recipient_id : msg.sender_id;
-      
-      if (otherPartyId && users.some(u => u.id === otherPartyId)) {
+
+      if (otherPartyId && users.some((u) => u.id === otherPartyId)) {
         if (!groups[otherPartyId]) {
           groups[otherPartyId] = {
             userId: otherPartyId,
@@ -141,16 +157,21 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
       }
     });
 
-    const conversationArray: Conversation[] = Object.values(groups).map(group => {
-      const sortedMessages = group.messages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const conversationArray: Conversation[] = Object.values(groups).map((group) => {
+      const sortedMessages = group.messages.sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
       return {
         ...group,
         messages: sortedMessages,
         lastMessage: sortedMessages[sortedMessages.length - 1],
       };
     });
-    
-    return conversationArray.sort((a, b) => new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime());
+
+    return conversationArray.sort(
+      (a, b) =>
+        new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime(),
+    );
   }, [messages, user, hasAdminRole, users]);
 
   const customerConversations = useMemo(() => {
@@ -158,7 +179,7 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
 
     const grouped: { [key: string]: Message[] } = {};
 
-    messages.forEach(message => {
+    messages.forEach((message) => {
       const key = message.quote_id || 'general';
       if (!grouped[key]) {
         grouped[key] = [];
@@ -172,8 +193,10 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
   const defaultAccordionItem = useMemo(() => {
     if (!messages || messages.length === 0 || hasAdminRole) return undefined;
 
-    const lastMessage = [...messages].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-    
+    const lastMessage = [...messages].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    )[0];
+
     return lastMessage.quote_id || 'general';
   }, [messages, hasAdminRole]);
 
@@ -188,4 +211,4 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
     customerConversations,
     defaultAccordionItem,
   };
-}
+};

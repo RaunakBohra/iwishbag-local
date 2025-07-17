@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { cn } from "@/lib/utils";
+import { useState, useEffect, useRef } from 'react';
+import { cn } from '@/lib/utils';
 
 interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
@@ -8,12 +8,12 @@ interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   className?: string;
 }
 
-export const LazyImage = ({ 
-  src, 
-  alt, 
+export const LazyImage = ({
+  src,
+  alt,
   placeholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23f3f4f6'/%3E%3C/svg%3E",
   className,
-  ...props 
+  ...props
 }: LazyImageProps) => {
   const [imageSrc, setImageSrc] = useState(placeholder);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -34,7 +34,7 @@ export const LazyImage = ({
           }
         });
       },
-      { threshold: 0.1, rootMargin: "50px" }
+      { threshold: 0.1, rootMargin: '50px' },
     );
 
     if (imgRef.current) {
@@ -52,9 +52,9 @@ export const LazyImage = ({
       src={imageSrc}
       alt={alt}
       className={cn(
-        "transition-opacity duration-300",
-        isLoaded ? "opacity-100" : "opacity-0",
-        className
+        'transition-opacity duration-300',
+        isLoaded ? 'opacity-100' : 'opacity-0',
+        className,
       )}
       loading="lazy"
       {...props}

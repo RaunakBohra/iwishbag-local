@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,7 @@ export const SmartCustomsDetector: React.FC<SmartCustomsDetectorProps> = ({
   productCategory,
   productTitle,
   onCustomsDetected,
-  disabled = false
+  disabled = false,
 }) => {
   const [isDetecting, setIsDetecting] = useState(false);
   const [detectedResult, setDetectedResult] = useState<CustomsResult | null>(null);
@@ -45,10 +45,10 @@ export const SmartCustomsDetector: React.FC<SmartCustomsDetectorProps> = ({
           price: itemPrice,
           weight: itemWeight,
           category: productCategory,
-          title: productTitle
+          title: productTitle,
         },
         originCountry,
-        destinationCountry
+        destinationCountry,
       );
 
       setDetectedResult(result);
@@ -81,7 +81,8 @@ export const SmartCustomsDetector: React.FC<SmartCustomsDetectorProps> = ({
           Smart Customs Detection
         </CardTitle>
         <CardDescription>
-          Automatically detect the appropriate customs category based on your route and product details
+          Automatically detect the appropriate customs category based on your route and product
+          details
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -89,18 +90,15 @@ export const SmartCustomsDetector: React.FC<SmartCustomsDetectorProps> = ({
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <AlertTriangle className="h-4 w-4" />
             <span>
-              Please fill in origin country, destination country, price, and weight to enable detection
+              Please fill in origin country, destination country, price, and weight to enable
+              detection
             </span>
           </div>
         )}
 
         {canDetect && (
           <div className="flex gap-2">
-            <Button
-              onClick={detectCustoms}
-              disabled={isDetecting || disabled}
-              className="flex-1"
-            >
+            <Button onClick={detectCustoms} disabled={isDetecting || disabled} className="flex-1">
               {isDetecting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -176,4 +174,4 @@ export const SmartCustomsDetector: React.FC<SmartCustomsDetectorProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

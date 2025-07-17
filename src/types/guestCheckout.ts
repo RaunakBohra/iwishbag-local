@@ -5,12 +5,12 @@ export interface GuestCheckoutSession {
   id: string;
   session_token: string;
   quote_id: string;
-  
+
   // Guest contact information
   guest_name?: string;
   guest_email?: string;
   guest_phone?: string;
-  
+
   // Guest shipping address (matches quote shipping address format)
   shipping_address?: {
     streetAddress?: string;
@@ -22,16 +22,16 @@ export interface GuestCheckoutSession {
     fullName?: string;
     phone?: string;
   };
-  
+
   // Payment and session info
   payment_currency?: string;
   payment_method?: string;
   payment_amount?: number;
-  
+
   // Session lifecycle
   status: 'active' | 'completed' | 'expired' | 'cancelled';
   expires_at: string;
-  
+
   // Audit fields
   created_at: string;
   updated_at: string;

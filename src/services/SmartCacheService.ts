@@ -35,7 +35,7 @@ export class SmartCacheService<T> {
   private stats = {
     totalHits: 0,
     totalMisses: 0,
-    totalAccessTime: 0
+    totalAccessTime: 0,
   };
   private cleanupTimer?: NodeJS.Timeout;
   private prefetchCallbacks = new Map<string, () => Promise<T>>();
@@ -47,26 +47,22 @@ export class SmartCacheService<T> {
   /**
    * Get value from cache or execute provider function
    */
-  async get<K extends T>(
-    key: string, 
-    provider: () => Promise<K>, 
-    customTTL?: number
-  ): Promise<K> {
+  async get<K extends T>(key: string, provider: () => Promise<K>, customTTL?: number): Promise<K> {
     const startTime = Date.now();
-    
+
     try {
       // Check cache first
       const cached = this.cache.get(key);
-      
+
       if (cached && this.isValid(cached)) {
         // Update access statistics
         cached.accessCount++;
         cached.lastAccessed = Date.now();
         this.stats.totalHits++;
-        
+
         // Check if we should prefetch (refresh before expiry)
         this.schedulePrefetchIfNeeded(key, provider, customTTL);
-        
+
         console.log(`[SmartCache] Cache HIT for key: ${key}`);
         return cached.data as K;
       }
@@ -74,14 +70,13 @@ export class SmartCacheService<T> {
       // Cache miss - fetch new data
       this.stats.totalMisses++;
       console.log(`[SmartCache] Cache MISS for key: ${key}`);
-      
+
       const data = await provider();
-      
+
       // Store in cache
       this.set(key, data, customTTL);
-      
-      return data;
 
+      return data;
     } finally {
       const accessTime = Date.now() - startTime;
       this.updateAccessTimeStats(accessTime);
@@ -93,13 +88,13 @@ export class SmartCacheService<T> {
    */
   set(key: string, data: T, customTTL?: number): void {
     const ttl = customTTL || this.config.defaultTTL;
-    
+
     const entry: CacheEntry<T> = {
       data,
       timestamp: Date.now(),
       accessCount: 1,
       lastAccessed: Date.now(),
-      ttl
+      ttl,
     };
 
     // Check if we need to make room
@@ -115,16 +110,16 @@ export class SmartCacheService<T> {
    * Check if cache entry is still valid
    */
   private isValid(entry: CacheEntry<T>): boolean {
-    return (Date.now() - entry.timestamp) < entry.ttl;
+    return Date.now() - entry.timestamp < entry.ttl;
   }
 
   /**
    * Schedule prefetch if entry is close to expiry
    */
   private schedulePrefetchIfNeeded<K extends T>(
-    key: string, 
-    provider: () => Promise<K>, 
-    customTTL?: number
+    key: string,
+    provider: () => Promise<K>,
+    customTTL?: number,
   ): void {
     const entry = this.cache.get(key);
     if (!entry) return;
@@ -180,7 +175,7 @@ export class SmartCacheService<T> {
       }
     }
 
-    expiredKeys.forEach(key => {
+    expiredKeys.forEach((key) => {
       console.log(`[SmartCache] Cleaning up expired entry: ${key}`);
       this.cache.delete(key);
       this.prefetchCallbacks.delete(key);
@@ -205,7 +200,7 @@ export class SmartCacheService<T> {
    */
   private updateAccessTimeStats(accessTime: number): void {
     this.accessTimes.push(accessTime);
-    
+
     // Keep only last 100 access times for moving average
     if (this.accessTimes.length > 100) {
       this.accessTimes.shift();
@@ -220,10 +215,11 @@ export class SmartCacheService<T> {
   getStats(): CacheStats {
     const totalRequests = this.stats.totalHits + this.stats.totalMisses;
     const hitRate = totalRequests > 0 ? (this.stats.totalHits / totalRequests) * 100 : 0;
-    
-    const averageAccessTime = this.accessTimes.length > 0 
-      ? this.accessTimes.reduce((sum, time) => sum + time, 0) / this.accessTimes.length 
-      : 0;
+
+    const averageAccessTime =
+      this.accessTimes.length > 0
+        ? this.accessTimes.reduce((sum, time) => sum + time, 0) / this.accessTimes.length
+        : 0;
 
     let oldestEntry = Date.now();
     let newestEntry = 0;
@@ -241,7 +237,7 @@ export class SmartCacheService<T> {
       averageAccessTime,
       cacheSize: this.cache.size,
       oldestEntry: this.cache.size > 0 ? oldestEntry : 0,
-      newestEntry: this.cache.size > 0 ? newestEntry : 0
+      newestEntry: this.cache.size > 0 ? newestEntry : 0,
     };
   }
 
@@ -255,7 +251,7 @@ export class SmartCacheService<T> {
     this.stats = {
       totalHits: 0,
       totalMisses: 0,
-      totalAccessTime: 0
+      totalAccessTime: 0,
     };
     console.log('[SmartCache] Cache cleared');
   }
@@ -314,7 +310,7 @@ export class ExchangeRateCache {
       defaultTTL: 15 * 60 * 1000, // 15 minutes
       maxSize: 100, // Store up to 100 exchange rate pairs
       cleanupInterval: 5 * 60 * 1000, // Cleanup every 5 minutes
-      prefetchThreshold: 0.8 // Prefetch when 80% of TTL has passed
+      prefetchThreshold: 0.8, // Prefetch when 80% of TTL has passed
     });
 
     // Prefetch common exchange rates on initialization
@@ -326,7 +322,7 @@ export class ExchangeRateCache {
    */
   async getExchangeRate(fromCountry: string, toCountry: string): Promise<ExchangeRateResult> {
     const cacheKey = `${fromCountry}-${toCountry}`;
-    
+
     return this.smartCache.get(cacheKey, async () => {
       console.log(`[ExchangeRateCache] Fetching fresh rate: ${fromCountry} → ${toCountry}`);
       return await getExchangeRate(fromCountry, toCountry);
@@ -338,10 +334,22 @@ export class ExchangeRateCache {
    */
   private async prefetchCommonRates(): void {
     const commonPairs = [
-      ['US', 'IN'], ['US', 'NP'], ['US', 'CA'], ['US', 'AU'], ['US', 'GB'], ['US', 'JP'],
-      ['IN', 'US'], ['IN', 'NP'], ['IN', 'CA'], ['IN', 'AU'],
-      ['CN', 'US'], ['CN', 'IN'], ['CN', 'NP'],
-      ['GB', 'US'], ['GB', 'IN'], ['GB', 'EU']
+      ['US', 'IN'],
+      ['US', 'NP'],
+      ['US', 'CA'],
+      ['US', 'AU'],
+      ['US', 'GB'],
+      ['US', 'JP'],
+      ['IN', 'US'],
+      ['IN', 'NP'],
+      ['IN', 'CA'],
+      ['IN', 'AU'],
+      ['CN', 'US'],
+      ['CN', 'IN'],
+      ['CN', 'NP'],
+      ['GB', 'US'],
+      ['GB', 'IN'],
+      ['GB', 'EU'],
     ];
 
     console.log('[ExchangeRateCache] Prefetching common exchange rates...');
@@ -350,7 +358,7 @@ export class ExchangeRateCache {
     for (const [from, to] of commonPairs) {
       if (!this.prefetchQueue.has(`${from}-${to}`)) {
         this.prefetchQueue.add(`${from}-${to}`);
-        
+
         setTimeout(async () => {
           try {
             await this.getExchangeRate(from, to);
@@ -384,7 +392,7 @@ export class ExchangeRateCache {
    */
   async warmUp(ratePairs: Array<[string, string]>): Promise<void> {
     console.log(`[ExchangeRateCache] Warming up cache with ${ratePairs.length} rate pairs...`);
-    
+
     const promises = ratePairs.map(async ([from, to]) => {
       try {
         await this.getExchangeRate(from, to);
@@ -406,5 +414,5 @@ export const generalCache = new SmartCacheService<unknown>({
   defaultTTL: 10 * 60 * 1000, // 10 minutes default
   maxSize: 200,
   cleanupInterval: 3 * 60 * 1000, // Cleanup every 3 minutes
-  prefetchThreshold: 0.75
+  prefetchThreshold: 0.75,
 });

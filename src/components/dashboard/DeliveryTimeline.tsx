@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, Package, Truck, CheckCircle } from 'lucide-react';
+import { Package, Truck, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
@@ -28,7 +28,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
   quote,
   onDeliveryOptionChange,
   selectedOptionId,
-  className = ''
+  className = '',
 }) => {
   const { getStatusConfig } = useStatusManagement();
   const [loading, setLoading] = useState(true);
@@ -69,7 +69,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
           console.log('[DeliveryTimeline] Fetching shipping route:', {
             originCountry,
             destinationCountry,
-            quoteId: quote.id
+            quoteId: quote.id,
           });
 
           const { data: routeData, error: routeError } = await supabase
@@ -94,7 +94,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
               .eq('destination_country', destinationCountry)
               .eq('is_active', true)
               .maybeSingle();
-            
+
             if (fallbackError) {
               console.error('Error fetching fallback shipping route:', fallbackError);
             } else if (fallbackRoute) {
@@ -104,14 +104,16 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
 
           // If still no route found, create a default one
           if (!currentRoute) {
-            console.warn(`No shipping route found for ${originCountry} → ${destinationCountry}, using default`);
+            console.warn(
+              `No shipping route found for ${originCountry} → ${destinationCountry}, using default`,
+            );
             currentRoute = {
               id: 0,
               origin_country: originCountry,
               destination_country: destinationCountry,
-              base_shipping_cost: 25.00,
-              cost_per_kg: 5.00,
-              shipping_per_kg: 5.00,
+              base_shipping_cost: 25.0,
+              cost_per_kg: 5.0,
+              shipping_per_kg: 5.0,
               cost_percentage: 2.5,
               processing_days: 2,
               customs_clearance_days: 3,
@@ -123,21 +125,19 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
                   carrier: 'Standard',
                   min_days: 7,
                   max_days: 14,
-                  price: 25.00,
-                  active: true
-                }
+                  price: 25.0,
+                  active: true,
+                },
               ],
               weight_tiers: [
-                { min: 0, max: 1, cost: 15.00 },
-                { min: 1, max: 3, cost: 25.00 },
-                { min: 3, max: 5, cost: 35.00 },
+                { min: 0, max: 1, cost: 15.0 },
+                { min: 1, max: 3, cost: 25.0 },
+                { min: 3, max: 5, cost: 35.0 },
               ],
-              carriers: [
-                { name: 'Standard', costMultiplier: 1.0, days: '7-14' }
-              ],
+              carriers: [{ name: 'Standard', costMultiplier: 1.0, days: '7-14' }],
               is_active: true,
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             };
           }
         }
@@ -152,38 +152,40 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
             name: opt.name || `Option ${index + 1}`,
             min_days: opt.min_days || 0,
             max_days: opt.max_days || 0,
-            cost: opt.cost || 0
+            cost: opt.cost || 0,
           }));
         }
 
         // Create default option if none exist
         if (options.length === 0) {
-          options = [{
-            id: 'default',
-            name: 'Standard Delivery',
-            min_days: 7,
-            max_days: 14,
-            cost: 0
-          }];
+          options = [
+            {
+              id: 'default',
+              name: 'Standard Delivery',
+              min_days: 7,
+              max_days: 14,
+              cost: 0,
+            },
+          ];
         }
 
         // Filter options based on quote's enabled_delivery_options
         const quoteEnabledOptions = quote.enabled_delivery_options || [];
         if (quoteEnabledOptions.length > 0) {
-          options = options.filter(option => quoteEnabledOptions.includes(option.id));
+          options = options.filter((option) => quoteEnabledOptions.includes(option.id));
         }
 
         setDeliveryOptions(options);
-        
+
         // Set selected option
-        const defaultOption = selectedOptionId 
-          ? options.find(opt => opt.id === selectedOptionId) 
+        const defaultOption = selectedOptionId
+          ? options.find((opt) => opt.id === selectedOptionId)
           : options[0];
         setSelectedOption(defaultOption || options[0]);
-
       } catch (err) {
         console.error('Error fetching shipping data:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load delivery information';
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to load delivery information';
         setError(errorMessage);
       } finally {
         setLoading(false);
@@ -191,7 +193,10 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
     };
 
     fetchShippingData();
-  }, [quote?.id, quote?.shipping_route_id, quote?.origin_country, quote?.destination_country, selectedOptionId, quote?.enabled_delivery_options]);
+  }, [
+    quote,
+    selectedOptionId,
+  ]);
 
   // Early return if no quote data
   if (!quote) {
@@ -214,12 +219,17 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
     if (!shippingRoute) return null;
 
     // DYNAMIC: Check if quote status indicates payment received
-    const statusConfig = getStatusConfig(quote.status, quote.status.includes('paid') || quote.status.includes('ordered') ? 'order' : 'quote');
-    const isPaymentReceived = statusConfig?.isSuccessful && (quote.status.includes('paid') || quote.status === 'ordered');
-    
-    const startDate = isPaymentReceived && quote.payment_date 
-      ? new Date(quote.payment_date) 
-      : new Date(quote.created_at);
+    const statusConfig = getStatusConfig(
+      quote.status,
+      quote.status.includes('paid') || quote.status.includes('ordered') ? 'order' : 'quote',
+    );
+    const isPaymentReceived =
+      statusConfig?.isSuccessful && (quote.status.includes('paid') || quote.status === 'ordered');
+
+    const startDate =
+      isPaymentReceived && quote.payment_date
+        ? new Date(quote.payment_date)
+        : new Date(quote.created_at);
 
     const processingDays = shippingRoute.processing_days || 0;
     const customsDays = shippingRoute.customs_clearance_days || 0;
@@ -233,7 +243,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
     // Calculate dates
     const minDate = new Date(startDate);
     minDate.setDate(minDate.getDate() + totalMinDays);
-    
+
     const maxDate = new Date(startDate);
     maxDate.setDate(maxDate.getDate() + totalMaxDays);
 
@@ -245,7 +255,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
       processingDays,
       customsDays,
       deliveryMinDays,
-      deliveryMaxDays
+      deliveryMaxDays,
     };
   };
 
@@ -255,7 +265,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
     const minDay = minDate.getDate();
     const maxMonth = maxDate.toLocaleDateString('en-US', { month: 'short' });
     const maxDay = maxDate.getDate();
-    
+
     if (minMonth === maxMonth) {
       return `${minMonth} ${minDay}-${maxDay}`;
     } else {
@@ -325,7 +335,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
               {selectedOption.name}
             </Badge>
           </div>
-          
+
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-blue-700">Delivery Window:</span>
@@ -333,18 +343,18 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
                 {formatDateRange(timeline.minDate, timeline.maxDate)}
               </span>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <span className="text-sm text-blue-700">Total Days:</span>
               <span className="font-medium text-blue-900">
                 {timeline.totalMinDays}-{timeline.totalMaxDays} days
               </span>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <span className="text-sm text-blue-700">Based on route:</span>
-              <ShippingRouteDisplay 
-                origin={shippingRoute.origin_country} 
+              <ShippingRouteDisplay
+                origin={shippingRoute.origin_country}
                 destination={shippingRoute.destination_country}
                 className="font-medium text-blue-900"
                 showIcon={false}
@@ -356,7 +366,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
         {/* Timeline Breakdown */}
         <div className="space-y-3">
           <h5 className="font-medium text-gray-900">Timeline Breakdown</h5>
-          
+
           <div className="space-y-2">
             <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
               <div className="flex items-center space-x-2">
@@ -367,17 +377,15 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
                 {timeline.processingDays} days
               </span>
             </div>
-            
+
             <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-4 h-4 text-gray-500" />
                 <span className="text-sm text-gray-700">Customs Clearance</span>
               </div>
-              <span className="text-sm font-medium text-gray-900">
-                {timeline.customsDays} days
-              </span>
+              <span className="text-sm font-medium text-gray-900">{timeline.customsDays} days</span>
             </div>
-            
+
             <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
               <div className="flex items-center space-x-2">
                 <Truck className="w-4 h-4 text-gray-500" />
@@ -400,7 +408,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
                 return (
                   <Button
                     key={option.id}
-                    variant={selectedOption.id === option.id ? "default" : "outline"}
+                    variant={selectedOption.id === option.id ? 'default' : 'outline'}
                     size="sm"
                     className="w-full justify-between"
                     onClick={() => {
@@ -423,4 +431,4 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

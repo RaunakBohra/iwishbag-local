@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { ChevronDown, ChevronUp, Shield, Percent, Package, DollarSign } from 'lucide-react';
-import { supabase } from '../../integrations/supabase/client';
+import { Shield, Package, DollarSign } from 'lucide-react';
 import { useCountryUtils } from '../../lib/countryUtils';
 import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
 
@@ -56,35 +54,40 @@ interface CustomsTier {
   description?: string;
 }
 
-export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({ 
-  quote, 
+export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
+  quote,
   shippingAddress,
   className = '',
   customsTiers,
   appliedTier,
   loading,
-  error
+  error,
 }) => {
-  const { countries, getCountryDisplayName } = useCountryUtils();
+  const { countries } = useCountryUtils();
 
   // Get quote details
   const originCountry = quote.origin_country || 'US';
-  let destinationCountry = shippingAddress?.destination_country || shippingAddress?.country || quote.destination_country;
+  let destinationCountry =
+    shippingAddress?.destination_country || shippingAddress?.country || quote.destination_country;
   if (destinationCountry && destinationCountry.length > 2) {
-    const found = countries.find(c => c.name === destinationCountry);
+    const found = countries.find((c) => c.name === destinationCountry);
     if (found) destinationCountry = found.code;
   }
-  const quotePrice = quote.quote_items?.reduce((sum: number, item: QuoteItem) => sum + (item.item_price || 0), 0) || 0;
-  const quoteWeight = quote.quote_items?.reduce((sum: number, item: QuoteItem) => sum + (item.item_weight || 0), 0) || 0;
-
-
+  const quotePrice =
+    quote.quote_items?.reduce((sum: number, item: QuoteItem) => sum + (item.item_price || 0), 0) ||
+    0;
+  const quoteWeight =
+    quote.quote_items?.reduce((sum: number, item: QuoteItem) => sum + (item.item_weight || 0), 0) ||
+    0;
 
   // Check if conditions match
   const checkConditions = (tier: CustomsTier): { priceMatch: boolean; weightMatch: boolean } => {
-    const priceMatch = (!tier.price_min || quotePrice >= tier.price_min) && 
-                      (!tier.price_max || quotePrice <= tier.price_max);
-    const weightMatch = (!tier.weight_min || quoteWeight >= tier.weight_min) && 
-                       (!tier.weight_max || quoteWeight <= tier.weight_max);
+    const priceMatch =
+      (!tier.price_min || quotePrice >= tier.price_min) &&
+      (!tier.price_max || quotePrice <= tier.price_max);
+    const weightMatch =
+      (!tier.weight_min || quoteWeight >= tier.weight_min) &&
+      (!tier.weight_max || quoteWeight <= tier.weight_max);
     return { priceMatch, weightMatch };
   };
 
@@ -105,9 +108,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
     return (
       <Card className={className}>
         <CardContent className="p-4">
-          <div className="text-sm text-red-600">
-            Error loading customs tiers: {error}
-          </div>
+          <div className="text-sm text-red-600">Error loading customs tiers: {error}</div>
         </CardContent>
       </Card>
     );
@@ -122,8 +123,8 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
             Customs Tiers
           </CardTitle>
           <CardDescription className="text-xs">
-            <ShippingRouteDisplay 
-              origin={originCountry} 
+            <ShippingRouteDisplay
+              origin={originCountry}
               destination={destinationCountry}
               showIcon={false}
             />
@@ -148,8 +149,8 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
               Customs Tiers
             </CardTitle>
             <CardDescription className="text-xs">
-              <ShippingRouteDisplay 
-                origin={originCountry} 
+              <ShippingRouteDisplay
+                origin={originCountry}
                 destination={destinationCountry}
                 showIcon={false}
               />
@@ -172,35 +173,27 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
                 <div className="text-sm font-semibold text-blue-800">
                   {appliedTier.customs_percentage}% customs
                 </div>
-                <div className="text-xs text-blue-600">
-                  {appliedTier.vat_percentage}% VAT
-                </div>
+                <div className="text-xs text-blue-600">{appliedTier.vat_percentage}% VAT</div>
               </div>
             </div>
             {appliedTier.description && (
-              <div className="mt-2 text-xs text-blue-700">
-                {appliedTier.description}
-              </div>
+              <div className="mt-2 text-xs text-blue-700">{appliedTier.description}</div>
             )}
           </div>
         )}
 
         {/* All Tiers (when expanded) */}
         <div className="space-y-2">
-          <div className="text-xs font-medium text-muted-foreground mb-2">
-            All Available Tiers:
-          </div>
+          <div className="text-xs font-medium text-muted-foreground mb-2">All Available Tiers:</div>
           {customsTiers.map((tier) => {
             const { priceMatch, weightMatch } = checkConditions(tier);
             const isApplied = appliedTier?.id === tier.id;
-            
+
             return (
               <div
                 key={tier.id}
                 className={`p-2 rounded border text-xs ${
-                  isApplied 
-                    ? 'bg-blue-50 border-blue-200' 
-                    : 'bg-gray-50 border-gray-200'
+                  isApplied ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
@@ -217,7 +210,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
                     <div className="text-muted-foreground">{tier.vat_percentage}% VAT</div>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
@@ -234,7 +227,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
                     {weightMatch && <span className="text-green-600">✓</span>}
                   </div>
                 </div>
-                
+
                 <div className="mt-1 text-xs text-blue-600">
                   Logic: {tier.logic_type} • Priority: {tier.priority_order}
                 </div>
@@ -259,4 +252,4 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

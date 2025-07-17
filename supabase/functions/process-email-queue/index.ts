@@ -1,29 +1,29 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') || 'https://iwishbag.com',
   'Access-Control-Allow-Headers': 'authorization, content-type',
   'Access-Control-Allow-Methods': 'POST',
   'Access-Control-Max-Age': '86400',
-}
+};
 
 serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
     // Create Supabase client with service role key
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get Resend API key
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
     if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY not configured')
+      throw new Error('RESEND_API_KEY not configured');
     }
 
     // Fetch pending emails from queue
@@ -33,11 +33,11 @@ serve(async (req) => {
       .eq('status', 'pending')
       .lt('attempts', 3)
       .order('created_at', { ascending: true })
-      .limit(10)
+      .limit(10);
 
-    if (fetchError) throw fetchError
+    if (fetchError) throw fetchError;
 
-    const results = []
+    const results = [];
 
     for (const email of pendingEmails || []) {
       try {
@@ -45,7 +45,7 @@ serve(async (req) => {
         const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${resendApiKey}`,
+            Authorization: `Bearer ${resendApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -54,7 +54,7 @@ serve(async (req) => {
             subject: email.subject,
             html: email.html_content,
           }),
-        })
+        });
 
         if (response.ok) {
           // Mark as sent
@@ -65,12 +65,12 @@ serve(async (req) => {
               sent_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             })
-            .eq('id', email.id)
+            .eq('id', email.id);
 
-          results.push({ id: email.id, status: 'sent' })
+          results.push({ id: email.id, status: 'sent' });
         } else {
-          const error = await response.text()
-          
+          const error = await response.text();
+
           // Update with error
           await supabase
             .from('email_queue')
@@ -80,9 +80,9 @@ serve(async (req) => {
               error_message: error,
               updated_at: new Date().toISOString(),
             })
-            .eq('id', email.id)
+            .eq('id', email.id);
 
-          results.push({ id: email.id, status: 'failed', error })
+          results.push({ id: email.id, status: 'failed', error });
         }
       } catch (error) {
         // Update with error
@@ -94,20 +94,19 @@ serve(async (req) => {
             error_message: error.message,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', email.id)
+          .eq('id', email.id);
 
-        results.push({ id: email.id, status: 'error', error: error.message })
+        results.push({ id: email.id, status: 'error', error: error.message });
       }
     }
 
-    return new Response(
-      JSON.stringify({ processed: results.length, results }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ processed: results.length, results }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
-})
+});

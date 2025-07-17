@@ -1,8 +1,7 @@
-
-import { MessageSquare, Paperclip } from "lucide-react";
-import { MessageItem } from "./MessageItem";
-import { cn } from "@/lib/utils";
-import { Message } from "./types";
+import { MessageSquare, Paperclip } from 'lucide-react';
+import { MessageItem } from './MessageItem';
+import { cn } from '@/lib/utils';
+import { Message } from './types';
 
 interface MessageListProps {
   messages: Message[] | undefined;
@@ -40,7 +39,13 @@ export const MessageList = ({ messages, isLoading, currentUserId, isAdmin }: Mes
   return (
     <div className="flex flex-col gap-4">
       {messages.map((message) => (
-        <div key={message.id} className={cn("flex flex-col", message.sender_id === currentUserId ? "items-end" : "items-start")}>
+        <div
+          key={message.id}
+          className={cn(
+            'flex flex-col',
+            message.sender_id === currentUserId ? 'items-end' : 'items-start',
+          )}
+        >
           <MessageItem message={message} currentUserId={currentUserId} isAdmin={isAdmin} />
           {message.attachment_url && (
             <div className="mt-2">
@@ -51,7 +56,7 @@ export const MessageList = ({ messages, isLoading, currentUserId, isAdmin }: Mes
                 className="inline-flex items-center gap-2 rounded-md bg-muted px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/80"
               >
                 <Paperclip className="h-4 w-4" />
-                {message.attachment_file_name || "View Attachment"}
+                {message.attachment_file_name || 'View Attachment'}
               </a>
             </div>
           )}

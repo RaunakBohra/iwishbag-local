@@ -1,11 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Control, UseFieldArrayRemove, UseFormSetValue } from "react-hook-form";
-import { ProductInfoFields } from "./ProductInfoFields";
-import { ProductImageField } from "./ProductImageField";
-import { Trash2, Package } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { QuoteFormValues } from "@/components/forms/quote-form-validation";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Control, UseFieldArrayRemove, UseFormSetValue } from 'react-hook-form';
+import { ProductInfoFields } from './ProductInfoFields';
+import { ProductImageField } from './ProductImageField';
+import { Trash2, Package } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { QuoteFormValues } from '@/components/forms/quote-form-validation';
 
 interface QuoteItemProps {
   index: number;
@@ -25,9 +25,7 @@ const QuoteItem = ({ index, remove, control, setValue }: QuoteItemProps) => {
             </div>
             <div>
               <CardTitle className="text-lg">Product {index + 1}</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Tell us about this item
-              </p>
+              <p className="text-sm text-muted-foreground">Tell us about this item</p>
             </div>
           </div>
           {index > 0 && (
@@ -51,12 +49,14 @@ const QuoteItem = ({ index, remove, control, setValue }: QuoteItemProps) => {
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <h4 className="font-medium text-sm">Product Image</h4>
-                <Badge variant="secondary" className="text-xs">Optional</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  Optional
+                </Badge>
               </div>
-          <ProductImageField control={control} index={index} />
+              <ProductImageField control={control} index={index} />
             </div>
           </div>
-          
+
           {/* Product Details */}
           <div className="lg:col-span-2">
             <div className="space-y-4">

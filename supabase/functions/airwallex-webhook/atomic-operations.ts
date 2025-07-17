@@ -61,21 +61,21 @@ interface AirwallexDispute {
  */
 export async function processPaymentIntentSucceeded(
   supabaseAdmin: SupabaseClient,
-  paymentIntent: AirwallexPaymentIntent
+  paymentIntent: AirwallexPaymentIntent,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     console.log('Processing payment_intent.succeeded:', {
       id: paymentIntent.id,
       amount: paymentIntent.amount,
       currency: paymentIntent.currency,
-      merchant_order_id: paymentIntent.merchant_order_id
+      merchant_order_id: paymentIntent.merchant_order_id,
     });
 
     const transactionId = `airwallex_${paymentIntent.id}`;
-    
+
     // Extract quote IDs from metadata
     const quoteIds = paymentIntent.metadata?.quote_ids?.split(',').filter(Boolean) || [];
-    
+
     if (quoteIds.length === 0 && paymentIntent.merchant_order_id) {
       // Fallback to merchant_order_id if no quote_ids in metadata
       quoteIds.push(paymentIntent.merchant_order_id);
@@ -95,7 +95,7 @@ export async function processPaymentIntentSucceeded(
         amount: paymentIntent.amount / 100, // Convert from cents to dollars
       })
       .eq('transaction_id', transactionId);
-    
+
     updates.push(transactionUpdate);
 
     // 2. Update quote statuses to 'paid'
@@ -112,9 +112,8 @@ export async function processPaymentIntentSucceeded(
       }
 
       // Only update quotes that are in 'approved' or 'sent' status
-      const quotesToUpdate = quotes?.filter(q => 
-        ['approved', 'sent'].includes(q.status)
-      ).map(q => q.id) || [];
+      const quotesToUpdate =
+        quotes?.filter((q) => ['approved', 'sent'].includes(q.status)).map((q) => q.id) || [];
 
       if (quotesToUpdate.length > 0) {
         const quoteUpdate = supabaseAdmin
@@ -123,10 +122,10 @@ export async function processPaymentIntentSucceeded(
             status: 'paid',
             payment_transaction_id: transactionId,
             paid_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .in('id', quotesToUpdate);
-        
+
         updates.push(quoteUpdate);
 
         // 3. Create order records if needed (depends on business flow)
@@ -141,26 +140,26 @@ export async function processPaymentIntentSucceeded(
         email: paymentIntent.customer?.email,
         amount: paymentIntent.amount,
         currency: paymentIntent.currency,
-        quoteIds: quoteIds
+        quoteIds: quoteIds,
       });
     }
 
     // Execute all updates
     const results = await Promise.all(updates);
-    
+
     // Check for errors
-    const errors = results.filter(r => r.error);
+    const errors = results.filter((r) => r.error);
     if (errors.length > 0) {
       console.error('Errors during payment success processing:', errors);
-      throw new Error(`Database update failed: ${errors.map(e => e.error.message).join(', ')}`);
+      throw new Error(`Database update failed: ${errors.map((e) => e.error.message).join(', ')}`);
     }
 
     return { success: true };
   } catch (error) {
     console.error('Error processing payment success:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -172,12 +171,12 @@ export async function processPaymentIntentSucceeded(
 export async function processPaymentIntentFailed(
   supabaseAdmin: SupabaseClient,
   paymentIntent: AirwallexPaymentIntent,
-  eventType: 'failed' | 'cancelled'
+  eventType: 'failed' | 'cancelled',
 ): Promise<{ success: boolean; error?: string }> {
   try {
     console.log(`Processing payment_intent.${eventType}:`, {
       id: paymentIntent.id,
-      status: paymentIntent.status
+      status: paymentIntent.status,
     });
 
     const transactionId = `airwallex_${paymentIntent.id}`;
@@ -193,10 +192,11 @@ export async function processPaymentIntentFailed(
         status: eventType,
         gateway_response: paymentIntent,
         updated_at: new Date().toISOString(),
-        error_message: paymentIntent.latest_payment_attempt?.failure_reason || `Payment ${eventType}`
+        error_message:
+          paymentIntent.latest_payment_attempt?.failure_reason || `Payment ${eventType}`,
       })
       .eq('transaction_id', transactionId);
-    
+
     updates.push(transactionUpdate);
 
     // 2. Update quote statuses back to 'approved' (allowing retry)
@@ -206,37 +206,37 @@ export async function processPaymentIntentFailed(
         .update({
           status: 'approved', // Reset to approved so customer can retry
           payment_transaction_id: null, // Clear failed transaction reference
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .in('id', quoteIds)
         .eq('status', 'paid'); // Only update if currently marked as paid (edge case)
-      
+
       updates.push(quoteUpdate);
 
       // Log notification task
       console.log(`TODO: Notify customer of payment ${eventType}:`, {
         email: paymentIntent.customer?.email,
         quoteIds: quoteIds,
-        reason: eventType
+        reason: eventType,
       });
     }
 
     // Execute all updates
     const results = await Promise.all(updates);
-    
+
     // Check for errors
-    const errors = results.filter(r => r.error);
+    const errors = results.filter((r) => r.error);
     if (errors.length > 0) {
       console.error(`Errors during payment ${eventType} processing:`, errors);
-      throw new Error(`Database update failed: ${errors.map(e => e.error.message).join(', ')}`);
+      throw new Error(`Database update failed: ${errors.map((e) => e.error.message).join(', ')}`);
     }
 
     return { success: true };
   } catch (error) {
     console.error(`Error processing payment ${eventType}:`, error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -247,18 +247,18 @@ export async function processPaymentIntentFailed(
  */
 export async function processRefundSucceeded(
   supabaseAdmin: SupabaseClient,
-  refund: AirwallexRefund
+  refund: AirwallexRefund,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     console.log('Processing refund.succeeded:', {
       id: refund.id,
       payment_intent_id: refund.payment_intent_id,
       amount: refund.amount,
-      currency: refund.currency
+      currency: refund.currency,
     });
 
     const transactionId = `airwallex_${refund.payment_intent_id}`;
-    
+
     // Check if we have a refunds table
     const { data: tables } = await supabaseAdmin
       .from('information_schema.tables')
@@ -273,19 +273,17 @@ export async function processRefundSucceeded(
 
     if (hasRefundsTable) {
       // Insert refund record
-      const refundInsert = supabaseAdmin
-        .from('refunds')
-        .insert({
-          id: `airwallex_refund_${refund.id}`,
-          transaction_id: transactionId,
-          amount: refund.amount / 100, // Convert from cents
-          currency: refund.currency,
-          status: 'succeeded',
-          reason: refund.reason,
-          gateway_response: refund,
-          created_at: refund.created_at
-        });
-      
+      const refundInsert = supabaseAdmin.from('refunds').insert({
+        id: `airwallex_refund_${refund.id}`,
+        transaction_id: transactionId,
+        amount: refund.amount / 100, // Convert from cents
+        currency: refund.currency,
+        status: 'succeeded',
+        reason: refund.reason,
+        gateway_response: refund,
+        created_at: refund.created_at,
+      });
+
       updates.push(refundInsert);
     }
 
@@ -297,7 +295,7 @@ export async function processRefundSucceeded(
       .single();
 
     if (transaction) {
-      const newRefundedAmount = (transaction.refunded_amount || 0) + (refund.amount / 100);
+      const newRefundedAmount = (transaction.refunded_amount || 0) + refund.amount / 100;
       const isFullyRefunded = newRefundedAmount >= transaction.amount;
 
       const transactionUpdate = supabaseAdmin
@@ -305,10 +303,10 @@ export async function processRefundSucceeded(
         .update({
           refunded_amount: newRefundedAmount,
           status: isFullyRefunded ? 'refunded' : 'partially_refunded',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('transaction_id', transactionId);
-      
+
       updates.push(transactionUpdate);
 
       // If fully refunded, update quote status
@@ -324,10 +322,10 @@ export async function processRefundSucceeded(
             .from('quotes')
             .update({
               status: 'refunded',
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             })
             .in('id', txnData.quote_ids);
-          
+
           updates.push(quoteUpdate);
         }
       }
@@ -335,12 +333,12 @@ export async function processRefundSucceeded(
 
     // Execute all updates
     const results = await Promise.all(updates);
-    
+
     // Check for errors
-    const errors = results.filter(r => r.error);
+    const errors = results.filter((r) => r.error);
     if (errors.length > 0) {
       console.error('Errors during refund success processing:', errors);
-      throw new Error(`Database update failed: ${errors.map(e => e.error.message).join(', ')}`);
+      throw new Error(`Database update failed: ${errors.map((e) => e.error.message).join(', ')}`);
     }
 
     // Log refund confirmation task
@@ -349,9 +347,9 @@ export async function processRefundSucceeded(
     return { success: true };
   } catch (error) {
     console.error('Error processing refund success:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -362,13 +360,13 @@ export async function processRefundSucceeded(
  */
 export async function processRefundFailed(
   supabaseAdmin: SupabaseClient,
-  refund: AirwallexRefund
+  refund: AirwallexRefund,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     console.log('Processing refund.failed:', {
       id: refund.id,
       payment_intent_id: refund.payment_intent_id,
-      failure_reason: refund.failure_reason
+      failure_reason: refund.failure_reason,
     });
 
     // Check if we have a refunds table
@@ -383,20 +381,18 @@ export async function processRefundFailed(
 
     if (hasRefundsTable) {
       // Update or insert refund record as failed
-      const { error } = await supabaseAdmin
-        .from('refunds')
-        .upsert({
-          id: `airwallex_refund_${refund.id}`,
-          transaction_id: `airwallex_${refund.payment_intent_id}`,
-          amount: refund.amount / 100,
-          currency: refund.currency,
-          status: 'failed',
-          reason: refund.reason,
-          failure_reason: refund.failure_reason,
-          gateway_response: refund,
-          created_at: refund.created_at,
-          updated_at: new Date().toISOString()
-        });
+      const { error } = await supabaseAdmin.from('refunds').upsert({
+        id: `airwallex_refund_${refund.id}`,
+        transaction_id: `airwallex_${refund.payment_intent_id}`,
+        amount: refund.amount / 100,
+        currency: refund.currency,
+        status: 'failed',
+        reason: refund.reason,
+        failure_reason: refund.failure_reason,
+        gateway_response: refund,
+        created_at: refund.created_at,
+        updated_at: new Date().toISOString(),
+      });
 
       if (error) {
         throw new Error(`Failed to update refund record: ${error.message}`);
@@ -409,7 +405,7 @@ export async function processRefundFailed(
       payment_intent_id: refund.payment_intent_id,
       amount: refund.amount,
       currency: refund.currency,
-      failure_reason: refund.failure_reason
+      failure_reason: refund.failure_reason,
     });
 
     // In a real system, this would trigger an admin notification
@@ -418,9 +414,9 @@ export async function processRefundFailed(
     return { success: true };
   } catch (error) {
     console.error('Error processing refund failure:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -431,14 +427,14 @@ export async function processRefundFailed(
  */
 export async function processDisputeCreated(
   supabaseAdmin: SupabaseClient,
-  dispute: AirwallexDispute
+  dispute: AirwallexDispute,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     console.log('Processing dispute.created:', {
       id: dispute.id,
       payment_intent_id: dispute.payment_intent_id,
       amount: dispute.amount,
-      reason: dispute.reason
+      reason: dispute.reason,
     });
 
     // Check if we have a disputes table
@@ -453,20 +449,18 @@ export async function processDisputeCreated(
 
     if (hasDisputesTable) {
       // Insert dispute record
-      const { error } = await supabaseAdmin
-        .from('disputes')
-        .insert({
-          id: `airwallex_dispute_${dispute.id}`,
-          transaction_id: `airwallex_${dispute.payment_intent_id}`,
-          amount: dispute.amount / 100,
-          currency: dispute.currency,
-          status: dispute.status,
-          reason: dispute.reason,
-          evidence_due_by: dispute.evidence_due_by,
-          gateway: 'airwallex',
-          gateway_response: dispute,
-          created_at: dispute.created_at
-        });
+      const { error } = await supabaseAdmin.from('disputes').insert({
+        id: `airwallex_dispute_${dispute.id}`,
+        transaction_id: `airwallex_${dispute.payment_intent_id}`,
+        amount: dispute.amount / 100,
+        currency: dispute.currency,
+        status: dispute.status,
+        reason: dispute.reason,
+        evidence_due_by: dispute.evidence_due_by,
+        gateway: 'airwallex',
+        gateway_response: dispute,
+        created_at: dispute.created_at,
+      });
 
       if (error) {
         throw new Error(`Failed to create dispute record: ${error.message}`);
@@ -481,7 +475,7 @@ export async function processDisputeCreated(
       .from('payment_transactions')
       .update({
         has_dispute: true,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('transaction_id', `airwallex_${dispute.payment_intent_id}`);
 
@@ -496,7 +490,7 @@ export async function processDisputeCreated(
       amount: dispute.amount,
       currency: dispute.currency,
       reason: dispute.reason,
-      evidence_due_by: dispute.evidence_due_by
+      evidence_due_by: dispute.evidence_due_by,
     });
 
     // In a real system, this would trigger urgent admin notifications
@@ -506,9 +500,9 @@ export async function processDisputeCreated(
     return { success: true };
   } catch (error) {
     console.error('Error processing dispute creation:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -519,12 +513,12 @@ export async function processDisputeCreated(
  */
 export async function processDisputeUpdated(
   supabaseAdmin: SupabaseClient,
-  dispute: AirwallexDispute
+  dispute: AirwallexDispute,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     console.log('Processing dispute.updated:', {
       id: dispute.id,
-      status: dispute.status
+      status: dispute.status,
     });
 
     // Check if we have a disputes table
@@ -544,7 +538,7 @@ export async function processDisputeUpdated(
         .update({
           status: dispute.status,
           gateway_response: dispute,
-          updated_at: dispute.updated_at || new Date().toISOString()
+          updated_at: dispute.updated_at || new Date().toISOString(),
         })
         .eq('id', `airwallex_dispute_${dispute.id}`);
 
@@ -558,7 +552,7 @@ export async function processDisputeUpdated(
           .from('payment_transactions')
           .update({
             has_dispute: false,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq('transaction_id', `airwallex_${dispute.payment_intent_id}`);
 
@@ -571,15 +565,15 @@ export async function processDisputeUpdated(
     // Log status change
     console.log('Dispute status updated:', {
       dispute_id: dispute.id,
-      new_status: dispute.status
+      new_status: dispute.status,
     });
 
     return { success: true };
   } catch (error) {
     console.error('Error processing dispute update:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }

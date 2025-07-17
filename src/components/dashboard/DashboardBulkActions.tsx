@@ -1,37 +1,32 @@
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { ShoppingCart, X, Package } from 'lucide-react';
+import { Tables } from '@/integrations/supabase/types';
+import { useDashboardBulkActions } from '@/hooks/useDashboardBulkActions';
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { ShoppingCart, X, Package } from "lucide-react";
-import { Tables } from "@/integrations/supabase/types";
-import { useDashboardBulkActions } from "@/hooks/useDashboardBulkActions";
-
-type Quote = Tables<'quotes'>;
+// Removed unused Quote type
 type CountrySetting = Tables<'country_settings'>;
 type Profile = Tables<'profiles'>;
 
 interface DashboardBulkActionsProps {
   selectedQuoteIds: string[];
-  onBulkAction: (action: string) => void;
-  userProfile?: Profile | null;
-  allCountries?: CountrySetting[] | null;
+  _onBulkAction: (action: string) => void;
+  _userProfile?: Profile | null;
+  _allCountries?: CountrySetting[] | null;
 }
 
 export const DashboardBulkActions = ({
   selectedQuoteIds,
-  onBulkAction,
-  userProfile,
-  allCountries
+  _onBulkAction,
+  _userProfile,
+  _allCountries,
 }: DashboardBulkActionsProps) => {
-  const {
-    handleBulkAddToCart,
-    handleBulkRemoveFromCart,
-    isAddingBulk,
-    isRemovingBulk,
-  } = useDashboardBulkActions({
-    quotes: [],
-    selectedQuoteIds,
-    setSelectedQuoteIds: () => {},
-  });
+  const { handleBulkAddToCart, handleBulkRemoveFromCart, isAddingBulk, isRemovingBulk } =
+    useDashboardBulkActions({
+      quotes: [],
+      selectedQuoteIds,
+      setSelectedQuoteIds: () => {},
+    });
 
   if (selectedQuoteIds.length === 0) {
     return null;
@@ -45,7 +40,7 @@ export const DashboardBulkActions = ({
           {selectedQuoteIds.length} item{selectedQuoteIds.length > 1 ? 's' : ''} selected
         </span>
       </div>
-      
+
       <div className="flex gap-2">
         <Button
           size="sm"
@@ -54,9 +49,9 @@ export const DashboardBulkActions = ({
           className="flex items-center gap-2"
         >
           <ShoppingCart className="h-4 w-4" />
-          {isAddingBulk ? "Adding..." : "Add to Cart"}
+          {isAddingBulk ? 'Adding...' : 'Add to Cart'}
         </Button>
-        
+
         <Button
           size="sm"
           variant="outline"
@@ -65,7 +60,7 @@ export const DashboardBulkActions = ({
           className="flex items-center gap-2"
         >
           <X className="h-4 w-4" />
-          {isRemovingBulk ? "Removing..." : "Remove from Cart"}
+          {isRemovingBulk ? 'Removing...' : 'Remove from Cart'}
         </Button>
       </div>
     </div>

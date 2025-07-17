@@ -1,17 +1,23 @@
-import { useState, useCallback } from "react";
-import { useDropzone } from "react-dropzone";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Upload, X, FileText, Check } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { DocumentType } from "./DocumentManager";
+import { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Upload, X, FileText, Check } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useMutation } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { DocumentType } from './DocumentManager';
 
 interface DocumentUploaderProps {
   quoteId: string;
@@ -29,11 +35,11 @@ const DOCUMENT_TYPES: readonly { value: DocumentType; label: string }[] = [
   { value: 'other', label: 'Other' },
 ] as const;
 
-export const DocumentUploader = ({ 
-  quoteId, 
-  orderId, 
-  onSuccess, 
-  isAdmin = false 
+export const DocumentUploader = ({
+  quoteId,
+  orderId,
+  onSuccess,
+  isAdmin = false,
 }: DocumentUploaderProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -44,23 +50,26 @@ export const DocumentUploader = ({
   const [isCustomerVisible, setIsCustomerVisible] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      if (!file) return;
 
-    // Validate file size (50MB limit for documents)
-    if (file.size > 50 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please select a file smaller than 50MB.",
-        variant: "destructive"
-      });
-      return;
-    }
+      // Validate file size (50MB limit for documents)
+      if (file.size > 50 * 1024 * 1024) {
+        toast({
+          title: 'File too large',
+          description: 'Please select a file smaller than 50MB.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-    setSelectedFile(file);
-    setFileName(file.name);
-  }, [toast]);
+      setSelectedFile(file);
+      setFileName(file.name);
+    },
+    [toast],
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -73,7 +82,7 @@ export const DocumentUploader = ({
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
     },
     maxFiles: 1,
-    disabled: uploading
+    disabled: uploading,
   });
 
   const uploadMutation = useMutation({
@@ -94,16 +103,16 @@ export const DocumentUploader = ({
         // Upload file to Supabase Storage with retry logic
         const fileExt = selectedFile.name.split('.').pop();
         const fileName = `${quoteId}/${documentType}-${Date.now()}.${fileExt}`;
-        
+
         let uploadAttempts = 0;
         const maxAttempts = 3;
         let uploadError: Error | null = null;
-        
+
         while (uploadAttempts < maxAttempts) {
           const { error } = await supabase.storage
             .from('message-attachments')
             .upload(fileName, selectedFile);
-          
+
           if (!error) {
             uploadError = null;
             break;
@@ -112,13 +121,15 @@ export const DocumentUploader = ({
             uploadAttempts++;
             if (uploadAttempts < maxAttempts) {
               // Wait before retry
-              await new Promise(resolve => setTimeout(resolve, 1000 * uploadAttempts));
+              await new Promise((resolve) => setTimeout(resolve, 1000 * uploadAttempts));
             }
           }
         }
-        
+
         if (uploadError) {
-          throw new Error(`File upload failed after ${maxAttempts} attempts: ${uploadError.message}`);
+          throw new Error(
+            `File upload failed after ${maxAttempts} attempts: ${uploadError.message}`,
+          );
         }
 
         const { data: urlData } = supabase.storage
@@ -126,25 +137,21 @@ export const DocumentUploader = ({
           .getPublicUrl(fileName);
 
         // Save document record to database
-        const { error: dbError } = await supabase
-          .from('quote_documents')
-          .insert({
-            quote_id: quoteId,
-            document_type: documentType,
-            file_name: fileName || selectedFile.name,
-            file_url: urlData.publicUrl,
-            file_size: selectedFile.size,
-            uploaded_by: user.id,
-            is_customer_visible: isCustomerVisible,
-            description: description || null,
-          });
+        const { error: dbError } = await supabase.from('quote_documents').insert({
+          quote_id: quoteId,
+          document_type: documentType,
+          file_name: fileName || selectedFile.name,
+          file_url: urlData.publicUrl,
+          file_size: selectedFile.size,
+          uploaded_by: user.id,
+          is_customer_visible: isCustomerVisible,
+          description: description || null,
+        });
 
         if (dbError) {
           // If database insert fails, try to clean up the uploaded file
           try {
-            await supabase.storage
-              .from('message-attachments')
-              .remove([fileName]);
+            await supabase.storage.from('message-attachments').remove([fileName]);
           } catch (cleanupError) {
             console.warn('Failed to cleanup uploaded file:', cleanupError);
           }
@@ -159,25 +166,25 @@ export const DocumentUploader = ({
     },
     onSuccess: () => {
       toast({
-        title: "Document uploaded!",
-        description: "The document has been uploaded successfully.",
+        title: 'Document uploaded!',
+        description: 'The document has been uploaded successfully.',
       });
-      
+
       // Reset form
       setSelectedFile(null);
       setDocumentType('');
       setFileName('');
       setDescription('');
       setIsCustomerVisible(true);
-      
+
       onSuccess();
     },
     onError: (error) => {
       console.error('Upload error:', error);
       toast({
-        title: "Upload failed",
-        description: error.message || "Failed to upload document. Please try again.",
-        variant: "destructive",
+        title: 'Upload failed',
+        description: error.message || 'Failed to upload document. Please try again.',
+        variant: 'destructive',
       });
     },
     onSettled: () => {
@@ -188,9 +195,9 @@ export const DocumentUploader = ({
   const handleUpload = () => {
     if (!selectedFile || !documentType) {
       toast({
-        title: "Missing information",
-        description: "Please select a file and document type.",
-        variant: "destructive",
+        title: 'Missing information',
+        description: 'Please select a file and document type.',
+        variant: 'destructive',
       });
       return;
     }
@@ -239,12 +246,7 @@ export const DocumentUploader = ({
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={removeFile}
-              disabled={uploading}
-            >
+            <Button variant="ghost" size="sm" onClick={removeFile} disabled={uploading}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -254,11 +256,7 @@ export const DocumentUploader = ({
       {/* Document Type */}
       <div className="space-y-2">
         <Label htmlFor="document-type">Document Type *</Label>
-        <Select 
-          value={documentType} 
-          onValueChange={setDocumentType}
-          disabled={uploading}
-        >
+        <Select value={documentType} onValueChange={setDocumentType} disabled={uploading}>
           <SelectTrigger>
             <SelectValue placeholder="Select document type" />
           </SelectTrigger>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple eSewa Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ccc; padding: 15px; margin: 10px 0; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f0f0f0; padding: 10px; border-radius: 4px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+    <h1>Simple eSewa Test</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: Direct Form Submission</h3>
+        <button onclick="testDirectSubmission()">Test Direct Submission</button>
+        <div id="result1"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: New Window Submission</h3>
+        <button onclick="testNewWindowSubmission()">Test New Window</button>
+        <div id="result2"></div>
+    </div>
+
+    <script>
+        function generateTransactionUuid() {
+            const currentTime = new Date();
+            return currentTime.toISOString().slice(2, 10).replace(/-/g, '') + '-' + 
+                   currentTime.getHours() + currentTime.getMinutes() + currentTime.getSeconds();
+        }
+
+        function generateSignature(total_amount, transaction_uuid, product_code) {
+            const signatureString = `total_amount=${total_amount},transaction_uuid=${transaction_uuid},product_code=${product_code}`;
+            const secretKey = '8gBm/:&EnhH.1/q';
+            const hash = CryptoJS.HmacSHA256(signatureString, secretKey);
+            return CryptoJS.enc.Base64.stringify(hash);
+        }
+
+        function testDirectSubmission() {
+            const resultDiv = document.getElementById('result1');
+            resultDiv.innerHTML = '<p>Testing direct submission...</p>';
+            
+            const transaction_uuid = generateTransactionUuid();
+            const signature = generateSignature('100', transaction_uuid, 'EPAYTEST');
+            
+            // Create form exactly like backend generates
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+            form.target = '_blank';
+            
+            const formData = {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: transaction_uuid,
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code',
+                signature: signature
+            };
+            
+            Object.entries(formData).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <h4>✅ Direct Form Created</h4>
+                    <p><strong>Method:</strong> ${form.method}</p>
+                    <p><strong>Action:</strong> ${form.action}</p>
+                    <p><strong>Fields:</strong> ${form.elements.length}</p>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                try {
+                    console.log('Submitting direct form...');
+                    form.submit();
+                    resultDiv.innerHTML += '<p class="success">✅ Direct form submitted</p>';
+                } catch (error) {
+                    resultDiv.innerHTML += '<p class="error">❌ Direct form submission failed: ' + error.message + '</p>';
+                }
+            }, 2000);
+        }
+
+        function testNewWindowSubmission() {
+            const resultDiv = document.getElementById('result2');
+            resultDiv.innerHTML = '<p>Testing new window submission...</p>';
+            
+            const transaction_uuid = generateTransactionUuid();
+            const signature = generateSignature('100', transaction_uuid, 'EPAYTEST');
+            
+            const formData = {
+                amount: '100',
+                tax_amount: '0',
+                total_amount: '100',
+                transaction_uuid: transaction_uuid,
+                product_code: 'EPAYTEST',
+                product_service_charge: '0',
+                product_delivery_charge: '0',
+                success_url: 'https://esewa.com.np',
+                failure_url: 'https://google.com',
+                signed_field_names: 'total_amount,transaction_uuid,product_code',
+                signature: signature
+            };
+            
+            // Create form HTML exactly like checkout
+            const formHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>eSewa Payment</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                        .loading { font-size: 18px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="loading">Redirecting to eSewa...</div>
+                    <form id="esewaForm" method="POST" action="https://rc-epay.esewa.com.np/api/epay/main/v2/form" style="display: none;">
+                        ${Object.entries(formData)
+                            .map(([key, value]) => 
+                                `<input type="hidden" name="${key}" value="${String(value)}">`
+                            )
+                            .join('')}
+                    </form>
+                    <script>
+                        console.log('Form created in new window');
+                        console.log('Method:', document.getElementById('esewaForm').method);
+                        console.log('Action:', document.getElementById('esewaForm').action);
+                        console.log('Form HTML:', document.getElementById('esewaForm').outerHTML);
+                        
+                        // Log all form fields
+                        const form = document.getElementById('esewaForm');
+                        for (let i = 0; i < form.elements.length; i++) {
+                            const element = form.elements[i];
+                            console.log('Field:', element.name, '=', element.value);
+                        }
+                        
+                        // Submit immediately
+                        setTimeout(() => {
+                            console.log('About to submit form...');
+                            console.log('Form method before submit:', document.getElementById('esewaForm').method);
+                            console.log('Form action before submit:', document.getElementById('esewaForm').action);
+                            document.getElementById('esewaForm').submit();
+                            console.log('Form submitted!');
+                        }, 500);
+                    </script>
+                </body>
+                </html>
+            `;
+            
+            // Open new window and write the form
+            const paymentWindow = window.open('', '_blank', 'width=800,height=600');
+            if (paymentWindow) {
+                paymentWindow.document.write(formHTML);
+                paymentWindow.document.close();
+                resultDiv.innerHTML = '<div class="success">✅ New window created and form submitted</div>';
+            } else {
+                resultDiv.innerHTML = '<div class="error">❌ Failed to open new window (pop-up blocked?)</div>';
+            }
+        }
+        
+        console.log('Simple eSewa test page loaded');
+    </script>
+</body>
+</html>

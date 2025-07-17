@@ -7,7 +7,7 @@ export const formatAmountForDisplay = (
   amount: number | null | undefined,
   currency: string = 'USD',
   exchangeRate: number = 1,
-  options?: Intl.NumberFormatOptions
+  options?: Intl.NumberFormatOptions,
 ): string => {
   if (amount === null || amount === undefined) {
     return 'N/A';
@@ -19,7 +19,7 @@ export const formatAmountForDisplay = (
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency,
-    ...options
+    ...options,
   }).format(convertedAmount);
 };
 
@@ -33,7 +33,7 @@ export const getCurrencySymbolAsync = async (currency: string): Promise<string> 
   } catch (error) {
     console.warn('Failed to get currency symbol from service, using fallback', error);
   }
-  
+
   // Fallback to CurrencyService
   return currencyService.getCurrencySymbol(currency);
 };
@@ -60,7 +60,9 @@ export const getCountryCurrency = (countryCode: string): string => {
 };
 
 // Get the currency map for reverse lookup (async version with database lookup)
-export const getCountryCurrencyMapAsync = async (): Promise<{ [key: string]: string }> => {
+export const getCountryCurrencyMapAsync = async (): Promise<{
+  [key: string]: string;
+}> => {
   try {
     const map = await currencyService.getCountryCurrencyMap();
     const result: { [key: string]: string } = {};
@@ -70,7 +72,7 @@ export const getCountryCurrencyMapAsync = async (): Promise<{ [key: string]: str
     return result;
   } catch (error) {
     console.warn('Failed to get country currency map from service, using fallback', error);
-    return { 'US': 'USD' }; // Minimal fallback
+    return { US: 'USD' }; // Minimal fallback
   }
 };
 
@@ -91,7 +93,7 @@ export const formatDualCurrency = (
   amount: number | null | undefined,
   purchaseCountry: string,
   deliveryCountry: string,
-  exchangeRate?: number
+  exchangeRate?: number,
 ): { purchase: string; delivery: string } => {
   if (amount === null || amount === undefined) {
     return { purchase: 'N/A', delivery: 'N/A' };
@@ -99,7 +101,7 @@ export const formatDualCurrency = (
 
   const purchaseCurrency = getCountryCurrency(purchaseCountry);
   const deliveryCurrency = getCountryCurrency(deliveryCountry);
-  
+
   // Format in purchase currency (amount is already in purchase currency)
   const purchaseDisplay = new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -133,7 +135,7 @@ export async function getExchangeRate(
   fromCountry: string,
   toCountry: string,
   fromCurrency?: string,
-  toCurrency?: string
+  toCurrency?: string,
 ): Promise<ExchangeRateResult> {
   // Check cache first
   const cacheKey = `${fromCountry}-${toCountry}-${fromCurrency}-${toCurrency}`;
@@ -144,13 +146,13 @@ export async function getExchangeRate(
 
   const fromCurr = fromCurrency || getCountryCurrency(fromCountry);
   const toCurr = toCurrency || getCountryCurrency(toCountry);
-  
+
   // Same currency, no conversion needed
   if (fromCurr === toCurr) {
     return {
       rate: 1,
       source: 'shipping_route',
-      confidence: 'high'
+      confidence: 'high',
     };
   }
 
@@ -170,7 +172,7 @@ export async function getExchangeRate(
       result = {
         rate: route.exchange_rate,
         source: 'shipping_route',
-        confidence: 'high'
+        confidence: 'high',
       };
       // Cache and return
       exchangeRateCache.set(cacheKey, { result, timestamp: Date.now() });
@@ -179,8 +181,12 @@ export async function getExchangeRate(
 
     // 2. Try country settings via USD
     const [fromSettings, toSettings] = await Promise.all([
-      supabase.from('country_settings').select('rate_from_usd').eq('code', fromCountry).maybeSingle(),
-      supabase.from('country_settings').select('rate_from_usd').eq('code', toCountry).maybeSingle()
+      supabase
+        .from('country_settings')
+        .select('rate_from_usd')
+        .eq('code', fromCountry)
+        .maybeSingle(),
+      supabase.from('country_settings').select('rate_from_usd').eq('code', toCountry).maybeSingle(),
     ]);
 
     const fromRate = fromSettings.data?.rate_from_usd;
@@ -189,12 +195,14 @@ export async function getExchangeRate(
     if (fromRate && toRate && fromRate > 0 && toRate > 0) {
       // Convert via USD: fromCurrency -> USD -> toCurrency
       const rate = toRate / fromRate;
-      logger.currency(`USD-based conversion: ${fromCurr} (${fromRate}) → USD → ${toCurr} (${toRate}) = ${rate}`);
+      logger.currency(
+        `USD-based conversion: ${fromCurr} (${fromRate}) → USD → ${toCurr} (${toRate}) = ${rate}`,
+      );
       result = {
         rate,
         source: 'country_settings',
         confidence: 'medium',
-        warning: `Using USD-based conversion: ${fromCurr} → USD → ${toCurr} (rate: ${rate.toFixed(4)})`
+        warning: `Using USD-based conversion: ${fromCurr} → USD → ${toCurr} (rate: ${rate.toFixed(4)})`,
       };
       // Cache and return
       exchangeRateCache.set(cacheKey, { result, timestamp: Date.now() });
@@ -202,37 +210,40 @@ export async function getExchangeRate(
     }
 
     // Debug missing rates
-    logger.warn(`Missing exchange rates for ${fromCountry}→${toCountry}`, {
-      fromCountry,
-      toCountry,
-      fromRate,
-      toRate,
-      fromSettings: fromSettings.data,
-      toSettings: toSettings.data
-    }, 'Currency');
+    logger.warn(
+      `Missing exchange rates for ${fromCountry}→${toCountry}`,
+      {
+        fromCountry,
+        toCountry,
+        fromRate,
+        toRate,
+        fromSettings: fromSettings.data,
+        toSettings: toSettings.data,
+      },
+      'Currency',
+    );
 
     // 3. Final fallback - warn admin about missing rates
     const missingCountries = [];
     if (!fromRate || fromRate <= 0) missingCountries.push(`${fromCountry} (${fromCurr})`);
     if (!toRate || toRate <= 0) missingCountries.push(`${toCountry} (${toCurr})`);
-    
+
     result = {
       rate: 1,
       source: 'fallback',
       confidence: 'low',
-      warning: `⚠️ No exchange rate configured for ${fromCurr} → ${toCurr}. Missing rates for: ${missingCountries.join(', ')}. Please ask admin to configure exchange rates. Using 1:1 ratio.`
+      warning: `⚠️ No exchange rate configured for ${fromCurr} → ${toCurr}. Missing rates for: ${missingCountries.join(', ')}. Please ask admin to configure exchange rates. Using 1:1 ratio.`,
     };
     // Cache and return
     exchangeRateCache.set(cacheKey, { result, timestamp: Date.now() });
     return result;
-
   } catch (error) {
     logger.error('Error getting exchange rate', error, 'Currency');
     result = {
       rate: 1,
       source: 'fallback',
       confidence: 'low',
-      warning: `❌ Database error fetching exchange rate for ${fromCurr} → ${toCurr}. Using 1:1 ratio. Please try again.`
+      warning: `❌ Database error fetching exchange rate for ${fromCurr} → ${toCurr}. Using 1:1 ratio. Please try again.`,
     };
     // Cache and return
     exchangeRateCache.set(cacheKey, { result, timestamp: Date.now() });
@@ -244,16 +255,16 @@ export async function getExchangeRate(
 export function convertCurrency(
   amount: number,
   exchangeRate: number,
-  targetCurrency: string
+  targetCurrency: string,
 ): number {
   const converted = amount * exchangeRate;
-  
+
   // Round to whole numbers for most Asian currencies
   const noDecimalCurrencies = ['NPR', 'INR', 'JPY', 'KRW', 'VND', 'IDR'];
   if (noDecimalCurrencies.includes(targetCurrency)) {
     return Math.round(converted);
   }
-  
+
   // Round to 2 decimal places for others
   return Math.round(converted * 100) / 100;
 }
@@ -263,7 +274,7 @@ export const formatDualCurrencyNew = (
   amount: number | null | undefined,
   originCountry: string,
   destinationCountry: string,
-  exchangeRate?: number
+  exchangeRate?: number,
 ): { origin: string; destination: string; short: string } => {
   if (amount === null || amount === undefined) {
     return { origin: 'N/A', destination: 'N/A', short: 'N/A' };
@@ -271,21 +282,21 @@ export const formatDualCurrencyNew = (
 
   const originCurrency = getCountryCurrency(originCountry);
   const destinationCurrency = getCountryCurrency(destinationCountry);
-  
+
   // Format in origin currency (amount is already in origin currency)
   const originSymbol = getCurrencySymbol(originCurrency);
   const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
-  
+
   // Format in destination currency using exchange rate
   if (exchangeRate && exchangeRate !== 1) {
     const convertedAmount = convertCurrency(amount, exchangeRate, destinationCurrency);
     const destinationSymbol = getCurrencySymbol(destinationCurrency);
     const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
-    
+
     return {
       origin: originFormatted,
       destination: destinationFormatted,
-      short: `${originFormatted}/${destinationFormatted}`
+      short: `${originFormatted}/${destinationFormatted}`,
     };
   }
 
@@ -293,7 +304,7 @@ export const formatDualCurrencyNew = (
   return {
     origin: originFormatted,
     destination: originFormatted,
-    short: originFormatted
+    short: originFormatted,
   };
 };
 
@@ -302,27 +313,27 @@ export const formatCustomerCurrency = (
   amount: number | null | undefined,
   originCountry: string,
   customerPreferredCurrency: string,
-  exchangeRate?: number
+  exchangeRate?: number,
 ): string => {
   if (amount === null || amount === undefined) {
     return 'N/A';
   }
 
   const originCurrency = getCountryCurrency(originCountry);
-  
+
   // If customer prefers origin currency, no conversion needed
   if (customerPreferredCurrency === originCurrency) {
     const symbol = getCurrencySymbol(originCurrency);
     return `${symbol}${amount.toLocaleString()}`;
   }
-  
+
   // Convert to customer's preferred currency using the provided exchange rate
   if (exchangeRate && exchangeRate !== 1) {
     const convertedAmount = convertCurrency(amount, exchangeRate, customerPreferredCurrency);
     const symbol = getCurrencySymbol(customerPreferredCurrency);
     return `${symbol}${convertedAmount.toLocaleString()}`;
   }
-  
+
   // Fallback to origin currency
   const symbol = getCurrencySymbol(originCurrency);
   return `${symbol}${amount.toLocaleString()}`;
@@ -332,6 +343,93 @@ export const formatCustomerCurrency = (
 export const getCurrencySymbolFromCountry = (countryCode: string): string => {
   const currency = getCountryCurrency(countryCode);
   return getCurrencySymbol(currency);
+};
+
+// Normalize country names to country codes for currency operations
+export const normalizeCountryForCurrency = (country: string): string => {
+  if (!country) return 'US';
+
+  // If it's already a 2-character code, ensure it's uppercase
+  if (country.length === 2) {
+    return country.toUpperCase();
+  }
+
+  // Extended country name to code mapping for currency operations
+  const countryNameToCode: { [key: string]: string } = {
+    Nepal: 'NP',
+    India: 'IN',
+    'United States': 'US',
+    USA: 'US',
+    'United States of America': 'US',
+    China: 'CN',
+    Australia: 'AU',
+    'United Kingdom': 'GB',
+    UK: 'GB',
+    Canada: 'CA',
+    Germany: 'DE',
+    France: 'FR',
+    Japan: 'JP',
+    'South Korea': 'KR',
+    Korea: 'KR',
+    Thailand: 'TH',
+    Malaysia: 'MY',
+    Singapore: 'SG',
+    Philippines: 'PH',
+    Indonesia: 'ID',
+    Vietnam: 'VN',
+    Bangladesh: 'BD',
+    'Sri Lanka': 'LK',
+    Pakistan: 'PK',
+    Myanmar: 'MM',
+    Cambodia: 'KH',
+    Laos: 'LA',
+    Taiwan: 'TW',
+    'Hong Kong': 'HK',
+    'South Africa': 'ZA',
+    Egypt: 'EG',
+    Nigeria: 'NG',
+    Brazil: 'BR',
+    Argentina: 'AR',
+    Mexico: 'MX',
+    Chile: 'CL',
+    Peru: 'PE',
+    Colombia: 'CO',
+    Ecuador: 'EC',
+    Uruguay: 'UY',
+    Paraguay: 'PY',
+    Bolivia: 'BO',
+    Venezuela: 'VE',
+  };
+
+  // Direct lookup
+  if (countryNameToCode[country]) {
+    return countryNameToCode[country];
+  }
+
+  // Try case-insensitive lookup
+  const caseInsensitiveMatch = Object.keys(countryNameToCode).find(
+    (name) => name.toLowerCase() === country.toLowerCase(),
+  );
+  if (caseInsensitiveMatch) {
+    return countryNameToCode[caseInsensitiveMatch];
+  }
+
+  // Try partial match
+  const partialMatch = Object.keys(countryNameToCode).find(
+    (name) =>
+      name.toLowerCase().includes(country.toLowerCase()) ||
+      country.toLowerCase().includes(name.toLowerCase()),
+  );
+
+  if (partialMatch) {
+    console.log(
+      `Using partial match for ${country}: ${partialMatch} -> ${countryNameToCode[partialMatch]}`,
+    );
+    return countryNameToCode[partialMatch];
+  }
+
+  console.warn(`Unknown country name in currency operation: ${country}, defaulting to US`);
+  return 'US';
 };
 
 // Validate exchange rate for quote creation
@@ -344,15 +442,15 @@ export interface ExchangeRateValidation {
 
 export async function validateExchangeRate(
   fromCountry: string,
-  toCountry: string
+  toCountry: string,
 ): Promise<ExchangeRateValidation> {
   const result = await getExchangeRate(fromCountry, toCountry);
-  
+
   return {
     isValid: result.confidence !== 'low',
     rate: result.rate,
     warning: result.warning,
-    shouldBlock: result.confidence === 'low' && result.rate === 1
+    shouldBlock: result.confidence === 'low' && result.rate === 1,
   };
 }
 
@@ -362,53 +460,28 @@ export function getDestinationCountryFromQuote(quote: Quote | null): string {
   if (!quote) {
     return 'US';
   }
-  
+
   // Try to get destination country from multiple sources
   if (quote.destination_country) {
-    return quote.destination_country;
+    return normalizeCountryForCurrency(quote.destination_country);
   }
-  
+
   if (quote.shipping_address) {
     try {
-      const shippingAddress: ShippingAddress = typeof quote.shipping_address === 'string' 
-        ? JSON.parse(quote.shipping_address) 
-        : quote.shipping_address;
-      
+      const shippingAddress: ShippingAddress =
+        typeof quote.shipping_address === 'string'
+          ? JSON.parse(quote.shipping_address)
+          : quote.shipping_address;
+
       // Get country from shipping address
       const country = shippingAddress?.destination_country || shippingAddress?.country || 'US';
-      
-      // Convert country names to country codes
-      const countryNameToCode: { [key: string]: string } = {
-        'Nepal': 'NP',
-        'India': 'IN', 
-        'United States': 'US',
-        'USA': 'US',
-        'China': 'CN',
-        'Australia': 'AU',
-        'United Kingdom': 'GB',
-        'Canada': 'CA',
-        'Germany': 'DE',
-        'France': 'FR',
-        'Japan': 'JP',
-        'South Korea': 'KR',
-        'Thailand': 'TH',
-        'Malaysia': 'MY',
-        'Singapore': 'SG'
-      };
-      
-      // If it's a country name, convert to code
-      if (countryNameToCode[country]) {
-        return countryNameToCode[country];
-      } else if (country && country.length === 2) {
-        // Already a country code
-        return country.toUpperCase();
-      }
-      
-      logger.warn('Unknown country format in shipping address', { country }, 'Currency');
+
+      // Use the comprehensive normalization function
+      return normalizeCountryForCurrency(country);
     } catch (e) {
       logger.warn('Could not parse shipping address', e, 'Currency');
     }
   }
-  
+
   return 'US'; // Default fallback
 }

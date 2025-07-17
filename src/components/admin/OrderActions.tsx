@@ -1,21 +1,28 @@
-import { Button } from "@/components/ui/button";
-import { useOrderMutations } from "@/hooks/useOrderMutations";
-import { useStatusManagement } from "@/hooks/useStatusManagement";
-import { Tables } from "@/integrations/supabase/types";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useState } from "react";
-import { UnifiedPaymentModal } from "./UnifiedPaymentModal";
-import { CheckCircle2 } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { useOrderMutations } from '@/hooks/useOrderMutations';
+import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { Tables } from '@/integrations/supabase/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useState } from 'react';
+import { UnifiedPaymentModal } from './UnifiedPaymentModal';
+import { CheckCircle2 } from 'lucide-react';
 
 interface OrderActionsProps {
   quote: Tables<'quotes'>;
 }
 
 export const OrderActions = ({ quote }: OrderActionsProps) => {
-  const { updateOrderStatus, isUpdatingStatus, confirmPayment, isConfirmingPayment } = useOrderMutations(quote.id);
+  const {
+    updateOrderStatus,
+    isUpdatingStatus,
+    confirmPayment: _confirmPayment,
+    isConfirmingPayment,
+  } = useOrderMutations(quote.id);
   const { getStatusConfig, getAllowedTransitions } = useStatusManagement();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'record' | 'verify' | 'history' | 'refund'>('record');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'record' | 'verify' | 'history' | 'refund'
+  >('record');
 
   const handleStatusChange = (newStatus: string) => {
     updateOrderStatus(newStatus);
@@ -25,11 +32,11 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
     setActiveTab(tab);
     setShowPaymentModal(true);
   };
-  
+
   const renderActions = () => {
     const currentStatusConfig = getStatusConfig(quote.status, 'order');
     const allowedTransitions = getAllowedTransitions(quote.status, 'order');
-    
+
     if (!currentStatusConfig) {
       return <p className="text-sm text-muted-foreground">Unknown status: {quote.status}</p>;
     }
@@ -54,19 +61,21 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
       <div className="flex flex-wrap gap-2">
         {/* DYNAMIC: Show payment actions based on payment status and method */}
         {/* Check if payment is unpaid and show appropriate action */}
-        {quote.payment_status === 'unpaid' && quote.payment_method && quote.payment_method !== 'bank_transfer' && (
-          <Button
-            type="button"
-            onClick={() => handleOpenPaymentModal('record')}
-            disabled={isConfirmingPayment}
-            variant="default"
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Confirm Payment
-          </Button>
-        )}
-        
+        {quote.payment_status === 'unpaid' &&
+          quote.payment_method &&
+          quote.payment_method !== 'bank_transfer' && (
+            <Button
+              type="button"
+              onClick={() => handleOpenPaymentModal('record')}
+              disabled={isConfirmingPayment}
+              variant="default"
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Confirm Payment
+            </Button>
+          )}
+
         {/* For unpaid bank transfers, show verification button */}
         {quote.payment_status === 'unpaid' && quote.payment_method === 'bank_transfer' && (
           <Button
@@ -79,12 +88,14 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
             Verify Bank Transfer
           </Button>
         )}
-        
+
         {/* FALLBACK: Support legacy orders with payment_pending status */}
         {!quote.payment_status && quote.status === 'payment_pending' && (
           <Button
             type="button"
-            onClick={() => handleOpenPaymentModal(quote.payment_method === 'bank_transfer' ? 'verify' : 'record')}
+            onClick={() =>
+              handleOpenPaymentModal(quote.payment_method === 'bank_transfer' ? 'verify' : 'record')
+            }
             disabled={isConfirmingPayment}
             variant="default"
             className="bg-green-600 hover:bg-green-700"
@@ -93,7 +104,7 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
             {quote.payment_method === 'bank_transfer' ? 'Verify Bank Transfer' : 'Confirm Payment'}
           </Button>
         )}
-        
+
         {/* Regular status transitions */}
         {allowedTransitions.map((transitionStatus) => {
           const transitionConfig = getStatusConfig(transitionStatus, 'order');
@@ -111,7 +122,7 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
         })}
       </div>
     );
-  }
+  };
 
   const currentStatusConfig = getStatusConfig(quote.status, 'order');
 
@@ -124,10 +135,11 @@ export const OrderActions = ({ quote }: OrderActionsProps) => {
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
-              <p className="text-sm">
-                Current Status: <span className="font-semibold">{currentStatusConfig?.label || quote.status}</span>
-              </p>
-              {renderActions()}
+            <p className="text-sm">
+              Current Status:{' '}
+              <span className="font-semibold">{currentStatusConfig?.label || quote.status}</span>
+            </p>
+            {renderActions()}
           </div>
         </CardContent>
       </Card>

@@ -1,47 +1,44 @@
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Send, MapPin, Calculator, CheckCircle, XCircle, Clock, AlertTriangle, FileText, DollarSign, ShoppingCart, Truck, Circle, User, Mail, Phone, Calendar, Package, Settings, TrendingUp, Eye, Edit3, MessageSquare, Globe, Flag, UserMinus, Plus, Printer, ExternalLink, Weight, MessageCircle, CreditCard, Hash, PackageCheck, Clipboard } from "lucide-react";
-import { QuoteDetailForm } from "@/components/admin/QuoteDetailForm";
-import { QuoteMessaging } from "@/components/messaging/QuoteMessaging";
-import { DocumentManager } from "@/components/documents/DocumentManager";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useAdminQuoteDetail } from "@/hooks/useAdminQuoteDetail";
-import { QuoteCalculatedCosts } from "@/components/admin/QuoteCalculatedCosts";
-import { ShareQuoteButton } from './ShareQuoteButton';
-import { Form, FormField, FormControl } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { EditableAdminQuoteItemCard } from "./EditableAdminQuoteItemCard";
-import { OrderActions } from "./OrderActions";
-import { ShippingInfoForm } from "./ShippingInfoForm";
-import { OrderTimeline } from "@/components/dashboard/OrderTimeline";
-import { Badge } from "@/components/ui/badge";
-import { extractShippingAddressFromNotes } from "@/lib/addressUpdates";
+import { useParams, useNavigate } from 'react-router-dom';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import {
+  ArrowLeft,
+  MapPin,
+  Calculator,
+  FileText,
+  DollarSign,
+  ShoppingCart,
+  Truck,
+  Circle,
+  Package,
+  Printer,
+  ExternalLink,
+  MessageCircle,
+  CreditCard,
+} from 'lucide-react';
+import { QuoteDetailForm } from '@/components/admin/QuoteDetailForm';
+import { DocumentManager } from '@/components/documents/DocumentManager';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useAdminQuoteDetail } from '@/hooks/useAdminQuoteDetail';
+import { QuoteCalculatedCosts } from '@/components/admin/QuoteCalculatedCosts';
+import { Form } from '@/components/ui/form';
+import { OrderTimeline } from '@/components/dashboard/OrderTimeline';
+import { OrderActions } from './OrderActions';
+import { Badge } from '@/components/ui/badge';
+import { extractShippingAddressFromNotes } from '@/lib/addressUpdates';
 
-import { useWatch } from "react-hook-form";
-import { getShippingRouteById } from '@/hooks/useShippingRoutes';
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { WeightDisplay } from './WeightDisplay';
-import { getDisplayWeight, getAppropriateWeightUnit } from '@/lib/weightUtils';
-import { DeliveryOptionsManager } from "./DeliveryOptionsManager";
-import { useToast } from "@/components/ui/use-toast";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Separator } from "@/components/ui/separator";
-import { ShippingRouteDisplay } from "@/components/shared/ShippingRouteDisplay";
-import { CustomsTierDisplay } from "./CustomsTierDisplay";
+import { useWatch } from 'react-hook-form';
+import { useState } from 'react';
+import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
-import { useAllCountries } from '../../hooks/useAllCountries';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { Icon } from '@/components/ui/icon';
 import { StatusTransitionHistory } from './StatusTransitionHistory';
-import { getCurrencySymbolFromCountry } from '@/lib/currencyUtils';
 import { QuoteItem } from '@/types/quote';
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { StatusBadge } from "@/components/dashboard/StatusBadge";
-import { QuoteExpirationTimer } from '@/components/dashboard/QuoteExpirationTimer';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 
 // Import new admin components
 import { CustomerCommHub } from './CustomerCommHub';
@@ -49,22 +46,18 @@ import { ShippingTrackingManager } from './ShippingTrackingManager';
 import { AddressContactManager } from './AddressContactManager';
 import { PaymentManagementWidget } from './PaymentManagementWidget';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 
 const AdminOrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
-  
+
   const {
     quote,
     quoteLoading,
     error,
-    countries,
     shippingCountries,
     allCountries,
     sendQuoteEmail,
@@ -80,12 +73,7 @@ const AdminOrderDetailPage = () => {
   } = useAdminQuoteDetail(id);
 
   // Use the new status management hook
-  const { 
-    getStatusConfig, 
-    isValidTransition,
-    isLoading: statusLoading,
-    statuses,
-  } = useStatusManagement();
+  const { getStatusConfig, isValidTransition, isLoading: statusLoading } = useStatusManagement();
 
   const [isCalculating, setIsCalculating] = useState(false);
   const [calculationError, setCalculationError] = useState<string | null>(null);
@@ -93,22 +81,20 @@ const AdminOrderDetailPage = () => {
   const [routeWeightUnit, setRouteWeightUnit] = useState<string | null>(null);
   const [smartWeightUnit, setSmartWeightUnit] = useState<'kg' | 'lb'>('kg');
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
-  const [isCostBreakdownOpen, setIsCostBreakdownOpen] = useState(false);
-  const [isCustomsTiersOpen, setIsCustomsTiersOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Calculate progress based on status
   const calculateProgress = (status: string) => {
     const progressMap: { [key: string]: number } = {
-      'pending': 10,
-      'sent': 20,
-      'approved': 30,
-      'paid': 50,
-      'ordered': 70,
-      'shipped': 85,
-      'completed': 100,
-      'rejected': 0,
-      'cancelled': 0
+      pending: 10,
+      sent: 20,
+      approved: 30,
+      paid: 50,
+      ordered: 70,
+      shipped: 85,
+      completed: 100,
+      rejected: 0,
+      cancelled: 0,
     };
     return progressMap[status] || 0;
   };
@@ -118,51 +104,57 @@ const AdminOrderDetailPage = () => {
   // Quick actions based on status
   const getQuickActions = () => {
     if (!quote) return [];
-    
+
     const actions = [];
-    
+
     if (quote.status === 'paid' && quote.payment_method === 'bank_transfer') {
       actions.push({
         label: 'Confirm Payment',
         icon: CreditCard,
         onClick: () => handleStatusUpdate('ordered'),
-        variant: 'default' as const
+        variant: 'default' as const,
       });
     }
-    
+
     if (quote.status === 'ordered') {
       actions.push({
         label: 'Update Shipping',
         icon: Truck,
         onClick: () => setActiveTab('payment-shipping'),
-        variant: 'outline' as const
+        variant: 'outline' as const,
       });
     }
-    
+
     actions.push({
       label: 'Message Customer',
       icon: MessageCircle,
       onClick: () => setActiveTab('communication'),
-      variant: 'outline' as const
+      variant: 'outline' as const,
     });
-    
+
     actions.push({
       label: 'Print Invoice',
       icon: Printer,
       onClick: () => window.print(),
-      variant: 'outline' as const
+      variant: 'outline' as const,
     });
-    
+
     return actions;
   };
 
   const quickActions = getQuickActions();
 
   // DYNAMIC: Determine if this is an order based on status configuration
-  const isOrder = quote && (() => {
-    const statusConfig = getStatusConfig(quote.status, 'quote') || getStatusConfig(quote.status, 'order');
-    return statusConfig?.countsAsOrder ?? ['paid', 'ordered', 'shipped', 'completed'].includes(quote.status); // fallback
-  })();
+  const isOrder =
+    quote &&
+    (() => {
+      const statusConfig =
+        getStatusConfig(quote.status, 'quote') || getStatusConfig(quote.status, 'order');
+      return (
+        statusConfig?.countsAsOrder ??
+        ['paid', 'ordered', 'shipped', 'completed'].includes(quote.status)
+      ); // fallback
+    })();
 
   const originCountry = useWatch({
     control: form.control,
@@ -174,21 +166,8 @@ const AdminOrderDetailPage = () => {
     name: 'destination_country',
   });
 
-  const quoteItems = useWatch({
-    control: form.control,
-    name: 'items',
-  });
-
-  const orderStatusLink = `/admin/orders?status=${quote?.status || ''}`;
-
   // Extracted address from notes
   const extractedAddress = quote?.notes ? extractShippingAddressFromNotes(quote.notes) : null;
-
-  // DYNAMIC: Check if address should be editable based on status configuration
-  const isAddressEditable = quote && (() => {
-    const statusConfig = getStatusConfig(quote.status, 'quote') || getStatusConfig(quote.status, 'order');
-    return statusConfig?.allowAddressEdit ?? !['paid', 'ordered', 'shipped', 'completed'].includes(quote.status); // fallback
-  })();
 
   const handleStatusUpdate = async (newStatus: string) => {
     if (!quote) return;
@@ -196,9 +175,9 @@ const AdminOrderDetailPage = () => {
     // Validate status transition
     if (!isValidTransition(quote.status, newStatus)) {
       toast({
-        title: "Invalid Status Change",
+        title: 'Invalid Status Change',
         description: `Cannot change status from ${quote.status} to ${newStatus}`,
-        variant: "destructive",
+        variant: 'destructive',
       });
       return;
     }
@@ -212,18 +191,18 @@ const AdminOrderDetailPage = () => {
       if (error) throw error;
 
       toast({
-        title: "Status Updated",
+        title: 'Status Updated',
         description: `Order status changed to ${newStatus}`,
       });
-      
+
       // Reload the page to get fresh data
       window.location.reload();
     } catch (error) {
       console.error('Error updating status:', error);
       toast({
-        title: "Error",
-        description: "Failed to update status. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update status. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -232,7 +211,11 @@ const AdminOrderDetailPage = () => {
     if (!quote) return null;
 
     const currentStatusConfig = getStatusConfig(quote.status);
-    if (!currentStatusConfig || !currentStatusConfig.nextStatuses || currentStatusConfig.nextStatuses.length === 0) {
+    if (
+      !currentStatusConfig ||
+      !currentStatusConfig.nextStatuses ||
+      currentStatusConfig.nextStatuses.length === 0
+    ) {
       return null;
     }
 
@@ -248,7 +231,9 @@ const AdminOrderDetailPage = () => {
             <Button
               key={nextStatus}
               onClick={() => handleStatusUpdate(nextStatus)}
-              variant={nextStatus === 'rejected' || nextStatus === 'cancelled' ? 'destructive' : 'default'}
+              variant={
+                nextStatus === 'rejected' || nextStatus === 'cancelled' ? 'destructive' : 'default'
+              }
               size="sm"
               className="gap-2"
             >
@@ -278,9 +263,7 @@ const AdminOrderDetailPage = () => {
           <p className="text-muted-foreground">
             The order you're looking for doesn't exist or you don't have permission to view it.
           </p>
-          <Button onClick={() => navigate('/admin/orders')}>
-            Back to Orders
-          </Button>
+          <Button onClick={() => navigate('/admin/orders')}>Back to Orders</Button>
         </div>
       </div>
     );
@@ -300,7 +283,7 @@ const AdminOrderDetailPage = () => {
             <ArrowLeft className="h-4 w-4" />
             Back to Orders
           </Button>
-          
+
           <div className="flex items-center gap-4">
             <StatusBadge status={quote.status} />
             {quote.priority && (
@@ -372,9 +355,7 @@ const AdminOrderDetailPage = () => {
                 <ShoppingCart className="h-5 w-5" />
                 Products to Order
               </CardTitle>
-              <CardDescription>
-                Items that need to be purchased from the merchant
-              </CardDescription>
+              <CardDescription>Items that need to be purchased from the merchant</CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
@@ -386,9 +367,9 @@ const AdminOrderDetailPage = () => {
                         {item.product_url && (
                           <div className="flex items-center gap-2">
                             <ExternalLink className="h-4 w-4 text-primary" />
-                            <a 
-                              href={item.product_url} 
-                              target="_blank" 
+                            <a
+                              href={item.product_url}
+                              target="_blank"
                               rel="noopener noreferrer"
                               className="text-primary hover:underline text-sm break-all"
                             >
@@ -398,7 +379,9 @@ const AdminOrderDetailPage = () => {
                         )}
                         {item.customer_comment && (
                           <div className="bg-muted/50 border border-muted rounded-md p-3 mt-2">
-                            <p className="text-sm font-medium text-muted-foreground mb-1">Customer Instructions:</p>
+                            <p className="text-sm font-medium text-muted-foreground mb-1">
+                              Customer Instructions:
+                            </p>
                             <p className="text-sm">{item.customer_comment}</p>
                           </div>
                         )}
@@ -406,7 +389,9 @@ const AdminOrderDetailPage = () => {
                       <div className="text-right ml-4">
                         <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                         <p className="font-medium">${item.price} each</p>
-                        <p className="text-sm font-medium">${(item.price * item.quantity).toFixed(2)} total</p>
+                        <p className="text-sm font-medium">
+                          ${(item.price * item.quantity).toFixed(2)} total
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -435,7 +420,8 @@ const AdminOrderDetailPage = () => {
                     <p>{quote.shipping_address.address_line_2}</p>
                   )}
                   <p>
-                    {quote.shipping_address.city}, {quote.shipping_address.state} {quote.shipping_address.postal_code}
+                    {quote.shipping_address.city}, {quote.shipping_address.state}{' '}
+                    {quote.shipping_address.postal_code}
                   </p>
                   <p>{quote.shipping_address.country}</p>
                 </div>
@@ -453,7 +439,7 @@ const AdminOrderDetailPage = () => {
             <CollapsibleContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <QuoteDetailForm 
+                  <QuoteDetailForm
                     form={form}
                     fields={fields}
                     remove={remove}
@@ -495,7 +481,7 @@ const AdminOrderDetailPage = () => {
               <ChevronDown className="h-4 w-4 ml-auto" />
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <QuoteCalculatedCosts 
+              <QuoteCalculatedCosts
                 quote={quote}
                 originCountry={originCountry}
                 destinationCountry={destinationCountry}
@@ -518,7 +504,7 @@ const AdminOrderDetailPage = () => {
         {/* Communication Tab */}
         <TabsContent value="communication" className="space-y-6">
           <CustomerCommHub quote={quote} />
-          
+
           {/* Order Timeline for orders */}
           {isOrder && (
             <Card>
@@ -545,7 +531,7 @@ const AdminOrderDetailPage = () => {
         {/* Documents & Details Tab */}
         <TabsContent value="documents" className="space-y-6">
           <DocumentManager quoteId={quote.id} quoteStatus={quote.status} />
-          
+
           {/* Order Actions for orders */}
           {isOrder && (
             <Card>

@@ -2,12 +2,7 @@ import React, { useState } from 'react';
 import { PaymentGatewayManagement } from '@/components/admin/PaymentGatewayManagement';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  CreditCard, 
-  BarChart3, 
-  Settings,
-  Activity
-} from 'lucide-react';
+import { CreditCard, BarChart3, Settings, Activity } from 'lucide-react';
 
 export const PaymentManagement: React.FC = () => {
   return (
@@ -16,9 +11,7 @@ export const PaymentManagement: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Payment Management</h1>
-          <p className="text-muted-foreground">
-            Manage gateway configurations
-          </p>
+          <p className="text-muted-foreground">Manage gateway configurations</p>
         </div>
         <div className="flex items-center gap-2">
           <Activity className="h-5 w-5 text-green-500" />
@@ -38,9 +31,7 @@ export const PaymentManagement: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">6</div>
-            <p className="text-xs text-muted-foreground">
-              Configured payment methods
-            </p>
+            <p className="text-xs text-muted-foreground">Configured payment methods</p>
           </CardContent>
         </Card>
 
@@ -51,9 +42,7 @@ export const PaymentManagement: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">98.5%</div>
-            <p className="text-xs text-muted-foreground">
-              Payment success rate
-            </p>
+            <p className="text-xs text-muted-foreground">Payment success rate</p>
           </CardContent>
         </Card>
 
@@ -64,9 +53,7 @@ export const PaymentManagement: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">2.3s</div>
-            <p className="text-xs text-muted-foreground">
-              Average processing time
-            </p>
+            <p className="text-xs text-muted-foreground">Average processing time</p>
           </CardContent>
         </Card>
       </div>
@@ -74,4 +61,4 @@ export const PaymentManagement: React.FC = () => {
   );
 };
 
-export default PaymentManagement; 
+export default PaymentManagement;

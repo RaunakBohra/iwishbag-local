@@ -28,7 +28,7 @@ export function useQuoteRoute(quote: Record<string, unknown> | null): RouteInfo 
         // Fallback to basic route info
         setRoute({
           origin: quote.origin_country || 'US',
-          destination: quote.destination_country || ''
+          destination: quote.destination_country || '',
         });
       }
     }

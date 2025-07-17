@@ -1,14 +1,14 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-serve(async (req)=>{
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
-      headers: corsHeaders
+      headers: corsHeaders,
     });
   }
   try {
@@ -21,11 +21,18 @@ serve(async (req)=>{
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     // Get the expired quote with all its items
-    const { data: expiredQuote, error: fetchError } = await supabase.from('quotes').select(`
+    const { data: expiredQuote, error: fetchError } = await supabase
+      .from('quotes')
+      .select(
+        `
         *,
         quote_items(*),
         profiles:user_id(preferred_display_currency)
-      `).eq('id', expiredQuoteId).eq('status', 'expired').single();
+      `,
+      )
+      .eq('id', expiredQuoteId)
+      .eq('status', 'expired')
+      .single();
     if (fetchError || !expiredQuote) {
       throw new Error('Expired quote not found');
     }
@@ -37,7 +44,8 @@ serve(async (req)=>{
       status: 'pending',
       currency: expiredQuote.currency,
       items_currency: expiredQuote.items_currency,
-      final_currency: expiredQuote.profiles?.preferred_display_currency || expiredQuote.final_currency,
+      final_currency:
+        expiredQuote.profiles?.preferred_display_currency || expiredQuote.final_currency,
       customs_percentage: expiredQuote.customs_percentage,
       internal_notes: `Re-requested from expired quote ${expiredQuote.display_id || expiredQuote.id}`,
       // Reset all calculated fields
@@ -63,26 +71,30 @@ serve(async (req)=>{
       shipping_delivery_days: null,
       shipping_method: null,
       shipping_route_id: null,
-      origin_country: null
+      origin_country: null,
     };
     // Insert new quote
-    const { data: newQuote, error: insertError } = await supabase.from('quotes').insert(newQuoteData).select().single();
+    const { data: newQuote, error: insertError } = await supabase
+      .from('quotes')
+      .insert(newQuoteData)
+      .select()
+      .single();
     if (insertError) {
       throw insertError;
     }
     // Copy quote items to new quote
     if (expiredQuote.quote_items && expiredQuote.quote_items.length > 0) {
-      const newQuoteItems = expiredQuote.quote_items.map((item)=>({
-          quote_id: newQuote.id,
-          product_url: item.product_url,
-          product_name: item.product_name,
-          quantity: item.quantity,
-          options: item.options,
-          image_url: item.image_url,
-          item_currency: item.item_currency,
-          item_price: null,
-          item_weight: null // Reset weight for recalculation
-        }));
+      const newQuoteItems = expiredQuote.quote_items.map((item) => ({
+        quote_id: newQuote.id,
+        product_url: item.product_url,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        options: item.options,
+        image_url: item.image_url,
+        item_currency: item.item_currency,
+        item_price: null,
+        item_weight: null, // Reset weight for recalculation
+      }));
       const { error: itemsError } = await supabase.from('quote_items').insert(newQuoteItems);
       if (itemsError) {
         throw itemsError;
@@ -90,27 +102,33 @@ serve(async (req)=>{
     }
     // Send re-request confirmation email
     await sendReRequestEmail(supabase, newQuote, expiredQuote);
-    return new Response(JSON.stringify({
-      message: 'Quote re-requested successfully',
-      newQuoteId: newQuote.id,
-      displayId: newQuote.display_id
-    }), {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
-    });
+    return new Response(
+      JSON.stringify({
+        message: 'Quote re-requested successfully',
+        newQuoteId: newQuote.id,
+        displayId: newQuote.display_id,
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   } catch (error) {
     console.error('Error re-requesting quote:', error);
-    return new Response(JSON.stringify({
-      error: error.message
-    }), {
-      status: 500,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
-    });
+    return new Response(
+      JSON.stringify({
+        error: error.message,
+      }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
 });
 async function sendReRequestEmail(supabase, newQuote, expiredQuote) {
@@ -124,9 +142,9 @@ async function sendReRequestEmail(supabase, newQuote, expiredQuote) {
           newQuoteId: newQuote.display_id || newQuote.id,
           expiredQuoteId: expiredQuote.display_id || expiredQuote.id,
           productName: expiredQuote.product_name || 'your items',
-          email: newQuote.email
-        }
-      }
+          email: newQuote.email,
+        },
+      },
     });
     if (error) {
       console.error(`Failed to send re-request email to ${newQuote.email}:`, error);

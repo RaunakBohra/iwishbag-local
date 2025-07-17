@@ -1,26 +1,25 @@
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import { Loader2, Settings, DollarSign, Bell, RefreshCw, Heart } from "lucide-react";
-import { useSystemSettings } from "@/hooks/useSystemSettings";
-import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Loader2, Settings, DollarSign, Bell, RefreshCw, Heart } from 'lucide-react';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { useState } from 'react';
 
 export const SystemSettings = () => {
-  const { 
-    settings, 
-    isLoading, 
-    isUpdating, 
-    updateSetting, 
-    getBooleanSetting, 
-    getNumericSetting,
-    getSetting 
+  const {
+    settings,
+    isLoading,
+    isUpdating,
+    updateSetting,
+    getBooleanSetting,
+    _getNumericSetting,
+    getSetting,
   } = useSystemSettings();
 
-  const [exchangeRateMarkup, setExchangeRateMarkup] = useState<string>("");
-  const [updateInterval, setUpdateInterval] = useState<string>("");
+  const [exchangeRateMarkup, setExchangeRateMarkup] = useState<string>('');
+  const [updateInterval, setUpdateInterval] = useState<string>('');
 
   if (isLoading) {
     return (
@@ -33,13 +32,13 @@ export const SystemSettings = () => {
   const handleExchangeRateMarkupSave = () => {
     const value = exchangeRateMarkup || getSetting('exchange_rate_markup_percentage');
     updateSetting('exchange_rate_markup_percentage', value);
-    setExchangeRateMarkup("");
+    setExchangeRateMarkup('');
   };
 
   const handleUpdateIntervalSave = () => {
     const value = updateInterval || getSetting('exchange_rate_update_interval_hours');
     updateSetting('exchange_rate_update_interval_hours', value);
-    setUpdateInterval("");
+    setUpdateInterval('');
   };
 
   return (
@@ -65,9 +64,7 @@ export const SystemSettings = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="exchange-rate-markup">
-                Exchange Rate Markup (%)
-              </Label>
+              <Label htmlFor="exchange-rate-markup">Exchange Rate Markup (%)</Label>
               <div className="flex gap-2">
                 <Input
                   id="exchange-rate-markup"
@@ -78,12 +75,8 @@ export const SystemSettings = () => {
                   value={exchangeRateMarkup}
                   onChange={(e) => setExchangeRateMarkup(e.target.value)}
                 />
-                <Button 
-                  onClick={handleExchangeRateMarkupSave}
-                  disabled={isUpdating}
-                  size="sm"
-                >
-                  {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                <Button onClick={handleExchangeRateMarkupSave} disabled={isUpdating} size="sm">
+                  {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -94,13 +87,11 @@ export const SystemSettings = () => {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Auto Exchange Rate Updates</Label>
-                <p className="text-sm text-muted-foreground">
-                  Automatically update exchange rates
-                </p>
+                <p className="text-sm text-muted-foreground">Automatically update exchange rates</p>
               </div>
               <Switch
                 checked={getBooleanSetting('auto_exchange_rate_enabled')}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   updateSetting('auto_exchange_rate_enabled', checked.toString())
                 }
                 disabled={isUpdating}
@@ -108,9 +99,7 @@ export const SystemSettings = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="update-interval">
-                Update Interval (hours)
-              </Label>
+              <Label htmlFor="update-interval">Update Interval (hours)</Label>
               <div className="flex gap-2">
                 <Input
                   id="update-interval"
@@ -120,12 +109,8 @@ export const SystemSettings = () => {
                   value={updateInterval}
                   onChange={(e) => setUpdateInterval(e.target.value)}
                 />
-                <Button 
-                  onClick={handleUpdateIntervalSave}
-                  disabled={isUpdating}
-                  size="sm"
-                >
-                  {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                <Button onClick={handleUpdateIntervalSave} disabled={isUpdating} size="sm">
+                  {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -156,9 +141,7 @@ export const SystemSettings = () => {
               </div>
               <Switch
                 checked={getBooleanSetting('wishlist_enabled')}
-                onCheckedChange={(checked) => 
-                  updateSetting('wishlist_enabled', checked.toString())
-                }
+                onCheckedChange={(checked) => updateSetting('wishlist_enabled', checked.toString())}
                 disabled={isUpdating}
               />
             </div>
@@ -169,13 +152,11 @@ export const SystemSettings = () => {
                   <Bell className="h-4 w-4" />
                   Email Notifications
                 </Label>
-                <p className="text-sm text-muted-foreground">
-                  System-wide email notifications
-                </p>
+                <p className="text-sm text-muted-foreground">System-wide email notifications</p>
               </div>
               <Switch
                 checked={getBooleanSetting('email_notifications_enabled')}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   updateSetting('email_notifications_enabled', checked.toString())
                 }
                 disabled={isUpdating}
@@ -197,9 +178,7 @@ export const SystemSettings = () => {
                 <div className="font-medium text-sm">{setting.setting_key}</div>
                 <div className="text-lg font-bold">{setting.setting_value}</div>
                 {setting.description && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {setting.description}
-                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">{setting.description}</div>
                 )}
               </div>
             ))}

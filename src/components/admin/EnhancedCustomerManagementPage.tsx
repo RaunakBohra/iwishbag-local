@@ -1,54 +1,45 @@
-import { useState, useMemo } from "react";
-import { useCustomerManagement } from "@/hooks/useCustomerManagement";
-import { CustomerTable } from "./CustomerTable";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Loader2, 
-  Users, 
-  Search, 
-  Filter, 
-  Download, 
-  Upload, 
-  Mail, 
-  TrendingUp, 
-  DollarSign,
-  MapPin,
-  Calendar,
+import { useState, useMemo } from 'react';
+import { useCustomerManagement } from '@/hooks/useCustomerManagement';
+import { CustomerTable } from './CustomerTable';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Loader2,
+  Users,
+  Search,
+  Download,
+  TrendingUp,
   Activity,
   Star,
   UserCheck,
-  UserX,
-  RefreshCw
-} from "lucide-react";
-import { CustomerStats } from "./CustomerStats";
-import { CustomerActivityTimeline } from "./CustomerActivityTimeline";
+} from 'lucide-react';
+import { CustomerStats } from './CustomerStats';
+import { CustomerActivityTimeline } from './CustomerActivityTimeline';
 
-import { CustomerEmailDialog } from "./CustomerEmailDialog";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export const EnhancedCustomerManagementPage = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [countryFilter, setCountryFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [countryFilter, setCountryFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
-  
+
   const { toast } = useToast();
-  
-  const { 
-    customers, 
-    isLoading, 
-    updateCodMutation,
-    updateNotesMutation,
-    updateProfileMutation
-  } = useCustomerManagement();
+
+  const { customers, isLoading, updateCodMutation, updateNotesMutation, updateProfileMutation } =
+    useCustomerManagement();
 
   // Handler for COD updates
   const handleUpdateCod = (userId: string, codEnabled: boolean) => {
@@ -58,49 +49,49 @@ export const EnhancedCustomerManagementPage = () => {
   // Enhanced filtering
   const filteredCustomers = useMemo(() => {
     if (!customers) return [];
-    
-    return customers.filter(customer => {
+
+    return customers.filter((customer) => {
       // Search filter
-      const matchesSearch = 
+      const matchesSearch =
         (customer.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
         customer.email.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       if (!matchesSearch) return false;
-      
+
       // Status filter
-      if (statusFilter !== "all") {
-        if (statusFilter === "active" && !customer.cod_enabled) return false;
-        if (statusFilter === "inactive" && customer.cod_enabled) return false;
-        if (statusFilter === "vip" && !customer.internal_notes?.includes("VIP")) return false;
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'active' && !customer.cod_enabled) return false;
+        if (statusFilter === 'inactive' && customer.cod_enabled) return false;
+        if (statusFilter === 'vip' && !customer.internal_notes?.includes('VIP')) return false;
       }
-      
+
       // Country filter
-      if (countryFilter !== "all") {
+      if (countryFilter !== 'all') {
         const customerCountry = customer.user_addresses[0]?.country;
         if (customerCountry !== countryFilter) return false;
       }
-      
+
       // Date filter
-      if (dateFilter !== "all") {
+      if (dateFilter !== 'all') {
         const customerDate = new Date(customer.created_at);
         const now = new Date();
         const startDate = new Date();
-        
+
         switch (dateFilter) {
-          case "7d":
+          case '7d':
             startDate.setDate(now.getDate() - 7);
             break;
-          case "30d":
+          case '30d':
             startDate.setDate(now.getDate() - 30);
             break;
-          case "90d":
+          case '90d':
             startDate.setDate(now.getDate() - 90);
             break;
         }
-        
+
         if (customerDate < startDate) return false;
       }
-      
+
       return true;
     });
   }, [customers, searchQuery, statusFilter, countryFilter, dateFilter]);
@@ -117,51 +108,61 @@ export const EnhancedCustomerManagementPage = () => {
       if (error) throw error;
 
       // Calculate customer metrics
-      const customerMetrics = customers?.map(customer => {
-        const customerQuotes = quotes?.filter(q => q.user_id === customer.id) || [];
-        const totalSpent = customerQuotes.reduce((sum, q) => sum + (q.final_total || 0), 0);
-        const orderCount = customerQuotes.filter(q => ['paid', 'ordered', 'shipped', 'completed'].includes(q.status)).length;
-        const quoteCount = customerQuotes.length;
-        const avgOrderValue = orderCount > 0 ? totalSpent / orderCount : 0;
-        
-        return {
-          customerId: customer.id,
-          totalSpent,
-          orderCount,
-          quoteCount,
-          avgOrderValue,
-          lastActivity: customerQuotes.length > 0 ? 
-            new Date(Math.max(...customerQuotes.map(q => new Date(q.created_at).getTime()))) : 
-            new Date(customer.created_at)
-        };
-      }) || [];
+      const customerMetrics =
+        customers?.map((customer) => {
+          const customerQuotes = quotes?.filter((q) => q.user_id === customer.id) || [];
+          const totalSpent = customerQuotes.reduce((sum, q) => sum + (q.final_total || 0), 0);
+          const orderCount = customerQuotes.filter((q) =>
+            ['paid', 'ordered', 'shipped', 'completed'].includes(q.status),
+          ).length;
+          const quoteCount = customerQuotes.length;
+          const avgOrderValue = orderCount > 0 ? totalSpent / orderCount : 0;
+
+          return {
+            customerId: customer.id,
+            totalSpent,
+            orderCount,
+            quoteCount,
+            avgOrderValue,
+            lastActivity:
+              customerQuotes.length > 0
+                ? new Date(Math.max(...customerQuotes.map((q) => new Date(q.created_at).getTime())))
+                : new Date(customer.created_at),
+          };
+        }) || [];
 
       return customerMetrics;
     },
-    enabled: !!customers
+    enabled: !!customers,
   });
 
   // Export functionality
   const exportCustomers = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "ID,Name,Email,Location,Join Date,Total Spent,Orders,Avg Order Value,Status\n"
-      + filteredCustomers.map(customer => {
-        const analytics = customerAnalytics?.find(a => a.customerId === customer.id);
-        const status = customer.internal_notes?.includes("VIP") ? "VIP" : 
-                      customer.cod_enabled ? "Active" : "Inactive";
-        return `${customer.id},"${customer.full_name || 'N/A'}","${customer.email}","${customer.user_addresses[0]?.city || 'N/A'}, ${customer.user_addresses[0]?.country || 'N/A'}","${new Date(customer.created_at).toLocaleDateString()}","${analytics?.totalSpent || 0}","${analytics?.orderCount || 0}","${analytics?.avgOrderValue || 0}","${status}"`;
-      }).join("\n");
-    
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      'ID,Name,Email,Location,Join Date,Total Spent,Orders,Avg Order Value,Status\n' +
+      filteredCustomers
+        .map((customer) => {
+          const analytics = customerAnalytics?.find((a) => a.customerId === customer.id);
+          const status = customer.internal_notes?.includes('VIP')
+            ? 'VIP'
+            : customer.cod_enabled
+              ? 'Active'
+              : 'Inactive';
+          return `${customer.id},"${customer.full_name || 'N/A'}","${customer.email}","${customer.user_addresses[0]?.city || 'N/A'}, ${customer.user_addresses[0]?.country || 'N/A'}","${new Date(customer.created_at).toLocaleDateString()}","${analytics?.totalSpent || 0}","${analytics?.orderCount || 0}","${analytics?.avgOrderValue || 0}","${status}"`;
+        })
+        .join('\n');
+
     const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "customers_export.csv");
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'customers_export.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast({
-      title: "Export Successful",
+      title: 'Export Successful',
       description: `${filteredCustomers.length} customers exported to CSV`,
     });
   };
@@ -170,8 +171,8 @@ export const EnhancedCustomerManagementPage = () => {
   const uniqueCountries = useMemo(() => {
     if (!customers) return [];
     const countries = new Set<string>();
-    customers.forEach(customer => {
-      customer.user_addresses.forEach(address => {
+    customers.forEach((customer) => {
+      customer.user_addresses.forEach((address) => {
         if (address.destination_country) countries.add(address.destination_country);
       });
     });
@@ -197,12 +198,10 @@ export const EnhancedCustomerManagementPage = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{customers?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {filteredCustomers.length} filtered
-            </p>
+            <p className="text-xs text-muted-foreground">{filteredCustomers.length} filtered</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
@@ -210,14 +209,12 @@ export const EnhancedCustomerManagementPage = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {customers?.filter(c => c.cod_enabled).length || 0}
+              {customers?.filter((c) => c.cod_enabled).length || 0}
             </div>
-            <p className="text-xs text-muted-foreground">
-              COD enabled
-            </p>
+            <p className="text-xs text-muted-foreground">COD enabled</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">VIP Customers</CardTitle>
@@ -225,14 +222,12 @@ export const EnhancedCustomerManagementPage = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {customers?.filter(c => c.internal_notes?.includes("VIP")).length || 0}
+              {customers?.filter((c) => c.internal_notes?.includes('VIP')).length || 0}
             </div>
-            <p className="text-xs text-muted-foreground">
-              High-value customers
-            </p>
+            <p className="text-xs text-muted-foreground">High-value customers</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">New This Month</CardTitle>
@@ -240,16 +235,14 @@ export const EnhancedCustomerManagementPage = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {customers?.filter(c => {
+              {customers?.filter((c) => {
                 const customerDate = new Date(c.created_at);
                 const monthAgo = new Date();
                 monthAgo.setMonth(monthAgo.getMonth() - 1);
                 return customerDate >= monthAgo;
               }).length || 0}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Last 30 days
-            </p>
+            <p className="text-xs text-muted-foreground">Last 30 days</p>
           </CardContent>
         </Card>
       </div>
@@ -261,7 +254,7 @@ export const EnhancedCustomerManagementPage = () => {
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="activity">Activity Timeline</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="list" className="space-y-4">
           <Card>
             <CardHeader>
@@ -270,7 +263,8 @@ export const EnhancedCustomerManagementPage = () => {
                 Customer Management
               </CardTitle>
               <CardDescription>
-                View, search, and manage your customers. Currently managing {customers?.length || 0} users.
+                View, search, and manage your customers. Currently managing {customers?.length || 0}{' '}
+                users.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -288,7 +282,7 @@ export const EnhancedCustomerManagementPage = () => {
                     />
                   </div>
                 </div>
-                
+
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Status" />
@@ -300,19 +294,21 @@ export const EnhancedCustomerManagementPage = () => {
                     <SelectItem value="vip">VIP</SelectItem>
                   </SelectContent>
                 </Select>
-                
+
                 <Select value={countryFilter} onValueChange={setCountryFilter}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Country" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Countries</SelectItem>
-                    {uniqueCountries.map(country => (
-                      <SelectItem key={country} value={country}>{country}</SelectItem>
+                    {uniqueCountries.map((country) => (
+                      <SelectItem key={country} value={country}>
+                        {country}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                
+
                 <Select value={dateFilter} onValueChange={setDateFilter}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Date Range" />
@@ -324,16 +320,16 @@ export const EnhancedCustomerManagementPage = () => {
                     <SelectItem value="90d">Last 90 Days</SelectItem>
                   </SelectContent>
                 </Select>
-                
+
                 <Button onClick={exportCustomers} variant="outline">
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
               </div>
-              
-              <CustomerTable 
+
+              <CustomerTable
                 customers={filteredCustomers}
-                customerAnalytics={customers?.map(customer => {
+                customerAnalytics={customers?.map((customer) => {
                   // Calculate basic analytics from available data
                   return {
                     customerId: customer.id,
@@ -341,16 +337,22 @@ export const EnhancedCustomerManagementPage = () => {
                     orderCount: 0, // We'll need to calculate this from quotes
                     quoteCount: 0, // We'll need to calculate this from quotes
                     avgOrderValue: 0,
-                    lastActivity: new Date(customer.created_at)
+                    lastActivity: new Date(customer.created_at),
                   };
                 })}
                 onUpdateCod={handleUpdateCod}
                 onUpdateNotes={updateNotesMutation.mutate}
-                onUpdateName={(userId, name) => updateProfileMutation.mutate({ userId, fullName: name })}
+                onUpdateName={(userId, name) =>
+                  updateProfileMutation.mutate({ userId, fullName: name })
+                }
                 onCustomerSelect={setSelectedCustomer}
-                isUpdating={updateCodMutation.isPending || updateNotesMutation.isPending || updateProfileMutation.isPending}
+                isUpdating={
+                  updateCodMutation.isPending ||
+                  updateNotesMutation.isPending ||
+                  updateProfileMutation.isPending
+                }
               />
-              
+
               {filteredCustomers.length === 0 && !isLoading && (
                 <div className="text-center py-12 text-muted-foreground">
                   <p>No customers found matching your search criteria.</p>
@@ -359,11 +361,11 @@ export const EnhancedCustomerManagementPage = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="analytics" className="space-y-4">
-          <CustomerStats 
-            customers={customers} 
-            customerAnalytics={customers?.map(customer => {
+          <CustomerStats
+            customers={customers}
+            customerAnalytics={customers?.map((customer) => {
               // Calculate basic analytics from available data
               return {
                 customerId: customer.id,
@@ -371,12 +373,12 @@ export const EnhancedCustomerManagementPage = () => {
                 orderCount: 0, // We'll need to calculate this from quotes
                 quoteCount: 0, // We'll need to calculate this from quotes
                 avgOrderValue: 0,
-                lastActivity: new Date(customer.created_at)
+                lastActivity: new Date(customer.created_at),
               };
             })}
           />
         </TabsContent>
-        
+
         <TabsContent value="activity" className="space-y-4">
           {selectedCustomer ? (
             <CustomerActivityTimeline customerId={selectedCustomer} />
@@ -384,7 +386,9 @@ export const EnhancedCustomerManagementPage = () => {
             <Card>
               <CardContent className="text-center py-12">
                 <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Select a customer to view their activity timeline</p>
+                <p className="text-muted-foreground">
+                  Select a customer to view their activity timeline
+                </p>
               </CardContent>
             </Card>
           )}
@@ -392,4 +396,4 @@ export const EnhancedCustomerManagementPage = () => {
       </Tabs>
     </div>
   );
-}; 
+};

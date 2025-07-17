@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { 
-  createAirwallexPaymentIntent, 
+import {
+  createAirwallexPaymentIntent,
   formatAmountForAirwallex,
-  isCurrencySupportedByAirwallex 
+  isCurrencySupportedByAirwallex,
 } from '../create-payment/airwallex-api.ts';
 
 // Mock Deno global for environment variables
@@ -11,16 +11,16 @@ globalThis.Deno = {
   env: {
     get: vi.fn((key: string) => {
       const envVars: Record<string, string> = {
-        'FRONTEND_URL': 'https://test.whyteclub.com',
-        'AIRWALLEX_API_KEY': 'test_airwallex_key',
-        'AIRWALLEX_CLIENT_ID': 'test_client_id',
-        'AIRWALLEX_BASE_URL': 'https://api.airwallex.com',
-        'SUPABASE_URL': 'http://127.0.0.1:54321',
-        'SUPABASE_SERVICE_ROLE_KEY': 'test-service-role-key'
+        FRONTEND_URL: 'https://test.whyteclub.com',
+        AIRWALLEX_API_KEY: 'test_airwallex_key',
+        AIRWALLEX_CLIENT_ID: 'test_client_id',
+        AIRWALLEX_BASE_URL: 'https://api.airwallex.com',
+        SUPABASE_URL: 'http://127.0.0.1:54321',
+        SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
       };
       return envVars[key] || null;
-    })
-  }
+    }),
+  },
 } as any;
 
 // Mock crypto for UUID generation
@@ -29,7 +29,7 @@ Object.defineProperty(global, 'crypto', {
     randomUUID: vi.fn(() => 'test-uuid-123'),
   },
   writable: true,
-  configurable: true
+  configurable: true,
 });
 
 // Mock types
@@ -64,18 +64,71 @@ describe('airwallex-api', () => {
     // Reset all mocks before each test
     vi.clearAllMocks();
 
-    // Mock Airwallex client
+    // Mock global fetch for Airwallex API calls
+    const mockFetch = vi.fn();
+    global.fetch = mockFetch;
+
+    // Configure fetch mock for authentication
+    mockFetch.mockImplementation((url: string, options: any) => {
+      if (url.includes('/authentication/login')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              token: 'mock_access_token_123',
+              expires_at: '2024-12-31T23:59:59Z',
+            }),
+          headers: new Headers(),
+          text: () => Promise.resolve(''),
+        } as Response);
+      }
+
+      // Configure fetch mock for payment intent creation
+      if (url.includes('/payment_intents/create')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              id: 'pi_test_123',
+              client_secret: 'pi_test_123_secret_abc',
+              amount: 10050,
+              currency: 'USD',
+              status: 'requires_payment_method',
+              customer: {
+                email: 'john@example.com',
+                first_name: 'John',
+                last_name: 'Doe',
+              },
+              metadata: {
+                quote_ids: 'quote_123,quote_456',
+                user_id: 'user_789',
+              },
+              created_at: '2024-01-15T10:00:00Z',
+              merchant_order_id: 'quote_123',
+            }),
+          headers: new Headers(),
+          text: () => Promise.resolve(''),
+        } as Response);
+      }
+
+      // Default fallback
+      return Promise.reject(new Error(`Unmocked fetch call to: ${url}`));
+    });
+
+    // Mock Airwallex client (kept for backward compatibility but not used by actual implementation)
     mockAirwallexClient = {
       paymentIntents: {
-        create: vi.fn()
-      }
+        create: vi.fn(),
+      },
     };
 
     // Mock Supabase client
     mockInsert = vi.fn().mockReturnValue(Promise.resolve({ error: null }));
     mockFrom = vi.fn().mockReturnValue({ insert: mockInsert });
     mockSupabaseClient = {
-      from: mockFrom
+      from: mockFrom,
     } as any;
   });
 
@@ -85,8 +138,10 @@ describe('airwallex-api', () => {
 
   describe('createAirwallexPaymentIntent', () => {
     const baseParams = {
-      airwallexClient: {} as any, // Will be replaced with mockAirwallexClient
-      amount: 100.50,
+      apiKey: 'test_airwallex_key',
+      clientId: 'test_client_id',
+      testMode: true,
+      amount: 100.5,
       currency: 'USD',
       quoteIds: ['quote_123', 'quote_456'],
       userId: 'user_789',
@@ -99,8 +154,8 @@ describe('airwallex-api', () => {
           city: 'New York',
           state: 'NY',
           postal_code: '10001',
-          country: 'US'
-        }
+          country: 'US',
+        },
       },
       quotes: [
         {
@@ -108,50 +163,24 @@ describe('airwallex-api', () => {
           product_name: 'Product 1',
           final_total: 50.25,
           quantity: 2,
-          final_currency: 'USD'
+          final_currency: 'USD',
         },
         {
           id: 'quote_456',
           product_name: 'Product 2',
           final_total: 50.25,
           quantity: 1,
-          final_currency: 'USD'
-        }
+          final_currency: 'USD',
+        },
       ],
-      supabaseAdmin: {} as SupabaseClient // Will be replaced with mockSupabaseClient
+      supabaseAdmin: {} as SupabaseClient, // Will be replaced with mockSupabaseClient
     };
 
     it('should successfully create a payment intent', async () => {
-      // Arrange
-      const mockPaymentIntent: MockAirwallexPaymentIntent = {
-        id: 'pi_test_123',
-        client_secret: 'pi_test_123_secret_abc',
-        amount: 10050, // $100.50 in cents
-        currency: 'USD',
-        status: 'requires_payment_method',
-        customer: {
-          email: 'john@example.com',
-          first_name: 'John',
-          last_name: 'Doe'
-        },
-        metadata: {
-          quote_ids: 'quote_123,quote_456',
-          user_id: 'user_789'
-        },
-        created_at: '2024-01-15T10:00:00Z',
-        merchant_order_id: 'quote_123',
-        next_action: {
-          url: 'https://checkout.airwallex.com/payment/pi_test_123/redirect'
-        }
-      };
-
-      mockAirwallexClient.paymentIntents.create.mockResolvedValue(mockPaymentIntent);
-
       // Act
       const result = await createAirwallexPaymentIntent({
         ...baseParams,
-        airwallexClient: mockAirwallexClient as any,
-        supabaseAdmin: mockSupabaseClient
+        supabaseAdmin: mockSupabaseClient,
       });
 
       // Assert
@@ -160,23 +189,50 @@ describe('airwallex-api', () => {
         client_secret: 'pi_test_123_secret_abc',
         transactionId: 'airwallex_pi_test_123',
         paymentIntentId: 'pi_test_123',
-        confirmationUrl: 'https://checkout.airwallex.com/payment/pi_test_123/redirect'
+        confirmationUrl: null,
+        airwallexData: {
+          intent_id: 'pi_test_123',
+          client_secret: 'pi_test_123_secret_abc',
+          currency: 'USD',
+          amount: 10050,
+          env: 'demo',
+        },
       });
 
-      // Verify Airwallex API was called with correct parameters
-      expect(mockAirwallexClient.paymentIntents.create).toHaveBeenCalledTimes(1);
-      const createCall = mockAirwallexClient.paymentIntents.create.mock.calls[0][0];
-      expect(createCall.amount).toBe(10050); // Amount in cents
-      expect(createCall.currency).toBe('USD');
-      expect(createCall.customer.email).toBe('john@example.com');
-      expect(createCall.metadata.quote_ids).toBe('quote_123,quote_456');
+      // Verify fetch was called for authentication
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api-demo.airwallex.com/api/v1/authentication/login',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'x-client-id': 'test_client_id',
+            'x-api-key': 'test_airwallex_key',
+            'Content-Type': 'application/json',
+            'x-api-version': '2024-06-14',
+          }),
+        }),
+      );
+
+      // Verify fetch was called for payment intent creation
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api-demo.airwallex.com/api/v1/pa/payment_intents/create',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer mock_access_token_123',
+            'x-api-version': '2024-06-14',
+          }),
+          body: expect.stringContaining('"amount":10050'),
+        }),
+      );
 
       // Verify Supabase insert was called
       expect(mockFrom).toHaveBeenCalledWith('payment_transactions');
       expect(mockInsert).toHaveBeenCalledTimes(1);
       const insertData = mockInsert.mock.calls[0][0];
       expect(insertData.transaction_id).toBe('airwallex_pi_test_123');
-      expect(insertData.amount).toBe(100.50);
+      expect(insertData.amount).toBe(100.5);
       expect(insertData.gateway).toBe('airwallex');
     });
 
@@ -185,15 +241,14 @@ describe('airwallex-api', () => {
       const result = await createAirwallexPaymentIntent({
         ...baseParams,
         amount: 0,
-        airwallexClient: mockAirwallexClient as any,
-        supabaseAdmin: mockSupabaseClient
+        supabaseAdmin: mockSupabaseClient,
       });
 
       expect(result).toEqual({
         success: false,
-        error: 'Invalid payment amount'
+        error: 'Invalid payment amount',
       });
-      expect(mockAirwallexClient.paymentIntents.create).not.toHaveBeenCalled();
+      expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should handle negative amount', async () => {
@@ -201,15 +256,14 @@ describe('airwallex-api', () => {
       const result = await createAirwallexPaymentIntent({
         ...baseParams,
         amount: -50,
-        airwallexClient: mockAirwallexClient as any,
-        supabaseAdmin: mockSupabaseClient
+        supabaseAdmin: mockSupabaseClient,
       });
 
       expect(result).toEqual({
         success: false,
-        error: 'Invalid payment amount'
+        error: 'Invalid payment amount',
       });
-      expect(mockAirwallexClient.paymentIntents.create).not.toHaveBeenCalled();
+      expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should handle invalid currency code', async () => {
@@ -217,15 +271,14 @@ describe('airwallex-api', () => {
       const result = await createAirwallexPaymentIntent({
         ...baseParams,
         currency: 'US', // Too short
-        airwallexClient: mockAirwallexClient as any,
-        supabaseAdmin: mockSupabaseClient
+        supabaseAdmin: mockSupabaseClient,
       });
 
       expect(result).toEqual({
         success: false,
-        error: 'Invalid currency code'
+        error: 'Invalid currency code',
       });
-      expect(mockAirwallexClient.paymentIntents.create).not.toHaveBeenCalled();
+      expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should handle empty quoteIds', async () => {
@@ -233,15 +286,14 @@ describe('airwallex-api', () => {
       const result = await createAirwallexPaymentIntent({
         ...baseParams,
         quoteIds: [],
-        airwallexClient: mockAirwallexClient as any,
-        supabaseAdmin: mockSupabaseClient
+        supabaseAdmin: mockSupabaseClient,
       });
 
       expect(result).toEqual({
         success: false,
-        error: 'No quote IDs provided'
+        error: 'No quote IDs provided',
       });
-      expect(mockAirwallexClient.paymentIntents.create).not.toHaveBeenCalled();
+      expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should handle unsupported currency', async () => {
@@ -249,88 +301,124 @@ describe('airwallex-api', () => {
       const result = await createAirwallexPaymentIntent({
         ...baseParams,
         currency: 'XXX', // Unsupported currency
-        airwallexClient: mockAirwallexClient as any,
-        supabaseAdmin: mockSupabaseClient
+        supabaseAdmin: mockSupabaseClient,
       });
 
       expect(result).toEqual({
         success: false,
-        error: 'Currency XXX is not supported by Airwallex'
+        error: 'Currency XXX is not supported by Airwallex',
       });
-      expect(mockAirwallexClient.paymentIntents.create).not.toHaveBeenCalled();
+      expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should handle Airwallex API error', async () => {
-      // Arrange
-      const apiError = new Error('Invalid API key');
-      mockAirwallexClient.paymentIntents.create.mockRejectedValue(apiError);
+      // Arrange - Mock authentication failure
+      const mockFetch = vi.fn();
+      global.fetch = mockFetch;
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        text: () => Promise.resolve('{"message":"Access token required","code":"unauthorized"}'),
+        headers: new Headers(),
+      } as Response);
 
       // Act
       const result = await createAirwallexPaymentIntent({
         ...baseParams,
-        airwallexClient: mockAirwallexClient as any,
-        supabaseAdmin: mockSupabaseClient
+        supabaseAdmin: mockSupabaseClient,
       });
 
       // Assert
       expect(result).toEqual({
         success: false,
-        error: 'Invalid API key'
+        error: expect.stringContaining('Airwallex API error'),
       });
     });
 
     it('should handle Airwallex API error object', async () => {
-      // Arrange
-      const apiError = {
-        message: 'Payment intent creation failed',
-        code: 'payment_intent_error',
-        status: 400
-      };
-      mockAirwallexClient.paymentIntents.create.mockRejectedValue(apiError);
+      // Arrange - Mock authentication success but payment creation failure
+      const mockFetch = vi.fn();
+      global.fetch = mockFetch;
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/authentication/login')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                token: 'mock_access_token_123',
+                expires_at: '2024-12-31T23:59:59Z',
+              }),
+            headers: new Headers(),
+          } as Response);
+        }
+
+        if (url.includes('/payment_intents/create')) {
+          return Promise.resolve({
+            ok: false,
+            status: 400,
+            text: () =>
+              Promise.resolve(
+                '{"message":"Payment intent creation failed","code":"payment_intent_error"}',
+              ),
+            headers: new Headers(),
+          } as Response);
+        }
+
+        return Promise.reject(new Error(`Unmocked fetch: ${url}`));
+      });
 
       // Act
       const result = await createAirwallexPaymentIntent({
         ...baseParams,
-        airwallexClient: mockAirwallexClient as any,
-        supabaseAdmin: mockSupabaseClient
+        supabaseAdmin: mockSupabaseClient,
       });
 
       // Assert
       expect(result).toEqual({
         success: false,
-        error: 'Payment intent creation failed'
+        error: expect.stringContaining('Payment intent creation failed'),
       });
     });
 
     it('should construct correct request payload', async () => {
-      // Arrange
-      const mockPaymentIntent: MockAirwallexPaymentIntent = {
-        id: 'pi_test_789',
-        client_secret: 'secret_xyz',
-        amount: 10050,
-        currency: 'USD',
-        status: 'requires_payment_method',
-        created_at: '2024-01-15T10:00:00Z',
-        merchant_order_id: 'quote_123'
-      };
-      mockAirwallexClient.paymentIntents.create.mockResolvedValue(mockPaymentIntent);
-
       // Act
       await createAirwallexPaymentIntent({
         ...baseParams,
-        airwallexClient: mockAirwallexClient as any,
-        supabaseAdmin: mockSupabaseClient
+        supabaseAdmin: mockSupabaseClient,
       });
 
-      // Assert
-      const createCall = mockAirwallexClient.paymentIntents.create.mock.calls[0][0];
-      
+      // Assert - Check the request body sent to fetch
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api-demo.airwallex.com/api/v1/pa/payment_intents/create',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer mock_access_token_123',
+            'x-api-version': '2024-06-14',
+          }),
+          body: expect.any(String),
+        }),
+      );
+
+      // Parse and check the request body
+      const fetchCalls = (global.fetch as any).mock.calls;
+      const paymentIntentCall = fetchCalls.find((call: any[]) =>
+        call[0].includes('/payment_intents/create'),
+      );
+      expect(paymentIntentCall).toBeDefined();
+
+      const requestBody = JSON.parse(paymentIntentCall[1].body);
+
       // Check amount formatting
-      expect(createCall.amount).toBe(10050); // $100.50 -> 10050 cents
-      expect(createCall.currency).toBe('USD');
-      
+      expect(requestBody.amount).toBe(10050); // $100.50 -> 10050 cents
+      expect(requestBody.currency).toBe('USD');
+
       // Check customer details
-      expect(createCall.customer).toEqual({
+      expect(requestBody.customer).toEqual({
         email: 'john@example.com',
         first_name: 'John',
         last_name: 'Doe',
@@ -340,111 +428,127 @@ describe('airwallex-api', () => {
           city: 'New York',
           state: 'NY',
           postcode: '10001',
-          country_code: 'US'
-        }
+          country_code: 'US',
+        },
       });
-      
+
       // Check metadata
-      expect(createCall.metadata).toEqual({
+      expect(requestBody.metadata).toEqual({
         quote_ids: 'quote_123,quote_456',
         user_id: 'user_789',
         quotes_count: '2',
-        total_items: '3' // 2 + 1 = 3 items total
+        total_items: '3', // 2 + 1 = 3 items total
       });
-      
+
       // Check other fields
-      expect(createCall.description).toBe('Payment for 2 item(s) - Order: quote_123, quote_456');
-      expect(createCall.merchant_order_id).toBe('quote_123');
-      expect(createCall.return_url).toBe('https://test.whyteclub.com/payment/complete');
-      expect(createCall.request_id).toMatch(/^user_789_\d+_[a-z0-9]+$/);
+      expect(requestBody.description).toBe('Payment for 2 item(s) - Order: quote_123, quote_456');
+      expect(requestBody.merchant_order_id).toBe('quote_123');
+      expect(requestBody.return_url).toBe('https://test.whyteclub.com/payment/complete');
+      expect(requestBody.request_id).toMatch(/^user_789_\d+_[a-z0-9]+$/);
     });
 
     it('should handle payment intent without next_action URL', async () => {
-      // Arrange
-      const mockPaymentIntent: MockAirwallexPaymentIntent = {
-        id: 'pi_test_no_action',
-        client_secret: 'secret_no_action',
-        amount: 10050,
-        currency: 'USD',
-        status: 'requires_payment_method',
-        created_at: '2024-01-15T10:00:00Z',
-        merchant_order_id: 'quote_123'
-        // No next_action property
-      };
-      mockAirwallexClient.paymentIntents.create.mockResolvedValue(mockPaymentIntent);
+      // Arrange - Override fetch mock for this test
+      const mockFetch = vi.fn();
+      global.fetch = mockFetch;
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/authentication/login')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                token: 'mock_access_token_123',
+                expires_at: '2024-12-31T23:59:59Z',
+              }),
+            headers: new Headers(),
+          } as Response);
+        }
+
+        if (url.includes('/payment_intents/create')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                id: 'pi_test_no_action',
+                client_secret: 'secret_no_action',
+                amount: 10050,
+                currency: 'USD',
+                status: 'requires_payment_method',
+                created_at: '2024-01-15T10:00:00Z',
+                merchant_order_id: 'quote_123',
+                // No next_action property
+              }),
+            headers: new Headers(),
+          } as Response);
+        }
+
+        return Promise.reject(new Error(`Unmocked fetch: ${url}`));
+      });
 
       // Act
       const result = await createAirwallexPaymentIntent({
         ...baseParams,
-        airwallexClient: mockAirwallexClient as any,
-        supabaseAdmin: mockSupabaseClient
+        supabaseAdmin: mockSupabaseClient,
       });
 
-      // Assert
-      expect(result.confirmationUrl).toBe('https://checkout.airwallex.com/payment/pi_test_no_action');
+      // Assert - For Airwallex HPP, confirmationUrl is null (handled on frontend)
+      expect(result.confirmationUrl).toBe(null);
+      expect(result.airwallexData?.intent_id).toBe('pi_test_no_action');
     });
 
     it('should handle database insert failure gracefully', async () => {
-      // Arrange
-      const mockPaymentIntent: MockAirwallexPaymentIntent = {
-        id: 'pi_test_db_fail',
-        client_secret: 'secret_db_fail',
-        amount: 10050,
-        currency: 'USD',
-        status: 'requires_payment_method',
-        created_at: '2024-01-15T10:00:00Z',
-        merchant_order_id: 'quote_123'
-      };
-      mockAirwallexClient.paymentIntents.create.mockResolvedValue(mockPaymentIntent);
+      // Arrange - Mock database insert failure
       mockInsert.mockReturnValue(Promise.resolve({ error: new Error('Database error') }));
 
       // Act
       const result = await createAirwallexPaymentIntent({
         ...baseParams,
-        airwallexClient: mockAirwallexClient as any,
-        supabaseAdmin: mockSupabaseClient
+        supabaseAdmin: mockSupabaseClient,
       });
 
       // Assert - Should still return success since payment intent was created
       expect(result).toEqual({
         success: true,
-        client_secret: 'secret_db_fail',
-        transactionId: 'airwallex_pi_test_db_fail',
-        paymentIntentId: 'pi_test_db_fail',
-        confirmationUrl: 'https://checkout.airwallex.com/payment/pi_test_db_fail'
+        client_secret: 'pi_test_123_secret_abc',
+        transactionId: 'airwallex_pi_test_123',
+        paymentIntentId: 'pi_test_123',
+        confirmationUrl: null,
+        airwallexData: {
+          intent_id: 'pi_test_123',
+          client_secret: 'pi_test_123_secret_abc',
+          currency: 'USD',
+          amount: 10050,
+          env: 'demo',
+        },
       });
     });
 
     it('should handle minimal customer info', async () => {
-      // Arrange
-      const mockPaymentIntent: MockAirwallexPaymentIntent = {
-        id: 'pi_test_minimal',
-        client_secret: 'secret_minimal',
-        amount: 10050,
-        currency: 'USD',
-        status: 'requires_payment_method',
-        created_at: '2024-01-15T10:00:00Z',
-        merchant_order_id: 'quote_123'
-      };
-      mockAirwallexClient.paymentIntents.create.mockResolvedValue(mockPaymentIntent);
-
       // Act
       await createAirwallexPaymentIntent({
         ...baseParams,
         customerInfo: undefined, // No customer info
-        airwallexClient: mockAirwallexClient as any,
-        supabaseAdmin: mockSupabaseClient
+        supabaseAdmin: mockSupabaseClient,
       });
 
-      // Assert
-      const createCall = mockAirwallexClient.paymentIntents.create.mock.calls[0][0];
-      expect(createCall.customer).toBeUndefined();
+      // Assert - Check the request body
+      const fetchCalls = (global.fetch as any).mock.calls;
+      const paymentIntentCall = fetchCalls.find((call: any[]) =>
+        call[0].includes('/payment_intents/create'),
+      );
+      expect(paymentIntentCall).toBeDefined();
+
+      const requestBody = JSON.parse(paymentIntentCall[1].body);
+      expect(requestBody.customer).toBeUndefined();
     });
   });
 
   describe('formatAmountForAirwallex', () => {
     it('should format USD correctly (2 decimal places)', () => {
-      expect(formatAmountForAirwallex(100.50, 'USD')).toBe(10050);
+      expect(formatAmountForAirwallex(100.5, 'USD')).toBe(10050);
       expect(formatAmountForAirwallex(99.99, 'USD')).toBe(9999);
       expect(formatAmountForAirwallex(1, 'USD')).toBe(100);
     });

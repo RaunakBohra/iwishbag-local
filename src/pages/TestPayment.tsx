@@ -91,9 +91,7 @@ const TestPayment = () => {
       console.log('✅ Test quote created:', quote);
     } catch (error) {
       console.error('❌ Error creating test quote:', error);
-      setError(
-        error instanceof Error ? error.message : 'Failed to create test quote'
-      );
+      setError(error instanceof Error ? error.message : 'Failed to create test quote');
     } finally {
       setTesting(false);
     }
@@ -119,8 +117,7 @@ const TestPayment = () => {
       console.log('🔍 User ID:', user.id);
 
       // Get the current session to ensure we have a valid auth token
-      const { data: session, error: sessionError } =
-        await supabase.auth.getSession();
+      const { data: session, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session.session) {
         throw new Error('Authentication required. Please log in again.');
@@ -129,26 +126,21 @@ const TestPayment = () => {
       console.log('✅ Valid session found');
 
       // Call the Edge Function with proper authentication
-      const { data, error } = await supabase.functions.invoke(
-        'create-payment',
-        {
-          body: {
-            quoteIds: [testQuote.id],
-            gateway: 'esewa',
-            success_url:
-              window.location.origin + '/payment-callback/esewa-success',
-            cancel_url:
-              window.location.origin + '/payment-callback/esewa-failure',
-            amount: parseFloat(amount),
-            currency: 'NPR',
-            customerInfo: {
-              name: 'Test Customer',
-              email: user?.email || 'test@example.com',
-              phone: '9806800001',
-            },
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          quoteIds: [testQuote.id],
+          gateway: 'esewa',
+          success_url: window.location.origin + '/payment-callback/esewa-success',
+          cancel_url: window.location.origin + '/payment-callback/esewa-failure',
+          amount: parseFloat(amount),
+          currency: 'NPR',
+          customerInfo: {
+            name: 'Test Customer',
+            email: user?.email || 'test@example.com',
+            phone: '9806800001',
           },
-        }
-      );
+        },
+      });
 
       if (error) {
         throw new Error(`Edge Function error: ${error.message}`);
@@ -163,19 +155,14 @@ const TestPayment = () => {
         console.log('📋 URL:', data.url);
         console.log('📋 Method:', data.method);
         console.log('📋 Has formData:', !!data.formData);
-        console.log(
-          '📋 FormData keys:',
-          data.formData ? Object.keys(data.formData) : 'None'
-        );
+        console.log('📋 FormData keys:', data.formData ? Object.keys(data.formData) : 'None');
         console.log('📋 FormData:', data.formData);
       } else {
         console.log('❌ Invalid payment response structure');
       }
     } catch (error) {
       console.error('❌ Error testing eSewa payment:', error);
-      setError(
-        error instanceof Error ? error.message : 'Failed to test eSewa payment'
-      );
+      setError(error instanceof Error ? error.message : 'Failed to test eSewa payment');
     } finally {
       setTesting(false);
     }
@@ -219,8 +206,7 @@ const TestPayment = () => {
     } catch (error) {
       console.error('❌ Form submission failed:', error);
       setError(
-        'Form submission failed: ' +
-          (error instanceof Error ? error.message : 'Unknown error')
+        'Form submission failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
       );
     }
   };
@@ -241,12 +227,8 @@ const TestPayment = () => {
         </Button>
 
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            eSewa Payment Gateway Testing
-          </h1>
-          <p className="text-gray-600">
-            Test and debug eSewa payment integration
-          </p>
+          <h1 className="text-3xl font-bold mb-2">eSewa Payment Gateway Testing</h1>
+          <p className="text-gray-600">Test and debug eSewa payment integration</p>
         </div>
 
         {/* Authentication Status */}
@@ -261,14 +243,8 @@ const TestPayment = () => {
             {!user ? (
               <div className="p-4 bg-red-50 rounded-lg flex items-center gap-2">
                 <XCircle className="h-5 w-5 text-red-600" />
-                <span className="text-red-800">
-                  Please log in to test eSewa payments
-                </span>
-                <Button
-                  onClick={() => navigate('/auth')}
-                  size="sm"
-                  className="ml-auto"
-                >
+                <span className="text-red-800">Please log in to test eSewa payments</span>
+                <Button onClick={() => navigate('/auth')} size="sm" className="ml-auto">
                   Login
                 </Button>
               </div>
@@ -276,9 +252,7 @@ const TestPayment = () => {
               <div className="p-4 bg-green-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="text-green-800 font-medium">
-                    User authenticated
-                  </span>
+                  <span className="text-green-800 font-medium">User authenticated</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-green-700">
                   <div className="flex items-center gap-2">
@@ -296,17 +270,11 @@ const TestPayment = () => {
                   <div className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4" />
                     <span>
-                      <strong>Session:</strong>{' '}
-                      {sessionInfo?.session ? '✅ Valid' : '❌ Invalid'}
+                      <strong>Session:</strong> {sessionInfo?.session ? '✅ Valid' : '❌ Invalid'}
                     </span>
                   </div>
                 </div>
-                <Button
-                  onClick={refreshSession}
-                  size="sm"
-                  variant="outline"
-                  className="mt-3"
-                >
+                <Button onClick={refreshSession} size="sm" variant="outline" className="mt-3">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh Session
                 </Button>
@@ -331,7 +299,7 @@ const TestPayment = () => {
                   id="amount"
                   type="number"
                   value={amount}
-                  onChange={e => setAmount(e.target.value)}
+                  onChange={(e) => setAmount(e.target.value)}
                   placeholder="100"
                   disabled={testing}
                 />
@@ -345,11 +313,7 @@ const TestPayment = () => {
             </div>
 
             <div className="flex gap-2">
-              <Button
-                onClick={createTestQuote}
-                disabled={testing || !user}
-                className="flex-1"
-              >
+              <Button onClick={createTestQuote} disabled={testing || !user} className="flex-1">
                 {testing ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -425,8 +389,7 @@ const TestPayment = () => {
                   <strong>Currency:</strong> {testQuote.final_currency}
                 </div>
                 <div>
-                  <strong>Status:</strong>{' '}
-                  <Badge variant="outline">{testQuote.status}</Badge>
+                  <strong>Status:</strong> <Badge variant="outline">{testQuote.status}</Badge>
                 </div>
                 <div>
                   <strong>Product:</strong> {testQuote.product_name}
@@ -455,15 +418,13 @@ const TestPayment = () => {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
                 <div>
-                  <strong>Success:</strong>{' '}
-                  {paymentResponse.success ? '✅ Yes' : '❌ No'}
+                  <strong>Success:</strong> {paymentResponse.success ? '✅ Yes' : '❌ No'}
                 </div>
                 <div>
                   <strong>Method:</strong> {paymentResponse.method}
                 </div>
                 <div>
-                  <strong>Transaction ID:</strong>{' '}
-                  {paymentResponse.transactionId}
+                  <strong>Transaction ID:</strong> {paymentResponse.transactionId}
                 </div>
                 <div>
                   <strong>Gateway:</strong> {paymentResponse.gateway}
@@ -475,14 +436,11 @@ const TestPayment = () => {
                   <strong>Currency:</strong> {paymentResponse.currency}
                 </div>
                 <div>
-                  <strong>Has Form Data:</strong>{' '}
-                  {paymentResponse.formData ? '✅ Yes' : '❌ No'}
+                  <strong>Has Form Data:</strong> {paymentResponse.formData ? '✅ Yes' : '❌ No'}
                 </div>
                 <div>
                   <strong>URL:</strong>{' '}
-                  <span className="text-xs break-all">
-                    {paymentResponse.url}
-                  </span>
+                  <span className="text-xs break-all">{paymentResponse.url}</span>
                 </div>
               </div>
 
@@ -512,15 +470,10 @@ const TestPayment = () => {
               <li>Click "Create Test Quote" to generate a test quote</li>
               <li>Click "Test eSewa Payment" to call the Edge Function</li>
               <li>Check the browser console for detailed logs</li>
+              <li>Click "Submit Form" to simulate the actual form submission</li>
+              <li>The form will open in a new tab - verify it uses POST method</li>
               <li>
-                Click "Submit Form" to simulate the actual form submission
-              </li>
-              <li>
-                The form will open in a new tab - verify it uses POST method
-              </li>
-              <li>
-                Use eSewa test credentials: ID: 9806800001, Password: Nepal@123,
-                Token: 123456
+                Use eSewa test credentials: ID: 9806800001, Password: Nepal@123, Token: 123456
               </li>
             </ol>
           </CardContent>

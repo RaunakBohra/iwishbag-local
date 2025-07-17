@@ -7,20 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  CreditCard, 
-  Settings, 
-  Edit, 
-  Save, 
-  X, 
-  Plus, 
-  Trash2,
+import {
+  CreditCard,
+  Settings,
+  Edit,
+  Save,
   Eye,
-  EyeOff,
   Globe,
   Smartphone,
   Landmark,
@@ -31,8 +26,7 @@ import {
   BarChart3,
   TrendingUp,
   DollarSign,
-  Users,
-  Activity
+  Activity,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { PaymentGatewayConfig, PaymentGateway, PaymentAnalytics } from '@/types/payment';
@@ -108,18 +102,19 @@ export const PaymentGatewayManagement: React.FC = () => {
   const { data: gateways, isLoading } = useQuery({
     queryKey: ['payment-gateways'],
     queryFn: async (): Promise<PaymentGatewayConfig[]> => {
-      const { data, error } = await supabase
-        .from('payment_gateways')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.from('payment_gateways').select('*').order('name');
 
       if (error) throw error;
       return data || [];
-    }
+    },
   });
 
   // Fetch payment analytics
-  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useQuery({
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    error: _analyticsError,
+  } = useQuery({
     queryKey: ['payment-analytics'],
     queryFn: async (): Promise<PaymentAnalytics> => {
       try {
@@ -132,22 +127,30 @@ export const PaymentGatewayManagement: React.FC = () => {
 
         const totalTransactions = transactions?.length || 0;
         const totalAmount = transactions?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
-        const completedTransactions = transactions?.filter(t => t.status === 'completed') || [];
-        const successRate = totalTransactions > 0 ? (completedTransactions.length / totalTransactions) * 100 : 0;
+        const completedTransactions = transactions?.filter((t) => t.status === 'completed') || [];
+        const successRate =
+          totalTransactions > 0 ? (completedTransactions.length / totalTransactions) * 100 : 0;
         const averageAmount = totalTransactions > 0 ? totalAmount / totalTransactions : 0;
 
         // Calculate gateway breakdown
-        const gatewayBreakdown: Record<PaymentGateway, { count: number; amount: number; success_rate: number }> = {};
-        
-        gateways?.forEach(gateway => {
-          const gatewayTransactions = transactions?.filter(t => t.gateway_code === gateway.code) || [];
-          const gatewayCompleted = gatewayTransactions.filter(t => t.status === 'completed');
+        const gatewayBreakdown: Record<
+          PaymentGateway,
+          { count: number; amount: number; success_rate: number }
+        > = {};
+
+        gateways?.forEach((gateway) => {
+          const gatewayTransactions =
+            transactions?.filter((t) => t.gateway_code === gateway.code) || [];
+          const gatewayCompleted = gatewayTransactions.filter((t) => t.status === 'completed');
           const gatewayAmount = gatewayTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
-          
+
           gatewayBreakdown[gateway.code] = {
             count: gatewayTransactions.length,
             amount: gatewayAmount,
-            success_rate: gatewayTransactions.length > 0 ? (gatewayCompleted.length / gatewayTransactions.length) * 100 : 0
+            success_rate:
+              gatewayTransactions.length > 0
+                ? (gatewayCompleted.length / gatewayTransactions.length) * 100
+                : 0,
           };
         });
 
@@ -160,8 +163,8 @@ export const PaymentGatewayManagement: React.FC = () => {
           gateway_breakdown: gatewayBreakdown,
           time_period: {
             start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-            end: new Date().toISOString()
-          }
+            end: new Date().toISOString(),
+          },
         };
       } catch (error) {
         console.warn('Payment transactions table not available:', error);
@@ -175,21 +178,18 @@ export const PaymentGatewayManagement: React.FC = () => {
           gateway_breakdown: {},
           time_period: {
             start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-            end: new Date().toISOString()
-          }
+            end: new Date().toISOString(),
+          },
         };
       }
     },
-    enabled: !!gateways
+    enabled: !!gateways,
   });
 
   // Update gateway mutation
   const updateGatewayMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<PaymentGatewayFormData> }) => {
-      const { error } = await supabase
-        .from('payment_gateways')
-        .update(data)
-        .eq('id', id);
+      const { error } = await supabase.from('payment_gateways').update(data).eq('id', id);
 
       if (error) throw error;
     },
@@ -209,7 +209,7 @@ export const PaymentGatewayManagement: React.FC = () => {
         description: error.message,
         variant: 'destructive',
       });
-    }
+    },
   });
 
   // Toggle gateway status
@@ -217,7 +217,7 @@ export const PaymentGatewayManagement: React.FC = () => {
     try {
       await updateGatewayMutation.mutateAsync({
         id: gateway.id,
-        data: { is_active: !gateway.is_active }
+        data: { is_active: !gateway.is_active },
       });
     } catch (error) {
       console.error('Error toggling gateway status:', error);
@@ -225,11 +225,11 @@ export const PaymentGatewayManagement: React.FC = () => {
   };
 
   // Toggle test mode
-  const toggleTestMode = async (gateway: PaymentGatewayConfig) => {
+  const _toggleTestMode = async (gateway: PaymentGatewayConfig) => {
     try {
       await updateGatewayMutation.mutateAsync({
         id: gateway.id,
-        data: { test_mode: !gateway.test_mode }
+        data: { test_mode: !gateway.test_mode },
       });
     } catch (error) {
       console.error('Error toggling test mode:', error);
@@ -246,7 +246,7 @@ export const PaymentGatewayManagement: React.FC = () => {
 
     updateGatewayMutation.mutate({
       id: editingGateway.id,
-      data: formData
+      data: formData,
     });
   };
 
@@ -297,20 +297,22 @@ export const PaymentGatewayManagement: React.FC = () => {
                       {getGatewayIcon(gateway.code)}
                       <CardTitle className="text-lg">{gateway.name}</CardTitle>
                     </div>
-                    <Badge 
-                      variant={gateway.is_active ? "default" : "secondary"}
+                    <Badge
+                      variant={gateway.is_active ? 'default' : 'secondary'}
                       className={getGatewayColor(gateway.code)}
                     >
                       {gateway.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
                 </CardHeader>
-                
+
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Fee:</span>
-                      <span>{gateway.fee_percent}% + ${gateway.fee_fixed}</span>
+                      <span>
+                        {gateway.fee_percent}% + ${gateway.fee_fixed}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Countries:</span>
@@ -322,7 +324,10 @@ export const PaymentGatewayManagement: React.FC = () => {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Mode:</span>
-                      <Badge variant={gateway.test_mode ? "outline" : "default"} className="text-xs">
+                      <Badge
+                        variant={gateway.test_mode ? 'outline' : 'default'}
+                        className="text-xs"
+                      >
                         {gateway.test_mode ? 'Test' : 'Live'}
                       </Badge>
                     </div>
@@ -338,11 +343,7 @@ export const PaymentGatewayManagement: React.FC = () => {
                       <Edit className="h-3 w-3 mr-1" />
                       Edit
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewConfig(gateway)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => handleViewConfig(gateway)}>
                       <Eye className="h-3 w-3" />
                     </Button>
                     <Button
@@ -379,9 +380,7 @@ export const PaymentGatewayManagement: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{analytics.total_transactions}</div>
-                    <p className="text-xs text-muted-foreground">
-                      Last 30 days
-                    </p>
+                    <p className="text-xs text-muted-foreground">Last 30 days</p>
                   </CardContent>
                 </Card>
 
@@ -391,12 +390,8 @@ export const PaymentGatewayManagement: React.FC = () => {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">
-                      ${analytics.total_amount.toFixed(2)}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {analytics.currency}
-                    </p>
+                    <div className="text-2xl font-bold">${analytics.total_amount.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">{analytics.currency}</p>
                   </CardContent>
                 </Card>
 
@@ -406,12 +401,8 @@ export const PaymentGatewayManagement: React.FC = () => {
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">
-                      {analytics.success_rate.toFixed(1)}%
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Payment success
-                    </p>
+                    <div className="text-2xl font-bold">{analytics.success_rate.toFixed(1)}%</div>
+                    <p className="text-xs text-muted-foreground">Payment success</p>
                   </CardContent>
                 </Card>
 
@@ -421,12 +412,8 @@ export const PaymentGatewayManagement: React.FC = () => {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">
-                      ${analytics.average_amount.toFixed(2)}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Per transaction
-                    </p>
+                    <div className="text-2xl font-bold">${analytics.average_amount.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">Per transaction</p>
                   </CardContent>
                 </Card>
               </div>
@@ -439,7 +426,10 @@ export const PaymentGatewayManagement: React.FC = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {Object.entries(analytics.gateway_breakdown).map(([gateway, stats]) => (
-                      <div key={gateway} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div
+                        key={gateway}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
                         <div className="flex items-center gap-3">
                           {getGatewayIcon(gateway as PaymentGateway)}
                           <div>
@@ -524,7 +514,7 @@ const GatewayEditForm: React.FC<GatewayEditFormProps> = ({
   gateway,
   onSave,
   onCancel,
-  isSaving
+  isSaving,
 }) => {
   const [formData, setFormData] = useState<PaymentGatewayFormData>({
     name: gateway.name,
@@ -536,7 +526,7 @@ const GatewayEditForm: React.FC<GatewayEditFormProps> = ({
     fee_fixed: gateway.fee_fixed,
     config: gateway.config,
     webhook_url: gateway.webhook_url,
-    test_mode: gateway.test_mode
+    test_mode: gateway.test_mode,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -558,12 +548,7 @@ const GatewayEditForm: React.FC<GatewayEditFormProps> = ({
         </div>
         <div>
           <Label htmlFor="code">Gateway Code</Label>
-          <Input
-            id="code"
-            value={formData.code}
-            disabled
-            className="bg-gray-50"
-          />
+          <Input id="code" value={formData.code} disabled className="bg-gray-50" />
         </div>
       </div>
 
@@ -575,7 +560,12 @@ const GatewayEditForm: React.FC<GatewayEditFormProps> = ({
             type="number"
             step="0.01"
             value={formData.fee_percent}
-            onChange={(e) => setFormData({ ...formData, fee_percent: parseFloat(e.target.value) })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                fee_percent: parseFloat(e.target.value),
+              })
+            }
             required
           />
         </div>
@@ -586,7 +576,12 @@ const GatewayEditForm: React.FC<GatewayEditFormProps> = ({
             type="number"
             step="0.01"
             value={formData.fee_fixed}
-            onChange={(e) => setFormData({ ...formData, fee_fixed: parseFloat(e.target.value) })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                fee_fixed: parseFloat(e.target.value),
+              })
+            }
             required
           />
         </div>
@@ -611,7 +606,7 @@ const GatewayEditForm: React.FC<GatewayEditFormProps> = ({
           />
           <Label htmlFor="is_active">Active</Label>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Switch
             id="test_mode"
@@ -642,4 +637,4 @@ const GatewayEditForm: React.FC<GatewayEditFormProps> = ({
       </div>
     </form>
   );
-}; 
+};

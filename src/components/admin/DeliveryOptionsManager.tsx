@@ -22,8 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { Package, Truck, Clock, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAllCountries } from '@/hooks/useAllCountries';
-import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
-import { formatDualCurrency, getCountryCurrency } from '@/lib/currencyUtils';
+import { formatDualCurrency } from '@/lib/currencyUtils';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 
 // Delivery option interface
@@ -33,13 +32,6 @@ interface DeliveryOption {
   min_days: number;
   max_days: number;
   cost: number;
-}
-
-// Country interface
-interface Country {
-  code: string;
-  name: string;
-  [key: string]: unknown; // For other properties
 }
 
 // Shipping route interface
@@ -101,7 +93,7 @@ interface DeliveryOptionsManagerProps {
 export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
   quote,
   onOptionsChange,
-  className = ''
+  className = '',
 }) => {
   const { data: allCountries = [] } = useAllCountries();
   const [loading, setLoading] = useState(true);
@@ -120,12 +112,19 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
         setError(null);
 
         // Use the same logic as CustomsTierDisplay for consistency
-        const shippingAddress = quote.shipping_address ? (typeof quote.shipping_address === 'string' ? JSON.parse(quote.shipping_address) : quote.shipping_address) : null;
-        
+        const shippingAddress = quote.shipping_address
+          ? typeof quote.shipping_address === 'string'
+            ? JSON.parse(quote.shipping_address)
+            : quote.shipping_address
+          : null;
+
         const origin = quote.origin_country || 'US';
-        let destination = shippingAddress?.destination_country || shippingAddress?.country || quote.destination_country;
+        let destination =
+          shippingAddress?.destination_country ||
+          shippingAddress?.country ||
+          quote.destination_country;
         if (destination && destination.length > 2) {
-          const found = allCountries.find(c => c.name === destination);
+          const found = allCountries.find((c) => c.name === destination);
           if (found) destination = found.code;
         }
 
@@ -169,7 +168,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
               .eq('destination_country', destination)
               .eq('is_active', true)
               .maybeSingle();
-            
+
             if (fallbackError) {
               console.error('Error fetching fallback shipping route:', fallbackError);
             } else if (fallbackRoute) {
@@ -184,9 +183,9 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
               id: 0,
               origin_country: origin,
               destination_country: destination,
-              base_shipping_cost: 25.00,
-              cost_per_kg: 5.00,
-              shipping_per_kg: 5.00,
+              base_shipping_cost: 25.0,
+              cost_per_kg: 5.0,
+              shipping_per_kg: 5.0,
               cost_percentage: 2.5,
               processing_days: 2,
               customs_clearance_days: 3,
@@ -198,21 +197,19 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
                   carrier: 'Standard',
                   min_days: 7,
                   max_days: 14,
-                  price: 25.00,
-                  active: true
-                }
+                  price: 25.0,
+                  active: true,
+                },
               ],
               weight_tiers: [
-                { min: 0, max: 1, cost: 15.00 },
-                { min: 1, max: 3, cost: 25.00 },
-                { min: 3, max: 5, cost: 35.00 },
+                { min: 0, max: 1, cost: 15.0 },
+                { min: 1, max: 3, cost: 25.0 },
+                { min: 3, max: 5, cost: 35.0 },
               ],
-              carriers: [
-                { name: 'Standard', costMultiplier: 1.0, days: '7-14' }
-              ],
+              carriers: [{ name: 'Standard', costMultiplier: 1.0, days: '7-14' }],
               is_active: true,
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             };
           }
         }
@@ -228,37 +225,40 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
         // Parse delivery options
         let options: DeliveryOption[] = [];
         if (currentRoute.delivery_options && Array.isArray(currentRoute.delivery_options)) {
-          options = currentRoute.delivery_options.map((opt: DeliveryOptionExtended, index: number) => ({
-            id: opt.id || `option-${index}`,
-            name: opt.name || `Option ${index + 1}`,
-            min_days: opt.min_days || 0,
-            max_days: opt.max_days || 0,
-            cost: opt.cost || opt.price || 0
-          }));
+          options = currentRoute.delivery_options.map(
+            (opt: DeliveryOptionExtended, index: number) => ({
+              id: opt.id || `option-${index}`,
+              name: opt.name || `Option ${index + 1}`,
+              min_days: opt.min_days || 0,
+              max_days: opt.max_days || 0,
+              cost: opt.cost || opt.price || 0,
+            }),
+          );
         }
 
         // Create default option if none exist
         if (options.length === 0) {
-          options = [{
-            id: 'default',
-            name: 'Standard Delivery',
-            min_days: 7,
-            max_days: 14,
-            cost: 0
-          }];
+          options = [
+            {
+              id: 'default',
+              name: 'Standard Delivery',
+              min_days: 7,
+              max_days: 14,
+              cost: 0,
+            },
+          ];
         }
 
         setAllDeliveryOptions(options);
-        
+
         // Set enabled options from quote or default to all
         const quoteEnabledOptions = quote.enabled_delivery_options || [];
         if (quoteEnabledOptions.length === 0) {
           // If no options are set, enable all by default
-          setEnabledOptions(options.map(opt => opt.id));
+          setEnabledOptions(options.map((opt) => opt.id));
         } else {
           setEnabledOptions(quoteEnabledOptions);
         }
-
       } catch (err) {
         console.error('Error fetching shipping data:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to load delivery options';
@@ -269,13 +269,21 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
     };
 
     fetchShippingData();
-  }, [quote.id, quote.shipping_route_id, quote.origin_country, quote.destination_country, allCountries]);
+  }, [
+    quote.id,
+    quote.shipping_route_id,
+    quote.origin_country,
+    quote.destination_country,
+    quote.enabled_delivery_options,
+    quote.shipping_address,
+    allCountries,
+  ]);
 
   const handleOptionToggle = async (optionId: string, enabled: boolean) => {
     try {
       const newEnabledOptions = enabled
         ? [...enabledOptions, optionId]
-        : enabledOptions.filter(id => id !== optionId);
+        : enabledOptions.filter((id) => id !== optionId);
 
       setEnabledOptions(newEnabledOptions);
 
@@ -294,7 +302,6 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
 
       // Notify parent component
       onOptionsChange?.(newEnabledOptions);
-
     } catch (err) {
       console.error('Error toggling delivery option:', err);
       // Revert the change if update failed
@@ -303,7 +310,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
   };
 
   const enableAllOptions = async () => {
-    const allOptionIds = allDeliveryOptions.map(opt => opt.id);
+    const allOptionIds = allDeliveryOptions.map((opt) => opt.id);
     await handleOptionToggle(allOptionIds[0], true); // This will trigger the update for all
     setEnabledOptions(allOptionIds);
   };
@@ -403,8 +410,8 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-sm text-blue-700">Shipping Route:</span>
             {routeOrigin && routeDestination && (
-              <ShippingRouteDisplay 
-                origin={routeOrigin} 
+              <ShippingRouteDisplay
+                origin={routeOrigin}
                 destination={routeDestination}
                 showCodes={true}
                 className="font-medium text-blue-900"
@@ -417,7 +424,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
         {/* Delivery Options */}
         <div className="space-y-3">
           <h4 className="font-medium text-gray-900">Available Options</h4>
-          
+
           {allDeliveryOptions.map((option) => {
             const isEnabled = enabledOptions.includes(option.id);
             const processingDays = shippingRoute.processing_days || 0;
@@ -429,9 +436,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
               <div
                 key={option.id}
                 className={`p-4 border rounded-lg transition-colors ${
-                  isEnabled
-                    ? 'border-green-200 bg-green-50'
-                    : 'border-gray-200 bg-gray-50'
+                  isEnabled ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
                 }`}
               >
                 <div className="flex items-center justify-between mb-3">
@@ -443,8 +448,8 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
                     <div>
                       <h5 className="font-medium text-gray-900">{option.name}</h5>
                       <div className="flex items-center gap-2 mt-1">
-                        <Badge variant={isEnabled ? "default" : "secondary"}>
-                          {isEnabled ? "Enabled" : "Disabled"}
+                        <Badge variant={isEnabled ? 'default' : 'secondary'}>
+                          {isEnabled ? 'Enabled' : 'Disabled'}
                         </Badge>
                         {option.cost > 0 && (
                           <Badge variant="outline">
@@ -452,13 +457,23 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
                               const purchaseCountry = quote.destination_country || 'US';
                               const deliveryCountry = quote.destination_country || 'US';
                               const exchangeRate = quote.exchange_rate;
-                              const dualCurrency = formatDualCurrency(option.cost, purchaseCountry, deliveryCountry, exchangeRate);
-                              const showDualCurrency = purchaseCountry !== deliveryCountry && exchangeRate && exchangeRate !== 1;
-                              
+                              const dualCurrency = formatDualCurrency(
+                                option.cost,
+                                purchaseCountry,
+                                deliveryCountry,
+                                exchangeRate,
+                              );
+                              const showDualCurrency =
+                                purchaseCountry !== deliveryCountry &&
+                                exchangeRate &&
+                                exchangeRate !== 1;
+
                               return showDualCurrency ? (
                                 <div className="text-xs">
                                   <div>{dualCurrency.purchase}</div>
-                                  <div className="text-muted-foreground">{dualCurrency.delivery}</div>
+                                  <div className="text-muted-foreground">
+                                    {dualCurrency.delivery}
+                                  </div>
                                 </div>
                               ) : (
                                 `${option.cost.toFixed(2)}`
@@ -479,7 +494,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
                       {totalMinDays}-{totalMaxDays} days
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Truck className="w-4 h-4 text-gray-500" />
                     <span className="text-gray-700">Shipping:</span>
@@ -502,7 +517,9 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <Truck className="w-3 h-3" />
-                    <span>Delivery: {option.min_days}-{option.max_days} days</span>
+                    <span>
+                      Delivery: {option.min_days}-{option.max_days} days
+                    </span>
                   </div>
                 </div>
               </div>
@@ -520,11 +537,12 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
           </div>
           {enabledOptions.length === 0 && (
             <p className="text-xs text-red-600 mt-1">
-              ⚠️ No delivery options are enabled. Customers won't be able to select any delivery method.
+              ⚠️ No delivery options are enabled. Customers won't be able to select any delivery
+              method.
             </p>
           )}
         </div>
       </CardContent>
     </Card>
   );
-}; 
+};

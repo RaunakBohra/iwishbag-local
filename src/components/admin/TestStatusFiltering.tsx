@@ -4,13 +4,13 @@ import { Badge } from '@/components/ui/badge';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 export const TestStatusFiltering = () => {
-  const { 
+  const {
     quoteStatuses,
-    orderStatuses, 
+    orderStatuses,
     getStatusesForQuotesList,
     getStatusesForOrdersList,
     isLoading,
-    error 
+    error,
   } = useStatusManagement();
 
   if (isLoading) {
@@ -53,30 +53,38 @@ export const TestStatusFiltering = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h3 className="font-semibold mb-2">Quotes Page Statuses ({quotesListStatuses.length})</h3>
+            <h3 className="font-semibold mb-2">
+              Quotes Page Statuses ({quotesListStatuses.length})
+            </h3>
             <div className="flex flex-wrap gap-2">
-              {quotesListStatuses.map(status => (
+              {quotesListStatuses.map((status) => (
                 <Badge key={status} variant="outline" className="bg-blue-50 border-blue-200">
                   {status}
                 </Badge>
               ))}
             </div>
             {quotesListStatuses.length === 0 && (
-              <p className="text-sm text-muted-foreground">No statuses configured for quotes page</p>
+              <p className="text-sm text-muted-foreground">
+                No statuses configured for quotes page
+              </p>
             )}
           </div>
 
           <div>
-            <h3 className="font-semibold mb-2">Orders Page Statuses ({ordersListStatuses.length})</h3>
+            <h3 className="font-semibold mb-2">
+              Orders Page Statuses ({ordersListStatuses.length})
+            </h3>
             <div className="flex flex-wrap gap-2">
-              {ordersListStatuses.map(status => (
+              {ordersListStatuses.map((status) => (
                 <Badge key={status} variant="outline" className="bg-green-50 border-green-200">
                   {status}
                 </Badge>
               ))}
             </div>
             {ordersListStatuses.length === 0 && (
-              <p className="text-sm text-muted-foreground">No statuses configured for orders page</p>
+              <p className="text-sm text-muted-foreground">
+                No statuses configured for orders page
+              </p>
             )}
           </div>
         </CardContent>
@@ -91,17 +99,24 @@ export const TestStatusFiltering = () => {
             <div>
               <h3 className="font-semibold mb-2">Quote Statuses</h3>
               <div className="grid gap-2">
-                {quoteStatuses.map(status => (
-                  <div key={status.id} className="flex items-center justify-between p-2 border rounded">
+                {quoteStatuses.map((status) => (
+                  <div
+                    key={status.id}
+                    className="flex items-center justify-between p-2 border rounded"
+                  >
                     <div className="flex items-center gap-2">
                       <Badge variant={status.color}>{status.name}</Badge>
                       <span className="text-sm">{status.label}</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
-                      <span className={`px-2 py-1 rounded ${status.showsInQuotesList ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}>
+                      <span
+                        className={`px-2 py-1 rounded ${status.showsInQuotesList ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}
+                      >
                         Quotes: {status.showsInQuotesList ? 'Yes' : 'No'}
                       </span>
-                      <span className={`px-2 py-1 rounded ${status.showsInOrdersList ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+                      <span
+                        className={`px-2 py-1 rounded ${status.showsInOrdersList ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}
+                      >
                         Orders: {status.showsInOrdersList ? 'Yes' : 'No'}
                       </span>
                     </div>
@@ -113,17 +128,24 @@ export const TestStatusFiltering = () => {
             <div>
               <h3 className="font-semibold mb-2">Order Statuses</h3>
               <div className="grid gap-2">
-                {orderStatuses.map(status => (
-                  <div key={status.id} className="flex items-center justify-between p-2 border rounded">
+                {orderStatuses.map((status) => (
+                  <div
+                    key={status.id}
+                    className="flex items-center justify-between p-2 border rounded"
+                  >
                     <div className="flex items-center gap-2">
                       <Badge variant={status.color}>{status.name}</Badge>
                       <span className="text-sm">{status.label}</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
-                      <span className={`px-2 py-1 rounded ${status.showsInQuotesList ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}>
+                      <span
+                        className={`px-2 py-1 rounded ${status.showsInQuotesList ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}
+                      >
                         Quotes: {status.showsInQuotesList ? 'Yes' : 'No'}
                       </span>
-                      <span className={`px-2 py-1 rounded ${status.showsInOrdersList ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+                      <span
+                        className={`px-2 py-1 rounded ${status.showsInOrdersList ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}
+                      >
                         Orders: {status.showsInOrdersList ? 'Yes' : 'No'}
                       </span>
                     </div>

@@ -3,7 +3,12 @@
  * Implements defensive programming principles for security
  */
 
-import { CustomerInfo, CustomerAddress, ValidationResult, CustomerValidationRules } from '@/types/stripeCustomer';
+import {
+  CustomerInfo,
+  CustomerAddress,
+  ValidationResult,
+  CustomerValidationRules,
+} from '@/types/stripeCustomer';
 
 export class CustomerValidator {
   // Stripe API limits for customer data
@@ -19,7 +24,8 @@ export class CustomerValidator {
   };
 
   // Email validation regex (RFC 5322 compliant)
-  private static readonly EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  private static readonly EMAIL_REGEX =
+    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
   // Phone validation regex (international format)
   private static readonly PHONE_REGEX = /^\+?[1-9]\d{1,14}$/;
@@ -37,7 +43,7 @@ export class CustomerValidator {
 
     return input
       .trim()
-      .replace(/[<>'"&]/g, '') // Remove potentially dangerous characters
+      .replace(/[<>'"&;]/g, '') // Remove potentially dangerous characters including semicolon
       .substring(0, maxLength);
   }
 
@@ -46,7 +52,7 @@ export class CustomerValidator {
    */
   private static validateEmail(email: string): ValidationResult {
     const errors: string[] = [];
-    
+
     if (!email || typeof email !== 'string') {
       errors.push('Email is required');
       return { isValid: false, errors };
@@ -68,7 +74,7 @@ export class CustomerValidator {
    */
   private static validateName(name: string): ValidationResult {
     const errors: string[] = [];
-    
+
     if (!name || typeof name !== 'string') {
       errors.push('Name is required');
       return { isValid: false, errors };
@@ -95,7 +101,7 @@ export class CustomerValidator {
    */
   private static validatePhone(phone: string): ValidationResult {
     const errors: string[] = [];
-    
+
     if (!phone || typeof phone !== 'string') {
       // Phone is optional, so empty is valid
       return { isValid: true, errors: [] };
@@ -106,8 +112,8 @@ export class CustomerValidator {
     }
 
     // Remove common formatting characters for validation
-    const cleanPhone = phone.replace(/[\s\-\(\)\.]/g, '');
-    
+    const cleanPhone = phone.replace(/[\s\-().]/g, '');
+
     if (!this.PHONE_REGEX.test(cleanPhone)) {
       errors.push('Invalid phone number format. Use international format (e.g., +1234567890)');
     }
@@ -130,7 +136,9 @@ export class CustomerValidator {
     if (!address.line1 || address.line1.length === 0) {
       errors.push('Address line 1 is required');
     } else if (address.line1.length > this.STRIPE_LIMITS.address_line) {
-      errors.push(`Address line 1 exceeds maximum length of ${this.STRIPE_LIMITS.address_line} characters`);
+      errors.push(
+        `Address line 1 exceeds maximum length of ${this.STRIPE_LIMITS.address_line} characters`,
+      );
     }
 
     if (!address.city || address.city.length === 0) {
@@ -148,7 +156,9 @@ export class CustomerValidator {
     if (!address.postal_code || address.postal_code.length === 0) {
       errors.push('Postal code is required');
     } else if (address.postal_code.length > this.STRIPE_LIMITS.postal_code) {
-      errors.push(`Postal code exceeds maximum length of ${this.STRIPE_LIMITS.postal_code} characters`);
+      errors.push(
+        `Postal code exceeds maximum length of ${this.STRIPE_LIMITS.postal_code} characters`,
+      );
     }
 
     if (!address.country || address.country.length === 0) {
@@ -163,7 +173,9 @@ export class CustomerValidator {
   /**
    * Validates and sanitizes customer information
    */
-  public static validateCustomerInfo(customerInfo: CustomerInfo): ValidationResult & { sanitizedData?: CustomerInfo } {
+  public static validateCustomerInfo(
+    customerInfo: CustomerInfo,
+  ): ValidationResult & { sanitizedData?: CustomerInfo } {
     const errors: string[] = [];
     const sanitizedData: CustomerInfo = {};
 
@@ -205,10 +217,15 @@ export class CustomerValidator {
       } else {
         sanitizedData.address = {
           line1: this.sanitizeString(customerInfo.address.line1, this.STRIPE_LIMITS.address_line),
-          line2: customerInfo.address.line2 ? this.sanitizeString(customerInfo.address.line2, this.STRIPE_LIMITS.address_line) : undefined,
+          line2: customerInfo.address.line2
+            ? this.sanitizeString(customerInfo.address.line2, this.STRIPE_LIMITS.address_line)
+            : undefined,
           city: this.sanitizeString(customerInfo.address.city, this.STRIPE_LIMITS.city),
           state: this.sanitizeString(customerInfo.address.state, this.STRIPE_LIMITS.state),
-          postal_code: this.sanitizeString(customerInfo.address.postal_code, this.STRIPE_LIMITS.postal_code),
+          postal_code: this.sanitizeString(
+            customerInfo.address.postal_code,
+            this.STRIPE_LIMITS.postal_code,
+          ),
           country: customerInfo.address.country.toUpperCase(),
         };
       }
@@ -229,11 +246,23 @@ export class CustomerValidator {
       return '';
     }
 
-    // Stripe metadata values must be strings and have specific limitations
-    return value
-      .trim()
-      .replace(/[^\w\s\-\.@]/g, '') // Allow only alphanumeric, spaces, hyphens, dots, and @
-      .substring(0, 500); // Stripe metadata value limit
+    let sanitized = value.trim();
+
+    // Remove common malicious patterns (XSS, SQL injection keywords)
+    // This is a basic blacklist and should be augmented with more comprehensive solutions if needed
+    sanitized = sanitized.replace(/<script[^>]*>.*?<\/script>/gi, ''); // Remove complete script tags
+    sanitized = sanitized.replace(/<script[^>]*>/gi, ''); // Remove opening script tags
+    sanitized = sanitized.replace(/<\/script>/gi, ''); // Remove closing script tags
+    sanitized = sanitized.replace(/onerror|onload|javascript:|data:/gi, ''); // Remove common event handlers and protocols
+    sanitized = sanitized.replace(
+      /drop\s+table|delete\s+from|insert\s+into|select\s+from|update\s+set/gi,
+      '',
+    ); // Remove SQL keywords
+
+    // Allow only alphanumeric, spaces, hyphens, dots, and @
+    sanitized = sanitized.replace(/[^\w\s\-.@]/g, '');
+
+    return sanitized.substring(0, 500); // Stripe metadata value limit
   }
 
   /**
