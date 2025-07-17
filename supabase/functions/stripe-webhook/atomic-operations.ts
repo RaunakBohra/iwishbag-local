@@ -6,8 +6,7 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno';
 import { SecureLogger } from '../../../src/lib/secureLogger.ts';
-import { EdgeLogger, EdgeLogCategory, logEdgeInfo, logEdgeError } from '../_shared/edge-logging.ts';
-import { EdgePaymentErrorCode } from '../_shared/edge-payment-monitoring.ts';
+import { EdgeLogger, EdgeLogCategory } from '../_shared/edge-logging.ts';
 
 interface AtomicPaymentResult {
   success: boolean;
@@ -33,15 +32,15 @@ interface CustomerDetailsFromStripe {
 export async function processPaymentSuccessAtomic(
   supabaseAdmin: SupabaseClient,
   paymentIntent: Stripe.PaymentIntent,
-  logger?: EdgeLogger,
+  _logger?: EdgeLogger,
 ): Promise<AtomicPaymentResult> {
   const quoteIds = paymentIntent.metadata.quote_ids?.split(',') || [];
   const userId = paymentIntent.metadata.user_id;
   const amount = paymentIntent.amount / 100;
   const currency = paymentIntent.currency.toUpperCase();
 
-  if (logger) {
-    logger.info(EdgeLogCategory.DATABASE_OPERATION, 'Starting atomic payment success processing', {
+  if (_logger) {
+    _logger.info(EdgeLogCategory.DATABASE_OPERATION, 'Starting atomic payment success processing', {
       metadata: {
         paymentIntentId: paymentIntent.id,
         userId,
@@ -54,8 +53,8 @@ export async function processPaymentSuccessAtomic(
 
   if (!quoteIds.length) {
     const error = 'No quote IDs found in payment metadata';
-    if (logger) {
-      logger.error(EdgeLogCategory.DATABASE_OPERATION, error, new Error(error), {
+    if (_logger) {
+      _logger.error(EdgeLogCategory.DATABASE_OPERATION, error, new Error(error), {
         metadata: { paymentIntentId: paymentIntent.id },
       });
     }
@@ -93,12 +92,12 @@ export async function processPaymentSuccessAtomic(
 
   try {
     // Start performance tracking for database operation
-    if (logger) {
-      logger.startPerformance('db_payment_success_atomic');
+    if (_logger) {
+      _logger.startPerformance('db_payment_success_atomic');
     }
 
     // Use database function for atomic operations
-    const { data: result, error } = await supabaseAdmin.rpc('process_stripe_payment_success', {
+    const { data: _result, error } = await supabaseAdmin.rpc('process_stripe_payment_success', {
       p_payment_intent_id: paymentIntent.id,
       p_user_id: userId,
       p_quote_ids: quoteIds,
@@ -112,8 +111,8 @@ export async function processPaymentSuccessAtomic(
     });
 
     // End performance tracking
-    if (logger) {
-      logger.endPerformance('db_payment_success_atomic', EdgeLogCategory.DATABASE_OPERATION, {
+    if (_logger) {
+      _logger.endPerformance('db_payment_success_atomic', EdgeLogCategory.DATABASE_OPERATION, {
         metadata: {
           paymentIntentId: paymentIntent.id,
           success: !error,
@@ -123,8 +122,8 @@ export async function processPaymentSuccessAtomic(
     }
 
     if (error) {
-      if (logger) {
-        logger.error(
+      if (_logger) {
+        _logger.error(
           EdgeLogCategory.DATABASE_OPERATION,
           'Atomic payment processing database operation failed',
           new Error(error.message),
@@ -144,8 +143,8 @@ export async function processPaymentSuccessAtomic(
       };
     }
 
-    if (logger) {
-      logger.info(EdgeLogCategory.DATABASE_OPERATION, 'Payment success processing completed', {
+    if (_logger) {
+      _logger.info(EdgeLogCategory.DATABASE_OPERATION, 'Payment success processing completed', {
         metadata: {
           paymentIntentId: paymentIntent.id,
           userId,
@@ -165,9 +164,9 @@ export async function processPaymentSuccessAtomic(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    if (logger) {
-      logger.endPerformance('db_payment_success_atomic', EdgeLogCategory.DATABASE_OPERATION);
-      logger.error(
+    if (_logger) {
+      _logger.endPerformance('db_payment_success_atomic', EdgeLogCategory.DATABASE_OPERATION);
+      _logger.error(
         EdgeLogCategory.DATABASE_OPERATION,
         'Atomic payment processing exception',
         error instanceof Error ? error : new Error(errorMessage),
@@ -194,13 +193,13 @@ export async function processPaymentSuccessAtomic(
 export async function processPaymentFailureAtomic(
   supabaseAdmin: SupabaseClient,
   paymentIntent: Stripe.PaymentIntent,
-  logger?: EdgeLogger,
+  _logger?: EdgeLogger,
 ): Promise<AtomicPaymentResult> {
   const quoteIds = paymentIntent.metadata.quote_ids?.split(',') || [];
   const userId = paymentIntent.metadata.user_id;
 
   try {
-    const { data: result, error } = await supabaseAdmin.rpc('process_stripe_payment_failure', {
+    const { data: _result, error } = await supabaseAdmin.rpc('process_stripe_payment_failure', {
       p_payment_intent_id: paymentIntent.id,
       p_user_id: userId,
       p_quote_ids: quoteIds,
@@ -240,7 +239,7 @@ export async function processPaymentFailureAtomic(
 export async function processChargeSucceededAtomic(
   supabaseAdmin: SupabaseClient,
   charge: Stripe.Charge,
-  logger?: EdgeLogger,
+  _logger?: EdgeLogger,
 ): Promise<AtomicPaymentResult> {
   if (!charge.payment_intent) {
     return {
@@ -257,7 +256,7 @@ export async function processChargeSucceededAtomic(
   };
 
   try {
-    const { data: result, error } = await supabaseAdmin.rpc('process_stripe_charge_succeeded', {
+    const { data: _result, error } = await supabaseAdmin.rpc('process_stripe_charge_succeeded', {
       p_charge_id: charge.id,
       p_payment_intent_id: charge.payment_intent as string,
       p_charge_details: customerDetailsFromCharge,
@@ -292,7 +291,7 @@ export async function processChargeSucceededAtomic(
 export async function processRefundAtomic(
   supabaseAdmin: SupabaseClient,
   charge: Stripe.Charge,
-  logger?: EdgeLogger,
+  _logger?: EdgeLogger,
 ): Promise<AtomicPaymentResult> {
   if (!charge.payment_intent || charge.amount_refunded <= 0) {
     return {
@@ -305,7 +304,7 @@ export async function processRefundAtomic(
   const currency = charge.currency.toUpperCase();
 
   try {
-    const { data: result, error } = await supabaseAdmin.rpc('process_stripe_refund', {
+    const { data: _result, error } = await supabaseAdmin.rpc('process_stripe_refund', {
       p_charge_id: charge.id,
       p_payment_intent_id: charge.payment_intent as string,
       p_refund_amount: refundAmount,

@@ -15,7 +15,6 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { Tables } from '@/integrations/supabase/types';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

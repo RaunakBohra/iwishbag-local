@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
-import { Image as ImageIcon } from 'lucide-react';
+import { Image as _ImageIcon } from 'lucide-react';
 
 interface ProductImageProps {
   imageUrl?: string | null;

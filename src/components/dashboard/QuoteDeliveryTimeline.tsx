@@ -5,11 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar, Package, Truck, Clock, CheckCircle, Info, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
-import {
-  DeliveryOption,
-  calculateDeliveryDates,
-  DeliveryEstimate,
-} from '@/lib/delivery-estimates';
+import { DeliveryOption, calculateDeliveryDates } from '@/lib/delivery-estimates';
 import { format, parseISO } from 'date-fns';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 
@@ -123,10 +119,7 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
     if (quote && quote.destination_country) {
       fetchDeliveryData();
     }
-  }, [
-    quote,
-    getStartDate,
-  ]);
+  }, [quote]); // Fixed: removed getStartDate from dependencies to avoid re-creation issue
 
   if (loading) {
     return (
@@ -192,7 +185,7 @@ export const QuoteDeliveryTimeline: React.FC<QuoteDeliveryTimelineProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {deliveryTimeline.phases.map((phase, _idx: number) => (
+          {deliveryTimeline.phases.map((phase, _idx) => (
             <div
               key={phase.phase}
               className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50"

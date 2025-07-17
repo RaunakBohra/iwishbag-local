@@ -74,7 +74,7 @@ export function StripePaymentForm({
 
 // Internal component that handles the payment form logic
 function StripePaymentFormContent({
-  client_secret,
+  client_secret: _client_secret,
   amount,
   currency,
   onSuccess,

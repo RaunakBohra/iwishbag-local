@@ -241,8 +241,8 @@ serve(async (req) => {
     console.log('✅ PayPal OAuth token obtained, length:', access_token.length);
 
     // Create test order without database operations
-    const customerName = customerInfo?.name || 'Test Customer';
-    const customerEmail = customerInfo?.email || 'test@example.com';
+    const _customerName = customerInfo?.name || 'Test Customer';
+    const _customerEmail = customerInfo?.email || 'test@example.com';
     const transactionId = `TEST_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const description = `Test Order: ${quoteIds.join(',')}`;
     const invoiceId = `INV_${transactionId}`;

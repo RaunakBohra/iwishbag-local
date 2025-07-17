@@ -7,7 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Tables } from '@/integrations/supabase/types';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +18,7 @@ import { DocumentUploader } from './DocumentUploader';
 import { DocumentViewer } from './DocumentViewer';
 
 // Define document types as a const to ensure type safety
-const DOCUMENT_TYPES = {
+const _DOCUMENT_TYPES = {
   INVOICE: 'invoice',
   RECEIPT: 'receipt',
   SHIPPING_LABEL: 'shipping_label',
@@ -28,7 +27,7 @@ const DOCUMENT_TYPES = {
   OTHER: 'other',
 } as const;
 
-export type DocumentType = (typeof DOCUMENT_TYPES)[keyof typeof DOCUMENT_TYPES];
+export type DocumentType = (typeof _DOCUMENT_TYPES)[keyof typeof _DOCUMENT_TYPES];
 
 export interface QuoteDocument {
   id: string;
@@ -56,7 +55,7 @@ export const DocumentManager = ({
   isAdmin = false,
   canUpload = false,
 }: DocumentManagerProps) => {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedDocument, setSelectedDocument] = useState<QuoteDocument | null>(null);

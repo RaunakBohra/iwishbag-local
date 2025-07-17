@@ -137,7 +137,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
           variant: 'destructive',
         });
       }
-    } catch (_error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'An unexpected error occurred',

@@ -37,7 +37,7 @@ const DOCUMENT_TYPES: readonly { value: DocumentType; label: string }[] = [
 
 export const DocumentUploader = ({
   quoteId,
-  orderId,
+  _orderId,
   onSuccess,
   isAdmin = false,
 }: DocumentUploaderProps) => {

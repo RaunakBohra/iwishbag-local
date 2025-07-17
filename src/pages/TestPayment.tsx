@@ -13,7 +13,6 @@ import {
   XCircle,
   Loader2,
   CreditCard,
-  AlertCircle,
   User,
   Mail,
   Phone,

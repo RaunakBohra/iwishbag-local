@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Clock, CheckCircle, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { PaymentGateway } from '@/types/payment';
 
 interface PaymentStatusTrackerProps {
@@ -25,7 +25,7 @@ interface PaymentStatus {
 
 export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
   transactionId,
-  gateway,
+  _gateway,
   onStatusChange,
   autoRefresh = true,
   refreshInterval = 5000,
@@ -107,9 +107,9 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
     }
   };
 
-  const getGatewayStatus = (gateway: PaymentGateway, progress: number): string => {
+  const _getGatewayStatus = (_gateway: PaymentGateway, _progress: number): string => {
     // Validate progress parameter
-    const validProgress = Math.max(0, Math.min(100, progress || 0));
+    const validProgress = Math.max(0, Math.min(100, _progress || 0));
 
     const statuses = {
       stripe: [
@@ -198,7 +198,7 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
       ],
     };
 
-    const gatewayStatuses = statuses[gateway] || statuses.stripe;
+    const gatewayStatuses = statuses[_gateway] || statuses.stripe;
     const statusIndex = Math.floor((validProgress / 100) * (gatewayStatuses.length - 1));
     return gatewayStatuses[Math.min(statusIndex, gatewayStatuses.length - 1)] || 'Processing...';
   };

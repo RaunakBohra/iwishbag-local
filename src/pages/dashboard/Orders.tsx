@@ -4,17 +4,12 @@ import {
   ShoppingCart,
   Search,
   ArrowLeft,
-  Truck,
   CheckCircle,
-  Clock,
   DollarSign,
   Package,
-  Eye,
-  Calendar,
   Download,
   MessageSquare,
   AlertTriangle,
-  TrendingUp,
 } from 'lucide-react';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import { useAllCountries } from '@/hooks/useAllCountries';
@@ -30,10 +25,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useNavigate } from 'react-router-dom';
+import { Card, CardContent } from '@/components/ui/card';
+// useNavigate removed - not used
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
-import { formatDistanceToNow } from 'date-fns';
+// formatDistanceToNow removed - not used
 import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { useToast } from '@/components/ui/use-toast';
@@ -43,7 +38,13 @@ import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { useQuoteRoute } from '@/hooks/useQuoteRoute';
 
 export default function Orders() {
-  const { orders, isLoading, searchTerm, handleSearchChange, isSearching } = useDashboardState();
+  const {
+    orders,
+    isLoading,
+    searchTerm,
+    handleSearchChange,
+    isSearching: _isSearching,
+  } = useDashboardState();
 
   const { data: countries } = useAllCountries();
   const { orderStatuses } = useStatusManagement();
@@ -334,7 +335,7 @@ export default function Orders() {
 // Separate component for order item to handle message count query
 function OrderItem({
   order,
-  countries,
+  countries: _countries,
 }: {
   order: Tables<'quotes'> & { quote_items?: Tables<'quote_items'>[] };
   countries: { code: string; name: string }[] | undefined;

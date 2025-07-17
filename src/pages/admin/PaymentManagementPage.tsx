@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+// Tabs imports removed - not used
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
@@ -32,23 +32,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
   Receipt,
   Search,
-  Filter,
   Download,
   Eye,
   CheckCircle,
   XCircle,
   Clock,
-  Calendar,
   DollarSign,
   Image,
   FileText,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   MoreVertical,
-  AlertCircle,
   FileDown,
   Keyboard,
 } from 'lucide-react';
@@ -60,19 +53,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+// Dialog imports removed - not used
+// Textarea import removed - not used
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -126,8 +111,8 @@ const PaymentManagementPage = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
-  const [selectedProof, setSelectedProof] = useState<PaymentProofData | null>(null);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [_selectedProof, _setSelectedProof] = useState<PaymentProofData | null>(null);
+  const [_showPreviewModal, _setShowPreviewModal] = useState(false);
 
   // Fetch payment proofs with pagination
   const {
@@ -505,7 +490,7 @@ const PaymentManagementPage = () => {
         const quote = quotes.find((q) => q.id === message.quote_id);
         const orderTotal = quote?.final_total || 0;
         const existingPaid = quote?.amount_paid || 0;
-        const remainingBalance = orderTotal - existingPaid;
+        const _remainingBalance = orderTotal - existingPaid;
 
         // For now, we'll track the amount in the update logic below
         // since verified_amount column was removed from database
@@ -539,8 +524,8 @@ const PaymentManagementPage = () => {
           const existingPaid = quote.amount_paid || 0;
 
           // Use the remaining balance as the amount received
-          const remainingBalance = orderTotal - existingPaid;
-          const amountReceived = remainingBalance;
+          const _remainingBalance = orderTotal - existingPaid;
+          const amountReceived = _remainingBalance;
           const totalPaid = existingPaid + amountReceived;
 
           // Determine payment status
@@ -631,7 +616,7 @@ const PaymentManagementPage = () => {
       // Return the messages and quote IDs for use in onSuccess
       return { messages, quoteIds };
     },
-    onSuccess: async (data) => {
+    onSuccess: async (_data) => {
       toast({
         title: 'Payment Confirmed!',
         description: `${selectedProofs.size} payment(s) verified and confirmed successfully. Amount paid has been updated.`,
@@ -1156,8 +1141,8 @@ const PaymentManagementPage = () => {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    setSelectedProof(proof);
-                                    setShowPreviewModal(true);
+                                    _setSelectedProof(proof);
+                                    _setShowPreviewModal(true);
                                   }}
                                 >
                                   <Eye className="h-4 w-4 mr-2" />

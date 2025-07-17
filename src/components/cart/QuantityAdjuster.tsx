@@ -27,7 +27,7 @@ export const QuantityAdjuster = ({
       const newQuantity = quantity - 1;
       await onQuantityChange(newQuantity);
       setQuantity(newQuantity);
-    } catch (_error) {
+    } catch {
       // Revert to previous quantity on error
       setQuantity(quantity);
     } finally {
@@ -42,7 +42,7 @@ export const QuantityAdjuster = ({
       const newQuantity = quantity + 1;
       await onQuantityChange(newQuantity);
       setQuantity(newQuantity);
-    } catch (_error) {
+    } catch {
       // Revert to previous quantity on error
       setQuantity(quantity);
     } finally {

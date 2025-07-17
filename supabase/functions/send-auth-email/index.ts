@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createCorsHeaders } from '../_shared/cors.ts';
 const getEmailTemplate = (type, data) => {
-  const baseUrl = 'https://whyteclub.com';
+  const _baseUrl = 'https://whyteclub.com';
   switch (type) {
     case 'signup_confirmation':
       return {
@@ -182,7 +182,7 @@ serve(async (req) => {
   try {
     const body = await req.json();
     console.log('🔵 Auth email request:', JSON.stringify(body, null, 2));
-    const { email, type, user_id, token, redirect_to } = body;
+    const { email, type, user_id: _user_id, token, redirect_to: _redirect_to } = body;
     if (!email || !type) {
       return new Response(
         JSON.stringify({

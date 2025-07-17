@@ -67,7 +67,7 @@ export const PaymentGatewayTester = () => {
 
       results.paypalExists = !!paypalGateway;
       results.paypalConfig = paypalGateway?.config;
-    } catch (_error) {
+    } catch {
       results.paypalExists = false;
     }
 
@@ -82,7 +82,7 @@ export const PaymentGatewayTester = () => {
         );
 
       results.countryConfigs = countries;
-    } catch (_error) {
+    } catch {
       results.countryConfigs = [];
     }
 
@@ -95,7 +95,7 @@ export const PaymentGatewayTester = () => {
         .single();
 
       results.profileColumnExists = true;
-    } catch (_error) {
+    } catch {
       results.profileColumnExists = false;
     }
 

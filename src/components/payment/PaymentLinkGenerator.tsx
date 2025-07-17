@@ -95,7 +95,7 @@ export function PaymentLinkGenerator({
         title: 'Copied!',
         description: 'Link copied to clipboard',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Failed to copy',
         description: 'Please copy the link manually',

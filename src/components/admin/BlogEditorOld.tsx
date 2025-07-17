@@ -732,20 +732,22 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
               {_seoAnalysis && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <SEOAnalysis analysis={_seoAnalysis} />
-                  <SERPPreview preview={seoAnalyzer.generateSERPPreview({
-                    title: watchedTitle,
-                    content: watchedContent,
-                    excerpt: watchedExcerpt,
-                    meta_title: watchedMetaTitle,
-                    meta_description: watchedMetaDescription,
-                    focus_keyword: watchedFocusKeyword,
-                    slug: watchedSlug,
-                    featured_image_url: watchedFeaturedImage,
-                    og_title: watchedOgTitle,
-                    og_description: watchedOgDescription,
-                    twitter_title: watchedTwitterTitle,
-                    twitter_description: watchedTwitterDescription,
-                  })} />
+                  <SERPPreview
+                    preview={seoAnalyzer.generateSERPPreview({
+                      title: watchedTitle,
+                      content: watchedContent,
+                      excerpt: watchedExcerpt,
+                      meta_title: watchedMetaTitle,
+                      meta_description: watchedMetaDescription,
+                      focus_keyword: watchedFocusKeyword,
+                      slug: watchedSlug,
+                      featured_image_url: watchedFeaturedImage,
+                      og_title: watchedOgTitle,
+                      og_description: watchedOgDescription,
+                      twitter_title: watchedTwitterTitle,
+                      twitter_description: watchedTwitterDescription,
+                    })}
+                  />
                 </div>
               )}
 

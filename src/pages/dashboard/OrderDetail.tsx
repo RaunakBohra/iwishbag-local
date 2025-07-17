@@ -17,34 +17,24 @@ import { EnhancedBankTransferDetails } from '@/components/payment/EnhancedBankTr
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+// Separator removed - not used
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
 import {
   ArrowLeft,
   Package,
-  Truck,
   CheckCircle,
-  Clock,
   DollarSign,
   MapPin,
-  Calendar,
-  ChevronDown,
-  ChevronUp,
   ExternalLink,
   Download,
   MessageCircle,
   Edit,
-  Eye,
-  EyeOff,
   Globe,
   Weight,
-  ShoppingCart,
   AlertCircle,
-  XCircle,
   HelpCircle,
   CreditCard,
-  CalendarDays,
   Navigation,
 } from 'lucide-react';
 import { ShippingAddress } from '@/types/address';
@@ -56,7 +46,7 @@ export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { data: countries } = useAllCountries();
-  const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
+  const [_isBreakdownExpanded, _setIsBreakdownExpanded] = useState(false);
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
 
   // Use order mutations for order-specific actions
@@ -91,7 +81,7 @@ export default function OrderDetail() {
   const { formatAmount } = useQuoteDisplayCurrency({ quote: order });
 
   // Get country name for display
-  const countryName = useMemo(() => {
+  const _countryName = useMemo(() => {
     return (
       countries?.find((c) => c.code === order?.destination_country)?.name ||
       order?.destination_country

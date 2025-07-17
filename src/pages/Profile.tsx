@@ -36,7 +36,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
   User,
-  Settings,
   Globe,
   DollarSign,
   MapPin,
@@ -44,14 +43,11 @@ import {
   AlertCircle,
   Shield,
   Bell,
-  Languages,
-  Palette,
   Mail,
   Phone,
   Save,
   Package,
   FileText,
-  Calendar,
   ArrowRight,
   CreditCard,
   Truck,
@@ -242,7 +238,7 @@ const Profile = () => {
   };
 
   // Get available currencies for selected country
-  const getAvailableCurrencies = (countryCode: string) => {
+  const getAvailableCurrencies = (_countryCode: string) => {
     let currencies = [];
 
     // Return all available currencies from database instead of just the country's currency

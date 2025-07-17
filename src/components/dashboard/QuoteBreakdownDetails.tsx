@@ -2,10 +2,7 @@ import React, { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { Tables } from '@/integrations/supabase/types';
 import { useQuoteCurrencyDisplay } from '@/hooks/useCurrencyConversion';
-import {
-  getCountryCurrency,
-  formatAmountForDisplay,
-} from '@/lib/currencyUtils';
+import { getCountryCurrency, formatAmountForDisplay } from '@/lib/currencyUtils';
 import {
   Receipt,
   Percent,

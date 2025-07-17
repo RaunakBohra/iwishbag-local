@@ -124,13 +124,13 @@ export const Cart = () => {
   const [showBulkSaveConfirm, setShowBulkSaveConfirm] = useState(false);
   const [showBulkMoveConfirm, setShowBulkMoveConfirm] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-  const [_searchQuery, _setSearchQuery] = useState('');
-  const [_sortBy, _setSortBy] = useState<SortOption>('date-desc');
+  const [searchQuery, _setSearchQuery] = useState('');
+  const [sortBy, _setSortBy] = useState<SortOption>('date-desc');
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   // Debounced search
-  const _debouncedSearchQuery = useDebounce(_searchQuery, 300);
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   // Load cart data from server when component mounts
   useEffect(() => {
@@ -226,7 +226,7 @@ export const Cart = () => {
           description: 'Item has been moved to saved items.',
         });
       } catch (_error) {
-        console.error('Error saving item:', error);
+        console.error('Error saving item:', _error);
         toast({
           title: 'Error',
           description: 'Failed to save item. Please try again.',
@@ -246,7 +246,7 @@ export const Cart = () => {
           description: 'Item has been moved to your cart.',
         });
       } catch (_error) {
-        console.error('Error moving item to cart:', error);
+        console.error('Error moving item to cart:', _error);
         toast({
           title: 'Error',
           description: 'Failed to move item to cart. Please try again.',
@@ -266,7 +266,7 @@ export const Cart = () => {
           description: 'Item has been removed from your cart.',
         });
       } catch (_error) {
-        console.error('Error removing item from cart:', error);
+        console.error('Error removing item from cart:', _error);
         toast({
           title: 'Error',
           description: 'Failed to remove item from cart. Please try again.',
@@ -286,7 +286,7 @@ export const Cart = () => {
         description: 'Selected items have been saved for later.',
       });
     } catch (_error) {
-      console.error('Error bulk saving items:', error);
+      console.error('Error bulk saving items:', _error);
       toast({
         title: 'Error',
         description: 'Failed to save items. Please try again.',
@@ -304,7 +304,7 @@ export const Cart = () => {
         description: 'Selected items have been moved to your cart.',
       });
     } catch (_error) {
-      console.error('Error bulk moving items to cart:', error);
+      console.error('Error bulk moving items to cart:', _error);
       toast({
         title: 'Error',
         description: 'Failed to move items to cart. Please try again.',
@@ -322,7 +322,7 @@ export const Cart = () => {
         description: 'Selected items have been deleted.',
       });
     } catch (_error) {
-      console.error('Error bulk deleting items:', error);
+      console.error('Error bulk deleting items:', _error);
       toast({
         title: 'Error',
         description: 'Failed to delete items. Please try again.',
@@ -352,7 +352,7 @@ export const Cart = () => {
 
       // Navigate to checkout page with quote IDs
       window.location.href = `/checkout?${params.toString()}`;
-    } catch (_error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to proceed to checkout.',

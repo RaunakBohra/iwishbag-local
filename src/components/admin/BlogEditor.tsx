@@ -17,21 +17,18 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Save, 
-  Eye, 
-  FileText, 
-  Settings, 
-  Search, 
-  Share2, 
+import {
+  Save,
+  Eye,
+  FileText,
+  Settings,
+  Search,
+  Share2,
   BarChart3,
   ChevronDown,
   ChevronUp,
   Tag,
-  Calendar,
-  Image,
-  Clock
+  Clock,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -158,10 +155,7 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
   const { data: tags } = useQuery({
     queryKey: ['blog_tags'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('blog_tags')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.from('blog_tags').select('*').order('name');
       if (error) throw error;
       return data as BlogTag[];
     },
@@ -346,8 +340,8 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
               {previewMode ? <FileText className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               {previewMode ? 'Edit' : 'Preview'}
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isSubmitting}
               onClick={handleSubmit(onSubmit)}
               className="flex items-center gap-2"
@@ -481,7 +475,11 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         <Settings className="w-5 h-5" />
                         Post Settings
                       </div>
-                      {settingsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      {settingsOpen ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
                     </CardTitle>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -494,7 +492,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         control={control}
                         render={({ field }) => (
                           <Select value={field.value} onValueChange={field.onChange}>
-                            <SelectTrigger className={errors.category_id ? 'border-destructive' : ''}>
+                            <SelectTrigger
+                              className={errors.category_id ? 'border-destructive' : ''}
+                            >
                               <SelectValue placeholder="Select a category" />
                             </SelectTrigger>
                             <SelectContent>
@@ -508,7 +508,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         )}
                       />
                       {errors.category_id && (
-                        <p className="text-sm text-destructive mt-1">{errors.category_id.message}</p>
+                        <p className="text-sm text-destructive mt-1">
+                          {errors.category_id.message}
+                        </p>
                       )}
                     </div>
 
@@ -559,7 +561,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         )}
                       />
                       {errors.featured_image_url && (
-                        <p className="text-sm text-destructive mt-1">{errors.featured_image_url.message}</p>
+                        <p className="text-sm text-destructive mt-1">
+                          {errors.featured_image_url.message}
+                        </p>
                       )}
                     </div>
 
@@ -577,7 +581,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         )}
                       />
                       {errors.published_at && (
-                        <p className="text-sm text-destructive mt-1">{errors.published_at.message}</p>
+                        <p className="text-sm text-destructive mt-1">
+                          {errors.published_at.message}
+                        </p>
                       )}
                     </div>
 
@@ -612,7 +618,11 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         <Search className="w-5 h-5" />
                         SEO Settings
                       </div>
-                      {seoOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      {seoOpen ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
                     </CardTitle>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -632,7 +642,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         )}
                       />
                       {errors.focus_keyword && (
-                        <p className="text-sm text-destructive mt-1">{errors.focus_keyword.message}</p>
+                        <p className="text-sm text-destructive mt-1">
+                          {errors.focus_keyword.message}
+                        </p>
                       )}
                     </div>
 
@@ -669,7 +681,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         )}
                       />
                       {errors.meta_description && (
-                        <p className="text-sm text-destructive mt-1">{errors.meta_description.message}</p>
+                        <p className="text-sm text-destructive mt-1">
+                          {errors.meta_description.message}
+                        </p>
                       )}
                     </div>
 
@@ -687,7 +701,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         )}
                       />
                       {errors.canonical_url && (
-                        <p className="text-sm text-destructive mt-1">{errors.canonical_url.message}</p>
+                        <p className="text-sm text-destructive mt-1">
+                          {errors.canonical_url.message}
+                        </p>
                       )}
                     </div>
                   </CardContent>
@@ -705,7 +721,11 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         <Share2 className="w-5 h-5" />
                         Social Media
                       </div>
-                      {socialOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      {socialOpen ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
                     </CardTitle>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -744,7 +764,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         )}
                       />
                       {errors.og_description && (
-                        <p className="text-sm text-destructive mt-1">{errors.og_description.message}</p>
+                        <p className="text-sm text-destructive mt-1">
+                          {errors.og_description.message}
+                        </p>
                       )}
                     </div>
 
@@ -782,7 +804,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         )}
                       />
                       {errors.twitter_title && (
-                        <p className="text-sm text-destructive mt-1">{errors.twitter_title.message}</p>
+                        <p className="text-sm text-destructive mt-1">
+                          {errors.twitter_title.message}
+                        </p>
                       )}
                     </div>
 
@@ -801,7 +825,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         )}
                       />
                       {errors.twitter_description && (
-                        <p className="text-sm text-destructive mt-1">{errors.twitter_description.message}</p>
+                        <p className="text-sm text-destructive mt-1">
+                          {errors.twitter_description.message}
+                        </p>
                       )}
                     </div>
 
@@ -819,7 +845,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         )}
                       />
                       {errors.twitter_image && (
-                        <p className="text-sm text-destructive mt-1">{errors.twitter_image.message}</p>
+                        <p className="text-sm text-destructive mt-1">
+                          {errors.twitter_image.message}
+                        </p>
                       )}
                     </div>
                   </CardContent>
@@ -837,7 +865,11 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                         <BarChart3 className="w-5 h-5" />
                         SEO Analysis
                       </div>
-                      {analysisOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      {analysisOpen ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
                     </CardTitle>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -847,7 +879,7 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                       <div className="space-y-4">
                         <SEOAnalysis analysis={seoAnalysis} />
                         <Separator />
-                        <SERPPreview 
+                        <SERPPreview
                           preview={seoAnalyzer.generateSERPPreview({
                             title: watchedTitle,
                             content: watchedContent,
@@ -861,7 +893,7 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onSave, onCancel }
                             og_description: watchedOgDescription,
                             twitter_title: watchedTwitterTitle,
                             twitter_description: watchedTwitterDescription,
-                          })} 
+                          })}
                         />
                       </div>
                     )}

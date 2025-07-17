@@ -121,7 +121,7 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
         description: `${fieldName} copied to clipboard`,
       });
       setTimeout(() => setCopiedField(null), 2000);
-    } catch (err) {
+    } catch {
       toast({
         title: 'Failed to copy',
         description: 'Please copy manually',

@@ -9,7 +9,7 @@ import { createAirwallexPaymentIntent } from './airwallex-api.ts';
 import {
   withEdgeMonitoring,
   extractPaymentId,
-  extractUserId,
+  extractUserId as _extractUserId,
   mapGatewayError,
   createErrorResponse,
   createSuccessResponse,
@@ -75,9 +75,9 @@ interface PaymentResponse {
 // }, 'LIVE'); // Use LIVE for production environment
 
 // Rate limiting for PayU requests
-const payuRequestCache = new Map();
-const PAYU_RATE_LIMIT_MS = 60000; // 60 seconds between requests
-const PAYU_MAX_REQUESTS_PER_MINUTE = 10;
+const _payuRequestCache = new Map();
+const _PAYU_RATE_LIMIT_MS = 60000; // 60 seconds between requests
+const _PAYU_MAX_REQUESTS_PER_MINUTE = 10;
 
 // --- PayU Hash Generation for Deno (matches Node.js SDK) ---
 async function generatePayUHash({
@@ -175,9 +175,9 @@ async function generatePayUHash({
 // console.log(hash);
 
 // Helper function to get currency multiplier for converting to smallest unit
-function getCurrencyMultiplier(currency: string): number {
+function _getCurrencyMultiplier(currency: string): number {
   // Most currencies use 2 decimal places (100 cents = 1 dollar)
-  const twoDecimalCurrencies = [
+  const _twoDecimalCurrencies = [
     'USD',
     'EUR',
     'GBP',
@@ -233,7 +233,7 @@ serve(async (req) => {
           const paymentRequest: PaymentRequest = await req.json();
 
           // Extract and sanitize request data for logging
-          const sanitizedRequest = sanitizeForLogging(paymentRequest);
+          const _sanitizedRequest = sanitizeForLogging(paymentRequest);
 
           logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Payment request received', {
             metadata: {
@@ -251,7 +251,7 @@ serve(async (req) => {
             quoteIds,
             gateway,
             success_url,
-            cancel_url,
+            cancel_url: _cancel_url,
             amount,
             currency,
             customerInfo,
@@ -310,7 +310,7 @@ serve(async (req) => {
 
           let userId: string | null = null;
           let isGuestSessionValid = false;
-          let isAuthSessionValid = false;
+          let _isAuthSessionValid = false;
 
           if (token) {
             // Authenticate user via JWT
@@ -344,7 +344,7 @@ serve(async (req) => {
               .single();
 
             if (!authError && authSession) {
-              isAuthSessionValid = true;
+              _isAuthSessionValid = true;
               console.log('Valid authenticated session for user:', userId);
             }
           }
@@ -1436,7 +1436,7 @@ serve(async (req) => {
                 // Extract configuration
                 const merchantCode = fonepayConfig.merchant_code;
                 const secretKey = fonepayConfig.secret_key;
-                const panNumber = fonepayConfig.pan_number;
+                const _panNumber = fonepayConfig.pan_number;
 
                 if (!merchantCode || !secretKey) {
                   paymentMonitoring.completePaymentMonitoring(
@@ -1487,8 +1487,8 @@ serve(async (req) => {
 
                 // Get customer information
                 let customerName = customerInfo?.name || 'Customer';
-                let customerEmail = customerInfo?.email || 'customer@example.com';
-                let customerPhone = customerInfo?.phone || '9999999999';
+                const _customerEmail = customerInfo?.email || 'customer@example.com';
+                const _customerPhone = customerInfo?.phone || '9999999999';
 
                 // If we have quote IDs, try to get customer info from quotes
                 if (quoteIds && quoteIds.length > 0) {
@@ -1500,7 +1500,7 @@ serve(async (req) => {
 
                   if (fullQuotes && fullQuotes.length > 0) {
                     const firstQuote = fullQuotes[0];
-                    customerEmail = firstQuote.email || customerEmail;
+                    const _customerEmailFromQuote = firstQuote.email || _customerEmail;
                     customerName = firstQuote.customer_name || customerName;
 
                     // Extract phone from shipping address if available
@@ -1512,7 +1512,7 @@ serve(async (req) => {
                         string,
                         unknown
                       >;
-                      customerPhone = shippingAddress.phone || customerPhone;
+                      const _customerPhoneFromQuote = shippingAddress.phone || _customerPhone;
                     }
                   }
                 }
@@ -1748,8 +1748,8 @@ serve(async (req) => {
                   currentTime.getSeconds();
 
                 // Get customer information
-                let customerName = customerInfo?.name || 'Customer';
-                let customerEmail = customerInfo?.email || 'customer@example.com';
+                const _customerName = customerInfo?.name || 'Customer';
+                const _customerEmail = customerInfo?.email || 'customer@example.com';
 
                 if (quoteIds && quoteIds.length > 0) {
                   const { data: fullQuotes } = await supabaseAdmin
@@ -1760,8 +1760,8 @@ serve(async (req) => {
 
                   if (fullQuotes && fullQuotes.length > 0) {
                     const firstQuote = fullQuotes[0];
-                    customerEmail = firstQuote.email || customerEmail;
-                    customerName = firstQuote.customer_name || customerName;
+                    const _customerEmailFromQuote = firstQuote.email || _customerEmail;
+                    const _customerNameFromQuote = firstQuote.customer_name || _customerName;
                   }
                 }
 
@@ -1770,8 +1770,8 @@ serve(async (req) => {
 
                 // Get base URL from success_url for return URLs
                 const baseUrl = new URL(success_url).origin;
-                const successUrl = `${baseUrl}/payment-callback/esewa-success`;
-                const failureUrl = `${baseUrl}/payment-callback/esewa-failure`;
+                const _successUrl = `${baseUrl}/payment-callback/esewa-success`;
+                const _failureUrl = `${baseUrl}/payment-callback/esewa-failure`;
                 
                 // For testing: use simple URLs like in the working test
                 const testSuccessUrl = `${baseUrl}/payment-callback/esewa-success`;

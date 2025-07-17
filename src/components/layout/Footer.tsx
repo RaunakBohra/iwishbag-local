@@ -1,10 +1,5 @@
 import { Link } from 'react-router-dom';
-import {
-  Twitter,
-  Facebook,
-  Instagram,
-  Linkedin,
-} from 'lucide-react';
+import { Twitter, Facebook, Instagram, Linkedin } from 'lucide-react';
 
 const Footer = () => {
   // Default footer settings

@@ -140,7 +140,7 @@ export const ShareQuoteButton: React.FC<ShareQuoteButtonProps> = ({
         title: 'Copied!',
         description: 'Share link copied to clipboard.',
       });
-    } catch (_error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to copy link to clipboard.',

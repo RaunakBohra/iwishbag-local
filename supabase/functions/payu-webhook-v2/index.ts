@@ -174,7 +174,7 @@ async function verifyPayUHash(data: PayUWebhookPayload, saltKey: string): Promis
 async function processPaymentStatusUpdate(
   supabaseAdmin: SupabaseClient<Database>,
   webhookData: PayUWebhookPayload,
-  webhookLogEntry: WebhookLogEntry,
+  _webhookLogEntry: WebhookLogEntry,
 ): Promise<PaymentStatusUpdateResult> {
   const {
     txnid,
@@ -442,19 +442,19 @@ async function processWebhookRequest(
 
     // Extract key information
     const {
-      key,
+      key: _key,
       txnid,
-      amount,
-      status,
+      amount: _amount,
+      status: _status,
       mihpayid,
       hash,
       udf1: quoteId,
-      email,
-      firstname,
-      error,
-      error_Message,
-      invoice_id,
-      payment_link_id,
+      email: _email,
+      firstname: _firstname,
+      error: _error,
+      error_Message: _error_Message,
+      invoice_id: _invoice_id,
+      payment_link_id: _payment_link_id,
     } = webhookData;
 
     // Log webhook request with enhanced information

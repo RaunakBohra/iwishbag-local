@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import {
   QrCode,
   Smartphone,
@@ -14,7 +13,6 @@ import {
   AlertTriangle,
   Clock,
   RefreshCw,
-  ExternalLink,
   X,
 } from 'lucide-react';
 import { PaymentGateway } from '@/types/payment';

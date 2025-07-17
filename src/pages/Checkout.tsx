@@ -240,7 +240,7 @@ export default function Checkout() {
   const [guestSessionToken, setGuestSessionToken] = useState<string>('');
 
   const { data: userProfile } = useUserProfile();
-  const { formatAmount } = useUserCurrency();
+  const { formatAmount: _formatAmount } = useUserCurrency();
   const { data: countries } = useAllCountries();
   const { sendBankTransferEmail } = useEmailNotifications();
   const { findStatusForPaymentMethod } = useStatusManagement();
@@ -322,7 +322,7 @@ export default function Checkout() {
                     guestQuote.destination_country ||
                     'Unknown'
                   );
-                } catch (e) {
+                } catch {
                   return guestQuote.destination_country || 'Unknown';
                 }
               }
@@ -373,9 +373,9 @@ export default function Checkout() {
     availableMethods,
     methodsLoading,
     getRecommendedPaymentMethod,
-    createPayment,
+    createPayment: _createPayment,
     createPaymentAsync,
-    isCreatingPayment,
+    isCreatingPayment: _isCreatingPayment,
     validatePaymentRequest,
     isMobileOnlyPayment,
     requiresQRCode,
@@ -714,7 +714,7 @@ export default function Checkout() {
     setPaymentMethod(method);
   };
 
-  const handlePaymentSuccess = (data: { id: string }) => {
+  const _handlePaymentSuccess = (data: { id: string }) => {
     toast({
       title: 'Payment Successful',
       description: 'Your payment has been processed successfully.',
@@ -859,7 +859,7 @@ export default function Checkout() {
       // Handle guest checkout
       if (isGuestCheckout) {
         try {
-          const userId: string | null = null;
+          const _userId: string | null = null;
 
           if (checkoutMode === 'guest') {
             // Pure guest checkout - store details temporarily without updating quote
@@ -1561,7 +1561,7 @@ export default function Checkout() {
               );
 
               // Create a quote object for the email
-              const quoteForEmail = {
+              const _quoteForEmail = {
                 id: updateResult.id,
                 display_id: updateResult.display_id,
                 email: isGuestCheckout ? guestContact.email : user?.email || '',
@@ -1940,7 +1940,7 @@ export default function Checkout() {
 
                               // Reload to refresh auth state
                               setTimeout(() => window.location.reload(), 1000);
-                            } catch (error) {
+                            } catch {
                               toast({
                                 title: 'Error',
                                 description: 'Failed to sign in. Please try again.',

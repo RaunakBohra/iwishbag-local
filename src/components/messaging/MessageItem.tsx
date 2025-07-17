@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Message } from './types';
-import { Receipt, CheckCircle, XCircle, Eye, MessageSquare } from 'lucide-react';
+import { Receipt, Eye } from 'lucide-react';
 import { useState } from 'react';
 
 // Extended Message type for payment proof messages
@@ -26,10 +26,10 @@ export const MessageItem = ({
   message,
   currentUserId,
   isAdmin,
-  onVerificationUpdate,
+  _onVerificationUpdate,
 }: MessageItemProps) => {
   const navigate = useNavigate();
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [_showPreviewModal, setShowPreviewModal] = useState(false);
   const isUserSender = message.sender_id === currentUserId;
   const isUnread = !isUserSender && !message.is_read;
   const paymentProofMessage = message as PaymentProofMessage;

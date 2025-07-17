@@ -1,17 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  AlertCircle,
-  TrendingUp,
-  TrendingDown,
-  Link,
-  Mail,
-  Loader2,
-  CheckCircle,
-  Info,
-} from 'lucide-react';
+import { TrendingUp, TrendingDown, CheckCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DueAmountInfo } from '@/lib/paymentUtils';
 import { PaymentLinkGenerator } from './PaymentLinkGenerator';
@@ -62,7 +52,7 @@ export function DueAmountNotification({
     return null;
   }
 
-  const getAlertVariant = () => {
+  const _getAlertVariant = () => {
     if (dueInfo.changeType === 'increase') return 'default';
     if (dueInfo.changeType === 'decrease') return 'default';
     return 'default';

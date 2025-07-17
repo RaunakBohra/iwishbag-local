@@ -59,6 +59,24 @@ const renderWithQueryClient = (component: React.ReactElement) => {
   return render(<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>);
 };
 
+// Test data types
+interface MockPayment {
+  id: string;
+  quote_id: string;
+  amount: number;
+  currency: string;
+  payment_type: string;
+  status: string;
+  payment_method: string;
+  method: string;
+  gateway_transaction_id: string;
+  payment_date: Date;
+  created_at: string;
+  date: Date;
+  reference: string;
+  canRefund: boolean;
+}
+
 // Test data
 const mockQuote: Partial<Tables<'quotes'>> = {
   id: 'test-quote-id',
@@ -72,7 +90,7 @@ const mockQuote: Partial<Tables<'quotes'>> = {
   refunded_amount: 0,
 };
 
-const mockSingleCurrencyPayments = [
+const mockSingleCurrencyPayments: MockPayment[] = [
   {
     id: 'payment-1',
     quote_id: 'test-quote-id',
@@ -91,7 +109,7 @@ const mockSingleCurrencyPayments = [
   },
 ];
 
-const mockMultiCurrencyPayments = [
+const mockMultiCurrencyPayments: MockPayment[] = [
   {
     id: 'payment-1',
     quote_id: 'test-quote-id',
@@ -148,7 +166,7 @@ describe('Refund Currency Validation', () => {
 
     // Add formatAmountSync mock if it doesn't exist
     if (!mockCurrencyService.formatAmountSync) {
-      (mockCurrencyService as any).formatAmountSync = vi.fn();
+      (mockCurrencyService as MockCurrencyService).formatAmountSync = vi.fn();
     }
     mockCurrencyService.formatAmountSync?.mockImplementation((amount, currency) => {
       const symbol = mockCurrencyService.getCurrencySymbol(currency);
@@ -167,7 +185,7 @@ describe('Refund Currency Validation', () => {
 
     // Add isValidPaymentAmountSync mock if it doesn't exist
     if (!mockCurrencyService.isValidPaymentAmountSync) {
-      (mockCurrencyService as any).isValidPaymentAmountSync = vi.fn();
+      (mockCurrencyService as MockCurrencyService).isValidPaymentAmountSync = vi.fn();
     }
     mockCurrencyService.isValidPaymentAmountSync?.mockReturnValue(true);
 
@@ -208,7 +226,7 @@ describe('Refund Currency Validation', () => {
           isOpen={true}
           onClose={onClose}
           quote={mockQuote as Tables<'quotes'>}
-          payments={mockSingleCurrencyPayments as any[]}
+          payments={mockSingleCurrencyPayments}
         />,
       );
 
@@ -263,7 +281,7 @@ describe('Refund Currency Validation', () => {
           isOpen={true}
           onClose={onClose}
           quote={mockQuote as Tables<'quotes'>}
-          payments={mockSingleCurrencyPayments as any[]}
+          payments={mockSingleCurrencyPayments}
         />,
       );
 
@@ -313,7 +331,7 @@ describe('Refund Currency Validation', () => {
           isOpen={true}
           onClose={onClose}
           quote={mockQuote as Tables<'quotes'>}
-          payments={mockSingleCurrencyPayments as any[]}
+          payments={mockSingleCurrencyPayments}
         />,
       );
 
@@ -362,7 +380,7 @@ describe('Refund Currency Validation', () => {
           isOpen={true}
           onClose={onClose}
           quote={mockQuote as Tables<'quotes'>}
-          payments={mockMultiCurrencyPayments as any[]}
+          payments={mockMultiCurrencyPayments}
         />,
       );
 
@@ -413,7 +431,7 @@ describe('Refund Currency Validation', () => {
           isOpen={true}
           onClose={onClose}
           quote={mockQuote as Tables<'quotes'>}
-          payments={mockMultiCurrencyPayments as any[]}
+          payments={mockMultiCurrencyPayments}
         />,
       );
 
@@ -458,7 +476,7 @@ describe('Refund Currency Validation', () => {
           isOpen={true}
           onClose={onClose}
           quote={mockQuote as Tables<'quotes'>}
-          payments={mockMultiCurrencyPayments as any[]}
+          payments={mockMultiCurrencyPayments}
         />,
       );
 
@@ -511,7 +529,7 @@ describe('Refund Currency Validation', () => {
 
   describe('Gateway-Specific Refund Validation', () => {
     test('should validate PayU refunds are in INR', async () => {
-      const payuPayment = [
+      const payuPayment: MockPayment[] = [
         {
           id: 'payment-1',
           quote_id: 'test-quote-id',
@@ -562,7 +580,7 @@ describe('Refund Currency Validation', () => {
           isOpen={true}
           onClose={onClose}
           quote={mockQuote as Tables<'quotes'>}
-          payments={payuPayment as any[]}
+          payments={payuPayment}
         />,
       );
 
@@ -577,7 +595,7 @@ describe('Refund Currency Validation', () => {
     });
 
     test('should validate Stripe refunds match original payment currency', async () => {
-      const stripePayment = [
+      const stripePayment: MockPayment[] = [
         {
           id: 'payment-1',
           quote_id: 'test-quote-id',
@@ -628,7 +646,7 @@ describe('Refund Currency Validation', () => {
           isOpen={true}
           onClose={onClose}
           quote={mockQuote as Tables<'quotes'>}
-          payments={stripePayment as any[]}
+          payments={stripePayment}
         />,
       );
 
@@ -711,7 +729,7 @@ describe('Refund Currency Validation', () => {
           isOpen={true}
           onClose={onClose}
           quote={mockQuote as Tables<'quotes'>}
-          payments={mockSingleCurrencyPayments as any[]}
+          payments={mockSingleCurrencyPayments}
         />,
       );
 
@@ -780,7 +798,7 @@ describe('Refund Currency Validation', () => {
           isOpen={true}
           onClose={onClose}
           quote={mockQuote as Tables<'quotes'>}
-          payments={[] as any[]}
+          payments={[]}
         />,
       );
 
@@ -813,7 +831,7 @@ describe('Refund Currency Validation', () => {
           isOpen={true}
           onClose={onClose}
           quote={mockQuote as Tables<'quotes'>}
-          payments={mockSingleCurrencyPayments as any[]}
+          payments={mockSingleCurrencyPayments}
         />,
       );
 
@@ -824,7 +842,7 @@ describe('Refund Currency Validation', () => {
     });
 
     test('should handle zero amount payments', async () => {
-      const zeroPayment = [
+      const zeroPayment: MockPayment[] = [
         {
           id: 'payment-1',
           quote_id: 'test-quote-id',
@@ -875,7 +893,7 @@ describe('Refund Currency Validation', () => {
           isOpen={true}
           onClose={onClose}
           quote={mockQuote as Tables<'quotes'>}
-          payments={zeroPayment as any[]}
+          payments={zeroPayment}
         />,
       );
 

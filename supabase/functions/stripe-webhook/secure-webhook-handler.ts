@@ -228,7 +228,7 @@ async function getStripeConfiguration(supabaseAdmin: SupabaseClient): Promise<{
       secretKey,
       webhookSecret,
     };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Configuration retrieval failed' };
   }
 }

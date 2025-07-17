@@ -3,15 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import {
-  AlertTriangle,
-  Clock,
-  RefreshCw,
-  XCircle,
-  CheckCircle,
-  Smartphone,
-  IndianRupee,
-} from 'lucide-react';
+import { AlertTriangle, Clock, RefreshCw, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface PayUErrorHandlerProps {

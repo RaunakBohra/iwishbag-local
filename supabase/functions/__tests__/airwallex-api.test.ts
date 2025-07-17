@@ -33,7 +33,7 @@ Object.defineProperty(global, 'crypto', {
 });
 
 // Mock types
-interface MockAirwallexPaymentIntent {
+interface _MockAirwallexPaymentIntent {
   id: string;
   client_secret: string;
   amount: number;
@@ -55,7 +55,7 @@ interface MockAirwallexClient {
 }
 
 describe('airwallex-api', () => {
-  let mockAirwallexClient: MockAirwallexClient;
+  let _mockAirwallexClient: MockAirwallexClient;
   let mockSupabaseClient: SupabaseClient;
   let mockInsert: ReturnType<typeof vi.fn>;
   let mockFrom: ReturnType<typeof vi.fn>;
@@ -69,7 +69,7 @@ describe('airwallex-api', () => {
     global.fetch = mockFetch;
 
     // Configure fetch mock for authentication
-    mockFetch.mockImplementation((url: string, options: any) => {
+    mockFetch.mockImplementation((url: string, _options: any) => {
       if (url.includes('/authentication/login')) {
         return Promise.resolve({
           ok: true,
@@ -118,7 +118,7 @@ describe('airwallex-api', () => {
     });
 
     // Mock Airwallex client (kept for backward compatibility but not used by actual implementation)
-    mockAirwallexClient = {
+    _mockAirwallexClient = {
       paymentIntents: {
         create: vi.fn(),
       },

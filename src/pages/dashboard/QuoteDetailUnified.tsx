@@ -11,16 +11,15 @@ import { useCartStore } from '@/stores/cartStore';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+// Badge removed - not used
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
   ArrowLeft,
   Package,
   Truck,
   CheckCircle,
-  Clock,
   Calendar,
   ExternalLink,
   Download,
@@ -41,7 +40,7 @@ import {
   Shield,
   Percent,
 } from 'lucide-react';
-import { formatCurrency, cn } from '@/lib/utils';
+// formatCurrency, cn removed - not used
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { QuoteExpirationTimer } from '@/components/dashboard/QuoteExpirationTimer';
 import { useQuoteSteps } from '@/hooks/useQuoteSteps';
@@ -57,7 +56,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { StickyActionBar } from '@/components/dashboard/StickyActionBar';
 import { GuestApprovalDialog } from '@/components/share/GuestApprovalDialog';
 import { useToast } from '@/components/ui/use-toast';
-import { Tables } from '@/integrations/supabase/types';
+// Tables removed - not used
 import { GuestCurrencyProvider, useGuestCurrency } from '@/contexts/GuestCurrencyContext';
 import { GuestCurrencySelector } from '@/components/guest/GuestCurrencySelector';
 
@@ -68,7 +67,7 @@ interface UnifiedQuoteDetailProps {
 function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailProps) {
   const { id, shareToken } = useParams<{ id: string; shareToken: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
+  const _location = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -82,7 +81,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
 
   // State for dialogs and UI
   const [showMessages, setShowMessages] = useState(false);
-  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [_isApproveDialogOpen, _setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
   const [mobileBreakdownOpen, setMobileBreakdownOpen] = useState(false);
@@ -180,7 +179,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
     return cartItems.some((item) => item.quoteId === quoteId);
   };
 
-  const quoteSteps = useQuoteSteps(quote);
+  const _quoteSteps = useQuoteSteps(quote);
 
   // Computed values
   const countryName = useMemo(() => {
@@ -289,23 +288,23 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
     const { status, in_cart } = quote;
 
     let step: 'review' | 'approve' | 'cart' | 'checkout' | 'rejected' = 'review';
-    let summaryStatus: 'pending' | 'approved' | 'rejected' | 'in_cart' = 'pending';
+    let _summaryStatus: 'pending' | 'approved' | 'rejected' | 'in_cart' = 'pending';
 
     if (status === 'pending') {
       step = 'review';
-      summaryStatus = 'pending';
+      _summaryStatus = 'pending';
     } else if (status === 'sent') {
       step = 'approve';
-      summaryStatus = 'pending';
+      _summaryStatus = 'pending';
     } else if (status === 'approved' && !in_cart) {
       step = 'approve';
-      summaryStatus = 'approved';
+      _summaryStatus = 'approved';
     } else if (status === 'approved' && in_cart) {
       step = 'cart';
-      summaryStatus = 'in_cart';
+      _summaryStatus = 'in_cart';
     } else if (status === 'rejected') {
       step = 'rejected';
-      summaryStatus = 'rejected';
+      _summaryStatus = 'rejected';
     } else if (
       status === 'paid' ||
       status === 'ordered' ||
@@ -313,7 +312,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
       status === 'completed'
     ) {
       step = 'checkout';
-      summaryStatus = 'approved';
+      _summaryStatus = 'approved';
     }
 
     return { step, rejected: step === 'rejected' };
@@ -442,7 +441,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
       }
     } else {
       await approveQuote();
-      setIsApproveDialogOpen(false);
+      _setIsApproveDialogOpen(false);
     }
   };
 

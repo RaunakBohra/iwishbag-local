@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, SupabaseClient as _SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createWebhookHeaders } from '../_shared/cors.ts';
 import {
   processPaymentIntentSucceeded,
@@ -12,11 +12,11 @@ import {
 import {
   withEdgeMonitoring,
   extractPaymentId,
-  extractUserId,
-  mapGatewayError,
+  extractUserId as _extractUserId,
+  mapGatewayError as _mapGatewayError,
   createErrorResponse,
   createSuccessResponse,
-  validateWebhookSignature,
+  validateWebhookSignature as _validateWebhookSignature,
   sanitizeForLogging,
 } from '../_shared/monitoring-utils.ts';
 import { EdgeLogCategory } from '../_shared/edge-logging.ts';
@@ -48,7 +48,7 @@ interface AirwallexWebhookEvent {
   version: string;
 }
 
-interface WebhookLogEntry {
+interface _WebhookLogEntry {
   request_id: string;
   webhook_type: string;
   status: 'processing' | 'completed' | 'failed';
@@ -59,7 +59,7 @@ interface WebhookLogEntry {
 }
 
 // Get webhook headers (empty object for webhooks)
-const corsHeaders = createWebhookHeaders();
+const _corsHeaders = createWebhookHeaders();
 
 serve(async (req) => {
   // Webhooks only accept POST

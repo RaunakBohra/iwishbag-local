@@ -1,5 +1,4 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SmtpClient } from 'https://deno.land/x/smtp@v0.7.0/mod.ts';
 import {
   authenticateUser,
@@ -37,7 +36,7 @@ serve(async (req) => {
     validateMethod(req, ['POST']);
 
     // Authenticate user
-    const { user, supabaseClient } = await authenticateUser(req);
+    const { user, supabaseClient: _supabaseClient } = await authenticateUser(req);
 
     console.log(`🔐 Authenticated user ${user.email} requesting email send`);
 
@@ -116,7 +115,7 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           },
         );
-      } catch (error) {
+      } catch {
         console.log('⚠️ Inbucket failed, falling back to console log');
         console.log('📧 EMAIL CONTENT:');
         console.log('To:', to);

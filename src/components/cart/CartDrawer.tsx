@@ -230,7 +230,7 @@ export const CartDrawer = () => {
         title: 'Item removed',
         description: 'Item has been removed from your cart.',
       });
-    } catch (_error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to remove item from cart.',
@@ -246,7 +246,7 @@ export const CartDrawer = () => {
         title: 'Item saved',
         description: 'Item has been saved for later.',
       });
-    } catch (_error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to save item for later.',
@@ -262,7 +262,7 @@ export const CartDrawer = () => {
         title: 'Item moved',
         description: 'Item has been moved to your cart.',
       });
-    } catch (_error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to move item to cart.',
@@ -278,7 +278,7 @@ export const CartDrawer = () => {
         title: 'Quantity updated',
         description: 'Item quantity has been updated.',
       });
-    } catch (_error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to update quantity.',
@@ -378,7 +378,7 @@ export const CartDrawer = () => {
       params.set('quotes', quoteIds.join(','));
 
       window.location.href = `/checkout?${params.toString()}`;
-    } catch (_error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to proceed to checkout.',

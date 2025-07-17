@@ -193,10 +193,7 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
     };
 
     fetchShippingData();
-  }, [
-    quote,
-    selectedOptionId,
-  ]);
+  }, [quote, selectedOptionId]);
 
   // Early return if no quote data
   if (!quote) {

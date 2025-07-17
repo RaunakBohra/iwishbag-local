@@ -15,7 +15,7 @@ globalThis.Deno = {
       return envVars[key] || null;
     }),
   },
-} as any;
+} as unknown as typeof Deno;
 
 // Mock crypto with subtle API for HMAC operations
 Object.defineProperty(global, 'crypto', {
@@ -25,7 +25,7 @@ Object.defineProperty(global, 'crypto', {
       importKey: vi.fn(async (format, keyData, algorithm, extractable, keyUsages) => {
         return { type: 'secret', algorithm, extractable, usages: keyUsages };
       }),
-      sign: vi.fn(async (algorithm, key, data) => {
+      sign: vi.fn(async (_algorithm, _key, _data) => {
         // Return a deterministic mock signature buffer for testing
         // This will produce the hex string: 0102030405060708
         return new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]).buffer;
@@ -82,7 +82,7 @@ const mockPaymentMonitoring = {
 };
 
 vi.doMock('../_shared/monitoring-utils.ts', () => ({
-  withEdgeMonitoring: vi.fn().mockImplementation(async (functionName, handler, request) => {
+  withEdgeMonitoring: vi.fn().mockImplementation(async (functionName, handler, _request) => {
     return await handler(mockLogger, mockPaymentMonitoring);
   }),
   extractPaymentId: vi.fn((obj) => obj?.id || 'test-payment-id'),
@@ -205,7 +205,7 @@ describe('airwallex-webhook', () => {
         let event;
         try {
           event = JSON.parse(body);
-        } catch (parseError) {
+        } catch {
           return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
             status: 400,
           });
@@ -335,7 +335,7 @@ describe('airwallex-webhook', () => {
 
       // Compare signatures
       return computedSignature === webhookSignature;
-    } catch (error) {
+    } catch {
       return false;
     }
   };
@@ -386,7 +386,7 @@ describe('airwallex-webhook', () => {
 
     mockSupabaseInstance = {
       from: mockFrom,
-    } as any;
+    } as unknown as ReturnType<typeof mockSupabaseClient>;
 
     mockSupabaseClient.mockReturnValue(mockSupabaseInstance);
   });
@@ -511,7 +511,7 @@ describe('airwallex-webhook', () => {
         ['sign'],
       );
 
-      const signatureBuffer = await crypto.subtle.sign(
+      const _signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
         encoder.encode(`${validTimestamp}.${payload}`),
@@ -575,7 +575,7 @@ describe('airwallex-webhook', () => {
         ['sign'],
       );
 
-      const signatureBuffer = await crypto.subtle.sign(
+      const _signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
         encoder.encode(`${validTimestamp}.${payload}`),
@@ -659,7 +659,7 @@ describe('airwallex-webhook', () => {
         ['sign'],
       );
 
-      const signatureBuffer = await crypto.subtle.sign(
+      const _signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
         encoder.encode(`${validTimestamp}.${payload}`),
@@ -720,7 +720,7 @@ describe('airwallex-webhook', () => {
         ['sign'],
       );
 
-      const signatureBuffer = await crypto.subtle.sign(
+      const _signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
         encoder.encode(`${validTimestamp}.${payload}`),
@@ -779,7 +779,7 @@ describe('airwallex-webhook', () => {
         ['sign'],
       );
 
-      const signatureBuffer = await crypto.subtle.sign(
+      const _signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
         encoder.encode(`${validTimestamp}.${payload}`),
@@ -812,7 +812,7 @@ describe('airwallex-webhook', () => {
 
   describe('verifyAirwallexWebhookSignature', () => {
     // Import the function directly for testing
-    let verifyAirwallexWebhookSignature: (
+    let _verifyAirwallexWebhookSignature: (
       signature: string,
       secret: string,
       payload: string,
@@ -820,7 +820,7 @@ describe('airwallex-webhook', () => {
 
     beforeEach(async () => {
       // Extract the function from the module
-      const module = await import('../airwallex-webhook/index.ts');
+      const _module = await import('../airwallex-webhook/index.ts');
       // Since the function is not exported, we'll test it through the main handler
       // For these tests, we'll use the handler's behavior to verify the function works correctly
     });
@@ -961,7 +961,7 @@ describe('airwallex-webhook', () => {
         ['sign'],
       );
 
-      const signatureBuffer = await crypto.subtle.sign(
+      const _signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
         encoder.encode(`${oldTimestamp}.${payload}`),
@@ -1008,7 +1008,7 @@ describe('airwallex-webhook', () => {
         ['sign'],
       );
 
-      const signatureBuffer = await crypto.subtle.sign(
+      const _signatureBuffer = await crypto.subtle.sign(
         'HMAC',
         key,
         encoder.encode(`${futureTimestamp}.${payload}`),

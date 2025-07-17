@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { usePaymentLinks } from '../usePaymentLinks';
 import { supabase } from '@/integrations/supabase/client';
@@ -134,7 +134,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.createPaymentLink(mockPaymentLinkParams);
       });
@@ -227,7 +227,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.createPaymentLink(unsupportedParams);
       });
@@ -303,7 +303,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.createPaymentLink(mockPaymentLinkParams);
       });
@@ -353,7 +353,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.createPaymentLink(mockPaymentLinkParams);
       });
@@ -370,7 +370,7 @@ describe('usePaymentLinks', () => {
     });
 
     test('should manage loading state correctly', async () => {
-      let resolvePromise: (value: any) => void;
+      let resolvePromise: (value: unknown) => void;
       const promise = new Promise((resolve) => {
         resolvePromise = resolve;
       });
@@ -399,7 +399,7 @@ describe('usePaymentLinks', () => {
     test('should handle browser without clipboard API', async () => {
       // Mock a browser without clipboard API by setting it to undefined
       const originalClipboard = navigator.clipboard;
-      (navigator as any).clipboard = undefined;
+      (navigator as unknown as { clipboard: unknown }).clipboard = undefined;
 
       mockSupabase.functions.invoke.mockResolvedValue({
         data: mockPaymentLinkResponse,
@@ -421,7 +421,7 @@ describe('usePaymentLinks', () => {
       expect(mockToast).toHaveBeenCalledTimes(1);
 
       // Restore clipboard
-      (navigator as any).clipboard = originalClipboard;
+      (navigator as unknown as { clipboard: unknown }).clipboard = originalClipboard;
     });
   });
 
@@ -439,7 +439,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.getPaymentLinks();
       });
@@ -466,7 +466,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.getPaymentLinks('quote-123');
       });
@@ -491,7 +491,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.getPaymentLinks();
       });
@@ -516,7 +516,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.getPaymentLinks();
       });
@@ -566,7 +566,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.cancelPaymentLink('link-123');
       });
@@ -600,7 +600,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.cancelPaymentLink('link-123');
       });
@@ -625,7 +625,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.cancelPaymentLink('link-123');
       });
@@ -831,7 +831,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.createPaymentLink(mockPaymentLinkParams);
       });
@@ -853,7 +853,7 @@ describe('usePaymentLinks', () => {
 
       const { result } = renderHook(() => usePaymentLinks());
 
-      let response: any;
+      let response: unknown;
       await act(async () => {
         response = await result.current.createPaymentLink(mockPaymentLinkParams);
       });
@@ -862,8 +862,8 @@ describe('usePaymentLinks', () => {
     });
 
     test('should handle concurrent payment link creation', async () => {
-      let resolveFirst: (value: any) => void;
-      let resolveSecond: (value: any) => void;
+      let resolveFirst: (value: unknown) => void;
+      let resolveSecond: (value: unknown) => void;
 
       const firstPromise = new Promise((resolve) => {
         resolveFirst = resolve;
@@ -879,8 +879,8 @@ describe('usePaymentLinks', () => {
       const { result } = renderHook(() => usePaymentLinks());
 
       // Start two concurrent operations
-      let firstResponse: any;
-      let secondResponse: any;
+      let firstResponse: unknown;
+      let secondResponse: unknown;
 
       act(() => {
         result.current.createPaymentLink(mockPaymentLinkParams).then((res) => {

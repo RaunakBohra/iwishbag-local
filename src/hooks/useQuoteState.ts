@@ -1,8 +1,12 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation as _useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Quote, QuoteStatus, isValidStatusTransition } from '@/types/quote';
+import {
+  Quote as _Quote,
+  QuoteStatus as _QuoteStatus,
+  isValidStatusTransition as _isValidStatusTransition,
+} from '@/types/quote';
 import { useEmailNotifications } from './useEmailNotifications';
 import { useCartStore, CartItem } from '@/stores/cartStore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,8 +20,11 @@ type QuoteWithItems = Tables<'quotes'> & {
 export const useQuoteState = (quoteId: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { sendQuoteApprovedEmail, sendQuoteRejectedEmail } = useEmailNotifications();
-  const { loadFromServer, addItem } = useCartStore();
+  const {
+    sendQuoteApprovedEmail: _sendQuoteApprovedEmail,
+    sendQuoteRejectedEmail: _sendQuoteRejectedEmail,
+  } = useEmailNotifications();
+  const { loadFromServer: _loadFromServer, addItem } = useCartStore();
   const { user } = useAuth();
   const { isValidTransition } = useStatusManagement();
   const [isUpdating, setIsUpdating] = useState(false);
@@ -154,7 +161,7 @@ export const useQuoteState = (quoteId: string) => {
     }
   };
 
-  const rejectQuote = async (reason: string = '') => {
+  const rejectQuote = async (_reason: string = '') => {
     setIsUpdating(true);
     try {
       // Remove from cart if in cart

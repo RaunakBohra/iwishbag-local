@@ -14,10 +14,8 @@ import {
   Clock,
   CheckCircle,
   QrCode,
-  ExternalLink,
   AlertCircle,
   AlertTriangle,
-  IndianRupee,
 } from 'lucide-react';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
 import { PaymentGateway, PaymentMethodDisplay } from '@/types/payment';
@@ -85,7 +83,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     methodsLoading: hookIsLoading,
     getRecommendedPaymentMethod,
     getPaymentMethodDisplay,
-    PAYMENT_METHOD_DISPLAYS,
+    _PAYMENT_METHOD_DISPLAYS,
   } = usePaymentGateways();
 
   // Prefer props over hook data (for guest checkout)

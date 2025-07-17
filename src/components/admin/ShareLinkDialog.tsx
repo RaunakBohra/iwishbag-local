@@ -37,7 +37,7 @@ export const ShareLinkDialog: React.FC<ShareLinkDialogProps> = ({
         description: 'Share link copied to clipboard',
       });
       setTimeout(() => setCopied(false), 2000);
-    } catch (_err) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to copy link',

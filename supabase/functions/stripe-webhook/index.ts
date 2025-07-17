@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno';
 import { createWebhookHeaders } from '../_shared/cors.ts';
 import {
@@ -11,18 +11,14 @@ import {
 import {
   withEdgeMonitoring,
   extractPaymentId,
-  extractUserId,
-  mapGatewayError,
   createErrorResponse,
   createSuccessResponse,
-  validateWebhookSignature,
-  sanitizeForLogging,
 } from '../_shared/monitoring-utils.ts';
 import { EdgeLogCategory } from '../_shared/edge-logging.ts';
 import { EdgePaymentErrorCode } from '../_shared/edge-payment-monitoring.ts';
 
 // Get webhook headers (empty object for webhooks)
-const corsHeaders = createWebhookHeaders();
+const _corsHeaders = createWebhookHeaders();
 
 serve(async (req) => {
   // Webhooks only accept POST

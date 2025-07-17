@@ -12,12 +12,7 @@ import {
   Info,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import {
-  DeliveryOption,
-  calculateDeliveryDates,
-  DeliveryPhase,
-} from '@/lib/delivery-estimates';
-import { EnhancedDeliveryTimeline } from './EnhancedDeliveryTimeline';
+import { DeliveryOption, calculateDeliveryDates, DeliveryPhase } from '@/lib/delivery-estimates';
 import { format, parseISO, addBusinessDays } from 'date-fns';
 // Removed unused Tables import
 
@@ -121,8 +116,7 @@ export const DeliveryEstimateDisplay = ({
     quote?.status,
     quote?.paid_at,
     quote?.created_at,
-    getStartDate,
-  ]);
+  ]); // Fixed: removed getStartDate from dependencies to avoid recreation issue
 
   if (!deliveryTimeline || !selectedOption) {
     return <div>Loading delivery estimate...</div>;
