@@ -671,6 +671,20 @@ serve(async (req) => {
             secret_key: testMode ? config.test_secret_key : config.live_secret_key,
             base_url: testMode ? config.sandbox_base_url : config.production_base_url
           };
+          
+          console.log('Khalti config:', {
+            testMode,
+            base_url: khaltiConfig.base_url,
+            has_secret_key: !!khaltiConfig.secret_key,
+            secret_key_length: khaltiConfig.secret_key?.length
+          });
+          
+          // Check if demo mode is enabled for testing
+          const isDemoMode = config.demo_mode === true;
+          
+          if (isDemoMode) {
+            console.warn('⚠️ Khalti is in DEMO MODE. Using mock response for testing.');
+          }
 
           if (!khaltiConfig.public_key || !khaltiConfig.secret_key) {
             paymentMonitoring.completePaymentMonitoring(
@@ -746,12 +760,12 @@ serve(async (req) => {
           const productNames = quotesToUse.map(q => q.product_name || 'Product').join(', ');
           const purchaseOrderName = `Order: ${productNames} (${quoteIds.join(',')})`;
           
-          const baseUrl = success_url.includes('localhost') 
+          const khaltiBaseUrl = success_url.includes('localhost') 
             ? 'http://localhost:8080' 
             : 'https://whyteclub.com';
           
-          const khaltiReturnUrl = `${baseUrl}/api/khalti-callback`;
-          const khaltiWebsiteUrl = baseUrl;
+          const khaltiReturnUrl = `${khaltiBaseUrl}/api/khalti-callback`;
+          const khaltiWebsiteUrl = khaltiBaseUrl;
 
           // Prepare Khalti payment initiation request
           const khaltiRequest = {
@@ -766,30 +780,77 @@ serve(async (req) => {
               phone: customerPhone
             }
           };
-
-          // Initiate payment with Khalti
-          const khaltiResponse = await fetch(`${khaltiConfig.base_url}epayment/initiate/`, {
-            method: 'POST',
+          
+          // Ensure proper URL format - remove double slashes
+          const khaltiApiUrl = khaltiConfig.base_url.endsWith('/') ? khaltiConfig.base_url.slice(0, -1) : khaltiConfig.base_url;
+          const khaltiUrl = `${khaltiApiUrl}/epayment/initiate/`;
+          console.log('Khalti request:', {
+            url: khaltiUrl,
             headers: {
-              'Authorization': `Key ${khaltiConfig.secret_key}`,
+              'Authorization': `Key ${khaltiConfig.secret_key?.substring(0, 20)}...`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify(khaltiRequest)
+            body: khaltiRequest
           });
 
-          if (!khaltiResponse.ok) {
-            const errorData = await khaltiResponse.json();
-            console.error('Khalti API error:', errorData);
-            paymentMonitoring.completePaymentMonitoring(
-              paymentId,
-              false,
-              EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
-              `Khalti API error: ${JSON.stringify(errorData)}`
-            );
-            return createErrorResponse(new Error(`Khalti API error: ${JSON.stringify(errorData)}`), 500, logger);
-          }
+          let khaltiResponse;
+          let khaltiData;
+          
+          if (isDemoMode) {
+            // Mock response for demo mode
+            khaltiData = {
+              pidx: `DEMO_${purchaseOrderId}`,
+              payment_url: `https://demo.khalti.com/payment/test?pidx=DEMO_${purchaseOrderId}`,
+              expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour from now
+            };
+            console.log('📱 Demo mode: Returning mock Khalti response');
+          } else {
+            // Real API call
+            khaltiResponse = await fetch(khaltiUrl, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Key ${khaltiConfig.secret_key}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(khaltiRequest)
+            });
 
-          const khaltiData = await khaltiResponse.json();
+            if (!khaltiResponse.ok) {
+              const errorData = await khaltiResponse.json();
+              console.error('Khalti API error:', errorData);
+              console.error('Khalti request details:', {
+                status: khaltiResponse.status,
+                statusText: khaltiResponse.statusText,
+                url: khaltiUrl,
+                testMode: testMode
+              });
+              
+              // Special handling for 401 errors
+              if (khaltiResponse.status === 401) {
+                paymentMonitoring.completePaymentMonitoring(
+                  paymentId,
+                  false,
+                  EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
+                  'Khalti authentication failed. Please check your API credentials.'
+                );
+                return createErrorResponse(
+                  new Error('Khalti authentication failed. The API credentials may be incorrect or expired. Please contact support to update the Khalti configuration.'), 
+                  401, 
+                  logger
+                );
+              }
+              
+              paymentMonitoring.completePaymentMonitoring(
+                paymentId,
+                false,
+                EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
+                `Khalti API error: ${JSON.stringify(errorData)}`
+              );
+              return createErrorResponse(new Error(`Khalti API error: ${JSON.stringify(errorData)}`), 500, logger);
+            }
+
+            khaltiData = await khaltiResponse.json();
+          }
           
           // Log transaction details (non-sensitive)
           logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Khalti payment created successfully', {
@@ -1112,6 +1173,227 @@ serve(async (req) => {
         }
         break;
 
+      case 'fonepay':
+        try {
+          logger.info(EdgeLogCategory.PAYMENT_PROCESSING, 'Starting Fonepay payment creation', {
+            paymentId,
+            userId,
+            metadata: { amount: totalAmount, currency: totalCurrency }
+          });
+          
+          // Fetch Fonepay config from database
+          const { data: fonepayGateway, error: fonepayGatewayError } = await paymentMonitoring.monitorGatewayCall(
+            'fetch_fonepay_config',
+            'fonepay',
+            async () => {
+              return await supabaseAdmin
+                .from('payment_gateways')
+                .select('config, test_mode')
+                .eq('code', 'fonepay')
+                .single();
+            },
+            paymentId
+          );
+
+          if (fonepayGatewayError || !fonepayGateway) {
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+              'Fonepay gateway config missing'
+            );
+            return createErrorResponse(new Error('Fonepay gateway config missing'), 500, logger);
+          }
+
+          const fonepayConfig = fonepayGateway.config || {};
+          const fonepayTestMode = fonepayGateway.test_mode;
+          
+          // Extract configuration
+          const merchantCode = fonepayConfig.merchant_code;
+          const secretKey = fonepayConfig.secret_key;
+          const panNumber = fonepayConfig.pan_number;
+          
+          if (!merchantCode || !secretKey) {
+            paymentMonitoring.completePaymentMonitoring(
+              paymentId,
+              false,
+              EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
+              'Fonepay configuration incomplete'
+            );
+            return createErrorResponse(new Error('Fonepay configuration incomplete'), 500, logger);
+          }
+
+          // Get Nepal's exchange rate for USD to NPR conversion
+          const { data: nepalSettings, error: countryError } = await supabaseAdmin
+            .from('country_settings')
+            .select('rate_from_usd')
+            .eq('code', 'NP')
+            .single();
+            
+          if (countryError || !nepalSettings) {
+            console.error('Error fetching Nepal settings:', countryError);
+            return createErrorResponse(new Error('Failed to get exchange rate for NPR conversion'), 500, logger);
+          }
+          
+          // Convert amount to NPR if needed
+          const exchangeRate = nepalSettings.rate_from_usd;
+          let amountInNPR: number;
+          
+          if (totalCurrency === 'NPR') {
+            amountInNPR = totalAmount;
+            console.log(`Amount is already in NPR: ${amountInNPR}`);
+          } else {
+            amountInNPR = totalAmount * exchangeRate;
+            console.log(`Converting ${totalAmount} ${totalCurrency} to ${amountInNPR} NPR (rate: ${exchangeRate})`);
+          }
+
+          // Generate unique Product Reference Number (PRN)
+          const prn = `FP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
+          // Get customer information
+          let customerName = customerInfo?.name || 'Customer';
+          let customerEmail = customerInfo?.email || 'customer@example.com';
+          let customerPhone = customerInfo?.phone || '9999999999';
+          
+          // If we have quote IDs, try to get customer info from quotes
+          if (quoteIds && quoteIds.length > 0) {
+            const { data: fullQuotes } = await supabaseAdmin
+              .from('quotes')
+              .select('email, customer_name, shipping_address')
+              .in('id', quoteIds)
+              .limit(1);
+
+            if (fullQuotes && fullQuotes.length > 0) {
+              const firstQuote = fullQuotes[0];
+              customerEmail = firstQuote.email || customerEmail;
+              customerName = firstQuote.customer_name || customerName;
+              
+              // Extract phone from shipping address if available
+              if (firstQuote.shipping_address && typeof firstQuote.shipping_address === 'object') {
+                const shippingAddress = firstQuote.shipping_address as Record<string, unknown>;
+                customerPhone = shippingAddress.phone || customerPhone;
+              }
+            }
+          }
+          
+          // Format amount to 2 decimal places
+          const formattedAmount = amountInNPR.toFixed(2);
+          
+          // Get base URL from success_url for return URL
+          const baseUrl = new URL(success_url).origin;
+          const returnUrl = `${baseUrl}/payment-callback/fonepay`;
+          
+          // Fonepay payment parameters
+          const paymentParams = {
+            PID: merchantCode,
+            MD: 'P', // Payment mode
+            PRN: prn,
+            AMT: formattedAmount,
+            CRN: 'NPR', // Currency (Nepal Rupees)
+            DT: new Date().toLocaleDateString('en-US'), // MM/DD/YYYY format
+            R1: `Order_${quoteIds.join(',')}`,
+            R2: customerName.substring(0, 20), // Max 20 chars
+            RU: returnUrl
+          };
+
+          // Generate HMAC-SHA512 hash for security
+          const hashString = [
+            paymentParams.PID,
+            paymentParams.MD,
+            paymentParams.PRN,
+            paymentParams.AMT,
+            paymentParams.CRN,
+            paymentParams.DT,
+            paymentParams.R1,
+            paymentParams.R2,
+            paymentParams.RU
+          ].join(',');
+
+          console.log('🔐 Fonepay hash string:', hashString);
+
+          // Generate HMAC-SHA512 hash
+          const encoder = new TextEncoder();
+          const keyData = encoder.encode(secretKey);
+          const messageData = encoder.encode(hashString);
+          
+          const cryptoKey = await crypto.subtle.importKey(
+            'raw',
+            keyData,
+            { name: 'HMAC', hash: 'SHA-512' },
+            false,
+            ['sign']
+          );
+          
+          const hashBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          
+          console.log('✅ Fonepay hash generated:', hashHex.substring(0, 20) + '...');
+
+          // Build Fonepay payment URL
+          const fonepayUrl = fonepayTestMode 
+            ? 'https://dev-clientapi.fonepay.com/api/merchantRequest'
+            : 'https://clientapi.fonepay.com/api/merchantRequest';
+
+          // Convert parameters to URL query string
+          const queryParams = new URLSearchParams();
+          Object.entries(paymentParams).forEach(([key, value]) => {
+            queryParams.append(key, value as string);
+          });
+          queryParams.append('DV', hashHex);
+
+          const paymentUrl = `${fonepayUrl}?${queryParams.toString()}`;
+
+          console.log('🚀 Fonepay payment URL generated');
+          
+          paymentMonitoring.completePaymentMonitoring(
+            paymentId,
+            true,
+            undefined,
+            undefined,
+            {
+              gateway: 'fonepay',
+              transactionId: prn,
+              amount: amountInNPR,
+              currency: 'NPR'
+            }
+          );
+
+          responseData = {
+            success: true,
+            url: paymentUrl,
+            method: 'GET',
+            transactionId: prn,
+            gateway: 'fonepay',
+            qrCode: paymentUrl, // Fonepay will generate QR code
+            amount: amountInNPR,
+            currency: 'NPR'
+          };
+
+        } catch (error) {
+          paymentMonitoring.completePaymentMonitoring(
+            paymentId,
+            false,
+            EdgePaymentErrorCode.PAYMENT_PROCESSING_FAILED,
+            error instanceof Error ? error.message : 'Unknown error'
+          );
+
+          logger.error(EdgeLogCategory.PAYMENT_PROCESSING, 'Fonepay payment creation failed', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            paymentId,
+            userId,
+            metadata: { gateway: 'fonepay', amount: totalAmount, currency: totalCurrency }
+          });
+
+          return createErrorResponse(
+            error instanceof Error ? error : new Error('Fonepay payment creation failed'),
+            500,
+            logger,
+            { gateway: 'fonepay', paymentId }
+          );
+        }
+        break;
+        
       case 'bank_transfer':
       case 'cod':
         logger.info(EdgeLogCategory.PAYMENT_PROCESSING, `Manual payment method selected: ${gateway}`, {

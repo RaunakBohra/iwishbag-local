@@ -393,7 +393,7 @@ describe('StripePaymentForm', () => {
       fireEvent.click(payButton);
       
       await waitFor(() => {
-        expect(mockStripe.confirmCardPayment).toHaveBeenCalledWith(
+        expect(mockConfirmCardPayment).toHaveBeenCalledWith(
           mockProps.client_secret,
           expect.any(Object)
         );

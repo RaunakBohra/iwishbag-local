@@ -39,6 +39,7 @@ const PaypalFailure = React.lazy(() => import("@/pages/PaypalFailure"));
 const QuoteDetailUnified = React.lazy(() => import("@/pages/dashboard/QuoteDetailUnified"));
 const ResetPassword = React.lazy(() => import("@/pages/auth/ResetPassword"));
 const EmailConfirmation = React.lazy(() => import("@/pages/auth/EmailConfirmation"));
+const FonepayCallback = React.lazy(() => import("@/pages/api/fonepay-callback"));
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import("@/pages/admin/Dashboard"));
@@ -210,6 +211,14 @@ const router = createBrowserRouter([
         element: (
           <ErrorBoundary fallback={PaymentErrorFallback}>
             <PaypalFailure />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "payment-callback/fonepay", // Fonepay payment callback (public access)
+        element: (
+          <ErrorBoundary fallback={PaymentErrorFallback}>
+            <FonepayCallback />
           </ErrorBoundary>
         ),
       },

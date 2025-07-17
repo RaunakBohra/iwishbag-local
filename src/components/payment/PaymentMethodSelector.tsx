@@ -17,6 +17,7 @@ import {
   QrCode,
   ExternalLink,
   AlertCircle,
+  AlertTriangle,
   IndianRupee
 } from 'lucide-react';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';

@@ -13,7 +13,9 @@ const testKhaltiPayment = async () => {
       phone: '9801234567'
     },
     metadata: {
-      test: true
+      test: true,
+      guest_checkout: true,
+      guest_session_token: 'test-session-123'
     }
   };
 
@@ -24,7 +26,8 @@ const testKhaltiPayment = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'}`
+        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'}`,
+        'x-guest-checkout': 'true' // Add guest checkout header
       },
       body: JSON.stringify(testPaymentRequest)
     });

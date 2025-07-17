@@ -26,12 +26,20 @@ const mockDeno = {
 };
 
 // Mock global Deno
-global.Deno = mockDeno as typeof Deno;
+Object.defineProperty(global, 'Deno', {
+  value: mockDeno,
+  writable: true,
+  configurable: true
+});
 
 // Mock crypto for UUID generation
-global.crypto = {
-  randomUUID: vi.fn(() => 'test-uuid-123'),
-} as Crypto;
+Object.defineProperty(global, 'crypto', {
+  value: {
+    randomUUID: vi.fn(() => 'test-uuid-123'),
+  },
+  writable: true,
+  configurable: true
+});
 
 // Mock Stripe
 const mockStripe = {

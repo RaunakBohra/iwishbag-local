@@ -516,8 +516,11 @@ class CurrencyService {
     const currency = this.getCurrencySymbolSync(currencyCode);
     const options = this.getCurrencyFormatOptions(currencyCode);
     
+    // Handle null, undefined, or NaN values
+    const safeAmount = (amount == null || isNaN(amount)) ? 0 : amount;
+    
     // Round to appropriate decimal places
-    const rounded = Math.round(amount * Math.pow(10, options.decimalPlaces)) / Math.pow(10, options.decimalPlaces);
+    const rounded = Math.round(safeAmount * Math.pow(10, options.decimalPlaces)) / Math.pow(10, options.decimalPlaces);
     
     // Format with separators
     const parts = rounded.toFixed(options.decimalPlaces).split('.');

@@ -3,8 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { UnifiedPaymentModal } from '../UnifiedPaymentModal';
-import { RefundManagementModal } from '../RefundManagementModal';
+import { UnifiedPaymentModal } from '../../admin/UnifiedPaymentModal';
+import { RefundManagementModal } from '../../admin/RefundManagementModal';
 import { PaymentManagementWidget } from '../../admin/PaymentManagementWidget';
 import { currencyService } from '@/services/CurrencyService';
 import type { Tables } from '@/integrations/supabase/types';
@@ -12,7 +12,16 @@ import type { Tables } from '@/integrations/supabase/types';
 // Mock dependencies
 vi.mock('@/integrations/supabase/client');
 vi.mock('@/services/CurrencyService');
-vi.mock('@/hooks/use-toast');
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({
+    toast: vi.fn()
+  })
+}));
+vi.mock('@/components/ui/use-toast', () => ({
+  useToast: () => ({
+    toast: vi.fn()
+  })
+}));
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'test-user-id' },

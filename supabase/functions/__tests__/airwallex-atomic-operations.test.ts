@@ -1,5 +1,38 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+// Mock Deno global
+const mockDeno = {
+  env: {
+    get: vi.fn((key: string) => {
+      const envVars: Record<string, string> = {
+        'AIRWALLEX_API_KEY': 'test_airwallex_key',
+        'AIRWALLEX_CLIENT_ID': 'test_client_id',
+        'AIRWALLEX_WEBHOOK_SECRET': 'test_webhook_secret',
+        'SUPABASE_URL': 'http://127.0.0.1:54321',
+        'SUPABASE_SERVICE_ROLE_KEY': 'test-service-role-key',
+      };
+      return envVars[key] || '';
+    }),
+  },
+};
+
+// Set up global mocks
+Object.defineProperty(global, 'Deno', {
+  value: mockDeno,
+  writable: true,
+  configurable: true
+});
+
+// Mock crypto for UUID generation
+Object.defineProperty(global, 'crypto', {
+  value: {
+    randomUUID: vi.fn(() => 'test-uuid-123'),
+  },
+  writable: true,
+  configurable: true
+});
+
 import {
   processPaymentIntentSucceeded,
   processPaymentIntentFailed,
@@ -24,20 +57,30 @@ describe('airwallex-atomic-operations', () => {
     vi.clearAllMocks();
 
     // Create mocks that return promises
-    mockEq = vi.fn().mockResolvedValue({ error: null });
-    mockIn = vi.fn().mockResolvedValue({ error: null });
+    mockEq = vi.fn().mockReturnValue({ error: null });
+    mockIn = vi.fn().mockReturnValue({ error: null });
     mockSingle = vi.fn().mockResolvedValue({ data: [], error: null });
     
-    // Create chainable mocks
-    const createChainableMock = () => ({
-      eq: mockEq,
-      in: mockIn,
-      single: mockSingle,
-      select: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      upsert: vi.fn().mockReturnThis()
-    });
+    // Create chainable mocks with proper promise returns
+    const createChainableMock = () => {
+      const chainable = {
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        single: mockSingle,
+        select: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        upsert: vi.fn().mockReturnThis()
+      };
+      
+      // Make terminal operations return promises
+      Object.defineProperty(chainable, 'then', {
+        value: (resolve: Function) => resolve({ error: null }),
+        configurable: true
+      });
+      
+      return chainable;
+    };
 
     mockSelect = vi.fn().mockReturnValue(createChainableMock());
     mockUpdate = vi.fn().mockReturnValue(createChainableMock());
@@ -49,8 +92,8 @@ describe('airwallex-atomic-operations', () => {
       update: mockUpdate,
       insert: mockInsert,
       upsert: mockUpsert,
-      eq: mockEq,
-      in: mockIn
+      eq: vi.fn().mockReturnValue({ error: null }),
+      in: vi.fn().mockReturnValue({ error: null })
     });
 
     mockSupabaseAdmin = {
@@ -115,8 +158,20 @@ describe('airwallex-atomic-operations', () => {
     });
 
     it('should handle database errors', async () => {
-      // Mock a Promise.all failure scenario
-      mockEq.mockResolvedValueOnce({ error: new Error('Database error') });
+      // Create a mock that simulates a database error
+      const errorChainable = {
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        single: mockSingle,
+        select: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        upsert: vi.fn().mockReturnThis(),
+        then: (resolve: Function) => resolve({ error: new Error('Database error') })
+      };
+      
+      // Override the update mock to return an error
+      mockUpdate.mockReturnValueOnce(errorChainable);
 
       const result = await processPaymentIntentSucceeded(mockSupabaseAdmin, mockPaymentIntent);
 

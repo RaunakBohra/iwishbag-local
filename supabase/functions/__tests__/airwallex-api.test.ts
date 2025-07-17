@@ -10,11 +10,27 @@ import {
 globalThis.Deno = {
   env: {
     get: vi.fn((key: string) => {
-      if (key === 'FRONTEND_URL') return 'https://test.whyteclub.com';
-      return null;
+      const envVars: Record<string, string> = {
+        'FRONTEND_URL': 'https://test.whyteclub.com',
+        'AIRWALLEX_API_KEY': 'test_airwallex_key',
+        'AIRWALLEX_CLIENT_ID': 'test_client_id',
+        'AIRWALLEX_BASE_URL': 'https://api.airwallex.com',
+        'SUPABASE_URL': 'http://127.0.0.1:54321',
+        'SUPABASE_SERVICE_ROLE_KEY': 'test-service-role-key'
+      };
+      return envVars[key] || null;
     })
   }
 } as any;
+
+// Mock crypto for UUID generation
+Object.defineProperty(global, 'crypto', {
+  value: {
+    randomUUID: vi.fn(() => 'test-uuid-123'),
+  },
+  writable: true,
+  configurable: true
+});
 
 // Mock types
 interface MockAirwallexPaymentIntent {

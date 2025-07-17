@@ -199,6 +199,45 @@ const PaymentSuccess: React.FC = () => {
             });
           }
         }
+        // Check for Fonepay payment parameters
+        else if (gateway === 'fonepay') {
+          console.log('Processing Fonepay payment success page');
+          
+          const txnId = searchParams.get('txn');
+          const uid = searchParams.get('uid');
+          
+          if (txnId) {
+            const paymentInfo: PaymentSuccessData = {
+              transactionId: uid || txnId,
+              amount: 0, // Will be fetched from database
+              currency: 'NPR',
+              gateway: 'fonepay',
+              customerName: user?.user_metadata?.full_name || 'Customer',
+              customerEmail: user?.email,
+              productInfo: 'Fonepay Payment'
+            };
+
+            setPaymentData(paymentInfo);
+            
+            // The webhook should have already updated the order status
+            toast({
+              title: "Payment Successful!",
+              description: "Your Fonepay payment has been processed successfully.",
+            });
+            
+            // Invalidate queries to refresh data
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            queryClient.invalidateQueries({ queryKey: ['cart'] });
+          } else {
+            console.error('Missing Fonepay transaction ID');
+            toast({
+              title: "Payment Verification Failed",
+              description: "Could not verify Fonepay payment. Please contact support.",
+              variant: "destructive"
+            });
+          }
+        }
         // Check for PayU payment parameters
         else {
           // Extract PayU payment data from URL parameters

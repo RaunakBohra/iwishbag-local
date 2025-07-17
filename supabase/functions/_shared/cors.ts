@@ -46,7 +46,7 @@ export function createCorsHeaders(req: Request, additionalMethods: string[] = ['
   
   return {
     'Access-Control-Allow-Origin': getAllowedOrigin(req),
-    'Access-Control-Allow-Headers': 'authorization, content-type, x-client-info, apikey',
+    'Access-Control-Allow-Headers': 'authorization, content-type, x-client-info, apikey, x-guest-checkout',
     'Access-Control-Allow-Methods': methods,
     'Access-Control-Max-Age': '86400',
   };

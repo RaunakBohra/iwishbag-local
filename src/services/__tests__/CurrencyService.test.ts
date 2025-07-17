@@ -288,7 +288,7 @@ describe('CurrencyService', () => {
       expect(mockSupabase.from).toHaveBeenCalled();
 
       // Clear mock call count
-      jest.clearAllMocks();
+      vi.clearAllMocks();
 
       // Second call should use cache
       await currencyService.getAllCurrencies();

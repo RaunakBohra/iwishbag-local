@@ -72,7 +72,9 @@ serve(async (req) => {
     }
 
     // Lookup payment status from Khalti
-    const khaltiResponse = await fetch(`${khaltiConfig.base_url}epayment/lookup/`, {
+    // Ensure proper URL format - remove double slashes
+    const baseUrl = khaltiConfig.base_url.endsWith('/') ? khaltiConfig.base_url.slice(0, -1) : khaltiConfig.base_url;
+    const khaltiResponse = await fetch(`${baseUrl}/epayment/lookup/`, {
       method: 'POST',
       headers: {
         'Authorization': `Key ${khaltiConfig.secret_key}`,

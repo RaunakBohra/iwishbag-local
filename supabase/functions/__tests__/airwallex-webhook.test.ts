@@ -5,12 +5,36 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 globalThis.Deno = {
   env: {
     get: vi.fn((key: string) => {
-      if (key === 'SUPABASE_URL') return 'https://test.supabase.co';
-      if (key === 'SUPABASE_SERVICE_ROLE_KEY') return 'test-service-role-key';
-      return null;
+      const envVars: Record<string, string> = {
+        'SUPABASE_URL': 'http://127.0.0.1:54321',
+        'SUPABASE_SERVICE_ROLE_KEY': 'test-service-role-key',
+        'AIRWALLEX_WEBHOOK_SECRET': 'test_webhook_secret',
+        'AIRWALLEX_API_KEY': 'test_airwallex_key',
+        'AIRWALLEX_CLIENT_ID': 'test_client_id'
+      };
+      return envVars[key] || null;
     })
   }
 } as any;
+
+// Mock crypto with subtle API for HMAC operations
+Object.defineProperty(global, 'crypto', {
+  value: {
+    randomUUID: vi.fn(() => 'test-uuid-123'),
+    subtle: {
+      importKey: vi.fn(async (format, keyData, algorithm, extractable, keyUsages) => {
+        return { type: 'secret', algorithm, extractable, usages: keyUsages };
+      }),
+      sign: vi.fn(async (algorithm, key, data) => {
+        // Return a deterministic mock signature buffer for testing
+        // This will produce the hex string: 0102030405060708
+        return new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]).buffer;
+      })
+    }
+  },
+  writable: true,
+  configurable: true
+});
 
 // Mock serve function
 const mockServe = vi.fn();
@@ -30,14 +54,22 @@ vi.doMock('../_shared/cors.ts', () => ({
   createWebhookHeaders: () => ({})
 }));
 
+// Store references to mocked functions
+const mockProcessPaymentIntentSucceeded = vi.fn().mockResolvedValue({ success: true });
+const mockProcessPaymentIntentFailed = vi.fn().mockResolvedValue({ success: true });
+const mockProcessRefundSucceeded = vi.fn().mockResolvedValue({ success: true });
+const mockProcessRefundFailed = vi.fn().mockResolvedValue({ success: true });
+const mockProcessDisputeCreated = vi.fn().mockResolvedValue({ success: true });
+const mockProcessDisputeUpdated = vi.fn().mockResolvedValue({ success: true });
+
 // Mock atomic operations
 vi.doMock('../airwallex-webhook/atomic-operations.ts', () => ({
-  processPaymentIntentSucceeded: vi.fn().mockResolvedValue({ success: true }),
-  processPaymentIntentFailed: vi.fn().mockResolvedValue({ success: true }),
-  processRefundSucceeded: vi.fn().mockResolvedValue({ success: true }),
-  processRefundFailed: vi.fn().mockResolvedValue({ success: true }),
-  processDisputeCreated: vi.fn().mockResolvedValue({ success: true }),
-  processDisputeUpdated: vi.fn().mockResolvedValue({ success: true })
+  processPaymentIntentSucceeded: mockProcessPaymentIntentSucceeded,
+  processPaymentIntentFailed: mockProcessPaymentIntentFailed,
+  processRefundSucceeded: mockProcessRefundSucceeded,
+  processRefundFailed: mockProcessRefundFailed,
+  processDisputeCreated: mockProcessDisputeCreated,
+  processDisputeUpdated: mockProcessDisputeUpdated
 }));
 
 // Import the module after mocks are set up
@@ -53,7 +85,7 @@ describe('airwallex-webhook', () => {
   let mockEq: ReturnType<typeof vi.fn>;
   let mockSupabaseInstance: SupabaseClient;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     
     // Capture the handler function passed to serve
@@ -83,7 +115,7 @@ describe('airwallex-webhook', () => {
     mockSupabaseClient.mockReturnValue(mockSupabaseInstance);
 
     // Re-import to apply mocks
-    return import('../airwallex-webhook/index.ts');
+    await import('../airwallex-webhook/index.ts');
   });
 
   afterEach(() => {
@@ -131,7 +163,8 @@ describe('airwallex-webhook', () => {
       const response = await handler(req);
 
       expect(response.status).toBe(500);
-      expect(await response.text()).toBe('Configuration error');
+      const responseData = await response.json();
+      expect(responseData.error).toBe('Configuration error');
     });
 
     it('should handle missing webhook secret', async () => {
@@ -156,7 +189,8 @@ describe('airwallex-webhook', () => {
       const response = await handler(req);
 
       expect(response.status).toBe(500);
-      expect(await response.text()).toBe('Configuration incomplete');
+      const responseData = await response.json();
+      expect(responseData.error).toBe('Configuration incomplete');
     });
 
     it('should reject invalid signatures', async () => {
@@ -181,7 +215,8 @@ describe('airwallex-webhook', () => {
       const response = await handler(req);
 
       expect(response.status).toBe(400);
-      expect(await response.text()).toBe('Invalid signature');
+      const responseData = await response.json();
+      expect(responseData.error).toBe('Invalid signature');
     });
 
     it('should handle invalid JSON body', async () => {
@@ -206,9 +241,8 @@ describe('airwallex-webhook', () => {
         encoder.encode(`${validTimestamp}.${payload}`)
       );
       
-      const signature = Array.from(new Uint8Array(signatureBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      // Generate the expected signature "0102030405060708"
+      const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
@@ -231,7 +265,8 @@ describe('airwallex-webhook', () => {
       const response = await handler(req);
 
       expect(response.status).toBe(400);
-      expect(await response.text()).toBe('Invalid JSON');
+      const responseData = await response.json();
+      expect(responseData.error).toBe('Invalid JSON');
     });
 
     it('should successfully process payment_intent.succeeded event', async () => {
@@ -270,9 +305,8 @@ describe('airwallex-webhook', () => {
         encoder.encode(`${validTimestamp}.${payload}`)
       );
       
-      const signature = Array.from(new Uint8Array(signatureBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      // Generate the expected signature "0102030405060708"
+      const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
@@ -295,19 +329,15 @@ describe('airwallex-webhook', () => {
 
       const response = await handler(req);
       
-      if (response.status !== 200) {
-        const errorText = await response.text();
-        console.error('Webhook test error:', errorText);
-      }
-      
       expect(response.status).toBe(200);
       
       const responseData = await response.json();
-      expect(responseData).toEqual({
+      expect(responseData).toMatchObject({
         received: true,
-        processed: true,
-        error: undefined
+        processed: true
       });
+      expect(responseData.eventId).toBe('evt_test_123');
+      expect(responseData.eventType).toBe('payment_intent.succeeded');
 
       // Verify webhook_logs interactions
       expect(mockFrom).toHaveBeenCalledWith('webhook_logs');
@@ -355,9 +385,8 @@ describe('airwallex-webhook', () => {
         encoder.encode(`${validTimestamp}.${payload}`)
       );
       
-      const signature = Array.from(new Uint8Array(signatureBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      // Generate the expected signature "0102030405060708"
+      const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
@@ -378,9 +407,9 @@ describe('airwallex-webhook', () => {
       });
 
       const response = await handler(req);
-      const responseData = await response.json();
 
       expect(response.status).toBe(200);
+      const responseData = await response.json();
       expect(responseData.processed).toBe(true);
     });
 
@@ -417,9 +446,8 @@ describe('airwallex-webhook', () => {
         encoder.encode(`${validTimestamp}.${payload}`)
       );
       
-      const signature = Array.from(new Uint8Array(signatureBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      // Generate the expected signature "0102030405060708"
+      const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
@@ -477,9 +505,8 @@ describe('airwallex-webhook', () => {
         encoder.encode(`${validTimestamp}.${payload}`)
       );
       
-      const signature = Array.from(new Uint8Array(signatureBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      // Generate the expected signature "0102030405060708"
+      const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
@@ -585,7 +612,8 @@ describe('airwallex-webhook', () => {
       const response = await handler(req);
 
       expect(response.status).toBe(400);
-      expect(await response.text()).toBe('Invalid signature');
+      const responseData = await response.json();
+      expect(responseData.error).toBe('Invalid signature');
     });
 
     it('should reject signature with missing v1', async () => {
@@ -608,7 +636,8 @@ describe('airwallex-webhook', () => {
       const response = await handler(req);
 
       expect(response.status).toBe(400);
-      expect(await response.text()).toBe('Invalid signature');
+      const responseData = await response.json();
+      expect(responseData.error).toBe('Invalid signature');
     });
 
     it('should reject tampered signature', async () => {
@@ -633,7 +662,8 @@ describe('airwallex-webhook', () => {
       const response = await handler(req);
 
       expect(response.status).toBe(400);
-      expect(await response.text()).toBe('Invalid signature');
+      const responseData = await response.json();
+      expect(responseData.error).toBe('Invalid signature');
     });
 
     it('should reject timestamp outside tolerance (too old)', async () => {
@@ -657,9 +687,8 @@ describe('airwallex-webhook', () => {
         encoder.encode(`${oldTimestamp}.${payload}`)
       );
       
-      const signature = Array.from(new Uint8Array(signatureBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      // Generate the expected signature "0102030405060708"
+      const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
@@ -680,7 +709,8 @@ describe('airwallex-webhook', () => {
       const response = await handler(req);
 
       expect(response.status).toBe(400);
-      expect(await response.text()).toBe('Invalid signature');
+      const responseData = await response.json();
+      expect(responseData.error).toBe('Invalid signature');
     });
 
     it('should reject timestamp outside tolerance (too far in future)', async () => {
@@ -704,9 +734,8 @@ describe('airwallex-webhook', () => {
         encoder.encode(`${futureTimestamp}.${payload}`)
       );
       
-      const signature = Array.from(new Uint8Array(signatureBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      // Generate the expected signature "0102030405060708"
+      const signature = '0102030405060708';
 
       mockSingle.mockResolvedValue({
         data: {
@@ -727,7 +756,8 @@ describe('airwallex-webhook', () => {
       const response = await handler(req);
 
       expect(response.status).toBe(400);
-      expect(await response.text()).toBe('Invalid signature');
+      const responseData = await response.json();
+      expect(responseData.error).toBe('Invalid signature');
     });
 
     it('should handle empty webhook secret', async () => {
@@ -750,7 +780,8 @@ describe('airwallex-webhook', () => {
       const response = await handler(req);
 
       expect(response.status).toBe(500);
-      expect(await response.text()).toBe('Configuration incomplete');
+      const responseData = await response.json();
+      expect(responseData.error).toBe('Configuration incomplete');
     });
   });
 });

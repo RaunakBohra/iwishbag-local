@@ -196,15 +196,8 @@ export function usePaymentMonitoring(options: UsePaymentMonitoringOptions = {}) 
    * Clean up on unmount
    */
   const cleanup = useCallback(() => {
-    // Complete any active payments as failed
-    activePayments.current.forEach(paymentId => {
-      completePaymentMonitoring(
-        paymentId,
-        false,
-        PaymentErrorCode.PAYMENT_PROCESSING_FAILED,
-        'Component unmounted during payment'
-      );
-    });
+    // Clear active payments without marking them as failed
+    // This prevents false errors when the component unmounts naturally
     activePayments.current.clear();
   }, []);
 

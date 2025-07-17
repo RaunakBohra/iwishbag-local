@@ -1097,6 +1097,9 @@ export default function Checkout() {
         if (paymentMethod === 'khalti') {
           // For Khalti, redirect to payment URL for better UX
           window.location.href = paymentResponse.url;
+        } else if (paymentMethod === 'fonepay') {
+          // For Fonepay, redirect to payment URL immediately like Khalti
+          window.location.href = paymentResponse.url;
         }
       } else if (paymentResponse.url) {
         // For redirect-based payments (PayU Hosted Checkout)
