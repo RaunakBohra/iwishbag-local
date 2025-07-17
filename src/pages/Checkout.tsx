@@ -1088,7 +1088,7 @@ export default function Checkout() {
         
         // Show QR modal
         setQrPaymentData({
-          qrCodeUrl: paymentResponse.qrCode,
+          qrCodeUrl: paymentResponse.qrCode || paymentResponse.qr_code || paymentResponse.qrCodeUrl || paymentResponse.url || '',
           transactionId: paymentResponse.transactionId || `${paymentMethod.toUpperCase()}_${Date.now()}`,
           gateway: paymentMethod
         });

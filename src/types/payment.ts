@@ -175,7 +175,9 @@ export interface PaymentRequest {
 export interface PaymentResponse {
   success: boolean;
   url?: string;
-  qr_code?: string;
+  qr_code?: string; // Legacy snake_case format
+  qrCode?: string; // New camelCase format (base64 data URL for generated QR codes)
+  qrCodeUrl?: string; // Original payment URL for QR code fallback
   transaction_id?: string;
   error?: string;
   fallback_methods?: PaymentGateway[];
