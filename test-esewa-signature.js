@@ -1,44 +1,63 @@
-// Test eSewa signature generation locally
+// Test eSewa v2 signature generation
 import crypto from 'crypto';
 
-// Test data
+// Test data from demo
 const testData = {
-  total_amount: "100.00",
-  transaction_uuid: "ESW_1234567890_test",
-  product_code: "EPAYTEST"
+    total_amount: "100",
+    transaction_uuid: "250117-123456",
+    product_code: "EPAYTEST",
+    secret_key: "8gBm/:&EnhH.1/q"
 };
 
-const secretKey = "8gBm/:&EnhH.1/q(";
+console.log('🧪 Testing eSewa v2 signature generation...');
 
-// Generate signature
-const signatureString = `${testData.total_amount},${testData.transaction_uuid},${testData.product_code}`;
-console.log('Signature string:', signatureString);
+// Create signature string (same format as demo)
+const signatureString = `total_amount=${testData.total_amount},transaction_uuid=${testData.transaction_uuid},product_code=${testData.product_code}`;
+console.log('📝 Signature string:', signatureString);
 
-// Method 1: Using Node.js crypto
-const hmac = crypto.createHmac('sha256', secretKey);
-hmac.update(signatureString);
-const signature1 = hmac.digest('base64');
-console.log('Method 1 (Node crypto):', signature1);
+// Generate HMAC-SHA256 signature
+const signature = crypto
+    .createHmac('sha256', testData.secret_key)
+    .update(signatureString)
+    .digest('base64');
 
-// Method 2: Manual HMAC construction
-const key = Buffer.from(secretKey, 'utf8');
-const message = Buffer.from(signatureString, 'utf8');
-const hmac2 = crypto.createHmac('sha256', key);
-hmac2.update(message);
-const signature2 = hmac2.digest('base64');
-console.log('Method 2 (Buffer):', signature2);
+console.log('🔐 Generated signature:', signature);
 
-// Check if they match
-console.log('Signatures match:', signature1 === signature2);
+// Test with demo values
+const demoSignatureString = `total_amount=100,transaction_uuid=11-200-1111,product_code=EPAYTEST`;
+const demoSignature = crypto
+    .createHmac('sha256', testData.secret_key)
+    .update(demoSignatureString)
+    .digest('base64');
 
-// Test with different secret key format (without parenthesis)
-const secretKey2 = "8gBm/:&EnhH.1/q";
-const hmac3 = crypto.createHmac('sha256', secretKey2);
-hmac3.update(signatureString);
-const signature3 = hmac3.digest('base64');
-console.log('\nWith secret key without parenthesis:', signature3);
+// Test with trailing comma (as seen in demo HTML)
+const demoSignatureStringWithComma = `total_amount=100,transaction_uuid=11-200-1111,product_code=EPAYTEST,`;
+const demoSignatureWithComma = crypto
+    .createHmac('sha256', testData.secret_key)
+    .update(demoSignatureStringWithComma)
+    .digest('base64');
 
-// Expected signature format based on eSewa docs
-console.log('\nExpected format pattern: Base64 string ending with =');
-console.log('Signature 1 ends with =?', signature1.endsWith('='));
-console.log('Signature 1 length:', signature1.length);
+console.log('');
+console.log('🎯 Demo test:');
+console.log('📝 Demo signature string:', demoSignatureString);
+console.log('🔐 Demo signature:', demoSignature);
+console.log('');
+console.log('🎯 Demo test (with trailing comma):');
+console.log('📝 Demo signature string:', demoSignatureStringWithComma);
+console.log('🔐 Demo signature:', demoSignatureWithComma);
+console.log('');
+
+// Expected signature from demo HTML file
+const expectedSignature = "4Ov7pCI1zIOdwtV2BRMUNjz1upIlT/COTxfLhWvVurE=";
+console.log('✅ Expected signature:', expectedSignature);
+console.log('🎯 Match (no comma):', demoSignature === expectedSignature ? 'YES' : 'NO');
+console.log('🎯 Match (with comma):', demoSignatureWithComma === expectedSignature ? 'YES' : 'NO');
+
+if (demoSignature === expectedSignature) {
+    console.log('✅ Signature generation is working correctly!');
+} else if (demoSignatureWithComma === expectedSignature) {
+    console.log('✅ Signature generation is working correctly (with trailing comma)!');
+} else {
+    console.log('❌ Signature generation mismatch');
+    console.log('💭 Check if secret key or format is incorrect');
+}
