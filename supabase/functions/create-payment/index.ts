@@ -2,8 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { createCorsHeaders } from '../_shared/cors.ts'
 import Stripe from 'https://esm.sh/stripe@14.11.0?target=deno'
-// QR Code generation for Fonepay
-import { encode as qrEncode } from "https://deno.land/x/qrcode@v2.0.0/mod.ts"
 // REMOVED: PayU SDK import as it might be causing additional API calls
 // import PayU from 'https://esm.sh/payu@latest?target=deno';
 import { createStripePaymentEnhancedSecure } from './stripe-enhanced-secure.ts'
@@ -153,28 +151,6 @@ async function generatePayUHash({
 // const hash = PayU.utils.hashCal('sha512', hashString);
 // console.log(hash);
 
-// Helper function to generate QR code as base64 data URL
-async function generateQRCodeDataURL(text: string): Promise<string> {
-  try {
-    const qrCodeSvg = qrEncode(text, { 
-      type: "svg",
-      width: 300,
-      height: 300,
-      color: {
-        dark: "#000000",
-        light: "#FFFFFF"
-      }
-    });
-    
-    // Convert SVG to base64 data URL
-    const svgBase64 = btoa(qrCodeSvg);
-    return `data:image/svg+xml;base64,${svgBase64}`;
-  } catch (error) {
-    console.error('Error generating QR code:', error);
-    // Fallback: return the URL itself if QR generation fails
-    return text;
-  }
-}
 
 // Helper function to get currency multiplier for converting to smallest unit
 function getCurrencyMultiplier(currency: string): number {
@@ -604,18 +580,8 @@ serve(async (req) => {
             }
           });
 
-          paymentMonitoring.completePaymentMonitoring(
-            paymentId,
-            true,
-            undefined,
-            undefined,
-            {
-              transactionId: txnid,
-              gateway: 'payu',
-              amountInINR,
-              exchangeRate: totalCurrency === 'INR' ? 1 : exchangeRate
-            }
-          );
+          // Don't complete payment monitoring here - let webhook handle completion
+          // This way monitoring shows "pending" until webhook confirms payment
           
           responseData = { 
             success: true, 
@@ -893,13 +859,8 @@ serve(async (req) => {
             }
           });
 
-          // Complete payment monitoring
-          paymentMonitoring.completePaymentMonitoring(
-            paymentId,
-            true,
-            EdgePaymentErrorCode.PAYMENT_PROCESSING_SUCCESS,
-            'Khalti payment initiated successfully'
-          );
+          // Don't complete payment monitoring here - let webhook handle completion
+          // This way monitoring shows "pending" until webhook confirms payment
 
           responseData = {
             success: true,
@@ -1371,10 +1332,6 @@ serve(async (req) => {
 
           console.log('🚀 Fonepay payment URL generated');
           
-          // Generate QR code for the payment URL
-          console.log('📱 Generating QR code for Fonepay payment...');
-          const qrCodeDataURL = await generateQRCodeDataURL(paymentUrl);
-          
           paymentMonitoring.completePaymentMonitoring(
             paymentId,
             true,
@@ -1394,8 +1351,6 @@ serve(async (req) => {
             method: 'GET',
             transactionId: prn,
             gateway: 'fonepay',
-            qrCode: qrCodeDataURL, // Generated QR code as base64 data URL
-            qrCodeUrl: paymentUrl, // Original payment URL for fallback
             amount: amountInNPR,
             currency: 'NPR'
           };

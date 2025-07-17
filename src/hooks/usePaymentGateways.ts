@@ -65,7 +65,7 @@ const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
     description: 'Pay using Fonepay mobile app with QR code.',
     icon: 'smartphone',
     is_mobile_only: false,
-    requires_qr: true,
+    requires_qr: false, // Fonepay generates QR on their payment page
     processing_time: '5-30 minutes',
     fees: '1.5%'
   },
