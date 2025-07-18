@@ -358,7 +358,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
             </SelectTrigger>
             <SelectContent>
               {availableGateways.map((gateway) => {
-                const option = paymentGatewayOptions.find(opt => opt.value === gateway);
+                const option = paymentGatewayOptions.find((opt) => opt.value === gateway);
                 return (
                   <SelectItem key={gateway} value={gateway}>
                     {option?.label || gateway}

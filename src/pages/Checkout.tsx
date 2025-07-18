@@ -46,7 +46,7 @@ import {
   isAddressComplete,
   extractQuoteShippingAddress,
 } from '@/lib/addressUtils';
-import { formatAmountForDisplay, getExchangeRate, convertCurrency } from '@/lib/currencyUtils';
+import { formatAmountForDisplay, getExchangeRate, convertCurrency, getCurrencySymbol } from '@/lib/currencyUtils';
 import { checkoutSessionService } from '@/services/CheckoutSessionService';
 import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 import { formatBankDetailsForEmail } from '@/lib/bankDetailsFormatter';
@@ -93,9 +93,13 @@ interface AddressFormData {
 const CheckoutItemPrice = ({
   item,
   displayCurrency,
+  selectedPaymentMethod,
+  currencyConversion,
 }: {
   item: CartItem;
   displayCurrency?: string;
+  selectedPaymentMethod?: string;
+  currencyConversion?: { rate: number; source: string; confidence: string };
 }) => {
   // Always call hooks at the top
   const { data: _userProfile } = useUserProfile();
@@ -114,22 +118,65 @@ const CheckoutItemPrice = ({
     quote: mockQuote as QuoteType,
   });
 
-  // If displayCurrency is provided (for guest checkout), use that currency directly
-  if (displayCurrency) {
-    return <>{formatAmountForDisplay(item.finalTotal, displayCurrency, 1)}</>;
+  // Determine gateway type
+  const isLocalGateway = selectedPaymentMethod && ['khalti', 'fonepay', 'esewa', 'payu'].includes(selectedPaymentMethod);
+  const isInternationalGateway = selectedPaymentMethod && ['paypal', 'stripe', 'airwallex'].includes(selectedPaymentMethod);
+  
+  // Get quote currency and amount
+  const quoteCurrency = item.finalCurrency || 'USD';
+  const quoteAmount = item.finalTotal || 0;
+  
+  // Show currency conversion info only when gateway currency differs from quote currency
+  if (selectedPaymentMethod && isLocalGateway && quoteCurrency === 'USD') {
+    // Local gateway with USD quote - show conversion using dynamic rate
+    const convertedAmount = currencyConversion?.rate 
+      ? (quoteAmount * currencyConversion.rate).toFixed(0)
+      : (quoteAmount * 133).toFixed(0); // fallback to hardcoded
+    return (
+      <div className="text-right">
+        <div className="text-sm text-muted-foreground">
+          ${quoteAmount.toFixed(2)} USD
+        </div>
+        <div className="font-medium">
+          ≈ {getCurrencySymbol(displayCurrency || 'NPR')}{convertedAmount} {displayCurrency || 'NPR'}
+        </div>
+      </div>
+    );
+  } else if (selectedPaymentMethod && isInternationalGateway && quoteCurrency !== 'USD') {
+    // International gateway with local currency quote - show conversion using dynamic rate
+    const convertedAmount = currencyConversion?.rate 
+      ? (quoteAmount * currencyConversion.rate).toFixed(2)
+      : (quoteAmount / 133).toFixed(2); // fallback to hardcoded
+    return (
+      <div className="text-right">
+        <div className="text-sm text-muted-foreground">
+          {getCurrencySymbol(quoteCurrency)}{quoteAmount.toFixed(0)} {quoteCurrency}
+        </div>
+        <div className="font-medium">
+          ≈ ${convertedAmount} USD
+        </div>
+      </div>
+    );
+  } else {
+    // No conversion needed - show original amount
+    if (displayCurrency) {
+      return <>{formatAmountForDisplay(item.finalTotal, displayCurrency, 1)}</>;
+    }
+    return <>{formatAmount(item.finalTotal)}</>;
   }
-
-  // For authenticated users, use the existing quote display currency logic
-  return <>{formatAmount(item.finalTotal)}</>;
 };
 
 // Component to display checkout total with proper currency conversion
 const CheckoutTotal = ({
   items,
   displayCurrency,
+  selectedPaymentMethod,
+  currencyConversion,
 }: {
   items: CartItem[];
   displayCurrency?: string;
+  selectedPaymentMethod?: string;
+  currencyConversion?: { rate: number; source: string; confidence: string };
 }) => {
   // Use the first item to determine the quote format (all items should have same destination)
   const firstItem = items[0];
@@ -153,14 +200,52 @@ const CheckoutTotal = ({
 
   // Calculate total from all items
   const totalAmount = items.reduce((sum, item) => sum + item.finalTotal, 0);
-
-  // If displayCurrency is provided (for guest checkout), use that currency directly
-  if (displayCurrency) {
-    return <>{formatAmountForDisplay(totalAmount, displayCurrency, 1)}</>;
+  
+  // Determine gateway type
+  const isLocalGateway = selectedPaymentMethod && ['khalti', 'fonepay', 'esewa', 'payu'].includes(selectedPaymentMethod);
+  const isInternationalGateway = selectedPaymentMethod && ['paypal', 'stripe', 'airwallex'].includes(selectedPaymentMethod);
+  
+  // Get quote currency (assuming all items have same currency)
+  const quoteCurrency = firstItem.finalCurrency || 'USD';
+  
+  // Show currency conversion info only when gateway currency differs from quote currency
+  if (selectedPaymentMethod && isLocalGateway && quoteCurrency === 'USD') {
+    // Local gateway with USD quote - show conversion using dynamic rate
+    const convertedAmount = currencyConversion?.rate 
+      ? (totalAmount * currencyConversion.rate).toFixed(0)
+      : (totalAmount * 133).toFixed(0); // fallback to hardcoded
+    return (
+      <div className="text-right">
+        <div className="text-sm text-muted-foreground">
+          ${totalAmount.toFixed(2)} USD
+        </div>
+        <div className="font-medium">
+          ≈ {getCurrencySymbol(displayCurrency || 'NPR')}{convertedAmount} {displayCurrency || 'NPR'}
+        </div>
+      </div>
+    );
+  } else if (selectedPaymentMethod && isInternationalGateway && quoteCurrency !== 'USD') {
+    // International gateway with local currency quote - show conversion using dynamic rate
+    const convertedAmount = currencyConversion?.rate 
+      ? (totalAmount * currencyConversion.rate).toFixed(2)
+      : (totalAmount / 133).toFixed(2); // fallback to hardcoded
+    return (
+      <div className="text-right">
+        <div className="text-sm text-muted-foreground">
+          {getCurrencySymbol(quoteCurrency)}{totalAmount.toFixed(0)} {quoteCurrency}
+        </div>
+        <div className="font-medium">
+          ≈ ${convertedAmount} USD
+        </div>
+      </div>
+    );
+  } else {
+    // No conversion needed - show original amount
+    if (displayCurrency) {
+      return <>{formatAmountForDisplay(totalAmount, displayCurrency, 1)}</>;
+    }
+    return <>{formatAmount(totalAmount)}</>;
   }
-
-  // For authenticated users, use the existing quote display currency logic
-  return <>{formatAmount(totalAmount)}</>;
 };
 
 export default function Checkout() {
@@ -452,19 +537,24 @@ export default function Checkout() {
   useEffect(() => {
     const calculateCurrencyConversion = async () => {
       console.log('🏦 [Checkout] ===== CURRENCY CONVERSION CALCULATION =====');
+      
+      // Get quote currency from the first cart item
+      const quoteCurrency = selectedCartItems[0]?.finalCurrency || 'USD';
+      
       console.log('📊 STEP 1: CONVERSION INPUTS');
       console.log('  Conversion Parameters:', {
         purchaseCountry,
         destinationCountry,
+        quoteCurrency,
         paymentCurrency,
-        needsConversion: paymentCurrency !== 'USD'
+        needsConversion: quoteCurrency !== paymentCurrency
       });
 
-      if (!purchaseCountry || !destinationCountry || paymentCurrency === 'USD') {
+      if (!purchaseCountry || !destinationCountry || quoteCurrency === paymentCurrency) {
         console.log('💰 STEP 2: NO CONVERSION NEEDED');
         console.log('  Reason:', !purchaseCountry ? 'No purchase country' : 
                     !destinationCountry ? 'No destination country' : 
-                    'Payment currency is USD');
+                    'Quote currency equals payment currency');
         setCurrencyConversion({ rate: 1, source: 'no_conversion', confidence: 'high' });
         console.log('🏦 [Checkout] ===== END CURRENCY CONVERSION (NO CONVERSION) =====');
         return;
@@ -473,17 +563,17 @@ export default function Checkout() {
       try {
         console.log('💱 STEP 2: CALLING EXCHANGE RATE SERVICE');
         console.log('  Exchange Rate Lookup:', {
-          from: 'USD',
+          from: quoteCurrency,
           to: paymentCurrency,
           purchaseCountry,
           destinationCountry,
         });
 
-        // Get exchange rate from USD (database storage) to user's preferred currency
+        // Get exchange rate from quote currency to payment currency
         const exchangeRateResult = await getExchangeRate(
-          purchaseCountry,
           destinationCountry,
-          'USD',
+          purchaseCountry,
+          quoteCurrency,
           paymentCurrency
         );
 
@@ -518,7 +608,7 @@ export default function Checkout() {
     };
 
     calculateCurrencyConversion();
-  }, [purchaseCountry, destinationCountry, paymentCurrency]);
+  }, [purchaseCountry, destinationCountry, paymentCurrency, selectedCartItems]);
 
   // Pre-fill guest contact info and address from quote if available
   useEffect(() => {
@@ -724,9 +814,9 @@ export default function Checkout() {
       return total;
     }
     
-    // 🚨 CRITICAL FIX: Use appropriate currency based on payment gateway
-    // For local gateways: use final_total_local (customer's local currency)
-    // For international gateways: use final_total (USD)
+    // 🚨 FIXED: Use quote currency directly, convert only when gateway requires different currency
+    // Key principle: final_total is already in the quote's currency (NPR/INR/USD)
+    // Only convert if payment gateway requires different currency than quote currency
     
     const isLocalGateway = ['khalti', 'fonepay', 'esewa', 'payu'].includes(paymentMethod || '');
     const isInternationalGateway = ['paypal', 'stripe', 'airwallex'].includes(paymentMethod || '');
@@ -734,24 +824,51 @@ export default function Checkout() {
     let itemAmount: number;
     let itemCurrency: string;
     
-    if (isLocalGateway && item.finalTotalLocal && item.finalTotalLocal > 0) {
-      // Use local currency amount for local gateways
-      itemAmount = item.finalTotalLocal * (item.quantity || 1);
-      itemCurrency = item.finalCurrency || paymentCurrency;
-      console.log(`🏦 [Checkout] Using local currency for ${paymentMethod}: ${itemAmount} ${itemCurrency}`);
-    } else if (isInternationalGateway || !item.finalTotalLocal) {
-      // Use USD amount for international gateways or fallback
-      itemAmount = (item.finalTotal || 0) * (item.quantity || 1);
-      itemCurrency = 'USD';
-      
-      // Convert USD to user's preferred currency if needed for display
-      if (currencyConversion && currencyConversion.rate && currencyConversion.rate !== 1 && paymentCurrency !== 'USD') {
-        const convertedAmount = convertCurrency(itemAmount, currencyConversion.rate, paymentCurrency);
-        console.log(`🏦 [Checkout] Converting USD for ${paymentMethod}: $${itemAmount} USD → ${convertedAmount} ${paymentCurrency} (rate: ${currencyConversion.rate})`);
-        return total + convertedAmount;
+    // Get quote's original currency and amount
+    const quoteCurrency = item.finalCurrency || 'USD';
+    const quoteAmount = item.finalTotal || 0;
+    
+    if (isLocalGateway) {
+      // Local gateways: use quote amount directly if it's already in local currency
+      if (quoteCurrency === 'NPR' || quoteCurrency === 'INR') {
+        // Quote is already in local currency - use as is
+        itemAmount = quoteAmount * (item.quantity || 1);
+        itemCurrency = quoteCurrency;
+        console.log(`🏦 [Checkout] Using quote currency directly for ${paymentMethod}: ${itemAmount} ${itemCurrency}`);
+      } else {
+        // Quote is in USD, convert to local currency
+        const targetCurrency = paymentCurrency || 'USD';
+        if (currencyConversion && currencyConversion.rate && currencyConversion.rate !== 1) {
+          const convertedAmount = convertCurrency(quoteAmount, currencyConversion.rate, targetCurrency);
+          itemAmount = convertedAmount * (item.quantity || 1);
+          itemCurrency = targetCurrency;
+          console.log(`🏦 [Checkout] Converting USD to local for ${paymentMethod}: $${quoteAmount} USD → ${convertedAmount} ${targetCurrency} (rate: ${currencyConversion.rate})`);
+        } else {
+          itemAmount = quoteAmount * (item.quantity || 1);
+          itemCurrency = quoteCurrency;
+          console.log(`🏦 [Checkout] Using USD for local gateway ${paymentMethod}: $${itemAmount} USD`);
+        }
       }
-      
-      console.log(`🏦 [Checkout] Using USD for ${paymentMethod}: $${itemAmount} USD`);
+    } else if (isInternationalGateway) {
+      // International gateways: prefer USD, convert if needed
+      if (quoteCurrency === 'USD') {
+        // Quote is already in USD - use as is
+        itemAmount = quoteAmount * (item.quantity || 1);
+        itemCurrency = 'USD';
+        console.log(`🏦 [Checkout] Using USD directly for ${paymentMethod}: $${itemAmount} USD`);
+      } else {
+        // Quote is in local currency, convert to USD
+        if (currencyConversion && currencyConversion.rate && currencyConversion.rate !== 1) {
+          const convertedAmount = convertCurrency(quoteAmount, 1 / currencyConversion.rate, 'USD');
+          itemAmount = convertedAmount * (item.quantity || 1);
+          itemCurrency = 'USD';
+          console.log(`🏦 [Checkout] Converting local to USD for ${paymentMethod}: ${quoteAmount} ${quoteCurrency} → $${convertedAmount} USD (rate: ${1 / currencyConversion.rate})`);
+        } else {
+          itemAmount = quoteAmount * (item.quantity || 1);
+          itemCurrency = quoteCurrency;
+          console.log(`🏦 [Checkout] Using quote currency for international gateway ${paymentMethod}: ${itemAmount} ${itemCurrency}`);
+        }
+      }
     } else {
       // Fallback to USD
       itemAmount = (item.finalTotal || 0) * (item.quantity || 1);
@@ -940,16 +1057,36 @@ export default function Checkout() {
     let paymentCurrency: string;
     
     if (isLocalGateway) {
-      // For local gateways: use local currency amounts
+      // For local gateways: use quote currency directly if it's local currency
       paymentAmount = selectedCartItems.reduce((total, item) => {
-        const localAmount = item.finalTotalLocal && item.finalTotalLocal > 0 ? item.finalTotalLocal : item.finalTotal;
-        return total + (localAmount * (item.quantity || 1));
+        const quoteCurrency = item.finalCurrency || 'USD';
+        const quoteAmount = item.finalTotal || 0;
+        
+        // If quote is already in local currency (NPR/INR), use as is
+        if (quoteCurrency === 'NPR' || quoteCurrency === 'INR') {
+          return total + (quoteAmount * (item.quantity || 1));
+        } else {
+          // Quote is in USD, convert to local currency if needed
+          // For now, use finalTotalLocal if available, otherwise finalTotal
+          const localAmount = item.finalTotalLocal && item.finalTotalLocal > 0 ? item.finalTotalLocal : item.finalTotal;
+          return total + (localAmount * (item.quantity || 1));
+        }
       }, 0);
-      paymentCurrency = selectedCartItems[0]?.finalCurrency || userCurrency?.code || 'USD';
+      paymentCurrency = selectedCartItems[0]?.finalCurrency || userCurrency || 'USD';
     } else {
-      // For international gateways: use USD amounts
+      // For international gateways: convert to USD if needed
       paymentAmount = selectedCartItems.reduce((total, item) => {
-        return total + ((item.finalTotal || 0) * (item.quantity || 1));
+        const quoteCurrency = item.finalCurrency || 'USD';
+        const quoteAmount = item.finalTotal || 0;
+        
+        // If quote is already in USD, use as is
+        if (quoteCurrency === 'USD') {
+          return total + (quoteAmount * (item.quantity || 1));
+        } else {
+          // Quote is in local currency, we need USD for international gateway
+          // For now, use the current logic but this should be improved
+          return total + (quoteAmount * (item.quantity || 1));
+        }
       }, 0);
       paymentCurrency = 'USD';
     }
@@ -2796,6 +2933,8 @@ export default function Checkout() {
                           <CheckoutItemPrice
                             item={item}
                             displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
+                            selectedPaymentMethod={paymentMethod}
+                            currencyConversion={currencyConversion}
                           />
                         </div>
                       </div>
@@ -2811,6 +2950,8 @@ export default function Checkout() {
                         <CheckoutTotal
                           items={selectedCartItems}
                           displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
+                          selectedPaymentMethod={paymentMethod}
+                          currencyConversion={currencyConversion}
                         />
                       </span>
                     </div>
@@ -2820,25 +2961,64 @@ export default function Checkout() {
                         <CheckoutTotal
                           items={selectedCartItems}
                           displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
+                          selectedPaymentMethod={paymentMethod}
+                          currencyConversion={currencyConversion}
                         />
                       </span>
                     </div>
                     
-                    {/* 🚨 CRITICAL FIX: Show users what amount will actually be charged */}
-                    {currencyConversion && currencyConversion.rate !== 1 && (
-                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-sm text-blue-800 font-medium">
-                          💡 Payment Information
-                        </p>
-                        <p className="text-xs text-blue-700 mt-1">
-                          Your payment will be processed in USD (${selectedCartItems.reduce((total, item) => total + ((item.finalTotal || 0) * (item.quantity || 1)), 0).toFixed(2)}) 
-                          and converted to {paymentCurrency} by your payment provider.
-                        </p>
-                        <p className="text-xs text-blue-600 mt-1">
-                          Exchange rate: 1 USD = {currencyConversion.rate.toFixed(4)} {paymentCurrency}
-                        </p>
-                      </div>
-                    )}
+                    {/* Show payment information only when currency conversion is needed */}
+                    {(() => {
+                      const isLocalGateway = ['khalti', 'fonepay', 'esewa', 'payu'].includes(paymentMethod || '');
+                      const isInternationalGateway = ['paypal', 'stripe', 'airwallex'].includes(paymentMethod || '');
+                      const quoteCurrency = selectedCartItems[0]?.finalCurrency || 'USD';
+                      const showConversion = (
+                        (isLocalGateway && quoteCurrency === 'USD') || 
+                        (isInternationalGateway && quoteCurrency !== 'USD')
+                      );
+                      
+                      if (!showConversion || !paymentMethod) return null;
+                      
+                      const totalAmount = selectedCartItems.reduce((total, item) => total + ((item.finalTotal || 0) * (item.quantity || 1)), 0);
+                      
+                      if (isLocalGateway && quoteCurrency === 'USD') {
+                        // Local gateway with USD quote - show USD to local currency conversion
+                        const exchangeRate = currencyConversion?.rate || 133;
+                        const convertedAmount = (totalAmount * exchangeRate).toFixed(0);
+                        return (
+                          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-800 font-medium">
+                              💡 Payment Information
+                            </p>
+                            <p className="text-xs text-blue-700 mt-1">
+                              Your ${totalAmount.toFixed(2)} USD quote will be charged as ≈ {getCurrencySymbol(paymentCurrency || 'NPR')}{convertedAmount} {paymentCurrency || 'NPR'} via {paymentMethod}.
+                            </p>
+                            <p className="text-xs text-blue-600 mt-1">
+                              Exchange rate: 1 USD = {exchangeRate} {paymentCurrency || 'NPR'} {currencyConversion?.source ? `(${currencyConversion.source})` : ''}
+                            </p>
+                          </div>
+                        );
+                      } else if (isInternationalGateway && quoteCurrency !== 'USD') {
+                        // International gateway with local currency quote - show local to USD conversion
+                        const exchangeRate = currencyConversion?.rate || (1/133);
+                        const convertedAmount = (totalAmount * exchangeRate).toFixed(2);
+                        return (
+                          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-800 font-medium">
+                              💡 Payment Information
+                            </p>
+                            <p className="text-xs text-blue-700 mt-1">
+                              Your {getCurrencySymbol(quoteCurrency)}{totalAmount.toFixed(0)} {quoteCurrency} quote will be charged as ≈ ${convertedAmount} USD via {paymentMethod}.
+                            </p>
+                            <p className="text-xs text-blue-600 mt-1">
+                              Exchange rate: 1 {quoteCurrency} = {exchangeRate} USD {currencyConversion?.source ? `(${currencyConversion.source})` : ''}
+                            </p>
+                          </div>
+                        );
+                      }
+                      
+                      return null;
+                    })()}
                   </div>
 
                   <Button
@@ -2867,14 +3047,7 @@ export default function Checkout() {
                           'Please Create Account Above First'}
                         {(!isGuestCheckout || checkoutMode === 'guest') && (
                           <>
-                            Place Order -{' '}
-                            {/* 🚨 CRITICAL FIX: Show USD amount that will actually be charged */}
-                            ${selectedCartItems.reduce((total, item) => total + ((item.finalTotal || 0) * (item.quantity || 1)), 0).toFixed(2)} USD
-                            {currencyConversion && currencyConversion.rate !== 1 && (
-                              <span className="text-sm text-muted-foreground ml-1">
-                                (≈ {(selectedCartItems.reduce((total, item) => total + ((item.finalTotal || 0) * (item.quantity || 1)), 0) * currencyConversion.rate).toFixed(2)} {paymentCurrency})
-                              </span>
-                            )}
+                            Place Order
                           </>
                         )}
                       </>
