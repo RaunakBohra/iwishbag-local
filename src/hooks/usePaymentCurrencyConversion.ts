@@ -88,10 +88,9 @@ export function usePaymentCurrencyConversion({
   };
 
   useEffect(() => {
-    if (!enabled || !gatewayConfig || !gateway || !amount || !currency) {
+    if (!enabled || !gateway || !amount || !currency) {
       console.log('🔍 [usePaymentCurrencyConversion] Skipping conversion:', {
         enabled,
-        hasGatewayConfig: !!gatewayConfig,
         gateway,
         amount,
         currency,
@@ -189,7 +188,7 @@ export function usePaymentCurrencyConversion({
     };
 
     calculateConversion();
-  }, [enabled, gatewayConfig, gateway, amount, currency, originCountry]);
+  }, [enabled, gateway, amount, currency, originCountry]);
 
   return {
     conversion,
