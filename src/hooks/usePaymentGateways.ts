@@ -334,7 +334,21 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
   });
 
   // Debug the enabled condition
-  const isQueryEnabled = user ? !!userProfile : !!overrideCurrency;
+  // For authenticated users: enable if user exists (userProfile can be loading)
+  // For guests: enable if overrideCurrency is provided
+  const isQueryEnabled = user ? !!user : !!overrideCurrency;
+  
+  // Debug logging for payment gateway query enablement
+  if (import.meta.env.DEV) {
+    console.log('🔍 Payment gateway query enabled state:', {
+      isQueryEnabled,
+      hasUser: !!user,
+      hasUserProfile: !!userProfile,
+      hasOverrideCurrency: !!overrideCurrency,
+      userProfileCurrency: userProfile?.preferred_display_currency,
+      overrideCurrency
+    });
+  }
 
   // Get available payment methods for current user or guest with country-specific logic
   const { data: availableMethods, isLoading: methodsLoading } = useQuery({

@@ -17,6 +17,7 @@ import {
 } from '../_shared/monitoring-utils.ts';
 import { EdgeLogCategory } from '../_shared/edge-logging.ts';
 import { EdgePaymentErrorCode } from '../_shared/edge-payment-monitoring.ts';
+import { getPaymentExchangeRate } from '../_shared/currency-utils.ts';
 
 // This should match src/types/payment.ts PaymentRequest
 interface PaymentRequest {
@@ -399,7 +400,7 @@ serve(async (req) => {
           // Fetch quotes and verify ownership
           const { data: quotes, error: quotesError } = await supabaseAdmin
             .from('quotes')
-            .select('id, user_id, product_name, final_total, quantity, final_currency')
+            .select('id, user_id, product_name, final_total, quantity, final_currency, origin_country, destination_country')
             .in('id', quoteIds);
 
           if (quotesError) {
@@ -446,6 +447,119 @@ serve(async (req) => {
           const totalAmount =
             amount || quotesToUse.reduce((sum, quote) => sum + (quote.final_total || 0), 0);
           const totalCurrency = currency || quotesToUse[0]?.final_currency || 'USD';
+
+          // 🚨 CRITICAL DEBUG: Comprehensive amount tracking in backend
+          console.log('🏦 [create-payment] ===== BACKEND PAYMENT AMOUNT TRACKING =====');
+          console.log('📊 STEP 1: RAW QUOTE DATA FROM DATABASE');
+          quotesToUse.forEach((quote, index) => {
+            console.log(`  Quote ${index + 1}:`, {
+              id: quote.id,
+              final_total: quote.final_total,
+              final_currency: quote.final_currency,
+              origin_country: quote.origin_country,
+              destination_country: quote.destination_country
+            });
+          });
+          
+          console.log('💰 STEP 2: RECEIVED PAYMENT REQUEST');
+          console.log('  Payment Request Details:', {
+            received_amount: amount,
+            received_currency: currency,
+            calculated_amount: quotesToUse.reduce((sum, quote) => sum + (quote.final_total || 0), 0),
+            final_amount: totalAmount,
+            final_currency: totalCurrency,
+            gateway: gateway,
+            quote_ids: quoteIds
+          });
+          
+          console.log('🔍 STEP 3: METADATA ANALYSIS');
+          
+          // 🚨 CRITICAL FIX: Validate currency metadata and USD amount consistency
+          const currencyContext = metadata?.currency_context;
+          console.log('  Currency Context:', currencyContext);
+          console.log('  Quote Context:', metadata?.quote_context);
+          if (currencyContext) {
+            console.log('🔍 [create-payment] Currency context validation:', {
+              source_currency: currencyContext.source_currency,
+              target_currency: currencyContext.target_currency,
+              conversion_rate: currencyContext.conversion_rate,
+              amount_in_source_currency: currencyContext.amount_in_source_currency,
+              amount_in_target_currency: currencyContext.amount_in_target_currency,
+              received_amount: totalAmount,
+              received_currency: totalCurrency,
+            });
+
+            // Validate that we're receiving USD amounts (new requirement)
+            if (totalCurrency !== 'USD') {
+              console.error('🚨 [create-payment] Expected USD currency but received:', totalCurrency);
+              return new Response(
+                JSON.stringify({
+                  error: 'Invalid currency in payment request',
+                  details: `Expected USD, received ${totalCurrency}. Frontend should always send USD amounts.`,
+                }),
+                {
+                  status: 400,
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                }
+              );
+            }
+
+            // Validate USD amount consistency (with 1% tolerance for rounding)
+            const expectedUsdAmount = currencyContext.amount_in_source_currency;
+            const amountDifference = Math.abs(totalAmount - expectedUsdAmount);
+            const toleranceThreshold = Math.max(expectedUsdAmount * 0.01, 0.01); // 1% or 1 cent minimum
+
+            if (amountDifference > toleranceThreshold) {
+              console.error('🚨 [create-payment] USD amount validation failed:', {
+                expected: expectedUsdAmount,
+                received: totalAmount,
+                difference: amountDifference,
+                tolerance: toleranceThreshold,
+                percentageDiff: (amountDifference / expectedUsdAmount) * 100,
+              });
+              return new Response(
+                JSON.stringify({
+                  error: 'USD amount validation failed',
+                  details: `USD amount mismatch: expected ${expectedUsdAmount}, received ${totalAmount}`,
+                }),
+                {
+                  status: 400,
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                }
+              );
+            }
+
+            console.log('✅ [create-payment] USD amount validation passed');
+            
+            // 🚨 CRITICAL FIX: Cross-validate USD amounts with quote totals
+            const calculatedUsdTotal = quotesToUse.reduce((sum, quote) => sum + (quote.final_total || 0), 0);
+            const usdAmountDifference = Math.abs(totalAmount - calculatedUsdTotal);
+            const usdToleranceThreshold = Math.max(calculatedUsdTotal * 0.01, 0.01);
+            
+            if (usdAmountDifference > usdToleranceThreshold) {
+              console.error('🚨 [create-payment] USD amount vs quote total mismatch:', {
+                received_usd_amount: totalAmount,
+                calculated_quote_total: calculatedUsdTotal,
+                difference: usdAmountDifference,
+                tolerance: usdToleranceThreshold,
+                quotes: quotesToUse.map(q => ({ id: q.id, final_total: q.final_total }))
+              });
+              return new Response(
+                JSON.stringify({
+                  error: 'Quote total validation failed',
+                  details: `USD amount (${totalAmount}) doesn't match quote total (${calculatedUsdTotal})`,
+                }),
+                {
+                  status: 400,
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                }
+              );
+            }
+            
+            console.log('✅ [create-payment] USD amount vs quote total validation passed');
+          } else {
+            console.warn('⚠️ [create-payment] No currency context provided - using legacy validation');
+          }
 
           let responseData: PaymentResponse;
 
@@ -503,57 +617,69 @@ serve(async (req) => {
                   return createErrorResponse(new Error('PayU configuration missing'), 500, logger);
                 }
 
-                // Get India's exchange rate for USD to INR conversion
-                const { data: indiaSettings, error: countryError } = await supabaseAdmin
-                  .from('country_settings')
-                  .select('rate_from_usd')
-                  .eq('code', 'IN')
-                  .single();
-
-                if (countryError || !indiaSettings) {
-                  console.error('Error fetching India settings:', countryError);
-                  return new Response(
-                    JSON.stringify({
-                      error: 'Failed to get exchange rate for INR conversion',
-                    }),
-                    {
-                      status: 500,
-                      headers: {
-                        ...corsHeaders,
-                        'Content-Type': 'application/json',
-                      },
-                    },
-                  );
-                }
-
-                // Check if amount is already in INR or needs conversion from USD
-                const exchangeRate = indiaSettings.rate_from_usd;
-                if (exchangeRate === null || exchangeRate === undefined) {
-                  console.error('Error: Exchange rate for INR conversion is missing.');
-                  return new Response(
-                    JSON.stringify({
-                      error: 'Failed to get exchange rate for INR conversion',
-                    }),
-                    {
-                      status: 500,
-                      headers: {
-                        ...corsHeaders,
-                        'Content-Type': 'application/json',
-                      },
-                    },
-                  );
-                }
+                // 🚨 CRITICAL FIX: Convert from USD to INR directly (no double conversion)
                 let amountInINR: number;
+                let exchangeRateInfo: { rate: number; source: string; confidence: string };
 
-                if (totalCurrency === 'INR') {
-                  // Amount is already in INR, no conversion needed
-                  amountInINR = totalAmount;
-                  console.log(`Amount is already in INR: ${amountInINR}`);
-                } else {
-                  // Convert from USD (or other currency) to INR
-                  amountInINR = totalAmount * exchangeRate;
-                  console.log(
-                    `Converting ${totalAmount} ${totalCurrency} to ${amountInINR} INR (rate: ${exchangeRate})`,
+                // Get the origin country from the first quote (all quotes should have same origin for multi-item purchases)
+                const originCountry = quotesToUse[0]?.origin_country || 'US';
+                
+                console.log('🏦 [PayU] ===== GATEWAY CONVERSION TRACKING =====');
+                console.log('💰 STEP 1: INPUT TO PAYU GATEWAY');
+                console.log('  Gateway Input:', {
+                  amount: totalAmount,
+                  currency: totalCurrency,
+                  gateway: 'PayU',
+                  originCountry: originCountry,
+                  targetCountry: 'IN',
+                  expectedOutputCurrency: 'INR'
+                });
+                
+                try {
+                  // Always convert from USD to INR (totalAmount is now always in USD)
+                  console.log('💱 STEP 2: EXCHANGE RATE LOOKUP');
+                  console.log(`  Looking up exchange rate: ${totalAmount} USD → INR`);
+                  
+                  exchangeRateInfo = await getPaymentExchangeRate(
+                    supabaseAdmin,
+                    originCountry,
+                    'IN', // PayU is for India
+                    'USD', // Always from USD now
+                    'INR'
+                  );
+                  
+                  console.log('  Exchange Rate Result:', {
+                    rate: exchangeRateInfo.rate,
+                    source: exchangeRateInfo.source,
+                    confidence: exchangeRateInfo.confidence
+                  });
+                  
+                  amountInINR = totalAmount * exchangeRateInfo.rate;
+                  
+                  console.log('🎯 STEP 3: PAYU CONVERSION RESULT');
+                  console.log('  Conversion Details:', {
+                    usdAmount: totalAmount,
+                    exchangeRate: exchangeRateInfo.rate,
+                    inrAmount: amountInINR,
+                    calculation: `${totalAmount} × ${exchangeRateInfo.rate} = ${amountInINR}`,
+                    inrFormatted: `₹${amountInINR.toFixed(2)} INR`,
+                    gatewayWillReceive: `₹${amountInINR.toFixed(2)} INR`
+                  });
+                  
+                  console.log('🏦 [PayU] ===== END GATEWAY CONVERSION TRACKING =====');
+                } catch (error) {
+                  console.error('🚨 [PayU] Error getting USD to INR exchange rate:', error);
+                  return new Response(
+                    JSON.stringify({
+                      error: 'Failed to get USD to INR exchange rate',
+                    }),
+                    {
+                      status: 500,
+                      headers: {
+                        ...corsHeaders,
+                        'Content-Type': 'application/json',
+                      },
+                    },
                   );
                 }
 
@@ -825,33 +951,62 @@ serve(async (req) => {
                   );
                 }
 
-                // Get Nepal's exchange rate for USD to NPR conversion
-                const { data: nepalSettings, error: countryError } = await supabaseAdmin
-                  .from('country_settings')
-                  .select('rate_from_usd')
-                  .eq('code', 'NP')
-                  .single();
+                // 🚨 CRITICAL FIX: Convert from USD to NPR directly (no double conversion)
+                let amountInNPR: number;
+                let exchangeRateInfo: { rate: number; source: string; confidence: string };
 
-                if (countryError || !nepalSettings) {
-                  console.error('Error fetching Nepal settings:', countryError);
+                // Get the origin country from the first quote (all quotes should have same origin for multi-item purchases)
+                const originCountry = quotesToUse[0]?.origin_country || 'US';
+                
+                console.log('🏦 [Khalti] ===== GATEWAY CONVERSION TRACKING =====');
+                console.log('💰 STEP 1: INPUT TO KHALTI GATEWAY');
+                console.log('  Gateway Input:', {
+                  amount: totalAmount,
+                  currency: totalCurrency,
+                  gateway: 'Khalti',
+                  originCountry: originCountry,
+                  targetCountry: 'NP',
+                  expectedOutputCurrency: 'NPR'
+                });
+                
+                try {
+                  // Always convert from USD to NPR (totalAmount is now always in USD)
+                  console.log('💱 STEP 2: EXCHANGE RATE LOOKUP');
+                  console.log(`  Looking up exchange rate: ${totalAmount} USD → NPR`);
+                  
+                  exchangeRateInfo = await getPaymentExchangeRate(
+                    supabaseAdmin,
+                    originCountry,
+                    'NP', // Khalti is for Nepal
+                    'USD', // Always from USD now
+                    'NPR'
+                  );
+                  
+                  console.log('  Exchange Rate Result:', {
+                    rate: exchangeRateInfo.rate,
+                    source: exchangeRateInfo.source,
+                    confidence: exchangeRateInfo.confidence
+                  });
+                  
+                  amountInNPR = totalAmount * exchangeRateInfo.rate;
+                  
+                  console.log('🎯 STEP 3: KHALTI CONVERSION RESULT');
+                  console.log('  Conversion Details:', {
+                    usdAmount: totalAmount,
+                    exchangeRate: exchangeRateInfo.rate,
+                    nprAmount: amountInNPR,
+                    calculation: `${totalAmount} × ${exchangeRateInfo.rate} = ${amountInNPR}`,
+                    nprFormatted: `₨${amountInNPR.toFixed(2)} NPR`,
+                    gatewayWillReceive: `₨${amountInNPR.toFixed(2)} NPR`
+                  });
+                  
+                  console.log('🏦 [Khalti] ===== END GATEWAY CONVERSION TRACKING =====');
+                } catch (error) {
+                  console.error('🚨 [Khalti] Error getting USD to NPR exchange rate:', error);
                   return createErrorResponse(
-                    new Error('Failed to get exchange rate for NPR conversion'),
+                    new Error('Failed to get USD to NPR exchange rate'),
                     500,
                     logger,
-                  );
-                }
-
-                // Convert amount to NPR if needed
-                const exchangeRate = nepalSettings.rate_from_usd;
-                let amountInNPR: number;
-
-                if (totalCurrency === 'NPR') {
-                  amountInNPR = totalAmount;
-                  console.log(`Amount is already in NPR: ${amountInNPR}`);
-                } else {
-                  amountInNPR = totalAmount * exchangeRate;
-                  console.log(
-                    `Converting ${totalAmount} ${totalCurrency} to ${amountInNPR} NPR (rate: ${exchangeRate})`,
                   );
                 }
 
@@ -1144,6 +1299,9 @@ serve(async (req) => {
                   apiVersion: config.api_version || '2023-10-16',
                 });
 
+                // 🚨 CRITICAL FIX: Stripe supports USD directly, no conversion needed
+                console.log(`🎯 Stripe: Using ${totalAmount} USD directly (no conversion needed)`);
+                
                 // Use secure enhanced Stripe payment creation with monitoring
                 const result = await paymentMonitoring.monitorGatewayCall(
                   'create_stripe_payment',
@@ -1151,8 +1309,8 @@ serve(async (req) => {
                   async () => {
                     return await createStripePaymentEnhancedSecure({
                       stripe,
-                      amount: totalAmount,
-                      currency: totalCurrency,
+                      amount: totalAmount, // USD amount
+                      currency: totalCurrency, // USD currency
                       quoteIds,
                       userId: userId || 'guest',
                       customerInfo,
@@ -1322,13 +1480,16 @@ serve(async (req) => {
                       : 'api_key',
                 });
 
+                // 🚨 CRITICAL FIX: Airwallex supports USD directly, no conversion needed
+                console.log(`🎯 Airwallex: Using ${totalAmount} USD directly (no conversion needed)`);
+                
                 // Call the Airwallex API module to create payment intent
                 const result = await createAirwallexPaymentIntent({
                   apiKey: airwallexApiKey,
                   clientId: airwallexClientId,
                   testMode: airwallexTestMode,
-                  amount: totalAmount,
-                  currency: totalCurrency,
+                  amount: totalAmount, // USD amount
+                  currency: totalCurrency, // USD currency
                   quoteIds,
                   userId: userId || 'guest',
                   customerInfo,
@@ -1391,6 +1552,9 @@ serve(async (req) => {
 
             case 'fonepay':
               try {
+                console.log('🏦 [create-payment] ===== FONEPAY PAYMENT PROCESSING =====');
+                console.log('📊 STEP 1: FONEPAY PAYMENT INITIALIZATION');
+                
                 logger.info(
                   EdgeLogCategory.PAYMENT_PROCESSING,
                   'Starting Fonepay payment creation',
@@ -1401,6 +1565,7 @@ serve(async (req) => {
                   },
                 );
 
+                console.log('📊 STEP 2: FONEPAY GATEWAY CONFIGURATION');
                 // Fetch Fonepay config from database
                 const { data: fonepayGateway, error: fonepayGatewayError } =
                   await paymentMonitoring.monitorGatewayCall(
@@ -1417,6 +1582,7 @@ serve(async (req) => {
                   );
 
                 if (fonepayGatewayError || !fonepayGateway) {
+                  console.error('❌ Fonepay gateway config missing:', fonepayGatewayError);
                   paymentMonitoring.completePaymentMonitoring(
                     paymentId,
                     false,
@@ -1438,7 +1604,15 @@ serve(async (req) => {
                 const secretKey = fonepayConfig.secret_key;
                 const _panNumber = fonepayConfig.pan_number;
 
+                console.log('  🔧 Gateway Configuration:', {
+                  merchant_code: merchantCode ? 'present' : 'missing',
+                  secret_key: secretKey ? 'present' : 'missing',
+                  pan_number: _panNumber ? 'present' : 'missing',
+                  test_mode: fonepayTestMode,
+                });
+
                 if (!merchantCode || !secretKey) {
+                  console.error('❌ Fonepay configuration incomplete');
                   paymentMonitoring.completePaymentMonitoring(
                     paymentId,
                     false,
@@ -1452,38 +1626,63 @@ serve(async (req) => {
                   );
                 }
 
-                // Get Nepal's exchange rate for USD to NPR conversion
-                const { data: nepalSettings, error: countryError } = await supabaseAdmin
-                  .from('country_settings')
-                  .select('rate_from_usd')
-                  .eq('code', 'NP')
-                  .single();
+                console.log('📊 STEP 3: USD TO NPR CONVERSION');
+                // 🚨 CRITICAL FIX: Convert from USD to NPR directly (no double conversion)
+                let amountInNPR: number;
+                let exchangeRateInfo: { rate: number; source: string; confidence: string };
 
-                if (countryError || !nepalSettings) {
-                  console.error('Error fetching Nepal settings:', countryError);
+                // Get the origin country from the first quote (all quotes should have same origin for multi-item purchases)
+                const originCountry = quotesToUse[0]?.origin_country || 'US';
+                
+                console.log('  🎯 Conversion Parameters:', {
+                  totalAmount_USD: totalAmount,
+                  originCountry: originCountry,
+                  destinationCountry: 'NP',
+                  fromCurrency: 'USD',
+                  toCurrency: 'NPR',
+                });
+                
+                try {
+                  // Always convert from USD to NPR (totalAmount is now always in USD)
+                  console.log(`  🎯 Converting ${totalAmount} USD to NPR for Fonepay gateway`);
+                  
+                  exchangeRateInfo = await getPaymentExchangeRate(
+                    supabaseAdmin,
+                    originCountry,
+                    'NP', // Fonepay is for Nepal
+                    'USD', // Always from USD now
+                    'NPR'
+                  );
+                  
+                  amountInNPR = totalAmount * exchangeRateInfo.rate;
+                  console.log('  ✅ Currency Conversion Result:', {
+                    input_amount: totalAmount,
+                    input_currency: 'USD',
+                    output_amount: amountInNPR,
+                    output_currency: 'NPR',
+                    exchange_rate: exchangeRateInfo.rate,
+                    rate_source: exchangeRateInfo.source,
+                    confidence: exchangeRateInfo.confidence,
+                    conversion_string: `${totalAmount} USD → ${amountInNPR} NPR`,
+                  });
+                } catch (error) {
+                  console.error('❌ Error getting USD to NPR exchange rate:', error);
                   return createErrorResponse(
-                    new Error('Failed to get exchange rate for NPR conversion'),
+                    new Error('Failed to get USD to NPR exchange rate'),
                     500,
                     logger,
                   );
                 }
 
-                // Convert amount to NPR if needed
-                const exchangeRate = nepalSettings.rate_from_usd;
-                let amountInNPR: number;
-
-                if (totalCurrency === 'NPR') {
-                  amountInNPR = totalAmount;
-                  console.log(`Amount is already in NPR: ${amountInNPR}`);
-                } else {
-                  amountInNPR = totalAmount * exchangeRate;
-                  console.log(
-                    `Converting ${totalAmount} ${totalCurrency} to ${amountInNPR} NPR (rate: ${exchangeRate})`,
-                  );
-                }
-
+                console.log('📊 STEP 4: PRN GENERATION AND CUSTOMER INFO');
                 // Generate unique Product Reference Number (PRN)
                 const prn = `FP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+                console.log('  🔢 PRN Generation:', {
+                  prn: prn,
+                  payment_id: paymentId,
+                  timestamp: Date.now(),
+                });
 
                 // Get customer information
                 let customerName = customerInfo?.name || 'Customer';
@@ -1517,13 +1716,27 @@ serve(async (req) => {
                   }
                 }
 
+                console.log('📊 STEP 5: AMOUNT FORMATTING AND URL GENERATION');
                 // Format amount to 2 decimal places
                 const formattedAmount = amountInNPR.toFixed(2);
+
+                console.log('  💰 Amount Formatting:', {
+                  original_amount_NPR: amountInNPR,
+                  formatted_amount_NPR: formattedAmount,
+                  decimal_places: 2,
+                });
 
                 // Get base URL from success_url for return URL
                 const baseUrl = new URL(success_url).origin;
                 const returnUrl = `${baseUrl}/payment-callback/fonepay`;
 
+                console.log('  🔗 URL Generation:', {
+                  base_url: baseUrl,
+                  return_url: returnUrl,
+                  original_success_url: success_url,
+                });
+
+                console.log('📊 STEP 6: FONEPAY PAYMENT PARAMETERS');
                 // Fonepay payment parameters
                 const paymentParams = {
                   PID: merchantCode,
@@ -1537,6 +1750,19 @@ serve(async (req) => {
                   RU: returnUrl,
                 };
 
+                console.log('  📦 Fonepay payment parameters:', {
+                  PID: paymentParams.PID,
+                  MD: paymentParams.MD,
+                  PRN: paymentParams.PRN,
+                  AMT: paymentParams.AMT,
+                  CRN: paymentParams.CRN,
+                  DT: paymentParams.DT,
+                  R1: paymentParams.R1,
+                  R2: paymentParams.R2,
+                  RU: paymentParams.RU,
+                });
+
+                console.log('📊 STEP 7: HMAC-SHA512 SIGNATURE GENERATION');
                 // Generate HMAC-SHA512 hash for security
                 const hashString = [
                   paymentParams.PID,
@@ -1550,7 +1776,7 @@ serve(async (req) => {
                   paymentParams.RU,
                 ].join(',');
 
-                console.log('🔐 Fonepay hash string:', hashString);
+                console.log('  🔐 Fonepay hash string:', hashString);
 
                 // Generate HMAC-SHA512 hash
                 const encoder = new TextEncoder();
@@ -1569,12 +1795,24 @@ serve(async (req) => {
                 const hashArray = Array.from(new Uint8Array(hashBuffer));
                 const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 
-                console.log('✅ Fonepay hash generated:', hashHex.substring(0, 20) + '...');
+                console.log('  ✅ Fonepay hash generated:', {
+                  hash_preview: hashHex.substring(0, 20) + '...',
+                  hash_length: hashHex.length,
+                  hash_algorithm: 'HMAC-SHA512',
+                  hash_valid: hashHex.length === 128, // SHA-512 should be 128 chars
+                });
 
+                console.log('📊 STEP 8: FONEPAY URL GENERATION');
                 // Build Fonepay payment URL
                 const fonepayUrl = fonepayTestMode
                   ? 'https://dev-clientapi.fonepay.com/api/merchantRequest'
                   : 'https://clientapi.fonepay.com/api/merchantRequest';
+
+                console.log('  🌐 Fonepay URL Details:', {
+                  base_url: fonepayUrl,
+                  test_mode: fonepayTestMode,
+                  environment: fonepayTestMode ? 'test' : 'live',
+                });
 
                 // Convert parameters to URL query string
                 const queryParams = new URLSearchParams();
@@ -1585,7 +1823,9 @@ serve(async (req) => {
 
                 const paymentUrl = `${fonepayUrl}?${queryParams.toString()}`;
 
-                console.log('🚀 Fonepay payment URL generated');
+                console.log('📊 STEP 9: FINAL FONEPAY PAYMENT RESPONSE');
+                console.log('  🚀 Fonepay payment URL generated');
+                console.log('  🔗 Payment URL Length:', paymentUrl.length);
 
                 paymentMonitoring.completePaymentMonitoring(paymentId, true, undefined, undefined, {
                   gateway: 'fonepay',
@@ -1603,6 +1843,17 @@ serve(async (req) => {
                   amount: amountInNPR,
                   currency: 'NPR',
                 };
+
+                console.log('  🎯 Final Fonepay Response:', {
+                  success: responseData.success,
+                  url_length: responseData.url.length,
+                  method: responseData.method,
+                  transactionId: responseData.transactionId,
+                  gateway: responseData.gateway,
+                  amount: responseData.amount,
+                  currency: responseData.currency,
+                });
+                console.log('🏦 [create-payment] ===== END FONEPAY PAYMENT PROCESSING =====');
               } catch (error) {
                 paymentMonitoring.completePaymentMonitoring(
                   paymentId,
@@ -1658,43 +1909,65 @@ serve(async (req) => {
 
             case 'esewa':
               try {
-                console.log('💳 Processing eSewa payment (v2 API)');
+                console.log('🏦 [create-payment] ===== ESEWA PAYMENT PROCESSING =====');
+                console.log('📊 STEP 1: ESEWA PAYMENT INITIALIZATION');
+                console.log('  💳 Processing eSewa payment (v2 API)');
 
-                // Get Nepal country settings for exchange rate
-                const { data: nepalSettings, error: nepalError } = await supabaseAdmin
-                  .from('country_settings')
-                  .select('rate_from_usd')
-                  .eq('code', 'NP')
-                  .single();
+                // 🚨 CRITICAL FIX: Convert from USD to NPR directly (no double conversion)
+                let amountInNPR: number;
+                let exchangeRateInfo: { rate: number; source: string; confidence: string };
 
-                if (nepalError || !nepalSettings) {
+                // Get the origin country from the first quote (all quotes should have same origin for multi-item purchases)
+                const originCountry = quotesToUse[0]?.origin_country || 'US';
+                
+                console.log('📊 STEP 2: USD TO NPR CONVERSION');
+                console.log('  🎯 Conversion Parameters:', {
+                  totalAmount_USD: totalAmount,
+                  originCountry: originCountry,
+                  destinationCountry: 'NP',
+                  fromCurrency: 'USD',
+                  toCurrency: 'NPR',
+                });
+                
+                try {
+                  // Always convert from USD to NPR (totalAmount is now always in USD)
+                  console.log(`  🎯 Converting ${totalAmount} USD to NPR for eSewa gateway`);
+                  
+                  exchangeRateInfo = await getPaymentExchangeRate(
+                    supabaseAdmin,
+                    originCountry,
+                    'NP', // eSewa is for Nepal
+                    'USD', // Always from USD now
+                    'NPR'
+                  );
+                  
+                  amountInNPR = totalAmount * exchangeRateInfo.rate;
+                  console.log('  ✅ Currency Conversion Result:', {
+                    input_amount: totalAmount,
+                    input_currency: 'USD',
+                    output_amount: amountInNPR,
+                    output_currency: 'NPR',
+                    exchange_rate: exchangeRateInfo.rate,
+                    rate_source: exchangeRateInfo.source,
+                    confidence: exchangeRateInfo.confidence,
+                    conversion_string: `${totalAmount} USD → ${amountInNPR} NPR`,
+                  });
+                } catch (error) {
+                  console.error('❌ Error getting USD to NPR exchange rate:', error);
                   paymentMonitoring.completePaymentMonitoring(
                     paymentId,
                     false,
                     EdgePaymentErrorCode.GATEWAY_CONFIGURATION_ERROR,
-                    'Nepal exchange rate not found',
+                    'Failed to get USD to NPR exchange rate',
                   );
                   return createErrorResponse(
-                    new Error('Nepal exchange rate not found'),
+                    new Error('Failed to get USD to NPR exchange rate'),
                     500,
                     logger,
                   );
                 }
 
-                // Convert amount to NPR
-                const exchangeRate = nepalSettings.rate_from_usd;
-                let amountInNPR: number;
-
-                if (totalCurrency === 'NPR') {
-                  amountInNPR = totalAmount;
-                  console.log(`Amount is already in NPR: ${amountInNPR}`);
-                } else {
-                  amountInNPR = totalAmount * exchangeRate;
-                  console.log(
-                    `Converting ${totalAmount} ${totalCurrency} to ${amountInNPR} NPR (rate: ${exchangeRate})`,
-                  );
-                }
-
+                console.log('📊 STEP 3: ESEWA GATEWAY CONFIGURATION');
                 // Get eSewa gateway configuration (v2)
                 const { data: esewaGateway, error: esewaGatewayError } = await supabaseAdmin
                   .from('payment_gateways')
@@ -1703,6 +1976,7 @@ serve(async (req) => {
                   .single();
 
                 if (esewaGatewayError || !esewaGateway) {
+                  console.error('❌ eSewa gateway config missing:', esewaGatewayError);
                   paymentMonitoring.completePaymentMonitoring(
                     paymentId,
                     false,
@@ -1724,7 +1998,17 @@ serve(async (req) => {
                   live_url: string;
                 };
 
+                console.log('  🔧 Gateway Configuration:', {
+                  product_code: esewaConfig.product_code ? 'present' : 'missing',
+                  secret_key: esewaConfig.secret_key ? 'present' : 'missing',
+                  api_version: esewaConfig.api_version || 'v2',
+                  test_mode: esewaGateway.test_mode,
+                  test_url: esewaConfig.test_url || 'default',
+                  live_url: esewaConfig.live_url || 'default',
+                });
+
                 if (!esewaConfig.product_code || !esewaConfig.secret_key) {
+                  console.error('❌ eSewa product code or secret key missing');
                   paymentMonitoring.completePaymentMonitoring(
                     paymentId,
                     false,
@@ -1738,6 +2022,7 @@ serve(async (req) => {
                   );
                 }
 
+                console.log('📊 STEP 4: TRANSACTION UUID GENERATION');
                 // Generate unique transaction UUID for this transaction
                 const currentTime = new Date();
                 const transactionUuid =
@@ -1746,6 +2031,12 @@ serve(async (req) => {
                   currentTime.getHours() +
                   currentTime.getMinutes() +
                   currentTime.getSeconds();
+                
+                console.log('  🔢 Transaction UUID:', {
+                  transaction_uuid: transactionUuid,
+                  generated_at: currentTime.toISOString(),
+                  payment_id: paymentId,
+                });
 
                 // Get customer information
                 const _customerName = customerInfo?.name || 'Customer';
@@ -1765,8 +2056,16 @@ serve(async (req) => {
                   }
                 }
 
+                console.log('📊 STEP 5: AMOUNT FORMATTING AND URL GENERATION');
                 // Format amount for eSewa v2 (whole numbers)
                 const formattedAmount = Math.round(amountInNPR);
+                
+                console.log('  💰 Amount Formatting:', {
+                  original_amount_NPR: amountInNPR,
+                  formatted_amount_NPR: formattedAmount,
+                  rounding_applied: amountInNPR !== formattedAmount,
+                  difference: Math.abs(amountInNPR - formattedAmount),
+                });
 
                 // Get base URL from success_url for return URLs
                 const baseUrl = new URL(success_url).origin;
@@ -1777,9 +2076,22 @@ serve(async (req) => {
                 const testSuccessUrl = `${baseUrl}/payment-callback/esewa-success`;
                 const testFailureUrl = `${baseUrl}/payment-callback/esewa-failure`;
 
+                console.log('  🔗 URL Generation:', {
+                  base_url: baseUrl,
+                  success_url: testSuccessUrl,
+                  failure_url: testFailureUrl,
+                  original_success_url: success_url,
+                });
+
+                console.log('📊 STEP 6: HMAC-SHA256 SIGNATURE GENERATION');
                 // Generate HMAC-SHA256 signature for v2 API
                 const signatureString = `total_amount=${formattedAmount},transaction_uuid=${transactionUuid},product_code=${esewaConfig.product_code}`;
-                console.log('🔐 Signature string:', signatureString);
+                console.log('  🔐 Signature Generation:', {
+                  signature_string: signatureString,
+                  total_amount: formattedAmount,
+                  transaction_uuid: transactionUuid,
+                  product_code: esewaConfig.product_code,
+                });
 
                 // Create HMAC-SHA256 hash
                 const encoder = new TextEncoder();
@@ -1802,7 +2114,11 @@ serve(async (req) => {
                 const signatureArray = Array.from(new Uint8Array(signatureBuffer));
                 const signatureBase64 = btoa(String.fromCharCode(...signatureArray));
 
-                console.log('🔏 Generated signature:', signatureBase64);
+                console.log('  🔏 Generated Signature:', {
+                  signature_base64: signatureBase64,
+                  signature_length: signatureBase64.length,
+                  signature_valid: signatureBase64.length > 0,
+                });
 
                 // eSewa v2 payment parameters
                 const paymentParams = {
@@ -1819,11 +2135,19 @@ serve(async (req) => {
                   signature: signatureBase64,
                 };
 
+                console.log('📊 STEP 7: ESEWA PAYMENT PARAMETERS');
                 // Debug logging
-                console.log('📊 eSewa v2 payment params:', {
+                console.log('  📦 eSewa v2 payment params:', {
+                  amount: paymentParams.amount,
+                  tax_amount: paymentParams.tax_amount,
                   total_amount: paymentParams.total_amount,
                   transaction_uuid: paymentParams.transaction_uuid,
                   product_code: paymentParams.product_code,
+                  product_service_charge: paymentParams.product_service_charge,
+                  product_delivery_charge: paymentParams.product_delivery_charge,
+                  success_url: paymentParams.success_url,
+                  failure_url: paymentParams.failure_url,
+                  signed_field_names: paymentParams.signed_field_names,
                   signature: paymentParams.signature,
                   api_version: 'v2',
                 });
@@ -1831,26 +2155,28 @@ serve(async (req) => {
                 // Determine eSewa v2 URL based on test mode
                 const esewaTestMode = esewaGateway.test_mode ?? true;
                 
+                console.log('📊 STEP 8: ESEWA URL GENERATION');
                 // Fix URL corruption issue - hardcode correct URLs
                 const esewaUrl = esewaTestMode 
                   ? 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'  // Test environment
                   : 'https://epay.esewa.com.np/api/epay/main/v2/form';    // Live environment
 
-                console.log('🌐 eSewa v2 URL:', esewaUrl);
-                console.log('🧪 Test mode:', esewaTestMode);
-                console.log('🔍 URL validation:', {
+                console.log('  🌐 eSewa v2 URL Details:', {
                   url: esewaUrl,
+                  test_mode: esewaTestMode,
                   length: esewaUrl.length,
                   includes_epay: esewaUrl.includes('epay'),
                   includes_spaces: esewaUrl.includes('  '),
-                  url_encoded: encodeURIComponent(esewaUrl)
+                  url_encoded: encodeURIComponent(esewaUrl),
+                  environment: esewaTestMode ? 'test' : 'live',
                 });
 
                 // Create form data for POST submission (eSewa v2 with signature)
                 const formData = paymentParams;
 
-                console.log('🚀 eSewa v2 payment form generated with HMAC-SHA256 signature');
-                console.log('📦 Complete form data being sent:', JSON.stringify(formData, null, 2));
+                console.log('📊 STEP 9: FINAL ESEWA PAYMENT RESPONSE');
+                console.log('  🚀 eSewa v2 payment form generated with HMAC-SHA256 signature');
+                console.log('  📦 Complete form data being sent:', JSON.stringify(formData, null, 2));
 
                 // Don't complete payment monitoring here - let callback handle completion
                 // This way monitoring shows "pending" until callback confirms payment
@@ -1866,6 +2192,19 @@ serve(async (req) => {
                   currency: 'NPR',
                   apiVersion: 'v2',
                 };
+
+                console.log('  🎯 Final eSewa Response:', {
+                  success: responseData.success,
+                  url: responseData.url,
+                  method: responseData.method,
+                  transactionId: responseData.transactionId,
+                  gateway: responseData.gateway,
+                  amount: responseData.amount,
+                  currency: responseData.currency,
+                  apiVersion: responseData.apiVersion,
+                  formDataKeys: Object.keys(formData),
+                });
+                console.log('🏦 [create-payment] ===== END ESEWA PAYMENT PROCESSING =====');
               } catch (error) {
                 paymentMonitoring.completePaymentMonitoring(
                   paymentId,
@@ -1898,6 +2237,52 @@ serve(async (req) => {
               return createErrorResponse(new Error(`Unsupported gateway: ${gateway}`), 400, logger);
           }
 
+          // 🚨 CRITICAL FIX: Add comprehensive payment creation summary
+          console.log('🎉 [create-payment] ===== FINAL PAYMENT SUMMARY =====');
+          console.log('📊 PAYMENT FLOW SUMMARY:');
+          console.log('  1. Database Storage:', {
+            quotes: quotesToUse.map(q => ({ id: q.id, final_total: q.final_total, currency: q.final_currency })),
+            total_usd: quotesToUse.reduce((sum, quote) => sum + (quote.final_total || 0), 0)
+          });
+          
+          console.log('  2. Frontend Request:', {
+            received_amount: amount,
+            received_currency: currency,
+            gateway: gateway,
+            display_currency: currencyContext?.target_currency || 'USD',
+            display_amount: currencyContext?.amount_in_target_currency || totalAmount,
+            conversion_rate: currencyContext?.conversion_rate || 1
+          });
+          
+          console.log('  3. Backend Processing:', {
+            processed_amount: totalAmount,
+            processed_currency: totalCurrency,
+            gateway: gateway,
+            paymentId: paymentId,
+            userId: userId
+          });
+          
+          console.log('  4. Gateway Conversion:', {
+            gateway: gateway,
+            input_amount: totalAmount,
+            input_currency: totalCurrency,
+            // Gateway-specific amounts will be logged by individual gateways
+            transaction_id: responseData.transactionId || 'Not generated yet'
+          });
+          
+          console.log('  5. Validation Status:', {
+            usd_amount_valid: totalAmount > 0 && isFinite(totalAmount),
+            currency_valid: totalCurrency === 'USD',
+            metadata_present: !!currencyContext,
+            amounts_consistent: currencyContext ? Math.abs(totalAmount - currencyContext.amount_in_source_currency) < 0.01 : true
+          });
+          
+          if (responseData.transactionId) {
+            console.log('  ✅ Transaction ID:', responseData.transactionId);
+          }
+          
+          console.log('🎉 [create-payment] ===== END PAYMENT SUMMARY =====');
+
           logger.info(
             EdgeLogCategory.PAYMENT_PROCESSING,
             'Payment creation completed successfully',
@@ -1908,6 +2293,9 @@ serve(async (req) => {
                 gateway,
                 responseType: typeof responseData,
                 hasTransactionId: !!responseData.transactionId,
+                usd_amount: totalAmount,
+                display_currency: currencyContext?.target_currency || 'USD',
+                display_amount: currencyContext?.amount_in_target_currency || totalAmount,
               },
             },
           );

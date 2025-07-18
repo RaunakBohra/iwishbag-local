@@ -8,7 +8,9 @@ export interface CartItem {
   id: string;
   quoteId: string;
   productName: string;
-  finalTotal: number;
+  finalTotal: number; // Amount in USD (base currency)
+  finalTotalLocal?: number; // Amount in customer's local currency
+  finalCurrency?: string; // Customer's local currency code
   quantity: number;
   itemWeight: number;
   imageUrl?: string;
@@ -492,6 +494,16 @@ export const useCartStore = create<CartStore>()(
               .eq('user_id', userId)
               .order('created_at', { ascending: false });
 
+            // 🚨 DEBUG: Log quote data to check if local currency fields are loaded
+            console.log('🔍 [CartStore] Raw quote data sample:', allQuotes?.slice(0, 1).map(q => ({
+              id: q.id,
+              final_total: q.final_total,
+              final_total_local: q.final_total_local,
+              final_currency: q.final_currency,
+              origin_country: q.origin_country,
+              destination_country: q.destination_country
+            })));
+
             if (quotesError) {
               logger.error('Error fetching quotes', quotesError, 'Cart');
               throw quotesError;
@@ -507,6 +519,7 @@ export const useCartStore = create<CartStore>()(
               product_name: string;
               final_total?: number;
               final_total_local?: number;
+              final_currency?: string;
               quantity?: number;
               item_weight?: number;
               origin_country?: string;
@@ -596,7 +609,9 @@ export const useCartStore = create<CartStore>()(
                 id: quote.id,
                 quoteId: quote.id,
                 productName: firstItem?.product_name || quote.product_name || 'Unknown Product',
-                finalTotal: totalPrice,
+                finalTotal: quote.final_total || totalPrice, // USD amount
+                finalTotalLocal: quote.final_total_local, // Local currency amount
+                finalCurrency: quote.final_currency, // Local currency code
                 quantity: quantity,
                 itemWeight: itemWeight,
                 imageUrl: firstItem?.image_url || quote.image_url,
@@ -610,10 +625,30 @@ export const useCartStore = create<CartStore>()(
                 updatedAt: new Date(quote.updated_at),
               };
 
+              // 🚨 DEBUG: Log currency conversion details
+              console.log('🔍 [CartStore] Converting quote to cart item:', {
+                quoteId: quote.id,
+                rawQuote: {
+                  final_total: quote.final_total,
+                  final_total_local: quote.final_total_local,
+                  final_currency: quote.final_currency,
+                  origin_country: quote.origin_country,
+                  destination_country: quote.destination_country
+                },
+                cartItem: {
+                  finalTotal: cartItem.finalTotal,
+                  finalTotalLocal: cartItem.finalTotalLocal,
+                  finalCurrency: cartItem.finalCurrency,
+                  purchaseCountryCode: cartItem.purchaseCountryCode,
+                  destinationCountryCode: cartItem.destinationCountryCode
+                }
+              });
+
               // FIXED: Final safety check to ensure all numeric values are valid
               const validatedCartItem = {
                 ...cartItem,
                 finalTotal: isNaN(cartItem.finalTotal) ? 0 : cartItem.finalTotal,
+                finalTotalLocal: cartItem.finalTotalLocal && !isNaN(cartItem.finalTotalLocal) ? cartItem.finalTotalLocal : undefined,
                 quantity: isNaN(cartItem.quantity) ? 1 : cartItem.quantity,
                 itemWeight: isNaN(cartItem.itemWeight) ? 0 : cartItem.itemWeight,
               };

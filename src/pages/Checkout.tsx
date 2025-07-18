@@ -46,7 +46,7 @@ import {
   isAddressComplete,
   extractQuoteShippingAddress,
 } from '@/lib/addressUtils';
-import { formatAmountForDisplay } from '@/lib/currencyUtils';
+import { formatAmountForDisplay, getExchangeRate, convertCurrency } from '@/lib/currencyUtils';
 import { checkoutSessionService } from '@/services/CheckoutSessionService';
 import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 import { formatBankDetailsForEmail } from '@/lib/bankDetailsFormatter';
@@ -240,7 +240,7 @@ export default function Checkout() {
   const [guestSessionToken, setGuestSessionToken] = useState<string>('');
 
   const { data: userProfile } = useUserProfile();
-  const { formatAmount: _formatAmount } = useUserCurrency();
+  const { formatAmount: _formatAmount, userCurrency } = useUserCurrency();
   const { data: countries } = useAllCountries();
   const { sendBankTransferEmail } = useEmailNotifications();
   const { findStatusForPaymentMethod } = useStatusManagement();
@@ -381,33 +381,36 @@ export default function Checkout() {
     requiresQRCode,
   } = usePaymentGateways(guestCurrency, shippingCountry);
 
-  // Debug logging for guest checkout payment state (development only)
+  // Debug logging for payment gateway loading (development only)
   useEffect(() => {
-    if (isGuestCheckout && import.meta.env.DEV) {
-      console.log('💳 Guest checkout payment state:', {
+    if (import.meta.env.DEV) {
+      console.log('💳 Payment gateway loading state:', {
+        isGuestCheckout,
         guestCurrency,
         guestSelectedCurrency,
+        defaultGuestCurrency,
+        shippingCountry,
+        selectedCartItems: selectedCartItems.map(item => ({
+          id: item.id,
+          finalCurrency: item.finalCurrency,
+          destinationCountryCode: item.destinationCountryCode,
+          countryCode: item.countryCode,
+          purchaseCountryCode: item.purchaseCountryCode
+        })),
+        availableMethods,
+        methodsLoading,
+        userCurrency
+      });
+    }
+  }, [isGuestCheckout, guestCurrency, guestSelectedCurrency,
         defaultGuestCurrency,
         availableMethods,
         methodsLoading,
         shippingCountry,
-        selectedCartItems: selectedCartItems.length,
-        guestQuote: !!guestQuote,
-        destinationCountry: selectedCartItems[0]?.destinationCountryCode,
-        '🔍 Hook Result': { availableMethods, methodsLoading },
-      });
-    }
-  }, [
-    isGuestCheckout,
-    guestCurrency,
-    guestSelectedCurrency,
-    defaultGuestCurrency,
-    availableMethods,
-    methodsLoading,
-    shippingCountry,
-    selectedCartItems,
-    guestQuote,
-  ]);
+        selectedCartItems.length,
+        guestQuote,
+        userCurrency
+      ]);
 
   // Set recommended payment method when available methods load
   useEffect(() => {
@@ -433,6 +436,89 @@ export default function Checkout() {
   // Get purchase country for route display (where we buy from)
   const purchaseCountry =
     selectedCartItems.length > 0 ? selectedCartItems[0].purchaseCountryCode : null;
+
+  // 🚨 CRITICAL FIX: Add currency conversion state for proper amount calculation
+  const [currencyConversion, setCurrencyConversion] = useState<{
+    rate: number;
+    source: string;
+    confidence: string;
+  } | null>(null);
+
+  // Get destination country for currency conversion
+  const destinationCountry = shippingCountry || 
+    (isGuestCheckout ? addressFormData.country : userProfile?.country) || 'US';
+
+  // 🚨 CRITICAL FIX: Calculate currency conversion rate when payment currency changes
+  useEffect(() => {
+    const calculateCurrencyConversion = async () => {
+      console.log('🏦 [Checkout] ===== CURRENCY CONVERSION CALCULATION =====');
+      console.log('📊 STEP 1: CONVERSION INPUTS');
+      console.log('  Conversion Parameters:', {
+        purchaseCountry,
+        destinationCountry,
+        paymentCurrency,
+        needsConversion: paymentCurrency !== 'USD'
+      });
+
+      if (!purchaseCountry || !destinationCountry || paymentCurrency === 'USD') {
+        console.log('💰 STEP 2: NO CONVERSION NEEDED');
+        console.log('  Reason:', !purchaseCountry ? 'No purchase country' : 
+                    !destinationCountry ? 'No destination country' : 
+                    'Payment currency is USD');
+        setCurrencyConversion({ rate: 1, source: 'no_conversion', confidence: 'high' });
+        console.log('🏦 [Checkout] ===== END CURRENCY CONVERSION (NO CONVERSION) =====');
+        return;
+      }
+
+      try {
+        console.log('💱 STEP 2: CALLING EXCHANGE RATE SERVICE');
+        console.log('  Exchange Rate Lookup:', {
+          from: 'USD',
+          to: paymentCurrency,
+          purchaseCountry,
+          destinationCountry,
+        });
+
+        // Get exchange rate from USD (database storage) to user's preferred currency
+        const exchangeRateResult = await getExchangeRate(
+          purchaseCountry,
+          destinationCountry,
+          'USD',
+          paymentCurrency
+        );
+
+        console.log('🎯 STEP 3: EXCHANGE RATE RESULT');
+        console.log('  Exchange Rate Details:', {
+          rate: exchangeRateResult.rate,
+          source: exchangeRateResult.source,
+          confidence: exchangeRateResult.confidence,
+          warning: exchangeRateResult.warning
+        });
+
+        setCurrencyConversion({
+          rate: exchangeRateResult.rate,
+          source: exchangeRateResult.source,
+          confidence: exchangeRateResult.confidence,
+        });
+        
+        console.log('✅ STEP 4: CONVERSION STATE SET');
+        console.log('  Final Conversion State:', {
+          rate: exchangeRateResult.rate,
+          source: exchangeRateResult.source,
+          confidence: exchangeRateResult.confidence,
+        });
+        
+        console.log('🏦 [Checkout] ===== END CURRENCY CONVERSION (SUCCESS) =====');
+      } catch (error) {
+        console.error('🚨 [Checkout] Error calculating currency conversion:', error);
+        // Fallback to 1:1 rate to prevent payment failures
+        setCurrencyConversion({ rate: 1, source: 'fallback', confidence: 'low' });
+        console.log('🏦 [Checkout] ===== END CURRENCY CONVERSION (ERROR - FALLBACK) =====');
+      }
+    };
+
+    calculateCurrencyConversion();
+  }, [purchaseCountry, destinationCountry, paymentCurrency]);
 
   // Pre-fill guest contact info and address from quote if available
   useEffect(() => {
@@ -630,14 +716,50 @@ export default function Checkout() {
     },
   });
 
-  // Calculations
+  // 🚨 CRITICAL FIX: Calculate total amount with proper currency conversion
   const totalAmount = selectedCartItems.reduce((total, item) => {
     // Add null checks for item properties
     if (!item || typeof item.finalTotal !== 'number' || typeof item.quantity !== 'number') {
       console.warn('Invalid cart item data:', item);
       return total;
     }
-    return total + (item.finalTotal || 0) * (item.quantity || 1);
+    
+    // 🚨 CRITICAL FIX: Use appropriate currency based on payment gateway
+    // For local gateways: use final_total_local (customer's local currency)
+    // For international gateways: use final_total (USD)
+    
+    const isLocalGateway = ['khalti', 'fonepay', 'esewa', 'payu'].includes(paymentMethod || '');
+    const isInternationalGateway = ['paypal', 'stripe', 'airwallex'].includes(paymentMethod || '');
+    
+    let itemAmount: number;
+    let itemCurrency: string;
+    
+    if (isLocalGateway && item.finalTotalLocal && item.finalTotalLocal > 0) {
+      // Use local currency amount for local gateways
+      itemAmount = item.finalTotalLocal * (item.quantity || 1);
+      itemCurrency = item.finalCurrency || paymentCurrency;
+      console.log(`🏦 [Checkout] Using local currency for ${paymentMethod}: ${itemAmount} ${itemCurrency}`);
+    } else if (isInternationalGateway || !item.finalTotalLocal) {
+      // Use USD amount for international gateways or fallback
+      itemAmount = (item.finalTotal || 0) * (item.quantity || 1);
+      itemCurrency = 'USD';
+      
+      // Convert USD to user's preferred currency if needed for display
+      if (currencyConversion && currencyConversion.rate && currencyConversion.rate !== 1 && paymentCurrency !== 'USD') {
+        const convertedAmount = convertCurrency(itemAmount, currencyConversion.rate, paymentCurrency);
+        console.log(`🏦 [Checkout] Converting USD for ${paymentMethod}: $${itemAmount} USD → ${convertedAmount} ${paymentCurrency} (rate: ${currencyConversion.rate})`);
+        return total + convertedAmount;
+      }
+      
+      console.log(`🏦 [Checkout] Using USD for ${paymentMethod}: $${itemAmount} USD`);
+    } else {
+      // Fallback to USD
+      itemAmount = (item.finalTotal || 0) * (item.quantity || 1);
+      itemCurrency = 'USD';
+      console.log(`🏦 [Checkout] Fallback to USD: $${itemAmount} USD`);
+    }
+    
+    return total + itemAmount;
   }, 0);
 
   const cartQuoteIds = selectedCartItems
@@ -810,8 +932,46 @@ export default function Checkout() {
       }
     }
 
-    // Validate total amount before creating payment request
-    if (!totalAmount || totalAmount <= 0 || isNaN(totalAmount) || !isFinite(totalAmount)) {
+    // 🚨 CRITICAL FIX: Calculate payment amount based on gateway type
+    const isLocalGateway = ['khalti', 'fonepay', 'esewa', 'payu'].includes(paymentMethod || '');
+    const isInternationalGateway = ['paypal', 'stripe', 'airwallex'].includes(paymentMethod || '');
+    
+    let paymentAmount: number;
+    let paymentCurrency: string;
+    
+    if (isLocalGateway) {
+      // For local gateways: use local currency amounts
+      paymentAmount = selectedCartItems.reduce((total, item) => {
+        const localAmount = item.finalTotalLocal && item.finalTotalLocal > 0 ? item.finalTotalLocal : item.finalTotal;
+        return total + (localAmount * (item.quantity || 1));
+      }, 0);
+      paymentCurrency = selectedCartItems[0]?.finalCurrency || userCurrency?.code || 'USD';
+    } else {
+      // For international gateways: use USD amounts
+      paymentAmount = selectedCartItems.reduce((total, item) => {
+        return total + ((item.finalTotal || 0) * (item.quantity || 1));
+      }, 0);
+      paymentCurrency = 'USD';
+    }
+    
+    console.log(`🏦 [Checkout] Payment amount calculation:`, {
+      gateway: paymentMethod,
+      isLocalGateway,
+      isInternationalGateway,
+      paymentAmount,
+      paymentCurrency,
+      userCurrency,
+      itemDetails: selectedCartItems.map(item => ({
+        id: item.id,
+        finalTotal: item.finalTotal,
+        finalTotalLocal: item.finalTotalLocal,
+        finalCurrency: item.finalCurrency,
+        quantity: item.quantity,
+      }))
+    });
+
+    // Validate payment amount before creating payment request
+    if (!paymentAmount || paymentAmount <= 0 || isNaN(paymentAmount) || !isFinite(paymentAmount)) {
       toast({
         title: 'Invalid Amount',
         description: 'The total amount is invalid. Please check your cart items.',
@@ -821,10 +981,114 @@ export default function Checkout() {
       return;
     }
 
+    // 🚨 CRITICAL FIX: Validate USD amount (what we're sending to backend)
+    if (!paymentAmount || paymentAmount <= 0 || isNaN(paymentAmount) || !isFinite(paymentAmount)) {
+      toast({
+        title: 'Invalid USD Amount',
+        description: 'The USD amount calculation is invalid. Please refresh and try again.',
+        variant: 'destructive',
+      });
+      setIsProcessing(false);
+      return;
+    }
+
+    console.log('🏦 [Checkout] ===== COMPREHENSIVE PAYMENT AMOUNT TRACKING =====');
+    console.log('📊 STEP 1: RAW CART ITEMS FROM DATABASE');
+    selectedCartItems.forEach((item, index) => {
+      console.log(`  Item ${index + 1}:`, {
+        id: item.id,
+        productName: item.productName,
+        quantity: item.quantity,
+        finalTotal_USD: item.finalTotal, // USD amount from database
+        finalTotalLocal: item.finalTotalLocal, // Local currency amount from database
+        finalCurrency: item.finalCurrency, // Local currency code
+        subtotal_USD: (item.finalTotal || 0) * (item.quantity || 1),
+        subtotal_Local: (item.finalTotalLocal || 0) * (item.quantity || 1),
+        originCountry: item.originCountry,
+        destinationCountry: item.destinationCountry
+      });
+    });
+    
+    console.log('💰 STEP 2: PAYMENT AMOUNT CALCULATION (Gateway-Specific)');
+    console.log('  Gateway Type:', {
+      code: paymentMethod,
+      isLocalGateway,
+      isInternationalGateway
+    });
+    console.log('  Payment Amount:', paymentAmount);
+    console.log('  Payment Currency:', paymentCurrency);
+    console.log('  Payment Amount Breakdown:', {
+      calculation: selectedCartItems.map(item => {
+        const amount = isLocalGateway && item.finalTotalLocal ? item.finalTotalLocal : item.finalTotal;
+        return `${amount} × ${item.quantity} = ${amount * (item.quantity || 1)}`;
+      }).join(' + '),
+      total: paymentAmount,
+      currency: paymentCurrency
+    });
+    
+    console.log('💱 STEP 3: CURRENCY CONVERSION (USD → Display Currency)');
+    console.log('  Currency Conversion Details:', {
+      fromCurrency: 'USD',
+      toCurrency: paymentCurrency,
+      rate: currencyConversion?.rate || 1,
+      source: currencyConversion?.source || 'no_conversion',
+      confidence: currencyConversion?.confidence || 'high'
+    });
+    
+    console.log('🎯 STEP 4: DISPLAY AMOUNT CALCULATION');
+    console.log('  Display Amount Calculation:', {
+      paymentAmount: paymentAmount,
+      conversionRate: currencyConversion?.rate || 1,
+      expectedDisplayAmount: paymentAmount,
+      actualDisplayAmount: totalAmount,
+      displayCurrency: paymentCurrency,
+      amountMatches: Math.abs(paymentAmount - totalAmount) < 0.01
+    });
+    
+    console.log('🚨 STEP 5: PAYMENT REQUEST (What We Send to Backend)');
+    console.log('  Payment Request Structure:', {
+      amount: paymentAmount,
+      currency: paymentCurrency,
+      gateway: paymentMethod,
+      metadata: {
+        currency_context: {
+          source_currency: 'USD',
+          target_currency: paymentCurrency,
+          conversion_rate: currencyConversion?.rate || 1,
+          amount_in_source_currency: paymentAmount,
+          amount_in_target_currency: totalAmount
+        }
+      }
+    });
+    
+    console.log('🔍 STEP 6: WHAT USER SEES VS WHAT GATEWAY GETS');
+    console.log('  User Display:', {
+      displayAmount: totalAmount,
+      displayCurrency: paymentCurrency,
+      displayFormatted: `${totalAmount.toFixed(2)} ${paymentCurrency}`
+    });
+    console.log('  Gateway Receives:', {
+      amount: paymentAmount,
+      currency: paymentCurrency,
+      gatewayFormatted: `${paymentAmount.toFixed(2)} ${paymentCurrency}`
+    });
+    
+    console.log('⚠️ STEP 7: POTENTIAL ISSUES TO CHECK');
+    console.log('  Validation Checks:', {
+      paymentAmountValid: paymentAmount > 0 && isFinite(paymentAmount),
+      displayAmountValid: totalAmount > 0 && isFinite(totalAmount),
+      conversionRateValid: (currencyConversion?.rate || 1) > 0,
+      amountsConsistent: Math.abs(paymentAmount - totalAmount) < 0.01,
+      currencyMismatch: paymentCurrency !== 'USD' && (!currencyConversion || currencyConversion.rate === 1)
+    });
+    
+    console.log('🏦 [Checkout] ===== END PAYMENT AMOUNT TRACKING =====');
+
+    // 🚨 CRITICAL FIX: Send appropriate currency amounts to backend based on gateway type
     const paymentRequest: PaymentRequest = {
       quoteIds: cartQuoteIds,
-      amount: totalAmount,
-      currency: paymentCurrency,
+      amount: paymentAmount, // Local currency for local gateways, USD for international
+      currency: paymentCurrency, // Gateway-appropriate currency
       gateway: paymentMethod,
       success_url: `${window.location.origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${window.location.origin}/checkout?quotes=${cartQuoteIds.join(',')}`,
@@ -840,6 +1104,24 @@ export default function Checkout() {
         // Include guest session token for webhook processing
         guest_session_token: isGuestCheckout ? guestSessionToken : undefined,
         checkout_type: isGuestCheckout ? 'guest' : 'authenticated',
+        // 🚨 CRITICAL FIX: Currency context for payment gateways
+        currency_context: {
+          source_currency: paymentCurrency, // Currency being sent to gateway
+          target_currency: paymentCurrency, // Same as source for new logic
+          conversion_rate: 1, // No conversion needed as we're sending correct currency
+          conversion_source: 'direct', // Direct currency amount
+          conversion_confidence: 'high',
+          amount_in_source_currency: paymentAmount, // Amount in gateway currency (what we're sending)
+          amount_in_target_currency: totalAmount, // Amount in user's preferred currency (for display)
+          gateway_type: isLocalGateway ? 'local' : 'international',
+          converted_at: new Date().toISOString(),
+        },
+        // Quote context
+        quote_context: {
+          quote_ids: selectedCartItems.map(item => item.id),
+          origin_countries: [...new Set(selectedCartItems.map(item => item.originCountry).filter(Boolean))],
+          destination_countries: [...new Set(selectedCartItems.map(item => item.destinationCountry).filter(Boolean))],
+        }
       },
     };
 
@@ -2460,6 +2742,7 @@ export default function Checkout() {
                     disabled={isProcessing}
                     availableMethods={availableMethods}
                     methodsLoading={methodsLoading}
+                    originCountry={selectedCartItems[0]?.purchaseCountryCode || selectedCartItems[0]?.countryCode || 'US'}
                   />
                 </CardContent>
               </Card>
@@ -2540,6 +2823,22 @@ export default function Checkout() {
                         />
                       </span>
                     </div>
+                    
+                    {/* 🚨 CRITICAL FIX: Show users what amount will actually be charged */}
+                    {currencyConversion && currencyConversion.rate !== 1 && (
+                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800 font-medium">
+                          💡 Payment Information
+                        </p>
+                        <p className="text-xs text-blue-700 mt-1">
+                          Your payment will be processed in USD (${selectedCartItems.reduce((total, item) => total + ((item.finalTotal || 0) * (item.quantity || 1)), 0).toFixed(2)}) 
+                          and converted to {paymentCurrency} by your payment provider.
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                          Exchange rate: 1 USD = {currencyConversion.rate.toFixed(4)} {paymentCurrency}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <Button
@@ -2569,10 +2868,13 @@ export default function Checkout() {
                         {(!isGuestCheckout || checkoutMode === 'guest') && (
                           <>
                             Place Order -{' '}
-                            <CheckoutTotal
-                              items={selectedCartItems}
-                              displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
-                            />
+                            {/* 🚨 CRITICAL FIX: Show USD amount that will actually be charged */}
+                            ${selectedCartItems.reduce((total, item) => total + ((item.finalTotal || 0) * (item.quantity || 1)), 0).toFixed(2)} USD
+                            {currencyConversion && currencyConversion.rate !== 1 && (
+                              <span className="text-sm text-muted-foreground ml-1">
+                                (≈ {(selectedCartItems.reduce((total, item) => total + ((item.finalTotal || 0) * (item.quantity || 1)), 0) * currencyConversion.rate).toFixed(2)} {paymentCurrency})
+                              </span>
+                            )}
                           </>
                         )}
                       </>
