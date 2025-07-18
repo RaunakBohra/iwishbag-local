@@ -135,15 +135,17 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       <div
         key={method.code}
         className={cn(
-          'border rounded-lg transition-colors',
-          isSelected && 'border-primary bg-primary/5',
+          'border rounded-xl transition-all duration-200 hover:shadow-lg',
+          isSelected 
+            ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-purple-50 shadow-lg ring-2 ring-blue-200' 
+            : 'border-gray-200 bg-white/60 backdrop-blur-sm hover:border-gray-300',
           disabled && 'opacity-50',
         )}
       >
         <Label
           htmlFor={method.code}
           className={cn(
-            'flex items-center space-x-3 p-3 cursor-pointer',
+            'flex items-center space-x-3 p-4 cursor-pointer',
             disabled && 'cursor-not-allowed',
           )}
         >
@@ -193,15 +195,17 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
-          Payment Method
-        </CardTitle>
-      </CardHeader>
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+          <CreditCard className="h-4 w-4 text-white" />
+        </div>
+        <h3 className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          Payment Methods
+        </h3>
+      </div>
 
-      <CardContent>
+      <div>
         <RadioGroup
           key={validSelectedMethod}
           value={validSelectedMethod}
@@ -233,7 +237,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           </Alert>
         )}
 
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
