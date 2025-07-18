@@ -1,13 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { H1, H2, BodyLarge, Body } from '@/components/ui/typography';
-import { Mail, Phone, MapPin, Clock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Display, H1, H2, H3, BodyLarge, Body } from '@/components/ui/typography';
+import { Section, Container } from '@/components/ui/spacing';
+import { Mail, Phone, MapPin, Clock, MessageCircle, Send, CheckCircle, ArrowRight, Globe, Zap, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/design-system';
+import { Link } from 'react-router-dom';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -17,7 +22,32 @@ const Contact = () => {
     message: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVisible, setIsVisible] = useState({ hero: false, form: false, faq: false });
   const { toast } = useToast();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const heroElement = document.getElementById('hero-section');
+      const formElement = document.getElementById('form-section');
+      const faqElement = document.getElementById('faq-section');
+      
+      const checkVisibility = (element: Element | null) => {
+        if (!element) return false;
+        const rect = element.getBoundingClientRect();
+        return rect.top < window.innerHeight * 0.8 && rect.bottom > 0;
+      };
+
+      setIsVisible({
+        hero: checkVisibility(heroElement),
+        form: checkVisibility(formElement),
+        faq: checkVisibility(faqElement),
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial check
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const { data: footerSettings } = useQuery({
     queryKey: ['footer-settings'],
@@ -75,182 +105,262 @@ const Contact = () => {
     });
   };
 
+  const contactMethods = [
+    {
+      icon: Mail,
+      title: 'Send Message',
+      description: 'Send us a message anytime',
+      contact: footerSettings?.email || 'contact@iwishbag.com',
+      availability: 'We respond within 24 hours',
+      bgColor: 'bg-blue-50',
+      iconColor: 'text-blue-600',
+    },
+    {
+      icon: MessageCircle,
+      title: 'Live Chat',
+      description: 'Get instant help',
+      contact: 'Available 24/7',
+      availability: 'Average response time: 2 minutes',
+      bgColor: 'bg-green-50',
+      iconColor: 'text-green-600',
+    },
+    {
+      icon: Phone,
+      title: 'Phone Support',
+      description: 'Call us directly',
+      contact: footerSettings?.phone || '+1 (555) 123-4567',
+      availability: 'Mon-Fri 9AM-6PM EST',
+      bgColor: 'bg-purple-50',
+      iconColor: 'text-purple-600',
+    },
+  ];
+
+  const features = [
+    {
+      icon: Zap,
+      title: 'Fast Response',
+      description: 'Get answers within 24 hours',
+    },
+    {
+      icon: Shield,
+      title: 'Expert Support',
+      description: 'Our team knows international shipping',
+    },
+    {
+      icon: Globe,
+      title: 'Global Coverage',
+      description: 'We support customers worldwide',
+    },
+  ];
+
+  const faqs = [
+    {
+      question: 'How long does shipping take?',
+      answer: 'Typically 7-21 business days depending on the destination country and customs processing.',
+    },
+    {
+      question: 'How are customs duties calculated?',
+      answer: 'Based on product category, declared value, and destination country regulations. Our calculator provides accurate estimates.',
+    },
+    {
+      question: 'Can I track my shipment?',
+      answer: 'Yes! You\'ll receive tracking information as soon as your order ships, with real-time updates.',
+    },
+    {
+      question: 'What payment methods do you accept?',
+      answer: 'We accept all major credit cards, PayPal, and bank transfers for your convenience.',
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-semibold text-gray-900">iwishBag</h1>
+
+      {/* Contact Methods Section */}
+      <Section className="py-8 bg-white">
+        <Container>
+          <div className="text-center mb-8">
+            <H2 className="mb-4 text-gray-900 text-2xl">Choose how to reach us</H2>
+            <Body className="text-gray-600 max-w-2xl mx-auto text-sm">
+              Pick the method that works best for you. We're committed to providing quick, helpful responses.
+            </Body>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {contactMethods.map((method, index) => (
+              <div key={index}>
+                {index === 0 ? (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <div className="group p-4 md:p-6 rounded-2xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300 cursor-pointer">
+                        <div className="flex flex-col md:flex-col items-center md:items-center text-center md:text-center">
+                          <div className={`w-12 h-12 md:w-16 md:h-16 ${method.bgColor} rounded-full flex items-center justify-center mb-4 md:mb-4 group-hover:scale-110 transition-transform flex-shrink-0`}>
+                            <method.icon className={`w-6 h-6 md:w-8 md:h-8 ${method.iconColor}`} />
+                          </div>
+                          <div className="flex-1 md:flex-none">
+                            <H3 className="mb-1 md:mb-2 text-gray-900 text-base md:text-lg">{method.title}</H3>
+                            <Body className="text-gray-600 mb-2 md:mb-3 text-xs md:text-sm">{method.description}</Body>
+                            <Body className="font-medium text-gray-900 mb-1 text-xs md:text-sm">{method.contact}</Body>
+                            <Body className="text-xs text-gray-500">{method.availability}</Body>
+                          </div>
+                        </div>
+                      </div>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>Send us a message</DialogTitle>
+                      </DialogHeader>
+                      <div className="mt-4">
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="modal-name" className="text-sm font-medium text-gray-700 mb-2 block">
+                                Name *
+                              </Label>
+                              <Input
+                                id="modal-name"
+                                name="name"
+                                type="text"
+                                required
+                                value={formData.name}
+                                onChange={handleChange}
+                                placeholder="Your full name"
+                                className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="modal-email" className="text-sm font-medium text-gray-700 mb-2 block">
+                                Email *
+                              </Label>
+                              <Input
+                                id="modal-email"
+                                name="email"
+                                type="email"
+                                required
+                                value={formData.email}
+                                onChange={handleChange}
+                                placeholder="your@email.com"
+                                className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label htmlFor="modal-subject" className="text-sm font-medium text-gray-700 mb-2 block">
+                              Subject *
+                            </Label>
+                            <Input
+                              id="modal-subject"
+                              name="subject"
+                              type="text"
+                              required
+                              value={formData.subject}
+                              onChange={handleChange}
+                              placeholder="What can we help you with?"
+                              className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </div>
+
+                          <div>
+                            <Label htmlFor="modal-message" className="text-sm font-medium text-gray-700 mb-2 block">
+                              Message *
+                            </Label>
+                            <Textarea
+                              id="modal-message"
+                              name="message"
+                              required
+                              rows={4}
+                              value={formData.message}
+                              onChange={handleChange}
+                              placeholder="Tell us more about your shipping needs..."
+                              className="border-gray-200 focus:border-blue-500 focus:ring-blue-500 resize-none"
+                            />
+                          </div>
+
+                          <Button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-medium group"
+                          >
+                            {isSubmitting ? (
+                              <span className="flex items-center justify-center">
+                                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                                Sending...
+                              </span>
+                            ) : (
+                              <span className="flex items-center justify-center">
+                                Send Message
+                                <Send className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                              </span>
+                            )}
+                          </Button>
+                        </form>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ) : (
+                  <div className="group p-4 md:p-6 rounded-2xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300 cursor-pointer">
+                    <div className="flex flex-col md:flex-col items-center md:items-center text-center md:text-center">
+                      <div className={`w-12 h-12 md:w-16 md:h-16 ${method.bgColor} rounded-full flex items-center justify-center mb-4 md:mb-4 group-hover:scale-110 transition-transform flex-shrink-0`}>
+                        <method.icon className={`w-6 h-6 md:w-8 md:h-8 ${method.iconColor}`} />
+                      </div>
+                      <div className="flex-1 md:flex-none">
+                        <H3 className="mb-1 md:mb-2 text-gray-900 text-base md:text-lg">{method.title}</H3>
+                        <Body className="text-gray-600 mb-2 md:mb-3 text-xs md:text-sm">{method.description}</Body>
+                        <Body className="font-medium text-gray-900 mb-1 text-xs md:text-sm">{method.contact}</Body>
+                        <Body className="text-xs text-gray-500">{method.availability}</Body>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Container>
+      </Section>
+
+
+      {/* FAQ Section */}
+      <Section 
+        id="faq-section"
+        className="py-8 bg-white"
+      >
+        <Container>
+          <div 
+            className={cn(
+              "transition-all duration-1000",
+              isVisible.faq ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+            )}
+          >
+            <div className="text-center mb-8">
+              <H2 className="mb-4 text-gray-900 text-2xl">Frequently Asked Questions</H2>
+              <Body className="text-gray-600 max-w-2xl mx-auto text-sm">
+                Find quick answers to common questions about our international shipping services.
+              </Body>
             </div>
-            <nav className="flex space-x-8">
-              <a href="/" className="text-gray-600 hover:text-gray-900">Home</a>
-              <a href="/blog" className="text-gray-600 hover:text-gray-900">Blog</a>
-              <a href="/about" className="text-gray-600 hover:text-gray-900">About</a>
-              <a href="/contact" className="text-gray-900 font-medium">Contact</a>
-            </nav>
-          </div>
-        </div>
-      </header>
 
-      {/* Hero Section */}
-      <div className="bg-white py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
-            <p className="text-xl text-gray-600">
-              We're here to help with your international shopping needs
-            </p>
-          </div>
-        </div>
-      </div>
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {faqs.map((faq, index) => (
+                <div key={index} className="p-6 rounded-2xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+                  <H3 className="text-gray-900 mb-3 text-base">{faq.question}</H3>
+                  <Body className="text-gray-600 text-sm">{faq.answer}</Body>
+                </div>
+              ))}
+            </div>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid lg:grid-cols-2 gap-16">
-          {/* Contact Form */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Send us a message</h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="mt-1 h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="mt-1 h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="subject" className="text-sm font-medium text-gray-700">
-                  Subject
-                </Label>
-                <Input
-                  id="subject"
-                  name="subject"
-                  type="text"
-                  required
-                  value={formData.subject}
-                  onChange={handleChange}
-                  className="mt-1 h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="message" className="text-sm font-medium text-gray-700">
-                  Message
-                </Label>
-                <Textarea
-                  id="message"
-                  name="message"
-                  required
-                  rows={6}
-                  value={formData.message}
-                  onChange={handleChange}
-                  className="mt-1 border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-medium"
+            <div className="text-center mt-8">
+              <Body className="text-gray-600 mb-6 text-sm">Can't find what you're looking for?</Body>
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3" 
+                onClick={() => {
+                  document.getElementById('form-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
               >
-                {isSubmitting ? 'Sending...' : 'Send Message'}
+                Send us a message
               </Button>
-            </form>
-          </div>
-
-          {/* Contact Information */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Get in touch</h2>
-            <div className="space-y-6">
-              <div className="flex items-start space-x-4">
-                <Mail className="w-5 h-5 text-purple-600 mt-1" />
-                <div>
-                  <h3 className="font-medium text-gray-900">Email</h3>
-                  <p className="text-gray-600">{footerSettings?.email || 'contact@iwishbag.com'}</p>
-                  <p className="text-sm text-gray-500 mt-1">We respond within 24 hours</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <Phone className="w-5 h-5 text-purple-600 mt-1" />
-                <div>
-                  <h3 className="font-medium text-gray-900">Phone</h3>
-                  <p className="text-gray-600">{footerSettings?.phone || '+1 (555) 123-4567'}</p>
-                  <p className="text-sm text-gray-500 mt-1">Mon-Fri 9AM-6PM EST</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <MapPin className="w-5 h-5 text-purple-600 mt-1" />
-                <div>
-                  <h3 className="font-medium text-gray-900">Address</h3>
-                  <p className="text-gray-600">{footerSettings?.address || 'New York, NY 10001'}</p>
-                  <p className="text-sm text-gray-500 mt-1">Visit our office anytime</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <Clock className="w-5 h-5 text-purple-600 mt-1" />
-                <div>
-                  <h3 className="font-medium text-gray-900">Business Hours</h3>
-                  <p className="text-gray-600">{footerSettings?.business_hours || '24/7 Customer Support'}</p>
-                  <p className="text-sm text-gray-500 mt-1">Quick response guaranteed</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Simple FAQ */}
-            <div className="mt-12">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Frequently Asked Questions</h3>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-900">How long does shipping take?</h4>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Typically 7-21 business days depending on the destination country and customs processing.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">How are customs duties calculated?</h4>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Based on product category, declared value, and destination country regulations.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">Can I track my shipment?</h4>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Yes! You'll receive tracking information as soon as your order ships.
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </Container>
+      </Section>
     </div>
   );
 };

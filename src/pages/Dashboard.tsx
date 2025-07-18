@@ -194,7 +194,7 @@ const Dashboard = () => {
                           {action.label === 'Request Quote' && 'Start a new quote request'}
                           {action.label === 'View All Quotes' && 'Manage your quote requests'}
                           {action.label === 'My Orders' && 'Track your shipments'}
-                        </p>
+                        </BodySmall>
                         <div className="mt-4 flex items-center text-blue-600 group-hover:translate-x-1 transition-transform">
                           <span className="text-sm font-medium">Go</span>
                           <ArrowRight className="w-4 h-4 ml-1" />

@@ -608,9 +608,9 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
             <Button
               onClick={handleApprove}
               disabled={isUpdating}
-              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg"
+              className="w-full bg-green-600 hover:bg-green-700 text-white shadow-sm"
             >
-              <CheckCircle className="mr-2 h-5 w-5" />
+              <CheckCircle className="mr-2 h-4 w-4" />
               Approve Quote
             </Button>
             <Button
@@ -623,7 +623,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
               variant="outline"
               className="w-full border-red-200 hover:bg-red-50 text-red-600"
             >
-              <XCircle className="mr-2 h-5 w-5" />
+              <XCircle className="mr-2 h-4 w-4" />
               Reject Quote
             </Button>
           </>
@@ -633,9 +633,9 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
           <Button
             onClick={handleAddToCart}
             disabled={isUpdating}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
           >
-            <ShoppingCart className="mr-2 h-5 w-5" />
+            <ShoppingCart className="mr-2 h-4 w-4" />
             Add to Cart
           </Button>
         )}
@@ -643,9 +643,9 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
         {canCheckout && (
           <Button
             onClick={handleCheckout}
-            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg"
+            className="w-full bg-green-600 hover:bg-green-700 text-white shadow-sm"
           >
-            <CreditCard className="mr-2 h-5 w-5" />
+            <CreditCard className="mr-2 h-4 w-4" />
             Proceed to Checkout
           </Button>
         )}
@@ -656,45 +656,44 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto max-w-6xl px-4 py-4 sm:py-6 lg:py-8">
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto max-w-6xl px-4 py-8">
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
+        <div className="mb-8">
           <Link
             to={isGuestMode ? '/' : '/dashboard'}
-            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 mb-4 group"
+            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6 group"
           >
             <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
             Back to {isGuestMode ? 'Home' : 'Dashboard'}
           </Link>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
-                Quote Details
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                {quote.display_id || `#${quote.id.slice(0, 8)}`}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <StatusBadge status={quote.status} category="quote" />
-              {quote.status === 'sent' && <QuoteExpirationTimer expiresAt={quote.expires_at} />}
-              {isAdmin && <ShareQuoteButton quote={quote} variant="button" size="sm" />}
-              {/* Guest Currency Selector - Only for guest users */}
-              {isGuestMode && !user && (
-                <GuestCurrencySelector
-                  defaultCurrency={quote?.destination_country || 'US'}
-                  className="border-l border-gray-200 pl-3"
-                />
-              )}
-            </div>
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-medium text-gray-900 mb-2">
+              Quote Details
+            </h1>
+            <p className="text-gray-600 text-sm">
+              {quote.display_id || `#${quote.id.slice(0, 8)}`}
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <StatusBadge status={quote.status} category="quote" />
+            {quote.status === 'sent' && <QuoteExpirationTimer expiresAt={quote.expires_at} />}
+            {isAdmin && <ShareQuoteButton quote={quote} variant="button" size="sm" />}
+            {/* Guest Currency Selector - Only for guest users */}
+            {isGuestMode && !user && (
+              <GuestCurrencySelector
+                defaultCurrency={quote?.destination_country || 'US'}
+                className="border-l border-gray-200 pl-3"
+              />
+            )}
           </div>
         </div>
 
         {/* Progress Stepper - Only for authenticated users */}
         {!isGuestMode && user && (
-          <div className="mb-6 sm:mb-8">
+          <div className="mb-8">
             <QuoteStepper
               currentStep={getQuoteUIState(quote).step}
               rejected={getQuoteUIState(quote).step === 'rejected'}
@@ -702,18 +701,18 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-3 space-y-6">
             {/* Quote Summary Card */}
-            <Card className="overflow-hidden bg-white/80 backdrop-blur-sm shadow-xl border-white/20">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-                <CardTitle className="flex items-center gap-3">
-                  <Package className="h-6 w-6" />
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                  <Package className="h-5 w-5 text-gray-600" />
                   Quote Summary
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-6 pt-0">
                 {quote.quote_items && quote.quote_items.length > 0 && (
                   <div className="space-y-4">
                     {/* Product details */}
@@ -724,7 +723,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                           {quote.quote_items.map((item) => (
                             <div
                               key={item.id}
-                              className="flex flex-col items-center min-w-[140px] max-w-[160px] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50 shadow-sm hover:shadow-md transition-all duration-200"
+                              className="flex flex-col items-center min-w-[140px] max-w-[160px] bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200"
                             >
                               <div className="text-sm font-medium text-center truncate w-full">
                                 {item.product_url ? (
@@ -740,7 +739,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                                   item.product_name
                                 )}
                               </div>
-                              <div className="text-xs text-muted-foreground mt-1 bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-full inline-block">
+                              <div className="text-xs text-gray-600 mt-1 bg-white px-2 py-1 rounded-full inline-block border border-gray-200">
                                 Qty: {item.quantity}
                               </div>
                               {/* Product Notes Blue Box */}
@@ -749,16 +748,16 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                                   try {
                                     const options = JSON.parse(item.options);
                                     return options.notes ? (
-                                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
-                                        <span className="font-medium text-blue-800">Notes:</span>{' '}
+                                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 inline-block">
+                                        <span className="font-medium">Notes:</span>{' '}
                                         {options.notes}
                                       </div>
                                     ) : null;
                                   } catch {
                                     // If not JSON, treat as plain text notes
                                     return (
-                                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
-                                        <span className="font-medium text-blue-800">Notes:</span>{' '}
+                                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 inline-block">
+                                        <span className="font-medium">Notes:</span>{' '}
                                         {item.options}
                                       </div>
                                     );
@@ -805,16 +804,16 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                                   try {
                                     const options = JSON.parse(item.options);
                                     return options.notes ? (
-                                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
-                                        <span className="font-medium text-blue-800">Notes:</span>{' '}
+                                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 inline-block">
+                                        <span className="font-medium">Notes:</span>{' '}
                                         {options.notes}
                                       </div>
                                     ) : null;
                                   } catch {
                                     // If not JSON, treat as plain text notes
                                     return (
-                                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
-                                        <span className="font-medium text-blue-800">Notes:</span>{' '}
+                                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 inline-block">
+                                        <span className="font-medium">Notes:</span>{' '}
                                         {item.options}
                                       </div>
                                     );
@@ -828,14 +827,14 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
 
                     {/* Combined Price and Info Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-xl p-4">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <div className="flex items-center gap-2 mb-2">
                           <Package className="h-4 w-4 text-gray-600" />
                           <span className="text-xs text-gray-600 font-medium">Cost of Goods</span>
                         </div>
-                        <span className="text-xl font-bold">{formatAmount(quote.item_price)}</span>
+                        <span className="text-xl font-semibold text-gray-900">{formatAmount(quote.item_price)}</span>
                       </div>
-                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-xl p-4">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <div className="flex items-center gap-2 mb-2">
                           <Receipt className="h-4 w-4 text-gray-600" />
                           <span className="text-xs text-gray-600 font-medium">Quote Total</span>
@@ -846,21 +845,21 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                             <Info className="h-3 w-3 text-gray-500 hover:text-gray-700" />
                           </button>
                         </div>
-                        <span className="text-xl font-bold">{formatAmount(quote.final_total)}</span>
+                        <span className="text-xl font-semibold text-gray-900">{formatAmount(quote.final_total)}</span>
                       </div>
-                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-xl p-4">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <div className="flex items-center gap-2 mb-2">
                           <Weight className="h-4 w-4 text-gray-600" />
                           <span className="text-xs text-gray-600 font-medium">Total Weight</span>
                         </div>
-                        <span className="text-xl font-bold">{quote.item_weight || 0} kg</span>
+                        <span className="text-xl font-semibold text-gray-900">{quote.item_weight || 0} kg</span>
                       </div>
-                      <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-xl p-4">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <div className="flex items-center gap-2 mb-2">
                           <Package className="h-4 w-4 text-gray-600" />
                           <span className="text-xs text-gray-600 font-medium">Quantity</span>
                         </div>
-                        <span className="text-xl font-bold">
+                        <span className="text-xl font-semibold text-gray-900">
                           {Array.isArray(quote.quote_items)
                             ? quote.quote_items.reduce((sum, item) => sum + (item.quantity || 0), 0)
                             : quote.quantity || 1}
@@ -905,14 +904,14 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                               destinationCountry;
 
                             return (
-                              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-blue-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
+                              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 hover:shadow-md transition-all duration-200">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Truck className="h-3 w-3 text-blue-600" />
-                                  <span className="text-xs text-blue-600 dark:text-gray-300 font-medium">
+                                  <span className="text-xs text-blue-600 font-medium">
                                     Shipping Route
                                   </span>
                                 </div>
-                                <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">
+                                <div className="font-semibold text-gray-900 text-sm">
                                   <ShippingRouteDisplay
                                     origin={purchaseCountry}
                                     destination={destinationCountry}
@@ -923,28 +922,28 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                             );
                           } else {
                             return (
-                              <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
+                              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:shadow-md transition-all duration-200">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Globe className="h-3 w-3 text-gray-600" />
-                                  <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                                  <span className="text-xs text-gray-600 font-medium">
                                     Country
                                   </span>
                                 </div>
-                                <div className="font-bold text-gray-900 dark:text-gray-100">
+                                <div className="font-semibold text-gray-900">
                                   {countryName}
                                 </div>
                               </div>
                             );
                           }
                         })()}
-                        <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-3 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-md transition-all duration-200">
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:shadow-md transition-all duration-200">
                           <div className="flex items-center gap-2 mb-1">
                             <Calendar className="h-3 w-3 text-gray-600" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                            <span className="text-xs text-gray-600 font-medium">
                               Delivery
                             </span>
                           </div>
-                          <div className="font-bold text-gray-900 dark:text-gray-100">
+                          <div className="font-semibold text-gray-900">
                             {deliveryWindow
                               ? `${deliveryWindow.label} (${deliveryWindow.days})`
                               : '—'}
@@ -990,14 +989,14 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                               destinationCountry;
 
                             return (
-                              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-blue-200/50 dark:border-gray-600/50">
+                              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                                 <div className="flex items-center gap-2 mb-2">
                                   <Truck className="h-4 w-4 text-blue-600" />
-                                  <span className="text-xs text-blue-600 dark:text-gray-300 font-medium">
+                                  <span className="text-xs text-blue-600 font-medium">
                                     Shipping Route
                                   </span>
                                 </div>
-                                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                <span className="text-lg font-semibold text-gray-900">
                                   <ShippingRouteDisplay
                                     origin={purchaseCountry}
                                     destination={destinationCountry}
@@ -1008,28 +1007,28 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                             );
                           } else {
                             return (
-                              <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                                 <div className="flex items-center gap-2 mb-2">
                                   <Globe className="h-4 w-4 text-gray-600" />
-                                  <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                                  <span className="text-xs text-gray-600 font-medium">
                                     Country
                                   </span>
                                 </div>
-                                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                <span className="text-lg font-semibold text-gray-900">
                                   {countryName}
                                 </span>
                               </div>
                             );
                           }
                         })()}
-                        <div className="bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-800 dark:to-slate-700 rounded-xl p-4 border border-gray-200/50 dark:border-gray-600/50">
+                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                           <div className="flex items-center gap-2 mb-2">
                             <Calendar className="h-4 w-4 text-gray-600" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                            <span className="text-xs text-gray-600 font-medium">
                               Delivery
                             </span>
                           </div>
-                          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                          <span className="text-lg font-semibold text-gray-900">
                             {deliveryWindow
                               ? `${deliveryWindow.label} (${deliveryWindow.days})`
                               : '—'}
@@ -1044,56 +1043,56 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
 
             {/* Need Help Section - Conditional for authenticated users */}
             {!isGuestMode && user && (
-              <div className="flex justify-center py-4 sm:py-6">
+              <div className="flex justify-center py-6">
                 <div className="md:block hidden">
                   <Popover open={isHelpOpen} onOpenChange={setHelpOpen}>
                     <PopoverTrigger asChild>
                       <button
-                        className="text-base font-medium flex items-center gap-2 text-gray-700 bg-gradient-to-r from-gray-50 to-slate-100 border shadow-sm hover:shadow-md px-4 py-2 rounded-xl transition-all duration-200 hover:scale-105"
+                        className="text-sm font-medium flex items-center gap-2 text-gray-700 bg-white border border-gray-200 shadow-sm hover:shadow-md px-4 py-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
                         type="button"
                       >
-                        <HelpCircle className="w-5 h-5 text-gray-600" /> Need Help?
+                        <HelpCircle className="w-4 h-4 text-gray-600" /> Need Help?
                       </button>
                     </PopoverTrigger>
                     <PopoverContent
                       align="center"
-                      className="w-64 p-3 backdrop-blur-xl bg-white/95 shadow-2xl rounded-2xl"
+                      className="w-64 p-3 bg-white shadow-lg rounded-lg border border-gray-200"
                     >
                       <div className="space-y-2">
                         <button
-                          className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
+                          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-gray-50 text-sm transition-all duration-200 text-gray-700"
                           onClick={handleMessageSupport}
                         >
-                          <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
+                          <div className="p-1.5 rounded-lg bg-blue-100">
                             <MessageCircle className="w-4 h-4 text-blue-600" />
                           </div>
                           Message Support
                         </button>
                         {quote.status !== 'rejected' && (
                           <button
-                            className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 text-sm transition-all duration-300 text-red-600 hover:scale-105"
+                            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-red-50 text-sm transition-all duration-200 text-red-600"
                             onClick={handleCancelQuote}
                           >
-                            <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/50">
+                            <div className="p-1.5 rounded-lg bg-red-100">
                               <XCircle className="w-4 h-4 text-red-600" />
                             </div>
                             Cancel Quote
                           </button>
                         )}
                         <button
-                          className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
+                          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-gray-50 text-sm transition-all duration-200 text-gray-700"
                           onClick={handleFAQ}
                         >
-                          <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50">
+                          <div className="p-1.5 rounded-lg bg-green-100">
                             <BookOpen className="w-4 h-4 text-green-600" />
                           </div>
                           FAQ
                         </button>
                         <button
-                          className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
+                          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-gray-50 text-sm transition-all duration-200 text-gray-700"
                           onClick={handleRequestChanges}
                         >
-                          <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
+                          <div className="p-1.5 rounded-lg bg-purple-100">
                             <Edit2 className="w-4 h-4 text-purple-600" />
                           </div>
                           Request Changes
@@ -1107,31 +1106,31 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
 
             {/* Messages Section - Only for authenticated users */}
             {showMessages && !isGuestMode && user && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <QuoteMessaging quoteId={quote.id} quoteUserId={quote.user_id} />
               </div>
             )}
           </div>
 
           {/* Sidebar - Action Buttons */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-2">
             <div className="sticky top-4 space-y-4">
               {/* Actions Card - Hidden on mobile */}
               {!isMobile && (
-                <Card className="animate-in slide-in-from-right duration-700 delay-100 hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-                  <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/50 dark:to-slate-950/50">
-                    <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                      <div className="p-2 rounded-lg bg-gradient-to-r from-slate-600 to-gray-700">
-                        <Zap className="h-5 w-5 text-white" />
+                <Card className="bg-white border border-gray-200 shadow-sm">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-blue-100">
+                        <Zap className="h-4 w-4 text-blue-600" />
                       </div>
                       Actions
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-6 space-y-4">
+                  <CardContent className="p-6 pt-0 space-y-4">
                     {/* Expiration Timer */}
                     {(quote.status === 'sent' || quote.status === 'approved') &&
                       quote.expires_at && (
-                        <div className="flex items-center justify-center p-3 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg">
+                        <div className="flex items-center justify-center p-3 bg-red-50 border border-red-200 rounded-lg">
                           <QuoteExpirationTimer
                             expiresAt={quote.expires_at}
                             compact={true}
@@ -1263,18 +1262,18 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
           }
         }}
       >
-        <DialogContent className="max-w-4xl w-[95vw] md:w-[90vw] bg-white/95 backdrop-blur-xl border border-white/30 shadow-2xl rounded-2xl">
+        <DialogContent className="max-w-4xl w-[95vw] md:w-[90vw] bg-white border border-gray-200 shadow-lg rounded-lg">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold flex items-center gap-3 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-              <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600">
-                <Receipt className="h-5 w-5 text-white" />
+            <h2 className="text-xl font-semibold flex items-center gap-3 text-gray-900">
+              <div className="p-2 rounded-lg bg-blue-100">
+                <Receipt className="h-5 w-5 text-blue-600" />
               </div>
               Quote Breakdown
             </h2>
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200/50"
+              className="gap-2 hover:bg-gray-50 border-gray-200"
             >
               <Download className="h-4 w-4" />
               Download PDF
@@ -1283,14 +1282,14 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Items Section */}
             <div className="space-y-4">
-              <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h3 className="font-semibold text-lg text-gray-900">
                 Items
               </h3>
               <div className="space-y-3">
                 {quote.quote_items?.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200/50 dark:border-gray-600/50 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200"
+                    className="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
@@ -1303,12 +1302,12 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                         )}
                         <div className={item.image_url ? '' : 'flex-1'}>
                           <div className="font-semibold text-sm">{item.product_name}</div>
-                          <div className="text-muted-foreground text-xs bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-full inline-block">
+                          <div className="text-gray-600 text-xs bg-white px-2 py-1 rounded-full inline-block border border-gray-200">
                             Quantity: {item.quantity}
                           </div>
                         </div>
                       </div>
-                      <span className="font-bold text-sm bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                      <span className="font-semibold text-sm text-gray-900">
                         {formatAmount(item.item_price * item.quantity)}
                       </span>
                     </div>
@@ -1318,10 +1317,10 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                         try {
                           const options = JSON.parse(item.options);
                           return options.notes ? (
-                            <div className="mt-3 pt-3 border-t border-gray-200/50 dark:border-gray-600/50">
+                            <div className="mt-3 pt-3 border-t border-gray-200">
                               <div className="flex items-start gap-2">
                                 <Edit2 className="h-3 w-3 text-gray-500 mt-0.5 flex-shrink-0" />
-                                <div className="text-xs text-gray-600 dark:text-gray-300 bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded-lg">
+                                <div className="text-xs text-gray-600 bg-white px-2 py-1 rounded-lg border border-gray-200">
                                   <span className="font-medium">Notes:</span> {options.notes}
                                 </div>
                               </div>
@@ -1338,10 +1337,10 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
 
             {/* Charges & Fees Section */}
             <div className="space-y-4">
-              <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h3 className="font-semibold text-lg text-gray-900">
                 Charges & Fees
               </h3>
-              <div className="space-y-3 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/50">
+              <div className="space-y-3 bg-blue-50 rounded-lg p-4 border border-blue-200">
                 {renderBreakdownRow(
                   'Total Item Price',
                   quote.item_price,
@@ -1403,8 +1402,8 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                   <Gift className="h-4 w-4 text-green-600" />,
                 )}
               </div>
-              <Separator className="bg-gradient-to-r from-blue-200 to-purple-200" />
-              <div className="space-y-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 rounded-xl p-4 border border-green-200/50 dark:border-green-700/50">
+              <Separator className="bg-gray-200" />
+              <div className="space-y-3 bg-green-50 rounded-lg p-4 border border-green-200">
                 {renderBreakdownRow(
                   'Subtotal',
                   quote.sub_total,
@@ -1418,12 +1417,12 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                   <Percent className="h-4 w-4 text-emerald-600" />,
                 )}
               </div>
-              <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 border border-purple-300/50 dark:border-purple-600/50 rounded-xl p-6 shadow-lg">
-                <div className="flex justify-between items-center font-bold text-lg">
-                  <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 shadow-sm">
+                <div className="flex justify-between items-center font-semibold text-lg">
+                  <span className="text-gray-900">
                     Total Amount
                   </span>
-                  <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-xl">
+                  <span className="text-gray-900 text-xl">
                     {formatAmount(quote.final_total)}
                   </span>
                 </div>

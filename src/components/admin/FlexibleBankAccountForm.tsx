@@ -12,9 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Building, Settings, Globe, CheckCircle, ChevronDown, X } from 'lucide-react';
 import { BankAccount } from '@/hooks/useBankAccountSettings';
 import { useShippingCountries } from '@/hooks/useShippingCountries';
+import { H2, H3, Body, BodySmall } from '@/components/ui/typography';
+import { Badge } from '@/components/ui/badge';
 
 interface BankAccountFormData {
   account_name: string;
@@ -261,126 +263,196 @@ export const FlexibleBankAccountForm = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{editingAccount ? 'Edit Bank Account' : 'Add New Bank Account'}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="country">Country</Label>
-              <Select
-                value={selectedCountry}
-                onValueChange={setSelectedCountry}
-                disabled={isFallback || countriesLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={countriesLoading ? 'Loading countries...' : 'Select country'}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {countries?.map((country) => (
-                    <SelectItem key={country.code} value={country.code}>
-                      {country.name} ({country.currency})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="display_order">Display Order</Label>
-              <Input
-                id="display_order"
-                type="number"
-                value={displayOrder}
-                onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)}
-              />
-            </div>
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Header */}
+      <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <H2 className="text-lg font-semibold text-gray-900">
+              {editingAccount ? 'Edit account' : 'Add new account'}
+            </H2>
+            <BodySmall className="text-gray-600 mt-1">
+              {editingAccount ? 'Update account details and payment information.' : 'Create a new bank account for processing payments.'}
+            </BodySmall>
           </div>
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="sm" 
+            onClick={onCancel}
+            className="text-gray-500 hover:text-gray-700 h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="is_fallback"
-                checked={isFallback}
-                onCheckedChange={(checked) => {
-                  setIsFallback(!!checked);
-                  if (checked) setSelectedCountry('');
-                }}
-              />
-              <Label htmlFor="is_fallback" className="text-sm font-medium">
-                Fallback Account (shown when no country-specific account exists)
-              </Label>
+      <form onSubmit={handleSubmit} className="p-6 space-y-8">
+        {/* Basic Configuration */}
+        <div className="space-y-6">
+          <div>
+            <H3 className="text-sm font-semibold text-gray-900 mb-4">Basic configuration</H3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="country" className="text-sm font-medium text-gray-700 mb-2 block">Country</Label>
+                <Select
+                  value={selectedCountry}
+                  onValueChange={setSelectedCountry}
+                  disabled={isFallback || countriesLoading}
+                >
+                  <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white h-10">
+                    <SelectValue
+                      placeholder={countriesLoading ? 'Loading countries...' : 'Select country'}
+                    />
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countries?.map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        {country.name} ({country.currency})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <BodySmall className="text-gray-500 mt-1">
+                  This account will be used for payments in this country.
+                </BodySmall>
+              </div>
+
+              <div>
+                <Label htmlFor="display_order" className="text-sm font-medium text-gray-700 mb-2 block">Display order</Label>
+                <Input
+                  id="display_order"
+                  type="number"
+                  value={displayOrder}
+                  onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)}
+                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-10"
+                />
+                <BodySmall className="text-gray-500 mt-1">
+                  Lower numbers appear first in the list.
+                </BodySmall>
+              </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="is_active"
-                checked={isActive}
-                onCheckedChange={(checked) => setIsActive(!!checked)}
-              />
-              <Label htmlFor="is_active" className="text-sm font-medium">
-                Active
-              </Label>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold">Bank Account Fields</h3>
-
-            {customFields.map((field) => (
-              <div key={field.id} className="flex gap-2 items-end">
+            <div className="space-y-4 mt-6">
+              <div className="flex items-center space-x-3 p-4 rounded-lg border border-gray-200 bg-gray-50">
+                <Checkbox
+                  id="is_fallback"
+                  checked={isFallback}
+                  onCheckedChange={(checked) => {
+                    setIsFallback(!!checked);
+                    if (checked) setSelectedCountry('');
+                  }}
+                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                />
                 <div className="flex-1">
-                  <Label htmlFor={`label_${field.id}`}>Field Label</Label>
-                  <Input
-                    id={`label_${field.id}`}
-                    value={field.label}
-                    onChange={(e) => handleFieldChange(field.id, 'label', e.target.value)}
-                    placeholder="e.g., IFSC Code"
-                    disabled={DEFAULT_FIELDS.some((df) => df.id === field.id)}
-                    required={field.required}
-                  />
+                  <Label htmlFor="is_fallback" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Fallback account
+                  </Label>
+                  <BodySmall className="text-gray-500 mt-1">
+                    This account will be shown when no country-specific account exists.
+                  </BodySmall>
                 </div>
-
-                <div className="flex-1">
-                  <Label htmlFor={`value_${field.id}`}>Value</Label>
-                  {field.id === 'instructions' ? (
-                    <Textarea
-                      id={`value_${field.id}`}
-                      value={field.value}
-                      onChange={(e) => handleFieldChange(field.id, 'value', e.target.value)}
-                      placeholder="Enter payment instructions"
-                      rows={3}
-                      required={field.required}
-                    />
-                  ) : (
-                    <Input
-                      id={`value_${field.id}`}
-                      value={field.value}
-                      onChange={(e) => handleFieldChange(field.id, 'value', e.target.value)}
-                      placeholder="Enter value"
-                      required={field.required}
-                    />
-                  )}
-                </div>
-
-                {!DEFAULT_FIELDS.some((df) => df.id === field.id) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveField(field.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                {isFallback && (
+                  <Badge className="bg-orange-50 text-orange-700 border-orange-200">
+                    <Globe className="h-3 w-3 mr-1" />
+                    Fallback
+                  </Badge>
                 )}
               </div>
-            ))}
 
-            <div className="flex gap-2">
+              <div className="flex items-center space-x-3 p-4 rounded-lg border border-gray-200 bg-gray-50">
+                <Checkbox
+                  id="is_active"
+                  checked={isActive}
+                  onCheckedChange={(checked) => setIsActive(!!checked)}
+                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="is_active" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Active account
+                  </Label>
+                  <BodySmall className="text-gray-500 mt-1">
+                    Only active accounts will be shown to customers.
+                  </BodySmall>
+                </div>
+                {isActive && (
+                  <Badge className="bg-green-50 text-green-700 border-green-200">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Active
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Account Details */}
+        <div className="space-y-6">
+          <div>
+            <H3 className="text-sm font-semibold text-gray-900 mb-4">Account details</H3>
+            <div className="space-y-4">
+              {customFields.map((field) => (
+                <div key={field.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                  <div>
+                    <Label htmlFor={`label_${field.id}`} className="text-sm font-medium text-gray-700 mb-2 block">
+                      Field label
+                    </Label>
+                    <Input
+                      id={`label_${field.id}`}
+                      value={field.label}
+                      onChange={(e) => handleFieldChange(field.id, 'label', e.target.value)}
+                      placeholder="e.g., IFSC Code"
+                      disabled={DEFAULT_FIELDS.some((df) => df.id === field.id)}
+                      required={field.required}
+                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-10"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Label htmlFor={`value_${field.id}`} className="text-sm font-medium text-gray-700 mb-2 block">
+                        Value
+                      </Label>
+                      {field.id === 'instructions' ? (
+                        <Textarea
+                          id={`value_${field.id}`}
+                          value={field.value}
+                          onChange={(e) => handleFieldChange(field.id, 'value', e.target.value)}
+                          placeholder="Enter payment instructions"
+                          rows={3}
+                          required={field.required}
+                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 resize-none"
+                        />
+                      ) : (
+                        <Input
+                          id={`value_${field.id}`}
+                          value={field.value}
+                          onChange={(e) => handleFieldChange(field.id, 'value', e.target.value)}
+                          placeholder="Enter value"
+                          required={field.required}
+                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-10"
+                        />
+                      )}
+                    </div>
+
+                    {!DEFAULT_FIELDS.some((df) => df.id === field.id) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveField(field.id)}
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 h-10 w-10 mt-8"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3 pt-6 border-t border-gray-200">
               <Select
                 value=""
                 onValueChange={(value) => {
@@ -396,8 +468,9 @@ export const FlexibleBankAccountForm = ({
                   }
                 }}
               >
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[200px] border-gray-300 h-10">
                   <SelectValue placeholder="Add common field" />
+                  <ChevronDown className="h-4 w-4 opacity-50" />
                 </SelectTrigger>
                 <SelectContent>
                   {COMMON_BANK_FIELDS.filter(
@@ -410,23 +483,39 @@ export const FlexibleBankAccountForm = ({
                 </SelectContent>
               </Select>
 
-              <Button type="button" variant="outline" onClick={handleAddField}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleAddField}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 h-10"
+              >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Custom Field
+                Add custom field
               </Button>
             </div>
           </div>
+        </div>
 
-          <div className="flex gap-2">
-            <Button type="submit" disabled={isProcessing}>
-              {isProcessing ? 'Saving...' : editingAccount ? 'Update Account' : 'Create Account'}
-            </Button>
-            <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        {/* Actions */}
+        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel} 
+            disabled={isProcessing}
+            className="border-gray-300 text-gray-700 hover:bg-gray-50 h-10 px-4"
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={isProcessing}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 h-10 font-medium"
+          >
+            {isProcessing ? 'Saving...' : editingAccount ? 'Update account' : 'Create account'}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 };

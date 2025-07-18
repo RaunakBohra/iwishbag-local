@@ -1,327 +1,280 @@
 import { OptimizedCostEstimator } from '@/components/shared/OptimizedCostEstimator';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ParallaxSection } from '@/components/shared/ParallaxSection';
-import { AnimatedSection } from '@/components/shared/AnimatedSection';
-import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 import { Button } from '@/components/ui/button';
-import {
-  Calculator,
-  Globe,
-  Shield,
-  Zap,
-  TrendingUp,
-  Package,
-  DollarSign,
-  Info,
-} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Display, H2, H3, BodyLarge, Body } from '@/components/ui/typography';
+import { Section, Container } from '@/components/ui/spacing';
+import { Calculator, ArrowRight, Zap, Shield, Globe, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { cn } from '@/lib/design-system';
 
 const CostEstimatorPage = () => {
+  const [scrollY, setScrollY] = useState(0);
+  const [isVisible, setIsVisible] = useState({ hero: false, calculator: false, features: false });
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+      
+      // Simple visibility detection
+      const heroElement = document.getElementById('hero-section');
+      const calculatorElement = document.getElementById('calculator-section');
+      const featuresElement = document.getElementById('features-section');
+      
+      const checkVisibility = (element: Element | null) => {
+        if (!element) return false;
+        const rect = element.getBoundingClientRect();
+        return rect.top < window.innerHeight * 0.8 && rect.bottom > 0;
+      };
+
+      setIsVisible({
+        hero: checkVisibility(heroElement),
+        calculator: checkVisibility(calculatorElement),
+        features: checkVisibility(featuresElement),
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial check
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const features = [
     {
-      icon: Calculator,
-      title: 'Accurate Calculations',
-      description: 'Real-time cost estimation with all fees included',
-      color: 'from-blue-500 to-blue-600',
-    },
-    {
-      icon: Globe,
-      title: 'Global Coverage',
-      description: 'Support for 100+ countries and currencies',
-      color: 'from-green-500 to-green-600',
+      icon: Zap,
+      title: 'Instant Estimates',
+      description: 'Get accurate cost calculations in seconds, not days.',
     },
     {
       icon: Shield,
       title: 'Transparent Pricing',
-      description: 'No hidden fees or surprise charges',
-      color: 'from-purple-500 to-purple-600',
+      description: 'No hidden fees. See exactly what you pay for.',
     },
     {
-      icon: Zap,
-      title: 'Instant Results',
-      description: 'Get your quote in seconds, not hours',
-      color: 'from-orange-500 to-orange-600',
+      icon: Globe,
+      title: 'Global Coverage',
+      description: 'Calculate costs for shipping to 100+ countries.',
     },
   ];
 
-  const stats = [
-    { value: 500000, label: 'Calculations Made', suffix: '+' },
-    { value: 98, label: 'Accuracy Rate', suffix: '%' },
-    { value: 3, label: 'Average Time', suffix: ' sec' },
-  ];
-
-  const steps = [
-    {
-      number: '1',
-      title: 'Enter Product Details',
-      description: 'Product URL, price, weight, and category',
-    },
-    {
-      number: '2',
-      title: 'Select Destination',
-      description: 'Choose your country and shipping method',
-    },
-    {
-      number: '3',
-      title: 'Get Instant Quote',
-      description: 'See total cost with all fees included',
-    },
-    {
-      number: '4',
-      title: 'Place Your Order',
-      description: 'Proceed with confidence knowing the exact cost',
-    },
+  const benefits = [
+    'Real-time exchange rates',
+    'Customs duty calculations',
+    'Shipping cost optimization',
+    'Insurance and handling fees',
+    'Tax and VAT calculations',
+    'Multi-currency support',
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <ParallaxSection
-        className="min-h-[500px] flex items-center"
-        backgroundImage="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1920&h=1080&fit=crop"
-        overlayOpacity={0.7}
+      <Section 
+        id="hero-section"
+        className="py-20 sm:py-32 bg-gradient-to-b from-gray-50 to-white"
       >
-        <div className="container py-20">
-          <AnimatedSection
-            animation="fadeInUp"
-            className="text-center text-white max-w-4xl mx-auto"
+        <Container>
+          <div 
+            className={cn(
+              "text-center max-w-4xl mx-auto transition-all duration-1000",
+              isVisible.hero ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+            )}
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm mb-6">
-              <Calculator className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">Cost Estimator</h1>
-            <p className="text-xl md:text-2xl mb-8 text-gray-200">
-              Calculate your total international shopping cost instantly with complete transparency
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="secondary" asChild>
-                <a href="#calculator">Start Calculating</a>
+            <Badge className="mb-6 bg-blue-50 text-blue-700 border-blue-200">
+              <Calculator className="w-3 h-3 mr-1" />
+              Free Cost Calculator
+            </Badge>
+            
+            <Display className="mb-6 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              Calculate your shopping costs
+              <br />
+              <span className="text-blue-600">before you buy</span>
+            </Display>
+            
+            <BodyLarge className="mb-8 text-gray-600 max-w-2xl mx-auto">
+              Get instant, accurate estimates for international shipping, customs duties, 
+              and all fees. No surprises at checkout.
+            </BodyLarge>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+              <Button 
+                size="lg" 
+                className="group bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg"
+                onClick={() => {
+                  document.getElementById('calculator-section')?.scrollIntoView({ 
+                    behavior: 'smooth' 
+                  });
+                }}
+              >
+                Start Calculating
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="bg-transparent text-white border-white hover:bg-white hover:text-blue-600"
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="px-8 py-4 text-lg border-gray-200 hover:border-gray-300"
                 asChild
               >
-                <Link to="/quote">Get Full Quote</Link>
+                <Link to="/quote">
+                  Get Full Quote
+                </Link>
               </Button>
             </div>
-          </AnimatedSection>
-        </div>
-      </ParallaxSection>
 
-      {/* Stats Section */}
-      <section className="py-12 -mt-16 relative z-10">
-        <div className="container">
-          <div className="grid md:grid-cols-3 gap-6">
-            {stats.map((stat, index) => (
-              <AnimatedSection key={index} animation="zoomIn" delay={index * 100}>
-                <Card className="text-center hover:shadow-lg transition-all duration-300 bg-white/95 backdrop-blur-sm transform hover:-translate-y-1">
-                  <CardContent className="p-6">
-                    <div className="text-4xl font-bold text-primary mb-2">
-                      <AnimatedCounter end={stat.value} suffix={stat.suffix} />
-                    </div>
-                    <p className="text-muted-foreground">{stat.label}</p>
-                  </CardContent>
-                </Card>
-              </AnimatedSection>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20">
-        <div className="container">
-          <AnimatedSection animation="fadeInUp" className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Use Our Calculator?</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Get accurate cost estimates before you buy
-            </p>
-          </AnimatedSection>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feature, index) => (
-              <AnimatedSection key={index} animation="fadeInUp" delay={index * 100}>
-                <Card className="h-full hover:shadow-lg transition-all duration-300 group">
-                  <CardContent className="p-6 text-center">
-                    <div
-                      className={`w-16 h-16 rounded-full bg-gradient-to-r ${feature.color} flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform`}
-                    >
-                      <feature.icon className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                    <p className="text-muted-foreground">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              </AnimatedSection>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Calculator Section */}
-      <section id="calculator" className="py-20 bg-gray-50">
-        <div className="container">
-          <AnimatedSection animation="fadeInUp">
-            <div className="w-full max-w-3xl mx-auto">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">Calculate Your Cost</h2>
-                <p className="text-xl text-muted-foreground">
-                  Enter your details below for an instant estimate
-                </p>
-              </div>
-
-              <Card className="shadow-2xl border-0 overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-1">
-                  <div className="bg-background rounded-t-lg">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-2xl flex items-center justify-center gap-2">
-                        <Calculator className="w-6 h-6 text-primary" />
-                        Cost Calculator
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <OptimizedCostEstimator variant="tools" />
-                    </CardContent>
+            {/* Features Grid */}
+            <div className="grid md:grid-cols-3 gap-8 mt-16">
+              {features.map((feature, index) => (
+                <div 
+                  key={index}
+                  className={cn(
+                    "transition-all duration-700",
+                    isVisible.hero ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+                  )}
+                  style={{ transitionDelay: `${300 + index * 100}ms` }}
+                >
+                  <div className="w-16 h-16 mx-auto mb-4 bg-blue-50 rounded-full flex items-center justify-center">
+                    <feature.icon className="w-8 h-8 text-blue-600" />
                   </div>
+                  <H3 className="mb-2 text-gray-900">{feature.title}</H3>
+                  <Body className="text-gray-600">{feature.description}</Body>
                 </div>
-              </Card>
-
-              <AnimatedSection animation="fadeIn" delay={300} className="mt-6 text-center">
-                <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-                  <Info className="w-4 h-4" />
-                  All prices include shipping, customs, and handling fees
-                </p>
-              </AnimatedSection>
-            </div>
-          </AnimatedSection>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section className="py-20">
-        <div className="container">
-          <AnimatedSection animation="fadeInUp" className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Simple steps to get your cost estimate
-            </p>
-          </AnimatedSection>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-5xl mx-auto">
-            {steps.map((step, index) => (
-              <AnimatedSection
-                key={index}
-                animation="fadeInUp"
-                delay={index * 150}
-                className="relative"
-              >
-                {index < steps.length - 1 && (
-                  <div className="hidden lg:block absolute top-12 left-full w-full h-0.5 bg-gradient-to-r from-primary to-transparent" />
-                )}
-
-                <div className="text-center">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold mb-4 mx-auto transform hover:scale-110 transition-transform">
-                    {step.number}
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
-                  <p className="text-muted-foreground">{step.description}</p>
-                </div>
-              </AnimatedSection>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Cost Breakdown Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="container">
-          <AnimatedSection animation="fadeInUp" className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Understanding Your Costs</h2>
-              <p className="text-xl text-muted-foreground">
-                Complete breakdown of international shopping expenses
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              {[
-                {
-                  icon: Package,
-                  title: 'Product Cost',
-                  items: ['Original product price', 'Local taxes if applicable', 'Seller fees'],
-                  color: 'text-blue-600',
-                },
-                {
-                  icon: Globe,
-                  title: 'Shipping Fees',
-                  items: ['International shipping', 'Handling charges', 'Insurance (optional)'],
-                  color: 'text-green-600',
-                },
-                {
-                  icon: DollarSign,
-                  title: 'Customs & Duties',
-                  items: ['Import duties', 'Customs clearance', 'Local taxes'],
-                  color: 'text-purple-600',
-                },
-                {
-                  icon: TrendingUp,
-                  title: 'Service Fees',
-                  items: ['Processing fee', 'Currency conversion', 'Payment gateway'],
-                  color: 'text-orange-600',
-                },
-              ].map((category, index) => (
-                <AnimatedSection key={index} animation="fadeInLeft" delay={index * 100}>
-                  <Card className="h-full hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3">
-                        <category.icon className={`w-6 h-6 ${category.color}`} />
-                        {category.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {category.items.map((item, idx) => (
-                          <li key={idx} className="flex items-center gap-2 text-muted-foreground">
-                            <div className="w-1.5 h-1.5 bg-primary rounded-full" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                </AnimatedSection>
               ))}
             </div>
-          </AnimatedSection>
-        </div>
-      </section>
+          </div>
+        </Container>
+      </Section>
+
+      {/* Calculator Section */}
+      <Section 
+        id="calculator-section"
+        className="py-20 bg-white"
+      >
+        <Container>
+          <div 
+            className={cn(
+              "transition-all duration-1000",
+              isVisible.calculator ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+            )}
+          >
+            <div className="text-center mb-12">
+              <H2 className="mb-4 text-gray-900">Cost Calculator</H2>
+              <Body className="text-gray-600 max-w-2xl mx-auto">
+                Enter your product details below to get an instant cost estimate
+              </Body>
+            </div>
+
+            {/* Calculator Container */}
+            <div className="max-w-5xl mx-auto">
+              <div className="grid lg:grid-cols-3 gap-8">
+                {/* Calculator */}
+                <div className="lg:col-span-2">
+                  <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+                    <OptimizedCostEstimator variant="tools" />
+                  </div>
+                </div>
+
+                {/* Benefits Sidebar */}
+                <div className="lg:col-span-1">
+                  <div className="bg-gray-50 rounded-2xl p-6 h-fit">
+                    <H3 className="mb-6 text-gray-900">What's included</H3>
+                    <div className="space-y-3">
+                      {benefits.map((benefit, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                          <Body className="text-gray-700">{benefit}</Body>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+                      <Body className="text-blue-700 text-sm">
+                        <strong>Pro tip:</strong> Costs are calculated using real-time exchange rates and current shipping prices for maximum accuracy.
+                      </Body>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </Section>
+
+      {/* Features Section */}
+      <Section 
+        id="features-section"
+        className="py-20 bg-gray-50"
+      >
+        <Container>
+          <div 
+            className={cn(
+              "text-center transition-all duration-1000",
+              isVisible.features ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+            )}
+          >
+            <H2 className="mb-6 text-gray-900">Why use our calculator?</H2>
+            <BodyLarge className="text-gray-600 max-w-2xl mx-auto mb-12">
+              Make informed decisions with accurate cost estimates before you commit to any purchase.
+            </BodyLarge>
+            
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              <div className="bg-white p-8 rounded-2xl border border-gray-200">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <H3 className="mb-3 text-gray-900">Accurate Estimates</H3>
+                <Body className="text-gray-600">
+                  Our calculator uses real-time data from shipping partners and customs authorities to provide the most accurate estimates possible.
+                </Body>
+              </div>
+              
+              <div className="bg-white p-8 rounded-2xl border border-gray-200">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                  <Zap className="w-6 h-6 text-blue-600" />
+                </div>
+                <H3 className="mb-3 text-gray-900">Instant Results</H3>
+                <Body className="text-gray-600">
+                  Get your cost breakdown in seconds. No waiting, no complicated forms, just enter your details and get results.
+                </Body>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </Section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-        <div className="container">
-          <AnimatedSection animation="fadeInUp" className="text-center max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Shop Globally?</h2>
-            <p className="text-xl mb-8 text-blue-100">
-              Start with our calculator and get transparent pricing for your international purchases
-            </p>
+      <Section className="py-20 bg-gradient-to-br from-blue-600 to-purple-600 text-white">
+        <Container>
+          <div className="text-center max-w-3xl mx-auto">
+            <H2 className="mb-6 text-white">Ready to start shopping?</H2>
+            <BodyLarge className="mb-8 text-blue-100">
+              Get a detailed quote with personalized assistance from our international shopping experts.
+            </BodyLarge>
+            
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="secondary" asChild>
-                <Link to="/quote">Get Started</Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="bg-transparent text-white border-white hover:bg-white hover:text-blue-600"
+              <Button 
+                size="lg" 
+                className="group bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 text-lg font-medium"
                 asChild
               >
-                <Link to="/contact">Need Help?</Link>
+                <Link to="/quote">
+                  Get Detailed Quote
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 text-lg font-medium"
+                asChild
+              >
+                <Link to="/contact">
+                  Contact Support
+                </Link>
               </Button>
             </div>
-          </AnimatedSection>
-        </div>
-      </section>
+          </div>
+        </Container>
+      </Section>
     </div>
   );
 };

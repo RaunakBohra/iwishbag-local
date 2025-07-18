@@ -29,6 +29,9 @@ const About = React.lazy(() => import('@/pages/About'));
 const Blog = React.lazy(() => import('@/pages/Blog'));
 const BlogPost = React.lazy(() => import('@/pages/BlogPost'));
 const Contact = React.lazy(() => import('@/pages/Contact'));
+const PrivacyPolicy = React.lazy(() => import('@/pages/PrivacyPolicy'));
+const TermsConditions = React.lazy(() => import('@/pages/TermsConditions'));
+const Returns = React.lazy(() => import('@/pages/Returns'));
 const Checkout = React.lazy(() => import('@/pages/Checkout'));
 const NotFound = React.lazy(() => import('@/pages/NotFound'));
 const MessageCenter = React.lazy(() =>
@@ -231,6 +234,18 @@ const router = createBrowserRouter([
       {
         path: 'contact',
         element: <Contact />,
+      },
+      {
+        path: 'privacy-policy',
+        element: <PrivacyPolicy />,
+      },
+      {
+        path: 'terms-conditions',
+        element: <TermsConditions />,
+      },
+      {
+        path: 'returns',
+        element: <Returns />,
       },
       {
         path: 'cost-estimator',

@@ -36,10 +36,10 @@ const Footer = () => {
         </div>
         {/* Divider */}
         <div className="my-3 border-t border-gray-200 w-full" />
-        {/* Centered Row: Company | Services | Social */}
-        <div className="flex flex-row justify-center items-start gap-8 md:gap-16 text-xs md:text-sm w-full">
+        {/* Centered Row: Company | Services | Legal | Social */}
+        <div className="flex flex-row justify-center items-start gap-6 md:gap-12 text-xs md:text-sm w-full">
           {/* Company */}
-          <div className="flex flex-col items-center min-w-[100px]">
+          <div className="flex flex-col items-center min-w-[80px]">
             <span className="font-semibold mb-1 text-gray-900">Company</span>
             <Link to="/about" className="text-gray-600 hover:text-gray-900 transition-colors mb-0.5">
               About Us
@@ -52,19 +52,32 @@ const Footer = () => {
             </Link>
           </div>
           {/* Services */}
-          <div className="flex flex-col items-center min-w-[100px]">
+          <div className="flex flex-col items-center min-w-[80px]">
             <span className="font-semibold mb-1 text-gray-900">Services</span>
             <Link to="/quote" className="text-gray-600 hover:text-gray-900 transition-colors mb-0.5">
               Quote Request
             </Link>
-            <Link to="/#cost-estimator" className="text-gray-600 hover:text-gray-900 transition-colors">
+            <Link to="/cost-estimator" className="text-gray-600 hover:text-gray-900 transition-colors">
               Cost Estimator
             </Link>
           </div>
+          {/* Legal */}
+          <div className="flex flex-col items-center min-w-[80px]">
+            <span className="font-semibold mb-1 text-gray-900">Legal</span>
+            <Link to="/privacy-policy" className="text-gray-600 hover:text-gray-900 transition-colors mb-0.5">
+              Privacy Policy
+            </Link>
+            <Link to="/terms-conditions" className="text-gray-600 hover:text-gray-900 transition-colors mb-0.5">
+              Terms & Conditions
+            </Link>
+            <Link to="/returns" className="text-gray-600 hover:text-gray-900 transition-colors">
+              Returns & Refunds
+            </Link>
+          </div>
           {/* Social */}
-          <div className="flex flex-col items-center min-w-[100px]">
+          <div className="flex flex-col items-center min-w-[80px]">
             <span className="font-semibold mb-1 text-gray-900">Follow</span>
-            <div className="flex space-x-4 md:space-x-3 mt-1">
+            <div className="flex space-x-3 mt-1">
               {homePageSettings?.social_twitter && (
                 <a
                   href={homePageSettings.social_twitter}

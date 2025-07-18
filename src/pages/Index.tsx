@@ -11,36 +11,6 @@ const HowItWorksSection = lazy(() =>
     default: m.HowItWorksSection,
   })),
 );
-const BrandsSection = lazy(() =>
-  import('@/components/home/BrandsSection').then((m) => ({
-    default: m.BrandsSection,
-  })),
-);
-const CountriesSection = lazy(() =>
-  import('@/components/home/CountriesSection').then((m) => ({
-    default: m.CountriesSection,
-  })),
-);
-const ValuePropsSection = lazy(() =>
-  import('@/components/home/ValuePropsSection').then((m) => ({
-    default: m.ValuePropsSection,
-  })),
-);
-const TestimonialsSection = lazy(() =>
-  import('@/components/home/TestimonialsSection').then((m) => ({
-    default: m.TestimonialsSection,
-  })),
-);
-const CostEstimatorPreview = lazy(() =>
-  import('@/components/home/CostEstimatorPreview').then((m) => ({
-    default: m.CostEstimatorPreview,
-  })),
-);
-const TrustIndicators = lazy(() =>
-  import('@/components/home/TrustIndicators').then((m) => ({
-    default: m.TrustIndicators,
-  })),
-);
 
 // Loading components for each section
 const SectionSkeleton = ({ height = 'h-96' }: { height?: string }) => (
@@ -71,47 +41,6 @@ export default function Index() {
         </Suspense>
       </LazySection>
 
-      {/* Featured Brands - Lazy loaded */}
-      <LazySection threshold={0.1} rootMargin="100px">
-        <Suspense fallback={<SectionSkeleton height="h-[300px]" />}>
-          <BrandsSection />
-        </Suspense>
-      </LazySection>
-
-      {/* Countries Section - Lazy loaded */}
-      <LazySection threshold={0.1} rootMargin="100px">
-        <Suspense fallback={<SectionSkeleton height="h-[600px]" />}>
-          <CountriesSection />
-        </Suspense>
-      </LazySection>
-
-      {/* Value Props - Lazy loaded */}
-      <LazySection threshold={0.1} rootMargin="100px">
-        <Suspense fallback={<SectionSkeleton height="h-[400px]" />}>
-          <ValuePropsSection settings={settings} />
-        </Suspense>
-      </LazySection>
-
-      {/* Testimonials - Lazy loaded */}
-      <LazySection threshold={0.1} rootMargin="100px">
-        <Suspense fallback={<SectionSkeleton height="h-[500px]" />}>
-          <TestimonialsSection />
-        </Suspense>
-      </LazySection>
-
-      {/* Interactive Cost Estimator Preview - Lazy loaded */}
-      <LazySection threshold={0.1} rootMargin="100px">
-        <Suspense fallback={<SectionSkeleton height="h-[600px]" />}>
-          <CostEstimatorPreview />
-        </Suspense>
-      </LazySection>
-
-      {/* Trust Indicators - Lazy loaded */}
-      <LazySection threshold={0.1} rootMargin="100px">
-        <Suspense fallback={<SectionSkeleton height="h-[400px]" />}>
-          <TrustIndicators />
-        </Suspense>
-      </LazySection>
     </main>
   );
 }

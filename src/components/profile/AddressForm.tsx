@@ -20,6 +20,8 @@ import { useMemo } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { BodySmall } from '@/components/ui/typography';
+import { CheckCircle } from 'lucide-react';
 
 const addressSchema = z.object({
   recipient_name: z.string().min(1, 'Recipient name is required'),
@@ -144,147 +146,230 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="recipient_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Recipient Name</FormLabel>
-              <FormControl>
-                <Input placeholder="John Doe" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="address_line1"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Address Line 1</FormLabel>
-              <FormControl>
-                <Input placeholder="123 Main St" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="address_line2"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Address Line 2 (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="Apt, suite, etc." {...field} value={field.value ?? ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="space-y-6">
           <FormField
             control={form.control}
-            name="city"
+            name="recipient_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>City</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Recipient Name
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="Anytown" {...field} />
+                  <Input 
+                    placeholder="John Doe" 
+                    {...field} 
+                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+          
           <FormField
             control={form.control}
-            name="state_province_region"
+            name="address_line1"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>State / Province</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Street Address
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="CA" {...field} />
+                  <Input 
+                    placeholder="123 Main St" 
+                    {...field} 
+                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
+          
           <FormField
             control={form.control}
-            name="postal_code"
+            name="address_line2"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Postal Code</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Apartment, suite, etc. (Optional)
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="12345" {...field} />
+                  <Input 
+                    placeholder="Apt 4B, Suite 100, etc." 
+                    {...field} 
+                    value={field.value ?? ''} 
+                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="destination_country"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Country</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value || ''}
-                  disabled={addressMutation.isPending || countriesLoading}
-                >
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700">
+                    City
+                  </FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a country" />
-                    </SelectTrigger>
+                    <Input 
+                      placeholder="Anytown" 
+                      {...field} 
+                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    />
                   </FormControl>
-                  <SelectContent>
-                    {countries?.map((country) => (
-                      <SelectItem key={country.code} value={country.code}>
-                        {country.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="state_province_region"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700">
+                    State / Province
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="CA" 
+                      {...field} 
+                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="postal_code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700">
+                    Postal Code
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="12345" 
+                      {...field} 
+                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="destination_country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700">
+                    Country
+                  </FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || ''}
+                    disabled={addressMutation.isPending || countriesLoading}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                        <SelectValue placeholder="Select a country" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {countries?.map((country) => (
+                        <SelectItem key={country.code} value={country.code}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Phone Number
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="+1 (555) 123-4567" 
+                    {...field} 
+                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+          
+          <FormField
+            control={form.control}
+            name="is_default"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center space-x-3 rounded-lg border border-gray-200 p-4">
+                  <FormControl>
+                    <Checkbox 
+                      checked={field.value} 
+                      onCheckedChange={field.onChange} 
+                      className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    />
+                  </FormControl>
+                  <div className="flex-1">
+                    <FormLabel className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Set as default address
+                    </FormLabel>
+                    <BodySmall className="text-gray-500 mt-1">
+                      This address will be selected by default for future orders
+                    </BodySmall>
+                  </div>
+                  {field.value && (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  )}
+                </div>
+              </FormItem>
+            )}
+          />
         </div>
-        <FormField
-          control={form.control}
-          name="phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Phone Number</FormLabel>
-              <FormControl>
-                <Input placeholder="+1 (555) 123-4567" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="is_default"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-              <FormControl>
-                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel>Set as default address</FormLabel>
-              </div>
-            </FormItem>
-          )}
-        />
-        <Button type="submit" disabled={addressMutation.isPending} className="w-full">
-          {addressMutation.isPending ? 'Saving...' : 'Save Address'}
-        </Button>
+        
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => form.reset()}
+            disabled={addressMutation.isPending}
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            Reset
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={addressMutation.isPending}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+          >
+            {addressMutation.isPending ? 'Saving...' : address ? 'Update Address' : 'Save Address'}
+          </Button>
+        </div>
       </form>
     </Form>
   );

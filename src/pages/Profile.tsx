@@ -13,7 +13,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -35,7 +34,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
-  User,
   Globe,
   DollarSign,
   MapPin,
@@ -43,25 +41,22 @@ import {
   AlertCircle,
   Shield,
   Bell,
-  Mail,
-  Phone,
   Save,
   Package,
   FileText,
-  ArrowRight,
   CreditCard,
-  Truck,
   HelpCircle,
   Lock,
   LogOut,
+  Settings,
+  Calendar,
+  Target,
 } from 'lucide-react';
-import { AnimatedSection } from '@/components/shared/AnimatedSection';
-import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
-import { AddressList } from '@/components/profile/AddressList';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { currencyService, type Currency } from '@/services/CurrencyService';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
+import { H1, Body, BodySmall } from '@/components/ui/typography';
 
 const profileFormSchema = z.object({
   full_name: z.string().min(1, 'Full name is required'),
@@ -284,33 +279,23 @@ const Profile = () => {
     return currencyNames[currencyCode] || currencyCode;
   };
 
-  // Profile completion percentage
-  const calculateProfileCompletion = () => {
-    if (!profile) return 0;
-    let completed = 0;
-    const fields = ['full_name', 'phone', 'country', 'preferred_display_currency'];
-    fields.forEach((field) => {
-      if (profile[field as keyof typeof profile]) completed++;
-    });
-    // Bonus points for optional fields
-    if ((profile as any).preferred_payment_gateway) completed += 0.5;
-    return Math.round((completed / fields.length) * 100);
-  };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-        <div className="container py-12">
-          <div className="max-w-6xl mx-auto space-y-8">
-            <div className="text-center space-y-4">
-              <Skeleton className="w-24 h-24 mx-auto rounded-full" />
-              <Skeleton className="h-8 w-48 mx-auto" />
-              <Skeleton className="h-4 w-64 mx-auto" />
+      <div className="min-h-screen bg-white">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="space-y-8">
+            <div className="flex items-center gap-4">
+              <Skeleton className="w-16 h-16 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </div>
             </div>
             <div className="grid gap-6">
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-64 w-full" />
               <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-64 w-full" />
-              <Skeleton className="h-64 w-full" />
             </div>
           </div>
         </div>
@@ -320,575 +305,468 @@ const Profile = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-        <div className="container py-12">
-          <AnimatedSection animation="fadeIn">
-            <Card className="max-w-md mx-auto text-center">
-              <CardContent className="pt-6">
-                <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-                <p className="text-destructive">Error loading profile: {error.message}</p>
-              </CardContent>
-            </Card>
-          </AnimatedSection>
+      <div className="min-h-screen bg-white">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <Card className="max-w-md mx-auto text-center">
+            <CardContent className="pt-6">
+              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+              <Body className="text-red-600">Error loading profile: {error.message}</Body>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      <div className="container py-12">
-        <div className="max-w-6xl mx-auto space-y-8">
-          {/* Profile Header */}
-          <AnimatedSection animation="fadeInDown">
-            <Card className="overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-8 text-white">
-                <div className="flex flex-col md:flex-row items-center gap-6">
-                  <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-4xl font-bold">
-                    {profile?.full_name
-                      ? profile.full_name.charAt(0).toUpperCase()
-                      : user?.email?.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="text-center md:text-left flex-1">
-                    <h1 className="text-3xl font-bold">
-                      {profile?.full_name || user?.email?.split('@')[0] || 'User'}
-                    </h1>
-                    <p className="text-white/90">{user?.email}</p>
-                    {stats?.memberSince && (
-                      <p className="text-sm text-white/75 mt-1">
-                        Member since {format(new Date(stats.memberSince), 'MMMM yyyy')}
-                      </p>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-semibold">
+                {profile?.full_name
+                  ? profile.full_name.charAt(0).toUpperCase()
+                  : user?.email?.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <H1 className="text-2xl mb-1">
+                  {profile?.full_name || user?.email?.split('@')[0] || 'User'}
+                </H1>
+                <BodySmall className="text-gray-600">{user?.email}</BodySmall>
+                {stats?.memberSince && (
+                  <BodySmall className="text-gray-500 flex items-center gap-1 mt-1">
+                    <Calendar className="w-3 h-3" />
+                    Member since {format(new Date(stats.memberSince), 'MMM yyyy')}
+                  </BodySmall>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="text-center">
+                <div className="text-2xl font-semibold text-gray-900">
+                  {stats?.totalOrders || 0}
+                </div>
+                <BodySmall className="text-gray-500">Orders</BodySmall>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-semibold text-gray-900">
+                  {stats?.totalQuotes || 0}
+                </div>
+                <BodySmall className="text-gray-500">Quotes</BodySmall>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-4xl mx-auto px-4 py-8">
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <Link
+            to="/dashboard/orders"
+            className="flex flex-col items-center gap-3 p-6 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
+          >
+            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Package className="h-5 w-5 text-blue-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-700">Orders</span>
+          </Link>
+          <Link
+            to="/dashboard/quotes"
+            className="flex flex-col items-center gap-3 p-6 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
+          >
+            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-purple-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-700">Quotes</span>
+          </Link>
+          <Link
+            to="/profile/address"
+            className="flex flex-col items-center gap-3 p-6 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
+          >
+            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+              <MapPin className="h-5 w-5 text-green-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-700">Addresses</span>
+          </Link>
+          <Link
+            to="/help"
+            className="flex flex-col items-center gap-3 p-6 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
+          >
+            <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
+              <HelpCircle className="h-5 w-5 text-orange-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-700">Help</span>
+          </Link>
+        </div>
+
+        {/* Profile Settings Form */}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            {/* Personal Information */}
+            <Card className="border-gray-200">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Settings className="h-5 w-5 text-gray-600" />
+                  Personal Information
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Update your personal details and contact information.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="full_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Full Name
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Your full name"
+                            {...field}
+                            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Phone Number
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="tel"
+                            placeholder="+1 234 567 8901"
+                            {...field}
+                            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-700">
+                        Email
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input {...field} disabled className="pl-10 bg-gray-50 text-gray-500" />
+                          <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <BodySmall className="text-gray-500 mt-1">
+                        Your email address is managed by your account and cannot be changed here.
+                      </BodySmall>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Regional & Currency Settings */}
+            <Card className="border-gray-200">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-gray-600" />
+                  Regional & Currency Settings
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Choose your preferred currency and payment method.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="preferred_display_currency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Preferred Currency
+                        </FormLabel>
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleCurrencyChange(value);
+                          }}
+                          value={field.value}
+                          disabled={updateProfileMutation.isPending}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                              <SelectValue placeholder="Select your preferred currency" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {availableCurrencies.map((currency) => (
+                              <SelectItem key={currency.code} value={currency.code}>
+                                <div className="flex items-center gap-2">
+                                  <span>{currency.name}</span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {currency.code}
+                                  </Badge>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <BodySmall className="text-gray-500 mt-1">
+                          Your country will be automatically set based on your currency selection.
+                        </BodySmall>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Hidden country field */}
+                  <FormField
+                    control={form.control}
+                    name="country"
+                    render={() => (
+                      <input type="hidden" {...form.register('country')} />
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="preferred_payment_gateway"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Preferred Payment Method
+                        </FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={updateProfileMutation.isPending || methodsLoading}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                              <SelectValue placeholder="Choose preferred payment method (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="auto">
+                              <div className="flex items-center gap-2">
+                                <span>Auto-select best method</span>
+                                <Badge variant="secondary" className="text-xs">
+                                  Recommended
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                            {getAvailablePaymentMethods().map((method) => (
+                              <SelectItem key={method.code} value={method.code}>
+                                <div className="flex items-center gap-2">
+                                  <span>{method.name}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {method.fees}
+                                  </Badge>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <BodySmall className="text-gray-500 mt-1">
+                          {field.value === 'auto' || !field.value
+                            ? "We'll automatically select the best payment method for your location and order."
+                            : `You've chosen ${getAvailablePaymentMethods().find((m) => m.code === field.value)?.name} as your preferred payment method.`}
+                        </BodySmall>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Current Settings Summary */}
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <CheckCircle className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-900">Current Settings</span>
                   </div>
-                  <div className="flex gap-4">
-                    <div className="text-center">
-                      <p className="text-3xl font-bold">
-                        <AnimatedCounter end={stats?.totalOrders || 0} />
-                      </p>
-                      <p className="text-sm text-white/75">Orders</p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="flex items-center gap-3">
+                      <DollarSign className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <BodySmall className="text-blue-800 font-medium">
+                          {getCurrencyName(form.watch('preferred_display_currency'))} ({form.watch('preferred_display_currency')})
+                        </BodySmall>
+                        <BodySmall className="text-blue-600">
+                          {getCountryName(form.watch('country'))}
+                        </BodySmall>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-3xl font-bold">
-                        <AnimatedCounter end={stats?.totalQuotes || 0} />
-                      </p>
-                      <p className="text-sm text-white/75">Quotes</p>
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <BodySmall className="text-blue-800 font-medium">
+                          {form.watch('preferred_payment_gateway') === 'auto' ||
+                          !form.watch('preferred_payment_gateway')
+                            ? 'Auto-select'
+                            : getAvailablePaymentMethods().find(
+                                (m) => m.code === form.watch('preferred_payment_gateway'),
+                              )?.name || 'Unknown'}
+                        </BodySmall>
+                        <BodySmall className="text-blue-600">Payment method</BodySmall>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* Profile Completion */}
-                <div className="mt-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-white/90">Profile Completion</span>
-                    <span className="text-sm font-medium">
-                      <AnimatedCounter end={calculateProfileCompletion()} suffix="%" />
-                    </span>
+            {/* Save Button */}
+            <div className="flex justify-end pt-4">
+              <Button
+                type="submit"
+                disabled={updateProfileMutation.isPending || currencyLoading}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {updateProfileMutation.isPending
+                  ? 'Saving...'
+                  : currencyLoading
+                    ? 'Loading...'
+                    : 'Save Changes'}
+              </Button>
+            </div>
+          </form>
+        </Form>
+
+        {/* Additional Sections */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Shipping Addresses */}
+          <Card className="border-gray-200">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-gray-600" />
+                Shipping Addresses
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Manage your delivery addresses
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">Manage addresses</span>
                   </div>
-                  <div className="w-full bg-white/20 rounded-full h-2">
-                    <div
-                      className="bg-white h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${calculateProfileCompletion()}%` }}
-                    />
-                  </div>
+                  <Link to="/profile/address">
+                    <Button variant="outline" size="sm" className="text-xs">
+                      View All
+                    </Button>
+                  </Link>
                 </div>
               </div>
-            </Card>
-          </AnimatedSection>
+            </CardContent>
+          </Card>
 
-          {/* Quick Actions */}
-          <AnimatedSection animation="fadeInUp" delay={100}>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Link
-                    to="/dashboard/orders"
-                    className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                      <Package className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <span className="text-sm font-medium">View Orders</span>
-                  </Link>
-                  <Link
-                    to="/dashboard/quotes"
-                    className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                      <FileText className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <span className="text-sm font-medium">View Quotes</span>
-                  </Link>
-                  <Link
-                    to="/profile/address"
-                    className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                      <MapPin className="h-6 w-6 text-green-600" />
-                    </div>
-                    <span className="text-sm font-medium">Addresses</span>
-                  </Link>
-                  <Link
-                    to="/help"
-                    className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
-                      <HelpCircle className="h-6 w-6 text-orange-600" />
-                    </div>
-                    <span className="text-sm font-medium">Get Help</span>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </AnimatedSection>
-
-          {/* Profile Settings Form - Combined */}
-          <AnimatedSection animation="fadeInUp" delay={200}>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Personal Information */}
-                <Card className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white">
-                        <User className="h-5 w-5" />
-                      </div>
-                      Personal Information
-                    </CardTitle>
-                    <CardDescription>
-                      Update your personal details and contact information.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="full_name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-gray-500" />
-                              Full Name
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Your full name"
-                                {...field}
-                                className="hover:border-primary transition-colors"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-gray-500" />
-                              Phone Number
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="tel"
-                                placeholder="+1 234 567 8901"
-                                {...field}
-                                className="hover:border-primary transition-colors"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Mail className="h-4 w-4 text-gray-500" />
-                            Email
-                          </FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input {...field} disabled className="pl-10" />
-                              <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Regional & Currency Settings */}
-                <Card className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white">
-                        <Globe className="h-5 w-5" />
-                      </div>
-                      Currency & Regional Settings
-                    </CardTitle>
-                    <CardDescription>
-                      Choose your preferred currency and we'll automatically set your country for better payment options and pricing.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid gap-6 md:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="preferred_display_currency"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <DollarSign className="h-4 w-4 text-gray-500" />
-                              Preferred Currency & Country
-                            </FormLabel>
-                            <Select
-                              onValueChange={(value) => {
-                                field.onChange(value);  // Update form state first
-                                handleCurrencyChange(value);  // Then handle additional logic
-                              }}
-                              value={field.value}
-                              disabled={updateProfileMutation.isPending}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="hover:border-primary transition-colors">
-                                  <SelectValue placeholder="Select your preferred currency" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {availableCurrencies.map((currency) => (
-                                  <SelectItem key={currency.code} value={currency.code}>
-                                    <div className="flex items-center gap-2">
-                                      <span>{currency.name}</span>
-                                      <Badge variant="secondary" className="text-xs">
-                                        {currency.code}
-                                      </Badge>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Your country will be automatically set based on your currency selection.
-                            </p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Hidden country field - automatically set by currency selection */}
-                      <FormField
-                        control={form.control}
-                        name="country"
-                        render={() => (
-                          <input type="hidden" {...form.register('country')} />
-                        )}
-                      />
-
-                      {/* Payment Gateway Preference */}
-                      <FormField
-                        control={form.control}
-                        name="preferred_payment_gateway"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <CreditCard className="h-4 w-4 text-gray-500" />
-                              Preferred Payment Method
-                            </FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              disabled={updateProfileMutation.isPending || methodsLoading}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="hover:border-primary transition-colors">
-                                  <SelectValue placeholder="Choose preferred payment method (optional)" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="auto">
-                                  <div className="flex items-center gap-2">
-                                    <span>Auto-select best method</span>
-                                    <Badge variant="secondary" className="text-xs">
-                                      Recommended
-                                    </Badge>
-                                  </div>
-                                </SelectItem>
-                                {getAvailablePaymentMethods().map((method) => (
-                                  <SelectItem key={method.code} value={method.code}>
-                                    <div className="flex items-center gap-2">
-                                      <span>{method.name}</span>
-                                      <Badge variant="outline" className="text-xs">
-                                        {method.fees}
-                                      </Badge>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {field.value === 'auto' || !field.value
-                                ? "We'll automatically select the best payment method for your location and order."
-                                : `You've chosen ${getAvailablePaymentMethods().find((m) => m.code === field.value)?.name} as your preferred payment method.`}
-                            </p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Current Settings Display */}
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 space-y-4">
-                      <h4 className="font-semibold flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                        Current Settings
-                      </h4>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div className="flex items-center gap-3 bg-white rounded-lg p-3">
-                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                            <DollarSign className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Currency & Country</p>
-                            <p className="font-medium">
-                              {getCurrencyName(form.watch('preferred_display_currency'))} (
-                              {form.watch('preferred_display_currency')}) - {getCountryName(form.watch('country'))}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3 bg-white rounded-lg p-3">
-                          <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                            <CreditCard className="h-5 w-5 text-purple-600" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Payment Method</p>
-                            <p className="font-medium">
-                              {form.watch('preferred_payment_gateway') === 'auto' ||
-                              !form.watch('preferred_payment_gateway')
-                                ? 'Auto-select (Recommended)'
-                                : getAvailablePaymentMethods().find(
-                                    (m) => m.code === form.watch('preferred_payment_gateway'),
-                                  )?.name || 'Unknown'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Save Button */}
-                <Card>
-                  <CardFooter>
-                    <Button
-                      type="submit"
-                      disabled={updateProfileMutation.isPending || currencyLoading}
-                      className="group"
-                    >
-                      <Save className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
-                      {updateProfileMutation.isPending
-                        ? 'Saving...'
-                        : currencyLoading
-                          ? 'Loading...'
-                          : 'Save Profile'}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </form>
-            </Form>
-          </AnimatedSection>
-
-          {/* Shipping Addresses */}
-          <AnimatedSection animation="fadeInUp" delay={300}>
-            <AddressList />
-          </AnimatedSection>
-
-          {/* Payment Methods */}
-          <AnimatedSection animation="fadeInUp" delay={500}>
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white">
-                    <CreditCard className="h-5 w-5" />
+          {/* Activity Summary */}
+          <Card className="border-gray-200">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Target className="h-5 w-5 text-gray-600" />
+                Activity Summary
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Your recent activity
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-gray-700">{stats?.totalOrders || 0} orders</span>
                   </div>
-                  Payment Methods
-                </CardTitle>
-                <CardDescription>Manage your saved payment methods</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
-                  No saved payment methods. Payment methods will be saved when you make your first
-                  purchase.
-                </p>
-                <Link to="/dashboard/orders">
-                  <Button variant="outline" className="w-full">
-                    View Order History
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </AnimatedSection>
-
-          {/* Order History Summary */}
-          <AnimatedSection animation="fadeInUp" delay={600}>
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-white">
-                    <Truck className="h-5 w-5" />
-                  </div>
-                  Recent Activity
-                </CardTitle>
-                <CardDescription>Your recent orders and quotes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Package className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <p className="font-medium">Total Orders</p>
-                        <p className="text-sm text-gray-600">View all your orders</p>
-                      </div>
-                    </div>
-                    <Link to="/dashboard/orders">
-                      <Button variant="ghost" size="sm" className="group">
-                        {stats?.totalOrders || 0} orders
-                        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                    </Link>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-purple-600" />
-                      <div>
-                        <p className="font-medium">Total Quotes</p>
-                        <p className="text-sm text-gray-600">View all your quotes</p>
-                      </div>
-                    </div>
-                    <Link to="/dashboard/quotes">
-                      <Button variant="ghost" size="sm" className="group">
-                        {stats?.totalQuotes || 0} quotes
-                        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </AnimatedSection>
-
-          {/* Security & Privacy */}
-          <AnimatedSection animation="fadeInUp" delay={700}>
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center text-white">
-                    <Shield className="h-5 w-5" />
-                  </div>
-                  Security & Privacy
-                </CardTitle>
-                <CardDescription>Manage your account security and privacy settings</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Button variant="outline" className="justify-start">
-                    <Lock className="h-4 w-4 mr-2" />
-                    Change Password
-                  </Button>
-                  <Button variant="outline" className="justify-start">
-                    <Shield className="h-4 w-4 mr-2" />
-                    Two-Factor Authentication
-                  </Button>
-                  <Button variant="outline" className="justify-start">
-                    <Bell className="h-4 w-4 mr-2" />
-                    Notification Settings
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="justify-start text-destructive hover:text-destructive"
-                    onClick={() => {
-                      signOut();
-                      toast({
-                        title: 'Signed out successfully',
-                        description: 'You have been signed out of your account.',
-                      });
-                    }}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </AnimatedSection>
-
-          {/* Notifications & Communications */}
-          <AnimatedSection animation="fadeInUp" delay={800}>
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white">
-                    <Bell className="h-5 w-5" />
-                  </div>
-                  Notifications & Communications
-                </CardTitle>
-                <CardDescription>Manage how we communicate with you</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
-                  Configure your email preferences and notification settings
-                </p>
-                <Button variant="outline" className="w-full">
-                  <Bell className="h-4 w-4 mr-2" />
-                  Configure Notifications
-                </Button>
-              </CardContent>
-            </Card>
-          </AnimatedSection>
-
-          {/* Help & Support */}
-          <AnimatedSection animation="fadeInUp" delay={900}>
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center text-white">
-                    <HelpCircle className="h-5 w-5" />
-                  </div>
-                  Help & Support
-                </CardTitle>
-                <CardDescription>Get help with your account</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Link to="/help" className="block">
-                    <Button variant="outline" className="w-full justify-start">
-                      <HelpCircle className="h-4 w-4 mr-2" />
-                      Help Center
+                  <Link to="/dashboard/orders">
+                    <Button variant="outline" size="sm" className="text-xs">
+                      View
                     </Button>
                   </Link>
-                  <Button variant="outline" className="justify-start">
-                    <Mail className="h-4 w-4 mr-2" />
-                    Contact Support
-                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </AnimatedSection>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-purple-600" />
+                    <span className="text-sm font-medium text-gray-700">{stats?.totalQuotes || 0} quotes</span>
+                  </div>
+                  <Link to="/dashboard/quotes">
+                    <Button variant="outline" size="sm" className="text-xs">
+                      View
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Security & Account Actions */}
+        <Card className="border-gray-200">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Shield className="h-5 w-5 text-gray-600" />
+              Security & Account
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              Manage your account security and preferences
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Button variant="outline" className="justify-start border-gray-300 text-gray-700">
+                <Lock className="h-4 w-4 mr-2" />
+                Change Password
+              </Button>
+              <Button variant="outline" className="justify-start border-gray-300 text-gray-700">
+                <Bell className="h-4 w-4 mr-2" />
+                Notifications
+              </Button>
+              <Link to="/help" className="contents">
+                <Button variant="outline" className="justify-start border-gray-300 text-gray-700">
+                  <HelpCircle className="h-4 w-4 mr-2" />
+                  Help Center
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                className="justify-start border-red-300 text-red-600 hover:bg-red-50"
+                onClick={() => {
+                  signOut();
+                  toast({
+                    title: 'Signed out successfully',
+                    description: 'You have been signed out of your account.',
+                  });
+                }}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

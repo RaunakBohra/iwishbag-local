@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertTriangle, Plus, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Plus, RefreshCw, Search, Globe } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { useState } from 'react';
 
 export const CountrySettings = () => {
   const {
@@ -25,6 +27,7 @@ export const CountrySettings = () => {
   } = useCountrySettings();
 
   const { triggerUpdate, isUpdating: isUpdatingRates } = useExchangeRateOperations();
+  const [searchTerm, setSearchTerm] = useState('');
 
   console.log('CountrySettings render:', {
     countriesCount: countries?.length,

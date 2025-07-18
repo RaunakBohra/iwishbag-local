@@ -7,7 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { FlexibleBankAccountForm } from './FlexibleBankAccountForm';
 import { BankAccountListItem } from './BankAccountListItem';
-import { Plus } from 'lucide-react';
+import { Plus, Building, Filter, ChevronDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
@@ -17,6 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useShippingCountries } from '@/hooks/useShippingCountries';
+import { H1, Body, BodySmall } from '@/components/ui/typography';
+import { Badge } from '@/components/ui/badge';
 
 export const BankAccountSettings = () => {
   const {
@@ -70,68 +72,157 @@ export const BankAccountSettings = () => {
 
   if (isLoadingBankAccounts) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-5xl mx-auto px-6 py-8">
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+        </div>
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          <div className="space-y-6">
+            <Skeleton className="h-20 w-full rounded-lg bg-white" />
+            <Skeleton className="h-20 w-full rounded-lg bg-white" />
+            <Skeleton className="h-20 w-full rounded-lg bg-white" />
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-2xl font-bold">Bank Account Settings</h3>
-        {!isFormOpen && (
-          <div className="flex gap-2">
-            <Select value={countryFilter} onValueChange={setCountryFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filter by country" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Countries</SelectItem>
-                <SelectItem value="fallback">Fallback Accounts</SelectItem>
-                {countries?.map((country) => (
-                  <SelectItem key={country.code} value={country.code}>
-                    {country.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleAddNew}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Account
-            </Button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <H1 className="text-2xl font-semibold text-gray-900 mb-2">Bank accounts</H1>
+              <BodySmall className="text-gray-600">
+                Manage your payment account details for different countries and regions.
+              </BodySmall>
+            </div>
+            {!isFormOpen && (
+              <div className="flex items-center gap-3">
+                <Select value={countryFilter} onValueChange={setCountryFilter}>
+                  <SelectTrigger className="w-[200px] border-gray-300 bg-white hover:bg-gray-50 h-9 text-sm">
+                    <SelectValue placeholder="Filter by country" />
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Countries</SelectItem>
+                    <SelectItem value="fallback">Fallback Accounts</SelectItem>
+                    {countries?.map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        {country.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={handleAddNew}
+                  className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4 text-sm font-medium"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add account
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        {isFormOpen ? (
+          <FlexibleBankAccountForm
+            editingAccount={editingAccount}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            isProcessing={isProcessing}
+          />
+        ) : (
+          <div className="space-y-6">
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="text-sm text-gray-500 mb-1">Total accounts</div>
+                <div className="text-2xl font-semibold text-gray-900">
+                  {bankAccounts.length}
+                </div>
+              </div>
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="text-sm text-gray-500 mb-1">Active accounts</div>
+                <div className="text-2xl font-semibold text-gray-900">
+                  {bankAccounts.filter(acc => acc.is_active).length}
+                </div>
+              </div>
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="text-sm text-gray-500 mb-1">Fallback accounts</div>
+                <div className="text-2xl font-semibold text-gray-900">
+                  {bankAccounts.filter(acc => acc.is_fallback).length}
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Info */}
+            {countryFilter !== 'all' && (
+              <div className="flex items-center gap-2 py-2">
+                <BodySmall className="text-gray-600">Showing accounts for:</BodySmall>
+                <Badge variant="outline" className="border-gray-300 text-gray-700">
+                  {countryFilter === 'fallback' 
+                    ? 'Fallback Accounts' 
+                    : countries?.find((c) => c.code === countryFilter)?.name || countryFilter}
+                </Badge>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setCountryFilter('all')}
+                  className="text-gray-500 hover:text-gray-700 h-6 px-2 text-xs"
+                >
+                  Clear filter
+                </Button>
+              </div>
+            )}
+
+            {/* Accounts List */}
+            <div className="space-y-3">
+              {filteredAccounts.map((account) => (
+                <BankAccountListItem
+                  key={account.id}
+                  account={account}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
+              {filteredAccounts.length === 0 && (
+                <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <Building className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <Body className="text-gray-900 mb-2 font-medium">
+                    {countryFilter === 'all'
+                      ? 'No bank accounts'
+                      : `No accounts for ${countryFilter === 'fallback' ? 'fallback' : countries?.find((c) => c.code === countryFilter)?.name || countryFilter}`}
+                  </Body>
+                  <BodySmall className="text-gray-500 mb-6 max-w-md mx-auto">
+                    {countryFilter === 'all'
+                      ? 'Add your first bank account to get started with payment processing.'
+                      : 'Add an account for this region to enable payment processing.'}
+                  </BodySmall>
+                  <Button 
+                    onClick={handleAddNew}
+                    className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4 text-sm font-medium"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add account
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
-
-      {isFormOpen ? (
-        <FlexibleBankAccountForm
-          editingAccount={editingAccount}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          isProcessing={isProcessing}
-        />
-      ) : (
-        <div className="space-y-4">
-          {filteredAccounts.map((account) => (
-            <BankAccountListItem
-              key={account.id}
-              account={account}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-          {filteredAccounts.length === 0 && (
-            <p>
-              {countryFilter === 'all'
-                ? 'No bank accounts found. Add one to get started.'
-                : `No bank accounts found for ${countryFilter === 'fallback' ? 'fallback' : countries?.find((c) => c.code === countryFilter)?.name || countryFilter}.`}
-            </p>
-          )}
-        </div>
-      )}
     </div>
   );
 };
