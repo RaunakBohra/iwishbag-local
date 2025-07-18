@@ -98,6 +98,47 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // Auto-calculate exchange rate when both countries are selected
+  const calculateExchangeRate = async (originCountry: string, destinationCountry: string) => {
+    if (!originCountry || !destinationCountry) return;
+    
+    try {
+      // Get country settings for both countries
+      const { data: countrySettings, error } = await supabase
+        .from('country_settings')
+        .select('code, rate_from_usd')
+        .in('code', [originCountry, destinationCountry])
+        .not('rate_from_usd', 'is', null);
+
+      if (error) {
+        console.error('Error fetching country settings:', error);
+        return;
+      }
+
+      const originRate = countrySettings?.find(c => c.code === originCountry)?.rate_from_usd;
+      const destRate = countrySettings?.find(c => c.code === destinationCountry)?.rate_from_usd;
+
+      if (originRate && destRate && originRate > 0 && destRate > 0) {
+        const calculatedRate = parseFloat((destRate / originRate).toFixed(4));
+        
+        setFormData(prev => ({
+          ...prev,
+          exchangeRate: calculatedRate,
+        }));
+
+        // Only show toast for new routes, not when editing existing ones
+        if (!initialData?.exchangeRate) {
+          toast({
+            title: 'Exchange Rate Updated',
+            description: `Calculated rate: 1 ${getCurrencySymbolFromCountry(originCountry)} = ${calculatedRate} ${getCurrencySymbolFromCountry(destinationCountry)}`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error calculating exchange rate:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -214,7 +255,13 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
           <Label htmlFor="originCountry">Origin Country</Label>
           <Select
             value={formData.originCountry}
-            onValueChange={(value) => setFormData((prev) => ({ ...prev, originCountry: value }))}
+            onValueChange={(value) => {
+              setFormData((prev) => ({ ...prev, originCountry: value }));
+              // Auto-calculate exchange rate when origin country changes
+              if (value && formData.destinationCountry) {
+                calculateExchangeRate(value, formData.destinationCountry);
+              }
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select origin country" />
@@ -232,9 +279,13 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
           <Label htmlFor="destinationCountry">Destination Country</Label>
           <Select
             value={formData.destinationCountry}
-            onValueChange={(value) =>
-              setFormData((prev) => ({ ...prev, destinationCountry: value }))
-            }
+            onValueChange={(value) => {
+              setFormData((prev) => ({ ...prev, destinationCountry: value }));
+              // Auto-calculate exchange rate when destination country changes
+              if (value && formData.originCountry) {
+                calculateExchangeRate(formData.originCountry, value);
+              }
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select destination country" />
@@ -355,6 +406,9 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
               <div className="text-xs text-gray-500 mt-1">
                 1 {getCurrencySymbolFromCountry(formData.originCountry)} = {formData.exchangeRate}{' '}
                 {getCurrencySymbolFromCountry(formData.destinationCountry)}
+                {formData.exchangeRate !== 1 && (
+                  <span className="ml-2 text-green-600 font-medium">✓ Auto-calculated</span>
+                )}
               </div>
             )}
           </div>

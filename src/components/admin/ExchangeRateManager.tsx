@@ -110,6 +110,88 @@ export function ExchangeRateManager() {
     }
   };
 
+  const updateShippingRouteRates = async () => {
+    try {
+      setLoading(true);
+      
+      // Use a direct SQL query to update all shipping routes based on country_settings
+      const { data, error } = await supabase.rpc('update_shipping_route_exchange_rates');
+      
+      if (error) {
+        // Fallback to manual update if the RPC doesn't exist
+        console.log('RPC not found, using manual update...');
+        
+        // Get all shipping routes
+        const { data: routes, error: routesError } = await supabase
+          .from('shipping_routes')
+          .select('id, origin_country, destination_country')
+          .eq('is_active', true);
+        
+        if (routesError) throw routesError;
+        
+        // Get all country settings for rate calculation
+        const { data: countrySettings, error: settingsError } = await supabase
+          .from('country_settings')
+          .select('code, rate_from_usd')
+          .not('rate_from_usd', 'is', null);
+        
+        if (settingsError) throw settingsError;
+        
+        // Create a map for quick lookup
+        const rateMap = new Map<string, number>();
+        countrySettings.forEach(setting => {
+          rateMap.set(setting.code, setting.rate_from_usd);
+        });
+        
+        let updatedCount = 0;
+        
+        for (const route of routes) {
+          const originRate = rateMap.get(route.origin_country);
+          const destRate = rateMap.get(route.destination_country);
+          
+          if (originRate && destRate && originRate > 0 && destRate > 0) {
+            // Calculate exchange rate: origin currency → destination currency
+            const exchangeRate = parseFloat((destRate / originRate).toFixed(4));
+            
+            const { error: updateError } = await supabase
+              .from('shipping_routes')
+              .update({
+                exchange_rate: exchangeRate,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', route.id);
+            
+            if (!updateError) {
+              updatedCount++;
+            }
+          }
+        }
+        
+        toast({
+          title: 'Success',
+          description: `Updated ${updatedCount} shipping route exchange rates`,
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: `Updated shipping route exchange rates using database function`,
+        });
+      }
+      
+      // Refresh the display
+      fetchExchangeRates();
+    } catch (error) {
+      console.error('Error updating shipping route rates:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update shipping route exchange rates',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const createNewRate = async () => {
     if (!newRate.origin_country || !newRate.destination_country) {
       toast({
@@ -229,6 +311,10 @@ export function ExchangeRateManager() {
           <Button onClick={fetchExchangeRates} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
+          </Button>
+          <Button onClick={updateShippingRouteRates} variant="outline" size="sm">
+            <ArrowRightLeft className="h-4 w-4 mr-2" />
+            Update Routes
           </Button>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
