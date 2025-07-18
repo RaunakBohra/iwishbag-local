@@ -144,25 +144,9 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     onMethodChange(paymentMethod);
   };
 
-  const getMethodFee = (method: PaymentGateway, amount: number) => {
-    const display = getPaymentMethodDisplay(method);
-    if (display.fees === 'No additional fees') return 0;
-
-    // Extract percentage from fees string (e.g., "2.9% + $0.30" -> 2.9)
-    const percentMatch = display.fees.match(/(\d+\.?\d*)%/);
-    if (percentMatch) {
-      const percent = parseFloat(percentMatch[1]);
-      return (amount * percent) / 100;
-    }
-
-    return 0;
-  };
-
   const renderPaymentMethod = (method: PaymentMethodDisplay) => {
     const isSelected = validSelectedMethod === method.code;
     const isRecommended = method.code === recommendedMethod;
-    const fee = getMethodFee(method.code, amount);
-    const totalWithFee = amount + fee;
 
     return (
       <div
@@ -182,23 +166,16 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         >
           <RadioGroupItem value={method.code} id={method.code} disabled={disabled} />
 
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-3">
-              {getIcon(method.icon)}
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{method.name}</span>
-                {isRecommended && showRecommended && (
-                  <Badge variant="outline" className="text-xs">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Recommended
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span className="font-medium">{method.fees}</span>
-              <span className="text-xs">{method.processing_time}</span>
+          <div className="flex items-center gap-3">
+            {getIcon(method.icon)}
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{method.name}</span>
+              {isRecommended && showRecommended && (
+                <Badge variant="outline" className="text-xs">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Recommended
+                </Badge>
+              )}
             </div>
           </div>
         </Label>
@@ -225,16 +202,6 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                 )}
               </div>
 
-              {fee > 0 && (
-                <div className="mt-2 text-xs text-muted-foreground">
-                  <span>
-                    Fee: {fee.toFixed(2)} {currency}
-                  </span>
-                  <span className="ml-2">
-                    Total: {totalWithFee.toFixed(2)} {currency}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         )}
