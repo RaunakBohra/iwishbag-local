@@ -94,20 +94,10 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
           created_by: user.id,
         });
       } else {
-        // Check if this is user's first quote and country/currency not set
+        // Check if country/currency not set and update with destination country/currency
         if (!existingProfile.country || !existingProfile.preferred_display_currency) {
-          // Check if user has any previous quotes
-          const { data: existingQuotes } = await supabase
-            .from('quotes')
-            .select('id')
-            .eq('user_id', user.id)
-            .limit(1);
-
-          // If no previous quotes, update profile with destination country/currency
-          if (!existingQuotes || existingQuotes.length === 0) {
-            // Get destination country from shipping address
-            const destinationCountry =
-              shippingAddress?.destination_country || shippingAddress?.country || countryCode;
+            // Get destination country from shipping address (this is where the customer lives)
+            const destinationCountry = shippingAddress?.country;
 
             // Get currency for destination country
             let destinationCurrency = 'USD';
@@ -146,7 +136,6 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
                 });
               }
             }
-          }
         }
       }
     }
@@ -287,20 +276,10 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
           created_by: user.id,
         });
       } else {
-        // Check if this is user's first quote and country/currency not set
+        // Check if country/currency not set and update with destination country/currency
         if (!existingProfile.country || !existingProfile.preferred_display_currency) {
-          // Check if user has any previous quotes
-          const { data: existingQuotes } = await supabase
-            .from('quotes')
-            .select('id')
-            .eq('user_id', user.id)
-            .limit(1);
-
-          // If no previous quotes, update profile with destination country/currency
-          if (!existingQuotes || existingQuotes.length === 0) {
-            // Get destination country from shipping address
-            const destinationCountry =
-              shippingAddress?.destination_country || shippingAddress?.country || countryCode;
+            // Get destination country from shipping address (this is where the customer lives)
+            const destinationCountry = shippingAddress?.country;
 
             // Get currency for destination country
             let destinationCurrency = 'USD';
@@ -339,7 +318,6 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
                 });
               }
             }
-          }
         }
       }
     }

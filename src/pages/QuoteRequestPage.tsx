@@ -229,6 +229,53 @@ export default function QuoteRequestPage() {
         }
       }
 
+      // Auto-update user profile with shipping address country and currency
+      if (user?.id) {
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id, country, preferred_display_currency')
+          .eq('id', user.id)
+          .single();
+
+        if (existingProfile && (!existingProfile.country || !existingProfile.preferred_display_currency)) {
+          // Get destination country from shipping address
+          const destinationCountry = shippingContact.country;
+          
+          // Get currency for destination country
+          let destinationCurrency = 'USD';
+          if (destinationCountry) {
+            const { data: countrySettings } = await supabase
+              .from('country_settings')
+              .select('currency')
+              .eq('code', destinationCountry)
+              .single();
+
+            if (countrySettings) {
+              destinationCurrency = countrySettings.currency;
+            }
+          }
+
+          const updateData = {};
+          if (!existingProfile.country) {
+            updateData.country = destinationCountry;
+          }
+          if (!existingProfile.preferred_display_currency) {
+            updateData.preferred_display_currency = destinationCurrency;
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update(updateData)
+              .eq('id', user.id);
+
+            if (updateError) {
+              console.error('❌ Profile update failed:', updateError);
+            }
+          }
+        }
+      }
+
       setQuoteSubmitted(true);
     } catch (error) {
       console.error('Error submitting quote:', error);

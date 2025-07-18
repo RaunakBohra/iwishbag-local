@@ -46,10 +46,6 @@ export function ExchangeRateManager() {
     exchange_rate: 1,
   });
 
-  useEffect(() => {
-    fetchExchangeRates();
-  }, [fetchExchangeRates]);
-
   const fetchExchangeRates = useCallback(async () => {
     try {
       setLoading(true);
@@ -81,6 +77,10 @@ export function ExchangeRateManager() {
       setLoading(false);
     }
   }, [toast]);
+
+  useEffect(() => {
+    fetchExchangeRates();
+  }, [fetchExchangeRates]);
 
   const updateExchangeRate = async (id: number, newExchangeRate: number) => {
     try {
