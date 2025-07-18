@@ -10,9 +10,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select';
 import { Tables } from '@/integrations/supabase/types';
 import { CountryFormData } from '@/hooks/useCountrySettings';
 import { useToast } from '@/hooks/use-toast';
+import { FALLBACK_GATEWAY_CODES } from '@/types/payment';
 
 type CountrySetting = Tables<'country_settings'>;
 
@@ -27,7 +29,8 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
   const [purchaseAllowed, setPurchaseAllowed] = useState(true);
   const [shippingAllowed, setShippingAllowed] = useState(true);
   const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg'>('lbs');
-  const [paymentGateway, setPaymentGateway] = useState('stripe');
+  const [availableGateways, setAvailableGateways] = useState<string[]>(['bank_transfer']);
+  const [defaultGateway, setDefaultGateway] = useState('bank_transfer');
   const [priorityThresholds, setPriorityThresholds] = useState({
     low: 0,
     normal: 500,
@@ -36,13 +39,32 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
   const [priorityError, setPriorityError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Payment gateway options with descriptions
+  const paymentGatewayOptions: MultiSelectOption[] = [
+    { value: 'stripe', label: 'Stripe', description: 'International card payments' },
+    { value: 'paypal', label: 'PayPal', description: 'Global digital wallet' },
+    { value: 'payu', label: 'PayU', description: 'Popular in India and emerging markets' },
+    { value: 'razorpay', label: 'Razorpay', description: 'India-focused payment gateway' },
+    { value: 'esewa', label: 'eSewa', description: 'Leading Nepal digital wallet' },
+    { value: 'khalti', label: 'Khalti', description: 'Popular Nepal payment service' },
+    { value: 'fonepay', label: 'Fonepay', description: 'Nepal mobile payment platform' },
+    { value: 'airwallex', label: 'Airwallex', description: 'Global business payments' },
+    { value: 'upi', label: 'UPI', description: 'Unified Payments Interface (India)' },
+    { value: 'paytm', label: 'Paytm', description: 'India digital payments' },
+    { value: 'grabpay', label: 'GrabPay', description: 'Southeast Asia digital wallet' },
+    { value: 'alipay', label: 'Alipay', description: 'Global digital payment platform' },
+    { value: 'bank_transfer', label: 'Bank Transfer', description: 'Direct bank transfers' },
+    { value: 'cod', label: 'Cash on Delivery', description: 'Pay upon delivery' },
+  ];
+
   useEffect(() => {
     if (editingCountry) {
       setFormCurrency(editingCountry.currency);
       setPurchaseAllowed(editingCountry.purchase_allowed ?? true);
       setShippingAllowed(editingCountry.shipping_allowed ?? true);
       setWeightUnit((editingCountry.weight_unit as 'lbs' | 'kg') || 'lbs');
-      setPaymentGateway(editingCountry.payment_gateway || 'stripe');
+      setAvailableGateways((editingCountry as any).available_gateways || ['bank_transfer']);
+      setDefaultGateway((editingCountry as any).default_gateway || 'bank_transfer');
       if (editingCountry.priority_thresholds) {
         setPriorityThresholds({
           low: editingCountry.priority_thresholds.low ?? 0,
@@ -57,7 +79,8 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
       setPurchaseAllowed(true);
       setShippingAllowed(true);
       setWeightUnit('lbs');
-      setPaymentGateway('stripe');
+      setAvailableGateways(['bank_transfer']);
+      setDefaultGateway('bank_transfer');
       setPriorityThresholds({ low: 0, normal: 500, urgent: 2000 });
     }
   }, [editingCountry]);
@@ -133,10 +156,15 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
           parseFloat(formData.get('payment_gateway_fixed_fee') as string) || 0,
         payment_gateway_percent_fee:
           parseFloat(formData.get('payment_gateway_percent_fee') as string) || 0,
-        payment_gateway: paymentGateway,
         purchase_allowed: purchaseAllowed,
         shipping_allowed: shippingAllowed,
         priority_thresholds: priorityThresholds,
+        // Add the new gateway fields (cast as any to avoid TypeScript issues until types are updated)
+        ...({
+          available_gateways: availableGateways,
+          default_gateway: defaultGateway,
+          gateway_config: (editingCountry as any)?.gateway_config || {},
+        } as any),
       };
 
       onSubmit(countryData);
@@ -303,18 +331,45 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
           />
         </div>
         <div className="col-span-2">
-          <Label htmlFor="payment_gateway">Payment Gateway</Label>
-          <Select value={paymentGateway} onValueChange={setPaymentGateway}>
+          <Label htmlFor="available_gateways">Available Payment Gateways</Label>
+          <MultiSelect
+            options={paymentGatewayOptions}
+            value={availableGateways}
+            onValueChange={(value) => {
+              setAvailableGateways(value);
+              // If default gateway is not in the selected gateways, reset it
+              if (!value.includes(defaultGateway)) {
+                setDefaultGateway(value[0] || 'bank_transfer');
+              }
+            }}
+            placeholder="Select available payment gateways..."
+            emptyText="No payment gateways found."
+            className="w-full"
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            Select all payment gateways that customers can use in this country
+          </div>
+        </div>
+        <div className="col-span-2">
+          <Label htmlFor="default_gateway">Default Payment Gateway</Label>
+          <Select value={defaultGateway} onValueChange={setDefaultGateway}>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Select default gateway" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="stripe">Stripe</SelectItem>
-              <SelectItem value="payu">PayU</SelectItem>
-              <SelectItem value="nepalpayqr">NepalPay QR</SelectItem>
-              <SelectItem value="airwallex">Airwallex</SelectItem>
+              {availableGateways.map((gateway) => {
+                const option = paymentGatewayOptions.find(opt => opt.value === gateway);
+                return (
+                  <SelectItem key={gateway} value={gateway}>
+                    {option?.label || gateway}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
+          <div className="text-xs text-gray-500 mt-1">
+            This gateway will be pre-selected for customers from this country
+          </div>
         </div>
         <div className="col-span-2 grid grid-cols-2 gap-4">
           <div className="flex items-center space-x-2 pt-4">

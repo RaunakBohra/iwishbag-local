@@ -1,0 +1,158 @@
+================================================================================
+STORAGE OBJECTS EXPORT
+================================================================================
+Generated on: 2025-07-18
+Database: iwishBag Storage System
+Connection: Supabase Database
+
+================================================================================
+OBJECTS SUMMARY
+================================================================================
+Total Objects: 8
+Buckets with Objects:
+- message-attachments: 8 objects
+- product-images: 0 objects
+
+================================================================================
+DETAILED OBJECT LISTINGS
+================================================================================
+
+BUCKET: message-attachments
+================================================================================
+
+Object ID: 91258473-91ee-4a91-b9b1-bf6385e79566
+Name: payment-proof-c5d8ea1d-d801-4362-8150-7d605e7765fc-1752236662509.pdf
+Owner: c5d8ea1d-d801-4362-8150-7d605e7765fc
+Created At: 2025-07-11 12:24:22.895607+00
+Updated At: 2025-07-11 12:24:22.895607+00
+Last Accessed: 2025-07-11 12:24:22.895607+00
+Version: 4929c22e-2a64-4fee-9eee-2eb59d11c4e1
+Size: 59,469 bytes
+MIME Type: application/pdf
+ETag: "aa7aed34d8217346cade9ffb15d3f596"
+Cache Control: max-age=3600
+
+--------------------------------------------------------------------------------
+
+Object ID: 0d969aea-18b8-4357-a9b1-7f56beaa03a0
+Name: payment-proof-c5d8ea1d-d801-4362-8150-7d605e7765fc-1752327715565.pdf
+Owner: c5d8ea1d-d801-4362-8150-7d605e7765fc
+Created At: 2025-07-12 13:41:56.162091+00
+Updated At: 2025-07-12 13:41:56.162091+00
+Last Accessed: 2025-07-12 13:41:56.162091+00
+Version: 90773d7e-52fa-4e88-b68c-db404e8ca439
+Size: 59,469 bytes
+MIME Type: application/pdf
+ETag: "aa7aed34d8217346cade9ffb15d3f596"
+Cache Control: max-age=3600
+
+--------------------------------------------------------------------------------
+
+Object ID: 8510e783-a2c7-49d6-89db-a4585a82e773
+Name: payment-proof-130ec316-970f-429f-8cb8-ff9adf751248-1752339225287.pdf
+Owner: 130ec316-970f-429f-8cb8-ff9adf751248
+Created At: 2025-07-12 16:53:46.133364+00
+Updated At: 2025-07-12 16:53:46.133364+00
+Last Accessed: 2025-07-12 16:53:46.133364+00
+Version: 0c4cec7a-7b71-48cd-972a-e0183fa28dcc
+Size: 59,469 bytes
+MIME Type: application/pdf
+ETag: "aa7aed34d8217346cade9ffb15d3f596"
+Cache Control: max-age=3600
+
+--------------------------------------------------------------------------------
+
+Object ID: 3760357a-72ad-4348-bd7b-6900eec85d47
+Name: payment-proof-130ec316-970f-429f-8cb8-ff9adf751248-1752416895451.jpeg
+Owner: 130ec316-970f-429f-8cb8-ff9adf751248
+Created At: 2025-07-13 14:28:16.058439+00
+Updated At: 2025-07-13 14:28:16.058439+00
+Last Accessed: 2025-07-13 14:28:16.058439+00
+Version: cd9d9375-c2ab-463a-93f7-8bb9eabd1ccf
+Size: 58,409 bytes
+MIME Type: image/jpeg
+ETag: "c2e6d8bbd0e3c17e4910ef3048de05b1"
+Cache Control: max-age=3600
+
+--------------------------------------------------------------------------------
+
+Object ID: bae8cabd-0e34-4fea-93bd-d9c1fa43a8fc
+Name: payment-proof-130ec316-970f-429f-8cb8-ff9adf751248-1752419729502.jpeg
+Owner: 130ec316-970f-429f-8cb8-ff9adf751248
+Created At: 2025-07-13 15:15:29.982297+00
+Updated At: 2025-07-13 15:15:29.982297+00
+Last Accessed: 2025-07-13 15:15:29.982297+00
+Version: ede3a05b-7db1-4102-a957-9d96870a44ff
+Size: 58,409 bytes
+MIME Type: image/jpeg
+ETag: "c2e6d8bbd0e3c17e4910ef3048de05b1"
+Cache Control: max-age=3600
+
+--------------------------------------------------------------------------------
+
+Object ID: 8ae4d699-9c0e-45e3-9846-715d8d305718
+Name: payment-proof-130ec316-970f-429f-8cb8-ff9adf751248-1752420550264.pdf
+Owner: 130ec316-970f-429f-8cb8-ff9adf751248
+Created At: 2025-07-13 15:29:10.707462+00
+Updated At: 2025-07-13 15:29:10.707462+00
+Last Accessed: 2025-07-13 15:29:10.707462+00
+Version: 8da3be8f-c60a-4639-a5de-65f0dcb70145
+Size: 41,880 bytes
+MIME Type: application/pdf
+ETag: "c9387a866cc5ba47e6bc442678e1120e"
+Cache Control: max-age=3600
+
+--------------------------------------------------------------------------------
+
+Object ID: 3c66cf95-3898-482c-88eb-a11c1f2d866f
+Name: payment-proof-130ec316-970f-429f-8cb8-ff9adf751248-1752429914502.png
+Owner: 130ec316-970f-429f-8cb8-ff9adf751248
+Created At: 2025-07-13 18:05:14.978769+00
+Updated At: 2025-07-13 18:05:14.978769+00
+Last Accessed: 2025-07-13 18:05:14.978769+00
+Version: 1174c47f-d363-40a7-9d8f-6bc8348cd396
+Size: 34,583 bytes
+MIME Type: image/png
+ETag: "bc43341502bbb48616b83cc0e9d6fa21"
+Cache Control: max-age=3600
+
+--------------------------------------------------------------------------------
+
+Object ID: 3b1f03a9-643a-459a-9300-5bc597de08ca
+Name: payment-proof-130ec316-970f-429f-8cb8-ff9adf751248-1752433199176.png
+Owner: 130ec316-970f-429f-8cb8-ff9adf751248
+Created At: 2025-07-13 18:59:59.981436+00
+Updated At: 2025-07-13 18:59:59.981436+00
+Last Accessed: 2025-07-13 18:59:59.981436+00
+Version: 46246e02-8d57-4f80-94ff-2d50332e6067
+Size: 370,073 bytes
+MIME Type: image/png
+ETag: "f680a0a84d99b1fab2dba17558979754"
+Cache Control: max-age=3600
+
+================================================================================
+BUCKET: product-images
+================================================================================
+
+No objects found in this bucket.
+
+================================================================================
+STORAGE USAGE ANALYSIS
+================================================================================
+
+Total Storage Used: 629,372 bytes (614.6 KB)
+
+By File Type:
+- PDF files: 4 files, 219,287 bytes (214.1 KB)
+- JPEG images: 2 files, 116,818 bytes (114.1 KB)
+- PNG images: 2 files, 404,656 bytes (395.2 KB)
+
+By User:
+- c5d8ea1d-d801-4362-8150-7d605e7765fc: 2 files, 118,938 bytes (116.2 KB)
+- 130ec316-970f-429f-8cb8-ff9adf751248: 6 files, 510,434 bytes (498.5 KB)
+
+Usage Pattern:
+- All files are payment proof documents
+- Files are stored in the message-attachments bucket
+- Most recent activity: 2025-07-13
+- File sizes range from 34KB to 370KB

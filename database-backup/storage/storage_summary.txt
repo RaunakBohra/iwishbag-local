@@ -1,0 +1,138 @@
+================================================================================
+IWISHBAG STORAGE SYSTEM SUMMARY
+================================================================================
+Generated on: 2025-07-18
+Database: iwishBag Storage System (Supabase)
+Export Location: /Users/raunakbohra/Desktop/global-wishlist-hub/database-backup/storage/
+
+================================================================================
+STORAGE INFRASTRUCTURE OVERVIEW
+================================================================================
+
+Total Storage Buckets: 2
+Total Stored Objects: 8
+Total Storage Used: 629,372 bytes (614.6 KB)
+
+Storage Buckets:
+1. product-images (Empty)
+2. message-attachments (8 objects)
+
+================================================================================
+BUCKET CONFIGURATIONS
+================================================================================
+
+BUCKET 1: product-images
+========================
+Purpose: Product image storage
+Status: Active but empty
+Configuration:
+- Public Access: Yes
+- File Size Limit: 10 MB (10,485,760 bytes)
+- Allowed File Types: image/jpeg, image/png, image/webp, image/gif
+- AVIF Auto-detection: Disabled
+- Created: 2025-07-10 11:46:33 UTC
+- Current Usage: 0 bytes (0 objects)
+
+BUCKET 2: message-attachments
+============================
+Purpose: Message attachment storage (payment proofs, documents)
+Status: Active with content
+Configuration:
+- Public Access: Yes
+- File Size Limit: 10 MB (10,485,760 bytes)
+- Allowed File Types: image/jpeg, image/png, image/webp, image/gif, application/pdf
+- AVIF Auto-detection: Disabled
+- Created: 2025-07-10 11:46:33 UTC
+- Current Usage: 629,372 bytes (8 objects)
+
+================================================================================
+STORAGE USAGE BREAKDOWN
+================================================================================
+
+BY FILE TYPE:
+- PDF Documents: 4 files (219,287 bytes / 214.1 KB)
+- JPEG Images: 2 files (116,818 bytes / 114.1 KB)  
+- PNG Images: 2 files (404,656 bytes / 395.2 KB)
+
+BY USER:
+- User c5d8ea1d-d801-4362-8150-7d605e7765fc: 2 files (118,938 bytes)
+- User 130ec316-970f-429f-8cb8-ff9adf751248: 6 files (510,434 bytes)
+
+USAGE PATTERN:
+- All stored files are payment proof documents
+- Naming convention: payment-proof-{user-id}-{timestamp}.{ext}
+- Recent activity period: July 11-13, 2025
+- File sizes range from 34KB to 370KB
+
+================================================================================
+STORAGE SECURITY & ACCESS
+================================================================================
+
+Security Model:
+- All buckets are publicly accessible
+- Files are identified by UUID-based object IDs
+- Owner information is tracked per object
+- Version control is enabled for all objects
+- Cache control headers are set (max-age=3600)
+
+Access Patterns:
+- Direct URL access available for public buckets
+- Files served with appropriate MIME types
+- ETags provided for caching efficiency
+- Last access timestamps tracked
+
+================================================================================
+RECOMMENDATIONS
+================================================================================
+
+1. USAGE MONITORING:
+   - Current storage usage is minimal (614.6 KB)
+   - Well within limits for both buckets
+   - No immediate storage optimization needed
+
+2. SECURITY CONSIDERATIONS:
+   - All buckets are public - ensure this meets security requirements
+   - Consider implementing access controls for sensitive documents
+   - Payment proof documents are publicly accessible
+
+3. OPERATIONAL NOTES:
+   - product-images bucket is unused - consider removing if not needed
+   - message-attachments bucket actively used for payment proofs
+   - File naming convention is consistent and includes user identification
+
+4. FUTURE PLANNING:
+   - Monitor storage growth as user base expands
+   - Consider implementing file cleanup policies for old documents
+   - Evaluate need for additional buckets based on feature requirements
+
+================================================================================
+SQL QUERIES USED FOR EXPORT
+================================================================================
+
+Bucket Information:
+SELECT id, name, owner, created_at, updated_at, public, avif_autodetection, 
+       file_size_limit, allowed_mime_types, owner_id 
+FROM storage.buckets 
+ORDER BY created_at;
+
+Object Information:
+SELECT id, bucket_id, name, owner, created_at, updated_at, last_accessed_at, 
+       metadata, version, owner_id, user_metadata 
+FROM storage.objects 
+ORDER BY bucket_id, created_at;
+
+Object Count by Bucket:
+SELECT COUNT(*) as total_objects, bucket_id 
+FROM storage.objects 
+GROUP BY bucket_id;
+
+================================================================================
+EXPORT FILES CREATED
+================================================================================
+
+1. storage_buckets_export.txt - Detailed bucket configurations
+2. storage_objects_export.txt - Detailed object listings and analysis
+3. storage_summary.txt - This comprehensive summary document
+
+Last Updated: 2025-07-18
+Export Status: Complete
