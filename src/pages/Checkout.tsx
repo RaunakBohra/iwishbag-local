@@ -95,9 +95,16 @@ interface AddressFormData {
 const CheckoutItemPrice = ({
   item,
   displayCurrency,
+  paymentConversion,
 }: {
   item: CartItem;
   displayCurrency?: string;
+  paymentConversion?: {
+    convertedAmount: number;
+    convertedCurrency: string;
+    needsConversion: boolean;
+    originalAmount: number;
+  } | null;
 }) => {
   // Always call hooks at the top
   const { data: _userProfile } = useUserProfile();
@@ -116,6 +123,16 @@ const CheckoutItemPrice = ({
     quote: mockQuote as QuoteType,
   });
 
+  // If payment conversion is active, show the converted amount proportionally
+  if (paymentConversion?.needsConversion) {
+    const itemTotalOriginal = (item.finalTotal || 0) * (item.quantity || 1);
+    const conversionRatio = paymentConversion.convertedAmount / paymentConversion.originalAmount;
+    const convertedItemTotal = itemTotalOriginal * conversionRatio;
+    const convertedItemPrice = convertedItemTotal / (item.quantity || 1);
+    
+    return <>{formatAmountForDisplay(convertedItemPrice, paymentConversion.convertedCurrency, 1)}</>;
+  }
+
   // If displayCurrency is provided (for guest checkout), use that currency directly
   if (displayCurrency) {
     return <>{formatAmountForDisplay(item.finalTotal, displayCurrency, 1)}</>;
@@ -129,9 +146,16 @@ const CheckoutItemPrice = ({
 const CheckoutTotal = ({
   items,
   displayCurrency,
+  paymentConversion,
 }: {
   items: CartItem[];
   displayCurrency?: string;
+  paymentConversion?: {
+    convertedAmount: number;
+    convertedCurrency: string;
+    needsConversion: boolean;
+    originalAmount: number;
+  } | null;
 }) => {
   // Use the first item to determine the quote format (all items should have same destination)
   const firstItem = items[0];
@@ -152,6 +176,11 @@ const CheckoutTotal = ({
   });
 
   if (!firstItem) return <>$0.00</>;
+
+  // If payment conversion is active, show the converted total amount
+  if (paymentConversion?.needsConversion) {
+    return <>{formatAmountForDisplay(paymentConversion.convertedAmount, paymentConversion.convertedCurrency, 1)}</>;
+  }
 
   // Calculate total from all items
   const totalAmount = items.reduce((sum, item) => sum + item.finalTotal, 0);
@@ -2534,6 +2563,7 @@ export default function Checkout() {
                           <CheckoutItemPrice
                             item={item}
                             displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
+                            paymentConversion={paymentConversion}
                           />
                         </div>
                       </div>
@@ -2549,6 +2579,7 @@ export default function Checkout() {
                         <CheckoutTotal
                           items={selectedCartItems}
                           displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
+                          paymentConversion={paymentConversion}
                         />
                       </span>
                     </div>
@@ -2558,6 +2589,7 @@ export default function Checkout() {
                         <CheckoutTotal
                           items={selectedCartItems}
                           displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
+                          paymentConversion={paymentConversion}
                         />
                       </span>
                     </div>
@@ -2593,6 +2625,7 @@ export default function Checkout() {
                             <CheckoutTotal
                               items={selectedCartItems}
                               displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
+                              paymentConversion={paymentConversion}
                             />
                           </>
                         )}
