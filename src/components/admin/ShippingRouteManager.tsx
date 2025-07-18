@@ -29,6 +29,8 @@ import type { Tables } from '../../integrations/supabase/types';
 import { CustomsTiersManager } from './CustomsTiersManager';
 import { CurrencyInputLabel } from './DualCurrencyDisplay';
 import { ExchangeRateManager } from './ExchangeRateManager';
+import { CountrySettingsManager } from './CountrySettingsManager';
+import { MarkupManager } from './MarkupManager';
 import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
 
 interface ShippingRouteFormProps {
@@ -666,7 +668,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
 }
 
 export function ShippingRouteManager() {
-  const [activeTab, setActiveTab] = useState<'routes' | 'customs' | 'rates'>('routes');
+  const [activeTab, setActiveTab] = useState<'routes' | 'customs' | 'rates' | 'countries' | 'markups'>('routes');
   const { routes, loading, error, createRoute, updateRoute, removeRoute } = useShippingRoutes();
   const { data: _countries = [] } = useAllCountries();
   const [editingRoute, setEditingRoute] = useState<Tables<'shipping_routes'> | null>(null);
@@ -765,6 +767,18 @@ export function ShippingRouteManager() {
           onClick={() => setActiveTab('rates')}
         >
           Exchange Rates
+        </button>
+        <button
+          className={`px-4 py-2 font-semibold rounded-t ${activeTab === 'countries' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}
+          onClick={() => setActiveTab('countries')}
+        >
+          Countries
+        </button>
+        <button
+          className={`px-4 py-2 font-semibold rounded-t ${activeTab === 'markups' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}
+          onClick={() => setActiveTab('markups')}
+        >
+          Markups
         </button>
       </div>
       {activeTab === 'routes' ? (
@@ -923,7 +937,7 @@ export function ShippingRouteManager() {
         </div>
       ) : activeTab === 'customs' ? (
         <CustomsTiersManager />
-      ) : (
+      ) : activeTab === 'rates' ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -933,6 +947,10 @@ export function ShippingRouteManager() {
           </div>
           <ExchangeRateManager />
         </div>
+      ) : activeTab === 'countries' ? (
+        <CountrySettingsManager />
+      ) : (
+        <MarkupManager />
       )}
     </div>
   );
