@@ -1,11 +1,6 @@
 import AuthForm from '@/components/forms/AuthForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Lock, Shield, Users, Globe, Package, Zap, TrendingUp, ArrowRight } from 'lucide-react';
-import { AnimatedSection } from '@/components/shared/AnimatedSection';
-import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
-import { ParallaxSection } from '@/components/shared/ParallaxSection';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useEffect } from 'react';
 
@@ -25,197 +20,92 @@ const Auth = () => {
     return <Navigate to="/" replace />;
   }
 
-  const features = [
-    {
-      icon: Package,
-      title: 'Global Shopping',
-      description: 'Shop from anywhere in the world',
-    },
-    {
-      icon: Shield,
-      title: 'Secure Payments',
-      description: 'Bank-level encryption for all transactions',
-    },
-    {
-      icon: Zap,
-      title: 'Fast Shipping',
-      description: 'Express delivery options available',
-    },
-    {
-      icon: TrendingUp,
-      title: 'Best Prices',
-      description: 'Competitive rates with transparent fees',
-    },
-  ];
-
-  const stats = [
-    { value: 50000, label: 'Happy Customers', suffix: '+' },
-    { value: 100, label: 'Countries', suffix: '+' },
-    { value: 24, label: 'Support', suffix: '/7' },
-  ];
-
   return (
-    <div className="relative min-h-screen flex overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      {/* Animated Background */}
-      <div className="absolute inset-0">
-        {/* Gradient Orbs */}
-        <div className="absolute top-0 -left-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" />
-        <div
-          className="absolute top-0 -right-40 w-80 h-80 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
-          style={{ animationDelay: '2s' }}
-        />
-        <div
-          className="absolute -bottom-32 left-20 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
-          style={{ animationDelay: '4s' }}
-        />
-        <div
-          className="absolute bottom-0 right-20 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
-          style={{ animationDelay: '6s' }}
-        />
-      </div>
-
-      {/* Grid Pattern */}
-      <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#000_1px,transparent_1px),linear-gradient(to_bottom,#000_1px,transparent_1px)] bg-[size:4rem_4rem]" />
-
-      {/* Main Content */}
-      <div className="relative z-10 w-full flex items-center justify-center p-4">
-        <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center gap-12">
-          {/* Left Side - Features */}
-          <div className="flex-1 hidden lg:block">
-            <AnimatedSection animation="fadeInLeft">
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                    Shop the World,
-                    <br />
-                    Ship to Your Door
-                  </h2>
-                  <p className="text-xl text-gray-600">
-                    Access global products with transparent pricing and reliable shipping.
-                  </p>
-                </div>
-
-                {/* Features Grid */}
-                <div className="grid grid-cols-2 gap-6">
-                  {features.map((feature, index) => (
-                    <AnimatedSection key={index} animation="fadeInUp" delay={index * 100}>
-                      <div className="group">
-                        <div className="flex items-start space-x-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
-                            <feature.icon className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{feature.title}</h3>
-                            <p className="text-sm text-gray-600">{feature.description}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </AnimatedSection>
-                  ))}
-                </div>
-
-                {/* Stats */}
-                <div className="flex items-center space-x-8 pt-4">
-                  {stats.map((stat, index) => (
-                    <AnimatedSection key={index} animation="zoomIn" delay={index * 100}>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-900">
-                          <AnimatedCounter end={stat.value} suffix={stat.suffix} />
-                        </div>
-                        <p className="text-sm text-gray-600">{stat.label}</p>
-                      </div>
-                    </AnimatedSection>
-                  ))}
-                </div>
-              </div>
-            </AnimatedSection>
-          </div>
-
-          {/* Right Side - Auth Form */}
-          <div className="w-full max-w-md">
-            <AnimatedSection animation="fadeInRight">
-              {/* Brand Header */}
-              <div className="text-center mb-8">
-                <div className="flex items-center justify-center space-x-2 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center animate-glow">
-                    <Globe className="w-6 h-6 text-white" />
-                  </div>
-                  <h1 className="text-2xl font-bold text-gray-900">iwishBag</h1>
-                </div>
-                <p className="text-gray-600 text-sm">Your gateway to global shopping</p>
-              </div>
-
-              {/* Success Message */}
-              {message && (
-                <AnimatedSection animation="fadeInDown">
-                  <Alert className="mb-4 border-green-200 bg-green-50">
-                    <AlertDescription className="text-green-800">{message}</AlertDescription>
-                  </Alert>
-                </AnimatedSection>
-              )}
-
-              {/* Auth Card */}
-              <Card className="bg-white/80 backdrop-blur-sm border-gray-200 shadow-2xl hover:shadow-3xl transition-shadow duration-300">
-                <CardHeader className="text-center pb-6">
-                  <AnimatedSection animation="zoomIn" delay={200}>
-                    <div className="flex items-center justify-center mb-4">
-                      <div className="p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full shadow-lg">
-                        <Lock className="w-8 h-8 text-white" />
-                      </div>
-                    </div>
-                  </AnimatedSection>
-                  <AnimatedSection animation="fadeInUp" delay={300}>
-                    <CardTitle className="text-3xl font-bold text-gray-900">Welcome Back</CardTitle>
-                    <CardDescription className="text-gray-600 mt-2">
-                      Sign in to access your global shopping dashboard
-                    </CardDescription>
-                  </AnimatedSection>
-                </CardHeader>
-                <CardContent className="px-8 pb-8">
-                  <AnimatedSection animation="fadeIn" delay={400}>
-                    <AuthForm />
-                  </AnimatedSection>
-                </CardContent>
-              </Card>
-
-              {/* Trust Indicators */}
-              <AnimatedSection animation="fadeInUp" delay={500}>
-                <div className="mt-8">
-                  <div className="flex items-center justify-center space-x-6 text-gray-600 text-sm">
-                    <div className="flex items-center space-x-1 hover:text-blue-600 transition-colors cursor-pointer">
-                      <Shield className="w-4 h-4" />
-                      <span>SSL Secured</span>
-                    </div>
-                    <div className="flex items-center space-x-1 hover:text-blue-600 transition-colors cursor-pointer">
-                      <Users className="w-4 h-4" />
-                      <span>Trusted by 50K+</span>
-                    </div>
-                    <div className="flex items-center space-x-1 hover:text-blue-600 transition-colors cursor-pointer">
-                      <Globe className="w-4 h-4" />
-                      <span>100+ Countries</span>
-                    </div>
-                  </div>
-                </div>
-              </AnimatedSection>
-            </AnimatedSection>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="border-b border-gray-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <h1 className="text-2xl font-semibold text-gray-900">iwishBag</h1>
+            </div>
+            <div className="text-sm text-gray-600">
+              New to iwishBag?{' '}
+              <span className="text-purple-600 font-medium">Get started →</span>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Mobile Features (shown below form on mobile) */}
-      <div className="lg:hidden absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white to-transparent p-6">
-        <AnimatedSection animation="fadeInUp">
-          <div className="flex justify-around">
-            {features.slice(0, 3).map((feature, index) => (
-              <div key={index} className="text-center">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white mx-auto mb-2">
-                  <feature.icon className="w-5 h-5" />
-                </div>
-                <p className="text-xs text-gray-600">{feature.title}</p>
+      {/* Main Content */}
+      <div className="min-h-screen bg-white flex">
+        {/* Left Side - Content */}
+        <div className="hidden lg:flex lg:flex-1 lg:flex-col lg:justify-center lg:px-20">
+          <div className="max-w-md">
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">
+              Shop globally,
+              <br />
+              ship locally
+            </h2>
+            <p className="text-xl text-gray-600 mb-12">
+              Access products from Amazon, eBay, Flipkart, and Alibaba with transparent pricing and reliable shipping to India and Nepal.
+            </p>
+            
+            {/* Simple feature list */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                <span className="text-gray-700">Transparent pricing with no hidden fees</span>
               </div>
-            ))}
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                <span className="text-gray-700">Secure payment processing</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                <span className="text-gray-700">Real-time order tracking</span>
+              </div>
+            </div>
           </div>
-        </AnimatedSection>
+        </div>
+
+        {/* Right Side - Auth Form */}
+        <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-20 xl:px-24">
+          <div className="mx-auto w-full max-w-md">
+            {/* Success Message */}
+            {message && (
+              <Alert className="mb-6 border-green-200 bg-green-50">
+                <AlertDescription className="text-green-800">{message}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Auth Form */}
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900">Sign in to your account</h2>
+                <p className="mt-2 text-sm text-gray-600">
+                  Welcome back! Please enter your details.
+                </p>
+              </div>
+
+              <AuthForm />
+
+              {/* Footer */}
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <p className="text-xs text-gray-500 text-center">
+                  By continuing, you agree to our{' '}
+                  <a href="/terms" className="text-purple-600 hover:text-purple-800">
+                    Terms of Service
+                  </a>{' '}
+                  and{' '}
+                  <a href="/privacy" className="text-purple-600 hover:text-purple-800">
+                    Privacy Policy
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

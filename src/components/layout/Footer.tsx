@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Twitter, Facebook, Instagram, Linkedin } from 'lucide-react';
+import { cn } from '@/lib/design-system';
 
 const Footer = () => {
   // Default footer settings
@@ -14,7 +15,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="border-t bg-card text-card-foreground">
+    <footer className="border-t border-gray-200 bg-white">
       <div className="container py-6 md:py-8">
         {/* Logo & Description Centered */}
         <div className="flex flex-col items-center justify-center text-center space-y-2">
@@ -25,49 +26,49 @@ const Footer = () => {
               className="h-8 w-auto object-contain mb-1"
             />
           ) : (
-            <span className="font-bold text-lg mb-1">
+            <span className="font-semibold text-lg mb-1 text-gray-900">
               {homePageSettings?.company_name || 'WishBag'}
             </span>
           )}
-          <p className="text-xs md:text-sm leading-relaxed line-clamp-2 mb-1 text-muted-foreground">
+          <p className="text-xs md:text-sm leading-relaxed line-clamp-2 mb-1 text-gray-600">
             {homePageSettings?.company_description || 'Shop the world, delivered to your doorstep.'}
           </p>
         </div>
         {/* Divider */}
-        <div className="my-3 border-t border-border w-full" />
+        <div className="my-3 border-t border-gray-200 w-full" />
         {/* Centered Row: Company | Services | Social */}
         <div className="flex flex-row justify-center items-start gap-8 md:gap-16 text-xs md:text-sm w-full">
           {/* Company */}
           <div className="flex flex-col items-center min-w-[100px]">
-            <span className="font-semibold mb-1">Company</span>
-            <Link to="/about" className="hover:text-foreground/80 transition-colors mb-0.5">
+            <span className="font-semibold mb-1 text-gray-900">Company</span>
+            <Link to="/about" className="text-gray-600 hover:text-gray-900 transition-colors mb-0.5">
               About Us
             </Link>
-            <Link to="/blog" className="hover:text-foreground/80 transition-colors mb-0.5">
+            <Link to="/blog" className="text-gray-600 hover:text-gray-900 transition-colors mb-0.5">
               Blog
             </Link>
-            <Link to="/contact" className="hover:text-foreground/80 transition-colors">
+            <Link to="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">
               Contact Us
             </Link>
           </div>
           {/* Services */}
           <div className="flex flex-col items-center min-w-[100px]">
-            <span className="font-semibold mb-1">Services</span>
-            <Link to="/quote" className="hover:text-foreground/80 transition-colors mb-0.5">
+            <span className="font-semibold mb-1 text-gray-900">Services</span>
+            <Link to="/quote" className="text-gray-600 hover:text-gray-900 transition-colors mb-0.5">
               Quote Request
             </Link>
-            <Link to="/#cost-estimator" className="hover:text-foreground/80 transition-colors">
+            <Link to="/#cost-estimator" className="text-gray-600 hover:text-gray-900 transition-colors">
               Cost Estimator
             </Link>
           </div>
           {/* Social */}
           <div className="flex flex-col items-center min-w-[100px]">
-            <span className="font-semibold mb-1">Follow</span>
+            <span className="font-semibold mb-1 text-gray-900">Follow</span>
             <div className="flex space-x-4 md:space-x-3 mt-1">
               {homePageSettings?.social_twitter && (
                 <a
                   href={homePageSettings.social_twitter}
-                  className="hover:text-foreground/80 transition-colors"
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -77,7 +78,7 @@ const Footer = () => {
               {homePageSettings?.social_facebook && (
                 <a
                   href={homePageSettings.social_facebook}
-                  className="hover:text-foreground/80 transition-colors"
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -87,7 +88,7 @@ const Footer = () => {
               {homePageSettings?.social_instagram && (
                 <a
                   href={homePageSettings.social_instagram}
-                  className="hover:text-foreground/80 transition-colors"
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -97,7 +98,7 @@ const Footer = () => {
               {homePageSettings?.social_linkedin && (
                 <a
                   href={homePageSettings.social_linkedin}
-                  className="hover:text-foreground/80 transition-colors"
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -108,8 +109,8 @@ const Footer = () => {
           </div>
         </div>
         {/* Copyright Section */}
-        <div className="border-t border-border mt-6 pt-4 text-center">
-          <p className="text-xs md:text-sm text-muted-foreground">
+        <div className="border-t border-gray-200 mt-6 pt-4 text-center">
+          <p className="text-xs md:text-sm text-gray-500">
             © {new Date().getFullYear()} {homePageSettings?.company_name || 'WishBag'}. All rights
             reserved.
           </p>

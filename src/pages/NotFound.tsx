@@ -16,6 +16,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Display, H2, BodyLarge, Body } from '@/components/ui/typography';
+import { Section, Container } from '@/components/ui/spacing';
 import { AnimatedSection } from '@/components/shared/AnimatedSection';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 
@@ -27,7 +29,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   const quickLinks = [
-    { label: 'Home', icon: Home, to: '/', color: 'from-blue-500 to-blue-600' },
+    { label: 'Home', icon: Home, to: '/', color: 'bg-blue-50 text-blue-600' },
     {
       label: 'Request Quote',
       icon: Package,

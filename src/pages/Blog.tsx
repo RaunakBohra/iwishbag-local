@@ -80,160 +80,165 @@ const Blog = () => {
   const selectedCategory = categories?.find((cat) => cat.id === filters.category_id);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="border-b border-gray-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <h1 className="text-2xl font-semibold text-gray-900">iwishBag</h1>
+            </div>
+            <nav className="flex space-x-8">
+              <a href="/" className="text-gray-600 hover:text-gray-900">Home</a>
+              <a href="/blog" className="text-gray-900 font-medium">Blog</a>
+              <a href="/about" className="text-gray-600 hover:text-gray-900">About</a>
+              <a href="/contact" className="text-gray-600 hover:text-gray-900">Contact</a>
+            </nav>
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-primary/10 to-primary/5 py-12">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl font-bold mb-4">iwishBag Blog</h1>
-            <p className="text-xl text-muted-foreground mb-8">
-              Your guide to smart international shopping. Tips, reviews, and insights for shopping
-              from Amazon, Flipkart, eBay, and more.
+      <div className="bg-white py-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Blog</h1>
+            <p className="text-xl text-gray-600 mb-8">
+              Insights and tips for international shopping
             </p>
-            <BlogSearch
-              onSearch={(searchTerm) => handleFilterChange({ search: searchTerm })}
-              className="max-w-md mx-auto"
-            />
+            <div className="max-w-md mx-auto">
+              <BlogSearch
+                onSearch={(searchTerm) => handleFilterChange({ search: searchTerm })}
+                className="w-full"
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Filters */}
-            <div className="space-y-4">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="space-y-8">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between border-b border-gray-200 pb-6">
+            <div className="flex flex-wrap gap-2 items-center">
               <BlogCategories
                 selectedCategoryId={filters.category_id}
                 onCategorySelect={(categoryId) => handleFilterChange({ category_id: categoryId })}
               />
-
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div className="flex flex-wrap gap-2 items-center">
-                  {selectedCategory && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Filtered by:</span>
-                      <Badge
-                        variant="secondary"
-                        style={{
-                          backgroundColor: `${selectedCategory.color}20`,
-                          color: selectedCategory.color,
-                        }}
-                      >
-                        {selectedCategory.name}
-                      </Badge>
-                    </div>
-                  )}
-
-                  {filters.search && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Search:</span>
-                      <Badge variant="outline">"{filters.search}"</Badge>
-                    </div>
-                  )}
-                </div>
-
-                <Select
-                  value={filters.sort_by}
-                  onValueChange={(value) =>
-                    handleFilterChange({ sort_by: value as BlogPostFilters['sort_by'] })
-                  }
+              
+              {selectedCategory && (
+                <Badge
+                  variant="secondary"
+                  className="bg-purple-50 text-purple-700 border-purple-200"
                 >
-                  <SelectTrigger className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="published_at">Latest</SelectItem>
-                    <SelectItem value="views_count">Most Popular</SelectItem>
-                    <SelectItem value="title">Title A-Z</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  {selectedCategory.name}
+                </Badge>
+              )}
+
+              {filters.search && (
+                <Badge variant="outline" className="text-gray-600">
+                  "{filters.search}"
+                </Badge>
+              )}
             </div>
 
-            {/* Posts Grid */}
-            {postsLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[...Array(6)].map((_, i) => (
-                  <Card key={i}>
-                    <Skeleton className="aspect-video" />
-                    <CardHeader>
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-6 w-full" />
-                      <Skeleton className="h-4 w-full" />
-                    </CardHeader>
-                  </Card>
-                ))}
-              </div>
-            ) : postsError ? (
-              <div className="text-center py-12">
-                <p className="text-destructive">Failed to load blog posts</p>
-              </div>
-            ) : !postsResponse?.data || postsResponse.data.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No blog posts found</p>
-                {(filters.search || filters.category_id) && (
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      setFilters({
-                        page: 1,
-                        per_page: 12,
-                        sort_by: 'published_at',
-                        sort_order: 'desc',
-                      })
-                    }
-                    className="mt-4"
-                  >
-                    Clear Filters
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Featured Posts */}
-                {filters.page === 1 && (
-                  <>
-                    {postsResponse.data.filter((post) => post.featured).length > 0 && (
-                      <div className="space-y-4">
-                        <h2 className="text-2xl font-bold">Featured Posts</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {postsResponse.data
-                            .filter((post) => post.featured)
-                            .slice(0, 2)
-                            .map((post) => (
-                              <BlogCard key={post.id} post={post} />
-                            ))}
-                        </div>
-                        <Separator />
+            <Select
+              value={filters.sort_by}
+              onValueChange={(value) =>
+                handleFilterChange({ sort_by: value as BlogPostFilters['sort_by'] })
+              }
+            >
+              <SelectTrigger className="w-40 h-10 border-gray-300">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="published_at">Latest</SelectItem>
+                <SelectItem value="views_count">Most Popular</SelectItem>
+                <SelectItem value="title">Title A-Z</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Posts Grid */}
+          {postsLoading ? (
+            <div className="grid grid-cols-1 gap-8">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="border-b border-gray-200 pb-8">
+                  <Skeleton className="h-6 w-3/4 mb-4" />
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              ))}
+            </div>
+          ) : postsError ? (
+            <div className="text-center py-12">
+              <p className="text-red-600">Failed to load blog posts</p>
+            </div>
+          ) : !postsResponse?.data || postsResponse.data.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600">No blog posts found</p>
+              {(filters.search || filters.category_id) && (
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setFilters({
+                      page: 1,
+                      per_page: 12,
+                      sort_by: 'published_at',
+                      sort_order: 'desc',
+                    })
+                  }
+                  className="mt-4 border-gray-300"
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-12">
+              {/* Featured Posts */}
+              {filters.page === 1 && (
+                <>
+                  {postsResponse.data.filter((post) => post.featured).length > 0 && (
+                    <div className="space-y-8">
+                      <h2 className="text-2xl font-bold text-gray-900">Featured</h2>
+                      <div className="space-y-8">
+                        {postsResponse.data
+                          .filter((post) => post.featured)
+                          .slice(0, 2)
+                          .map((post) => (
+                            <BlogCard key={post.id} post={post} />
+                          ))}
                       </div>
-                    )}
-                  </>
-                )}
+                      <div className="border-t border-gray-200 pt-8"></div>
+                    </div>
+                  )}
+                </>
+              )}
 
-                {/* All Posts */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold">
-                      {filters.page === 1 ? 'Recent Posts' : `Posts - Page ${filters.page}`}
-                    </h2>
-                    <span className="text-sm text-muted-foreground">
-                      {postsResponse.count} posts found
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {postsResponse.data
-                      .filter((post) => (filters.page === 1 ? !post.featured : true))
-                      .map((post) => (
-                        <BlogCard key={post.id} post={post} />
-                      ))}
-                  </div>
+              {/* All Posts */}
+              <div className="space-y-8">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {filters.page === 1 ? 'Recent Posts' : `Page ${filters.page}`}
+                  </h2>
+                  <span className="text-sm text-gray-500">
+                    {postsResponse.count} posts
+                  </span>
                 </div>
 
-                {/* Pagination */}
-                {postsResponse.total_pages > 1 && (
+                <div className="space-y-8">
+                  {postsResponse.data
+                    .filter((post) => (filters.page === 1 ? !post.featured : true))
+                    .map((post) => (
+                      <BlogCard key={post.id} post={post} />
+                    ))}
+                </div>
+              </div>
+
+              {/* Pagination */}
+              {postsResponse.total_pages > 1 && (
+                <div className="flex justify-center pt-8 border-t border-gray-200">
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
@@ -274,81 +279,10 @@ const Blog = () => {
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Popular Posts */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Popular Posts
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {popularLoading ? (
-                  <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-3 w-3/4" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {popularPosts?.map((post) => (
-                      <div key={post.id} className="space-y-2">
-                        <a
-                          href={`/blog/${post.slug}`}
-                          className="font-medium text-sm hover:text-primary transition-colors line-clamp-2"
-                        >
-                          {post.title}
-                        </a>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          <span>{new Date(post.published_at).toLocaleDateString()}</span>
-                          <span>•</span>
-                          <span>{post.views_count} views</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Categories */}
-            <Card>
-              <CardHeader>
-                <CardTitle>All Categories</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {categories?.map((category) => (
-                    <Button
-                      key={category.id}
-                      variant={selectedCategory?.id === category.id ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => handleFilterChange({ category_id: category.id })}
-                      className="w-full justify-start"
-                      style={{
-                        backgroundColor:
-                          selectedCategory?.id === category.id ? category.color : undefined,
-                        color: selectedCategory?.id === category.id ? 'white' : category.color,
-                      }}
-                    >
-                      {category.name}
-                    </Button>
-                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

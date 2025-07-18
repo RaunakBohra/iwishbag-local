@@ -4,26 +4,26 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+  'inline-flex items-center rounded-lg border px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-blue-100 text-blue-800',
-        secondary: 'border-transparent bg-gray-100 text-gray-800',
-        outline: 'bg-white text-gray-800 border',
-        destructive: 'border-transparent bg-red-100 text-red-800',
-        success: 'border-transparent bg-green-100 text-green-800',
-        warning: 'border-transparent bg-yellow-100 text-yellow-800',
-        info: 'border-transparent bg-sky-100 text-sky-800',
-        purple: 'border-transparent bg-purple-100 text-purple-800',
-        pink: 'border-transparent bg-pink-100 text-pink-800',
-        indigo: 'border-transparent bg-indigo-100 text-indigo-800',
-        emerald: 'border-transparent bg-emerald-100 text-emerald-800',
-        amber: 'border-transparent bg-amber-100 text-amber-800',
-        rose: 'border-transparent bg-rose-100 text-rose-800',
-        violet: 'border-transparent bg-violet-100 text-violet-800',
-        cyan: 'border-transparent bg-cyan-100 text-cyan-800',
-        lime: 'border-transparent bg-lime-100 text-lime-800',
+        default: 'border-blue-200 bg-blue-50 text-blue-700',
+        secondary: 'border-gray-200 bg-gray-50 text-gray-700',
+        outline: 'bg-white text-gray-700 border-gray-200',
+        destructive: 'border-red-200 bg-red-50 text-red-700',
+        success: 'border-green-200 bg-green-50 text-green-700',
+        warning: 'border-yellow-200 bg-yellow-50 text-yellow-700',
+        info: 'border-sky-200 bg-sky-50 text-sky-700',
+        purple: 'border-purple-200 bg-purple-50 text-purple-700',
+        pink: 'border-pink-200 bg-pink-50 text-pink-700',
+        indigo: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+        emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        amber: 'border-amber-200 bg-amber-50 text-amber-700',
+        rose: 'border-rose-200 bg-rose-50 text-rose-700',
+        violet: 'border-violet-200 bg-violet-50 text-violet-700',
+        cyan: 'border-cyan-200 bg-cyan-50 text-cyan-700',
+        lime: 'border-lime-200 bg-lime-50 text-lime-700',
       },
     },
     defaultVariants: {

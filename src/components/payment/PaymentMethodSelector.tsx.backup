@@ -227,6 +227,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           </Alert>
         )}
 
+      </div>
     </div>
   );
 };

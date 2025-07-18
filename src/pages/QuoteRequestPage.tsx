@@ -282,10 +282,10 @@ export default function QuoteRequestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto py-4 sm:py-8 px-4 sm:px-6">
         <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Request a Quote</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-2">Request a Quote</h1>
           <p className="text-sm sm:text-base text-gray-600 px-2">
             Get a detailed quote for your international shipping needs
           </p>
@@ -294,21 +294,21 @@ export default function QuoteRequestPage() {
         {quoteSubmitted ? (
           <div className="space-y-6 sm:space-y-8">
             {/* Success Message */}
-            <div className="text-center space-y-4 sm:space-y-6 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border border-green-200 rounded-xl sm:rounded-2xl p-6 sm:p-10 shadow-lg">
+            <div className="text-center space-y-4 sm:space-y-6 bg-white border border-gray-200 rounded-lg p-6 sm:p-10 shadow-sm">
               <div className="flex justify-center">
-                <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-4 sm:p-6 rounded-full shadow-lg">
-                  <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
+                <div className="bg-green-50 border border-green-200 p-4 sm:p-6 rounded-full">
+                  <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 text-green-600" />
                 </div>
               </div>
               <div className="space-y-3 sm:space-y-4">
-                <h2 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-700 bg-clip-text text-transparent">
+                <h2 className="text-2xl sm:text-4xl font-semibold text-gray-900">
                   {quoteType === 'combined'
                     ? 'Quote Request Submitted!'
                     : 'Quote Requests Submitted!'}
                 </h2>
-                <div className="flex items-center justify-center gap-2 sm:gap-3 text-green-700 bg-green-100 px-4 sm:px-6 py-2 sm:py-3 rounded-full inline-flex shadow-sm">
+                <div className="flex items-center justify-center gap-2 sm:gap-3 text-gray-700 bg-gray-50 border border-gray-200 px-4 sm:px-6 py-2 sm:py-3 rounded-lg inline-flex">
                   <Clock className="h-4 w-4 sm:h-6 sm:w-6" />
-                  <span className="font-semibold text-sm sm:text-lg">
+                  <span className="font-medium text-sm sm:text-lg">
                     Estimated Response: 24-48 hours
                   </span>
                 </div>
@@ -355,21 +355,21 @@ export default function QuoteRequestPage() {
                     zip: '',
                   });
                 }}
-                className="w-full sm:w-auto px-6 py-3 rounded-lg border border-blue-600 text-blue-600 bg-white hover:bg-blue-50 font-semibold shadow-sm transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
+                className="w-full sm:w-auto px-6 py-3 rounded-lg border border-blue-600 text-blue-600 bg-white hover:bg-blue-50 font-medium shadow-sm transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
               >
                 <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
                 Request Another Quote
               </button>
               <button
                 onClick={() => (window.location.href = '/dashboard')}
-                className="w-full sm:w-auto px-6 py-3 rounded-lg bg-green-600 text-white font-semibold shadow-sm hover:bg-green-700 transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
+                className="w-full sm:w-auto px-6 py-3 rounded-lg bg-blue-600 text-white font-medium shadow-sm hover:bg-blue-700 transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
               >
                 <Package className="h-4 w-4 sm:h-5 sm:w-5" />
                 Go to Dashboard
               </button>
               <button
                 onClick={() => (window.location.href = '/')}
-                className="w-full sm:w-auto px-6 py-3 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-semibold shadow-sm transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
+                className="w-full sm:w-auto px-6 py-3 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium shadow-sm transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
               >
                 <svg
                   className="h-4 w-4 sm:h-5 sm:w-5"
@@ -394,10 +394,10 @@ export default function QuoteRequestPage() {
             <div className="mb-6 sm:mb-8">
               <div className="flex items-center justify-center space-x-2 sm:space-x-4">
                 <div
-                  className={`flex items-center ${currentStep >= 1 ? 'text-green-600' : 'text-gray-400'}`}
+                  className={`flex items-center ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}
                 >
                   <div
-                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 1 ? 'bg-green-600 border-green-600 text-white' : 'border-gray-300'}`}
+                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 1 ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300'}`}
                   >
                     1
                   </div>
@@ -406,13 +406,13 @@ export default function QuoteRequestPage() {
                   </span>
                 </div>
                 <div
-                  className={`w-8 sm:w-12 h-0.5 ${currentStep >= 2 ? 'bg-green-600' : 'bg-gray-300'}`}
+                  className={`w-8 sm:w-12 h-0.5 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`}
                 ></div>
                 <div
-                  className={`flex items-center ${currentStep >= 2 ? 'text-green-600' : 'text-gray-400'}`}
+                  className={`flex items-center ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}
                 >
                   <div
-                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 2 ? 'bg-green-600 border-green-600 text-white' : 'border-gray-300'}`}
+                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 2 ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300'}`}
                   >
                     2
                   </div>
@@ -424,12 +424,12 @@ export default function QuoteRequestPage() {
               {/* Mobile step labels */}
               <div className="flex justify-center space-x-8 mt-2 sm:hidden">
                 <span
-                  className={`text-xs font-medium ${currentStep >= 1 ? 'text-green-600' : 'text-gray-400'}`}
+                  className={`text-xs font-medium ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}
                 >
                   Product Info
                 </span>
                 <span
-                  className={`text-xs font-medium ${currentStep >= 2 ? 'text-green-600' : 'text-gray-400'}`}
+                  className={`text-xs font-medium ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}
                 >
                   Shipping & Review
                 </span>

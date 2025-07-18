@@ -25,7 +25,6 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 // Removed unused cn import
 import { Loader2, Mail, Eye, EyeOff } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 // Removed unused useEmailNotifications import
 
 const signInSchema = z.object({
@@ -305,22 +304,22 @@ const AuthForm = () => {
   return (
     <div className="w-full max-w-md mx-auto">
       <Form {...signInForm}>
-        <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="space-y-6 pt-4">
+        <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="space-y-5 pt-4">
           <FormField
             control={signInForm.control}
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-foreground">Email</FormLabel>
+                <FormLabel >Email</FormLabel>
                 <FormControl>
                   <Input
                     type="email"
                     placeholder="you@example.com"
                     {...field}
-                    className="border-border focus:border-foreground"
+                    className="h-11 px-4 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage  />
               </FormItem>
             )}
           />
@@ -329,44 +328,68 @@ const AuthForm = () => {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-foreground">Password</FormLabel>
+                <FormLabel >Password</FormLabel>
                 <FormControl>
                   <Input
                     type="password"
                     {...field}
-                    className="border-border focus:border-foreground"
+                    className="h-11 px-4 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage  />
               </FormItem>
             )}
           />
           <Button
             type="submit"
-            className="w-full bg-foreground text-background hover:bg-foreground/90"
+            className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
             disabled={loading}
           >
-            {loading ? 'Signing In...' : 'Sign In'}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing In...
+              </>
+            ) : (
+              'Sign In'
+            )}
           </Button>
+          
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-gray-500">Or continue with</span>
+            </div>
+          </div>
+          
           <Button
             type="button"
             variant="outline"
-            className="w-full border-border hover:bg-muted"
+            className="w-full h-11 border-gray-200 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors duration-200"
             onClick={handleSignInWithGoogle}
           >
-            Sign in with Google
+            <svg className="w-4 h-4 mr-3" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Continue with Google
           </Button>
-          <div className="flex justify-between items-center mt-2">
+          
+          <div className="flex justify-between items-center pt-4">
             <button
               type="button"
-              className="text-sm text-foreground underline hover:text-foreground/80"
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
               onClick={() => setShowForgot(true)}
             >
               Forgot Password?
             </button>
             <button
               type="button"
-              className="text-sm text-foreground underline hover:text-foreground/80"
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
               onClick={() => setShowSignUp(true)}
             >
               Sign Up
@@ -377,31 +400,31 @@ const AuthForm = () => {
 
       {/* Sign Up Modal */}
       <Dialog open={showSignUp} onOpenChange={setShowSignUp}>
-        <DialogContent className="bg-gradient-to-br from-blue-50 to-indigo-50 border-border shadow-xl max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-foreground text-xl font-semibold">
-              Join iWishBag
+        <DialogContent className="bg-white border-gray-200 shadow-2xl max-w-md rounded-lg">
+          <DialogHeader className="space-y-3 pb-4">
+            <DialogTitle className="text-gray-900 text-2xl font-semibold text-center">
+              Create your account
             </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Create your account to start shopping internationally
+            <DialogDescription className="text-gray-600 text-center">
+              Start shopping internationally with iWishBag
             </DialogDescription>
           </DialogHeader>
           <Form {...signUpForm}>
-            <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
+            <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-5">
               <FormField
                 control={signUpForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-foreground">Name</FormLabel>
+                    <FormLabel >Name</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Your Name"
                         {...field}
-                        className="border-border focus:border-foreground"
+                        className="h-11 px-4 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage  />
                   </FormItem>
                 )}
               />
@@ -410,16 +433,16 @@ const AuthForm = () => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-foreground">Email</FormLabel>
+                    <FormLabel >Email</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
                         placeholder="you@example.com"
                         {...field}
-                        className="border-border focus:border-foreground"
+                        className="h-11 px-4 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage  />
                   </FormItem>
                 )}
               />
@@ -428,20 +451,19 @@ const AuthForm = () => {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-foreground">Phone Number</FormLabel>
+                    <FormLabel >Phone Number</FormLabel>
                     <FormControl>
                       <Input
                         type="tel"
                         placeholder="+1 234 567 8901"
                         {...field}
-                        className="border-border focus:border-foreground"
+                        className="h-11 px-4 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                       />
                     </FormControl>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Required for account verification. You can update this later in your profile
-                      settings.
+                    <p className="text-xs text-gray-500 mt-1">
+                      Required for account verification
                     </p>
-                    <FormMessage />
+                    <FormMessage  />
                   </FormItem>
                 )}
               />
@@ -453,19 +475,19 @@ const AuthForm = () => {
                   const passwordStrength = getPasswordStrength(password);
                   return (
                     <FormItem>
-                      <FormLabel className="text-foreground">Password</FormLabel>
+                      <FormLabel >Password</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
                             type={showPassword ? 'text' : 'password'}
                             placeholder="••••••••"
                             {...field}
-                            className="border-border focus:border-foreground pr-10"
+                            className="h-11 px-4 pr-10 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                           >
                             {showPassword ? (
                               <EyeOff className="h-4 w-4" />
@@ -476,54 +498,28 @@ const AuthForm = () => {
                         </div>
                       </FormControl>
                       {password && (
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2 text-sm">
-                            <span>Password strength:</span>
-                            <span className={passwordStrength.color}>{passwordStrength.text}</span>
-                            <div className="flex-1 bg-gray-200 rounded-full h-2 ml-2">
-                              <div
-                                className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.bg}`}
-                                style={{
-                                  width: `${Math.min(passwordStrength.text === 'Weak' ? 33 : passwordStrength.text === 'Medium' ? 66 : 100, 100)}%`,
-                                }}
-                              />
-                            </div>
+                        <div className="mt-2">
+                          <div className="flex space-x-1 mb-2">
+                            <div className={`h-1 rounded-full flex-1 transition-colors duration-200 ${
+                              passwordStrength.text === 'Weak' ? 'bg-red-300' :
+                              passwordStrength.text === 'Medium' ? 'bg-yellow-300' :
+                              'bg-green-400'
+                            }`} />
+                            <div className={`h-1 rounded-full flex-1 transition-colors duration-200 ${
+                              passwordStrength.text === 'Medium' ? 'bg-yellow-300' :
+                              passwordStrength.text === 'Strong' ? 'bg-green-400' :
+                              'bg-gray-200'
+                            }`} />
+                            <div className={`h-1 rounded-full flex-1 transition-colors duration-200 ${
+                              passwordStrength.text === 'Strong' ? 'bg-green-400' : 'bg-gray-200'
+                            }`} />
                           </div>
-                          <div className="bg-blue-50 p-3 rounded-md border">
-                            <p className="text-sm text-blue-800 font-medium mb-2">
-                              Password Requirements:
-                            </p>
-                            <div className="space-y-1 text-xs text-blue-700">
-                              <div
-                                className={`flex items-center space-x-1 ${password.length >= 8 ? 'text-green-600' : ''}`}
-                              >
-                                <span>• At least 8 characters</span>
-                              </div>
-                              <div
-                                className={`flex items-center space-x-1 ${password.match(/[A-Z]/) ? 'text-green-600' : ''}`}
-                              >
-                                <span>• One uppercase letter</span>
-                              </div>
-                              <div
-                                className={`flex items-center space-x-1 ${password.match(/[a-z]/) ? 'text-green-600' : ''}`}
-                              >
-                                <span>• One lowercase letter</span>
-                              </div>
-                              <div
-                                className={`flex items-center space-x-1 ${password.match(/[0-9]/) ? 'text-green-600' : ''}`}
-                              >
-                                <span>• One number</span>
-                              </div>
-                              <div
-                                className={`flex items-center space-x-1 ${password.match(/[^A-Za-z0-9]/) ? 'text-green-600' : ''}`}
-                              >
-                                <span>• One special character</span>
-                              </div>
-                            </div>
-                          </div>
+                          <p className="text-xs text-gray-500">
+                            Use 8+ characters with a mix of letters, numbers & symbols
+                          </p>
                         </div>
                       )}
-                      <FormMessage />
+                      <FormMessage  />
                     </FormItem>
                   );
                 }}
@@ -532,39 +528,66 @@ const AuthForm = () => {
                 control={signUpForm.control}
                 name="terms"
                 render={({ field }) => (
-                  <FormItem className="flex items-center space-x-2">
+                  <FormItem className="flex items-start space-x-3 pt-2">
                     <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      <Checkbox 
+                        checked={field.value} 
+                        onCheckedChange={field.onChange} 
+                        className="mt-0.5 border-gray-200 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                      />
                     </FormControl>
-                    <FormLabel className="text-foreground">
+                    <FormLabel className="text-sm text-gray-700 leading-relaxed">
                       I agree to the{' '}
                       <a
                         href="/terms"
-                        className="underline text-foreground hover:text-foreground/80"
+                        className="text-blue-600 hover:text-blue-700 underline font-medium"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
                         terms and conditions
                       </a>
                     </FormLabel>
-                    <FormMessage />
+                    <FormMessage  />
                   </FormItem>
                 )}
               />
               <Button
                 type="submit"
-                className="w-full bg-foreground text-background hover:bg-foreground/90"
+                className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-md transition-colors duration-200 mt-6"
                 disabled={loading}
               >
-                {loading ? 'Signing Up...' : 'Sign Up'}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  'Create Account'
+                )}
               </Button>
+              
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">Or sign up with</span>
+                </div>
+              </div>
+              
               <Button
                 type="button"
                 variant="outline"
-                className="w-full border-border hover:bg-muted"
+                className="w-full h-11 border-gray-200 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors duration-200"
                 onClick={handleSignInWithGoogle}
               >
-                Sign up with Google
+                <svg className="w-4 h-4 mr-3" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Continue with Google
               </Button>
             </form>
           </Form>
@@ -582,41 +605,36 @@ const AuthForm = () => {
           }
         }}
       >
-        <DialogContent className="bg-gradient-to-br from-slate-50 to-gray-50 border-border shadow-xl">
-          <DialogHeader>
-            <DialogTitle className="text-foreground flex items-center gap-2 text-xl font-semibold">
-              <Mail className="h-5 w-5" />
-              {resetEmailSent ? 'Email Sent!' : 'Reset Password'}
+        <DialogContent className="bg-white border-gray-200 shadow-2xl max-w-md rounded-lg">
+          <DialogHeader className="space-y-3 pb-6">
+            <DialogTitle className="text-gray-900 text-xl font-semibold text-center">
+              {resetEmailSent ? 'Check your email' : 'Reset your password'}
             </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
+            <DialogDescription className="text-gray-600 text-center text-sm">
               {resetEmailSent
-                ? "We've sent a secure password reset link to your email address from iWishBag."
-                : "Enter your email address and we'll send you a secure reset link."}
+                ? "We sent a password reset link to your email address."
+                : "Enter your email address and we'll send you a reset link."}
             </DialogDescription>
           </DialogHeader>
 
           {resetEmailSent ? (
-            <div className="space-y-4">
-              <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
-                <Mail className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <AlertDescription className="text-green-800 dark:text-green-200">
-                  Please check your inbox for the password reset link. It may take a few minutes to
-                  arrive.
-                </AlertDescription>
-              </Alert>
-
-              <div className="text-sm text-muted-foreground">
-                <p className="mb-2">Didn't receive the email?</p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Check your spam or junk folder</li>
-                  <li>Make sure you entered the correct email address</li>
-                  <li>Wait a few minutes and try again</li>
-                </ul>
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                  <Mail className="h-6 w-6 text-green-600" />
+                </div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Please check your inbox for the password reset link. It may take a few minutes to arrive.
+                </p>
+                <div className="text-xs text-gray-500">
+                  <p className="mb-2">Didn't receive the email?</p>
+                  <p>Check your spam folder or try again.</p>
+                </div>
               </div>
 
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full h-11 border-gray-200 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors duration-200"
                 onClick={() => {
                   setShowForgot(false);
                   setResetEmailSent(false);
@@ -634,23 +652,23 @@ const AuthForm = () => {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-foreground">Email</FormLabel>
+                      <FormLabel >Email</FormLabel>
                       <FormControl>
                         <Input
                           type="email"
                           placeholder="you@example.com"
                           {...field}
-                          className="border-border focus:border-foreground"
+                          className="h-11 px-4 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                           disabled={forgotLoading}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage  />
                     </FormItem>
                   )}
                 />
                 <Button
                   type="submit"
-                  className="w-full bg-foreground text-background hover:bg-foreground/90"
+                  className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
                   disabled={forgotLoading}
                 >
                   {forgotLoading ? (

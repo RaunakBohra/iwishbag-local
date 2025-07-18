@@ -44,7 +44,7 @@ const TrustIndicators = lazy(() =>
 
 // Loading components for each section
 const SectionSkeleton = ({ height = 'h-96' }: { height?: string }) => (
-  <div className={`${height} bg-gray-50 animate-pulse rounded-lg`} />
+  <div className={`${height} bg-gray-100 animate-pulse rounded-lg`} />
 );
 
 export default function Index() {
@@ -60,7 +60,7 @@ export default function Index() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-gray-50/50 to-white overflow-hidden">
+    <main className="min-h-screen bg-white overflow-hidden">
       {/* Hero Section - Always loaded immediately */}
       <HeroSection settings={settings} />
 

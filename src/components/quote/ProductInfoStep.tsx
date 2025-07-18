@@ -188,7 +188,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
       };
     }
     return {
-      className: 'w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+      className: 'w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
     };
   };
 
@@ -197,7 +197,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
   return (
     <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
       {/* Quote Type Selection */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center">
           <Globe className="h-5 w-5 mr-2" />
           How would you like your quote?
@@ -206,7 +206,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
           <div
             className={`flex-1 min-w-[180px] p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
               quoteType === 'separate'
-                ? 'border-green-500 bg-green-50'
+                ? 'border-blue-500 bg-blue-50'
                 : 'border-gray-200 hover:border-gray-300'
             }`}
             onClick={() => setQuoteType('separate')}
@@ -214,7 +214,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
             <div className="flex items-center mb-2">
               <div
                 className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                  quoteType === 'separate' ? 'border-green-500 bg-green-500' : 'border-gray-300'
+                  quoteType === 'separate' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
                 }`}
               >
                 {quoteType === 'separate' && (
@@ -229,7 +229,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
           <div
             className={`flex-1 min-w-[180px] p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
               quoteType === 'combined'
-                ? 'border-green-500 bg-green-50'
+                ? 'border-blue-500 bg-blue-50'
                 : 'border-gray-200 hover:border-gray-300'
             }`}
             onClick={() => setQuoteType('combined')}
@@ -237,7 +237,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
             <div className="flex items-center mb-2">
               <div
                 className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                  quoteType === 'combined' ? 'border-green-500 bg-green-500' : 'border-gray-300'
+                  quoteType === 'combined' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
                 }`}
               >
                 {quoteType === 'combined' && (
@@ -290,14 +290,14 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
       )}
 
       {/* Products Section */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 sm:p-6">
         <div className="mb-4 sm:mb-6">
           <h3 className="text-lg font-semibold">Product Information</h3>
         </div>
 
         <div className="space-y-4 sm:space-y-6">
           {products.map((product, index) => (
-            <div key={index} className="border rounded-lg p-3 sm:p-4">
+            <div key={index} className="border border-gray-200 rounded-lg p-3 sm:p-4">
               <div className="flex items-center justify-between mb-3 sm:mb-4">
                 <h4 className="font-medium">Product {index + 1}</h4>
                 {products.length > 1 && (
@@ -354,7 +354,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     type="text"
                     value={product.name}
                     onChange={(e) => updateProduct(index, 'name', e.target.value)}
-                    className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter product name"
                   />
                 </div>
@@ -369,7 +369,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     type="url"
                     value={product.url}
                     onChange={(e) => updateProduct(index, 'url', e.target.value)}
-                    className="flex-1 border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="https://example.com/product"
                   />
                   <label className="flex items-center justify-center px-3 py-2 bg-gray-100 border border-gray-300 rounded cursor-pointer hover:bg-gray-200 min-h-[42px]">
@@ -403,7 +403,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     onChange={(e) =>
                       updateProduct(index, 'quantity', parseInt(e.target.value) || 1)
                     }
-                    className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   {errors[`quantity-${index}`] && (
                     <p className="text-red-500 text-xs mt-1">{errors[`quantity-${index}`]}</p>
@@ -417,7 +417,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     step="0.01"
                     value={product.price}
                     onChange={(e) => updateProduct(index, 'price', e.target.value)}
-                    className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="0.00"
                   />
                 </div>
@@ -429,7 +429,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     step="0.01"
                     value={product.weight}
                     onChange={(e) => updateProduct(index, 'weight', e.target.value)}
-                    className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="0.00 kg"
                   />
                 </div>
@@ -441,7 +441,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                 <textarea
                   value={product.notes}
                   onChange={(e) => updateProduct(index, 'notes', e.target.value)}
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[60px] resize-vertical"
+                  className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[60px] resize-vertical"
                   placeholder="E.g., Size, color, specific model, or any other product details..."
                   rows={2}
                 />
@@ -455,7 +455,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
           <button
             type="button"
             onClick={addProduct}
-            className="flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm text-sm sm:text-base"
+            className="flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm text-sm sm:text-base"
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             Add Another Product
@@ -467,7 +467,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
         <button
           type="button"
           onClick={handleNext}
-          className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-base sm:text-lg font-semibold"
+          className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base sm:text-lg font-medium"
         >
           Continue to Shipping
         </button>

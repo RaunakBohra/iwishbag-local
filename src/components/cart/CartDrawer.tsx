@@ -394,8 +394,8 @@ export const CartDrawer = () => {
       return (
         <div className="flex flex-col items-center justify-center h-32 space-y-4">
           <div className="text-center">
-            <h3 className="text-lg font-medium text-destructive">Error loading cart</h3>
-            <p className="text-sm text-muted-foreground">{cartError}</p>
+            <h3 className="text-lg font-medium text-red-600">Error loading cart</h3>
+            <p className="text-sm text-gray-500">{cartError}</p>
             <Button
               variant="outline"
               size="sm"
@@ -412,7 +412,7 @@ export const CartDrawer = () => {
     if (cartLoading) {
       return (
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       );
     }
@@ -420,14 +420,14 @@ export const CartDrawer = () => {
     if (!cartItems || cartItems.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center h-32 space-y-4">
-          <Package className="h-16 w-16 text-muted-foreground" />
+          <Package className="h-16 w-16 text-gray-400" />
           <div className="text-center">
-            <h3 className="text-lg font-medium">Your cart is empty</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="text-lg font-medium text-gray-900">Your cart is empty</h3>
+            <p className="text-sm text-gray-500">
               {hasLoadedFromServer ? 'Add some items to get started' : 'Loading cart...'}
             </p>
             {!hasLoadedFromServer && (
-              <div className="mt-2 text-xs text-muted-foreground">
+              <div className="mt-2 text-xs text-gray-500">
                 Debug: hasLoadedFromServer = {hasLoadedFromServer.toString()}
               </div>
             )}
@@ -441,7 +441,7 @@ export const CartDrawer = () => {
         {/* Cart Items */}
         <div className="space-y-3">
           {cartItems.map((item) => (
-            <div key={item.id} className="flex items-start gap-3 p-3 border rounded-lg">
+            <div key={item.id} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
               <Checkbox
                 checked={selectedItems.includes(item.id)}
                 onCheckedChange={() => handleSelectItem(item.id)}
@@ -450,8 +450,8 @@ export const CartDrawer = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium truncate">{item.productName}</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <h4 className="font-medium truncate text-gray-900">{item.productName}</h4>
+                    <p className="text-sm text-gray-500">
                       {item.countryCode} • {(item.itemWeight * item.quantity).toFixed(2)}kg
                     </p>
                     <div className="flex items-center gap-2 mt-2">
@@ -464,7 +464,7 @@ export const CartDrawer = () => {
                       >
                         -
                       </Button>
-                      <span className="w-8 text-center text-sm">{item.quantity}</span>
+                      <span className="w-8 text-center text-sm text-gray-900">{item.quantity}</span>
                       <Button
                         variant="outline"
                         size="sm"
@@ -497,7 +497,7 @@ export const CartDrawer = () => {
                   <div className="font-bold">
                     <CartItemPrice item={item} quantity={item.quantity} />
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-gray-500">
                     {(item.itemWeight * item.quantity).toFixed(2)}kg •{' '}
                     {item.destinationCountryCode || item.countryCode}
                   </div>
@@ -514,10 +514,10 @@ export const CartDrawer = () => {
     if (!savedItems || savedItems.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center h-32 space-y-4">
-          <Save className="h-16 w-16 text-muted-foreground" />
+          <Save className="h-16 w-16 text-gray-400" />
           <div className="text-center">
-            <h3 className="text-lg font-medium">No saved items</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="text-lg font-medium text-gray-900">No saved items</h3>
+            <p className="text-sm text-gray-500">
               Items you save for later will appear here
             </p>
           </div>
@@ -530,7 +530,7 @@ export const CartDrawer = () => {
         {/* Saved Items */}
         <div className="space-y-3">
           {savedItems.map((item) => (
-            <div key={item.id} className="flex items-start gap-3 p-3 border rounded-lg">
+            <div key={item.id} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
               <Checkbox
                 checked={selectedItems.includes(item.id)}
                 onCheckedChange={() => handleSelectItem(item.id)}
@@ -539,8 +539,8 @@ export const CartDrawer = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium truncate">{item.productName}</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <h4 className="font-medium truncate text-gray-900">{item.productName}</h4>
+                    <p className="text-sm text-gray-500">
                       {item.countryCode} • {(item.itemWeight * item.quantity).toFixed(2)}kg
                     </p>
                     <div className="flex items-center gap-2 mt-2">
@@ -553,7 +553,7 @@ export const CartDrawer = () => {
                       >
                         -
                       </Button>
-                      <span className="w-8 text-center text-sm">{item.quantity}</span>
+                      <span className="w-8 text-center text-sm text-gray-900">{item.quantity}</span>
                       <Button
                         variant="outline"
                         size="sm"
@@ -586,7 +586,7 @@ export const CartDrawer = () => {
                   <div className="font-bold">
                     <CartItemPrice item={item} quantity={item.quantity} />
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-gray-500">
                     {(item.itemWeight * item.quantity).toFixed(2)}kg •{' '}
                     {item.destinationCountryCode || item.countryCode}
                   </div>
@@ -618,15 +618,15 @@ export const CartDrawer = () => {
             <span className="sr-only">Cart</span>
           </Button>
         </SheetTrigger>
-        <SheetContent className="w-full sm:max-w-lg flex flex-col h-full">
+        <SheetContent className="w-full sm:max-w-lg flex flex-col h-full bg-white">
           <SheetHeader className="space-y-2.5 flex-shrink-0">
-            <SheetTitle>Shopping Cart</SheetTitle>
+            <SheetTitle className="text-gray-900">Shopping Cart</SheetTitle>
           </SheetHeader>
           <div className="flex-1 flex flex-col min-h-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-shrink-0">
               <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
-                <TabsTrigger value="cart">Cart ({cartItems?.length || 0})</TabsTrigger>
-                <TabsTrigger value="saved">Saved ({savedItems?.length || 0})</TabsTrigger>
+                <TabsTrigger value="cart" className="text-gray-600 data-[state=active]:text-gray-900">Cart ({cartItems?.length || 0})</TabsTrigger>
+                <TabsTrigger value="saved" className="text-gray-600 data-[state=active]:text-gray-900">Saved ({savedItems?.length || 0})</TabsTrigger>
               </TabsList>
             </Tabs>
             {activeTab === 'cart' && (
@@ -640,15 +640,15 @@ export const CartDrawer = () => {
               </div>
             )}
             {/* Sticky Action Buttons */}
-            <div className="flex-shrink-0 border-t pt-4 space-y-3 mt-4">
+            <div className="flex-shrink-0 border-t border-gray-200 pt-4 space-y-3 mt-4">
               {hasCartItems && (
                 <>
                   {/* Total Display */}
-                  <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                    <span className="font-medium">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="font-medium text-gray-900">
                       Total ({getAllSelectedItems().length} items):
                     </span>
-                    <span className="font-bold text-lg">
+                    <span className="font-bold text-lg text-gray-900">
                       <CartTotal items={getAllSelectedItems()} />
                     </span>
                   </div>

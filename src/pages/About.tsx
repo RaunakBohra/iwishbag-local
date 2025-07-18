@@ -4,6 +4,7 @@ import { AnimatedSection } from '@/components/shared/AnimatedSection';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 import { LazyImage } from '@/components/ui/lazy-image';
 import { Button } from '@/components/ui/button';
+import { Display, H1, H2, H3, BodyLarge, Body, StatNumber, StatLabel } from '@/components/ui/typography';
 import { ArrowRight, Award, Globe, Package, Shield, Users, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -21,25 +22,25 @@ const About = () => {
       title: 'Trust & Security',
       description:
         'Your security is our top priority. We use bank-level encryption and secure payment processing.',
-      color: 'from-blue-500 to-blue-600',
+      color: 'bg-blue-50 text-blue-600',
     },
     {
       icon: Zap,
       title: 'Speed & Efficiency',
       description: 'Fast processing and reliable shipping. We optimize every step of the journey.',
-      color: 'from-purple-500 to-purple-600',
+      color: 'bg-blue-50 text-blue-600',
     },
     {
       icon: Globe,
       title: 'Global Reach',
       description: 'Access products from anywhere in the world, delivered to your doorstep.',
-      color: 'from-green-500 to-green-600',
+      color: 'bg-blue-50 text-blue-600',
     },
     {
       icon: Users,
       title: 'Customer First',
       description: '24/7 support and transparent communication throughout your shopping journey.',
-      color: 'from-orange-500 to-orange-600',
+      color: 'bg-blue-50 text-blue-600',
     },
   ];
 
@@ -77,7 +78,7 @@ const About = () => {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <ParallaxSection
         className="min-h-[500px] flex items-center"
@@ -89,10 +90,10 @@ const About = () => {
             animation="fadeInUp"
             className="text-center text-white max-w-4xl mx-auto"
           >
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">Bridging the World of Shopping</h1>
-            <p className="text-xl md:text-2xl mb-8 text-gray-200">
+            <Display className="mb-6 text-white">Bridging the World of Shopping</Display>
+            <BodyLarge className="mb-8 text-gray-200">
               Your trusted partner for international shipping and customs clearance since 2019
-            </p>
+            </BodyLarge>
             <Button size="lg" className="group" asChild>
               <Link to="/quote">
                 Get Started Today
@@ -104,7 +105,7 @@ const About = () => {
       </ParallaxSection>
 
       {/* Stats Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-white">
         <div className="container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
@@ -114,10 +115,10 @@ const About = () => {
                 delay={index * 100}
                 className="text-center"
               >
-                <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
+                <StatNumber className="mb-2">
                   <AnimatedCounter end={stat.value} prefix={stat.prefix} suffix={stat.suffix} />
-                </div>
-                <p className="text-gray-600">{stat.label}</p>
+                </StatNumber>
+                <StatLabel>{stat.label}</StatLabel>
               </AnimatedSection>
             ))}
           </div>

@@ -20,6 +20,8 @@ import { AnimatedSection } from '@/components/shared/AnimatedSection';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { H1, H2, BodySmall, StatNumber, StatLabel } from '@/components/ui/typography';
+import { cn } from '@/lib/design-system';
 
 const Dashboard = () => {
   const { user, quotes, orders, isLoading, isError } = useDashboardState();
@@ -122,23 +124,23 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <div className="min-h-screen bg-white">
       <div className="container py-8 sm:py-12">
         {/* Welcome Header */}
         <AnimatedSection animation="fadeInDown">
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white">
-                <Sparkles className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                <H1 className="text-2xl sm:text-3xl">
                   Welcome back,{' '}
                   {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Customer'}!
-                </h1>
-                <p className="text-gray-600 text-sm">
+                </H1>
+                <BodySmall className="text-gray-600">
                   Here's what's happening with your international shopping.
-                </p>
+                </BodySmall>
               </div>
             </div>
           </div>
@@ -150,21 +152,19 @@ const Dashboard = () => {
             <AnimatedSection key={index} animation="zoomIn" delay={index * 100}>
               <Link to={metric.link}>
                 <Card
-                  className={`relative overflow-hidden group hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1`}
+                  className={cn(
+                    "relative overflow-hidden group hover:shadow-md transition-all duration-200 cursor-pointer",
+                    "bg-white border border-gray-200"
+                  )}
                 >
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-br ${metric.bgColor} opacity-50`}
-                  />
                   <CardContent className="relative p-6">
-                    <div
-                      className={`w-12 h-12 rounded-xl bg-gradient-to-br ${metric.color} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}
-                    >
-                      <metric.icon className="w-6 h-6" />
+                    <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center mb-4">
+                      <metric.icon className="w-6 h-6 text-blue-600" />
                     </div>
-                    <div className="text-3xl font-bold text-gray-900 mb-1">
+                    <StatNumber className="mb-1">
                       <AnimatedCounter end={metric.value} />
-                    </div>
-                    <p className="text-sm text-gray-600">{metric.label}</p>
+                    </StatNumber>
+                    <StatLabel>{metric.label}</StatLabel>
                   </CardContent>
                 </Card>
               </Link>
@@ -176,7 +176,7 @@ const Dashboard = () => {
         <AnimatedSection animation="fadeInUp" delay={400}>
           <div className="mb-8">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Globe className="w-5 h-5 text-primary" />
+              <Globe className="w-5 h-5 text-blue-600" />
               Quick Actions
             </h2>
 
@@ -184,20 +184,18 @@ const Dashboard = () => {
               {quickActions.map((action, index) => (
                 <AnimatedSection key={index} animation="fadeInUp" delay={500 + index * 100}>
                   <Link to={action.to}>
-                    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden">
+                    <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden">
                       <CardContent className="p-6">
-                        <div
-                          className={`w-12 h-12 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}
-                        >
-                          {action.icon}
+                        <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center mb-4">
+                          {React.cloneElement(action.icon, { className: "w-5 h-5 text-blue-600" })}
                         </div>
-                        <h3 className="font-semibold text-gray-900 mb-1">{action.label}</h3>
-                        <p className="text-sm text-gray-600">
+                        <H2 className="text-lg font-semibold mb-1">{action.label}</H2>
+                        <BodySmall className="text-gray-600">
                           {action.label === 'Request Quote' && 'Start a new quote request'}
                           {action.label === 'View All Quotes' && 'Manage your quote requests'}
                           {action.label === 'My Orders' && 'Track your shipments'}
                         </p>
-                        <div className="mt-4 flex items-center text-primary group-hover:translate-x-2 transition-transform">
+                        <div className="mt-4 flex items-center text-blue-600 group-hover:translate-x-1 transition-transform">
                           <span className="text-sm font-medium">Go</span>
                           <ArrowRight className="w-4 h-4 ml-1" />
                         </div>
@@ -213,16 +211,16 @@ const Dashboard = () => {
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Recent Activity */}
           <AnimatedSection animation="fadeInLeft" delay={800}>
-            <Card className="h-full hover:shadow-lg transition-shadow">
+            <Card className="h-full hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-primary" />
+                    <Clock className="w-5 h-5 text-blue-600" />
                     Recent Activity
                   </CardTitle>
                   <Link
                     to="/dashboard/quotes"
-                    className="text-primary hover:underline text-sm font-medium"
+                    className="text-blue-600 hover:text-blue-700 hover:underline text-sm font-medium"
                   >
                     View All
                   </Link>
@@ -244,14 +242,14 @@ const Dashboard = () => {
                       >
                         <div className="flex-shrink-0">{item.icon}</div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 group-hover:text-primary transition-colors">
+                          <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
                             {item.text}
                           </p>
                           <p className="text-xs text-gray-500">
                             {new Date(item.date).toLocaleDateString()}
                           </p>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                        <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
                       </Link>
                     </li>
                   ))}
@@ -262,12 +260,12 @@ const Dashboard = () => {
 
           {/* Support/Contact Info */}
           <AnimatedSection animation="fadeInRight" delay={900}>
-            <Card className="h-full bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 hover:shadow-lg transition-shadow">
+            <Card className="h-full bg-gray-50 border-gray-200 hover:shadow-md transition-shadow">
               <CardContent className="p-8 text-center flex flex-col justify-center h-full">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white mx-auto mb-4">
-                  <HelpCircle className="w-8 h-8" />
+                <div className="w-16 h-16 rounded-lg bg-blue-50 flex items-center justify-center mx-auto mb-4">
+                  <HelpCircle className="w-8 h-8 text-blue-600" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Need Assistance?</h3>
+                <h3 className="text-xl font-semibold mb-3 text-gray-900">Need Assistance?</h3>
                 <p className="text-gray-600 mb-6">
                   Our support team is here to help you with any questions about international
                   shipping, customs, or your orders.
@@ -275,7 +273,7 @@ const Dashboard = () => {
                 <div className="space-y-3">
                   <Link to="/contact">
                     <Button className="w-full group">
-                      <Mail className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
+                      <Mail className="w-4 h-4 mr-2" />
                       Contact Support
                     </Button>
                   </Link>
@@ -283,7 +281,7 @@ const Dashboard = () => {
                     or email us at{' '}
                     <a
                       href="mailto:support@iwishbag.com"
-                      className="text-primary hover:underline font-medium"
+                      className="text-blue-600 hover:text-blue-700 hover:underline font-medium"
                     >
                       support@iwishbag.com
                     </a>
@@ -296,17 +294,16 @@ const Dashboard = () => {
 
         {/* Bottom CTA */}
         <AnimatedSection animation="fadeInUp" delay={1000}>
-          <Card className="mt-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white overflow-hidden relative">
-            <div className="absolute inset-0 bg-black/10" />
+          <Card className="mt-8 bg-blue-50 border-blue-200 overflow-hidden relative">
             <CardContent className="relative p-8 text-center">
-              <h3 className="text-2xl font-bold mb-3">Ready to Shop Globally?</h3>
-              <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
+              <h3 className="text-2xl font-semibold mb-3 text-gray-900">Ready to Shop Globally?</h3>
+              <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
                 Get instant quotes for products from anywhere in the world. We handle shipping,
                 customs, and delivery.
               </p>
               <Link to="/quote">
-                <Button size="lg" variant="secondary" className="group">
-                  <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
+                <Button size="lg" className="group">
+                  <Plus className="w-5 h-5 mr-2" />
                   Request a Quote
                 </Button>
               </Link>

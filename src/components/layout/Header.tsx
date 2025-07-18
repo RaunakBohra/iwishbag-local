@@ -31,6 +31,7 @@ import { CartDrawer } from '@/components/cart/CartDrawer';
 import { useSidebar } from '@/hooks/use-sidebar';
 import { AdminSearch } from '@/components/admin/AdminSearch';
 import { useState } from 'react';
+import { cn } from '@/lib/design-system';
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -117,7 +118,7 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
+    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
       <div className="container flex h-16 items-center justify-between max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Left Section - Logo and Navigation */}
         <div className="flex items-center space-x-4 md:space-x-6 lg:space-x-8 min-w-0 flex-1">
@@ -126,7 +127,7 @@ const Header = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden hover:bg-accent flex-shrink-0 h-9 w-9"
+              className="md:hidden hover:bg-gray-50 flex-shrink-0 h-9 w-9 transition-colors"
               onClick={toggleSidebar}
             >
               <Menu className="h-4 w-4" />
@@ -143,7 +144,7 @@ const Header = () => {
                 className="h-8 sm:h-9 w-auto object-contain transition-transform hover:scale-105"
               />
             ) : (
-              <span className="font-bold text-lg sm:text-xl lg:text-2xl bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              <span className="font-semibold text-lg sm:text-xl lg:text-2xl text-gray-900">
                 {homePageSettings?.company_name || 'WishBag'}
               </span>
             )}
@@ -155,7 +156,12 @@ const Header = () => {
               <Button
                 variant={location.pathname === '/quote' ? 'default' : 'ghost'}
                 size="sm"
-                className="h-8 px-3 text-sm font-medium"
+                className={cn(
+                  "h-8 px-3 text-sm font-medium transition-colors",
+                  location.pathname === '/quote' 
+                    ? "bg-blue-600 text-white hover:bg-blue-700" 
+                    : "text-gray-700 hover:bg-gray-50"
+                )}
                 onClick={() => navigate('/quote')}
               >
                 <Package className="h-4 w-4 mr-2" />
@@ -164,7 +170,12 @@ const Header = () => {
               <Button
                 variant={location.pathname === '/quote-auto' ? 'default' : 'ghost'}
                 size="sm"
-                className="h-8 px-3 text-sm font-medium"
+                className={cn(
+                  "h-8 px-3 text-sm font-medium transition-colors",
+                  location.pathname === '/quote-auto' 
+                    ? "bg-blue-600 text-white hover:bg-blue-700" 
+                    : "text-gray-700 hover:bg-gray-50"
+                )}
                 onClick={() => navigate('/quote-auto')}
               >
                 <Package className="h-4 w-4 mr-2" />
@@ -179,7 +190,12 @@ const Header = () => {
               <Button
                 variant={location.pathname.includes('/admin/quotes') ? 'default' : 'ghost'}
                 size="sm"
-                className="h-8 px-3 text-sm font-medium"
+                className={cn(
+                  "h-8 px-3 text-sm font-medium transition-colors",
+                  location.pathname.includes('/admin/quotes') 
+                    ? "bg-blue-600 text-white hover:bg-blue-700" 
+                    : "text-gray-700 hover:bg-gray-50"
+                )}
                 onClick={() => navigate('/admin/quotes')}
               >
                 <Package className="h-4 w-4 mr-2" />
@@ -188,7 +204,12 @@ const Header = () => {
               <Button
                 variant={location.pathname.includes('/admin/orders') ? 'default' : 'ghost'}
                 size="sm"
-                className="h-8 px-3 text-sm font-medium"
+                className={cn(
+                  "h-8 px-3 text-sm font-medium transition-colors",
+                  location.pathname.includes('/admin/orders') 
+                    ? "bg-blue-600 text-white hover:bg-blue-700" 
+                    : "text-gray-700 hover:bg-gray-50"
+                )}
                 onClick={() => navigate('/admin/orders')}
               >
                 <ShoppingCart className="h-4 w-4 mr-2" />
@@ -217,14 +238,14 @@ const Header = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative hover:bg-accent flex-shrink-0 h-9 w-9 transition-colors"
+                  className="relative hover:bg-gray-50 flex-shrink-0 h-9 w-9 transition-colors"
                   onClick={() => navigate('/messages')}
                 >
                   <MessageSquare className="h-4 w-4" />
                   {unreadMessagesCount && unreadMessagesCount > 0 && (
                     <Badge
                       variant="destructive"
-                      className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs font-medium animate-pulse"
+                      className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs font-medium bg-red-500 text-white border-2 border-white"
                     >
                       {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
                     </Badge>
@@ -232,7 +253,7 @@ const Header = () => {
                 </Button>
 
                 {/* Separator */}
-                <div className="h-6 w-px bg-border mx-1 md:mx-2 lg:mx-3" />
+                <div className="h-6 w-px bg-gray-200 mx-1 md:mx-2 lg:mx-3" />
               </div>
 
               {/* Mobile View - Only show Cart and More menu */}
@@ -243,13 +264,13 @@ const Header = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="relative hover:bg-accent flex-shrink-0 h-9 w-9"
+                      className="relative hover:bg-gray-50 flex-shrink-0 h-9 w-9 transition-colors"
                     >
                       <MoreVertical className="h-4 w-4" />
                       {unreadMessagesCount > 0 && (
                         <Badge
                           variant="destructive"
-                          className="absolute -top-1 -right-1 h-2 w-2 p-0 rounded-full"
+                          className="absolute -top-1 -right-1 h-2 w-2 p-0 rounded-full bg-red-500"
                         />
                       )}
                     </Button>
@@ -426,73 +447,73 @@ const Header = () => {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
-                      className="px-2 md:px-3 py-2 text-left hover:bg-accent min-w-0 h-9 rounded-md transition-colors"
+                      className="px-2 md:px-3 py-2 text-left hover:bg-gray-50 min-w-0 h-9 rounded-md transition-colors"
                     >
                       <div className="flex items-center space-x-2 min-w-0">
-                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <User className="h-3 w-3 text-primary" />
+                        <div className="h-6 w-6 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                          <User className="h-3 w-3 text-blue-600" />
                         </div>
                         <div className="flex flex-col items-start min-w-0">
-                          <span className="text-sm font-medium truncate">{getDisplayName()}</span>
-                          <span className="text-xs text-muted-foreground truncate hidden lg:block">
+                          <span className="text-sm font-medium truncate text-gray-900">{getDisplayName()}</span>
+                          <span className="text-xs text-gray-500 truncate hidden lg:block">
                             {user.email}
                           </span>
                         </div>
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-60 md:w-64 p-2">
-                    <DropdownMenuLabel className="font-semibold">My Account</DropdownMenuLabel>
+                  <DropdownMenuContent align="end" className="w-60 md:w-64 p-2 bg-white border border-gray-200 shadow-lg">
+                    <DropdownMenuLabel className="font-semibold text-gray-900">My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-md">
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-md hover:bg-gray-50">
                       <Link to="/dashboard" className="flex items-center w-full">
                         <LayoutDashboard className="mr-3 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span className="font-medium">Dashboard</span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="font-medium text-gray-900">Dashboard</span>
+                          <span className="text-xs text-gray-500">
                             View your quotes and orders
                           </span>
                         </div>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-md">
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-md hover:bg-gray-50">
                       <Link to="/profile" className="flex items-center w-full">
                         <Settings className="mr-3 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span className="font-medium">Profile Settings</span>
-                          <span className="text-xs text-muted-foreground">Manage your account</span>
+                          <span className="font-medium text-gray-900">Profile Settings</span>
+                          <span className="text-xs text-gray-500">Manage your account</span>
                         </div>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-md">
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-md hover:bg-gray-50">
                       <Link to="/profile/address" className="flex items-center w-full">
                         <Home className="mr-3 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span className="font-medium">Shipping Address</span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="font-medium text-gray-900">Shipping Address</span>
+                          <span className="text-xs text-gray-500">
                             Manage your shipping addresses
                           </span>
                         </div>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-md">
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-md hover:bg-gray-50">
                       <Link to="/blog" className="flex items-center w-full">
                         <MessageSquare className="mr-3 h-4 w-4" />
                         <div className="flex flex-col">
-                          <span className="font-medium">Blog</span>
-                          <span className="text-xs text-muted-foreground">Tips and guides</span>
+                          <span className="font-medium text-gray-900">Blog</span>
+                          <span className="text-xs text-gray-500">Tips and guides</span>
                         </div>
                       </Link>
                     </DropdownMenuItem>
                     {hasAdminRole && (
                       <>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild className="cursor-pointer rounded-md">
+                        <DropdownMenuItem asChild className="cursor-pointer rounded-md hover:bg-gray-50">
                           <Link to="/admin" className="flex items-center w-full">
                             <Building className="mr-3 h-4 w-4" />
                             <div className="flex flex-col">
-                              <span className="font-medium">Admin Dashboard</span>
-                              <span className="text-xs text-muted-foreground">
+                              <span className="font-medium text-gray-900">Admin Dashboard</span>
+                              <span className="text-xs text-gray-500">
                                 Manage the platform
                               </span>
                             </div>
@@ -503,12 +524,12 @@ const Header = () => {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={handleSignOut}
-                      className="cursor-pointer rounded-md text-destructive focus:text-destructive"
+                      className="cursor-pointer rounded-md text-red-600 focus:text-red-600 hover:bg-red-50"
                     >
                       <LogOut className="mr-3 h-4 w-4" />
                       <div className="flex flex-col">
                         <span className="font-medium">Sign Out</span>
-                        <span className="text-xs text-muted-foreground">End your session</span>
+                        <span className="text-xs text-red-500">End your session</span>
                       </div>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -522,7 +543,7 @@ const Header = () => {
                 asChild
                 variant="ghost"
                 size="sm"
-                className="hidden sm:inline-flex h-8 px-3 md:px-4 text-sm font-medium hover:bg-accent"
+                className="hidden sm:inline-flex h-8 px-3 md:px-4 text-sm font-medium hover:bg-gray-50 text-gray-700"
               >
                 <Link to="/blog">Blog</Link>
               </Button>
@@ -530,7 +551,7 @@ const Header = () => {
                 asChild
                 variant="ghost"
                 size="sm"
-                className="hidden sm:inline-flex h-8 px-3 md:px-4 text-sm font-medium hover:bg-accent"
+                className="hidden sm:inline-flex h-8 px-3 md:px-4 text-sm font-medium hover:bg-gray-50 text-gray-700"
               >
                 <Link to="/quote">Get Quote</Link>
               </Button>
@@ -538,7 +559,7 @@ const Header = () => {
                 asChild
                 variant="default"
                 size="sm"
-                className="h-8 px-3 md:px-4 text-sm font-medium"
+                className="h-8 px-3 md:px-4 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
               >
                 <Link to="/auth">Sign In</Link>
               </Button>
