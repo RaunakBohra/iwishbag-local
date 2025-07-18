@@ -2502,14 +2502,6 @@ export default function Checkout() {
                     availableMethods={availableMethods}
                     methodsLoading={methodsLoading}
                   />
-                  
-                  {/* Currency Conversion Information */}
-                  <PaymentCurrencyConversion
-                    gateway={paymentMethod}
-                    amount={totalAmount}
-                    currency={paymentCurrency}
-                    originCountry={purchaseCountry || 'US'}
-                  />
                 </CardContent>
               </Card>
 
@@ -2589,19 +2581,14 @@ export default function Checkout() {
                       </span>
                     </div>
                     
-                    {/* Currency conversion summary */}
-                    {paymentConversion?.needsConversion && (
-                      <div className="text-xs text-muted-foreground p-2 bg-amber-50 rounded border border-amber-200">
-                        <div className="flex justify-between mb-1">
-                          <span>Quote total:</span>
-                          <span className="font-mono">{paymentConversion.originalAmount.toFixed(2)} {paymentConversion.convertedCurrency}</span>
-                        </div>
-                        <div className="flex justify-between font-medium text-amber-800">
-                          <span>Gateway charge:</span>
-                          <span className="font-mono">{paymentConversion.convertedAmount.toFixed(2)} {paymentConversion.convertedCurrency}</span>
-                        </div>
-                      </div>
-                    )}
+                    {/* Currency conversion information */}
+                    <PaymentCurrencyConversion
+                      gateway={paymentMethod}
+                      amount={totalAmount}
+                      currency={paymentCurrency}
+                      originCountry={purchaseCountry || 'US'}
+                      className="mt-2"
+                    />
                   </div>
 
                   <Button
