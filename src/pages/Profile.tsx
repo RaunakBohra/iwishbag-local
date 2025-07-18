@@ -243,15 +243,13 @@ const Profile = () => {
       // Get the country associated with this currency
       const countryCode = await currencyService.getCountryForCurrency(currencyCode);
       
-      // Update both currency and country in the form
-      form.setValue('preferred_display_currency', currencyCode);
+      // Update country in the form (currency is already updated by field.onChange)
       if (countryCode) {
         form.setValue('country', countryCode);
       }
     } catch (error) {
       console.error('Error updating country for currency:', error);
-      // If error, just update the currency
-      form.setValue('preferred_display_currency', currencyCode);
+      // If error, currency is still updated by field.onChange
     }
   };
 
@@ -557,7 +555,10 @@ const Profile = () => {
                               Preferred Currency & Country
                             </FormLabel>
                             <Select
-                              onValueChange={handleCurrencyChange}
+                              onValueChange={(value) => {
+                                field.onChange(value);  // Update form state first
+                                handleCurrencyChange(value);  // Then handle additional logic
+                              }}
                               value={field.value}
                               disabled={updateProfileMutation.isPending}
                             >
