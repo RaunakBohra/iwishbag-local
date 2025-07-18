@@ -440,7 +440,3 @@ CREATE POLICY "Users can access own quotes" ON quotes
    - Get approval before extensive coding
    - Break down complex tasks into phases
    - Set clear milestones
-
-
- 
-

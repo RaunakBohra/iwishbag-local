@@ -30,3 +30,47 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Test and temporary files
+test-*.html
+test-*.js
+test-*.mjs
+debug-*.html
+debug-*.js
+debug-*.mjs
+create-test-*.js
+create-test-*.mjs
+fix-*.js
+run_*.js
+manual-*.ts
+current_types.ts
+
+# SQL backup and temporary files
+*.sql
+!supabase/migrations/*.sql
+!supabase/seed.sql
+
+# Coverage and testing artifacts
+coverage/
+.nyc_output/
+
+# Temporary directories
+temp/
+tmp/
+*.tmp
+
+# Build artifacts
+bundlewatch.config.js
+lighthouserc.json
+lighthouserc.mobile.json
+sonar-project.properties
+
+# Lock files (prefer npm)
+bun.lockb
+yarn.lock
+
+# Documentation artifacts (except essential ones)
+*.md
+!README.md
+!CLAUDE.md
+!docs/**/*.md
