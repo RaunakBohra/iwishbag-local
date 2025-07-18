@@ -111,7 +111,7 @@ const Profile = () => {
       if (!user) return null;
 
       const [ordersResult, quotesResult] = await Promise.all([
-        supabase.from('orders').select('id', { count: 'exact' }).eq('user_id', user.id),
+        supabase.from('quotes').select('id', { count: 'exact' }).eq('user_id', user.id).eq('status', 'completed'),
         supabase.from('quotes').select('id', { count: 'exact' }).eq('user_id', user.id),
       ]);
 
@@ -228,7 +228,7 @@ const Profile = () => {
         phone: profile.phone || '',
         country: profile.country || 'US',
         preferred_display_currency: profile.preferred_display_currency || 'USD',
-        preferred_payment_gateway: profile.preferred_payment_gateway || 'auto',
+        preferred_payment_gateway: (profile as any).preferred_payment_gateway || 'auto',
       });
     }
   }, [profile, user, form]);
@@ -237,28 +237,22 @@ const Profile = () => {
     updateProfileMutation.mutate(data);
   };
 
-  // Get available currencies for selected country
-  const getAvailableCurrencies = (_countryCode: string) => {
-    let currencies = [];
-
-    // Return all available currencies from database instead of just the country's currency
-    if (availableCurrencies.length > 0) {
-      currencies = availableCurrencies.map((c) => c.code);
-    } else if (allCountries) {
-      // Get unique currencies from all countries as fallback
-      currencies = [...new Set(allCountries.map((c) => c.currency).filter(Boolean))];
-    } else {
-      // Final fallback
-      currencies = ['USD', 'EUR', 'GBP', 'INR', 'NPR'];
+  // Handle currency selection - automatically set country when currency is selected
+  const handleCurrencyChange = async (currencyCode: string) => {
+    try {
+      // Get the country associated with this currency
+      const countryCode = await currencyService.getCountryForCurrency(currencyCode);
+      
+      // Update both currency and country in the form
+      form.setValue('preferred_display_currency', currencyCode);
+      if (countryCode) {
+        form.setValue('country', countryCode);
+      }
+    } catch (error) {
+      console.error('Error updating country for currency:', error);
+      // If error, just update the currency
+      form.setValue('preferred_display_currency', currencyCode);
     }
-
-    // Always ensure the current profile currency is included
-    const currentCurrency = form.watch('preferred_display_currency');
-    if (currentCurrency && !currencies.includes(currentCurrency)) {
-      currencies.push(currentCurrency);
-    }
-
-    return currencies;
   };
 
   // Get country name by code
@@ -301,7 +295,7 @@ const Profile = () => {
       if (profile[field as keyof typeof profile]) completed++;
     });
     // Bonus points for optional fields
-    if (profile.preferred_payment_gateway) completed += 0.5;
+    if ((profile as any).preferred_payment_gateway) completed += 0.5;
     return Math.round((completed / fields.length) * 100);
   };
 
@@ -545,54 +539,14 @@ const Profile = () => {
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white">
                         <Globe className="h-5 w-5" />
                       </div>
-                      Regional & Currency Settings
+                      Currency & Regional Settings
                     </CardTitle>
                     <CardDescription>
-                      Configure your country and currency preferences for better payment options and
-                      pricing.
+                      Choose your preferred currency and we'll automatically set your country for better payment options and pricing.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid gap-6 md:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="country"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-gray-500" />
-                              Country
-                            </FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              disabled={updateProfileMutation.isPending}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="hover:border-primary transition-colors">
-                                  <SelectValue placeholder="Select your country" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {allCountries?.map((country) => (
-                                  <SelectItem key={country.code} value={country.code}>
-                                    <div className="flex items-center gap-2">
-                                      <span>{country.name}</span>
-                                      {country.currency && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {country.currency}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
                       <FormField
                         control={form.control}
                         name="preferred_display_currency"
@@ -600,10 +554,10 @@ const Profile = () => {
                           <FormItem>
                             <FormLabel className="flex items-center gap-2">
                               <DollarSign className="h-4 w-4 text-gray-500" />
-                              Preferred Currency
+                              Preferred Currency & Country
                             </FormLabel>
                             <Select
-                              onValueChange={field.onChange}
+                              onValueChange={handleCurrencyChange}
                               value={field.value}
                               disabled={updateProfileMutation.isPending}
                             >
@@ -613,20 +567,32 @@ const Profile = () => {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {getAvailableCurrencies(form.watch('country')).map((currency) => (
-                                  <SelectItem key={currency} value={currency}>
+                                {availableCurrencies.map((currency) => (
+                                  <SelectItem key={currency.code} value={currency.code}>
                                     <div className="flex items-center gap-2">
-                                      <span>{getCurrencyName(currency)}</span>
+                                      <span>{currency.name}</span>
                                       <Badge variant="secondary" className="text-xs">
-                                        {currency}
+                                        {currency.code}
                                       </Badge>
                                     </div>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Your country will be automatically set based on your currency selection.
+                            </p>
                             <FormMessage />
                           </FormItem>
+                        )}
+                      />
+
+                      {/* Hidden country field - automatically set by currency selection */}
+                      <FormField
+                        control={form.control}
+                        name="country"
+                        render={() => (
+                          <input type="hidden" {...form.register('country')} />
                         )}
                       />
 
@@ -691,29 +657,20 @@ const Profile = () => {
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="flex items-center gap-3 bg-white rounded-lg p-3">
                           <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                            <MapPin className="h-5 w-5 text-blue-600" />
+                            <DollarSign className="h-5 w-5 text-blue-600" />
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500">Country</p>
-                            <p className="font-medium">{getCountryName(form.watch('country'))}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 bg-white rounded-lg p-3">
-                          <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                            <DollarSign className="h-5 w-5 text-purple-600" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Currency</p>
+                            <p className="text-xs text-gray-500">Currency & Country</p>
                             <p className="font-medium">
                               {getCurrencyName(form.watch('preferred_display_currency'))} (
-                              {form.watch('preferred_display_currency')})
+                              {form.watch('preferred_display_currency')}) - {getCountryName(form.watch('country'))}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                            <CreditCard className="h-4 w-4 text-purple-600" />
+                        <div className="flex items-center gap-3 bg-white rounded-lg p-3">
+                          <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                            <CreditCard className="h-5 w-5 text-purple-600" />
                           </div>
                           <div>
                             <p className="text-xs text-gray-500">Payment Method</p>

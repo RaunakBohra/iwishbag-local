@@ -8,6 +8,7 @@ import * as z from 'zod';
 import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 import { Tables, TablesInsert } from '@/integrations/supabase/types';
 import { getCountryCurrency } from '@/lib/currencyUtils';
+import { currencyService } from '@/services/CurrencyService';
 
 interface UseQuoteSubmissionProps {
   form: UseFormReturn<QuoteFormValues>;
@@ -99,17 +100,15 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
             // Get destination country from shipping address (this is where the customer lives)
             const destinationCountry = shippingAddress?.country;
 
-            // Get currency for destination country
+            // Get currency for destination country using CurrencyService
             let destinationCurrency = 'USD';
             if (destinationCountry) {
-              const { data: countrySettings } = await supabase
-                .from('country_settings')
-                .select('currency')
-                .eq('code', destinationCountry)
-                .single();
-
-              if (countrySettings) {
-                destinationCurrency = countrySettings.currency;
+              try {
+                destinationCurrency = await currencyService.getCurrencyForCountry(destinationCountry);
+              } catch (error) {
+                console.error('Error getting currency for country:', error);
+                // Fall back to USD if there's an error
+                destinationCurrency = 'USD';
               }
             }
 
@@ -281,17 +280,15 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
             // Get destination country from shipping address (this is where the customer lives)
             const destinationCountry = shippingAddress?.country;
 
-            // Get currency for destination country
+            // Get currency for destination country using CurrencyService
             let destinationCurrency = 'USD';
             if (destinationCountry) {
-              const { data: countrySettings } = await supabase
-                .from('country_settings')
-                .select('currency')
-                .eq('code', destinationCountry)
-                .single();
-
-              if (countrySettings) {
-                destinationCurrency = countrySettings.currency;
+              try {
+                destinationCurrency = await currencyService.getCurrencyForCountry(destinationCountry);
+              } catch (error) {
+                console.error('Error getting currency for country:', error);
+                // Fall back to USD if there's an error
+                destinationCurrency = 'USD';
               }
             }
 

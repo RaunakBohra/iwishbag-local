@@ -39,6 +39,7 @@ import { Sparkles, Clock, CheckCircle, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountryUtils } from '@/lib/countryUtils';
+import { currencyService } from '@/services/CurrencyService';
 
 const steps = ['Product Info', 'Shipping & Contact', 'Review & Submit'];
 
@@ -241,17 +242,15 @@ export default function QuoteRequestPage() {
           // Get destination country from shipping address
           const destinationCountry = shippingContact.country;
           
-          // Get currency for destination country
+          // Get currency for destination country using CurrencyService
           let destinationCurrency = 'USD';
           if (destinationCountry) {
-            const { data: countrySettings } = await supabase
-              .from('country_settings')
-              .select('currency')
-              .eq('code', destinationCountry)
-              .single();
-
-            if (countrySettings) {
-              destinationCurrency = countrySettings.currency;
+            try {
+              destinationCurrency = await currencyService.getCurrencyForCountry(destinationCountry);
+            } catch (error) {
+              console.error('Error getting currency for country:', error);
+              // Fall back to USD if there's an error
+              destinationCurrency = 'USD';
             }
           }
 
