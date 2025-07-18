@@ -179,238 +179,335 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
   };
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="code">Country Code *</Label>
-          <Input
-            id="code"
-            name="code"
-            defaultValue={editingCountry?.code || ''}
-            disabled={!!editingCountry}
-            required
-            placeholder="e.g., US, IN, NP"
-          />
-        </div>
-        <div>
-          <Label htmlFor="name">Country Name *</Label>
-          <Input
-            id="name"
-            name="name"
-            defaultValue={editingCountry?.name || ''}
-            required
-            placeholder="e.g., United States"
-          />
-        </div>
-        <div>
-          <Label htmlFor="currency">Currency *</Label>
-          <Input
-            id="currency"
-            name="currency"
-            defaultValue={editingCountry?.currency || ''}
-            required
-            onChange={(e) => setFormCurrency(e.target.value)}
-            placeholder="e.g., USD, INR, NPR"
-          />
-        </div>
-        <div>
-          <Label htmlFor="rate_from_usd">Rate from USD *</Label>
-          <Input
-            id="rate_from_usd"
-            name="rate_from_usd"
-            type="number"
-            step="0.01"
-            defaultValue={editingCountry?.rate_from_usd || ''}
-            required
-            placeholder="e.g., 1.00, 83.00"
-          />
-        </div>
-        <div>
-          <Label htmlFor="sales_tax">Sales Tax (%)</Label>
-          <Input
-            id="sales_tax"
-            name="sales_tax"
-            type="number"
-            step="0.01"
-            defaultValue={editingCountry?.sales_tax || 0}
-            placeholder="0.00"
-          />
-        </div>
-        <div>
-          <Label htmlFor="vat">VAT (%)</Label>
-          <Input
-            id="vat"
-            name="vat"
-            type="number"
-            step="0.01"
-            defaultValue={editingCountry?.vat || 0}
-            placeholder="0.00"
-          />
-        </div>
-        <div>
-          <Label htmlFor="min_shipping">Min Shipping ({formCurrency}) *</Label>
-          <Input
-            id="min_shipping"
-            name="min_shipping"
-            type="number"
-            step="0.01"
-            defaultValue={editingCountry?.min_shipping || ''}
-            required
-            placeholder="0.00"
-          />
-        </div>
-        <div>
-          <Label htmlFor="additional_shipping">Additional Shipping (%)</Label>
-          <Input
-            id="additional_shipping"
-            name="additional_shipping"
-            type="number"
-            step="0.01"
-            defaultValue={editingCountry?.additional_shipping || 0}
-            placeholder="0.00"
-          />
-        </div>
-        <div>
-          <Label htmlFor="additional_weight">Additional Weight Cost ({formCurrency}) *</Label>
-          <Input
-            id="additional_weight"
-            name="additional_weight"
-            type="number"
-            step="0.01"
-            defaultValue={editingCountry?.additional_weight || ''}
-            required
-            placeholder="0.00"
-          />
-        </div>
-        <div>
-          <Label htmlFor="weight_unit">Weight Unit</Label>
-          <Select value={weightUnit} onValueChange={(value: 'lbs' | 'kg') => setWeightUnit(value)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="lbs">Pounds (lbs)</SelectItem>
-              <SelectItem value="kg">Kilograms (kg)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="volumetric_divisor">Volumetric Divisor *</Label>
-          <Input
-            id="volumetric_divisor"
-            name="volumetric_divisor"
-            type="number"
-            step="0.01"
-            defaultValue={editingCountry?.volumetric_divisor || ''}
-            required
-            placeholder="5000"
-          />
-        </div>
-        <div>
-          <Label htmlFor="payment_gateway_fixed_fee">
-            Payment Gateway Fixed Fee ({formCurrency})
-          </Label>
-          <Input
-            id="payment_gateway_fixed_fee"
-            name="payment_gateway_fixed_fee"
-            type="number"
-            step="0.01"
-            defaultValue={editingCountry?.payment_gateway_fixed_fee || 0}
-            placeholder="0.00"
-          />
-        </div>
-        <div>
-          <Label htmlFor="payment_gateway_percent_fee">Payment Gateway Percent Fee (%)</Label>
-          <Input
-            id="payment_gateway_percent_fee"
-            name="payment_gateway_percent_fee"
-            type="number"
-            step="0.01"
-            defaultValue={editingCountry?.payment_gateway_percent_fee || 0}
-            placeholder="0.00"
-          />
-        </div>
-        <div className="col-span-2">
-          <Label htmlFor="available_gateways">Available Payment Gateways</Label>
-          <MultiSelect
-            options={paymentGatewayOptions}
-            value={availableGateways}
-            onValueChange={(value) => {
-              setAvailableGateways(value);
-              // If default gateway is not in the selected gateways, reset it
-              if (!value.includes(defaultGateway)) {
-                setDefaultGateway(value[0] || 'bank_transfer');
-              }
-            }}
-            placeholder="Select available payment gateways..."
-            emptyText="No payment gateways found."
-            className="w-full"
-          />
-          <div className="text-xs text-gray-500 mt-1">
-            Select all payment gateways that customers can use in this country
+    <div className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Basic Information */}
+        <div className="space-y-4">
+          <div className="border-b border-gray-200 pb-3">
+            <h3 className="text-lg font-medium text-gray-900">Basic Information</h3>
+            <p className="text-sm text-gray-600">Configure the basic country and currency settings</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="code" className="text-sm font-medium text-gray-900">Country Code *</Label>
+              <Input
+                id="code"
+                name="code"
+                defaultValue={editingCountry?.code || ''}
+                disabled={!!editingCountry}
+                required
+                placeholder="e.g., US, IN, NP"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <Label htmlFor="name" className="text-sm font-medium text-gray-900">Country Name *</Label>
+              <Input
+                id="name"
+                name="name"
+                defaultValue={editingCountry?.name || ''}
+                required
+                placeholder="e.g., United States"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <Label htmlFor="currency" className="text-sm font-medium text-gray-900">Currency *</Label>
+              <Input
+                id="currency"
+                name="currency"
+                defaultValue={editingCountry?.currency || ''}
+                required
+                onChange={(e) => setFormCurrency(e.target.value)}
+                placeholder="e.g., USD, INR, NPR"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <Label htmlFor="rate_from_usd" className="text-sm font-medium text-gray-900">Rate from USD *</Label>
+              <Input
+                id="rate_from_usd"
+                name="rate_from_usd"
+                type="number"
+                step="0.01"
+                defaultValue={editingCountry?.rate_from_usd || ''}
+                required
+                placeholder="e.g., 1.00, 83.00"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
           </div>
         </div>
-        <div className="col-span-2">
-          <Label htmlFor="default_gateway">Default Payment Gateway</Label>
-          <Select value={defaultGateway} onValueChange={setDefaultGateway}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select default gateway" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableGateways.map((gateway) => {
-                const option = paymentGatewayOptions.find((opt) => opt.value === gateway);
-                return (
-                  <SelectItem key={gateway} value={gateway}>
-                    {option?.label || gateway}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-          <div className="text-xs text-gray-500 mt-1">
-            This gateway will be pre-selected for customers from this country
+
+        {/* Tax Settings */}
+        <div className="space-y-4">
+          <div className="border-b border-gray-200 pb-3">
+            <h3 className="text-lg font-medium text-gray-900">Tax Settings</h3>
+            <p className="text-sm text-gray-600">Configure tax percentages and rates</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="sales_tax" className="text-sm font-medium text-gray-900">Sales Tax (%)</Label>
+              <Input
+                id="sales_tax"
+                name="sales_tax"
+                type="number"
+                step="0.01"
+                defaultValue={editingCountry?.sales_tax || 0}
+                placeholder="0.00"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <Label htmlFor="vat" className="text-sm font-medium text-gray-900">VAT (%)</Label>
+              <Input
+                id="vat"
+                name="vat"
+                type="number"
+                step="0.01"
+                defaultValue={editingCountry?.vat || 0}
+                placeholder="0.00"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
           </div>
         </div>
-        <div className="col-span-2 grid grid-cols-2 gap-4">
-          <div className="flex items-center space-x-2 pt-4">
-            <Checkbox
-              id="purchase_allowed"
-              name="purchase_allowed"
-              checked={purchaseAllowed}
-              onCheckedChange={(checked) => setPurchaseAllowed(!!checked)}
-            />
-            <Label
-              htmlFor="purchase_allowed"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Purchase Allowed
-            </Label>
+
+        {/* Shipping Settings */}
+        <div className="space-y-4">
+          <div className="border-b border-gray-200 pb-3">
+            <h3 className="text-lg font-medium text-gray-900">Shipping Settings</h3>
+            <p className="text-sm text-gray-600">Configure shipping costs and weight units</p>
           </div>
-          <div className="flex items-center space-x-2 pt-4">
-            <Checkbox
-              id="shipping_allowed"
-              name="shipping_allowed"
-              checked={shippingAllowed}
-              onCheckedChange={(checked) => setShippingAllowed(!!checked)}
-            />
-            <Label
-              htmlFor="shipping_allowed"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Shipping Allowed
-            </Label>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="min_shipping" className="text-sm font-medium text-gray-900">
+                Min Shipping ({formCurrency || 'CUR'}) *
+              </Label>
+              <Input
+                id="min_shipping"
+                name="min_shipping"
+                type="number"
+                step="0.01"
+                defaultValue={editingCountry?.min_shipping || ''}
+                required
+                placeholder="0.00"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <Label htmlFor="additional_shipping" className="text-sm font-medium text-gray-900">
+                Additional Shipping (%)
+              </Label>
+              <Input
+                id="additional_shipping"
+                name="additional_shipping"
+                type="number"
+                step="0.01"
+                defaultValue={editingCountry?.additional_shipping || 0}
+                placeholder="0.00"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <Label htmlFor="additional_weight" className="text-sm font-medium text-gray-900">
+                Additional Weight Cost ({formCurrency || 'CUR'}) *
+              </Label>
+              <Input
+                id="additional_weight"
+                name="additional_weight"
+                type="number"
+                step="0.01"
+                defaultValue={editingCountry?.additional_weight || ''}
+                required
+                placeholder="0.00"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <Label htmlFor="weight_unit" className="text-sm font-medium text-gray-900">Weight Unit</Label>
+              <Select value={weightUnit} onValueChange={(value: 'lbs' | 'kg') => setWeightUnit(value)}>
+                <SelectTrigger className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lbs">Pounds (lbs)</SelectItem>
+                  <SelectItem value="kg">Kilograms (kg)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="volumetric_divisor" className="text-sm font-medium text-gray-900">
+                Volumetric Divisor *
+              </Label>
+              <Input
+                id="volumetric_divisor"
+                name="volumetric_divisor"
+                type="number"
+                step="0.01"
+                defaultValue={editingCountry?.volumetric_divisor || ''}
+                required
+                placeholder="5000"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
           </div>
         </div>
-        <div className="col-span-2">
-          <Label className="font-semibold">Priority Thresholds</Label>
-          <div className="text-xs text-muted-foreground mb-2">
-            Set the amount thresholds (in {formCurrency || 'main currency'}) for each priority.
-            Quotes with a final total above each threshold will be assigned the corresponding
-            priority, unless manually overridden.
+
+        {/* Payment Gateway Settings */}
+        <div className="space-y-4">
+          <div className="border-b border-gray-200 pb-3">
+            <h3 className="text-lg font-medium text-gray-900">Payment Gateway Settings</h3>
+            <p className="text-sm text-gray-600">Configure payment gateway fees and preferences</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="payment_gateway_fixed_fee" className="text-sm font-medium text-gray-900">
+                Payment Gateway Fixed Fee ({formCurrency || 'CUR'})
+              </Label>
+              <Input
+                id="payment_gateway_fixed_fee"
+                name="payment_gateway_fixed_fee"
+                type="number"
+                step="0.01"
+                defaultValue={editingCountry?.payment_gateway_fixed_fee || 0}
+                placeholder="0.00"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <Label htmlFor="payment_gateway_percent_fee" className="text-sm font-medium text-gray-900">
+                Payment Gateway Percent Fee (%)
+              </Label>
+              <Input
+                id="payment_gateway_percent_fee"
+                name="payment_gateway_percent_fee"
+                type="number"
+                step="0.01"
+                defaultValue={editingCountry?.payment_gateway_percent_fee || 0}
+                placeholder="0.00"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="available_gateways" className="text-sm font-medium text-gray-900">
+                Available Payment Gateways
+              </Label>
+              <MultiSelect
+                options={paymentGatewayOptions}
+                value={availableGateways}
+                onValueChange={(value) => {
+                  setAvailableGateways(value);
+                  // If default gateway is not in the selected gateways, reset it
+                  if (!value.includes(defaultGateway)) {
+                    setDefaultGateway(value[0] || 'bank_transfer');
+                  }
+                }}
+                placeholder="Select available payment gateways..."
+                emptyText="No payment gateways found."
+                className="w-full mt-1"
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                Select all payment gateways that customers can use in this country
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="default_gateway" className="text-sm font-medium text-gray-900">
+                Default Payment Gateway
+              </Label>
+              <Select value={defaultGateway} onValueChange={setDefaultGateway}>
+                <SelectTrigger className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                  <SelectValue placeholder="Select default gateway" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableGateways.map((gateway) => {
+                    const option = paymentGatewayOptions.find((opt) => opt.value === gateway);
+                    return (
+                      <SelectItem key={gateway} value={gateway}>
+                        {option?.label || gateway}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              <div className="text-xs text-gray-500 mt-1">
+                This gateway will be pre-selected for customers from this country
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Permissions */}
+        <div className="space-y-4">
+          <div className="border-b border-gray-200 pb-3">
+            <h3 className="text-lg font-medium text-gray-900">Permissions</h3>
+            <p className="text-sm text-gray-600">Configure what operations are allowed for this country</p>
+          </div>
+          
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg">
+              <Checkbox
+                id="purchase_allowed"
+                name="purchase_allowed"
+                checked={purchaseAllowed}
+                onCheckedChange={(checked) => setPurchaseAllowed(!!checked)}
+                className="border-gray-300"
+              />
+              <div className="flex-1">
+                <Label
+                  htmlFor="purchase_allowed"
+                  className="text-sm font-medium text-gray-900 leading-none cursor-pointer"
+                >
+                  Purchase Allowed
+                </Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Allow customers to make purchases from this country
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg">
+              <Checkbox
+                id="shipping_allowed"
+                name="shipping_allowed"
+                checked={shippingAllowed}
+                onCheckedChange={(checked) => setShippingAllowed(!!checked)}
+                className="border-gray-300"
+              />
+              <div className="flex-1">
+                <Label
+                  htmlFor="shipping_allowed"
+                  className="text-sm font-medium text-gray-900 leading-none cursor-pointer"
+                >
+                  Shipping Allowed
+                </Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Allow shipping deliveries to this country
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Priority Thresholds */}
+        <div className="space-y-4">
+          <div className="border-b border-gray-200 pb-3">
+            <h3 className="text-lg font-medium text-gray-900">Priority Thresholds</h3>
+            <p className="text-sm text-gray-600">
+              Set the amount thresholds (in {formCurrency || 'main currency'}) for each priority level
+            </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="priority-low">Low ({formCurrency || 'CUR'})</Label>
+              <Label htmlFor="priority-low" className="text-sm font-medium text-gray-900">
+                Low ({formCurrency || 'CUR'})
+              </Label>
               <Input
                 id="priority-low"
                 name="priority-low"
@@ -420,10 +517,13 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 value={priorityThresholds.low}
                 onChange={(e) => handlePriorityChange('low', e.target.value)}
                 min={0}
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
             <div>
-              <Label htmlFor="priority-normal">Normal ({formCurrency || 'CUR'})</Label>
+              <Label htmlFor="priority-normal" className="text-sm font-medium text-gray-900">
+                Normal ({formCurrency || 'CUR'})
+              </Label>
               <Input
                 id="priority-normal"
                 name="priority-normal"
@@ -433,10 +533,13 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 value={priorityThresholds.normal}
                 onChange={(e) => handlePriorityChange('normal', e.target.value)}
                 min={priorityThresholds.low}
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
             <div>
-              <Label htmlFor="priority-urgent">Urgent ({formCurrency || 'CUR'})</Label>
+              <Label htmlFor="priority-urgent" className="text-sm font-medium text-gray-900">
+                Urgent ({formCurrency || 'CUR'})
+              </Label>
               <Input
                 id="priority-urgent"
                 name="priority-urgent"
@@ -446,15 +549,36 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 value={priorityThresholds.urgent}
                 onChange={(e) => handlePriorityChange('urgent', e.target.value)}
                 min={priorityThresholds.normal}
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
           </div>
-          {priorityError && <div className="text-red-600 text-xs mt-1">{priorityError}</div>}
+          {priorityError && (
+            <div className="text-red-600 text-sm mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+              {priorityError}
+            </div>
+          )}
+          <div className="text-xs text-gray-500 mt-2">
+            Quotes with a final total above each threshold will be assigned the corresponding
+            priority, unless manually overridden.
+          </div>
         </div>
-        <div className="col-span-2 flex gap-2">
-          <Button type="submit">{editingCountry ? 'Update' : 'Create'}</Button>
-          <Button type="button" variant="outline" onClick={onCancel}>
+
+        {/* Form Actions */}
+        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel}
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
             Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {editingCountry ? 'Update Country' : 'Create Country'}
           </Button>
         </div>
       </form>

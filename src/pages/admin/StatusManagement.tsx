@@ -32,6 +32,10 @@ import {
   ShoppingCart,
   Loader2,
   Calculator,
+  Edit,
+  MoreHorizontal,
+  Activity,
+  Zap,
 } from 'lucide-react';
 import { useStatusManagement, StatusConfig } from '@/hooks/useStatusManagement';
 import { supabase } from '@/integrations/supabase/client';
@@ -311,136 +315,153 @@ export default function StatusManagement() {
     const availableTransitions = category === 'quote' ? localQuoteStatuses : localOrderStatuses;
 
     return (
-      <Card key={status.id} className="relative hover:shadow-md transition-shadow">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <IconComponent className="h-5 w-5" />
+      <div key={status.id} className="bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-gray-50 rounded-lg">
+                <IconComponent className="h-5 w-5 text-gray-600" />
+              </div>
               <div>
-                <CardTitle className="text-lg">{status.label}</CardTitle>
-                <CardDescription>{status.description}</CardDescription>
+                <h3 className="text-sm font-medium text-gray-900">{status.label}</h3>
+                <p className="text-xs text-gray-500">{status.description}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={status.color}>{status.name}</Badge>
-              {status.isActive ? (
-                <Badge variant="outline" className="text-green-600">
-                  Active
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-gray-500">
-                  Inactive
-                </Badge>
-              )}
+            <div className="flex items-center space-x-2">
+              <Badge variant={status.color} className="text-xs">
+                {status.name}
+              </Badge>
+              <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                status.isActive 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {status.isActive ? 'Active' : 'Inactive'}
+              </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <Label className="text-xs text-muted-foreground">Order</Label>
-              <p className="font-medium">{status.order}</p>
+
+          {/* Properties Grid */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="text-sm">
+              <span className="text-gray-500">Order:</span>
+              <span className="ml-2 font-medium text-gray-900">{status.order}</span>
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Terminal</Label>
-              <p className="font-medium">{status.isTerminal ? 'Yes' : 'No'}</p>
+            <div className="text-sm">
+              <span className="text-gray-500">Terminal:</span>
+              <span className="ml-2 font-medium text-gray-900">{status.isTerminal ? 'Yes' : 'No'}</span>
             </div>
             {status.autoExpireHours && (
-              <div className="col-span-2">
-                <Label className="text-xs text-muted-foreground">Auto Expire</Label>
-                <p className="font-medium">{status.autoExpireHours} hours</p>
+              <div className="col-span-2 text-sm">
+                <span className="text-gray-500">Auto Expire:</span>
+                <span className="ml-2 font-medium text-gray-900">{status.autoExpireHours} hours</span>
               </div>
             )}
           </div>
 
-          {/* NEW: Flow Properties */}
-          <div className="border-t pt-4">
-            <Label className="text-xs text-muted-foreground font-medium">Flow Behavior</Label>
-            <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${status.showsInQuotesList ? 'bg-green-500' : 'bg-gray-300'}`}
-                />
-                <span>Quotes List</span>
+          {/* Flow Properties */}
+          <div className="border-t border-gray-100 pt-4 mb-4">
+            <h4 className="text-xs font-medium text-gray-700 mb-3">Flow Behavior</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  status.showsInQuotesList ? 'bg-green-500' : 'bg-gray-300'
+                }`} />
+                <span className="text-xs text-gray-600">Quotes List</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${status.showsInOrdersList ? 'bg-green-500' : 'bg-gray-300'}`}
-                />
-                <span>Orders List</span>
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  status.showsInOrdersList ? 'bg-green-500' : 'bg-gray-300'
+                }`} />
+                <span className="text-xs text-gray-600">Orders List</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${status.canBePaid ? 'bg-green-500' : 'bg-gray-300'}`}
-                />
-                <span>Can Be Paid</span>
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  status.canBePaid ? 'bg-green-500' : 'bg-gray-300'
+                }`} />
+                <span className="text-xs text-gray-600">Can Be Paid</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${status.triggersEmail ? 'bg-green-500' : 'bg-gray-300'}`}
-                />
-                <span>Sends Email</span>
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  status.triggersEmail ? 'bg-green-500' : 'bg-gray-300'
+                }`} />
+                <span className="text-xs text-gray-600">Sends Email</span>
               </div>
               {status.isDefaultQuoteStatus && (
-                <div className="col-span-2 flex items-center gap-2">
+                <div className="col-span-2 flex items-center space-x-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="font-medium">Default Quote Status</span>
+                  <span className="text-xs font-medium text-blue-600">Default Quote Status</span>
                 </div>
               )}
             </div>
           </div>
 
-          <div>
-            <Label className="text-xs text-muted-foreground">Allowed Transitions</Label>
-            <div className="flex flex-wrap gap-1 mt-1">
+          {/* Allowed Transitions */}
+          <div className="mb-4">
+            <h4 className="text-xs font-medium text-gray-700 mb-2">Allowed Transitions</h4>
+            <div className="flex flex-wrap gap-1">
               {status.allowedTransitions.length > 0 ? (
                 status.allowedTransitions.map((transitionId) => {
                   const transition = availableTransitions.find((s) => s.id === transitionId);
                   return transition ? (
-                    <Badge key={transitionId} variant="outline" className="text-xs">
+                    <span key={transitionId} className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-100 text-gray-700">
                       {transition.label}
-                    </Badge>
+                    </span>
                   ) : null;
                 })
               ) : (
-                <span className="text-sm text-muted-foreground">No transitions allowed</span>
+                <span className="text-xs text-gray-500">No transitions allowed</span>
               )}
             </div>
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button size="sm" variant="outline" onClick={() => setEditingStatus(status)}>
-              Edit
-            </Button>
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+            <div className="flex items-center space-x-2">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setEditingStatus(status)}
+                className="text-gray-700 border-gray-300 hover:bg-gray-50"
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => moveStatus(status.id, 'up', category)}
+                disabled={status.order === 1}
+                className="text-gray-700 border-gray-300 hover:bg-gray-50"
+              >
+                <ArrowUp className="h-3 w-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => moveStatus(status.id, 'down', category)}
+                disabled={
+                  status.order ===
+                  (category === 'quote' ? localQuoteStatuses.length : localOrderStatuses.length)
+                }
+                className="text-gray-700 border-gray-300 hover:bg-gray-50"
+              >
+                <ArrowDown className="h-3 w-3" />
+              </Button>
+            </div>
             <Button
               size="sm"
               variant="outline"
-              onClick={() => moveStatus(status.id, 'up', category)}
-              disabled={status.order === 1}
-            >
-              <ArrowUp className="h-3 w-3" />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => moveStatus(status.id, 'down', category)}
-              disabled={
-                status.order ===
-                (category === 'quote' ? localQuoteStatuses.length : localOrderStatuses.length)
-              }
-            >
-              <ArrowDown className="h-3 w-3" />
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
               onClick={() => deleteStatus(status.id, category)}
+              className="text-red-700 border-red-300 hover:bg-red-50"
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-3 w-3 mr-1" />
+              Delete
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   };
 
@@ -453,28 +474,39 @@ export default function StatusManagement() {
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Edit Status</h3>
-            <Button size="sm" variant="outline" onClick={() => setEditingStatus(null)}>
-              ×
-            </Button>
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Edit Status</h3>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setEditingStatus(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ×
+              </Button>
+            </div>
           </div>
 
-          <div className="space-y-4">
+          {/* Content */}
+          <div className="px-6 py-4 space-y-6">
+            {/* Basic Information */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Name (Internal)</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Name (Internal)</Label>
                 <Input
                   value={editingStatus.name}
                   onChange={(e) =>
                     updateStatus(editingStatus.id, { name: e.target.value }, editingStatus.category)
                   }
                   placeholder="e.g., pending"
+                  className="border-gray-300 focus:border-blue-500"
                 />
               </div>
               <div>
-                <Label>Display Label</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Display Label</Label>
                 <Input
                   value={editingStatus.label}
                   onChange={(e) =>
@@ -485,12 +517,13 @@ export default function StatusManagement() {
                     )
                   }
                   placeholder="e.g., Pending"
+                  className="border-gray-300 focus:border-blue-500"
                 />
               </div>
             </div>
 
             <div>
-              <Label>Description</Label>
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">Description</Label>
               <Textarea
                 value={editingStatus.description}
                 onChange={(e) =>
@@ -501,12 +534,14 @@ export default function StatusManagement() {
                   )
                 }
                 placeholder="Describe what this status means"
+                className="border-gray-300 focus:border-blue-500"
               />
             </div>
 
+            {/* Appearance */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Color</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Color</Label>
                 <Select
                   value={editingStatus.color}
                   onValueChange={(value) =>
@@ -517,7 +552,7 @@ export default function StatusManagement() {
                     )
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="border-gray-300 focus:border-blue-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -533,14 +568,14 @@ export default function StatusManagement() {
                 </Select>
               </div>
               <div>
-                <Label>Icon</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Icon</Label>
                 <Select
                   value={editingStatus.icon}
                   onValueChange={(value) =>
                     updateStatus(editingStatus.id, { icon: value }, editingStatus.category)
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="border-gray-300 focus:border-blue-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -557,32 +592,33 @@ export default function StatusManagement() {
               </div>
             </div>
 
-            {/* Live Preview Section */}
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <Label className="text-sm font-medium mb-3 block">Live Preview</Label>
+            {/* Live Preview */}
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Live Preview</Label>
               <div className="flex items-center gap-3">
-                <IconComponent className="h-5 w-5" />
+                <div className="p-2 bg-white rounded-lg">
+                  <IconComponent className="h-5 w-5 text-gray-600" />
+                </div>
                 <Badge variant={editingStatus.color}>
                   {editingStatus.label || editingStatus.name}
                 </Badge>
-                {editingStatus.isActive ? (
-                  <Badge variant="outline" className="text-green-600">
-                    Active
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-gray-500">
-                    Inactive
-                  </Badge>
-                )}
+                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  editingStatus.isActive 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {editingStatus.isActive ? 'Active' : 'Inactive'}
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-gray-500 mt-2">
                 This is how the status will appear in the application
               </p>
             </div>
 
+            {/* Configuration */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Order</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Order</Label>
                 <Input
                   type="number"
                   value={editingStatus.order}
@@ -594,10 +630,11 @@ export default function StatusManagement() {
                     )
                   }
                   min="1"
+                  className="border-gray-300 focus:border-blue-500"
                 />
               </div>
               <div>
-                <Label>Auto Expire (hours)</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Auto Expire (hours)</Label>
                 <Input
                   type="number"
                   value={editingStatus.autoExpireHours || ''}
@@ -612,44 +649,48 @@ export default function StatusManagement() {
                   }
                   placeholder="Optional"
                   min="1"
+                  className="border-gray-300 focus:border-blue-500"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Active</Label>
-                <p className="text-sm text-muted-foreground">Enable this status</p>
+            {/* Status Properties */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between py-3">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Active</Label>
+                  <p className="text-xs text-gray-500">Enable this status</p>
+                </div>
+                <Switch
+                  checked={editingStatus.isActive}
+                  onCheckedChange={(checked) =>
+                    updateStatus(editingStatus.id, { isActive: checked }, editingStatus.category)
+                  }
+                />
               </div>
-              <Switch
-                checked={editingStatus.isActive}
-                onCheckedChange={(checked) =>
-                  updateStatus(editingStatus.id, { isActive: checked }, editingStatus.category)
-                }
-              />
+
+              <div className="flex items-center justify-between py-3 border-t border-gray-100">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Terminal Status</Label>
+                  <p className="text-xs text-gray-500">No further transitions allowed</p>
+                </div>
+                <Switch
+                  checked={editingStatus.isTerminal}
+                  onCheckedChange={(checked) =>
+                    updateStatus(editingStatus.id, { isTerminal: checked }, editingStatus.category)
+                  }
+                />
+              </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Terminal Status</Label>
-                <p className="text-sm text-muted-foreground">No further transitions allowed</p>
-              </div>
-              <Switch
-                checked={editingStatus.isTerminal}
-                onCheckedChange={(checked) =>
-                  updateStatus(editingStatus.id, { isTerminal: checked }, editingStatus.category)
-                }
-              />
-            </div>
-
-            {/* NEW: Flow Properties */}
-            <div className="border-t pt-4">
-              <Label className="text-sm font-medium">Flow Behavior</Label>
-              <div className="space-y-3 mt-3">
+            {/* Flow Properties */}
+            <div className="border-t border-gray-200 pt-4">
+              <Label className="text-sm font-medium text-gray-700 mb-4 block">Flow Behavior</Label>
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-sm">Show in Quotes List</Label>
-                    <p className="text-xs text-muted-foreground">
+                    <Label className="text-sm font-medium text-gray-700">Show in Quotes List</Label>
+                    <p className="text-xs text-gray-500">
                       Display quotes with this status on the Quotes page
                     </p>
                   </div>
@@ -667,8 +708,8 @@ export default function StatusManagement() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-sm">Show in Orders List</Label>
-                    <p className="text-xs text-muted-foreground">
+                    <Label className="text-sm font-medium text-gray-700">Show in Orders List</Label>
+                    <p className="text-xs text-gray-500">
                       Display quotes with this status on the Orders page
                     </p>
                   </div>
@@ -686,8 +727,8 @@ export default function StatusManagement() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-sm">Can Be Paid</Label>
-                    <p className="text-xs text-muted-foreground">
+                    <Label className="text-sm font-medium text-gray-700">Can Be Paid</Label>
+                    <p className="text-xs text-gray-500">
                       Allow payment for quotes with this status
                     </p>
                   </div>
@@ -701,8 +742,8 @@ export default function StatusManagement() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-sm">Send Email</Label>
-                    <p className="text-xs text-muted-foreground">
+                    <Label className="text-sm font-medium text-gray-700">Send Email</Label>
+                    <p className="text-xs text-gray-500">
                       Send email notification when this status is set
                     </p>
                   </div>
@@ -721,8 +762,8 @@ export default function StatusManagement() {
                 {editingStatus.category === 'quote' && (
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-sm">Default Quote Status</Label>
-                      <p className="text-xs text-muted-foreground">
+                      <Label className="text-sm font-medium text-gray-700">Default Quote Status</Label>
+                      <p className="text-xs text-gray-500">
                         Use this status for new quotes
                       </p>
                     </div>
@@ -741,7 +782,7 @@ export default function StatusManagement() {
 
                 {editingStatus.triggersEmail && (
                   <div>
-                    <Label className="text-sm">Email Template</Label>
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Email Template</Label>
                     <Input
                       value={editingStatus.emailTemplate || ''}
                       onChange={(e) =>
@@ -752,20 +793,21 @@ export default function StatusManagement() {
                         )
                       }
                       placeholder="e.g., quote_approved"
-                      className="mt-1"
+                      className="border-gray-300 focus:border-blue-500"
                     />
                   </div>
                 )}
               </div>
             </div>
 
-            <div>
-              <Label>Allowed Transitions</Label>
-              <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
+            {/* Allowed Transitions */}
+            <div className="border-t border-gray-200 pt-4">
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Allowed Transitions</Label>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
                 {availableTransitions
                   .filter((s) => s.id !== editingStatus.id)
                   .map((status) => (
-                    <div key={status.id} className="flex items-center gap-2">
+                    <div key={status.id} className="flex items-center gap-3">
                       <input
                         type="checkbox"
                         id={`transition-${status.id}`}
@@ -780,17 +822,25 @@ export default function StatusManagement() {
                             editingStatus.category,
                           );
                         }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <label htmlFor={`transition-${status.id}`} className="text-sm">
+                      <label htmlFor={`transition-${status.id}`} className="text-sm text-gray-700">
                         {status.label}
                       </label>
                     </div>
                   ))}
               </div>
             </div>
+          </div>
 
-            <div className="flex gap-2 justify-end pt-4">
-              <Button variant="outline" onClick={() => setEditingStatus(null)}>
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setEditingStatus(null)}
+                className="text-gray-700 border-gray-300 hover:bg-gray-50"
+              >
                 Cancel
               </Button>
               <Button
@@ -799,6 +849,7 @@ export default function StatusManagement() {
                   setEditingStatus(null);
                 }}
                 disabled={isSaving}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {isSaving ? (
                   <>
@@ -821,11 +872,30 @@ export default function StatusManagement() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto flex items-center justify-center h-64">
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Loading status settings...</span>
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="py-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <Activity className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold text-gray-900">Status Management</h1>
+                  <p className="text-sm text-gray-600">
+                    Configure quote and order statuses, their transitions, and display settings
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <span className="text-gray-600">Loading status settings...</span>
+            </div>
           </div>
         </div>
       </div>
@@ -834,62 +904,143 @@ export default function StatusManagement() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="pt-6">
-              <p className="text-red-800">Error loading status settings: {error}</p>
-            </CardContent>
-          </Card>
-          <FixStatusJSON />
-          <TestStatusFiltering />
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="py-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <Activity className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold text-gray-900">Status Management</h1>
+                  <p className="text-sm text-gray-600">
+                    Configure quote and order statuses, their transitions, and display settings
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+          <div className="space-y-6">
+            <div className="bg-white border border-red-200 rounded-lg p-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-red-50 rounded-lg">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-red-800">Error Loading Status Settings</h3>
+                  <p className="text-sm text-red-600 mt-1">{error}</p>
+                </div>
+              </div>
+            </div>
+            <FixStatusJSON />
+            <TestStatusFiltering />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Settings className="h-8 w-8" />
-            Status Management
-          </h1>
-          <p className="text-muted-foreground">
-            Configure quote and order statuses, their transitions, and display settings
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <Activity className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold text-gray-900">Status Management</h1>
+                  <p className="text-sm text-gray-600">
+                    Configure quote and order statuses, their transitions, and display settings
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setLocalQuoteStatuses([...quoteStatuses]);
+                    setLocalOrderStatuses([...orderStatuses]);
+                  }}
+                  disabled={isSaving}
+                  className="text-gray-700 border-gray-300 hover:bg-gray-50"
+                >
+                  Reset to Saved
+                </Button>
+                <Button 
+                  onClick={handleSaveSettings} 
+                  disabled={isSaving}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save All Changes
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
 
+      {/* Main Content */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="quotes" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Quote Statuses
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="flex items-center gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              Order Statuses
-            </TabsTrigger>
-            <TabsTrigger value="debug" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Debug & Fix
-            </TabsTrigger>
-          </TabsList>
+          <div className="border-b border-gray-200 mb-8">
+            <TabsList className="bg-transparent border-0 p-0 h-auto">
+              <TabsTrigger 
+                value="quotes" 
+                className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:border-blue-600 data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Quote Statuses
+              </TabsTrigger>
+              <TabsTrigger 
+                value="orders" 
+                className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:border-blue-600 data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Order Statuses
+              </TabsTrigger>
+              <TabsTrigger 
+                value="debug" 
+                className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:border-blue-600 data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Debug & Fix
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="quotes" className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-semibold">Quote Statuses</h2>
-                <p className="text-muted-foreground">Configure the workflow for quote processing</p>
+                <h2 className="text-lg font-medium text-gray-900">Quote Statuses</h2>
+                <p className="text-sm text-gray-600">Configure the workflow for quote processing</p>
               </div>
-              <Button onClick={() => addStatus('quote')}>
+              <Button 
+                onClick={() => addStatus('quote')}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Status
               </Button>
             </div>
 
-            <div className="grid gap-4">
+            <div className="space-y-4">
               {localQuoteStatuses
                 .sort((a, b) => a.order - b.order)
                 .map((status) => renderStatusCard(status, 'quote'))}
@@ -899,16 +1050,19 @@ export default function StatusManagement() {
           <TabsContent value="orders" className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-semibold">Order Statuses</h2>
-                <p className="text-muted-foreground">Configure the workflow for order processing</p>
+                <h2 className="text-lg font-medium text-gray-900">Order Statuses</h2>
+                <p className="text-sm text-gray-600">Configure the workflow for order processing</p>
               </div>
-              <Button onClick={() => addStatus('order')}>
+              <Button 
+                onClick={() => addStatus('order')}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Status
               </Button>
             </div>
 
-            <div className="grid gap-4">
+            <div className="space-y-4">
               {localOrderStatuses
                 .sort((a, b) => a.order - b.order)
                 .map((status) => renderStatusCard(status, 'order'))}
@@ -918,8 +1072,8 @@ export default function StatusManagement() {
           <TabsContent value="debug" className="space-y-6">
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-semibold">Debug & Fix Status Issues</h2>
-                <p className="text-muted-foreground">
+                <h2 className="text-lg font-medium text-gray-900">Debug & Fix Status Issues</h2>
+                <p className="text-sm text-gray-600">
                   Diagnose and fix issues with status filtering and configuration
                 </p>
               </div>
@@ -933,35 +1087,14 @@ export default function StatusManagement() {
           </TabsContent>
         </Tabs>
 
-        <div className="flex gap-2 justify-end pt-6">
-          <div className="flex-1 text-sm text-muted-foreground">
-            <p>
-              💡 Changes are auto-saved after 2 seconds. Use "Save All Changes" to save immediately.
-            </p>
+        {/* Auto-save indicator */}
+        <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center">
+            <Zap className="h-4 w-4 text-blue-600 mr-2" />
+            <span className="text-sm text-blue-800">
+              Changes are auto-saved after 2 seconds. Use "Save All Changes" to save immediately.
+            </span>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setLocalQuoteStatuses([...quoteStatuses]);
-              setLocalOrderStatuses([...orderStatuses]);
-            }}
-            disabled={isSaving}
-          >
-            Reset to Saved
-          </Button>
-          <Button onClick={handleSaveSettings} disabled={isSaving}>
-            {isSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save All Changes
-              </>
-            )}
-          </Button>
         </div>
 
         {renderEditDialog()}
