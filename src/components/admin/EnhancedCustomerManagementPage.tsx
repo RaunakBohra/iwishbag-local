@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useCustomerManagement } from '@/hooks/useCustomerManagement';
-import { CustomerTable } from './CustomerTable';
+import { CustomerMetrics } from './CustomerMetrics';
+import { CustomerQuickFilters } from './CustomerQuickFilters';
+import { CompactCustomerListItem } from './CompactCustomerListItem';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -13,17 +14,23 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   Loader2,
   Users,
   Search,
   Download,
-  TrendingUp,
-  Activity,
-  Star,
-  UserCheck,
+  Filter,
+  UserPlus,
+  BarChart3,
+  Package
 } from 'lucide-react';
 import { CustomerStats } from './CustomerStats';
 import { CustomerActivityTimeline } from './CustomerActivityTimeline';
+import { H1, H2, Body, BodySmall } from '@/components/ui/typography';
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,23 +41,64 @@ export const EnhancedCustomerManagementPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [quickFilter, setQuickFilter] = useState('all');
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState('list');
 
   const { toast } = useToast();
 
   const { customers, isLoading, updateCodMutation, updateNotesMutation, updateProfileMutation } =
     useCustomerManagement();
 
-  // Handler for COD updates
-  const handleUpdateCod = (userId: string, codEnabled: boolean) => {
-    updateCodMutation.mutate({ userId, codEnabled });
+  // Apply quick filters to customers
+  const applyQuickFilter = (filter: string) => {
+    setQuickFilter(filter);
+    
+    // Reset other filters when using quick filters
+    setStatusFilter('all');
+    setCountryFilter('all');
+    setDateFilter('all');
+    setSearchQuery('');
   };
 
-  // Enhanced filtering
+  // Enhanced filtering with quick filter support
   const filteredCustomers = useMemo(() => {
     if (!customers) return [];
 
     return customers.filter((customer) => {
+      // Apply quick filters first
+      if (quickFilter !== 'all') {
+        const now = new Date();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        
+        switch (quickFilter) {
+          case 'active':
+            if (!customer.cod_enabled) return false;
+            break;
+          case 'inactive':
+            if (customer.cod_enabled) return false;
+            break;
+          case 'vip':
+            if (!customer.internal_notes?.includes('VIP')) return false;
+            break;
+          case 'new_this_week':
+            if (new Date(customer.created_at) < weekAgo) return false;
+            break;
+          case 'new_this_month':
+            if (new Date(customer.created_at) < monthAgo) return false;
+            break;
+          case 'with_addresses':
+            if (!customer.user_addresses || customer.user_addresses.length === 0) return false;
+            break;
+          case 'recent_activity':
+            if (new Date(customer.created_at) < weekAgo) return false;
+            break;
+        }
+      }
+
       // Search filter
       const matchesSearch =
         (customer.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
@@ -94,7 +142,7 @@ export const EnhancedCustomerManagementPage = () => {
 
       return true;
     });
-  }, [customers, searchQuery, statusFilter, countryFilter, dateFilter]);
+  }, [customers, quickFilter, searchQuery, statusFilter, countryFilter, dateFilter]);
 
   // Get customer analytics
   const { data: customerAnalytics } = useQuery({
@@ -136,6 +184,11 @@ export const EnhancedCustomerManagementPage = () => {
     enabled: !!customers,
   });
 
+  // Handler for COD updates
+  const handleUpdateCod = (userId: string, codEnabled: boolean) => {
+    updateCodMutation.mutate({ userId, codEnabled });
+  };
+
   // Export functionality
   const exportCustomers = () => {
     const csvContent =
@@ -173,227 +226,225 @@ export const EnhancedCustomerManagementPage = () => {
     const countries = new Set<string>();
     customers.forEach((customer) => {
       customer.user_addresses.forEach((address) => {
-        if (address.destination_country) countries.add(address.destination_country);
+        if (address.country) countries.add(address.country);
       });
     });
     return Array.from(countries).sort();
   }, [customers]);
 
+  // Handle customer selection
+  const handleSelectCustomer = (customerId: string, selected: boolean) => {
+    if (selected) {
+      setSelectedCustomers([...selectedCustomers, customerId]);
+    } else {
+      setSelectedCustomers(selectedCustomers.filter(id => id !== customerId));
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedCustomers.length === filteredCustomers.length) {
+      setSelectedCustomers([]);
+    } else {
+      setSelectedCustomers(filteredCustomers.map(c => c.id));
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen bg-gray-50/40">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
+              <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+            </div>
+            <div className="h-4 w-96 bg-gray-200 rounded animate-pulse" />
+          </div>
+          <CustomerMetrics customers={[]} customerAnalytics={[]} isLoading={true} />
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <Body className="text-gray-600">Loading customers...</Body>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{customers?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">{filteredCustomers.length} filtered</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {customers?.filter((c) => c.cod_enabled).length || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">COD enabled</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">VIP Customers</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {customers?.filter((c) => c.internal_notes?.includes('VIP')).length || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">High-value customers</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New This Month</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {customers?.filter((c) => {
-                const customerDate = new Date(c.created_at);
-                const monthAgo = new Date();
-                monthAgo.setMonth(monthAgo.getMonth() - 1);
-                return customerDate >= monthAgo;
-              }).length || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">Last 30 days</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content */}
-      <Tabs defaultValue="list" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="list">Customer List</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="activity">Activity Timeline</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="list" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Customer Management
-              </CardTitle>
-              <CardDescription>
-                View, search, and manage your customers. Currently managing {customers?.length || 0}{' '}
-                users.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Enhanced Filters */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="text"
-                      placeholder="Search by name or email..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="vip">VIP</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={countryFilter} onValueChange={setCountryFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Countries</SelectItem>
-                    {uniqueCountries.map((country) => (
-                      <SelectItem key={country} value={country}>
-                        {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Date Range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Time</SelectItem>
-                    <SelectItem value="7d">Last 7 Days</SelectItem>
-                    <SelectItem value="30d">Last 30 Days</SelectItem>
-                    <SelectItem value="90d">Last 90 Days</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Button onClick={exportCustomers} variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
+    <div className="min-h-screen bg-gray-50/40">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <Users className="h-4 w-4 text-blue-600" />
               </div>
+              <div>
+                <H1 className="text-gray-900">Customer Management</H1>
+                <BodySmall className="text-gray-600">Manage your customer base and relationships</BodySmall>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Customer
+              </Button>
+              <Button 
+                onClick={exportCustomers} 
+                variant="outline" 
+                size="sm" 
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
+        </div>
 
-              <CustomerTable
-                customers={filteredCustomers}
-                customerAnalytics={customers?.map((customer) => {
-                  // Calculate basic analytics from available data
-                  return {
-                    customerId: customer.id,
-                    totalSpent: 0, // We'll need to calculate this from quotes
-                    orderCount: 0, // We'll need to calculate this from quotes
-                    quoteCount: 0, // We'll need to calculate this from quotes
-                    avgOrderValue: 0,
-                    lastActivity: new Date(customer.created_at),
-                  };
-                })}
-                onUpdateCod={handleUpdateCod}
-                onUpdateNotes={updateNotesMutation.mutate}
-                onUpdateName={(userId, name) =>
-                  updateProfileMutation.mutate({ userId, fullName: name })
-                }
-                onCustomerSelect={setSelectedCustomer}
-                isUpdating={
-                  updateCodMutation.isPending ||
-                  updateNotesMutation.isPending ||
-                  updateProfileMutation.isPending
-                }
+        {/* Metrics Dashboard */}
+        <CustomerMetrics 
+          customers={customers || []} 
+          customerAnalytics={customerAnalytics || []} 
+          isLoading={isLoading} 
+        />
+
+        {/* Main Content Card */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+          {/* Card Header */}
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <H2 className="text-gray-900">Customers</H2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Advanced Filters
+              </Button>
+            </div>
+            
+            {/* Search Bar */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search customers by name or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
+            </div>
 
-              {filteredCustomers.length === 0 && !isLoading && (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p>No customers found matching your search criteria.</p>
+            {/* Quick Filters */}
+            <CustomerQuickFilters
+              activeFilter={quickFilter}
+              onFilterChange={applyQuickFilter}
+              customers={customers || []}
+            />
+          </div>
+
+          {/* Advanced Filters (Collapsible) */}
+          <Collapsible open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
+            <CollapsibleContent>
+              <div className="px-6 pb-4 border-b border-gray-200">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[180px] border-gray-300">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="vip">VIP</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={countryFilter} onValueChange={setCountryFilter}>
+                    <SelectTrigger className="w-[180px] border-gray-300">
+                      <SelectValue placeholder="Country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Countries</SelectItem>
+                      {uniqueCountries.map((country) => (
+                        <SelectItem key={country} value={country}>
+                          {country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={dateFilter} onValueChange={setDateFilter}>
+                    <SelectTrigger className="w-[180px] border-gray-300">
+                      <SelectValue placeholder="Date Range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Time</SelectItem>
+                      <SelectItem value="7d">Last 7 Days</SelectItem>
+                      <SelectItem value="30d">Last 30 Days</SelectItem>
+                      <SelectItem value="90d">Last 90 Days</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
-        <TabsContent value="analytics" className="space-y-4">
-          <CustomerStats
-            customers={customers}
-            customerAnalytics={customers?.map((customer) => {
-              // Calculate basic analytics from available data
-              return {
-                customerId: customer.id,
-                totalSpent: 0, // We'll need to calculate this from quotes
-                orderCount: 0, // We'll need to calculate this from quotes
-                quoteCount: 0, // We'll need to calculate this from quotes
-                avgOrderValue: 0,
-                lastActivity: new Date(customer.created_at),
-              };
-            })}
-          />
-        </TabsContent>
-
-        <TabsContent value="activity" className="space-y-4">
-          {selectedCustomer ? (
-            <CustomerActivityTimeline customerId={selectedCustomer} />
-          ) : (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  Select a customer to view their activity timeline
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+          {/* Content */}
+          <div className="p-6">
+            {filteredCustomers && filteredCustomers.length > 0 ? (
+              <div className="space-y-3">
+                {filteredCustomers.map((customer) => (
+                  <CompactCustomerListItem
+                    key={customer.id}
+                    customer={customer}
+                    analytics={customerAnalytics?.find(a => a.customerId === customer.id)}
+                    isSelected={selectedCustomers.includes(customer.id)}
+                    onSelect={handleSelectCustomer}
+                    onUpdateCod={handleUpdateCod}
+                    onUpdateNotes={updateNotesMutation.mutate}
+                    onUpdateName={(userId, name) =>
+                      updateProfileMutation.mutate({ userId, fullName: name })
+                    }
+                    isUpdating={
+                      updateCodMutation.isPending ||
+                      updateNotesMutation.isPending ||
+                      updateProfileMutation.isPending
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-6 w-6 text-gray-400" />
+                </div>
+                <H2 className="text-gray-900 mb-2">No customers found</H2>
+                <Body className="text-gray-600 mb-6">
+                  {searchQuery ||
+                  statusFilter !== 'all' ||
+                  countryFilter !== 'all' ||
+                  dateFilter !== 'all' ||
+                  quickFilter !== 'all'
+                    ? 'Try adjusting your filters to see more results.'
+                    : 'Customers will appear here when users sign up.'}
+                </Body>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -321,46 +321,51 @@ ${template.html_content}
 
   if (loadingTemplates) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         {[...Array(3)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader>
-              <div className="h-4 bg-muted animate-pulse rounded w-1/3" />
-            </CardHeader>
-            <CardContent>
-              <div className="h-6 bg-muted animate-pulse rounded w-1/2 mb-2" />
-              <div className="h-20 bg-muted animate-pulse rounded" />
-            </CardContent>
-          </Card>
+          <div key={i} className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="p-6">
+              <div className="h-4 bg-gray-200 animate-pulse rounded w-1/3 mb-4" />
+              <div className="h-3 bg-gray-200 animate-pulse rounded w-1/2 mb-2" />
+              <div className="h-20 bg-gray-200 animate-pulse rounded" />
+            </div>
+          </div>
         ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Email Settings Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Email Settings
-          </CardTitle>
-          <CardDescription>Control which types of emails are sent from your system</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <div className="space-y-8">
+      {/* Email Settings Section - Stripe Style */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <Settings className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Email settings</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Control which types of emails are sent from your system
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-6">
           {loadingSettings ? (
-            <div className="flex items-center justify-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-0 divide-y divide-gray-200">
               {/* Global Email Toggle */}
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">Global Email Sending</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Master toggle to enable/disable all email sending
+              <div className="flex items-center justify-between py-4 first:pt-0">
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900">Global email sending</h4>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Master toggle to enable or disable all email sending
                   </p>
                 </div>
                 <Switch
@@ -376,10 +381,10 @@ ${template.html_content}
               </div>
 
               {/* Cart Abandonment Toggle */}
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">Cart Abandonment Emails</h4>
-                  <p className="text-sm text-muted-foreground">
+              <div className="flex items-center justify-between py-4">
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900">Cart abandonment emails</h4>
+                  <p className="text-sm text-gray-500 mt-1">
                     Send recovery emails when customers abandon their cart
                   </p>
                 </div>
@@ -396,10 +401,10 @@ ${template.html_content}
               </div>
 
               {/* Quote Notifications Toggle */}
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">Quote Notification Emails</h4>
-                  <p className="text-sm text-muted-foreground">
+              <div className="flex items-center justify-between py-4">
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900">Quote notification emails</h4>
+                  <p className="text-sm text-gray-500 mt-1">
                     Send confirmation emails when quotes are created or updated
                   </p>
                 </div>
@@ -416,10 +421,10 @@ ${template.html_content}
               </div>
 
               {/* Order Notifications Toggle */}
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">Order Notification Emails</h4>
-                  <p className="text-sm text-muted-foreground">
+              <div className="flex items-center justify-between py-4">
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900">Order notification emails</h4>
+                  <p className="text-sm text-gray-500 mt-1">
                     Send confirmation emails when orders are placed or updated
                   </p>
                 </div>
@@ -436,10 +441,10 @@ ${template.html_content}
               </div>
 
               {/* Status Notifications Toggle */}
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">Status Change Notifications</h4>
-                  <p className="text-sm text-muted-foreground">
+              <div className="flex items-center justify-between py-4 pb-0">
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900">Status change notifications</h4>
+                  <p className="text-sm text-gray-500 mt-1">
                     Send emails when quote or order status changes
                   </p>
                 </div>
@@ -456,60 +461,88 @@ ${template.html_content}
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Separator />
-
-      {/* Email Templates Section */}
+      {/* Email Templates Section Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Email Templates</h2>
-          <p className="text-muted-foreground">
-            Manage all email templates for quotes, orders, cart abandonment recovery, and status
-            notifications
+          <h2 className="text-lg font-semibold text-gray-900">Email templates</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Manage templates for customer communications and automated messaging
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={createDefaultStatusTemplates} variant="outline">
+        <div className="flex gap-3">
+          <Button 
+            onClick={createDefaultStatusTemplates} 
+            variant="outline"
+            className="bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+          >
             <Bell className="h-4 w-4 mr-2" />
-            Create Status Templates
+            Create status templates
           </Button>
-          <Button onClick={() => setShowCreateTemplate(true)}>
+          <Button 
+            onClick={() => setShowCreateTemplate(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+          >
             <Plus className="h-4 w-4 mr-2" />
-            Create Template
+            Create template
           </Button>
         </div>
       </div>
 
-      {/* Templates List */}
-      <div className="grid gap-4">
+      {/* Templates List - Stripe Style */}
+      <div className="space-y-4">
         {emailTemplates?.map((template) => (
-          <Card key={template.id}>
-            <CardHeader>
+          <div key={template.id} className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-lg">{template.name}</CardTitle>
-                  {template.template_type === 'cart_abandonment' && (
-                    <Badge variant="secondary">Cart Abandonment</Badge>
-                  )}
-                  {template.template_type === 'quote_notification' && (
-                    <Badge variant="outline">Quote</Badge>
-                  )}
-                  {template.template_type === 'order_notification' && (
-                    <Badge variant="outline">Order</Badge>
-                  )}
-                  {template.template_type === 'status_notification' && (
-                    <Badge variant="default">Status</Badge>
-                  )}
-                  {template.name.includes('Default') && <Badge variant="default">Default</Badge>}
+                <div className="flex items-center gap-3">
+                  <h3 className="text-sm font-semibold text-gray-900">{template.name}</h3>
+                  <div className="flex gap-2">
+                    {template.template_type === 'cart_abandonment' && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                        Cart Abandonment
+                      </span>
+                    )}
+                    {template.template_type === 'quote_notification' && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Quote
+                      </span>
+                    )}
+                    {template.template_type === 'order_notification' && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Order
+                      </span>
+                    )}
+                    {template.template_type === 'status_notification' && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        Status
+                      </span>
+                    )}
+                    {template.name.includes('Default') && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        Default
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => handleCopyTemplate(template)}>
-                    <Copy className="h-4 w-4" />
+                <div className="flex items-center gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => handleCopyTemplate(template)}
+                    className="h-8 w-8 p-0 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                  >
+                    <Copy className="h-4 w-4 text-gray-600" />
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)}>
-                    <Edit className="h-4 w-4" />
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => handleEditTemplate(template)}
+                    className="h-8 w-8 p-0 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                  >
+                    <Edit className="h-4 w-4 text-gray-600" />
                   </Button>
                   {template.template_type === 'cart_abandonment' &&
                     !template.name.includes('Default') && (
@@ -517,76 +550,82 @@ ${template.html_content}
                         size="sm"
                         variant="outline"
                         onClick={() => handleDeleteTemplate(template.id)}
+                        className="h-8 w-8 p-0 border-gray-200 hover:bg-red-50 hover:border-red-300 transition-colors"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
                     )}
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            </div>
+            <div className="px-6 py-4 space-y-4">
               <div>
-                <Label className="text-sm font-medium">Subject</Label>
-                <p className="text-sm text-muted-foreground mt-1">{template.subject}</p>
+                <h4 className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-1">Subject</h4>
+                <p className="text-sm text-gray-900">{template.subject}</p>
               </div>
               <div>
-                <Label className="text-sm font-medium">Preview</Label>
-                <div className="mt-2 p-3 bg-muted rounded-md text-sm">
-                  {template.html_content.length > 200
-                    ? `${template.html_content.substring(0, 200)}...`
-                    : template.html_content}
+                <h4 className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-2">Preview</h4>
+                <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+                  <p className="text-sm text-gray-700 font-mono">
+                    {template.html_content.length > 200
+                      ? `${template.html_content.substring(0, 200)}...`
+                      : template.html_content}
+                  </p>
                 </div>
               </div>
-              <div className="text-xs text-muted-foreground">
-                Available variables: {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'},{' '}
-                {'{quote_id}'}, {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'},{' '}
-                {'{tracking_number}'}
+              <div className="pt-2 border-t border-gray-200">
+                <p className="text-xs text-gray-500">
+                  <span className="font-medium">Available variables:</span> {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'}
+                </p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* Create Template Dialog */}
+      {/* Create Template Dialog - Stripe Style */}
       <Dialog open={showCreateTemplate} onOpenChange={setShowCreateTemplate}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Create Email Template</DialogTitle>
-            <DialogDescription>
-              Create a new email template for various communication purposes.
+        <DialogContent className="sm:max-w-[700px] p-0">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <DialogTitle className="text-lg font-semibold text-gray-900">Create email template</DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 mt-1">
+              Create a new email template for customer communications and automated messaging.
             </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="template-name">Template Name</Label>
-              <Input
-                id="template-name"
-                value={templateForm.name}
-                onChange={(e) => setTemplateForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="e.g., Default Abandonment Recovery"
-              />
+          </div>
+          <div className="px-6 py-4 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="template-name" className="text-sm font-medium text-gray-700">Template name</Label>
+                <Input
+                  id="template-name"
+                  value={templateForm.name}
+                  onChange={(e) => setTemplateForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Default Abandonment Recovery"
+                  className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <Label htmlFor="template-type" className="text-sm font-medium text-gray-700">Template type</Label>
+                <Select
+                  value={templateForm.template_type}
+                  onValueChange={(value) =>
+                    setTemplateForm((prev) => ({ ...prev, template_type: value }))
+                  }
+                >
+                  <SelectTrigger className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                    <SelectValue placeholder="Select template type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cart_abandonment">Cart Abandonment</SelectItem>
+                    <SelectItem value="quote_notification">Quote Notification</SelectItem>
+                    <SelectItem value="order_notification">Order Notification</SelectItem>
+                    <SelectItem value="status_notification">Status Notification</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div>
-              <Label htmlFor="template-type">Template Type</Label>
-              <Select
-                value={templateForm.template_type}
-                onValueChange={(value) =>
-                  setTemplateForm((prev) => ({ ...prev, template_type: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select template type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cart_abandonment">Cart Abandonment</SelectItem>
-                  <SelectItem value="quote_notification">Quote Notification</SelectItem>
-                  <SelectItem value="order_notification">Order Notification</SelectItem>
-                  <SelectItem value="status_notification">Status Notification</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="template-subject">Email Subject</Label>
+              <Label htmlFor="template-subject" className="text-sm font-medium text-gray-700">Email subject</Label>
               <Input
                 id="template-subject"
                 value={templateForm.subject}
@@ -596,11 +635,12 @@ ${template.html_content}
                     subject: e.target.value,
                   }))
                 }
-                placeholder="e.g., Complete Your Purchase - Your Cart is Waiting!"
+                placeholder="Complete Your Purchase - Your Cart is Waiting!"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
             <div>
-              <Label htmlFor="template-body">Email Body</Label>
+              <Label htmlFor="template-body" className="text-sm font-medium text-gray-700">Email body</Label>
               <Textarea
                 id="template-body"
                 value={templateForm.html_content}
@@ -612,70 +652,75 @@ ${template.html_content}
                 }
                 placeholder="Enter your email template here..."
                 rows={8}
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Use {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'},{' '}
-                {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'} as
-                variables
+              <p className="text-xs text-gray-500 mt-2">
+                <span className="font-medium">Available variables:</span> {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'}
               </p>
             </div>
-            <div className="flex gap-2 pt-4">
-              <Button onClick={handleSaveTemplate} className="flex-1">
-                <Save className="h-4 w-4 mr-2" />
-                Create Template
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowCreateTemplate(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
+          </div>
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateTemplate(false)}
+              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveTemplate} 
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Create template
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Template Dialog */}
+      {/* Edit Template Dialog - Stripe Style */}
       <Dialog open={showEditTemplate} onOpenChange={setShowEditTemplate}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Email Template</DialogTitle>
-            <DialogDescription>
-              Modify the email template for various communication purposes.
+        <DialogContent className="sm:max-w-[700px] p-0">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <DialogTitle className="text-lg font-semibold text-gray-900">Edit email template</DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 mt-1">
+              Modify the email template for customer communications and automated messaging.
             </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-template-name">Template Name</Label>
-              <Input
-                id="edit-template-name"
-                value={templateForm.name}
-                onChange={(e) => setTemplateForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="e.g., Default Abandonment Recovery"
-              />
+          </div>
+          <div className="px-6 py-4 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-template-name" className="text-sm font-medium text-gray-700">Template name</Label>
+                <Input
+                  id="edit-template-name"
+                  value={templateForm.name}
+                  onChange={(e) => setTemplateForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Default Abandonment Recovery"
+                  className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-template-type" className="text-sm font-medium text-gray-700">Template type</Label>
+                <Select
+                  value={templateForm.template_type}
+                  onValueChange={(value) =>
+                    setTemplateForm((prev) => ({ ...prev, template_type: value }))
+                  }
+                >
+                  <SelectTrigger className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                    <SelectValue placeholder="Select template type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cart_abandonment">Cart Abandonment</SelectItem>
+                    <SelectItem value="quote_notification">Quote Notification</SelectItem>
+                    <SelectItem value="order_notification">Order Notification</SelectItem>
+                    <SelectItem value="status_notification">Status Notification</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div>
-              <Label htmlFor="edit-template-type">Template Type</Label>
-              <Select
-                value={templateForm.template_type}
-                onValueChange={(value) =>
-                  setTemplateForm((prev) => ({ ...prev, template_type: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select template type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cart_abandonment">Cart Abandonment</SelectItem>
-                  <SelectItem value="quote_notification">Quote Notification</SelectItem>
-                  <SelectItem value="order_notification">Order Notification</SelectItem>
-                  <SelectItem value="status_notification">Status Notification</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="edit-template-subject">Email Subject</Label>
+              <Label htmlFor="edit-template-subject" className="text-sm font-medium text-gray-700">Email subject</Label>
               <Input
                 id="edit-template-subject"
                 value={templateForm.subject}
@@ -685,11 +730,12 @@ ${template.html_content}
                     subject: e.target.value,
                   }))
                 }
-                placeholder="e.g., Complete Your Purchase - Your Cart is Waiting!"
+                placeholder="Complete Your Purchase - Your Cart is Waiting!"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
             <div>
-              <Label htmlFor="edit-template-body">Email Body</Label>
+              <Label htmlFor="edit-template-body" className="text-sm font-medium text-gray-700">Email body</Label>
               <Textarea
                 id="edit-template-body"
                 value={templateForm.html_content}
@@ -701,26 +747,28 @@ ${template.html_content}
                 }
                 placeholder="Enter your email template here..."
                 rows={8}
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Use {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'},{' '}
-                {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'} as
-                variables
+              <p className="text-xs text-gray-500 mt-2">
+                <span className="font-medium">Available variables:</span> {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'}
               </p>
             </div>
-            <div className="flex gap-2 pt-4">
-              <Button onClick={handleSaveTemplate} className="flex-1">
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowEditTemplate(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
+          </div>
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowEditTemplate(false)}
+              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveTemplate} 
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save changes
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
