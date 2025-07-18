@@ -63,8 +63,8 @@ export function usePaymentCurrencyConversion({
     esewa: 'NPR',
     fonepay: 'NPR',
     paypal: 'USD', // PayPal supports multiple currencies but processes in USD primarily
-    stripe: 'USD', // Stripe supports multiple currencies
-    airwallex: 'USD', // Airwallex supports multiple currencies
+    stripe: 'USD', // Stripe accepts multiple currencies but processes in USD
+    airwallex: 'USD', // Airwallex accepts multiple currencies but processes in USD
     razorpay: 'INR',
     bank_transfer: currency, // Bank transfer uses display currency
     cod: currency, // COD uses display currency
