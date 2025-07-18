@@ -785,8 +785,8 @@ export function ShippingRouteManager() {
         <div>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold">Shipping Routes</h2>
-              <p className="text-gray-600">Manage origin-destination shipping costs</p>
+              <h2 className="text-2xl font-bold">Shipping Routes & Countries</h2>
+              <p className="text-gray-600">Manage routes, countries, and exchange rates</p>
             </div>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
@@ -948,7 +948,106 @@ export function ShippingRouteManager() {
           <ExchangeRateManager />
         </div>
       ) : activeTab === 'countries' ? (
-        <CountrySettingsManager />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">Countries & Exchange Rates</h2>
+              <p className="text-gray-600">Manage country settings, currencies, and exchange rates</p>
+            </div>
+          </div>
+          <div className="grid gap-4">
+            {_countries.map((country) => (
+              <Card key={country.code}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center space-x-2">
+                        <span>{country.name} ({country.code})</span>
+                        <Badge variant="secondary">
+                          {country.currency}
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription>
+                        Exchange Rate: {country.rate_from_usd} {country.currency}/USD
+                        {country.customs_percent > 0 && ` • Customs: ${country.customs_percent}%`}
+                        {country.vat_percent > 0 && ` • VAT: ${country.vat_percent}%`}
+                      </CardDescription>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // This would open the CountrySettingsManager for this specific country
+                          // For now, we'll just show a message
+                          toast({
+                            title: 'Edit Country',
+                            description: `Edit functionality for ${country.name} will be implemented`,
+                          });
+                        }}
+                      >
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <strong>Payment Gateway:</strong>
+                      <div className="mt-1 space-y-1">
+                        {country.payment_gateway_fixed_fee > 0 && (
+                          <div>Fixed Fee: {getCurrencySymbolFromCountry(country.code)}{country.payment_gateway_fixed_fee}</div>
+                        )}
+                        {country.payment_gateway_percent_fee > 0 && (
+                          <div>Percent Fee: {country.payment_gateway_percent_fee}%</div>
+                        )}
+                        {country.payment_gateway_fixed_fee === 0 && country.payment_gateway_percent_fee === 0 && (
+                          <div className="text-gray-500">No gateway fees</div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <strong>Markups:</strong>
+                      <div className="mt-1 space-y-1">
+                        {country.country_markup_percentage > 0 && (
+                          <div>Country Markup: {country.country_markup_percentage}%</div>
+                        )}
+                        {country.country_markup_fixed > 0 && (
+                          <div>Fixed Markup: {getCurrencySymbolFromCountry(country.code)}{country.country_markup_fixed}</div>
+                        )}
+                        {country.country_markup_percentage === 0 && country.country_markup_fixed === 0 && (
+                          <div className="text-gray-500">No markups</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 text-sm">
+                    <strong>Additional Info:</strong>
+                    <div className="mt-1 grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-gray-600">Last Updated:</span> {new Date(country.updated_at).toLocaleDateString()}
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Routes:</span> {routes.filter(r => r.origin_country === country.code || r.destination_country === country.code).length}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          {_countries.length === 0 && (
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-gray-600">No countries configured yet.</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Countries are automatically managed through the system.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       ) : (
         <MarkupManager />
       )}
