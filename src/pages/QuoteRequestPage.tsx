@@ -140,7 +140,7 @@ export default function QuoteRequestPage() {
           .from('quotes')
           .insert({
             email: emailToUse,
-            destination_country: products[0]?.country || '',
+            destination_country: shippingContact.country || '',
             origin_country: products[0]?.country || '',
             status: 'pending',
             currency: 'USD',
@@ -191,7 +191,7 @@ export default function QuoteRequestPage() {
             .from('quotes')
             .insert({
               email: emailToUse,
-              destination_country: product.country || '',
+              destination_country: shippingContact.country || '',
               origin_country: product.country || '',
               status: 'pending',
               currency: 'USD',
