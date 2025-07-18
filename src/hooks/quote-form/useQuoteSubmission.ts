@@ -144,11 +144,23 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
 
       // Prepare quote data
       // Get the currency for the destination country
-      const destinationCurrency = getCountryCurrency(countryCode);
+      const destinationCountry = shippingAddress?.countryCode || shippingAddress?.country;
+      const destinationCurrency = getCountryCurrency(destinationCountry || countryCode);
+
+      // Debug logging
+      console.log('Quote submission debug:', {
+        countryCode,
+        shippingAddress: shippingAddress ? {
+          country: shippingAddress.country,
+          countryCode: shippingAddress.countryCode
+        } : null,
+        destinationCountry
+      });
 
       const quoteData: Partial<TablesInsert<'quotes'>> = {
         email: finalEmail || null, // Allow null email for anonymous quotes
-        destination_country: countryCode,
+        origin_country: countryCode, // Purchase country (where we buy from)
+        destination_country: destinationCountry, // Shipping country (where we deliver to)
         user_id: user?.id ?? null,
         currency: selectedCountryCurrency,
         final_currency: destinationCurrency, // Use dynamic currency based on destination
@@ -320,12 +332,25 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
     }
 
     // Prepare quote data
+    const destinationCountry = shippingAddress?.countryCode || shippingAddress?.country;
+    
+    // Debug logging
+    console.log('Combined quote submission debug:', {
+      countryCode,
+      shippingAddress: shippingAddress ? {
+        country: shippingAddress.country,
+        countryCode: shippingAddress.countryCode
+      } : null,
+      destinationCountry
+    });
+
     const quoteData: Partial<TablesInsert<'quotes'>> = {
       email: finalEmail || null, // Allow null email for anonymous quotes
-      destination_country: countryCode,
+      origin_country: countryCode, // Purchase country (where we buy from)
+      destination_country: destinationCountry, // Shipping country (where we deliver to)
       user_id: user?.id ?? null,
       currency: selectedCountryCurrency,
-      final_currency: 'NPR',
+      final_currency: getCountryCurrency(shippingAddress?.countryCode || shippingAddress?.country || countryCode),
       status: 'pending',
       in_cart: false,
     };
