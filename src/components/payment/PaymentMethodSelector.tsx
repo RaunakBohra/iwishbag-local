@@ -165,70 +165,80 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     const totalWithFee = amount + fee;
 
     return (
-      <Label
+      <div
         key={method.code}
-        htmlFor={method.code}
         className={cn(
-          'flex items-start space-x-3 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer',
+          'border rounded-lg transition-colors',
           isSelected && 'border-primary bg-primary/5',
-          disabled && 'opacity-50 cursor-not-allowed',
+          disabled && 'opacity-50',
         )}
       >
-        <RadioGroupItem value={method.code} id={method.code} className="mt-1" disabled={disabled} />
-
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            {getIcon(method.icon)}
-            <span className="font-medium">{method.name}</span>
-
-            {isRecommended && showRecommended && (
-              <Badge variant="outline" className="text-xs">
-                <CheckCircle className="w-3 h-3 mr-1" />
-                Recommended
-              </Badge>
-            )}
-
-            {method.is_mobile_only && (
-              <Badge variant="secondary" className="text-xs">
-                <Smartphone className="w-3 h-3 mr-1" />
-                Mobile Only
-              </Badge>
-            )}
-
-            {method.requires_qr && (
-              <Badge variant="secondary" className="text-xs">
-                <QrCode className="w-3 h-3 mr-1" />
-                QR Code
-              </Badge>
-            )}
-          </div>
-
-          <p className="text-sm text-muted-foreground mb-2">{method.description}</p>
-
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span>{method.processing_time}</span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Shield className="h-3 w-3" />
-              <span>{method.fees}</span>
-            </div>
-          </div>
-
-          {fee > 0 && (
-            <div className="mt-2 text-xs text-muted-foreground">
-              <span>
-                Fee: {fee.toFixed(2)} {currency}
-              </span>
-              <span className="ml-2">
-                Total: {totalWithFee.toFixed(2)} {currency}
-              </span>
-            </div>
+        <Label
+          htmlFor={method.code}
+          className={cn(
+            'flex items-center space-x-3 p-3 cursor-pointer',
+            disabled && 'cursor-not-allowed',
           )}
-        </div>
-      </Label>
+        >
+          <RadioGroupItem value={method.code} id={method.code} disabled={disabled} />
+
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              {getIcon(method.icon)}
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{method.name}</span>
+                {isRecommended && showRecommended && (
+                  <Badge variant="outline" className="text-xs">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Recommended
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span className="font-medium">{method.fees}</span>
+              <span className="text-xs">{method.processing_time}</span>
+            </div>
+          </div>
+        </Label>
+
+        {/* Expandable details section */}
+        {isSelected && (
+          <div className="px-3 pb-3 border-t border-gray-200">
+            <div className="pt-3">
+              <p className="text-sm text-muted-foreground mb-2">{method.description}</p>
+              
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                {method.is_mobile_only && (
+                  <div className="flex items-center gap-1">
+                    <Smartphone className="w-3 h-3" />
+                    <span>Mobile Only</span>
+                  </div>
+                )}
+
+                {method.requires_qr && (
+                  <div className="flex items-center gap-1">
+                    <QrCode className="w-3 h-3" />
+                    <span>QR Code</span>
+                  </div>
+                )}
+              </div>
+
+              {fee > 0 && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  <span>
+                    Fee: {fee.toFixed(2)} {currency}
+                  </span>
+                  <span className="ml-2">
+                    Total: {totalWithFee.toFixed(2)} {currency}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     );
   };
 

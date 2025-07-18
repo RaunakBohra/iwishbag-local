@@ -65,13 +65,13 @@ export const PaymentCurrencyConversion: React.FC<PaymentCurrencyConversionProps>
   const getConfidenceColor = (confidence: string) => {
     switch (confidence) {
       case 'high':
-        return 'text-green-700 bg-green-50 border-green-200';
+        return 'text-amber-800 bg-amber-50 border-amber-200';
       case 'medium':
-        return 'text-yellow-700 bg-yellow-50 border-yellow-200';
+        return 'text-orange-800 bg-orange-50 border-orange-200';
       case 'low':
-        return 'text-red-700 bg-red-50 border-red-200';
+        return 'text-red-800 bg-red-50 border-red-200';
       default:
-        return 'text-blue-700 bg-blue-50 border-blue-200';
+        return 'text-amber-800 bg-amber-50 border-amber-200';
     }
   };
 
@@ -92,39 +92,39 @@ export const PaymentCurrencyConversion: React.FC<PaymentCurrencyConversionProps>
     <Alert className={`${getConfidenceColor(conversion.confidence)} ${className}`}>
       <Info className="h-4 w-4" />
       <AlertDescription>
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div>
-            <span className="font-medium">Currency conversion required:</span>
+            <span className="font-semibold">💱 Currency Conversion Applied</span>
           </div>
-          <div className="text-sm">
-            <div className="flex justify-between">
-              <span>Display amount:</span>
-              <span className="font-mono">
-                {originalSymbol}
-                {conversion.originalAmount.toFixed(2)} {conversion.originalCurrency}
-              </span>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">Your quote total</div>
+              <div className="font-mono font-medium">
+                {originalSymbol}{conversion.originalAmount.toFixed(2)} {conversion.originalCurrency}
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span>Gateway charge:</span>
-              <span className="font-mono font-bold">
-                {convertedSymbol}
-                {conversion.convertedAmount.toFixed(2)} {conversion.convertedCurrency}
-              </span>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">You'll be charged</div>
+              <div className="font-mono font-bold text-lg">
+                {convertedSymbol}{conversion.convertedAmount.toFixed(2)} {conversion.convertedCurrency}
+              </div>
             </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
+          </div>
+          <div className="text-xs text-muted-foreground pt-2 border-t border-current border-opacity-20">
+            <div className="flex justify-between">
               <span>{getConfidenceText(conversion.confidence)}:</span>
               <span>
                 1 {conversion.originalCurrency} = {conversion.exchangeRate.toFixed(4)}{' '}
                 {conversion.convertedCurrency}
               </span>
             </div>
+            {conversion.warning && (
+              <div className="mt-1 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                {conversion.warning}
+              </div>
+            )}
           </div>
-          {conversion.warning && (
-            <div className="text-xs text-muted-foreground mt-2">
-              <AlertTriangle className="h-3 w-3 inline mr-1" />
-              {conversion.warning}
-            </div>
-          )}
         </div>
       </AlertDescription>
     </Alert>

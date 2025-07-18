@@ -1701,32 +1701,32 @@ export default function Checkout() {
       <div className="container py-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Checkout</h1>
-            <p className="text-gray-600 mt-2">Complete your order securely</p>
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">Checkout</h1>
+            <p className="text-gray-600 mt-1 text-sm">Complete your order securely</p>
           </div>
 
           {/* Shipping Route Display */}
           {purchaseCountry && shippingCountry && (
-            <Card className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-              <CardContent className="py-4">
+            <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+              <CardContent className="py-3">
                 <div className="flex items-center justify-center space-x-4">
                   <div className="text-center">
-                    <div className="text-sm font-medium text-blue-800">From</div>
-                    <div className="text-lg font-bold text-blue-900">
+                    <div className="text-xs font-medium text-blue-800">From</div>
+                    <div className="text-base font-bold text-blue-900">
                       🌍{' '}
                       {countries?.find((c) => c.code === purchaseCountry)?.name || purchaseCountry}
                     </div>
                     <div className="text-xs text-blue-600">Purchase Country</div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <div className="w-8 h-0.5 bg-blue-300"></div>
-                    <Truck className="h-5 w-5 text-blue-500" />
-                    <div className="w-8 h-0.5 bg-blue-300"></div>
+                    <div className="w-6 h-0.5 bg-blue-300"></div>
+                    <Truck className="h-4 w-4 text-blue-500" />
+                    <div className="w-6 h-0.5 bg-blue-300"></div>
                   </div>
                   <div className="text-center">
-                    <div className="text-sm font-medium text-blue-800">To</div>
-                    <div className="text-lg font-bold text-blue-900">
+                    <div className="text-xs font-medium text-blue-800">To</div>
+                    <div className="text-base font-bold text-blue-900">
                       🌍{' '}
                       {countries?.find((c) => c.code === shippingCountry)?.name || shippingCountry}
                     </div>
@@ -1737,9 +1737,9 @@ export default function Checkout() {
             </Card>
           )}
 
-          <div className="grid gap-8 lg:grid-cols-3">
+          <div className="grid gap-6 lg:grid-cols-5">
             {/* Main Checkout Form */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-3 space-y-6">
               {/* Guest Checkout Options */}
               {isGuestCheckout && (
                 <Card>
@@ -2485,13 +2485,13 @@ export default function Checkout() {
 
               {/* Payment Method */}
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5" />
                     Payment Method
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <PaymentMethodSelector
                     selectedMethod={paymentMethod}
                     onMethodChange={handlePaymentMethodChange}
@@ -2509,19 +2509,18 @@ export default function Checkout() {
                     amount={totalAmount}
                     currency={paymentCurrency}
                     originCountry={purchaseCountry || 'US'}
-                    className="mt-4"
                   />
                 </CardContent>
               </Card>
 
               {/* Security Notice */}
               <Card className="border-blue-200 bg-blue-50">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-start gap-2">
+                    <Shield className="h-4 w-4 text-blue-600 mt-0.5" />
                     <div>
-                      <h4 className="font-medium text-blue-900">Secure Checkout</h4>
-                      <p className="text-sm text-blue-700 mt-1">
+                      <h4 className="font-medium text-blue-900 text-sm">Secure Checkout</h4>
+                      <p className="text-xs text-blue-700 mt-1">
                         Your payment information is encrypted and secure. We never store your card
                         details.
                       </p>
@@ -2532,58 +2531,54 @@ export default function Checkout() {
             </div>
 
             {/* Order Summary Sidebar */}
-            <div className="space-y-6">
+            <div className="lg:col-span-2 space-y-6">
               <Card className="sticky top-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <ShoppingCart className="h-4 w-4" />
                     Order Summary
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {selectedCartItems.map((item) => (
-                    <div
-                      key={item.quoteId}
-                      className="flex justify-between items-start p-3 border rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <Link
-                          to={`/quote-details/${item.quoteId}`}
-                          className="font-medium hover:underline text-primary"
-                        >
-                          <h4>{item.productName}</h4>
-                        </Link>
-                        <p className="text-sm text-muted-foreground">
-                          {item.quantity} item{item.quantity !== 1 ? 's' : ''}
-                        </p>
-                        <Badge variant="outline">{item.countryCode}</Badge>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold">
-                          <CheckoutItemPrice
-                            item={item}
-                            displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
-                            paymentConversion={paymentConversion}
-                          />
+                <CardContent className="space-y-3">
+                  {/* Items List */}
+                  <div className="space-y-2">
+                    {selectedCartItems.map((item) => (
+                      <div
+                        key={item.quoteId}
+                        className="flex justify-between items-start py-2 border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="flex-1 pr-3">
+                          <Link
+                            to={`/quote-details/${item.quoteId}`}
+                            className="font-medium hover:underline text-primary text-sm leading-tight"
+                          >
+                            {item.productName}
+                          </Link>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-muted-foreground">
+                              Qty: {item.quantity}
+                            </span>
+                            <Badge variant="outline" className="text-xs px-1.5 py-0">
+                              {item.countryCode}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-sm">
+                            <CheckoutItemPrice
+                              item={item}
+                              displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
+                              paymentConversion={paymentConversion}
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
 
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Subtotal:</span>
-                      <span>
-                        <CheckoutTotal
-                          items={selectedCartItems}
-                          displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
-                          paymentConversion={paymentConversion}
-                        />
-                      </span>
-                    </div>
-                    <div className="flex justify-between font-bold text-lg">
+                  {/* Total Section */}
+                  <div className="space-y-2 pt-3 border-t">
+                    <div className="flex justify-between text-lg font-bold">
                       <span>Total:</span>
                       <span>
                         <CheckoutTotal
@@ -2593,6 +2588,20 @@ export default function Checkout() {
                         />
                       </span>
                     </div>
+                    
+                    {/* Currency conversion summary */}
+                    {paymentConversion?.needsConversion && (
+                      <div className="text-xs text-muted-foreground p-2 bg-amber-50 rounded border border-amber-200">
+                        <div className="flex justify-between mb-1">
+                          <span>Quote total:</span>
+                          <span className="font-mono">{paymentConversion.originalAmount.toFixed(2)} {paymentConversion.convertedCurrency}</span>
+                        </div>
+                        <div className="flex justify-between font-medium text-amber-800">
+                          <span>Gateway charge:</span>
+                          <span className="font-mono">{paymentConversion.convertedAmount.toFixed(2)} {paymentConversion.convertedCurrency}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <Button
@@ -2604,7 +2613,7 @@ export default function Checkout() {
                       (isGuestCheckout && checkoutMode !== 'guest' && !user)
                     }
                     className="w-full"
-                    size="lg"
+                    size="default"
                   >
                     {isProcessing ? (
                       <>
