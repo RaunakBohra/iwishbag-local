@@ -797,11 +797,11 @@ export function ShippingRouteManager() {
                         {route.cost_per_kg}/{route.weight_unit || 'kg'}
                         {route.cost_percentage > 0 && ` + ${route.cost_percentage}% of price`}
                         {route.exchange_rate && route.exchange_rate !== 1 && (
-                          <div className="text-xs text-blue-600 mt-1">
+                          <span className="text-xs text-blue-600 block mt-1">
                             Rate: 1 {getCurrencySymbolFromCountry(route.origin_country)} ={' '}
                             {route.exchange_rate}{' '}
                             {getCurrencySymbolFromCountry(route.destination_country)}
-                          </div>
+                          </span>
                         )}
                       </CardDescription>
                     </div>
@@ -870,7 +870,15 @@ export function ShippingRouteManager() {
       ) : activeTab === 'customs' ? (
         <CustomsTiersManager />
       ) : (
-        <ExchangeRateManager />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">Exchange Rate Management</h2>
+              <p className="text-gray-600">Update exchange rates for all shipping routes</p>
+            </div>
+          </div>
+          <ExchangeRateManager />
+        </div>
       )}
     </div>
   );
