@@ -33,9 +33,9 @@ interface AirwallexQuote {
   id: string;
   user_id?: string;
   product_name?: string;
-  final_total?: number;
+  final_total_usd?: number;
   quantity?: number;
-  final_currency?: string;
+  destination_currency?: string;
   email?: string;
   customer_name?: string;
   customer_phone?: string;

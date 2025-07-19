@@ -4408,8 +4408,8 @@ export type Database = {
           customer_id: string
           order_id: string
           order_display_id: string
-          final_total: number
-          final_currency: string
+          final_total_usd: number
+          destination_currency: string
           payment_status: string
           payment_method: string
           customer_email: string

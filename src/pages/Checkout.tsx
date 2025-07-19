@@ -38,6 +38,7 @@ import { CartItem } from '@/stores/cartStore';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { currencyService } from '@/services/CurrencyService';
+import { useLocationDetection } from '@/hooks/useLocationDetection';
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
 import { PaymentCurrencyConversion } from '@/components/payment/PaymentCurrencyConversion';
 import { StripePaymentForm } from '@/components/payment/StripePaymentForm';
@@ -289,6 +290,21 @@ export default function Checkout() {
   const { sendBankTransferEmail } = useEmailNotifications();
   const { findStatusForPaymentMethod } = useStatusManagement();
 
+  // IP-based location detection with smart currency/country selection
+  const {
+    smartCurrency: autoDetectedCurrency,
+    smartCountry: autoDetectedCountry,
+    locationData,
+    isDetecting,
+  } = useLocationDetection({
+    userProfileCurrency: userProfile?.preferred_display_currency,
+    userProfileCountry: userProfile?.country,
+    quoteDestinationCountry: isGuestCheckout 
+      ? selectedCartItems[0]?.destinationCountryCode 
+      : undefined,
+    enabled: true, // Always enabled for smart defaults
+  });
+
   // Fetch available currencies for both guest and logged-in user selection using CurrencyService
   const { data: availableCurrencies } = useQuery({
     queryKey: ['available-currencies-service'],
@@ -383,14 +399,15 @@ export default function Checkout() {
 
   // Get the shipping country from selected items
   // All quotes in checkout should have the same destination country
-  // FIXED: Provide 'US' fallback instead of null to ensure payment methods can load
+  // ENHANCED: Use IP auto-detection as smart fallback
   const shippingCountry =
     selectedCartItems.length > 0
       ? selectedCartItems[0].destinationCountryCode ||
         selectedCartItems[0].countryCode ||
         selectedCartItems[0].purchaseCountryCode ||
-        'US' // FIXED: Add fallback
-      : 'US'; // FIXED: Use 'US' instead of null
+        autoDetectedCountry || // ENHANCED: Use IP-detected country
+        'US'
+      : autoDetectedCountry || 'US'; // ENHANCED: Use IP-detected country as fallback
 
   // Get default currency for guest checkout using CurrencyService
   const { data: defaultGuestCurrency } = useQuery({
@@ -449,6 +466,11 @@ export default function Checkout() {
         // User specific
         userSelectedCurrency: !isGuestCheckout ? userSelectedCurrency : undefined,
         userProfileCurrency: !isGuestCheckout ? userProfile?.preferred_display_currency : undefined,
+        // IP Auto-detection
+        autoDetectedCurrency,
+        autoDetectedCountry,
+        locationData,
+        isDetecting,
         // Common
         paymentCurrency,
         paymentGatewayCurrency,
@@ -466,6 +488,10 @@ export default function Checkout() {
     defaultGuestCurrency,
     userSelectedCurrency,
     userProfile?.preferred_display_currency,
+    autoDetectedCurrency,
+    autoDetectedCountry,
+    locationData,
+    isDetecting,
     paymentCurrency,
     paymentGatewayCurrency,
     availableMethods,
@@ -492,9 +518,10 @@ export default function Checkout() {
   }, [availableMethods, getRecommendedPaymentMethod, paymentMethod]);
 
   // Determine the currency for payment - defined here so it's available throughout the component
+  // Priority: Manual Selection > Profile Preference > IP Auto-detection > Quote Destination > USD
   const paymentCurrency = isGuestCheckout
-    ? guestSelectedCurrency || defaultGuestCurrency || 'USD'
-    : userSelectedCurrency || userProfile?.preferred_display_currency || 'USD';
+    ? guestSelectedCurrency || defaultGuestCurrency || autoDetectedCurrency || 'USD'
+    : userSelectedCurrency || userProfile?.preferred_display_currency || autoDetectedCurrency || 'USD';
 
   // Get purchase country for route display (where we buy from)
   const purchaseCountry =
@@ -2670,7 +2697,7 @@ export default function Checkout() {
                       Payment Method
                     </CardTitle>
                     
-                    {/* Compact Currency Selector for Both Guest and Logged-in Users */}
+                    {/* Smart Currency Selector for Both Guest and Logged-in Users */}
                     {availableCurrencies && (
                       <div className="flex items-center gap-2">
                         <Label 
@@ -2679,31 +2706,52 @@ export default function Checkout() {
                         >
                           {isGuestCheckout ? 'Currency:' : 'Pay in:'}
                         </Label>
-                        <select
-                          id="compact-currency"
-                          className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
-                          value={isGuestCheckout ? guestSelectedCurrency : userSelectedCurrency || userProfile?.preferred_display_currency || 'USD'}
-                          onChange={(e) => {
-                            if (isGuestCheckout) {
-                              setGuestSelectedCurrency(e.target.value);
-                            } else {
-                              setUserSelectedCurrency(e.target.value);
-                            }
-                          }}
-                        >
-                          {/* Show default option for logged-in users */}
-                          {!isGuestCheckout && userProfile?.preferred_display_currency && !userSelectedCurrency && (
-                            <option value={userProfile.preferred_display_currency}>
-                              {availableCurrencies.find(c => c.code === userProfile.preferred_display_currency)?.symbol || ''} {userProfile.preferred_display_currency} (Default)
-                            </option>
+                        <div className="flex items-center gap-1">
+                          <select
+                            id="compact-currency"
+                            className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+                            value={isGuestCheckout ? guestSelectedCurrency || autoDetectedCurrency || 'USD' : userSelectedCurrency || userProfile?.preferred_display_currency || autoDetectedCurrency || 'USD'}
+                            onChange={(e) => {
+                              if (isGuestCheckout) {
+                                setGuestSelectedCurrency(e.target.value);
+                              } else {
+                                setUserSelectedCurrency(e.target.value);
+                              }
+                            }}
+                          >
+                            {availableCurrencies?.map((currency) => {
+                              // Determine if this currency was auto-detected
+                              const isAutoDetected = currency.code === autoDetectedCurrency;
+                              const isUserDefault = !isGuestCheckout && currency.code === userProfile?.preferred_display_currency;
+                              
+                              let label = `${currency.symbol} ${currency.code}`;
+                              
+                              if (isUserDefault && !isGuestCheckout && !userSelectedCurrency) {
+                                label += ' (Your default)';
+                              } else if (isAutoDetected && !isUserDefault && !(isGuestCheckout ? guestSelectedCurrency : userSelectedCurrency)) {
+                                label += ` (Detected from ${locationData?.country || 'your location'})`;
+                              }
+                              
+                              return (
+                                <option key={currency.code} value={currency.code}>
+                                  {label}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          
+                          {/* Show detection status indicator */}
+                          {isDetecting && (
+                            <div className="text-xs text-gray-500" title="Detecting your location...">
+                              🌍
+                            </div>
                           )}
-                          {availableCurrencies?.map((currency) => (
-                            <option key={currency.code} value={currency.code}>
-                              {currency.symbol} {currency.code}
-                              {!isGuestCheckout && currency.code === userProfile?.preferred_display_currency && userSelectedCurrency ? ' (Your default)' : ''}
-                            </option>
-                          ))}
-                        </select>
+                          {locationData && !isDetecting && (
+                            <div className="text-xs text-gray-500" title={`Detected: ${locationData.country}`}>
+                              📍
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

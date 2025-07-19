@@ -46,7 +46,7 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
     isAdminView: true,
   });
 
-  if (!quote.final_total) {
+  if (!quote.final_total_usd) {
     return (
       <Card>
         <CardHeader>
@@ -144,7 +144,7 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
             <p className="font-semibold text-base">Final Total:</p>
             <div className="text-right font-semibold">
               <DualCurrencyDisplay
-                amount={quote.final_total}
+                amount={quote.final_total_usd}
                 originCountry={originCountry}
                 destinationCountry={destinationCountry}
                 exchangeRate={currencyDisplay.exchangeRate}

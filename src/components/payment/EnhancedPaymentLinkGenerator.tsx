@@ -53,7 +53,7 @@ interface QuoteData {
   display_id?: string;
   order_display_id?: string;
   product_name?: string;
-  final_total?: number;
+  final_total_usd?: number;
   amount_paid?: number;
   payment_status?: string;
   shipping_address?: {
@@ -196,8 +196,8 @@ export function EnhancedPaymentLinkGenerator({
 
     const orderId = quote.order_display_id || quote.display_id || quoteId;
     const productName = quote.product_name;
-    const dueAmount = quote.final_total - (quote.amount_paid || 0);
-    const isPartialPayment = dueAmount < quote.final_total && dueAmount > 0;
+    const dueAmount = quote.final_total_usd - (quote.amount_paid || 0);
+    const isPartialPayment = dueAmount < quote.final_total_usd && dueAmount > 0;
 
     if (productName) {
       if (isPartialPayment) {
@@ -254,7 +254,7 @@ export function EnhancedPaymentLinkGenerator({
     }
 
     // If high value order, suggest ID verification
-    if (quote.final_total > 500) {
+    if (quote.final_total_usd > 500) {
       suggestions.push({
         name: 'id_verification',
         type: 'text',
@@ -347,7 +347,7 @@ export function EnhancedPaymentLinkGenerator({
       };
     }
 
-    const totalAmount = quote.final_total || 0;
+    const totalAmount = quote.final_total_usd || 0;
     const paidAmount = quote.amount_paid || 0;
     const dueAmount = totalAmount - paidAmount;
     const isDueAmount = paidAmount > 0 && dueAmount > 0;

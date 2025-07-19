@@ -84,7 +84,7 @@ const OrderConfirmationPage: React.FC = () => {
             `
             id,
             display_id,
-            final_total,
+            final_total_usd,
             destination_currency,
             payment_method,
             email,
@@ -106,7 +106,7 @@ const OrderConfirmationPage: React.FC = () => {
           const formattedOrder = {
             id: data.id,
             displayId: data.display_id,
-            amount: data.final_total,
+            amount: data.final_total_usd,
             currency: data.destination_currency,
             paymentMethod: data.payment_method,
             email: data.email,

@@ -44,8 +44,8 @@ serve(async (req) => {
       status: 'pending',
       currency: expiredQuote.currency,
       items_currency: expiredQuote.items_currency,
-      final_currency:
-        expiredQuote.profiles?.preferred_display_currency || expiredQuote.final_currency,
+      destination_currency:
+        expiredQuote.profiles?.preferred_display_currency || expiredQuote.destination_currency,
       customs_percentage: expiredQuote.customs_percentage,
       internal_notes: `Re-requested from expired quote ${expiredQuote.display_id || expiredQuote.id}`,
       // Reset all calculated fields
@@ -62,7 +62,7 @@ serve(async (req) => {
       insurance_amount: null,
       payment_gateway_fee: null,
       discount: null,
-      final_total: null,
+      final_total_usd: null,
       final_total_local: null,
       exchange_rate: 1,
       in_cart: false,

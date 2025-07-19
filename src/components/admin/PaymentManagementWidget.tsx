@@ -176,7 +176,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
     });
 
     const totalPaid = totalPayments - totalRefunds;
-    const finalTotal = parseFloat(quote.final_total) || 0;
+    const finalTotal = parseFloat(quote.final_total_usd) || 0;
     const remaining = finalTotal - totalPaid;
 
     // Determine payment status with refund states
@@ -210,7 +210,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
       hasMultipleCurrencies,
       currencyBreakdown,
     };
-  }, [paymentLedger, quote.final_total, paymentCurrency]);
+  }, [paymentLedger, quote.final_total_usd, paymentCurrency]);
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {

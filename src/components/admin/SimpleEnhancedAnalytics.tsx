@@ -91,7 +91,7 @@ export const SimpleEnhancedAnalytics = ({ quotes, orders }: SimpleEnhancedAnalyt
       filteredData.some((quote) => quote.id === order.id),
     ).length;
 
-    const totalRevenue = filteredData.reduce((sum, quote) => sum + (quote.final_total || 0), 0);
+    const totalRevenue = filteredData.reduce((sum, quote) => sum + (quote.final_total_usd || 0), 0);
 
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
@@ -131,7 +131,7 @@ export const SimpleEnhancedAnalytics = ({ quotes, orders }: SimpleEnhancedAnalyt
         email: quote.email,
         status: quote.status,
         country: quote.destination_country,
-        total: quote.final_total || 0,
+        total: quote.final_total_usd || 0,
         created_at: quote.created_at,
         product_name: quote.product_name,
         quantity: quote.quantity || 1,

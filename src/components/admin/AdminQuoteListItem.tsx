@@ -89,7 +89,7 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
   //   : quote.product_name || 'No items specified';
 
   const currencyDisplays = formatMultiCurrency({
-    usdAmount: quote.final_total,
+    usdAmount: quote.final_total_usd,
     quoteCurrency: quote.destination_currency,
   });
 
@@ -303,7 +303,7 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
 
               {/* Amount */}
               <div className="flex-shrink-0 text-right">
-                {quote.final_total ? (
+                {quote.final_total_usd ? (
                   <div className="space-y-1">
                     <div className="text-sm font-semibold">
                       <MultiCurrencyDisplay

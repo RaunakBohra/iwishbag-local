@@ -13,9 +13,8 @@ INSERT INTO country_settings (code, name, currency, rate_from_usd, sales_tax, va
 ('US', 'United States', 'USD', 1.0, 0.08, 0, 10, 0, 2, 'lbs', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 500, "urgent": 2000}'),
 ('IN', 'India', 'INR', 83.0, 0, 0.18, 500, 0, 100, 'kg', 5000, 0, 2.5, true, true, 'payu', '{"low": 0, "normal": 41500, "urgent": 166000}'),
 ('NP', 'Nepal', 'NPR', 133.0, 0, 0.13, 1000, 0, 200, 'kg', 5000, 0, 1.5, true, true, 'esewa', '{"low": 0, "normal": 66500, "urgent": 266000}'),
-('JP', 'Japan', 'JPY', 150.0, 0, 0.10, 1500, 0, 200, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 75000, "urgent": 300000}'),
-('GB', 'United Kingdom', 'GBP', 0.79, 0, 0.20, 12, 0, 2, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 395, "urgent": 1580}'),
-('AU', 'Australia', 'AUD', 1.52, 0, 0.10, 15, 0, 2, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 760, "urgent": 3040}');
+('CN', 'China', 'CNY', 21.0, 0, 0.10, 1500, 0, 200, 'kg', 5000, 0, 2.9, true, true, 'stripe', '{"low": 0, "normal": 75000, "urgent": 300000}'),
+
 
 -- Insert comprehensive payment gateways
 INSERT INTO payment_gateways (code, name, description, is_active, supported_countries, supported_currencies, fee_percent, fee_fixed, config, test_mode) VALUES

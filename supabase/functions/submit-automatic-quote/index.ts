@@ -32,7 +32,7 @@ serve(async (req) => {
       'product_weight',
       'country_code',
       'calculated_quote',
-      'final_total',
+      'final_total_usd',
     ];
     for (const field of requiredFields) {
       if (!body[field]) {
@@ -96,7 +96,7 @@ serve(async (req) => {
         analysis_result: body.analysis_result,
         quote_type_info: body.quote_type_info,
         calculated_quote: body.calculated_quote,
-        final_total: body.final_total,
+        final_total_usd: body.final_total_usd,
         review_requested: body.review_requested || false,
         review_reason: body.review_reason,
         status: body.review_requested ? 'review_requested' : 'pending',
@@ -129,7 +129,7 @@ serve(async (req) => {
             data: {
               quote_id: quote.id,
               product_name: body.product_name,
-              final_total: body.final_total,
+              final_total_usd: body.final_total_usd,
               review_reason: body.review_reason,
             },
           },
@@ -149,7 +149,7 @@ serve(async (req) => {
           data: {
             quote_id: quote.id,
             product_name: body.product_name,
-            final_total: body.final_total,
+            final_total_usd: body.final_total_usd,
             expires_at: quote.expires_at,
             review_requested: body.review_requested,
           },

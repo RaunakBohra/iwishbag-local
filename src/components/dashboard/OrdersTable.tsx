@@ -35,7 +35,7 @@ const OrderRow = ({ order, onViewOrder }: { order: Order; onViewOrder: (id: stri
       <TableCell>
         <OrderStatusProgress status={order.status} />
       </TableCell>
-      <TableCell>{order.final_total ? formatAmount(order.final_total) : 'N/A'}</TableCell>
+      <TableCell>{order.final_total_usd ? formatAmount(order.final_total_usd) : 'N/A'}</TableCell>
       <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
       <TableCell>
         <Button

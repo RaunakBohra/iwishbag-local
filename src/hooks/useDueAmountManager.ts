@@ -215,12 +215,12 @@ export function useDueAmountManager({
       try {
         const { data: quote } = await supabase
           .from('quotes')
-          .select('final_total')
+          .select('final_total_usd')
           .eq('id', quoteId)
           .single();
 
         if (quote) {
-          setLastKnownTotal(parseFloat(quote.final_total) || 0);
+          setLastKnownTotal(parseFloat(quote.final_total_usd) || 0);
         }
       } catch (error) {
         console.error('Error fetching initial quote total:', error);

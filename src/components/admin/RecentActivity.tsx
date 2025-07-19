@@ -20,7 +20,7 @@ export const RecentActivity = () => {
           `
           id,
           email,
-          final_total,
+          final_total_usd,
           final_total_local,
           status,
           created_at,
@@ -91,7 +91,7 @@ export const RecentActivity = () => {
         <div className="space-y-4">
           {recentQuotes?.map((quote) => {
             // Use final_total_local for display (user's preferred currency)
-            const displayAmount = quote.final_total_local || quote.final_total || 0;
+            const displayAmount = quote.final_total_local || quote.final_total_usd || 0;
             const isOrder = orderStatuses.includes(quote.status || '');
 
             return (

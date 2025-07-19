@@ -379,7 +379,7 @@ serve(async (req) => {
     console.log('Creating PayPal invoice with request:', {
       invoice_number: invoiceNumber,
       quote_id: quote_id,
-      amount: quote.final_total,
+      amount: quote.final_total_usd,
       items_count: invoiceItems.length,
     });
     // Create invoice with PayPal
@@ -424,7 +424,7 @@ serve(async (req) => {
         description: `Professional invoice for approved quote ${quote.display_id}`,
         note: note,
         terms_and_conditions: terms_and_conditions,
-        amount: quote.final_total,
+        amount: quote.final_total_usd,
         currency: 'USD',
         payment_due_date: dueDate.toISOString().split('T')[0],
         allow_partial_payment: allow_partial_payment,
@@ -485,7 +485,7 @@ serve(async (req) => {
       invoice_id: invoice.id,
       paypal_invoice_id: invoiceData.id,
       invoice_number: invoiceNumber,
-      amount: quote.final_total,
+      amount: quote.final_total_usd,
     });
     // Return the invoice details
     return new Response(
@@ -496,7 +496,7 @@ serve(async (req) => {
           paypal_invoice_id: invoiceData.id,
           invoice_number: invoiceNumber,
           quote_id: quote_id,
-          amount: quote.final_total,
+          amount: quote.final_total_usd,
           currency: 'USD',
           status: 'draft',
           payment_due_date: dueDate.toISOString().split('T')[0],

@@ -137,7 +137,7 @@ export const EnhancedAdminAnalytics = ({ quotes, orders }: EnhancedAdminAnalytic
       filteredData.quotes
         .map(
           (quote) =>
-            `${quote.display_id},${quote.email},${quote.status},${quote.destination_country},${quote.final_total || 0},${quote.created_at}`,
+            `${quote.display_id},${quote.email},${quote.status},${quote.destination_country},${quote.final_total_usd || 0},${quote.created_at}`,
         )
         .join('\n');
 

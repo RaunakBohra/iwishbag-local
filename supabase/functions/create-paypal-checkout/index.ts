@@ -228,7 +228,7 @@ serve(async (req) => {
       console.log('🔍 Fetching quote details for:', quoteIds);
       const { data: quotes, error: quotesError } = await supabaseAdmin
         .from('quotes')
-        .select('id, product_name, email, customer_name, shipping_address, final_total')
+        .select('id, product_name, email, customer_name, shipping_address, final_total_usd')
         .in('id', quoteIds);
 
       if (quotesError || !quotes || quotes.length === 0) {

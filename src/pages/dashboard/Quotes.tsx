@@ -117,7 +117,7 @@ const QuoteCard = ({
 
         {/* Price */}
         <div className="mb-4">
-          <div className="text-lg font-bold text-green-600">{formatAmount(quote.final_total)}</div>
+          <div className="text-lg font-bold text-green-600">{formatAmount(quote.final_total_usd)}</div>
         </div>
 
         {/* Info Grid */}
@@ -229,7 +229,7 @@ const QuoteCard = ({
           <div className="flex items-center gap-3 ml-4">
             <div className="text-right">
               <div className="text-lg font-bold text-green-600">
-                {formatAmount(quote.final_total)}
+                {formatAmount(quote.final_total_usd)}
               </div>
             </div>
             <StatusBadge status={quote.status} category="quote" />

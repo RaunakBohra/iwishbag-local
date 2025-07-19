@@ -52,7 +52,7 @@ export const QuoteBulkActions = ({
   }
 
   // Calculate summary statistics
-  const totalValue = selectedQuotes.reduce((sum, quote) => sum + (quote.final_total || 0), 0);
+  const totalValue = selectedQuotes.reduce((sum, quote) => sum + (quote.final_total_usd || 0), 0);
   const statusBreakdown = selectedQuotes.reduce(
     (acc, quote) => {
       acc[quote.status] = (acc[quote.status] || 0) + 1;

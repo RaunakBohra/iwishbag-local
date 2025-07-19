@@ -41,7 +41,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCountryUtils } from '@/lib/countryUtils';
 import { currencyService } from '@/services/CurrencyService';
 
-const steps = ['Product Info', 'Shipping & Contact', 'Review & Submit'];
+const steps = ['Product Info', 'Contact & Submit'];
 
 export default function QuoteRequestPage() {
   const { user } = useAuth();
@@ -70,6 +70,9 @@ export default function QuoteRequestPage() {
     zip: '',
   });
   const [quoteSubmitted, setQuoteSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [destinationCountry, setDestinationCountry] = useState('');
 
   const nextStep = () => setCurrentStep(currentStep + 1);
   const prevStep = () => setCurrentStep(currentStep - 1);
@@ -83,6 +86,8 @@ export default function QuoteRequestPage() {
             setQuoteType={setQuoteType}
             products={products}
             setProducts={setProducts}
+            destinationCountry={destinationCountry}
+            setDestinationCountry={setDestinationCountry}
             next={nextStep}
           />
         );
@@ -95,6 +100,9 @@ export default function QuoteRequestPage() {
             back={prevStep}
             products={products}
             quoteType={quoteType}
+            isSubmitting={isSubmitting}
+            submitError={submitError}
+            clearError={() => setSubmitError('')}
           />
         );
       default:
@@ -103,11 +111,15 @@ export default function QuoteRequestPage() {
   };
 
   const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setSubmitError('');
+    
     try {
       // Determine email to use
       const emailToUse = user?.email || shippingContact.email;
       if (!emailToUse || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailToUse)) {
-        alert('A valid email is required to submit a quote.');
+        setSubmitError('A valid email is required to submit a quote.');
+        setIsSubmitting(false);
         return;
       }
 
@@ -118,8 +130,8 @@ export default function QuoteRequestPage() {
         city: shippingContact.city,
         state: shippingContact.state,
         postalCode: shippingContact.zip,
-        country: shippingContact.country, // Store country code for logic and DB
-        destination_country: shippingContact.country, // Add destination_country for calculation compatibility
+        country: destinationCountry, // Store country code for logic and DB
+        destination_country: destinationCountry, // Add destination_country for calculation compatibility
         phone: shippingContact.whatsapp || '',
         email: emailToUse,
       };
@@ -141,12 +153,12 @@ export default function QuoteRequestPage() {
           .from('quotes')
           .insert({
             email: emailToUse,
-            destination_country: shippingContact.country || '',
+            destination_country: destinationCountry || '',
             origin_country: products[0]?.country || '',
             status: 'pending',
             currency: 'USD',
             destination_currency: 'USD',
-            user_id: user ? user.id : undefined,
+            user_id: user ? user.id : null,
             shipping_address: shippingAddressData,
           })
           .select('id')
@@ -154,6 +166,8 @@ export default function QuoteRequestPage() {
 
         if (quoteError || !quote) {
           console.error('Error inserting quote:', quoteError);
+          setSubmitError('Failed to create quote. Please try again or contact support if the problem persists.');
+          setIsSubmitting(false);
           return;
         }
 
@@ -172,6 +186,8 @@ export default function QuoteRequestPage() {
 
         if (itemsError) {
           console.error('Error inserting quote items:', itemsError);
+          setSubmitError('Failed to save product details. Please try again.');
+          setIsSubmitting(false);
           return;
         }
       } else {
@@ -192,12 +208,12 @@ export default function QuoteRequestPage() {
             .from('quotes')
             .insert({
               email: emailToUse,
-              destination_country: shippingContact.country || '',
+              destination_country: destinationCountry || '',
               origin_country: product.country || '',
               status: 'pending',
               currency: 'USD',
               destination_currency: 'USD',
-              user_id: user ? user.id : undefined,
+              user_id: user ? user.id : null,
               shipping_address: shippingAddressData,
             })
             .select('id')
@@ -205,6 +221,7 @@ export default function QuoteRequestPage() {
 
           if (quoteError || !quote) {
             console.error('Error inserting quote:', quoteError);
+            setSubmitError(`Failed to create quote for ${product.name || 'one of your products'}. Some quotes may have been created successfully.`);
             continue;
           }
 
@@ -239,14 +256,14 @@ export default function QuoteRequestPage() {
           .single();
 
         if (existingProfile && (!existingProfile.country || !existingProfile.preferred_display_currency)) {
-          // Get destination country from shipping address
-          const destinationCountry = shippingContact.country;
+          // Use the destination country from state
+          const destCountry = destinationCountry;
           
           // Get currency for destination country using CurrencyService
           let destinationCurrency = 'USD';
-          if (destinationCountry) {
+          if (destCountry) {
             try {
-              destinationCurrency = await currencyService.getCurrencyForCountry(destinationCountry);
+              destinationCurrency = await currencyService.getCurrencyForCountry(destCountry);
             } catch (error) {
               console.error('Error getting currency for country:', error);
               // Fall back to USD if there's an error
@@ -256,7 +273,7 @@ export default function QuoteRequestPage() {
 
           const updateData = {};
           if (!existingProfile.country) {
-            updateData.country = destinationCountry;
+            updateData.country = destCountry;
           }
           if (!existingProfile.preferred_display_currency) {
             updateData.preferred_display_currency = destinationCurrency;
@@ -276,8 +293,11 @@ export default function QuoteRequestPage() {
       }
 
       setQuoteSubmitted(true);
+      setIsSubmitting(false);
     } catch (error) {
       console.error('Error submitting quote:', error);
+      setSubmitError('Something went wrong while submitting your quote. Please check your internet connection and try again.');
+      setIsSubmitting(false);
     }
   };
 
@@ -327,66 +347,84 @@ export default function QuoteRequestPage() {
               </div>
             </div>
 
-            {/* Navigation Buttons */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:gap-4 justify-center pt-4 sm:pt-6">
-              <button
-                onClick={() => {
-                  setQuoteSubmitted(false);
-                  setCurrentStep(1);
-                  setProducts([
-                    {
-                      name: '',
-                      url: '',
-                      file: null,
-                      quantity: 1,
-                      price: '',
-                      weight: '',
-                      country: '',
-                    },
-                  ]);
-                  setShippingContact({
-                    name: '',
-                    email: '',
-                    whatsapp: '',
-                    address: '',
-                    country: '',
-                    state: '',
-                    city: '',
-                    zip: '',
-                  });
-                }}
-                className="w-full sm:w-auto px-6 py-3 rounded-lg border border-teal-600 text-teal-600 bg-white hover:bg-teal-50 font-medium shadow-sm transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
-              >
-                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
-                Request Another Quote
-              </button>
-              <button
-                onClick={() => (window.location.href = '/dashboard')}
-                className="w-full sm:w-auto px-6 py-3 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600 font-medium shadow-sm  transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
-              >
-                <Package className="h-4 w-4 sm:h-5 sm:w-5" />
-                Go to Dashboard
-              </button>
-              <button
-                onClick={() => (window.location.href = '/')}
-                className="w-full sm:w-auto px-6 py-3 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium shadow-sm transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
-              >
-                <svg
-                  className="h-4 w-4 sm:h-5 sm:w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            {/* What's Next - Focus on User's Immediate Needs */}
+            <div className="text-center space-y-6">
+              {/* Primary Action: What Most Users Want */}
+              {user ? (
+                <button
+                  onClick={() => (window.location.href = '/dashboard')}
+                  className="px-8 py-4 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600 font-medium shadow-lg transition text-lg flex items-center justify-center gap-3 mx-auto"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                  />
-                </svg>
-                Go to Home
-              </button>
+                  <Package className="h-5 w-5" />
+                  Track Your Quotes
+                </button>
+              ) : (
+                <button
+                  onClick={() => (window.location.href = '/auth?mode=signup')}
+                  className="px-8 py-4 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600 font-medium shadow-lg transition text-lg flex items-center justify-center gap-3 mx-auto"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Create Account to Track Progress
+                </button>
+              )}
+              
+              {/* What Users Might Do Later */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p className="text-gray-700 text-sm font-medium mb-2">What happens next?</p>
+                <div className="text-xs text-gray-600 space-y-1">
+                  <p>✓ You'll receive a confirmation email shortly</p>
+                  <p>✓ Our team will review your products within 24-48 hours</p>
+                  <p>✓ You'll get detailed quotes via email</p>
+                  {!user && <p>✓ Create an account anytime to track progress</p>}
+                </div>
+              </div>
+              
+              {/* Secondary Options - Small and Unobtrusive */}
+              <div className="flex items-center justify-center gap-6 text-sm">
+                <button
+                  onClick={() => {
+                    setQuoteSubmitted(false);
+                    setCurrentStep(1);
+                    setProducts([
+                      {
+                        name: '',
+                        url: '',
+                        file: null,
+                        quantity: 1,
+                        price: '',
+                        weight: '',
+                        country: '',
+                      },
+                    ]);
+                    setShippingContact({
+                      name: '',
+                      email: '',
+                      whatsapp: '',
+                      address: '',
+                      country: '',
+                      state: '',
+                      city: '',
+                      zip: '',
+                    });
+                    setDestinationCountry('');
+                  }}
+                  className="text-teal-600 hover:text-teal-800 font-medium flex items-center gap-1"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Need another quote?
+                </button>
+                <span className="text-gray-300">•</span>
+                <button
+                  onClick={() => (window.location.href = '/')}
+                  className="text-gray-500 hover:text-gray-700 font-medium"
+                >
+                  Back to Home
+                </button>
+              </div>
             </div>
+
           </div>
         ) : (
           <>
@@ -417,7 +455,7 @@ export default function QuoteRequestPage() {
                     2
                   </div>
                   <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:inline">
-                    Shipping & Review
+                    Contact & Submit
                   </span>
                 </div>
               </div>
@@ -431,7 +469,7 @@ export default function QuoteRequestPage() {
                 <span
                   className={`text-xs font-medium ${currentStep >= 2 ? 'text-teal-600' : 'text-gray-400'}`}
                 >
-                  Shipping & Review
+                  Contact & Submit
                 </span>
               </div>
             </div>

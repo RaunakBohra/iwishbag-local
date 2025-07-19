@@ -49,7 +49,7 @@ interface Payment {
 // Quote summary for refund modal
 interface RefundQuote {
   id: string;
-  final_total: number;
+  final_total_usd?: number;
   amount_paid: number;
   currency: string;
   payment_method: string;
@@ -129,7 +129,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
 
     // Check if payment amount equals quote amount but currencies differ
     if (
-      Math.abs(payment.amount - quote.final_total) < tolerance &&
+      Math.abs(payment.amount - quote.final_total_usd) < tolerance &&
       paymentCurrency !== quote.currency
     ) {
       return true;
@@ -491,7 +491,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
           payment_status:
             quote.amount_paid - amount <= 0
               ? 'unpaid'
-              : quote.amount_paid - amount < quote.final_total
+              : quote.amount_paid - amount < quote.final_total_usd
                 ? 'partial'
                 : 'paid',
         })

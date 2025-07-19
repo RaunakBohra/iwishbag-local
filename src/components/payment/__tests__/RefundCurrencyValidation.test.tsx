@@ -80,8 +80,8 @@ interface MockPayment {
 // Test data
 const mockQuote: Partial<Tables<'quotes'>> = {
   id: 'test-quote-id',
-  final_total: 1000,
-  final_currency: 'USD',
+  final_total_usd: 1000,
+  destination_currency: 'USD',
   payment_status: 'paid',
   payment_method: 'payu',
   user_id: 'customer-user-id',

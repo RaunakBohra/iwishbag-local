@@ -47,7 +47,7 @@ export const OrderReceipt = ({ order }: OrderReceiptProps) => {
         <Separator />
         <div className="flex justify-between items-center text-lg font-bold">
           <p>Total</p>
-          <p>{formatAmount(order.final_total)}</p>
+          <p>{formatAmount(order.final_total_usd)}</p>
         </div>
       </CardContent>
     </Card>

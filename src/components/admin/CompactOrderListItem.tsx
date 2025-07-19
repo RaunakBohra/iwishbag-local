@@ -140,7 +140,7 @@ export const CompactOrderListItem = ({ order, isSelected, onSelect, onConfirmPay
   const paymentMethodInfo = getPaymentMethodInfo(order.payment_method);
   const PaymentIcon = paymentMethodInfo.icon;
   
-  const finalTotal = order.final_total || 0;
+  const finalTotal = order.final_total_usd || 0;
   const amountPaid = order.amount_paid || 0;
   const currency = order.destination_currency || 'USD';
   const paymentProgress = finalTotal > 0 ? (amountPaid / finalTotal) * 100 : 0;

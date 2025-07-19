@@ -24,8 +24,8 @@ serve(async (req) => {
         id,
         email,
         user_id,
-        final_total,
-        final_currency,
+        final_total_usd,
+        destination_currency,
         product_name,
         display_id,
         profiles:user_id(preferred_display_currency)
@@ -108,8 +108,8 @@ async function sendExpirationEmail(supabase, quote) {
         data: {
           quoteId: quote.display_id || quote.id,
           productName: quote.product_name || 'your items',
-          totalAmount: quote.final_total,
-          currency: quote.final_currency,
+          totalAmount: quote.final_total_usd,
+          currency: quote.destination_currency,
           userPreferredCurrency: quote.profiles?.preferred_display_currency,
         },
       },

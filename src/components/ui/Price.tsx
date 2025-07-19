@@ -354,7 +354,7 @@ export const AdminPrice: React.FC<AdminPriceProps> = ({
 
 // Utility components for common use cases
 interface QuotePriceData {
-  final_total?: number;
+  final_total_usd?: number;
   origin_country?: string;
   purchase_country?: string;
   destination_country?: string;
@@ -380,7 +380,7 @@ export const QuotePrice: React.FC<{
 
   return (
     <Price
-      amount={quote.final_total}
+      amount={quote.final_total_usd}
       originCountry={originCountry}
       destinationCountry={destinationCountry}
       exchangeRate={quote.exchange_rate}
@@ -391,7 +391,7 @@ export const QuotePrice: React.FC<{
 
 interface CartItemData {
   finalTotal?: number;
-  final_total?: number;
+  final_total_usd?: number;
   purchaseCountryCode?: string;
   origin_country?: string;
   country?: string;
@@ -404,7 +404,7 @@ export const CartItemPrice: React.FC<{
   quantity?: number;
   className?: string;
 }> = ({ item, quantity = 1, className }) => {
-  const amount = item.finalTotal ? item.finalTotal * quantity : item.final_total * quantity;
+  const amount = item.finalTotal ? item.finalTotal * quantity : item.final_total_usd * quantity;
 
   return (
     <Price
@@ -417,7 +417,7 @@ export const CartItemPrice: React.FC<{
 };
 
 interface OrderPriceData {
-  final_total?: number;
+  final_total_usd?: number;
   origin_country?: string;
   purchase_country?: string;
   destination_country?: string;
@@ -432,7 +432,7 @@ export const OrderPrice: React.FC<{
 
   return (
     <Price
-      amount={order.final_total}
+      amount={order.final_total_usd}
       originCountry={order.origin_country || order.purchase_country || 'US'}
       destinationCountry={order.destination_country || 'US'}
       exchangeRate={order.exchange_rate}

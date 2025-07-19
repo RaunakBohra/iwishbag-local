@@ -115,7 +115,7 @@ export const useOrderMutations = (id: string | undefined) => {
 
       const { data: existingQuote, error: fetchError } = await supabase
         .from('quotes')
-        .select('status, order_display_id, payment_method, final_total, amount_paid')
+        .select('status, order_display_id, payment_method, final_total_usd, amount_paid')
         .eq('id', id)
         .single();
 
@@ -142,7 +142,7 @@ export const useOrderMutations = (id: string | undefined) => {
       // Calculate new total paid
       const currentPaid = existingQuote?.amount_paid || 0;
       const newTotalPaid = currentPaid + amount;
-      const expectedAmount = existingQuote?.final_total || 0;
+      const expectedAmount = existingQuote?.final_total_usd || 0;
 
       // DYNAMIC: Determine payment status using configuration
       let paymentStatus: string;

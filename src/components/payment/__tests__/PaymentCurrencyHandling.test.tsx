@@ -12,7 +12,7 @@ import type { Tables } from '@/integrations/supabase/types';
 // Refund Quote interface for RefundManagementModal
 interface RefundQuote {
   id: string;
-  final_total: number;
+  final_total_usd: number;
   amount_paid: number;
   currency: string;
   payment_method: string;
@@ -73,8 +73,8 @@ const renderWithQueryClient = (component: React.ReactElement) => {
 // Mock quote with multi-currency payments
 const mockQuoteWithMultiCurrency: Partial<Tables<'quotes'>> = {
   id: 'test-quote-id',
-  final_total: 1000,
-  final_currency: 'USD',
+  final_total_usd: 1000,
+  destination_currency: 'USD',
   payment_status: 'partial',
   payment_method: 'payu',
   user_id: 'test-user-id',
@@ -90,7 +90,7 @@ const mockQuoteWithMultiCurrency: Partial<Tables<'quotes'>> = {
 // Mock refund quote for RefundManagementModal
 const mockRefundQuote: RefundQuote = {
   id: 'test-quote-id',
-  final_total: 1000,
+  final_total_usd: 1000,
   amount_paid: 800,
   currency: 'USD',
   payment_method: 'payu',
@@ -240,7 +240,7 @@ describe('Payment Currency Handling', () => {
     test('should show currency mismatch warnings', async () => {
       const quoteWithMismatch: Partial<Tables<'quotes'>> = {
         ...mockQuoteWithMultiCurrency,
-        final_currency: 'USD',
+        destination_currency: 'USD',
         payment_status: 'paid',
       };
 

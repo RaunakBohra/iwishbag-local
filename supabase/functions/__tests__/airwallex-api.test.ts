@@ -161,16 +161,16 @@ describe('airwallex-api', () => {
         {
           id: 'quote_123',
           product_name: 'Product 1',
-          final_total: 50.25,
+          final_total_usd: 50.25,
           quantity: 2,
-          final_currency: 'USD',
+          destination_currency: 'USD',
         },
         {
           id: 'quote_456',
           product_name: 'Product 2',
-          final_total: 50.25,
+          final_total_usd: 50.25,
           quantity: 1,
-          final_currency: 'USD',
+          destination_currency: 'USD',
         },
       ],
       supabaseAdmin: {} as SupabaseClient, // Will be replaced with mockSupabaseClient

@@ -131,7 +131,7 @@ export const OrderMetrics = ({ orders, isLoading }: OrderMetricsProps) => {
 
   // Calculate metrics
   const totalOrders = orders.length;
-  const totalRevenue = orders.reduce((sum, order) => sum + (order.final_total || 0), 0);
+  const totalRevenue = orders.reduce((sum, order) => sum + (order.final_total_usd || 0), 0);
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   
   // Status counts
@@ -147,7 +147,7 @@ export const OrderMetrics = ({ orders, isLoading }: OrderMetricsProps) => {
   
   // Outstanding amount
   const outstandingAmount = orders.reduce((sum, order) => {
-    const remaining = (order.final_total || 0) - (order.amount_paid || 0);
+    const remaining = (order.final_total_usd || 0) - (order.amount_paid || 0);
     return sum + Math.max(remaining, 0);
   }, 0);
   

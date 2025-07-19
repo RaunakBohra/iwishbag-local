@@ -393,7 +393,7 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(
                               // Use customer's preferred currency for display
                               return (
                                 <span className="text-foreground">
-                                  {currencyDisplay.formatAmount(quote.final_total || 0)}
+                                  {currencyDisplay.formatAmount(quote.final_total_usd || 0)}
                                 </span>
                               );
                             })()}
@@ -425,7 +425,7 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(
                 return (
                   <div className="text-right">
                     <div className="text-base sm:text-lg font-semibold text-foreground">
-                      {currencyDisplay.formatAmount(quote.final_total || 0)}
+                      {currencyDisplay.formatAmount(quote.final_total_usd || 0)}
                     </div>
                   </div>
                 );

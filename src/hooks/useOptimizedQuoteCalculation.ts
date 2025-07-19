@@ -80,7 +80,7 @@ export function useOptimizedQuoteCalculation(
 
         console.log('[OptimizedQuoteCalculation] Calculation result:', {
           success: calculationResult.success,
-          finalTotal: calculationResult.breakdown?.final_total,
+          finalTotal: calculationResult.breakdown?.final_total_usd,
           cacheHit: calculationResult.performance?.cache_hits || 0,
           calculationTime: calculationResult.performance?.calculation_time_ms,
         });

@@ -43,10 +43,10 @@ export const useQuoteState = (quoteId: string) => {
 
     // FIXED: Use proper fallback chain for total price
     let totalPrice = 0;
-    if (quote.final_total && quote.final_total > 0) {
-      totalPrice = quote.final_total;
-    } else if (quote.final_total_local && quote.final_total_local > 0) {
-      totalPrice = quote.final_total_local;
+    if (quote.final_total_usd && quote.final_total_usd > 0) {
+      totalPrice = quote.final_total_usd;
+    } else if (quote.final_total_usd_local && quote.final_total_usd_local > 0) {
+      totalPrice = quote.final_total_usd_local;
     } else if (totalFromItems > 0) {
       totalPrice = totalFromItems;
     } else {

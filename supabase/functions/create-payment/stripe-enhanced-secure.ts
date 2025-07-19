@@ -85,9 +85,9 @@ interface QuoteData {
   id: string;
   user_id?: string;
   product_name?: string;
-  final_total?: number;
+  final_total_usd?: number;
   quantity?: number;
-  final_currency?: string;
+  destination_currency?: string;
 }
 
 // Temporary interfaces until proper Stripe types are imported

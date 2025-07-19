@@ -231,7 +231,7 @@ describe('QuoteCalculatorService Currency Handling', () => {
       expect(result.success).toBe(true);
       expect(result.breakdown?.exchange_rate).toBe(83);
       expect(result.breakdown?.currency).toBe('INR');
-      expect(result.breakdown?.final_total).toBeGreaterThan(0);
+      expect(result.breakdown?.final_total_usd).toBeGreaterThan(0);
     });
 
     test('should handle no exchange rate gracefully (default to 1)', async () => {
@@ -499,7 +499,7 @@ describe('QuoteCalculatorService Currency Handling', () => {
       expect(result.breakdown?.currency).toBe('INR');
       expect(result.breakdown?.exchange_rate).toBe(83);
       expect(result.breakdown?.total_item_price).toBe(100);
-      expect(result.breakdown?.final_total).toBeGreaterThan(0);
+      expect(result.breakdown?.final_total_usd).toBeGreaterThan(0);
     });
 
     test('should maintain precision in currency conversions', async () => {
@@ -531,7 +531,7 @@ describe('QuoteCalculatorService Currency Handling', () => {
       // Service stores amounts in USD, not converted currency
       // Final total should be 99.99 USD (no conversion in storage)
       expect(result.success).toBe(true);
-      expect(result.breakdown?.final_total).toBeCloseTo(99.99, 2);
+      expect(result.breakdown?.final_total_usd).toBeCloseTo(99.99, 2);
       expect(result.breakdown?.currency).toBe('INR'); // Currency metadata for display
       expect(result.breakdown?.exchange_rate).toBe(83); // Rate for frontend conversion
     });
@@ -569,7 +569,7 @@ describe('QuoteCalculatorService Currency Handling', () => {
       expect(result.success).toBe(true);
       expect(result.breakdown?.currency).toBe('INVALID');
       expect(result.breakdown?.exchange_rate).toBe(1);
-      expect(result.breakdown?.final_total).toBe(100);
+      expect(result.breakdown?.final_total_usd).toBe(100);
     });
 
     test('should handle zero amounts correctly', async () => {
@@ -605,7 +605,7 @@ describe('QuoteCalculatorService Currency Handling', () => {
       expect(result.success).toBe(true);
       expect(result.breakdown?.total_item_price).toBe(0.01);
       expect(result.breakdown?.customs_and_ecs).toBe(0);
-      expect(result.breakdown?.final_total).toBeGreaterThan(0); // Should include gateway fees
+      expect(result.breakdown?.final_total_usd).toBeGreaterThan(0); // Should include gateway fees
     });
 
     test('should handle negative discounts correctly', async () => {
@@ -636,7 +636,7 @@ describe('QuoteCalculatorService Currency Handling', () => {
 
       // Final total should be 100 - (-10) = 110
       expect(result.success).toBe(true);
-      expect(result.breakdown?.final_total).toBe(110);
+      expect(result.breakdown?.final_total_usd).toBe(110);
     });
   });
 
@@ -674,7 +674,7 @@ describe('QuoteCalculatorService Currency Handling', () => {
       expect(result2.success).toBe(true);
 
       // The caching happens inside the service, we can verify the results are the same
-      expect(result2.breakdown?.final_total).toBe(result1.breakdown?.final_total);
+      expect(result2.breakdown?.final_total_usd).toBe(result1.breakdown?.final_total_usd);
     });
   });
 
@@ -728,7 +728,7 @@ describe('QuoteCalculatorService Currency Handling', () => {
       // Test data has payment_gateway_fee: 12.80, which gets treated as 12.80%
       const gatewayFee = (subtotalBeforeFees * 12.8) / 100;
       const expectedTotal = subtotalBeforeFees + gatewayFee;
-      expect(result.breakdown?.final_total).toBeCloseTo(expectedTotal, 2);
+      expect(result.breakdown?.final_total_usd).toBeCloseTo(expectedTotal, 2);
 
       expect(result.breakdown?.currency).toBe('INR');
       expect(result.breakdown?.exchange_rate).toBe(83);
@@ -770,7 +770,7 @@ describe('QuoteCalculatorService Currency Handling', () => {
       // Test data has payment_gateway_fee: 4.20, which gets treated as 4.20%
       const gatewayFee = (subtotalBeforeFees * 4.2) / 100;
       const expectedTotal = subtotalBeforeFees + gatewayFee;
-      expect(result.breakdown?.final_total).toBeCloseTo(expectedTotal, 2);
+      expect(result.breakdown?.final_total_usd).toBeCloseTo(expectedTotal, 2);
     });
   });
 });

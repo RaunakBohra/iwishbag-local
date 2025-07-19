@@ -143,7 +143,7 @@ export const QuoteManagementPage = () => {
     rejected: rejectedQuotes,
   };
   
-  const totalValue = quotes?.reduce((sum, q) => sum + (q.final_total || 0), 0) || 0;
+  const totalValue = quotes?.reduce((sum, q) => sum + (q.final_total_usd || 0), 0) || 0;
   const _averageValue = totalQuotes > 0 ? totalValue / totalQuotes : 0;
 
   // Get selected quotes for bulk actions

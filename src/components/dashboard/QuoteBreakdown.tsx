@@ -142,15 +142,15 @@ export function QuoteBreakdown({
     queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
   }, [quote.id, queryClient]);
 
-  const hasCalculation = quote.final_total !== null;
+  const hasCalculation = quote.final_total_usd !== null;
   const showBreakdown = hasCalculation; // Always show breakdown if there's a calculation
 
   // Use the same currency conversion logic for both breakdown and summary
   const quoteTotal = useMemo(() => {
-    if (!quote.final_total) return 0;
+    if (!quote.final_total_usd) return 0;
     // Ensure we're using the exact same value as shown in the breakdown
-    return quote.final_total;
-  }, [quote.final_total]);
+    return quote.final_total_usd;
+  }, [quote.final_total_usd]);
 
   const handleApproveClick = () => {
     setApprovalDialogOpen(true);

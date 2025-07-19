@@ -29,7 +29,7 @@ async function checkOrder(displayId: string) {
   console.log(`   Status: ${quote.status}`);
   console.log(`   Payment Status: ${quote.payment_status || 'null'}`);
   console.log(`   Payment Method: ${quote.payment_method || 'null'}`);
-  console.log(`   Amount: ${quote.final_total} ${quote.currency}`);
+  console.log(`   Amount: ${quote.final_total_usd} ${quote.currency}`);
   console.log(`   Created: ${new Date(quote.created_at).toLocaleString()}`);
   console.log(`   Updated: ${new Date(quote.updated_at).toLocaleString()}`);
   if (quote.paid_at) {

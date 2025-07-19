@@ -12,8 +12,8 @@ interface PaymentTransaction {
     id: string;
     user_id: string;
     status: string;
-    final_total: number;
-    final_currency: string;
+    final_total_usd: number;
+    destination_currency: string;
     product_name: string;
   };
   [key: string]: unknown;
@@ -50,8 +50,8 @@ serve(async (req) => {
           id,
           user_id,
           status,
-          final_total,
-          final_currency,
+          final_total_usd,
+          destination_currency,
           product_name
         )
       `,
@@ -130,8 +130,8 @@ async function sendPaymentReminder(
       template: 'payment_reminder',
       variables: {
         customer_name: user.first_name || 'Customer',
-        order_amount: payment.quotes.final_total,
-        order_currency: payment.quotes.final_currency || user.preferred_display_currency || 'USD',
+        order_amount: payment.quotes.final_total_usd,
+        order_currency: payment.quotes.destination_currency || user.preferred_display_currency || 'USD',
         product_name: payment.quotes.product_name || 'Your order',
         payment_link: `${Deno.env.get('SITE_URL') || 'https://your-site.com'}/checkout?quotes=${payment.quotes.id}`,
         transaction_id: payment.id,

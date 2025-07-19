@@ -28,7 +28,7 @@ serve(async (req) => {
     );
     // Create quote in database
     const quote = await createAutoQuote(quoteCalculation, userId, purchaseCountry, supabase);
-    console.log(`✅ Auto quote calculated: $${quote.final_total}`);
+    console.log(`✅ Auto quote calculated: $${quote.final_total_usd}`);
     return new Response(JSON.stringify(quote), {
       headers: {
         ...createCorsHeaders(req),
@@ -403,7 +403,7 @@ async function calculateFinalQuote(
   return {
     item_price: itemPriceUSD,
     item_weight: weightResult.weight,
-    final_total: unifiedResult.totalCost,
+    final_total_usd: unifiedResult.totalCost,
     sub_total:
       unifiedResult.breakdown.itemPrice +
       unifiedResult.breakdown.internationalShipping +
@@ -415,7 +415,7 @@ async function calculateFinalQuote(
     international_shipping: unifiedResult.breakdown.internationalShipping,
     customs_and_ecs: unifiedResult.breakdown.customsDuty,
     payment_gateway_fee: 0,
-    final_currency: destinationCountrySettings.currency,
+    destination_currency: destinationCountrySettings.currency,
     final_total_local: unifiedResult.totalCost * (destinationCountrySettings.rate_from_usd || 1),
     confidence_score: weightResult.confidence,
     status: 'calculated',
@@ -450,13 +450,13 @@ async function createAutoQuote(quoteCalculation, userId, purchaseCountry, supaba
     product_url: quoteCalculation.scrapedData.url,
     item_price: quoteCalculation.item_price,
     item_weight: quoteCalculation.item_weight,
-    final_total: quoteCalculation.final_total,
+    final_total_usd: quoteCalculation.final_total_usd,
     sub_total: quoteCalculation.sub_total,
     vat: quoteCalculation.vat,
     international_shipping: quoteCalculation.international_shipping,
     customs_and_ecs: quoteCalculation.customs_and_ecs,
     payment_gateway_fee: quoteCalculation.payment_gateway_fee,
-    final_currency: quoteCalculation.final_currency,
+    destination_currency: quoteCalculation.destination_currency,
     final_total_local: quoteCalculation.final_total_local,
     confidence_score: quoteCalculation.confidence_score,
     applied_rules: quoteCalculation.appliedRules,

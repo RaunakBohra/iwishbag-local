@@ -44,7 +44,7 @@ const QuoteRow = React.memo<QuoteRowProps>(({ quote, isSelected, onSelect }) => 
         </div>
       </TableCell>
       <TableCell>
-        <div>{formatAmount(quote.final_total)}</div>
+        <div>{formatAmount(quote.final_total_usd)}</div>
       </TableCell>
       <TableCell>{format(new Date(quote.created_at), 'MMM d, yyyy')}</TableCell>
     </TableRow>

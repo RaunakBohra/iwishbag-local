@@ -426,7 +426,7 @@ serve(async (req) => {
     console.log(`[${requestId}] 🔍 Verifying quotes exist before update...`);
     const { data: existingQuotes, error: fetchError } = await supabaseAdmin
       .from('quotes')
-      .select('id, status, display_id, final_total, user_id')
+      .select('id, status, display_id, final_total_usd, user_id')
       .in('id', quoteIds);
 
     if (fetchError) {
@@ -465,7 +465,7 @@ serve(async (req) => {
         id: q.id,
         display_id: q.display_id,
         status: q.status,
-        final_total: q.final_total,
+        final_total_usd: q.final_total_usd,
       })),
     );
 

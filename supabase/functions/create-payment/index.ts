@@ -400,7 +400,7 @@ serve(async (req) => {
           // Fetch quotes and verify ownership
           const { data: quotes, error: quotesError } = await supabaseAdmin
             .from('quotes')
-            .select('id, user_id, product_name, final_total, quantity, final_currency, origin_country, destination_country')
+            .select('id, user_id, product_name, final_total_usd, quantity, destination_currency, origin_country, destination_country')
             .in('id', quoteIds);
 
           if (quotesError) {
@@ -445,8 +445,8 @@ serve(async (req) => {
 
           // Calculate total amount if not provided
           const totalAmount =
-            amount || quotesToUse.reduce((sum, quote) => sum + (quote.final_total || 0), 0);
-          const totalCurrency = currency || quotesToUse[0]?.final_currency || 'USD';
+            amount || quotesToUse.reduce((sum, quote) => sum + (quote.final_total_usd || 0), 0);
+          const totalCurrency = currency || quotesToUse[0]?.destination_currency || 'USD';
 
           // 🚨 CRITICAL DEBUG: Comprehensive amount tracking in backend
           console.log('🏦 [create-payment] ===== BACKEND PAYMENT AMOUNT TRACKING =====');
@@ -454,8 +454,8 @@ serve(async (req) => {
           quotesToUse.forEach((quote, index) => {
             console.log(`  Quote ${index + 1}:`, {
               id: quote.id,
-              final_total: quote.final_total,
-              final_currency: quote.final_currency,
+              final_total_usd: quote.final_total_usd,
+              destination_currency: quote.destination_currency,
               origin_country: quote.origin_country,
               destination_country: quote.destination_country
             });
@@ -465,9 +465,9 @@ serve(async (req) => {
           console.log('  Payment Request Details:', {
             received_amount: amount,
             received_currency: currency,
-            calculated_amount: quotesToUse.reduce((sum, quote) => sum + (quote.final_total || 0), 0),
+            calculated_amount: quotesToUse.reduce((sum, quote) => sum + (quote.final_total_usd || 0), 0),
             final_amount: totalAmount,
-            final_currency: totalCurrency,
+            destination_currency: totalCurrency,
             gateway: gateway,
             quote_ids: quoteIds
           });
@@ -532,7 +532,7 @@ serve(async (req) => {
             console.log('✅ [create-payment] USD amount validation passed');
             
             // 🚨 CRITICAL FIX: Cross-validate USD amounts with quote totals
-            const calculatedUsdTotal = quotesToUse.reduce((sum, quote) => sum + (quote.final_total || 0), 0);
+            const calculatedUsdTotal = quotesToUse.reduce((sum, quote) => sum + (quote.final_total_usd || 0), 0);
             const usdAmountDifference = Math.abs(totalAmount - calculatedUsdTotal);
             const usdToleranceThreshold = Math.max(calculatedUsdTotal * 0.01, 0.01);
             
@@ -542,7 +542,7 @@ serve(async (req) => {
                 calculated_quote_total: calculatedUsdTotal,
                 difference: usdAmountDifference,
                 tolerance: usdToleranceThreshold,
-                quotes: quotesToUse.map(q => ({ id: q.id, final_total: q.final_total }))
+                quotes: quotesToUse.map(q => ({ id: q.id, final_total_usd: q.final_total_usd }))
               });
               return new Response(
                 JSON.stringify({
@@ -2241,8 +2241,8 @@ serve(async (req) => {
           console.log('🎉 [create-payment] ===== FINAL PAYMENT SUMMARY =====');
           console.log('📊 PAYMENT FLOW SUMMARY:');
           console.log('  1. Database Storage:', {
-            quotes: quotesToUse.map(q => ({ id: q.id, final_total: q.final_total, currency: q.final_currency })),
-            total_usd: quotesToUse.reduce((sum, quote) => sum + (quote.final_total || 0), 0)
+            quotes: quotesToUse.map(q => ({ id: q.id, final_total_usd: q.final_total_usd, currency: q.destination_currency })),
+            total_usd: quotesToUse.reduce((sum, quote) => sum + (quote.final_total_usd || 0), 0)
           });
           
           console.log('  2. Frontend Request:', {

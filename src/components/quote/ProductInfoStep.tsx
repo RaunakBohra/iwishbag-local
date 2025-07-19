@@ -36,8 +36,10 @@
 import React, { useState, useEffect } from 'react';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
-import { Upload, X, Plus, Globe, Info, AlertCircle, CheckCircle, FileText } from 'lucide-react';
+import { useAllCountries } from '@/hooks/useAllCountries';
+import { Upload, X, Plus, Globe, Info, AlertCircle, CheckCircle, FileText, MapPin, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 
 function isValidUrl(url) {
   try {
@@ -48,10 +50,32 @@ function isValidUrl(url) {
   }
 }
 
-export default function ProductInfoStep({ products, setProducts, quoteType, setQuoteType, next }) {
+export default function ProductInfoStep({ products, setProducts, quoteType, setQuoteType, destinationCountry, setDestinationCountry, next }) {
   const { data: countries, isLoading, error: countryError } = usePurchaseCountries();
+  const { data: allCountries, isLoading: allCountriesLoading } = useAllCountries();
   const [errors, setErrors] = useState({});
   const [countryValidationError, setCountryValidationError] = useState('');
+  const [destinationCountryError, setDestinationCountryError] = useState('');
+
+  // IP geolocation auto-detection for destination country
+  useEffect(() => {
+    if (!destinationCountry) {
+      // Try to auto-detect user's country via IP geolocation
+      fetch('https://ipapi.co/json/')
+        .then(response => response.json())
+        .then(data => {
+          if (data.country_code && allCountries) {
+            const detectedCountry = allCountries.find(c => c.code === data.country_code);
+            if (detectedCountry) {
+              setDestinationCountry(data.country_code);
+            }
+          }
+        })
+        .catch(error => {
+          console.log('IP geolocation failed, using manual selection:', error);
+        });
+    }
+  }, [destinationCountry, allCountries, setDestinationCountry]);
 
   // Auto-sync countries for both combined and separate quotes (initial sync)
   useEffect(() => {
@@ -127,6 +151,13 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
   const validate = () => {
     const newErrors = {};
     setCountryValidationError('');
+    setDestinationCountryError('');
+
+    // Validate destination country
+    if (!destinationCountry) {
+      setDestinationCountryError('Destination country is required');
+      return false;
+    }
 
     // Only validate country consistency for combined quotes
     if (quoteType === 'combined' && products.length > 1) {
@@ -159,7 +190,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
     });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0 && !countryValidationError;
+    return Object.keys(newErrors).length === 0 && !countryValidationError && !destinationCountryError;
   };
 
   const handleNext = () => {
@@ -270,6 +301,64 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
         )}
       </div>
 
+      {/* Destination Country Selection */}
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 sm:p-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center">
+          <MapPin className="h-5 w-5 mr-2" />
+          Where should we deliver?
+        </h3>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Destination Country *
+            </label>
+            <select
+              value={destinationCountry}
+              onChange={(e) => setDestinationCountry(e.target.value)}
+              className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${
+                destinationCountryError ? 'border-red-300 bg-red-50' : 'border-gray-200'
+              }`}
+            >
+              <option value="">Select destination country</option>
+              {allCountriesLoading ? (
+                <option>Loading countries...</option>
+              ) : (
+                allCountries?.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.name}
+                  </option>
+                ))
+              )}
+            </select>
+            {destinationCountryError && (
+              <p className="text-red-500 text-xs mt-1">{destinationCountryError}</p>
+            )}
+          </div>
+
+          {/* Visual Shipping Route Preview */}
+          {destinationCountry && products[0]?.country && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="text-sm font-medium text-gray-700 mb-2">Shipping Route Preview</div>
+              <div className="flex items-center justify-center">
+                <ShippingRouteDisplay
+                  origin={products[0]?.country}
+                  destination={destinationCountry}
+                  showIcon={true}
+                  variant="compact"
+                  className="text-lg font-medium"
+                />
+              </div>
+              <div className="mt-2 text-center">
+                <span className="text-xs text-gray-600 bg-white border border-gray-200 px-2 py-1 rounded">
+                  We'll find the most cost-effective shipping route for you
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Country Validation Error */}
       {countryValidationError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -364,13 +453,16 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                 <label className="block text-sm font-medium mb-1">
                   Product URL or File Upload *
                 </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  📝 Examples: Amazon, eBay, Flipkart, Alibaba, or any product page URL
+                </p>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="url"
                     value={product.url}
                     onChange={(e) => updateProduct(index, 'url', e.target.value)}
                     className="flex-1 border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="https://example.com/product"
+                    placeholder="https://amazon.com/dp/B123456789 or paste any product URL"
                   />
                   <label className="flex items-center justify-center px-3 py-2 bg-gray-100 border border-gray-300 rounded cursor-pointer hover:bg-gray-200 min-h-[42px]">
                     <Upload className="h-4 w-4 mr-1" />

@@ -499,7 +499,7 @@ export const useCartStore = create<CartStore>()(
               id: q.id,
               final_total_usd: q.final_total_usd,
               final_total_local: q.final_total_local,
-              final_currency: q.destination_currency,
+              destination_currency: q.destination_currency,
               origin_country: q.origin_country,
               destination_country: q.destination_country
             })));

@@ -94,9 +94,9 @@ export const AdminOrderListItem = ({
     : order.product_name || 'No items specified';
 
   // Currency displays available if needed
-  // const currencyDisplays = order.final_total
+  // const currencyDisplays = order.final_total_usd
   //   ? formatMultiCurrency({
-  //       usdAmount: order.final_total,
+  //       usdAmount: order.final_total_usd,
   //       quoteCurrency: order.destination_currency,
   //       customerPreferredCurrency: order.profiles?.preferred_display_currency,
   //     })
@@ -139,7 +139,7 @@ export const AdminOrderListItem = ({
   const PaymentIcon = paymentMethodInfo.icon;
 
   // Calculate payment amounts
-  const finalTotal = order.final_total || 0;
+  const finalTotal = order.final_total_usd || 0;
   const amountPaid = order.amount_paid || 0;
   const currency = order.destination_currency || 'USD';
 

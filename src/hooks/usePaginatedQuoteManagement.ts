@@ -121,19 +121,19 @@ export const usePaginatedQuoteManagement = (filters = {}) => {
       if (amountRange && amountRange !== 'all') {
         switch (amountRange) {
           case 'under50':
-            query = query.lt('final_total', 50);
+            query = query.lt('final_total_usd', 50);
             break;
           case '50to100':
-            query = query.gte('final_total', 50).lt('final_total', 100);
+            query = query.gte('final_total_usd', 50).lt('final_total_usd', 100);
             break;
           case '100to500':
-            query = query.gte('final_total', 100).lt('final_total', 500);
+            query = query.gte('final_total_usd', 100).lt('final_total_usd', 500);
             break;
           case '500to1000':
-            query = query.gte('final_total', 500).lt('final_total', 1000);
+            query = query.gte('final_total_usd', 500).lt('final_total_usd', 1000);
             break;
           case 'over1000':
-            query = query.gte('final_total', 1000);
+            query = query.gte('final_total_usd', 1000);
             break;
         }
       }
@@ -236,19 +236,19 @@ export const usePaginatedQuoteManagement = (filters = {}) => {
       if (amountRange && amountRange !== 'all') {
         switch (amountRange) {
           case 'under50':
-            query = query.lt('final_total', 50);
+            query = query.lt('final_total_usd', 50);
             break;
           case '50to100':
-            query = query.gte('final_total', 50).lt('final_total', 100);
+            query = query.gte('final_total_usd', 50).lt('final_total_usd', 100);
             break;
           case '100to500':
-            query = query.gte('final_total', 100).lt('final_total', 500);
+            query = query.gte('final_total_usd', 100).lt('final_total_usd', 500);
             break;
           case '500to1000':
-            query = query.gte('final_total', 500).lt('final_total', 1000);
+            query = query.gte('final_total_usd', 500).lt('final_total_usd', 1000);
             break;
           case 'over1000':
-            query = query.gte('final_total', 1000);
+            query = query.gte('final_total_usd', 1000);
             break;
         }
       }

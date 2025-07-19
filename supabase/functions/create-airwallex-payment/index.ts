@@ -77,7 +77,7 @@ serve(async (req) => {
       }
     }
     // Calculate total amount
-    const totalAmount = quotes.reduce((sum, quote) => sum + (quote.final_total || 0), 0);
+    const totalAmount = quotes.reduce((sum, quote) => sum + (quote.final_total_usd || 0), 0);
     const totalCurrency = quotes[0].currency || 'USD';
     // Get Airwallex configuration
     const { data: airwallexGateway, error: gatewayError } = await supabaseAdmin

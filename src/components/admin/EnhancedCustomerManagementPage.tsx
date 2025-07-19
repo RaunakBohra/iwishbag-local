@@ -151,7 +151,7 @@ export const EnhancedCustomerManagementPage = () => {
       const { data: quotes, error } = await supabase
         .from('quotes')
         .select('*')
-        .not('final_total', 'is', null);
+        .not('final_total_usd', 'is', null);
 
       if (error) throw error;
 
@@ -159,7 +159,7 @@ export const EnhancedCustomerManagementPage = () => {
       const customerMetrics =
         customers?.map((customer) => {
           const customerQuotes = quotes?.filter((q) => q.user_id === customer.id) || [];
-          const totalSpent = customerQuotes.reduce((sum, q) => sum + (q.final_total || 0), 0);
+          const totalSpent = customerQuotes.reduce((sum, q) => sum + (q.final_total_usd || 0), 0);
           const orderCount = customerQuotes.filter((q) =>
             ['paid', 'ordered', 'shipped', 'completed'].includes(q.status),
           ).length;

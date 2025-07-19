@@ -103,7 +103,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
   const productName = firstItem?.product_name || quote.product_name || 'Product name not specified';
 
   const currencyDisplays = formatMultiCurrency({
-    usdAmount: quote.final_total,
+    usdAmount: quote.final_total_usd,
     quoteCurrency: quote.destination_currency,
   });
 

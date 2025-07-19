@@ -118,7 +118,7 @@ export const QuoteMetrics = ({ quotes, isLoading }: QuoteMetricsProps) => {
 
   // Calculate metrics
   const totalQuotes = quotes.length;
-  const totalRevenue = quotes.reduce((sum, quote) => sum + (quote.final_total || 0), 0);
+  const totalRevenue = quotes.reduce((sum, quote) => sum + (quote.final_total_usd || 0), 0);
   const averageValue = totalQuotes > 0 ? totalRevenue / totalQuotes : 0;
   
   // Status counts

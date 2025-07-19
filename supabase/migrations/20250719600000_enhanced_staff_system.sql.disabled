@@ -35,9 +35,29 @@ END $$;
 ALTER TABLE user_roles 
   DROP CONSTRAINT IF EXISTS user_roles_role_check;
 
+-- Drop policies that depend on the role column temporarily
+DROP POLICY IF EXISTS "Admin can view all emails" ON email_queue;
+DROP POLICY IF EXISTS "Service role can manage all emails" ON email_queue;
+
 -- Update role column to use new enum
+-- First convert to text, then to new enum to avoid casting issues
+ALTER TABLE user_roles 
+  ALTER COLUMN role TYPE text;
+  
 ALTER TABLE user_roles 
   ALTER COLUMN role TYPE staff_role_enum USING role::staff_role_enum;
+
+-- Recreate the email policies with new enum
+CREATE POLICY "Admin can view all emails" ON email_queue
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM user_roles 
+            WHERE user_id = auth.uid() AND role = 'admin'
+        )
+    );
+
+CREATE POLICY "Service role can manage all emails" ON email_queue
+    FOR ALL USING (auth.role() = 'service_role');
 
 -- Add new columns for staff management
 ALTER TABLE user_roles 

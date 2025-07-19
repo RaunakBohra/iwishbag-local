@@ -90,7 +90,7 @@ export default function Orders() {
   // Calculate statistics
   const statistics = useMemo(() => {
     const totalOrders = filteredOrders.length;
-    const totalValue = filteredOrders.reduce((sum, order) => sum + (order.final_total || 0), 0);
+    const totalValue = filteredOrders.reduce((sum, order) => sum + (order.final_total_usd || 0), 0);
     const totalPaid = filteredOrders.reduce((sum, order) => sum + (order.amount_paid || 0), 0);
     const totalOutstanding = totalValue - totalPaid;
 
@@ -127,9 +127,9 @@ export default function Orders() {
       Product: order.product_name || 'N/A',
       Status: order.status,
       'Payment Status': order.payment_status || 'unpaid',
-      Total: order.final_total || 0,
+      Total: order.final_total_usd || 0,
       Paid: order.amount_paid || 0,
-      Outstanding: (order.final_total || 0) - (order.amount_paid || 0),
+      Outstanding: (order.final_total_usd || 0) - (order.amount_paid || 0),
       'Payment Method': order.payment_method || 'N/A',
       Country:
         countries?.find((c) => c.code === order.destination_country)?.name ||
@@ -375,7 +375,7 @@ function OrderItem({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-gray-500">Total:</span>
-              <span className="ml-1 font-medium">{formatAmount(order.final_total || 0)}</span>
+              <span className="ml-1 font-medium">{formatAmount(order.final_total_usd || 0)}</span>
             </div>
             <div>
               <span className="text-gray-500">Ordered:</span>
@@ -421,8 +421,8 @@ function OrderItem({
                 }
                 className="text-xs"
               >
-                {order.payment_status === 'partial' && order.amount_paid && order.final_total
-                  ? `Partial: ${formatAmount(order.amount_paid)} of ${formatAmount(order.final_total)}`
+                {order.payment_status === 'partial' && order.amount_paid && order.final_total_usd
+                  ? `Partial: ${formatAmount(order.amount_paid)} of ${formatAmount(order.final_total_usd)}`
                   : order.payment_status === 'overpaid' && order.overpayment_amount
                     ? `Overpaid: +${formatAmount(order.overpayment_amount)}`
                     : order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}

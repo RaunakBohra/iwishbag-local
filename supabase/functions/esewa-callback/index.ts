@@ -125,7 +125,7 @@ serve(async (req) => {
     // (We'll store the transaction UUID when creating the payment)
     const { data: quotes, error: quotesError } = await supabaseAdmin
       .from('quotes')
-      .select('id, status, final_total, user_id')
+      .select('id, status, final_total_usd, user_id')
       .or(
         `payment_details->transaction_uuid.eq.${transactionUuid},payment_details->>transaction_uuid.eq.${transactionUuid}`,
       );

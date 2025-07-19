@@ -613,7 +613,7 @@ export default function QuoteDetail() {
                           </button>
                         </div>
                         <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                          {formatAmount(quote.final_total)}
+                          {formatAmount(quote.final_total_usd)}
                         </span>
                       </div>
                     </div>
@@ -748,7 +748,7 @@ export default function QuoteDetail() {
                               </button>
                             </div>
                             <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                              {formatAmount(quote.final_total)}
+                              {formatAmount(quote.final_total_usd)}
                             </span>
                           </div>
                         </div>
@@ -1097,7 +1097,7 @@ export default function QuoteDetail() {
                           Total Amount
                         </span>
                         <span className="bg-gradient-to-r from-orange-600 to-cyan-600 bg-clip-text text-transparent text-xl">
-                          {formatAmount(quote.final_total)}
+                          {formatAmount(quote.final_total_usd)}
                         </span>
                       </div>
                     </div>

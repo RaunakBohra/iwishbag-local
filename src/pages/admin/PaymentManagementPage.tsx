@@ -78,7 +78,7 @@ interface PaymentProofData {
   // Joined data
   order_display_id: string;
   final_total_usd: number;
-  final_currency: string;
+  destination_currency?: string;
   payment_method: string;
   payment_status: string;
   customer_email: string;

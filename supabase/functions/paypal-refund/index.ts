@@ -564,7 +564,7 @@ serve(async (req) => {
     if (transaction.quote_id) {
       const { data: quoteData, error: quoteError } = await supabaseAdmin
         .from('quotes')
-        .select('amount_paid, final_total')
+        .select('amount_paid, final_total_usd')
         .eq('id', transaction.quote_id)
         .single();
 
@@ -573,7 +573,7 @@ serve(async (req) => {
         const newPaymentStatus =
           newAmountPaid <= 0
             ? 'unpaid'
-            : newAmountPaid < quoteData.final_total
+            : newAmountPaid < quoteData.final_total_usd
               ? 'partial'
               : 'paid';
 

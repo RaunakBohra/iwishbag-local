@@ -25,7 +25,9 @@ import { ArrowRight, Package, MapPin, User, Mail, Phone } from 'lucide-react';
 import { AddressForm } from '@/components/profile/AddressForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useCountryUtils } from '@/lib/countryUtils';
+import { useAllCountries } from '@/hooks/useAllCountries';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
+import { QuoteRequestContactForm } from './QuoteRequestContactForm';
 import ProductSummary from './ProductSummary';
 
 function validateEmail(email) {
@@ -39,11 +41,17 @@ export default function ShippingContactStep({
   back,
   products,
   quoteType,
+  isSubmitting = false,
+  submitError = '',
+  clearError = () => {},
 }) {
   const { user } = useAuth();
   const { data: profile } = useUserProfile();
   const { countries, getCountryDisplayName } = useCountryUtils();
+  const { isLoading: countriesLoading, error: countriesError } = useAllCountries();
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [emailError, setEmailError] = useState('');
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [addressModalOpen, setAddressModalOpen] = useState(false);
   const [addressToEdit, setAddressToEdit] = useState(null);
@@ -92,30 +100,56 @@ export default function ShippingContactStep({
   // Origin-Destination Route Display
   const showRoute = purchaseCountry && shippingCountry;
 
-  const handleChange = (field, value) => setShippingContact({ ...shippingContact, [field]: value });
+  const handleChange = (field, value) => {
+    setShippingContact({ ...shippingContact, [field]: value });
+    
+    // Real-time validation for email
+    if (field === 'email') {
+      if (value && !validateEmail(value)) {
+        setEmailError('Please enter a valid email address');
+      } else {
+        setEmailError('');
+      }
+    }
+    
+    // Clear field errors when user starts typing
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
 
   const validate = () => {
     // For authenticated users with addresses, we don't need to validate form fields
     if (user && addresses && addresses.length > 0 && address) {
-      return '';
+      return true;
     }
 
-    // For guests or users without addresses, validate all fields
-    if (!shippingContact.address) return 'Address is required.';
-    if (!shippingContact.country) return 'Country is required.';
-    if (!shippingContact.state) return 'State is required.';
-    if (!shippingContact.city) return 'City is required.';
-    if (!shippingContact.zip) return 'ZIP code is required.';
-    if (!shippingContact.name) return 'Name is required.';
-    if (!shippingContact.email) return 'Email is required.';
-    if (!validateEmail(shippingContact.email)) return 'Please enter a valid email address.';
-    return '';
+    // For guests, only validate email (simplified form)
+    const newFieldErrors = {};
+    
+    if (!shippingContact.email) newFieldErrors.email = 'Email is required';
+    else if (!validateEmail(shippingContact.email)) newFieldErrors.email = 'Please enter a valid email address';
+    
+    setFieldErrors(newFieldErrors);
+    
+    return Object.keys(newFieldErrors).length === 0;
   };
 
   const handleSubmit = () => {
-    const err = validate();
-    setError(err);
-    if (!err) next();
+    const isValid = validate();
+    if (isValid) next();
+  };
+
+  const handleContactFormSubmit = (emailData: { email: string; name?: string; useAuth?: boolean }) => {
+    // Update shippingContact with the provided data
+    setShippingContact({
+      ...shippingContact,
+      email: emailData.email,
+      name: emailData.name || '',
+    });
+    
+    // Proceed to submission
+    next();
   };
 
   // NEW: Auto-populate shippingContact from address on initial load
@@ -311,7 +345,11 @@ export default function ShippingContactStep({
           </button>
           <button
             type="button"
-            className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-200 font-medium shadow-sm"
+            className={`flex-1 py-3 rounded-lg font-medium shadow-sm transition-all duration-200 ${
+              isSubmitting 
+                ? 'bg-gray-400 cursor-not-allowed text-white' 
+                : 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600'
+            }`}
             onClick={() => {
               // Always set shipping contact from the selected address
               if (address) {
@@ -329,8 +367,19 @@ export default function ShippingContactStep({
               }
               next();
             }}
+            disabled={isSubmitting}
           >
-            Submit Quote Request
+            {isSubmitting ? (
+              <div className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Submitting...
+              </div>
+            ) : (
+              'Submit Quote Request'
+            )}
           </button>
         </div>
       </div>
@@ -412,136 +461,54 @@ export default function ShippingContactStep({
     );
   }
 
-  // For guests, keep address form and email field (no WhatsApp, no name)
+  // For guests, show the enhanced contact form with OAuth options
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Shipping & Contact Information</h2>
-        <p className="text-gray-600">Enter your shipping details and submit your quote request</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Almost There!</h2>
+        <p className="text-gray-600">Just need your contact details to send your quote</p>
         <div className="mt-4 p-4 bg-teal-50 border border-teal-200 rounded-lg">
           <p className="text-sm text-teal-700">
-            💡 <strong>Tip:</strong> Sign up for an account to save your addresses and get a faster
-            quote experience!
+            💡 <strong>Good news:</strong> We only need your destination country for calculations, so no full address required for quotes!
           </p>
         </div>
       </div>
 
-      {showRoute && (
+      {/* Show shipping route confirmation */}
+      {purchaseCountry && (
         <div className="mb-6 p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-          <div className="flex items-center justify-center space-x-6">
-            <div className="text-center">
-              <div className="text-sm font-medium text-gray-700 mb-1">Purchase Country</div>
-              <div className="text-xl font-semibold text-gray-900">
-                🌍 {getCountryDisplayName(purchaseCountry)}
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-0.5 bg-gray-300"></div>
-              <ArrowRight className="h-5 w-5 text-gray-500" />
-              <div className="w-12 h-0.5 bg-gray-300"></div>
-            </div>
-            <div className="text-center">
-              <div className="text-sm font-medium text-gray-700 mb-1">Delivery Address</div>
-              <div className="text-xl font-semibold text-gray-900">
-                🌍 {getCountryDisplayName(shippingCountry)}
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 text-center">
-            <div className="text-sm text-gray-600 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg inline-block">
-              We'll find the most cost-effective shipping route for you
+          <div className="text-center">
+            <div className="text-sm font-medium text-gray-700 mb-2">Shipping Route</div>
+            <ShippingRouteDisplay
+              origin={purchaseCountry}
+              destination={shippingCountry}
+              showIcon={true}
+              variant="compact"
+              className="text-lg font-medium"
+            />
+            <div className="mt-3">
+              <span className="text-xs text-gray-600 bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg">
+                Full shipping address will be collected at checkout
+              </span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column - Form */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center text-gray-900">
-              <User className="h-5 w-5 mr-2 text-teal-600" />
-              Contact Information
-            </h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                  value={shippingContact.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                  placeholder="your@email.com"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center text-gray-900">
-              <MapPin className="h-5 w-5 mr-2 text-teal-600" />
-              Shipping Address
-            </h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Full Address</label>
-                <input
-                  className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                  value={shippingContact.address}
-                  onChange={(e) => handleChange('address', e.target.value)}
-                  placeholder="Street address, apartment, suite, etc."
-                />
-              </div>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-                  <input
-                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    value={shippingContact.country}
-                    onChange={(e) => handleChange('country', e.target.value)}
-                    placeholder="Country"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-                  <input
-                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    value={shippingContact.state}
-                    onChange={(e) => handleChange('state', e.target.value)}
-                    placeholder="State/Province"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                  <input
-                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    value={shippingContact.city}
-                    onChange={(e) => handleChange('city', e.target.value)}
-                    placeholder="City"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">ZIP Code</label>
-                  <input
-                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    value={shippingContact.zip}
-                    onChange={(e) => handleChange('zip', e.target.value)}
-                    placeholder="ZIP/Postal code"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left/Center Column - Contact Form */}
+        <div className="lg:col-span-2">
+          <QuoteRequestContactForm
+            onSubmit={handleContactFormSubmit}
+            isSubmitting={isSubmitting}
+            submitError={submitError}
+            clearError={clearError}
+          />
         </div>
 
-        {/* Right Column - Summary */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        {/* Right Column - Quote Summary */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center text-gray-900">
               <Package className="h-5 w-5 mr-2 text-teal-600" />
               Quote Summary
@@ -556,6 +523,13 @@ export default function ShippingContactStep({
               </div>
 
               <div className="border-b border-gray-200 pb-3">
+                <div className="text-sm text-gray-600 mb-1">Products</div>
+                <div className="font-medium text-gray-900">
+                  {products?.length} item{products?.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+
+              <div className="border-b border-gray-200 pb-3">
                 <div className="text-sm text-gray-600 mb-1">Shipping Route</div>
                 <div className="font-medium text-gray-900">
                   <ShippingRouteDisplay
@@ -566,38 +540,33 @@ export default function ShippingContactStep({
                 </div>
               </div>
 
-              <div className="bg-teal-50 rounded-lg p-3">
-                <div className="text-sm text-teal-700">
-                  We'll calculate shipping costs, customs duties, and provide you with a detailed
-                  quote within 24-48 hours.
+              <div className="bg-teal-50 rounded-lg p-4">
+                <div className="text-sm text-teal-700 space-y-2">
+                  <p className="font-medium">Your quote will include:</p>
+                  <ul className="text-xs space-y-1 ml-2">
+                    <li>• Product cost + tax</li>
+                    <li>• International shipping</li>
+                    <li>• Customs & duties</li>
+                    <li>• Local delivery</li>
+                    <li>• All handling fees</li>
+                  </ul>
+                  <p className="text-xs">📧 Delivered within 24-48 hours</p>
                 </div>
               </div>
             </div>
           </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="text-red-600 text-sm font-medium">{error}</div>
-            </div>
-          )}
-
-          <div className="flex gap-4 pt-4">
-            <button
-              type="button"
-              className="flex-1 py-3 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-              onClick={back}
-            >
-              Back to Products
-            </button>
-            <button
-              type="button"
-              className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-200 font-medium shadow-sm"
-              onClick={handleSubmit}
-            >
-              Submit Quote Request
-            </button>
-          </div>
         </div>
+      </div>
+
+      {/* Back Button */}
+      <div className="flex justify-center pt-4">
+        <button
+          type="button"
+          className="px-6 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+          onClick={back}
+        >
+          ← Back to Products
+        </button>
       </div>
     </div>
   );

@@ -61,7 +61,7 @@ export const PaymentSyncDebugger = () => {
         console.log(`\nQuote ${quote.display_id}:`);
         console.log(`  Status: ${quote.status}`);
         console.log(`  Payment Status: ${quote.payment_status}`);
-        console.log(`  Amount Paid: ${quote.amount_paid} ${quote.final_currency}`);
+        console.log(`  Amount Paid: ${quote.amount_paid} ${quote.destination_currency}`);
         console.log(`  Final Total: ${quote.final_total_usd} ${quote.destination_currency}`);
         console.log(`  Total Proofs: ${proofs.length}`);
         console.log(`  Verified Proofs: ${verifiedProofs.length}`);
