@@ -23,6 +23,7 @@ import {
   User,
   Phone,
   Globe,
+  CheckCircle,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
@@ -337,7 +338,7 @@ export default function Checkout() {
             quoteId: guestQuote.id,
             productName: guestQuote.quote_items?.[0]?.product_name || 'Product',
             quantity: guestQuote.quote_items?.reduce((sum, item) => sum + item.quantity, 0) || 1,
-            finalTotal: guestQuote.final_total || 0,
+            finalTotal: guestQuote.final_total_usd || 0,
             countryCode: guestQuote.destination_country || 'Unknown',
             purchaseCountryCode: guestQuote.destination_country || 'Unknown',
             destinationCountryCode: (() => {
@@ -702,7 +703,7 @@ export default function Checkout() {
     selectedCartItems.length > 0 &&
     (!isGuestCheckout ||
       (checkoutMode === 'guest'
-        ? guestContact.email && guestContact.fullName
+        ? guestContact.email && (guestContact.fullName || guestQuote?.email) // Allow approved quotes without fullName
         : checkoutMode === 'signin'
           ? accountData.email && accountData.password
           : accountData.email &&
@@ -1617,7 +1618,7 @@ export default function Checkout() {
                 customer_name: isGuestCheckout
                   ? guestContact.fullName
                   : userProfile?.full_name || '',
-                final_total: totalAmount,
+                final_total_usd: totalAmount,
                 currency: paymentCurrency,
               };
 
@@ -1629,7 +1630,7 @@ export default function Checkout() {
                 customer_name: isGuestCheckout
                   ? guestContact.fullName
                   : userProfile?.full_name || '',
-                final_total: totalAmount,
+                final_total_usd: totalAmount,
                 currency: paymentCurrency,
                 status: updateResult[0].status,
                 created_at: updateResult[0].created_at,
@@ -1746,8 +1747,50 @@ export default function Checkout() {
           <div className="grid gap-6 lg:grid-cols-5">
             {/* Main Checkout Form */}
             <div className="lg:col-span-3 space-y-6">
-              {/* Guest Checkout Options */}
-              {isGuestCheckout && (
+              {/* Guest Checkout - Streamlined for approved quotes */}
+              {isGuestCheckout && guestQuote?.email ? (
+                <Card className="bg-white border border-gray-200 shadow-sm">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-900">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      Quote Approved
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <div>
+                          <p className="font-medium text-green-900">{guestQuote.customer_name || 'Guest Customer'}</p>
+                          <p className="text-sm text-green-700">{guestQuote.email}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Currency Selection for Guest Checkout */}
+                    {availableCurrencies && (
+                      <div className="mb-4">
+                        <Label htmlFor="guest-currency">Payment Currency</Label>
+                        <select
+                          id="guest-currency"
+                          className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                          value={guestSelectedCurrency}
+                          onChange={(e) => setGuestSelectedCurrency(e.target.value)}
+                        >
+                          {availableCurrencies?.map((currency) => (
+                            <option key={currency.code} value={currency.code}>
+                              {currency.symbol} {currency.formatted}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Choose your preferred payment currency. Payment methods will be filtered accordingly.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : isGuestCheckout && (
                 <Card className="bg-white border border-gray-200 shadow-sm">
                   <CardHeader className="pb-4">
                     <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-900">

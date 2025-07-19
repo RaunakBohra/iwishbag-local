@@ -6,9 +6,9 @@ import { LazySection } from '@/components/home/LazySection';
 import HeroSection from '@/components/home/HeroSection';
 
 // Lazy load below-the-fold sections
-const HowItWorksSection = lazy(() =>
-  import('@/components/home/HowItWorksSection').then((m) => ({
-    default: m.HowItWorksSection,
+const EnhancedHowItWorksSection = lazy(() =>
+  import('@/components/home/EnhancedHowItWorksSection').then((m) => ({
+    default: m.EnhancedHowItWorksSection,
   })),
 );
 
@@ -34,10 +34,10 @@ export default function Index() {
       {/* Hero Section - Always loaded immediately */}
       <HeroSection settings={settings} />
 
-      {/* How It Works Section - Lazy loaded */}
+      {/* Enhanced How It Works Section - Lazy loaded */}
       <LazySection threshold={0.1} rootMargin="100px">
         <Suspense fallback={<SectionSkeleton height="h-[500px]" />}>
-          <HowItWorksSection />
+          <EnhancedHowItWorksSection />
         </Suspense>
       </LazySection>
 
