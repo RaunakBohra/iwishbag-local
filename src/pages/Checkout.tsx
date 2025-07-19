@@ -276,6 +276,9 @@ export default function Checkout() {
 
   // Guest currency selection (defaults to destination country currency)
   const [guestSelectedCurrency, setGuestSelectedCurrency] = useState<string>('');
+  
+  // Logged-in user currency override (allows changing from profile default)
+  const [userSelectedCurrency, setUserSelectedCurrency] = useState<string>('');
 
   // Guest checkout session token (for temporary data storage)
   const [guestSessionToken, setGuestSessionToken] = useState<string>('');
@@ -286,7 +289,7 @@ export default function Checkout() {
   const { sendBankTransferEmail } = useEmailNotifications();
   const { findStatusForPaymentMethod } = useStatusManagement();
 
-  // Fetch available currencies for guest selection using CurrencyService
+  // Fetch available currencies for both guest and logged-in user selection using CurrencyService
   const { data: availableCurrencies } = useQuery({
     queryKey: ['available-currencies-service'],
     queryFn: async () => {
@@ -298,7 +301,8 @@ export default function Checkout() {
         formatted: `${currency.name} (${currency.code})`,
       }));
     },
-    enabled: isGuestCheckout,
+    // CHANGED: Enable for both guest and logged-in users
+    enabled: true,
   });
 
   // Fetch guest quote if this is a guest checkout
@@ -415,9 +419,10 @@ export default function Checkout() {
 
   // FIXED: For guest checkout, ensure we always pass a valid currency to prevent empty payment methods
   // The hook should be called with USD as fallback if no currency is determined yet
+  // UPDATED: Also pass user-selected currency for logged-in users when they override their profile
   const paymentGatewayCurrency = isGuestCheckout
     ? guestCurrency || 'USD' // Always provide USD as final fallback
-    : undefined; // Let the hook use user profile currency for authenticated users
+    : userSelectedCurrency; // Pass user override currency, or undefined to use profile
 
   // Payment gateway hook with currency override for guests
   const {
@@ -432,20 +437,25 @@ export default function Checkout() {
     requiresQRCode,
   } = usePaymentGateways(paymentGatewayCurrency, shippingCountry);
 
-  // Debug logging for guest checkout payment state (development only)
+  // Debug logging for payment state (development only)
   useEffect(() => {
-    if (isGuestCheckout && import.meta.env.DEV) {
-      console.log('💳 Guest checkout payment state:', {
-        guestCurrency,
-        guestSelectedCurrency,
-        defaultGuestCurrency,
-        paymentGatewayCurrency, // Added this new variable
+    if (import.meta.env.DEV) {
+      console.log(isGuestCheckout ? '💳 Guest checkout payment state:' : '💳 Logged-in user payment state:', {
+        isGuestCheckout,
+        // Guest specific
+        guestCurrency: isGuestCheckout ? guestCurrency : undefined,
+        guestSelectedCurrency: isGuestCheckout ? guestSelectedCurrency : undefined,
+        defaultGuestCurrency: isGuestCheckout ? defaultGuestCurrency : undefined,
+        // User specific
+        userSelectedCurrency: !isGuestCheckout ? userSelectedCurrency : undefined,
+        userProfileCurrency: !isGuestCheckout ? userProfile?.preferred_display_currency : undefined,
+        // Common
+        paymentCurrency,
+        paymentGatewayCurrency,
         availableMethods,
         methodsLoading,
         shippingCountry,
         selectedCartItems: selectedCartItems.length,
-        guestQuote: !!guestQuote,
-        destinationCountry: selectedCartItems[0]?.destinationCountryCode,
         '🔍 Hook Result': { availableMethods, methodsLoading },
       });
     }
@@ -454,7 +464,10 @@ export default function Checkout() {
     guestCurrency,
     guestSelectedCurrency,
     defaultGuestCurrency,
-    paymentGatewayCurrency, // Added to dependency array
+    userSelectedCurrency,
+    userProfile?.preferred_display_currency,
+    paymentCurrency,
+    paymentGatewayCurrency,
     availableMethods,
     methodsLoading,
     shippingCountry,
@@ -481,7 +494,7 @@ export default function Checkout() {
   // Determine the currency for payment - defined here so it's available throughout the component
   const paymentCurrency = isGuestCheckout
     ? guestSelectedCurrency || defaultGuestCurrency || 'USD'
-    : userProfile?.preferred_display_currency || 'USD';
+    : userSelectedCurrency || userProfile?.preferred_display_currency || 'USD';
 
   // Get purchase country for route display (where we buy from)
   const purchaseCountry =
@@ -2657,19 +2670,37 @@ export default function Checkout() {
                       Payment Method
                     </CardTitle>
                     
-                    {/* Compact Currency Selector for Guest Checkout */}
-                    {isGuestCheckout && availableCurrencies && (
+                    {/* Compact Currency Selector for Both Guest and Logged-in Users */}
+                    {availableCurrencies && (
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="compact-currency" className="text-xs text-gray-600">Currency:</Label>
+                        <Label 
+                          htmlFor="compact-currency" 
+                          className="text-xs text-gray-600"
+                        >
+                          {isGuestCheckout ? 'Currency:' : 'Pay in:'}
+                        </Label>
                         <select
                           id="compact-currency"
                           className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
-                          value={guestSelectedCurrency}
-                          onChange={(e) => setGuestSelectedCurrency(e.target.value)}
+                          value={isGuestCheckout ? guestSelectedCurrency : userSelectedCurrency || userProfile?.preferred_display_currency || 'USD'}
+                          onChange={(e) => {
+                            if (isGuestCheckout) {
+                              setGuestSelectedCurrency(e.target.value);
+                            } else {
+                              setUserSelectedCurrency(e.target.value);
+                            }
+                          }}
                         >
+                          {/* Show default option for logged-in users */}
+                          {!isGuestCheckout && userProfile?.preferred_display_currency && !userSelectedCurrency && (
+                            <option value={userProfile.preferred_display_currency}>
+                              {availableCurrencies.find(c => c.code === userProfile.preferred_display_currency)?.symbol || ''} {userProfile.preferred_display_currency} (Default)
+                            </option>
+                          )}
                           {availableCurrencies?.map((currency) => (
                             <option key={currency.code} value={currency.code}>
                               {currency.symbol} {currency.code}
+                              {!isGuestCheckout && currency.code === userProfile?.preferred_display_currency && userSelectedCurrency ? ' (Your default)' : ''}
                             </option>
                           ))}
                         </select>
