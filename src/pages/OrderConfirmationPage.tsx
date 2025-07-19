@@ -356,16 +356,16 @@ const OrderConfirmationPage: React.FC = () => {
 
             {/* Sign-up Benefits Section for Guest Users */}
             {!user && (
-              <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+              <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-teal-200 rounded-lg">
                 <div className="max-w-2xl mx-auto">
-                  <h3 className="text-xl font-bold text-blue-900 mb-4 flex items-center justify-center gap-2">
+                  <h3 className="text-xl font-bold text-teal-900 mb-4 flex items-center justify-center gap-2">
                     <UserPlus className="h-6 w-6" />
                     Create an Account for Better Experience
                   </h3>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div className="flex items-start gap-3 bg-white p-4 rounded-lg shadow-sm">
-                      <Package className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <Package className="h-5 w-5 text-teal-600 mt-0.5 flex-shrink-0" />
                       <div>
                         <h4 className="font-semibold text-gray-900">Track Your Orders</h4>
                         <p className="text-sm text-gray-600">
@@ -375,7 +375,7 @@ const OrderConfirmationPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-start gap-3 bg-white p-4 rounded-lg shadow-sm">
-                      <History className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <History className="h-5 w-5 text-teal-600 mt-0.5 flex-shrink-0" />
                       <div>
                         <h4 className="font-semibold text-gray-900">Order History</h4>
                         <p className="text-sm text-gray-600">
@@ -385,7 +385,7 @@ const OrderConfirmationPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-start gap-3 bg-white p-4 rounded-lg shadow-sm">
-                      <MapPin className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <MapPin className="h-5 w-5 text-teal-600 mt-0.5 flex-shrink-0" />
                       <div>
                         <h4 className="font-semibold text-gray-900">Saved Addresses</h4>
                         <p className="text-sm text-gray-600">
@@ -395,7 +395,7 @@ const OrderConfirmationPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-start gap-3 bg-white p-4 rounded-lg shadow-sm">
-                      <Zap className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <Zap className="h-5 w-5 text-teal-600 mt-0.5 flex-shrink-0" />
                       <div>
                         <h4 className="font-semibold text-gray-900">Express Checkout</h4>
                         <p className="text-sm text-gray-600">Skip the forms next time you shop</p>
@@ -403,7 +403,7 @@ const OrderConfirmationPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-start gap-3 bg-white p-4 rounded-lg shadow-sm">
-                      <Gift className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <Gift className="h-5 w-5 text-teal-600 mt-0.5 flex-shrink-0" />
                       <div>
                         <h4 className="font-semibold text-gray-900">Exclusive Offers</h4>
                         <p className="text-sm text-gray-600">
@@ -413,7 +413,7 @@ const OrderConfirmationPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-start gap-3 bg-white p-4 rounded-lg shadow-sm">
-                      <Clock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <Clock className="h-5 w-5 text-teal-600 mt-0.5 flex-shrink-0" />
                       <div>
                         <h4 className="font-semibold text-gray-900">Priority Support</h4>
                         <p className="text-sm text-gray-600">
@@ -428,7 +428,7 @@ const OrderConfirmationPage: React.FC = () => {
                       <Button
                         onClick={() => setShowSignupForm(true)}
                         size="lg"
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="bg-teal-600 hover:bg-teal-700"
                       >
                         <UserPlus className="h-5 w-5 mr-2" />
                         Create Account & Track Order
@@ -589,7 +589,7 @@ const OrderConfirmationPage: React.FC = () => {
                   <Button
                     onClick={() => setShowSignupForm(true)}
                     variant="default"
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full bg-teal-600 hover:bg-teal-700"
                   >
                     <UserPlus className="h-4 w-4 mr-2" />
                     Create Account

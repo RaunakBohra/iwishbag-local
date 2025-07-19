@@ -188,7 +188,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
       };
     }
     return {
-      className: 'w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+      className: 'w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500',
     };
   };
 
@@ -206,7 +206,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
           <div
             className={`flex-1 min-w-[180px] p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
               quoteType === 'separate'
-                ? 'border-blue-500 bg-blue-50'
+                ? 'border-teal-500 bg-teal-50'
                 : 'border-gray-200 hover:border-gray-300'
             }`}
             onClick={() => setQuoteType('separate')}
@@ -229,7 +229,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
           <div
             className={`flex-1 min-w-[180px] p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
               quoteType === 'combined'
-                ? 'border-blue-500 bg-blue-50'
+                ? 'border-teal-500 bg-teal-50'
                 : 'border-gray-200 hover:border-gray-300'
             }`}
             onClick={() => setQuoteType('combined')}
@@ -316,7 +316,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                   <label className="block text-sm font-medium mb-1">
                     Purchase Country *
                     {quoteType === 'combined' && index > 0 && (
-                      <span className="text-blue-600 ml-2 text-xs">(Auto-synced)</span>
+                      <span className="text-teal-600 ml-2 text-xs">(Auto-synced)</span>
                     )}
                   </label>
                   <select
@@ -354,7 +354,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     type="text"
                     value={product.name}
                     onChange={(e) => updateProduct(index, 'name', e.target.value)}
-                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     placeholder="Enter product name"
                   />
                 </div>
@@ -369,7 +369,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     type="url"
                     value={product.url}
                     onChange={(e) => updateProduct(index, 'url', e.target.value)}
-                    className="flex-1 border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     placeholder="https://example.com/product"
                   />
                   <label className="flex items-center justify-center px-3 py-2 bg-gray-100 border border-gray-300 rounded cursor-pointer hover:bg-gray-200 min-h-[42px]">
@@ -403,7 +403,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     onChange={(e) =>
                       updateProduct(index, 'quantity', parseInt(e.target.value) || 1)
                     }
-                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                   />
                   {errors[`quantity-${index}`] && (
                     <p className="text-red-500 text-xs mt-1">{errors[`quantity-${index}`]}</p>
@@ -417,7 +417,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     step="0.01"
                     value={product.price}
                     onChange={(e) => updateProduct(index, 'price', e.target.value)}
-                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     placeholder="0.00"
                   />
                 </div>
@@ -429,7 +429,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     step="0.01"
                     value={product.weight}
                     onChange={(e) => updateProduct(index, 'weight', e.target.value)}
-                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     placeholder="0.00 kg"
                   />
                 </div>
@@ -441,7 +441,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                 <textarea
                   value={product.notes}
                   onChange={(e) => updateProduct(index, 'notes', e.target.value)}
-                  className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[60px] resize-vertical"
+                  className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 min-h-[60px] resize-vertical"
                   placeholder="E.g., Size, color, specific model, or any other product details..."
                   rows={2}
                 />

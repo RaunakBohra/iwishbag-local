@@ -112,8 +112,8 @@ const Contact = () => {
       description: 'Send us a message anytime',
       contact: footerSettings?.email || 'contact@iwishbag.com',
       availability: 'We respond within 24 hours',
-      bgColor: 'bg-blue-50',
-      iconColor: 'text-blue-600',
+      bgColor: 'bg-teal-50',
+      iconColor: 'text-teal-600',
     },
     {
       icon: MessageCircle,
@@ -130,8 +130,8 @@ const Contact = () => {
       description: 'Call us directly',
       contact: footerSettings?.phone || '+1 (555) 123-4567',
       availability: 'Mon-Fri 9AM-6PM EST',
-      bgColor: 'bg-purple-50',
-      iconColor: 'text-purple-600',
+      bgColor: 'bg-orange-50',
+      iconColor: 'text-orange-600',
     },
   ];
 
@@ -224,7 +224,7 @@ const Contact = () => {
                                 value={formData.name}
                                 onChange={handleChange}
                                 placeholder="Your full name"
-                                className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                                className="h-10 border-gray-200 focus:border-teal-500 focus:ring-teal-500"
                               />
                             </div>
                             <div>
@@ -239,7 +239,7 @@ const Contact = () => {
                                 value={formData.email}
                                 onChange={handleChange}
                                 placeholder="your@email.com"
-                                className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                                className="h-10 border-gray-200 focus:border-teal-500 focus:ring-teal-500"
                               />
                             </div>
                           </div>
@@ -256,7 +256,7 @@ const Contact = () => {
                               value={formData.subject}
                               onChange={handleChange}
                               placeholder="What can we help you with?"
-                              className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                              className="h-10 border-gray-200 focus:border-teal-500 focus:ring-teal-500"
                             />
                           </div>
 
@@ -272,14 +272,14 @@ const Contact = () => {
                               value={formData.message}
                               onChange={handleChange}
                               placeholder="Tell us more about your shipping needs..."
-                              className="border-gray-200 focus:border-blue-500 focus:ring-blue-500 resize-none"
+                              className="border-gray-200 focus:border-teal-500 focus:ring-teal-500 resize-none"
                             />
                           </div>
 
                           <Button
                             type="submit"
                             disabled={isSubmitting}
-                            className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-medium group"
+                            className="w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-medium group"
                           >
                             {isSubmitting ? (
                               <span className="flex items-center justify-center">
@@ -350,7 +350,7 @@ const Contact = () => {
             <div className="text-center mt-8">
               <Body className="text-gray-600 mb-6 text-sm">Can't find what you're looking for?</Body>
               <Button 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3" 
+                className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3" 
                 onClick={() => {
                   document.getElementById('form-section')?.scrollIntoView({ behavior: 'smooth' });
                 }}

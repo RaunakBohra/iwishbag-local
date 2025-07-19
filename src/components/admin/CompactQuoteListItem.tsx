@@ -67,7 +67,7 @@ const getPriorityBadge = (priority: QuoteWithItems['priority']) => {
     },
     medium: {
       label: 'Medium',
-      className: 'bg-blue-100 text-blue-700 border-blue-300',
+      className: 'bg-teal-100 text-teal-700 border-teal-300',
     },
     high: {
       label: 'High',
@@ -104,7 +104,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
 
   const currencyDisplays = formatMultiCurrency({
     usdAmount: quote.final_total,
-    quoteCurrency: quote.final_currency,
+    quoteCurrency: quote.destination_currency,
   });
 
   const formatDate = (dateString: string) => {
@@ -164,7 +164,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
     <>
       <div className={cn(
         'bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all duration-200',
-        isSelected && 'ring-2 ring-blue-500 border-blue-500'
+        isSelected && 'ring-2 ring-teal-500 border-teal-500'
       )}>
         <div className="flex items-center gap-4">
           {/* Selection Checkbox */}
@@ -172,7 +172,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
             <Checkbox
               checked={isSelected}
               onCheckedChange={(checked) => onSelect(quote.id, !!checked)}
-              className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+              className="data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
             />
           </div>
 
@@ -183,9 +183,9 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
             quote.status === 'rejected' && 'bg-red-500',
             quote.status === 'pending' && 'bg-yellow-500',
             quote.status === 'approved' && 'bg-green-500',
-            quote.status === 'paid' && 'bg-blue-500',
-            quote.status === 'ordered' && 'bg-purple-500',
-            quote.status === 'shipped' && 'bg-indigo-500',
+            quote.status === 'paid' && 'bg-teal-500',
+            quote.status === 'ordered' && 'bg-orange-500',
+            quote.status === 'shipped' && 'bg-teal-500',
             quote.status === 'completed' && 'bg-green-600',
             !['cancelled', 'rejected', 'pending', 'approved', 'paid', 'ordered', 'shipped', 'completed'].includes(quote.status) && 'bg-gray-300',
           )} />
@@ -236,7 +236,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
                   href={firstItem.product_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-teal-600 hover:text-teal-800"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink className="h-3 w-3" />
@@ -368,7 +368,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
                     href={firstItem.product_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800"
+                    className="text-teal-600 hover:text-teal-800"
                   >
                     <ExternalLink className="h-4 w-4" />
                   </a>
@@ -431,7 +431,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
                 setIsPreviewOpen(false);
                 navigate(`/admin/quotes/${quote.id}`);
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-teal-600 hover:bg-teal-700 text-white"
             >
               <ArrowRight className="h-4 w-4 mr-2" />
               View Full Details

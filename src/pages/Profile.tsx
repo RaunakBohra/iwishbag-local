@@ -379,8 +379,8 @@ const Profile = () => {
             to="/dashboard/quotes"
             className="flex flex-col items-center gap-3 p-6 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
           >
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-purple-600" />
+            <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-orange-600" />
             </div>
             <span className="text-sm font-medium text-gray-700">Quotes</span>
           </Link>
@@ -709,7 +709,7 @@ const Profile = () => {
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-purple-600" />
+                    <FileText className="h-4 w-4 text-orange-600" />
                     <span className="text-sm font-medium text-gray-700">{stats?.totalQuotes || 0} quotes</span>
                   </div>
                   <Link to="/dashboard/quotes">

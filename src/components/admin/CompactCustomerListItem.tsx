@@ -116,7 +116,7 @@ export const CompactCustomerListItem = ({
     <>
       <div className={cn(
         'bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all duration-200',
-        isSelected && 'ring-2 ring-blue-500 border-blue-500'
+        isSelected && 'ring-2 ring-teal-500 border-teal-500'
       )}>
         <div className="flex items-center gap-4">
           {/* Selection Checkbox */}
@@ -124,7 +124,7 @@ export const CompactCustomerListItem = ({
             <Checkbox
               checked={isSelected}
               onCheckedChange={(checked) => onSelect(customer.id, !!checked)}
-              className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+              className="data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
             />
           </div>
 
@@ -138,8 +138,8 @@ export const CompactCustomerListItem = ({
 
           {/* Customer Avatar */}
           <div className="flex-shrink-0">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="h-6 w-6 text-blue-600" />
+            <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center">
+              <User className="h-6 w-6 text-teal-600" />
             </div>
           </div>
 
@@ -400,7 +400,7 @@ export const CompactCustomerListItem = ({
                 // Navigate to customer details page if it exists
                 // navigate(`/admin/customers/${customer.id}`);
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-teal-600 hover:bg-teal-700 text-white"
             >
               <ArrowRight className="h-4 w-4 mr-2" />
               View Full Profile

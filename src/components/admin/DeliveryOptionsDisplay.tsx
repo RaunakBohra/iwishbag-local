@@ -85,7 +85,7 @@ export const DeliveryOptionsDisplay = ({
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <Truck className="h-4 w-4 text-blue-600" />
+                  <Truck className="h-4 w-4 text-teal-600" />
                   <span className="font-medium text-sm">{option.name}</span>
                   <Badge variant="outline" className="text-xs">
                     {option.carrier}

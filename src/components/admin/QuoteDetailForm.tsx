@@ -67,10 +67,10 @@ export const QuoteDetailForm = ({
   }, [countryCode, allCountries]);
 
   // Watch final currency for dynamic labels
-  const _finalCurrency =
+  const _destinationCurrency =
     useWatch({
       control: form.control,
-      name: 'final_currency',
+      name: 'destination_currency',
     }) || countryCurrency;
 
   // Auto-update currency field when country changes
@@ -160,7 +160,7 @@ export const QuoteDetailForm = ({
             </div>
             {/* Applied Customs Tier Box */}
             {detectedCustomsTier && (
-              <div className="mt-2 p-2 rounded-md bg-blue-50 border border-blue-200 text-black text-sm">
+              <div className="mt-2 p-2 rounded-md bg-teal-50 border border-teal-200 text-black text-sm">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">
                     {detectedCustomsTier.name || 'Customs Tier'}{' '}

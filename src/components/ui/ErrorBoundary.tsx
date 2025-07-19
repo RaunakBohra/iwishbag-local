@@ -255,8 +255,8 @@ export const DashboardErrorFallback: React.FC<{
     <div className="min-h-[500px] flex items-center justify-center p-4">
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
-            <AlertTriangle className="h-8 w-8 text-purple-600" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
+            <AlertTriangle className="h-8 w-8 text-orange-600" />
           </div>
           <CardTitle className="text-2xl">Dashboard Error</CardTitle>
         </CardHeader>

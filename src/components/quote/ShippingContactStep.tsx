@@ -214,7 +214,7 @@ export default function ShippingContactStep({
                     {address.city}, {address.state_province_region} {address.postal_code}
                   </div>
                   <div className="font-medium">{address.destination_country}</div>
-                  {address.phone && <div className="text-blue-600">📞 {address.phone}</div>}
+                  {address.phone && <div className="text-teal-600">📞 {address.phone}</div>}
                 </div>
               </div>
             ) : (
@@ -230,7 +230,7 @@ export default function ShippingContactStep({
                 Choose another address:
               </label>
               <select
-                className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 value={address.id}
                 onChange={(e) => setSelectedAddressId(e.target.value)}
               >
@@ -350,7 +350,7 @@ export default function ShippingContactStep({
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
           <div className="mb-4">
-            <MapPin className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+            <MapPin className="h-12 w-12 text-teal-600 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No Shipping Address Found</h3>
             <p className="text-gray-600 mb-6">
               To request a quote, you need to add a shipping address to your profile first.
@@ -418,8 +418,8 @@ export default function ShippingContactStep({
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Shipping & Contact Information</h2>
         <p className="text-gray-600">Enter your shipping details and submit your quote request</p>
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-700">
+        <div className="mt-4 p-4 bg-teal-50 border border-teal-200 rounded-lg">
+          <p className="text-sm text-teal-700">
             💡 <strong>Tip:</strong> Sign up for an account to save your addresses and get a faster
             quote experience!
           </p>
@@ -460,7 +460,7 @@ export default function ShippingContactStep({
         <div className="space-y-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center text-gray-900">
-              <User className="h-5 w-5 mr-2 text-blue-600" />
+              <User className="h-5 w-5 mr-2 text-teal-600" />
               Contact Information
             </h3>
 
@@ -470,7 +470,7 @@ export default function ShippingContactStep({
                   Email Address
                 </label>
                 <input
-                  className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                   value={shippingContact.email}
                   onChange={(e) => handleChange('email', e.target.value)}
                   placeholder="your@email.com"
@@ -481,7 +481,7 @@ export default function ShippingContactStep({
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center text-gray-900">
-              <MapPin className="h-5 w-5 mr-2 text-blue-600" />
+              <MapPin className="h-5 w-5 mr-2 text-teal-600" />
               Shipping Address
             </h3>
 
@@ -489,7 +489,7 @@ export default function ShippingContactStep({
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Full Address</label>
                 <input
-                  className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                   value={shippingContact.address}
                   onChange={(e) => handleChange('address', e.target.value)}
                   placeholder="Street address, apartment, suite, etc."
@@ -499,7 +499,7 @@ export default function ShippingContactStep({
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
                   <input
-                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     value={shippingContact.country}
                     onChange={(e) => handleChange('country', e.target.value)}
                     placeholder="Country"
@@ -508,7 +508,7 @@ export default function ShippingContactStep({
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
                   <input
-                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     value={shippingContact.state}
                     onChange={(e) => handleChange('state', e.target.value)}
                     placeholder="State/Province"
@@ -519,7 +519,7 @@ export default function ShippingContactStep({
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
                   <input
-                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     value={shippingContact.city}
                     onChange={(e) => handleChange('city', e.target.value)}
                     placeholder="City"
@@ -528,7 +528,7 @@ export default function ShippingContactStep({
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">ZIP Code</label>
                   <input
-                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     value={shippingContact.zip}
                     onChange={(e) => handleChange('zip', e.target.value)}
                     placeholder="ZIP/Postal code"
@@ -543,7 +543,7 @@ export default function ShippingContactStep({
         <div className="space-y-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center text-gray-900">
-              <Package className="h-5 w-5 mr-2 text-blue-600" />
+              <Package className="h-5 w-5 mr-2 text-teal-600" />
               Quote Summary
             </h3>
 
@@ -566,8 +566,8 @@ export default function ShippingContactStep({
                 </div>
               </div>
 
-              <div className="bg-blue-50 rounded-lg p-3">
-                <div className="text-sm text-blue-700">
+              <div className="bg-teal-50 rounded-lg p-3">
+                <div className="text-sm text-teal-700">
                   We'll calculate shipping costs, customs duties, and provide you with a detailed
                   quote within 24-48 hours.
                 </div>

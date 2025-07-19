@@ -102,9 +102,9 @@ const CustomerOrderDetailPage = () => {
                           try {
                             const options = JSON.parse(item.options);
                             return options.notes ? (
-                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 my-2">
-                                <span className="font-semibold text-blue-800">Product Notes:</span>
-                                <span className="text-blue-900 ml-2 whitespace-pre-line">
+                              <div className="bg-teal-50 border border-teal-200 rounded-lg p-2 my-2">
+                                <span className="font-semibold text-teal-800">Product Notes:</span>
+                                <span className="text-teal-900 ml-2 whitespace-pre-line">
                                   {options.notes}
                                 </span>
                               </div>

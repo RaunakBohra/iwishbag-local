@@ -21,8 +21,8 @@ export const CountryListItem = ({ country, onEdit, onDelete }: CountryListItemPr
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Globe className="h-5 w-5 text-blue-600" />
+                <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
+                  <Globe className="h-5 w-5 text-teal-600" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 text-lg">
@@ -51,7 +51,7 @@ export const CountryListItem = ({ country, onEdit, onDelete }: CountryListItemPr
                     variant={country.shipping_allowed ? 'default' : 'secondary'}
                     className={`text-xs ${
                       country.shipping_allowed
-                        ? 'bg-blue-100 text-blue-700 border-blue-200'
+                        ? 'bg-teal-100 text-teal-700 border-teal-200'
                         : 'bg-gray-100 text-gray-600 border-gray-200'
                     }`}
                   >

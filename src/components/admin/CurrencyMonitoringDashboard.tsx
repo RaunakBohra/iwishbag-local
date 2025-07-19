@@ -258,9 +258,9 @@ export function CurrencyMonitoringDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Active Currencies</p>
-                <p className="text-2xl font-bold text-blue-600">{currencyStats?.length || 0}</p>
+                <p className="text-2xl font-bold text-teal-600">{currencyStats?.length || 0}</p>
               </div>
-              <DollarSign className="h-8 w-8 text-blue-600" />
+              <DollarSign className="h-8 w-8 text-teal-600" />
             </div>
           </CardContent>
         </Card>

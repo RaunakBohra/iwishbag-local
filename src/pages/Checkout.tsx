@@ -1793,7 +1793,7 @@ export default function Checkout() {
                         <Label htmlFor="guest-currency">Payment Currency</Label>
                         <select
                           id="guest-currency"
-                          className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                           value={guestSelectedCurrency}
                           onChange={(e) => setGuestSelectedCurrency(e.target.value)}
                         >
@@ -1925,7 +1925,7 @@ export default function Checkout() {
                       )}
                     </div>
 
-                    <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                    <div className="text-sm text-gray-600 bg-teal-50 p-3 rounded-lg">
                       <p>
                         {checkoutMode === 'guest' &&
                           "Complete your order without creating an account. You'll receive order updates via email."}
@@ -2157,7 +2157,7 @@ export default function Checkout() {
                                     guestContact.fullName ||
                                     'Guest'}
                                 </span>
-                                <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">Guest Address</Badge>
+                                <Badge variant="outline" className="text-xs text-teal-600 border-teal-200 bg-teal-50">Guest Address</Badge>
                               </div>
                               <p className="text-sm text-gray-600">
                                 {addressFormData.address_line1}
@@ -2209,7 +2209,7 @@ export default function Checkout() {
                                     userProfile?.full_name ||
                                     'User'}
                                 </span>
-                                <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">One-time Address</Badge>
+                                <Badge variant="outline" className="text-xs text-teal-600 border-teal-200 bg-teal-50">One-time Address</Badge>
                               </div>
                               <p className="text-sm text-gray-600">
                                 {addressFormData.address_line1}
@@ -2259,7 +2259,7 @@ export default function Checkout() {
                           ? 'Please provide a shipping address for your order.'
                           : `Please add a shipping address for delivery to ${countries?.find((c) => c.code === shippingCountry)?.name || shippingCountry}.`}
                       </p>
-                      <Button onClick={() => setShowAddressModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+                      <Button onClick={() => setShowAddressModal(true)} className="bg-teal-600 hover:bg-teal-700 text-white">
                         <Plus className="h-4 w-4 mr-2" />
                         Add Address
                       </Button>
@@ -2271,7 +2271,7 @@ export default function Checkout() {
                           {addresses.map((address) => (
                             <div
                               key={address.id}
-                              className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:border-blue-300 transition-colors"
+                              className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:border-teal-300 transition-colors"
                             >
                               <RadioGroupItem value={address.id} id={address.id} className="mt-1" />
                               <Label htmlFor={address.id} className="flex-1 cursor-pointer">
@@ -2607,7 +2607,7 @@ export default function Checkout() {
                       (!isGuestCheckout && (!addresses || addresses.length === 0)) ||
                       (isGuestCheckout && checkoutMode !== 'guest' && !user)
                     }
-                    className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors duration-200"
+                    className="w-full h-12 bg-teal-600 hover:bg-teal-700 text-white font-medium transition-colors duration-200"
                     size="default"
                   >
                     {isProcessing ? (

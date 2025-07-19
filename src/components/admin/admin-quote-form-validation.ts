@@ -28,7 +28,7 @@ export const adminQuoteFormSchema = z.object({
   destination_country: z.string().nullable(),
   customs_percentage: emptyStringToNull,
   currency: z.string().default('USD'),
-  final_currency: z.string(),
+  destination_currency: z.string(),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
   internal_notes: z.string().optional(),
   status: z.string().optional(),

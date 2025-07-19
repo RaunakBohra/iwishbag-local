@@ -186,7 +186,7 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-blue-500" />
+              <Zap className="h-5 w-5 text-teal-500" />
               Optimized Quote Calculator
             </CardTitle>
             <div className="flex items-center gap-2">
@@ -197,7 +197,7 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                 </Badge>
               )}
               {(isCalculating || isRealTimeCalculating) && (
-                <Badge variant="outline" className="text-blue-600">
+                <Badge variant="outline" className="text-teal-600">
                   <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
                   Calculating...
                 </Badge>
@@ -456,9 +456,9 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                           />
                         </div>
                       </div>
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <div className="text-sm text-blue-600">Items Total</div>
-                        <div className="text-xl font-semibold text-blue-700">
+                      <div className="p-4 bg-teal-50 rounded-lg">
+                        <div className="text-sm text-teal-600">Items Total</div>
+                        <div className="text-xl font-semibold text-teal-700">
                           <DualCurrencyDisplay
                             amount={displayResult.breakdown.total_item_price}
                             originCountry={originCountry}

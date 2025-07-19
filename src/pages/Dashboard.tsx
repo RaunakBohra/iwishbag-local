@@ -66,7 +66,7 @@ const Dashboard = () => {
       icon: <Plus className="h-5 w-5" />,
       to: '/quote',
       variant: 'primary',
-      color: 'from-blue-500 to-blue-600',
+      color: 'from-teal-500 to-teal-600',
     },
     {
       label: 'View All Quotes',
@@ -89,7 +89,7 @@ const Dashboard = () => {
       value: activeQuotes,
       label: 'Active Quotes',
       icon: Package,
-      color: 'from-blue-500 to-blue-600',
+      color: 'from-teal-500 to-teal-600',
       bgColor: 'from-blue-50 to-blue-100',
       link: '/dashboard/quotes',
     },
@@ -176,7 +176,7 @@ const Dashboard = () => {
         <AnimatedSection animation="fadeInUp" delay={400}>
           <div className="mb-8">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Globe className="w-5 h-5 text-blue-600" />
+              <Globe className="w-5 h-5 text-teal-600" />
               Quick Actions
             </h2>
 
@@ -186,8 +186,8 @@ const Dashboard = () => {
                   <Link to={action.to}>
                     <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden">
                       <CardContent className="p-6">
-                        <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center mb-4">
-                          {React.cloneElement(action.icon, { className: "w-5 h-5 text-blue-600" })}
+                        <div className="w-12 h-12 rounded-lg bg-teal-50 flex items-center justify-center mb-4">
+                          {React.cloneElement(action.icon, { className: "w-5 h-5 text-teal-600" })}
                         </div>
                         <H2 className="text-lg font-semibold mb-1">{action.label}</H2>
                         <BodySmall className="text-gray-600">
@@ -195,7 +195,7 @@ const Dashboard = () => {
                           {action.label === 'View All Quotes' && 'Manage your quote requests'}
                           {action.label === 'My Orders' && 'Track your shipments'}
                         </BodySmall>
-                        <div className="mt-4 flex items-center text-blue-600 group-hover:translate-x-1 transition-transform">
+                        <div className="mt-4 flex items-center text-teal-600 group-hover:translate-x-1 transition-transform">
                           <span className="text-sm font-medium">Go</span>
                           <ArrowRight className="w-4 h-4 ml-1" />
                         </div>
@@ -215,12 +215,12 @@ const Dashboard = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-blue-600" />
+                    <Clock className="w-5 h-5 text-teal-600" />
                     Recent Activity
                   </CardTitle>
                   <Link
                     to="/dashboard/quotes"
-                    className="text-blue-600 hover:text-blue-700 hover:underline text-sm font-medium"
+                    className="text-teal-600 hover:text-teal-700 hover:underline text-sm font-medium"
                   >
                     View All
                   </Link>
@@ -242,14 +242,14 @@ const Dashboard = () => {
                       >
                         <div className="flex-shrink-0">{item.icon}</div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                          <p className="text-sm font-medium text-gray-900 group-hover:text-teal-600 transition-colors">
                             {item.text}
                           </p>
                           <p className="text-xs text-gray-500">
                             {new Date(item.date).toLocaleDateString()}
                           </p>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                        <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-teal-600 group-hover:translate-x-1 transition-all" />
                       </Link>
                     </li>
                   ))}
@@ -262,8 +262,8 @@ const Dashboard = () => {
           <AnimatedSection animation="fadeInRight" delay={900}>
             <Card className="h-full bg-gray-50 border-gray-200 hover:shadow-md transition-shadow">
               <CardContent className="p-8 text-center flex flex-col justify-center h-full">
-                <div className="w-16 h-16 rounded-lg bg-blue-50 flex items-center justify-center mx-auto mb-4">
-                  <HelpCircle className="w-8 h-8 text-blue-600" />
+                <div className="w-16 h-16 rounded-lg bg-teal-50 flex items-center justify-center mx-auto mb-4">
+                  <HelpCircle className="w-8 h-8 text-teal-600" />
                 </div>
                 <h3 className="text-xl font-semibold mb-3 text-gray-900">Need Assistance?</h3>
                 <p className="text-gray-600 mb-6">
@@ -281,7 +281,7 @@ const Dashboard = () => {
                     or email us at{' '}
                     <a
                       href="mailto:support@iwishbag.com"
-                      className="text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                      className="text-teal-600 hover:text-teal-700 hover:underline font-medium"
                     >
                       support@iwishbag.com
                     </a>
@@ -294,7 +294,7 @@ const Dashboard = () => {
 
         {/* Bottom CTA */}
         <AnimatedSection animation="fadeInUp" delay={1000}>
-          <Card className="mt-8 bg-blue-50 border-blue-200 overflow-hidden relative">
+          <Card className="mt-8 bg-teal-50 border-teal-200 overflow-hidden relative">
             <CardContent className="relative p-8 text-center">
               <h3 className="text-2xl font-semibold mb-3 text-gray-900">Ready to Shop Globally?</h3>
               <p className="text-gray-600 mb-6 max-w-2xl mx-auto">

@@ -108,12 +108,12 @@ export const GuestCartDialog: React.FC<GuestCartDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <UserPlus className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <UserPlus className="h-5 w-5 text-teal-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-blue-800">Account Creation</p>
-                <p className="text-xs text-blue-700 mt-1">
+                <p className="text-sm font-medium text-teal-800">Account Creation</p>
+                <p className="text-xs text-teal-700 mt-1">
                   We'll create a secure account with: <strong>{guestEmail}</strong>
                 </p>
               </div>
@@ -144,7 +144,7 @@ export const GuestCartDialog: React.FC<GuestCartDialogProps> = ({
             <Button
               onClick={handleCreateTempAccount}
               disabled={isCreatingTempAccount}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              className="flex-1 bg-teal-600 hover:bg-teal-700"
             >
               {isCreatingTempAccount ? (
                 <>

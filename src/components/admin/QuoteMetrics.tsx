@@ -173,8 +173,8 @@ export const QuoteMetrics = ({ quotes, isLoading }: QuoteMetricsProps) => {
         value={`${conversionRate.toFixed(1)}%`}
         change={conversionChange.change}
         changeType={conversionChange.type}
-        icon={<Target className="h-5 w-5 text-purple-600" />}
-        iconColor="bg-purple-50"
+        icon={<Target className="h-5 w-5 text-orange-600" />}
+        iconColor="bg-orange-50"
         description="Paid quotes"
       />
       
@@ -183,8 +183,8 @@ export const QuoteMetrics = ({ quotes, isLoading }: QuoteMetricsProps) => {
         value={formatCurrency(averageValue)}
         change={avgValueChange.change}
         changeType={avgValueChange.type}
-        icon={<TrendingUp className="h-5 w-5 text-indigo-600" />}
-        iconColor="bg-indigo-50"
+        icon={<TrendingUp className="h-5 w-5 text-teal-600" />}
+        iconColor="bg-teal-50"
         description="Per quote"
       />
       

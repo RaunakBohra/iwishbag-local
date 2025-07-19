@@ -648,9 +648,9 @@ export const StatusConfigInitializer: React.FC = () => {
             </div>
           )}
 
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+          <div className="mt-4 p-4 bg-teal-50 rounded-lg">
             <h4 className="font-medium mb-2">How this fixes the issue:</h4>
-            <ul className="text-sm space-y-1 text-blue-800">
+            <ul className="text-sm space-y-1 text-teal-800">
               <li>• Initializes proper status configurations in the database</li>
               <li>
                 • Sets <code>payment_pending</code> status to show only in orders list

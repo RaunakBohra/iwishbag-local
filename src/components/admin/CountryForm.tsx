@@ -198,7 +198,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 disabled={!!editingCountry}
                 required
                 placeholder="e.g., US, IN, NP"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
             <div>
@@ -209,7 +209,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 defaultValue={editingCountry?.name || ''}
                 required
                 placeholder="e.g., United States"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
             <div>
@@ -221,7 +221,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 required
                 onChange={(e) => setFormCurrency(e.target.value)}
                 placeholder="e.g., USD, INR, NPR"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
             <div>
@@ -234,7 +234,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 defaultValue={editingCountry?.rate_from_usd || ''}
                 required
                 placeholder="e.g., 1.00, 83.00"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
           </div>
@@ -257,7 +257,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 step="0.01"
                 defaultValue={editingCountry?.sales_tax || 0}
                 placeholder="0.00"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
             <div>
@@ -269,7 +269,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 step="0.01"
                 defaultValue={editingCountry?.vat || 0}
                 placeholder="0.00"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
           </div>
@@ -295,7 +295,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 defaultValue={editingCountry?.min_shipping || ''}
                 required
                 placeholder="0.00"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
             <div>
@@ -309,7 +309,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 step="0.01"
                 defaultValue={editingCountry?.additional_shipping || 0}
                 placeholder="0.00"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
             <div>
@@ -324,13 +324,13 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 defaultValue={editingCountry?.additional_weight || ''}
                 required
                 placeholder="0.00"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
             <div>
               <Label htmlFor="weight_unit" className="text-sm font-medium text-gray-900">Weight Unit</Label>
               <Select value={weightUnit} onValueChange={(value: 'lbs' | 'kg') => setWeightUnit(value)}>
-                <SelectTrigger className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                <SelectTrigger className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -351,7 +351,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 defaultValue={editingCountry?.volumetric_divisor || ''}
                 required
                 placeholder="5000"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
           </div>
@@ -376,7 +376,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 step="0.01"
                 defaultValue={editingCountry?.payment_gateway_fixed_fee || 0}
                 placeholder="0.00"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
             <div>
@@ -390,7 +390,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 step="0.01"
                 defaultValue={editingCountry?.payment_gateway_percent_fee || 0}
                 placeholder="0.00"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
           </div>
@@ -423,7 +423,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 Default Payment Gateway
               </Label>
               <Select value={defaultGateway} onValueChange={setDefaultGateway}>
-                <SelectTrigger className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                <SelectTrigger className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500">
                   <SelectValue placeholder="Select default gateway" />
                 </SelectTrigger>
                 <SelectContent>
@@ -517,7 +517,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 value={priorityThresholds.low}
                 onChange={(e) => handlePriorityChange('low', e.target.value)}
                 min={0}
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
             <div>
@@ -533,7 +533,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 value={priorityThresholds.normal}
                 onChange={(e) => handlePriorityChange('normal', e.target.value)}
                 min={priorityThresholds.low}
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
             <div>
@@ -549,7 +549,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
                 value={priorityThresholds.urgent}
                 onChange={(e) => handlePriorityChange('urgent', e.target.value)}
                 min={priorityThresholds.normal}
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
           </div>
@@ -576,7 +576,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
           </Button>
           <Button 
             type="submit" 
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-teal-600 hover:bg-teal-700 text-white"
           >
             {editingCountry ? 'Update Country' : 'Create Country'}
           </Button>

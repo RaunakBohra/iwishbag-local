@@ -473,7 +473,7 @@ export default function Quotes() {
             </SelectContent>
           </Select>
           <Link to="/quote">
-            <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg">
+            <Button className="bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 shadow-lg">
               <Plus className="h-4 w-4 mr-1.5" />
               <span className="hidden sm:inline">New Quote</span>
               <span className="sm:hidden">New</span>
@@ -497,7 +497,7 @@ export default function Quotes() {
             </p>
             {!searchTerm && statusFilter === 'all' && (
               <Link to="/quote">
-                <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg">
+                <Button className="bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 shadow-lg">
                   Request Your First Quote
                 </Button>
               </Link>

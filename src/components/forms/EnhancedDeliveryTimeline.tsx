@@ -41,8 +41,8 @@ export const EnhancedDeliveryTimeline: React.FC<EnhancedDeliveryTimelineProps> =
     } else if (currentDate >= phase.start_date && currentDate <= phase.end_date) {
       return {
         status: 'in_progress',
-        color: 'text-blue-600',
-        bgColor: 'bg-blue-100',
+        color: 'text-teal-600',
+        bgColor: 'bg-teal-100',
       };
     } else {
       return {
@@ -67,7 +67,7 @@ export const EnhancedDeliveryTimeline: React.FC<EnhancedDeliveryTimelineProps> =
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'in_progress':
-        return <Clock className="h-4 w-4 text-blue-600" />;
+        return <Clock className="h-4 w-4 text-teal-600" />;
       case 'pending':
         return <Circle className="h-4 w-4 text-gray-400" />;
       default:
@@ -115,7 +115,7 @@ export const EnhancedDeliveryTimeline: React.FC<EnhancedDeliveryTimelineProps> =
                           phaseStatus.status === 'completed'
                             ? 'bg-green-100 text-green-800'
                             : phaseStatus.status === 'in_progress'
-                              ? 'bg-blue-100 text-blue-800'
+                              ? 'bg-teal-100 text-teal-800'
                               : 'bg-gray-100 text-gray-600'
                         }`}
                       >
@@ -143,7 +143,7 @@ export const EnhancedDeliveryTimeline: React.FC<EnhancedDeliveryTimelineProps> =
 
                     {/* Additional Info */}
                     {phaseStatus.status === 'in_progress' && (
-                      <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                      <div className="mt-3 p-2 bg-teal-50 rounded text-xs text-teal-700">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           <span>Currently in progress</span>

@@ -129,7 +129,7 @@ export const CreateQuoteModal = ({
         destination_country: purchaseCountry, // Purchase country (for calculation system)
         origin_country: purchaseCountry, // Also set origin_country for consistency
         currency: originCurrency, // Currency for calculations
-        final_currency: customerCurrency, // Customer's preferred display currency
+        destination_currency: customerCurrency, // Customer's preferred display currency
         status: defaultStatus,
         // For registered users, link to their profile
         user_id: isRegisteredUser ? userId : null,

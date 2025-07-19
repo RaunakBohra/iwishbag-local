@@ -64,7 +64,7 @@ export const AdminAnalytics = () => {
       title: 'Total Quotes',
       value: analytics?.totalQuotes || 0,
       icon: Package,
-      color: 'text-blue-600',
+      color: 'text-teal-600',
     },
     {
       title: 'Pending Quotes',
@@ -82,7 +82,7 @@ export const AdminAnalytics = () => {
       title: 'Completed Orders',
       value: analytics?.completedOrders || 0,
       icon: CheckCircle,
-      color: 'text-purple-600',
+      color: 'text-orange-600',
     },
   ];
 

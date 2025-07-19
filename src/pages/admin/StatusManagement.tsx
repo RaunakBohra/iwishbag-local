@@ -47,7 +47,7 @@ const colorOptions = [
   {
     value: 'default',
     label: 'Default',
-    className: 'bg-blue-100 text-blue-800',
+    className: 'bg-teal-100 text-teal-800',
   },
   {
     value: 'secondary',
@@ -78,13 +78,13 @@ const colorOptions = [
   {
     value: 'purple',
     label: 'Purple',
-    className: 'bg-purple-100 text-purple-800',
+    className: 'bg-orange-100 text-purple-800',
   },
   { value: 'pink', label: 'Pink', className: 'bg-pink-100 text-pink-800' },
   {
     value: 'indigo',
     label: 'Indigo',
-    className: 'bg-indigo-100 text-indigo-800',
+    className: 'bg-teal-100 text-indigo-800',
   },
   {
     value: 'emerald',
@@ -390,8 +390,8 @@ export default function StatusManagement() {
               </div>
               {status.isDefaultQuoteStatus && (
                 <div className="col-span-2 flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="text-xs font-medium text-blue-600">Default Quote Status</span>
+                  <div className="w-2 h-2 rounded-full bg-teal-500" />
+                  <span className="text-xs font-medium text-teal-600">Default Quote Status</span>
                 </div>
               )}
             </div>
@@ -502,7 +502,7 @@ export default function StatusManagement() {
                     updateStatus(editingStatus.id, { name: e.target.value }, editingStatus.category)
                   }
                   placeholder="e.g., pending"
-                  className="border-gray-300 focus:border-blue-500"
+                  className="border-gray-300 focus:border-teal-500"
                 />
               </div>
               <div>
@@ -517,7 +517,7 @@ export default function StatusManagement() {
                     )
                   }
                   placeholder="e.g., Pending"
-                  className="border-gray-300 focus:border-blue-500"
+                  className="border-gray-300 focus:border-teal-500"
                 />
               </div>
             </div>
@@ -534,7 +534,7 @@ export default function StatusManagement() {
                   )
                 }
                 placeholder="Describe what this status means"
-                className="border-gray-300 focus:border-blue-500"
+                className="border-gray-300 focus:border-teal-500"
               />
             </div>
 
@@ -552,7 +552,7 @@ export default function StatusManagement() {
                     )
                   }
                 >
-                  <SelectTrigger className="border-gray-300 focus:border-blue-500">
+                  <SelectTrigger className="border-gray-300 focus:border-teal-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -575,7 +575,7 @@ export default function StatusManagement() {
                     updateStatus(editingStatus.id, { icon: value }, editingStatus.category)
                   }
                 >
-                  <SelectTrigger className="border-gray-300 focus:border-blue-500">
+                  <SelectTrigger className="border-gray-300 focus:border-teal-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -630,7 +630,7 @@ export default function StatusManagement() {
                     )
                   }
                   min="1"
-                  className="border-gray-300 focus:border-blue-500"
+                  className="border-gray-300 focus:border-teal-500"
                 />
               </div>
               <div>
@@ -649,7 +649,7 @@ export default function StatusManagement() {
                   }
                   placeholder="Optional"
                   min="1"
-                  className="border-gray-300 focus:border-blue-500"
+                  className="border-gray-300 focus:border-teal-500"
                 />
               </div>
             </div>
@@ -793,7 +793,7 @@ export default function StatusManagement() {
                         )
                       }
                       placeholder="e.g., quote_approved"
-                      className="border-gray-300 focus:border-blue-500"
+                      className="border-gray-300 focus:border-teal-500"
                     />
                   </div>
                 )}
@@ -822,7 +822,7 @@ export default function StatusManagement() {
                             editingStatus.category,
                           );
                         }}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
                       />
                       <label htmlFor={`transition-${status.id}`} className="text-sm text-gray-700">
                         {status.label}
@@ -849,7 +849,7 @@ export default function StatusManagement() {
                   setEditingStatus(null);
                 }}
                 disabled={isSaving}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-teal-600 hover:bg-teal-700 text-white"
               >
                 {isSaving ? (
                   <>
@@ -877,8 +877,8 @@ export default function StatusManagement() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="py-6">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <Activity className="h-6 w-6 text-blue-600" />
+                <div className="p-2 bg-teal-50 rounded-lg">
+                  <Activity className="h-6 w-6 text-teal-600" />
                 </div>
                 <div>
                   <h1 className="text-2xl font-semibold text-gray-900">Status Management</h1>
@@ -893,7 +893,7 @@ export default function StatusManagement() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="flex items-center gap-3">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
               <span className="text-gray-600">Loading status settings...</span>
             </div>
           </div>
@@ -909,8 +909,8 @@ export default function StatusManagement() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="py-6">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <Activity className="h-6 w-6 text-blue-600" />
+                <div className="p-2 bg-teal-50 rounded-lg">
+                  <Activity className="h-6 w-6 text-teal-600" />
                 </div>
                 <div>
                   <h1 className="text-2xl font-semibold text-gray-900">Status Management</h1>
@@ -951,8 +951,8 @@ export default function StatusManagement() {
           <div className="py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <Activity className="h-6 w-6 text-blue-600" />
+                <div className="p-2 bg-teal-50 rounded-lg">
+                  <Activity className="h-6 w-6 text-teal-600" />
                 </div>
                 <div>
                   <h1 className="text-2xl font-semibold text-gray-900">Status Management</h1>
@@ -976,7 +976,7 @@ export default function StatusManagement() {
                 <Button 
                   onClick={handleSaveSettings} 
                   disabled={isSaving}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-teal-600 hover:bg-teal-700 text-white"
                 >
                   {isSaving ? (
                     <>
@@ -1003,21 +1003,21 @@ export default function StatusManagement() {
             <TabsList className="bg-transparent border-0 p-0 h-auto">
               <TabsTrigger 
                 value="quotes" 
-                className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:border-blue-600 data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                className="data-[state=active]:bg-transparent data-[state=active]:text-teal-600 data-[state=active]:border-teal-600 data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Quote Statuses
               </TabsTrigger>
               <TabsTrigger 
                 value="orders" 
-                className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:border-blue-600 data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                className="data-[state=active]:bg-transparent data-[state=active]:text-teal-600 data-[state=active]:border-teal-600 data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
               >
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 Order Statuses
               </TabsTrigger>
               <TabsTrigger 
                 value="debug" 
-                className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:border-blue-600 data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                className="data-[state=active]:bg-transparent data-[state=active]:text-teal-600 data-[state=active]:border-teal-600 data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Debug & Fix
@@ -1033,7 +1033,7 @@ export default function StatusManagement() {
               </div>
               <Button 
                 onClick={() => addStatus('quote')}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-teal-600 hover:bg-teal-700 text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Status
@@ -1055,7 +1055,7 @@ export default function StatusManagement() {
               </div>
               <Button 
                 onClick={() => addStatus('order')}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-teal-600 hover:bg-teal-700 text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Status
@@ -1088,10 +1088,10 @@ export default function StatusManagement() {
         </Tabs>
 
         {/* Auto-save indicator */}
-        <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="mt-8 p-4 bg-teal-50 rounded-lg border border-teal-200">
           <div className="flex items-center">
-            <Zap className="h-4 w-4 text-blue-600 mr-2" />
-            <span className="text-sm text-blue-800">
+            <Zap className="h-4 w-4 text-teal-600 mr-2" />
+            <span className="text-sm text-teal-800">
               Changes are auto-saved after 2 seconds. Use "Save All Changes" to save immediately.
             </span>
           </div>

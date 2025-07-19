@@ -406,15 +406,15 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Route Information */}
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="p-3 bg-teal-50 border border-teal-200 rounded-lg">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-blue-700">Shipping Route:</span>
+            <span className="text-sm text-teal-700">Shipping Route:</span>
             {routeOrigin && routeDestination && (
               <ShippingRouteDisplay
                 origin={routeOrigin}
                 destination={routeDestination}
                 showCodes={true}
-                className="font-medium text-blue-900"
+                className="font-medium text-teal-900"
                 showIcon={false}
               />
             )}

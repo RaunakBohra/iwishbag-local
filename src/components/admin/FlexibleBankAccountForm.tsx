@@ -300,7 +300,7 @@ export const FlexibleBankAccountForm = ({
                   onValueChange={setSelectedCountry}
                   disabled={isFallback || countriesLoading}
                 >
-                  <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white h-10">
+                  <SelectTrigger className="border-gray-300 focus:border-teal-500 focus:ring-teal-500 bg-white h-10">
                     <SelectValue
                       placeholder={countriesLoading ? 'Loading countries...' : 'Select country'}
                     />
@@ -326,7 +326,7 @@ export const FlexibleBankAccountForm = ({
                   type="number"
                   value={displayOrder}
                   onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)}
-                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-10"
+                  className="border-gray-300 focus:border-teal-500 focus:ring-teal-500 h-10"
                 />
                 <BodySmall className="text-gray-500 mt-1">
                   Lower numbers appear first in the list.
@@ -343,7 +343,7 @@ export const FlexibleBankAccountForm = ({
                     setIsFallback(!!checked);
                     if (checked) setSelectedCountry('');
                   }}
-                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                  className="data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
                 />
                 <div className="flex-1">
                   <Label htmlFor="is_fallback" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -366,7 +366,7 @@ export const FlexibleBankAccountForm = ({
                   id="is_active"
                   checked={isActive}
                   onCheckedChange={(checked) => setIsActive(!!checked)}
-                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                  className="data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
                 />
                 <div className="flex-1">
                   <Label htmlFor="is_active" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -405,7 +405,7 @@ export const FlexibleBankAccountForm = ({
                       placeholder="e.g., IFSC Code"
                       disabled={DEFAULT_FIELDS.some((df) => df.id === field.id)}
                       required={field.required}
-                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-10"
+                      className="border-gray-300 focus:border-teal-500 focus:ring-teal-500 h-10"
                     />
                   </div>
 
@@ -422,7 +422,7 @@ export const FlexibleBankAccountForm = ({
                           placeholder="Enter payment instructions"
                           rows={3}
                           required={field.required}
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 resize-none"
+                          className="border-gray-300 focus:border-teal-500 focus:ring-teal-500 resize-none"
                         />
                       ) : (
                         <Input
@@ -431,7 +431,7 @@ export const FlexibleBankAccountForm = ({
                           onChange={(e) => handleFieldChange(field.id, 'value', e.target.value)}
                           placeholder="Enter value"
                           required={field.required}
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-10"
+                          className="border-gray-300 focus:border-teal-500 focus:ring-teal-500 h-10"
                         />
                       )}
                     </div>
@@ -510,7 +510,7 @@ export const FlexibleBankAccountForm = ({
           <Button 
             type="submit" 
             disabled={isProcessing}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 h-10 font-medium"
+            className="bg-teal-600 hover:bg-teal-700 text-white px-6 h-10 font-medium"
           >
             {isProcessing ? 'Saving...' : editingAccount ? 'Update account' : 'Create account'}
           </Button>

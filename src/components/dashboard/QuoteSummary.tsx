@@ -125,7 +125,7 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
               ? 'bg-green-50 border border-green-200'
               : statusConfig.isTerminal
                 ? 'bg-red-50 border border-red-200'
-                : 'bg-blue-50 border border-blue-200'
+                : 'bg-teal-50 border border-teal-200'
           }`}
         >
           <p
@@ -134,7 +134,7 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
                 ? 'text-green-800'
                 : statusConfig.isTerminal
                   ? 'text-red-800'
-                  : 'text-blue-800'
+                  : 'text-teal-800'
             }`}
           >
             {statusConfig.customerMessage}

@@ -600,7 +600,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
                       <Badge
                         key={curr}
                         variant="secondary"
-                        className="text-xs bg-blue-100 text-blue-800"
+                        className="text-xs bg-teal-100 text-teal-800"
                       >
                         {curr}
                       </Badge>

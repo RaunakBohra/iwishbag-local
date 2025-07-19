@@ -101,7 +101,7 @@ export const SEOAnalysis: React.FC<SEOAnalysisProps> = ({ analysis }) => {
                 </div>
                 <p className="text-sm text-gray-600 mb-1">{check.description}</p>
                 {check.recommendation && (
-                  <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                  <p className="text-xs text-teal-600 bg-teal-50 p-2 rounded">
                     💡 {check.recommendation}
                   </p>
                 )}

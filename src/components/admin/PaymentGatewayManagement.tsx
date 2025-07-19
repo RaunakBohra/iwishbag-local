@@ -70,15 +70,15 @@ const getGatewayIcon = (code: PaymentGateway) => {
 const getGatewayColor = (code: PaymentGateway) => {
   switch (code) {
     case 'stripe':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-teal-100 text-teal-800';
     case 'payu':
-      return 'bg-purple-100 text-purple-800';
+      return 'bg-orange-100 text-purple-800';
     case 'esewa':
       return 'bg-green-100 text-green-800';
     case 'khalti':
-      return 'bg-purple-100 text-purple-800';
+      return 'bg-orange-100 text-purple-800';
     case 'fonepay':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-teal-100 text-teal-800';
     case 'airwallex':
       return 'bg-orange-100 text-orange-800';
     case 'bank_transfer':

@@ -591,7 +591,7 @@ export function CustomsTiersManager() {
                         Weight: {tier.weight_min} - {tier.weight_max || '∞'} kg
                       </div>
                     )}
-                    <div className="text-blue-600 font-medium">Logic: {tier.logic_type}</div>
+                    <div className="text-teal-600 font-medium">Logic: {tier.logic_type}</div>
                   </div>
                 </div>
                 <div>

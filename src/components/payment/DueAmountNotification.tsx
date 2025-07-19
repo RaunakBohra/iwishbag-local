@@ -92,7 +92,7 @@ export function DueAmountNotification({
     <Alert
       className={cn('border-l-4', className, {
         'border-l-orange-500 bg-orange-50': dueInfo.changeType === 'increase',
-        'border-l-blue-500 bg-blue-50': dueInfo.changeType === 'decrease',
+        'border-l-blue-500 bg-teal-50': dueInfo.changeType === 'decrease',
         'border-l-red-500 bg-red-50': dueInfo.hasDueAmount && dueInfo.changeType === 'none',
       })}
     >

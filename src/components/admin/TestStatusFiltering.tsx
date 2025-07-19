@@ -58,7 +58,7 @@ export const TestStatusFiltering = () => {
             </h3>
             <div className="flex flex-wrap gap-2">
               {quotesListStatuses.map((status) => (
-                <Badge key={status} variant="outline" className="bg-blue-50 border-blue-200">
+                <Badge key={status} variant="outline" className="bg-teal-50 border-teal-200">
                   {status}
                 </Badge>
               ))}
@@ -110,7 +110,7 @@ export const TestStatusFiltering = () => {
                     </div>
                     <div className="flex items-center gap-2 text-xs">
                       <span
-                        className={`px-2 py-1 rounded ${status.showsInQuotesList ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}
+                        className={`px-2 py-1 rounded ${status.showsInQuotesList ? 'bg-teal-100 text-teal-800' : 'bg-gray-100 text-gray-500'}`}
                       >
                         Quotes: {status.showsInQuotesList ? 'Yes' : 'No'}
                       </span>
@@ -139,7 +139,7 @@ export const TestStatusFiltering = () => {
                     </div>
                     <div className="flex items-center gap-2 text-xs">
                       <span
-                        className={`px-2 py-1 rounded ${status.showsInQuotesList ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}
+                        className={`px-2 py-1 rounded ${status.showsInQuotesList ? 'bg-teal-100 text-teal-800' : 'bg-gray-100 text-gray-500'}`}
                       >
                         Quotes: {status.showsInQuotesList ? 'Yes' : 'No'}
                       </span>

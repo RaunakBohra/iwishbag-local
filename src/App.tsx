@@ -123,6 +123,7 @@ const PaymentManagementPageNew = React.lazy(() => import('@/pages/admin/PaymentM
 const StatusDebug = React.lazy(() => import('@/pages/debug/StatusDebug'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
+import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
 
 // Import test utilities in development
 if (import.meta.env.DEV) {
@@ -406,6 +407,7 @@ function App() {
     <ErrorBoundary>
       <QueryProvider>
         <AuthProvider>
+          <UserRoleEnsurer />
           <AccessibilityProvider>
             <StatusConfigProvider>
               <HelmetProvider>

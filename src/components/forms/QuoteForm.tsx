@@ -171,7 +171,7 @@ const QuoteForm = () => {
                 <div className="flex items-center justify-center space-x-4">
                   <div className="text-center">
                     <div className="text-sm font-medium text-teal-800">Where we'll buy from</div>
-                    <div className="text-lg font-bold text-blue-900">
+                    <div className="text-lg font-bold text-teal-900">
                       {(() => {
                         const country = allCountrySettings?.find((c) => c.code === countryCode);
                         return country ? `🌍 ${country.name}` : `🌍 ${countryCode}`;
@@ -186,14 +186,14 @@ const QuoteForm = () => {
                   </div>
                   <div className="text-center">
                     <div className="text-sm font-medium text-teal-800">Where we'll deliver to</div>
-                    <div className="text-lg font-bold text-blue-900">
+                    <div className="text-lg font-bold text-teal-900">
                       {selectedAddress.country ? `🌍 ${selectedAddress.country}` : 'Not selected'}
                     </div>
                     <div className="text-xs text-teal-600">Your shipping address</div>
                   </div>
                 </div>
                 <div className="mt-3 text-center">
-                  <div className="text-xs text-blue-600">
+                  <div className="text-xs text-teal-600">
                     We'll use the most cost-effective shipping route for this journey
                   </div>
                 </div>

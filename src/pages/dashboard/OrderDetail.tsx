@@ -284,7 +284,7 @@ export default function OrderDetail() {
                         href={order.product_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm hover:scale-105 transition-transform duration-200"
+                        className="inline-flex items-center text-teal-600 hover:text-teal-800 text-sm hover:scale-105 transition-transform duration-200"
                       >
                         View Product <ExternalLink className="h-3 w-3 ml-1" />
                       </a>

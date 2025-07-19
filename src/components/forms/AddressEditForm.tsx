@@ -415,9 +415,9 @@ export const AddressEditForm: React.FC<AddressEditFormProps> = ({
 
             {/* Country Information */}
             {selectedCountry && (
-              <Alert className="bg-blue-50 border-blue-200">
-                <CheckCircle className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-800">
+              <Alert className="bg-teal-50 border-teal-200">
+                <CheckCircle className="h-4 w-4 text-teal-600" />
+                <AlertDescription className="text-teal-800">
                   Shipping to <strong>{selectedCountry.name}</strong> ({selectedCountry.currency})
                 </AlertDescription>
               </Alert>

@@ -178,7 +178,7 @@ export const QuoteMessaging = ({ quoteId, quoteUserId }: QuoteMessagingProps) =>
           <CardHeader className="py-2 px-4 cursor-pointer hover:bg-muted/50 transition-colors">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-blue-500" />
+                <MessageSquare className="h-4 w-4 text-teal-500" />
                 Messages
                 {messages && messages.length > 0 && (
                   <span className="text-xs text-muted-foreground">({messages.length})</span>
@@ -279,7 +279,7 @@ export const QuoteMessaging = ({ quoteId, quoteUserId }: QuoteMessagingProps) =>
                   <Button
                     type="submit"
                     disabled={sendMessageMutation.isPending || (!content.trim() && !attachment)}
-                    className="bg-blue-500 hover:bg-blue-600 h-8 px-3"
+                    className="bg-teal-500 hover:bg-teal-600 h-8 px-3"
                   >
                     {sendMessageMutation.isPending ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -837,7 +837,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     switch (method.toLowerCase()) {
       case 'bank_transfer':
       case 'wire_transfer':
-        return <Banknote className="w-5 h-5 text-blue-500" />;
+        return <Banknote className="w-5 h-5 text-teal-500" />;
       case 'payu':
       case 'stripe':
       case 'credit_card':
@@ -846,7 +846,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         return <DollarSign className="w-5 h-5 text-gray-500" />;
       case 'upi':
       case 'esewa':
-        return <Smartphone className="w-5 h-5 text-purple-500" />;
+        return <Smartphone className="w-5 h-5 text-orange-500" />;
       case 'check':
       case 'cheque':
         return <FileText className="w-5 h-5 text-orange-500" />;
@@ -866,7 +866,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       case 'unpaid':
         return 'text-red-600 bg-red-50';
       case 'partially_refunded':
-        return 'text-purple-600 bg-purple-50';
+        return 'text-orange-600 bg-orange-50';
       case 'fully_refunded':
         return 'text-gray-600 bg-gray-50';
       default:
@@ -993,7 +993,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         className={cn(
                           'h-3 rounded-full transition-all',
                           paymentSummary.isOverpaid
-                            ? 'bg-blue-600'
+                            ? 'bg-teal-600'
                             : paymentSummary.status === 'paid'
                               ? 'bg-green-600'
                               : 'bg-orange-600',
@@ -1045,8 +1045,8 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
                     {/* Currency Breakdown - Show if multiple currencies */}
                     {paymentSummary.hasMultipleCurrencies && (
-                      <div className="bg-blue-50 p-3 rounded-lg">
-                        <p className="text-sm font-medium text-blue-800 mb-2">
+                      <div className="bg-teal-50 p-3 rounded-lg">
+                        <p className="text-sm font-medium text-teal-800 mb-2">
                           Multi-Currency Breakdown
                         </p>
                         <div className="space-y-1 text-sm">
@@ -1056,7 +1056,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                               if (netAmount === 0) return null;
                               return (
                                 <div key={curr} className="flex justify-between">
-                                  <span className="text-blue-700">{curr}:</span>
+                                  <span className="text-teal-700">{curr}:</span>
                                   <span
                                     className={cn(
                                       'font-medium',
@@ -1101,9 +1101,9 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
                     {/* Overpayment (only show if overpaid) */}
                     {paymentSummary.isOverpaid && (
-                      <div className="flex items-center justify-between bg-blue-50 p-3 rounded-lg">
-                        <p className="text-sm font-medium text-blue-800">Overpayment</p>
-                        <p className="text-xl font-bold text-blue-600">
+                      <div className="flex items-center justify-between bg-teal-50 p-3 rounded-lg">
+                        <p className="text-sm font-medium text-teal-800">Overpayment</p>
+                        <p className="text-xl font-bold text-teal-600">
                           {formatAmountForDisplay(paymentSummary.overpaidAmount, currency)}
                         </p>
                       </div>
@@ -1517,7 +1517,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                               )}
 
                               {/* Payment Balance Calculation */}
-                              <Alert className="border-blue-200 bg-blue-50">
+                              <Alert className="border-teal-200 bg-teal-50">
                                 <Info className="h-4 w-4" />
                                 <AlertDescription>
                                   <div className="space-y-1 text-sm">
@@ -1548,7 +1548,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                       <span
                                         className={cn(
                                           balance.newTotal > balance.orderTotal
-                                            ? 'text-purple-600'
+                                            ? 'text-orange-600'
                                             : balance.newTotal === balance.orderTotal
                                               ? 'text-green-600'
                                               : 'text-orange-600',
@@ -1559,7 +1559,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                       </span>
                                     </div>
                                     {balance.overpayment > 0 && (
-                                      <div className="text-purple-600 text-xs">
+                                      <div className="text-orange-600 text-xs">
                                         Overpayment: {currencySymbol}
                                         {balance.overpayment.toFixed(2)}
                                       </div>
@@ -1982,7 +1982,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                 link.status === 'active'
                                   ? 'bg-green-500'
                                   : link.status === 'completed'
-                                    ? 'bg-blue-500'
+                                    ? 'bg-teal-500'
                                     : link.status === 'expired'
                                       ? 'bg-orange-500'
                                       : 'bg-gray-400',
@@ -2004,7 +2004,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                 {link.api_version === 'v1_legacy' && (
                                   <Badge
                                     variant="outline"
-                                    className="text-xs bg-blue-50 text-blue-700"
+                                    className="text-xs bg-teal-50 text-teal-700"
                                   >
                                     Legacy
                                   </Badge>
@@ -2093,7 +2093,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           Total paid amount:{' '}
                           {formatAmountForDisplay(paymentSummary.totalPaid, currency)}
                           {paymentSummary.isOverpaid && (
-                            <span className="block mt-1 text-blue-600">
+                            <span className="block mt-1 text-teal-600">
                               Overpaid by:{' '}
                               {formatAmountForDisplay(paymentSummary.overpaidAmount, currency)}
                             </span>

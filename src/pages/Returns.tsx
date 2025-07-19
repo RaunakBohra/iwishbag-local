@@ -130,7 +130,7 @@ const Returns = () => {
 
             <div className="space-y-6 mb-12">
               <div className="flex items-start space-x-4 p-6 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-semibold">1</span>
                 </div>
                 <div>
@@ -143,7 +143,7 @@ const Returns = () => {
               </div>
 
               <div className="flex items-start space-x-4 p-6 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-semibold">2</span>
                 </div>
                 <div>
@@ -156,7 +156,7 @@ const Returns = () => {
               </div>
 
               <div className="flex items-start space-x-4 p-6 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-semibold">3</span>
                 </div>
                 <div>
@@ -169,7 +169,7 @@ const Returns = () => {
               </div>
 
               <div className="flex items-start space-x-4 p-6 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-semibold">4</span>
                 </div>
                 <div>

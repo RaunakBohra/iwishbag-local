@@ -54,7 +54,7 @@ export const MessageItem = ({
   const getVerificationStatusColor = (status: string) => {
     switch (status) {
       case 'verified':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
+        return 'bg-teal-100 text-teal-800 border-teal-300';
       case 'confirmed':
         return 'bg-green-100 text-green-800 border-green-300';
       case 'rejected':
@@ -110,7 +110,7 @@ export const MessageItem = ({
               href={message.attachment_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 text-sm"
+              className="text-teal-600 hover:text-teal-800 text-sm"
             >
               View
             </a>
@@ -120,11 +120,11 @@ export const MessageItem = ({
 
       {/* Admin Notes */}
       {isPaymentProof && paymentProofMessage.admin_notes && (
-        <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
-          <div className="text-xs text-blue-700 font-medium">Admin Notes:</div>
-          <div className="text-sm text-blue-800 mt-1">{paymentProofMessage.admin_notes}</div>
+        <div className="mt-3 p-2 bg-teal-50 rounded border border-teal-200">
+          <div className="text-xs text-teal-700 font-medium">Admin Notes:</div>
+          <div className="text-sm text-teal-800 mt-1">{paymentProofMessage.admin_notes}</div>
           {paymentProofMessage.verified_at && (
-            <div className="text-xs text-blue-600 mt-1">
+            <div className="text-xs text-teal-600 mt-1">
               Updated: {new Date(paymentProofMessage.verified_at).toLocaleString()}
             </div>
           )}
@@ -137,7 +137,7 @@ export const MessageItem = ({
           <Button
             size="sm"
             variant="outline"
-            className="border-blue-300 hover:bg-blue-50"
+            className="border-teal-300 hover:bg-teal-50"
             onClick={() => setShowPreviewModal(true)}
           >
             <Eye className="h-3 w-3 mr-1" />

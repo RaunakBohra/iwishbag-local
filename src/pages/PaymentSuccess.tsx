@@ -610,11 +610,11 @@ const PaymentSuccess: React.FC = () => {
       <div className="absolute inset-0">
         <div className="absolute top-0 -left-40 w-80 h-80 bg-green-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" />
         <div
-          className="absolute top-0 -right-40 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
+          className="absolute top-0 -right-40 w-80 h-80 bg-teal-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
           style={{ animationDelay: '2s' }}
         />
         <div
-          className="absolute -bottom-32 left-20 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
+          className="absolute -bottom-32 left-20 w-80 h-80 bg-orange-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
           style={{ animationDelay: '4s' }}
         />
       </div>
@@ -633,7 +633,7 @@ const PaymentSuccess: React.FC = () => {
           >
             <Sparkles
               className={`w-4 h-4 ${
-                i % 3 === 0 ? 'text-green-500' : i % 3 === 1 ? 'text-blue-500' : 'text-purple-500'
+                i % 3 === 0 ? 'text-green-500' : i % 3 === 1 ? 'text-teal-500' : 'text-orange-500'
               }`}
             />
           </div>
@@ -772,11 +772,11 @@ const PaymentSuccess: React.FC = () => {
                     Your order is being processed
                   </p>
                   <p className="flex items-center gap-2">
-                    <Package className="w-4 h-4 text-blue-500" />
+                    <Package className="w-4 h-4 text-teal-500" />
                     Track your shipment in My Orders
                   </p>
                   <p className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-purple-500" />
+                    <Mail className="w-4 h-4 text-orange-500" />
                     Check your email for order updates
                   </p>
                 </div>

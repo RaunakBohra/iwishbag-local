@@ -341,8 +341,8 @@ ${template.html_content}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <Settings className="h-5 w-5 text-blue-600" />
+            <div className="p-2 bg-teal-50 rounded-lg">
+              <Settings className="h-5 w-5 text-teal-600" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Email settings</h2>
@@ -356,7 +356,7 @@ ${template.html_content}
         <div className="p-6">
           {loadingSettings ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-teal-600 border-t-transparent"></div>
             </div>
           ) : (
             <div className="space-y-0 divide-y divide-gray-200">
@@ -483,7 +483,7 @@ ${template.html_content}
           </Button>
           <Button 
             onClick={() => setShowCreateTemplate(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            className="bg-teal-600 hover:bg-teal-700 text-white transition-colors"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create template
@@ -506,7 +506,7 @@ ${template.html_content}
                       </span>
                     )}
                     {template.template_type === 'quote_notification' && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
                         Quote
                       </span>
                     )}
@@ -516,7 +516,7 @@ ${template.html_content}
                       </span>
                     )}
                     {template.template_type === 'status_notification' && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-purple-800">
                         Status
                       </span>
                     )}
@@ -601,7 +601,7 @@ ${template.html_content}
                   value={templateForm.name}
                   onChange={(e) => setTemplateForm((prev) => ({ ...prev, name: e.target.value }))}
                   placeholder="Default Abandonment Recovery"
-                  className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                 />
               </div>
               <div>
@@ -612,7 +612,7 @@ ${template.html_content}
                     setTemplateForm((prev) => ({ ...prev, template_type: value }))
                   }
                 >
-                  <SelectTrigger className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                  <SelectTrigger className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500">
                     <SelectValue placeholder="Select template type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -636,7 +636,7 @@ ${template.html_content}
                   }))
                 }
                 placeholder="Complete Your Purchase - Your Cart is Waiting!"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
             <div>
@@ -652,7 +652,7 @@ ${template.html_content}
                 }
                 placeholder="Enter your email template here..."
                 rows={8}
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500 font-mono text-sm"
               />
               <p className="text-xs text-gray-500 mt-2">
                 <span className="font-medium">Available variables:</span> {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'}
@@ -669,7 +669,7 @@ ${template.html_content}
             </Button>
             <Button 
               onClick={handleSaveTemplate} 
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-teal-600 hover:bg-teal-700 text-white"
             >
               <Save className="h-4 w-4 mr-2" />
               Create template
@@ -696,7 +696,7 @@ ${template.html_content}
                   value={templateForm.name}
                   onChange={(e) => setTemplateForm((prev) => ({ ...prev, name: e.target.value }))}
                   placeholder="Default Abandonment Recovery"
-                  className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                 />
               </div>
               <div>
@@ -707,7 +707,7 @@ ${template.html_content}
                     setTemplateForm((prev) => ({ ...prev, template_type: value }))
                   }
                 >
-                  <SelectTrigger className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                  <SelectTrigger className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500">
                     <SelectValue placeholder="Select template type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -731,7 +731,7 @@ ${template.html_content}
                   }))
                 }
                 placeholder="Complete Your Purchase - Your Cart is Waiting!"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
             <div>
@@ -747,7 +747,7 @@ ${template.html_content}
                 }
                 placeholder="Enter your email template here..."
                 rows={8}
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
+                className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500 font-mono text-sm"
               />
               <p className="text-xs text-gray-500 mt-2">
                 <span className="font-medium">Available variables:</span> {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'}
@@ -764,7 +764,7 @@ ${template.html_content}
             </Button>
             <Button 
               onClick={handleSaveTemplate} 
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-teal-600 hover:bg-teal-700 text-white"
             >
               <Save className="h-4 w-4 mr-2" />
               Save changes

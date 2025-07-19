@@ -56,7 +56,7 @@ export function PayUDebugInstructions() {
               <h4 className="font-medium">Visit Debug Page</h4>
               <p className="text-sm text-muted-foreground">
                 Go to{' '}
-                <a href="/admin/debug/payu" className="text-blue-600 hover:underline">
+                <a href="/admin/debug/payu" className="text-teal-600 hover:underline">
                   /admin/debug/payu
                 </a>{' '}
                 to view a formatted view of the logs.

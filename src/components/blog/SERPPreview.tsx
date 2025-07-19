@@ -25,7 +25,7 @@ export const SERPPreview: React.FC<SERPPreviewProps> = ({ preview }) => {
           )}
 
           {/* Title */}
-          <h3 className="text-blue-700 hover:text-blue-800 text-xl leading-6 mb-1 cursor-pointer">
+          <h3 className="text-teal-700 hover:text-teal-800 text-xl leading-6 mb-1 cursor-pointer">
             {preview.title}
           </h3>
 

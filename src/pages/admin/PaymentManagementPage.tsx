@@ -164,7 +164,7 @@ const PaymentManagementPage = () => {
             const { data } = await supabase
               .from('quotes')
               .select(
-                'id, order_display_id, final_total, final_currency, payment_method, payment_status, email, amount_paid, user_id',
+                'id, order_display_id, final_total_usd, destination_currency, payment_method, payment_status, email, amount_paid, user_id',
               )
               .in('id', quoteIds);
             quotesData = data || [];
@@ -203,7 +203,7 @@ const PaymentManagementPage = () => {
               // Joined data
               order_display_id: quote?.order_display_id || 'N/A',
               final_total: quote?.final_total || 0,
-              final_currency: quote?.final_currency || 'USD',
+              destination_currency: quote?.destination_currency || 'USD',
               payment_method: quote?.payment_method || 'bank_transfer',
               payment_status: quote?.payment_status || 'unpaid',
               customer_email: quote?.email || 'N/A',
@@ -266,7 +266,7 @@ const PaymentManagementPage = () => {
             const { data } = await supabase
               .from('quotes')
               .select(
-                'id, order_display_id, final_total, final_currency, payment_method, payment_status, email, amount_paid, user_id',
+                'id, order_display_id, final_total_usd, destination_currency, payment_method, payment_status, email, amount_paid, user_id',
               )
               .in('id', quoteIds);
             quotesData = data || [];
@@ -328,7 +328,7 @@ const PaymentManagementPage = () => {
               // Joined data
               order_display_id: quote?.order_display_id || 'N/A',
               final_total: quote?.final_total || 0,
-              final_currency: quote?.final_currency || item.currency || 'USD',
+              destination_currency: quote?.destination_currency || item.currency || 'USD',
               payment_method: item.payment_method || 'unknown',
               payment_status: quote?.payment_status || 'unpaid',
               customer_email: quote?.email || 'N/A',
@@ -708,8 +708,8 @@ const PaymentManagementPage = () => {
       proof.order_display_id,
       proof.customer_name,
       proof.customer_email,
-      proof.final_total,
-      proof.final_currency,
+      proof.final_total_usd,
+      proof.destination_currency,
       proof.payment_method,
       format(new Date(proof.created_at), 'yyyy-MM-dd HH:mm'),
       proof.verification_status || 'pending',
@@ -768,9 +768,9 @@ const PaymentManagementPage = () => {
 
   const getPaymentMethodIcon = (method: string) => {
     const icons: Record<string, React.ReactNode> = {
-      bank_transfer: <DollarSign className="h-4 w-4 text-blue-600" />,
+      bank_transfer: <DollarSign className="h-4 w-4 text-teal-600" />,
       cod: <DollarSign className="h-4 w-4 text-green-600" />,
-      stripe: <DollarSign className="h-4 w-4 text-purple-600" />,
+      stripe: <DollarSign className="h-4 w-4 text-orange-600" />,
       payu: <DollarSign className="h-4 w-4 text-orange-600" />,
       esewa: <DollarSign className="h-4 w-4 text-green-600" />,
     };
@@ -896,7 +896,7 @@ const PaymentManagementPage = () => {
                   <p className="text-sm font-medium text-muted-foreground">Total</p>
                   <p className="text-2xl font-bold">{statistics.total}</p>
                 </div>
-                <Receipt className="h-8 w-8 text-blue-500" />
+                <Receipt className="h-8 w-8 text-teal-500" />
               </div>
             </CardContent>
           </Card>
@@ -985,10 +985,10 @@ const PaymentManagementPage = () => {
 
       {/* Bulk Actions */}
       {selectedProofs.size > 0 && (
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-teal-50 border-teal-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-blue-900">
+              <p className="text-sm font-medium text-teal-900">
                 {selectedProofs.size} payment proof(s) selected
               </p>
               <div className="flex gap-2">
@@ -1082,11 +1082,11 @@ const PaymentManagementPage = () => {
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">
-                          {proof.final_currency} {proof.final_total.toFixed(2)}
+                          {proof.destination_currency} {proof.final_total_usd.toFixed(2)}
                         </div>
                         {proof.amount_paid > 0 && (
                           <div className="text-sm text-muted-foreground">
-                            Paid: {proof.final_currency} {proof.amount_paid.toFixed(2)}
+                            Paid: {proof.destination_currency} {proof.amount_paid.toFixed(2)}
                           </div>
                         )}
                       </TableCell>

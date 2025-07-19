@@ -87,41 +87,41 @@ export const CustomerDeliveryInfo: React.FC<CustomerDeliveryInfoProps> = ({
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Timeline Phase Indicator */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center gap-2 text-blue-800">
+          <div className="p-3 bg-teal-50 border border-teal-200 rounded-lg">
+            <div className="flex items-center gap-2 text-teal-800">
               <Info className="h-4 w-4" />
               <span className="text-sm font-medium">
                 Timeline based on: {isPaymentPhase ? 'Payment Date' : 'Quote Request Date'}
               </span>
             </div>
-            <p className="text-xs text-blue-700 mt-1">
+            <p className="text-xs text-teal-700 mt-1">
               Start date: {format(startDate, 'EEEE, MMMM d, yyyy')}
             </p>
             {!isPaymentPhase && quote && (
-              <p className="text-xs text-blue-700 mt-1">
+              <p className="text-xs text-teal-700 mt-1">
                 Timeline will be updated after payment for more accurate estimates.
               </p>
             )}
           </div>
 
           {/* Delivery Method Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-teal-50 rounded-lg">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Truck className="h-4 w-4 text-blue-600" />
-                <span className="font-medium text-blue-900">Delivery Method</span>
+                <Truck className="h-4 w-4 text-teal-600" />
+                <span className="font-medium text-teal-900">Delivery Method</span>
               </div>
-              <p className="text-blue-800">{estimate.option.name}</p>
-              <p className="text-sm text-blue-700">via {estimate.option.carrier}</p>
+              <p className="text-teal-800">{estimate.option.name}</p>
+              <p className="text-sm text-teal-700">via {estimate.option.carrier}</p>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-blue-600" />
-                <span className="font-medium text-blue-900">Estimated Time</span>
+                <Clock className="h-4 w-4 text-teal-600" />
+                <span className="font-medium text-teal-900">Estimated Time</span>
               </div>
-              <p className="text-blue-800 font-semibold">{formattedEstimate}</p>
-              <p className="text-sm text-blue-700">
+              <p className="text-teal-800 font-semibold">{formattedEstimate}</p>
+              <p className="text-sm text-teal-700">
                 From {originCountry} to {destinationCountry}
               </p>
             </div>
@@ -179,16 +179,16 @@ export const CustomerDeliveryInfo: React.FC<CustomerDeliveryInfoProps> = ({
               </p>
             </div>
 
-            <div className="p-3 bg-purple-50 rounded border border-purple-200">
+            <div className="p-3 bg-orange-50 rounded border border-orange-200">
               <div className="flex items-center gap-2 mb-1">
-                <Truck className="h-4 w-4 text-purple-600" />
+                <Truck className="h-4 w-4 text-orange-600" />
                 <span className="font-medium text-purple-900">Customs Processing</span>
               </div>
               <p className="text-purple-800">
                 {estimate.customs_processing_days} business day
                 {estimate.customs_processing_days > 1 ? 's' : ''}
               </p>
-              <p className="text-xs text-purple-700 mt-1">Customs clearance and inspection</p>
+              <p className="text-xs text-orange-700 mt-1">Customs clearance and inspection</p>
             </div>
           </div>
 
@@ -229,18 +229,18 @@ export const CustomerDeliveryInfo: React.FC<CustomerDeliveryInfoProps> = ({
         <CardContent className="space-y-3">
           <div className="text-sm space-y-2">
             <p className="flex items-start gap-2">
-              <span className="text-blue-600 font-medium">•</span>
+              <span className="text-teal-600 font-medium">•</span>
               <span>
                 Delivery times are estimates and may vary due to customs processing and local
                 conditions.
               </span>
             </p>
             <p className="flex items-start gap-2">
-              <span className="text-blue-600 font-medium">•</span>
+              <span className="text-teal-600 font-medium">•</span>
               <span>We'll provide tracking information once your order is shipped.</span>
             </p>
             <p className="flex items-start gap-2">
-              <span className="text-blue-600 font-medium">•</span>
+              <span className="text-teal-600 font-medium">•</span>
               <span>Contact us if you have any questions about your delivery.</span>
             </p>
             {!isPaymentPhase && (

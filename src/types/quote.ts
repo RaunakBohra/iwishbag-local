@@ -13,7 +13,8 @@ export interface QuoteBreakdown {
   sub_total: number;
   vat: number;
   discount: number;
-  final_total: number;
+  final_total_usd: number;
+  final_total_local?: number;
   exchange_rate: number;
 }
 
@@ -58,9 +59,10 @@ export interface Quote {
   origin_country?: string;
   destination_country: string;
   status: QuoteStatus;
-  final_total: number;
+  final_total_usd: number;
+  final_total_local?: number;
   final_total_local: number;
-  final_currency: string;
+  destination_currency: string;
   in_cart: boolean;
   created_at: string;
   updated_at: string;

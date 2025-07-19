@@ -35,7 +35,7 @@ export default function FonepayCallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
-        <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
+        <Loader2 className="h-12 w-12 animate-spin text-orange-600 mx-auto mb-4" />
         <h2 className="text-2xl font-semibold mb-2">Processing Fonepay Payment</h2>
         <p className="text-gray-600">Please wait while we verify your payment...</p>
       </div>

@@ -125,7 +125,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   value={formData.recipient_name || ''}
                   onChange={(e) => handleInputChange('recipient_name', e.target.value)}
                   placeholder="John Doe"
-                  className={`${errors.recipient_name ? 'border-red-500' : 'border-gray-300'} focus:border-blue-500 focus:ring-blue-500`}
+                  className={`${errors.recipient_name ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
                 />
                 {errors.recipient_name && (
                   <p className="text-sm text-red-600">{errors.recipient_name}</p>
@@ -141,7 +141,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   value={formData.phone || ''}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   placeholder="+1 234 567 8900"
-                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                 />
               </div>
             </div>
@@ -158,7 +158,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 value={formData.address_line1}
                 onChange={(e) => handleInputChange('address_line1', e.target.value)}
                 placeholder="123 Main Street"
-                className={`${errors.address_line1 ? 'border-red-500' : 'border-gray-300'} focus:border-blue-500 focus:ring-blue-500`}
+                className={`${errors.address_line1 ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
               />
               {errors.address_line1 && (
                 <p className="text-sm text-red-600">{errors.address_line1}</p>
@@ -174,7 +174,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 value={formData.address_line2 || ''}
                 onChange={(e) => handleInputChange('address_line2', e.target.value)}
                 placeholder="Apt 4B"
-                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
 
@@ -188,7 +188,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   value={formData.city}
                   onChange={(e) => handleInputChange('city', e.target.value)}
                   placeholder="New York"
-                  className={`${errors.city ? 'border-red-500' : 'border-gray-300'} focus:border-blue-500 focus:ring-blue-500`}
+                  className={`${errors.city ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
                 />
                 {errors.city && (
                   <p className="text-sm text-red-600">{errors.city}</p>
@@ -204,7 +204,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   value={formData.state_province_region}
                   onChange={(e) => handleInputChange('state_province_region', e.target.value)}
                   placeholder="NY"
-                  className={`${errors.state_province_region ? 'border-red-500' : 'border-gray-300'} focus:border-blue-500 focus:ring-blue-500`}
+                  className={`${errors.state_province_region ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
                 />
                 {errors.state_province_region && (
                   <p className="text-sm text-red-600">{errors.state_province_region}</p>
@@ -222,7 +222,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   value={formData.postal_code}
                   onChange={(e) => handleInputChange('postal_code', e.target.value)}
                   placeholder="10001"
-                  className={`${errors.postal_code ? 'border-red-500' : 'border-gray-300'} focus:border-blue-500 focus:ring-blue-500`}
+                  className={`${errors.postal_code ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
                 />
                 {errors.postal_code && (
                   <p className="text-sm text-red-600">{errors.postal_code}</p>
@@ -238,7 +238,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   onValueChange={(value) => handleInputChange('country', value)}
                 >
                   <SelectTrigger 
-                    className={`${errors.country ? 'border-red-500' : 'border-gray-300'} focus:border-blue-500 focus:ring-blue-500`}
+                    className={`${errors.country ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
                   >
                     <SelectValue placeholder="Select country" />
                   </SelectTrigger>
@@ -298,7 +298,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
           <Button
             onClick={handleSave}
             disabled={isLoading}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-teal-600 hover:bg-teal-700 text-white"
           >
             {isLoading ? (
               <>

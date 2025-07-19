@@ -307,7 +307,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Shipping Costs</h3>
         {formData.originCountry && (
-          <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+          <div className="text-sm text-gray-600 bg-teal-50 p-3 rounded-lg">
             <strong>Currency:</strong> All costs below should be entered in{' '}
             {getCurrencySymbolFromCountry(formData.originCountry)} ({formData.originCountry}{' '}
             currency)
@@ -865,7 +865,7 @@ export function ShippingRouteManager() {
                         {route.cost_per_kg}/{route.weight_unit || 'kg'}
                         {route.cost_percentage > 0 && ` + ${route.cost_percentage}% of price`}
                         {route.exchange_rate && route.exchange_rate !== 1 && (
-                          <span className="text-xs text-blue-600 block mt-1">
+                          <span className="text-xs text-teal-600 block mt-1">
                             Rate: 1 {getCurrencySymbolFromCountry(route.origin_country)} ={' '}
                             {route.exchange_rate}{' '}
                             {getCurrencySymbolFromCountry(route.destination_country)}

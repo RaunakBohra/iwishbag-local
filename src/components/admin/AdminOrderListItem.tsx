@@ -97,7 +97,7 @@ export const AdminOrderListItem = ({
   // const currencyDisplays = order.final_total
   //   ? formatMultiCurrency({
   //       usdAmount: order.final_total,
-  //       quoteCurrency: order.final_currency,
+  //       quoteCurrency: order.destination_currency,
   //       customerPreferredCurrency: order.profiles?.preferred_display_currency,
   //     })
   //   : [];
@@ -110,7 +110,7 @@ export const AdminOrderListItem = ({
       bank_transfer: {
         label: 'Bank Transfer',
         icon: Landmark,
-        color: 'text-blue-600',
+        color: 'text-teal-600',
       },
       cod: {
         label: 'Cash on Delivery',
@@ -120,10 +120,10 @@ export const AdminOrderListItem = ({
       stripe: {
         label: 'Credit Card',
         icon: CreditCard,
-        color: 'text-purple-600',
+        color: 'text-orange-600',
       },
       payu: { label: 'PayU', icon: CreditCard, color: 'text-orange-600' },
-      paypal: { label: 'PayPal', icon: Wallet, color: 'text-blue-600' },
+      paypal: { label: 'PayPal', icon: Wallet, color: 'text-teal-600' },
     };
 
     return (
@@ -141,7 +141,7 @@ export const AdminOrderListItem = ({
   // Calculate payment amounts
   const finalTotal = order.final_total || 0;
   const amountPaid = order.amount_paid || 0;
-  const currency = order.final_currency || 'USD';
+  const currency = order.destination_currency || 'USD';
 
   // Payment proof verification status (unused but kept for reference)
   // const getVerificationStatusInfo = (status: string | null) => {
@@ -155,7 +155,7 @@ export const AdminOrderListItem = ({
   //     case 'verified':
   //       return {
   //         label: 'Verified',
-  //         color: 'bg-blue-100 text-blue-800 border-blue-300',
+  //         color: 'bg-teal-100 text-teal-800 border-teal-300',
   //         icon: CheckCircle,
   //       };
   //     case 'confirmed':
@@ -281,7 +281,7 @@ export const AdminOrderListItem = ({
 
                 {/* Bank Transfer Proof Badge - simplified */}
                 {order.payment_method === 'bank_transfer' && (
-                  <Badge variant="outline" className="text-xs border-blue-300 bg-blue-50">
+                  <Badge variant="outline" className="text-xs border-teal-300 bg-teal-50">
                     <Receipt className="h-3 w-3 mr-1" />
                     Bank Transfer
                   </Badge>
@@ -344,7 +344,7 @@ export const AdminOrderListItem = ({
                           e.stopPropagation();
                           navigate(`/admin/orders/${order.id}`);
                         }}
-                        className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                        className="bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100"
                       >
                         <MessageSquare className="h-3 w-3 mr-1" />
                         {messageCount}

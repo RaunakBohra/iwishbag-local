@@ -66,9 +66,9 @@ const getTriggerColor = (trigger: string) => {
     case 'payment_received':
       return 'bg-green-100 text-green-800';
     case 'quote_sent':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-teal-100 text-teal-800';
     case 'order_shipped':
-      return 'bg-purple-100 text-purple-800';
+      return 'bg-orange-100 text-purple-800';
     case 'quote_expired':
       return 'bg-red-100 text-red-800';
     case 'auto_calculation':
@@ -173,7 +173,7 @@ export const StatusTransitionHistory: React.FC<StatusTransitionHistoryProps> = (
                 {/* Timeline dot */}
                 <div
                   className={`flex-shrink-0 w-3 h-3 rounded-full mt-2 ${
-                    isLatest ? 'bg-blue-500' : 'bg-gray-300'
+                    isLatest ? 'bg-teal-500' : 'bg-gray-300'
                   }`}
                 />
 

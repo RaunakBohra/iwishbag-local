@@ -857,7 +857,7 @@ export function EnhancedPaymentLinkGenerator({
                     {showSuggestedFields &&
                       suggestedFields.length > 0 &&
                       formData.apiMethod === 'rest' && (
-                        <Card className="bg-blue-50 border-blue-200">
+                        <Card className="bg-teal-50 border-teal-200">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm flex items-center gap-2">
                               <Settings className="w-4 h-4" />
@@ -1093,8 +1093,8 @@ export function EnhancedPaymentLinkGenerator({
                         </div>
                       )}
 
-                      <div className="bg-blue-50 p-3 rounded-lg">
-                        <div className="flex items-center gap-2 text-blue-800 text-sm">
+                      <div className="bg-teal-50 p-3 rounded-lg">
+                        <div className="flex items-center gap-2 text-teal-800 text-sm">
                           <Smartphone className="w-4 h-4" />
                           <span>Mobile-optimized payment experience</span>
                         </div>

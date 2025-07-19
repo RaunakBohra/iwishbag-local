@@ -610,7 +610,7 @@ const AdminQuoteDetailPage = () => {
                     {/* Country */}
                     {customerProfile?.country && (
                       <div className="flex items-center gap-2 text-sm min-w-0">
-                        <MapPin className="h-3 w-3 text-purple-600" />
+                        <MapPin className="h-3 w-3 text-orange-600" />
                         <span className="truncate">
                           {allCountries?.find((c) => c.code === customerProfile.country)?.name ||
                             customerProfile.country}
@@ -619,7 +619,7 @@ const AdminQuoteDetailPage = () => {
                     )}
                     {/* Date */}
                     <div className="flex items-center gap-2 text-sm min-w-0">
-                      <Calendar className="h-3 w-3 text-blue-600" />
+                      <Calendar className="h-3 w-3 text-teal-600" />
                       <span className="truncate">
                         {new Date(quote.created_at).toLocaleDateString()}
                       </span>
@@ -711,7 +711,7 @@ const AdminQuoteDetailPage = () => {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-lg">
-                      <MessageSquare className="h-5 w-5 text-blue-600" />
+                      <MessageSquare className="h-5 w-5 text-teal-600" />
                       Customer Notes
                     </CardTitle>
                     <CardDescription>
@@ -723,15 +723,15 @@ const AdminQuoteDetailPage = () => {
                       {customerNotes.map((note, index) => (
                         <div
                           key={index}
-                          className="bg-blue-50 border border-blue-200 rounded-lg p-4"
+                          className="bg-teal-50 border border-teal-200 rounded-lg p-4"
                         >
                           <div className="flex items-start gap-3">
-                            <Package className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <Package className="h-4 w-4 text-teal-600 mt-0.5 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-blue-900 text-sm mb-1">
+                              <h4 className="font-medium text-teal-900 text-sm mb-1">
                                 {note.productName}
                               </h4>
-                              <p className="text-sm text-blue-800 whitespace-pre-wrap break-words">
+                              <p className="text-sm text-teal-800 whitespace-pre-wrap break-words">
                                 {note.noteText}
                               </p>
                             </div>
@@ -1406,7 +1406,7 @@ const AdminQuoteDetailPage = () => {
                     {/* Expiration Timer */}
                     {(quote.status === 'sent' || quote.status === 'approved') &&
                       quote.expires_at && (
-                        <div className="flex items-center justify-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center justify-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-teal-200 rounded-lg">
                           <QuoteExpirationTimer
                             expiresAt={quote.expires_at}
                             compact={true}

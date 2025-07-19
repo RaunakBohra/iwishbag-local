@@ -298,7 +298,7 @@ export const PayPalRefundManagement: React.FC = () => {
 
   const getRefundTypeBadge = (type: string) => {
     return type === 'FULL' ? (
-      <Badge className="bg-blue-100 text-blue-800">Full Refund</Badge>
+      <Badge className="bg-teal-100 text-teal-800">Full Refund</Badge>
     ) : (
       <Badge className="bg-orange-100 text-orange-800">Partial Refund</Badge>
     );

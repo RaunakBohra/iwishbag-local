@@ -121,7 +121,7 @@ export const BankAccountSettings = () => {
                 </Select>
                 <Button 
                   onClick={handleAddNew}
-                  className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4 text-sm font-medium"
+                  className="bg-teal-600 hover:bg-teal-700 text-white h-9 px-4 text-sm font-medium"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add account
@@ -212,7 +212,7 @@ export const BankAccountSettings = () => {
                   </BodySmall>
                   <Button 
                     onClick={handleAddNew}
-                    className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4 text-sm font-medium"
+                    className="bg-teal-600 hover:bg-teal-700 text-white h-9 px-4 text-sm font-medium"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add account

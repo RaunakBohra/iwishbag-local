@@ -454,7 +454,7 @@ const PaypalSuccess: React.FC = () => {
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center space-y-4">
-              <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+              <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
               <h2 className="text-xl font-semibold">Processing your payment...</h2>
               <p className="text-gray-600 text-center">
                 Please wait while we confirm your PayPal payment.
@@ -529,7 +529,7 @@ const PaypalSuccess: React.FC = () => {
                   <AnimatedSection animation="fadeInUp" delay={100}>
                     <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                       <h3 className="font-semibold text-lg flex items-center gap-2">
-                        <CreditCard className="h-5 w-5 text-blue-600" />
+                        <CreditCard className="h-5 w-5 text-teal-600" />
                         Transaction Details
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
@@ -552,7 +552,7 @@ const PaypalSuccess: React.FC = () => {
                         <div>
                           <span className="text-gray-600">Payment Method:</span>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="secondary" className="bg-blue-100">
+                            <Badge variant="secondary" className="bg-teal-100">
                               PayPal
                             </Badge>
                           </div>
@@ -564,9 +564,9 @@ const PaypalSuccess: React.FC = () => {
                   {/* Customer Information */}
                   {paymentData.customerEmail && (
                     <AnimatedSection animation="fadeInUp" delay={200}>
-                      <div className="bg-blue-50 rounded-lg p-4 space-y-3">
+                      <div className="bg-teal-50 rounded-lg p-4 space-y-3">
                         <h3 className="font-semibold text-lg flex items-center gap-2">
-                          <Mail className="h-5 w-5 text-blue-600" />
+                          <Mail className="h-5 w-5 text-teal-600" />
                           Customer Information
                         </h3>
                         <div className="text-sm space-y-2">
@@ -587,7 +587,7 @@ const PaypalSuccess: React.FC = () => {
                   <AnimatedSection animation="fadeInUp" delay={300}>
                     <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 space-y-3">
                       <h3 className="font-semibold text-lg flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-purple-600" />
+                        <Sparkles className="h-5 w-5 text-orange-600" />
                         What's Next?
                       </h3>
                       <ul className="space-y-2 text-sm">

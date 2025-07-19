@@ -161,7 +161,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
       <CardContent className="pt-0">
         {/* Applied Tier Summary */}
         {appliedTier && (
-          <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="mb-3 p-3 bg-teal-50 border border-teal-200 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Badge variant="default" className="text-xs">
@@ -170,14 +170,14 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
                 <span className="font-medium text-sm">{appliedTier.rule_name}</span>
               </div>
               <div className="text-right">
-                <div className="text-sm font-semibold text-blue-800">
+                <div className="text-sm font-semibold text-teal-800">
                   {appliedTier.customs_percentage}% customs
                 </div>
-                <div className="text-xs text-blue-600">{appliedTier.vat_percentage}% VAT</div>
+                <div className="text-xs text-teal-600">{appliedTier.vat_percentage}% VAT</div>
               </div>
             </div>
             {appliedTier.description && (
-              <div className="mt-2 text-xs text-blue-700">{appliedTier.description}</div>
+              <div className="mt-2 text-xs text-teal-700">{appliedTier.description}</div>
             )}
           </div>
         )}
@@ -193,7 +193,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
               <div
                 key={tier.id}
                 className={`p-2 rounded border text-xs ${
-                  isApplied ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                  isApplied ? 'bg-teal-50 border-teal-200' : 'bg-gray-50 border-gray-200'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
@@ -228,7 +228,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-1 text-xs text-blue-600">
+                <div className="mt-1 text-xs text-teal-600">
                   Logic: {tier.logic_type} • Priority: {tier.priority_order}
                 </div>
               </div>

@@ -212,7 +212,7 @@ export const CustomsCategories = () => {
         </div>
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
             <p className="text-sm text-gray-600">Loading customs categories...</p>
           </div>
         </div>
@@ -271,7 +271,7 @@ export const CustomsCategories = () => {
               </Badge>
               <Button 
                 onClick={() => setIsCreating(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-teal-600 hover:bg-teal-700 text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Category
@@ -313,7 +313,7 @@ export const CustomsCategories = () => {
               {!searchTerm && (
                 <Button 
                   onClick={() => setIsCreating(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-teal-600 hover:bg-teal-700 text-white"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Category
@@ -354,7 +354,7 @@ export const CustomsCategories = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => setEditingCategory(category)}
-                            className="text-gray-600 hover:text-blue-600"
+                            className="text-gray-600 hover:text-teal-600"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -442,7 +442,7 @@ export const CustomsCategories = () => {
               </Button>
               <Button 
                 type="submit" 
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-teal-600 hover:bg-teal-700 text-white"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
                 {createMutation.isPending || updateMutation.isPending ? (

@@ -145,7 +145,7 @@ export default function QuoteRequestPage() {
             origin_country: products[0]?.country || '',
             status: 'pending',
             currency: 'USD',
-            final_currency: 'USD',
+            destination_currency: 'USD',
             user_id: user ? user.id : undefined,
             shipping_address: shippingAddressData,
           })
@@ -196,7 +196,7 @@ export default function QuoteRequestPage() {
               origin_country: product.country || '',
               status: 'pending',
               currency: 'USD',
-              final_currency: 'USD',
+              destination_currency: 'USD',
               user_id: user ? user.id : undefined,
               shipping_address: shippingAddressData,
             })

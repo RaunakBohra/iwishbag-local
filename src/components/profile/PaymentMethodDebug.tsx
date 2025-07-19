@@ -39,19 +39,19 @@ const getGatewayIcon = (code: string) => {
 const getGatewayColor = (code: string) => {
   switch (code) {
     case 'stripe':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-teal-100 text-teal-800';
     case 'payu':
-      return 'bg-purple-100 text-purple-800';
+      return 'bg-orange-100 text-purple-800';
     case 'razorpay':
-      return 'bg-indigo-100 text-indigo-800';
+      return 'bg-teal-100 text-indigo-800';
     case 'paypal':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-teal-100 text-teal-800';
     case 'esewa':
       return 'bg-green-100 text-green-800';
     case 'khalti':
-      return 'bg-purple-100 text-purple-800';
+      return 'bg-orange-100 text-purple-800';
     case 'fonepay':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-teal-100 text-teal-800';
     case 'upi':
       return 'bg-green-100 text-green-800';
     case 'paytm':
@@ -59,7 +59,7 @@ const getGatewayColor = (code: string) => {
     case 'grabpay':
       return 'bg-green-100 text-green-800';
     case 'alipay':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-teal-100 text-teal-800';
     case 'airwallex':
       return 'bg-orange-100 text-orange-800';
     case 'bank_transfer':
@@ -97,7 +97,7 @@ export const PaymentMethodDebug: React.FC<PaymentMethodDebugProps> = ({ country,
   const availableMethodsList = getAvailablePaymentMethods();
 
   return (
-    <Card className="border-blue-200 bg-blue-50">
+    <Card className="border-teal-200 bg-teal-50">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
           <Info className="h-4 w-4" />

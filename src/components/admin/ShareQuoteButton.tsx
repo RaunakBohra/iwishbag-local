@@ -192,8 +192,8 @@ export const ShareQuoteButton: React.FC<ShareQuoteButtonProps> = ({
 
             <div className="space-y-4">
               {hasExistingShareLink && !shareLink && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <div className="text-sm text-blue-900">
+                <div className="p-3 bg-teal-50 border border-teal-200 rounded-md">
+                  <div className="text-sm text-teal-900">
                     <p className="font-semibold">Existing share link:</p>
                     <div className="flex items-center gap-2 mt-1">
                       <p className="text-xs flex-1">
@@ -349,8 +349,8 @@ export const ShareQuoteButton: React.FC<ShareQuoteButtonProps> = ({
 
           <div className="space-y-4">
             {hasExistingShareLink && !shareLink && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <div className="text-sm text-blue-900">
+              <div className="p-3 bg-teal-50 border border-teal-200 rounded-md">
+                <div className="text-sm text-teal-900">
                   <p className="font-semibold">Existing share link:</p>
                   <div className="flex items-center gap-2 mt-1">
                     <p className="text-xs flex-1">

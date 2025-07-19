@@ -49,7 +49,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
         destination_country: quote.destination_country,
         customs_percentage: quote.customs_percentage ?? undefined,
         currency: quote.currency || purchaseCurrency, // Use quote currency or determine from country
-        final_currency: quote.final_currency || 'USD',
+        destination_currency: quote.destination_currency || 'USD',
         priority: quote.priority ?? undefined,
         internal_notes: quote.internal_notes ?? '',
         status: quote.status ?? '',

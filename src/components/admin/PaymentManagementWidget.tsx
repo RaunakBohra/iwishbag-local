@@ -135,8 +135,8 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
   // Extract payment details from different sources (moved before useMemo)
   const paymentDetails = (quote.payment_details as Record<string, unknown>) || {};
   const transactionData = (paymentTransaction?.gateway_response as Record<string, unknown>) || {};
-  const paymentCurrency = paymentTransaction?.currency || quote.final_currency || 'USD';
-  const quoteCurrency = quote.final_currency || 'USD';
+  const paymentCurrency = paymentTransaction?.currency || quote.destination_currency || 'USD';
+  const quoteCurrency = quote.destination_currency || 'USD';
   const hasCurrencyMismatch = paymentCurrency !== quoteCurrency;
 
   // Calculate payment summary with currency breakdown
@@ -318,9 +318,9 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
 
             {/* Overpayment (only show if overpaid) */}
             {paymentSummary.isOverpaid && (
-              <div className="flex items-center justify-between bg-blue-50 p-2 rounded">
-                <span className="text-sm font-medium text-blue-800">Overpayment</span>
-                <span className="font-bold text-blue-600">
+              <div className="flex items-center justify-between bg-teal-50 p-2 rounded">
+                <span className="text-sm font-medium text-teal-800">Overpayment</span>
+                <span className="font-bold text-teal-600">
                   {formatAmountForDisplay(paymentSummary.overpaidAmount, paymentCurrency)}
                 </span>
               </div>
@@ -328,8 +328,8 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
 
             {/* Multi-Currency Alert */}
             {paymentSummary.hasMultipleCurrencies && (
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <p className="text-sm font-medium text-blue-800 mb-2">
+              <div className="bg-teal-50 p-3 rounded-lg">
+                <p className="text-sm font-medium text-teal-800 mb-2">
                   Multi-Currency Payments Detected
                 </p>
                 <div className="space-y-1 text-sm">
@@ -338,7 +338,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                     if (netAmount === 0) return null;
                     return (
                       <div key={curr} className="flex justify-between">
-                        <span className="text-blue-700">{curr}:</span>
+                        <span className="text-teal-700">{curr}:</span>
                         <span
                           className={cn(
                             'font-medium',
@@ -351,7 +351,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                     );
                   })}
                 </div>
-                <p className="text-xs text-blue-600 mt-2">
+                <p className="text-xs text-teal-600 mt-2">
                   💡 Refunds must be processed in original payment currencies
                 </p>
               </div>
@@ -442,9 +442,9 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                   </div>
                   {/* Info message about bank transfer payments */}
                   {quote.payment_status !== 'paid' && (
-                    <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
-                      <p className="text-xs text-blue-700">
+                    <div className="flex items-start gap-2 p-3 bg-teal-50 rounded-lg border border-teal-200">
+                      <AlertCircle className="h-4 w-4 text-teal-600 mt-0.5" />
+                      <p className="text-xs text-teal-700">
                         Bank transfer payments are verified through the payment proof system. Click
                         "Verify Payment Proofs" below to review and confirm payments.
                       </p>

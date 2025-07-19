@@ -46,7 +46,7 @@ export function DualCurrencyDisplay({
     if (exchangeRateSource === 'shipping_route') {
       return <CheckCircle className="h-3 w-3 text-green-500" />;
     }
-    return <Info className="h-3 w-3 text-blue-500" />;
+    return <Info className="h-3 w-3 text-teal-500" />;
   };
 
   const getStatusBadge = () => {
@@ -75,7 +75,7 @@ export function DualCurrencyDisplay({
       );
     } else if (exchangeRateSource === 'country_settings') {
       badges.push(
-        <Badge key="usd" variant="outline" className="text-xs bg-blue-50">
+        <Badge key="usd" variant="outline" className="text-xs bg-teal-50">
           USD Rate
         </Badge>,
       );

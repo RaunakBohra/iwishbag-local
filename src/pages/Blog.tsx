@@ -129,7 +129,7 @@ const Blog = () => {
               {selectedCategory && (
                 <Badge
                   variant="secondary"
-                  className="bg-purple-50 text-purple-700 border-purple-200"
+                  className="bg-orange-50 text-orange-700 border-orange-200"
                 >
                   {selectedCategory.name}
                 </Badge>

@@ -48,7 +48,7 @@ const getPriorityBadge = (priority: QuoteWithItems['priority']) => {
     medium: {
       label: 'Medium',
       variant: 'default' as const,
-      className: 'bg-blue-100 text-blue-700',
+      className: 'bg-teal-100 text-teal-700',
     },
     high: {
       label: 'High',
@@ -90,7 +90,7 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
 
   const currencyDisplays = formatMultiCurrency({
     usdAmount: quote.final_total,
-    quoteCurrency: quote.final_currency,
+    quoteCurrency: quote.destination_currency,
   });
 
   const formatDate = (dateString: string) => {
@@ -362,7 +362,7 @@ export const AdminQuoteListItem = ({ quote, isSelected, onSelect }: AdminQuoteLi
                   href={firstItem.product_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline hover:text-blue-600"
+                  className="underline hover:text-teal-600"
                 >
                   {firstItem.product_name || 'LINK'}
                 </a>

@@ -23,7 +23,7 @@ export const WeightDisplay: React.FC<WeightDisplayProps> = ({
     return (
       <span className={className}>
         {displayWeight.value.toFixed(2)} {displayWeight.unit.toUpperCase()}
-        {isConverted && <span className="text-xs text-blue-600 ml-1">(Route)</span>}
+        {isConverted && <span className="text-xs text-teal-600 ml-1">(Route)</span>}
       </span>
     );
   }
@@ -32,7 +32,7 @@ export const WeightDisplay: React.FC<WeightDisplayProps> = ({
     <div className={`space-y-1 ${className}`}>
       <div className="font-semibold">
         {displayWeight.value.toFixed(2)} {displayWeight.unit.toUpperCase()}
-        {isConverted && <span className="text-xs text-blue-600 ml-1">(Route Unit)</span>}
+        {isConverted && <span className="text-xs text-teal-600 ml-1">(Route Unit)</span>}
       </div>
       {showOriginal && isConverted && (
         <div className="text-xs text-muted-foreground">

@@ -175,7 +175,7 @@ export const ManualAnalysisTasks = () => {
       case 'pending':
         return <Clock className="h-4 w-4 text-yellow-500" />;
       case 'in_progress':
-        return <Edit3 className="h-4 w-4 text-blue-500" />;
+        return <Edit3 className="h-4 w-4 text-teal-500" />;
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'failed':
@@ -291,7 +291,7 @@ export const ManualAnalysisTasks = () => {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">{stats.inProgress}</div>
+            <div className="text-2xl font-bold text-teal-600">{stats.inProgress}</div>
             <div className="text-sm text-muted-foreground">In Progress</div>
           </CardContent>
         </Card>
@@ -341,7 +341,7 @@ export const ManualAnalysisTasks = () => {
                         href={task.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center text-blue-600 hover:text-blue-800"
+                        className="flex items-center text-teal-600 hover:text-teal-800"
                       >
                         <ExternalLink className="h-4 w-4 mr-1" />
                         View Product

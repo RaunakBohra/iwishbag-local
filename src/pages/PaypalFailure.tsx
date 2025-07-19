@@ -129,14 +129,14 @@ const PaypalFailure: React.FC = () => {
 
                 {/* What to Do Next */}
                 <AnimatedSection animation="fadeInUp" delay={300}>
-                  <div className="bg-blue-50 rounded-lg p-4 space-y-3">
+                  <div className="bg-teal-50 rounded-lg p-4 space-y-3">
                     <h3 className="font-semibold text-lg flex items-center gap-2">
-                      <HelpCircle className="h-5 w-5 text-blue-600" />
+                      <HelpCircle className="h-5 w-5 text-teal-600" />
                       What Can You Do?
                     </h3>
                     <div className="text-sm space-y-3">
                       <div className="flex items-start gap-2">
-                        <Badge variant="secondary" className="bg-blue-100">
+                        <Badge variant="secondary" className="bg-teal-100">
                           1
                         </Badge>
                         <div>
@@ -147,7 +147,7 @@ const PaypalFailure: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-start gap-2">
-                        <Badge variant="secondary" className="bg-blue-100">
+                        <Badge variant="secondary" className="bg-teal-100">
                           2
                         </Badge>
                         <div>
@@ -156,7 +156,7 @@ const PaypalFailure: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-start gap-2">
-                        <Badge variant="secondary" className="bg-blue-100">
+                        <Badge variant="secondary" className="bg-teal-100">
                           3
                         </Badge>
                         <div>

@@ -210,7 +210,7 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
       case 'failed':
         return <AlertTriangle className="h-5 w-5 text-red-600" />;
       default:
-        return <Clock className="h-5 w-5 text-blue-600" />;
+        return <Clock className="h-5 w-5 text-teal-600" />;
     }
   };
 
@@ -221,7 +221,7 @@ export const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
       case 'failed':
         return 'bg-red-100 text-red-800';
       case 'processing':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-teal-100 text-teal-800';
       default:
         return 'bg-yellow-100 text-yellow-800';
     }

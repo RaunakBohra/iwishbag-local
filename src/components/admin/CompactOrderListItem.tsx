@@ -71,7 +71,7 @@ const getPriorityBadge = (priority: OrderWithItems['priority']) => {
     },
     medium: {
       label: 'Medium',
-      className: 'bg-blue-100 text-blue-700 border-blue-300',
+      className: 'bg-teal-100 text-teal-700 border-teal-300',
     },
     high: {
       label: 'High',
@@ -99,7 +99,7 @@ const getPaymentMethodInfo = (method: string | null) => {
     bank_transfer: {
       label: 'Bank Transfer',
       icon: Landmark,
-      color: 'text-blue-600',
+      color: 'text-teal-600',
     },
     cod: {
       label: 'Cash on Delivery',
@@ -109,10 +109,10 @@ const getPaymentMethodInfo = (method: string | null) => {
     stripe: {
       label: 'Credit Card',
       icon: CreditCard,
-      color: 'text-purple-600',
+      color: 'text-orange-600',
     },
     payu: { label: 'PayU', icon: CreditCard, color: 'text-orange-600' },
-    paypal: { label: 'PayPal', icon: Wallet, color: 'text-blue-600' },
+    paypal: { label: 'PayPal', icon: Wallet, color: 'text-teal-600' },
   };
 
   return (
@@ -142,7 +142,7 @@ export const CompactOrderListItem = ({ order, isSelected, onSelect, onConfirmPay
   
   const finalTotal = order.final_total || 0;
   const amountPaid = order.amount_paid || 0;
-  const currency = order.final_currency || 'USD';
+  const currency = order.destination_currency || 'USD';
   const paymentProgress = finalTotal > 0 ? (amountPaid / finalTotal) * 100 : 0;
 
   const formatDate = (dateString: string) => {
@@ -208,7 +208,7 @@ export const CompactOrderListItem = ({ order, isSelected, onSelect, onConfirmPay
       paid: { label: 'Paid', className: 'bg-green-100 text-green-700 border-green-300', icon: CheckCircle },
       partial: { label: 'Partial', className: 'bg-orange-100 text-orange-700 border-orange-300', icon: Clock },
       unpaid: { label: 'Unpaid', className: 'bg-red-100 text-red-700 border-red-300', icon: AlertCircle },
-      overpaid: { label: 'Overpaid', className: 'bg-blue-100 text-blue-700 border-blue-300', icon: CheckCircle },
+      overpaid: { label: 'Overpaid', className: 'bg-teal-100 text-teal-700 border-teal-300', icon: CheckCircle },
     };
 
     const badgeConfig = config[status as keyof typeof config] || config.unpaid;
@@ -226,7 +226,7 @@ export const CompactOrderListItem = ({ order, isSelected, onSelect, onConfirmPay
     <>
       <div className={cn(
         'bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all duration-200',
-        isSelected && 'ring-2 ring-blue-500 border-blue-500'
+        isSelected && 'ring-2 ring-teal-500 border-teal-500'
       )}>
         <div className="flex items-center gap-4">
           {/* Selection Checkbox */}
@@ -234,7 +234,7 @@ export const CompactOrderListItem = ({ order, isSelected, onSelect, onConfirmPay
             <Checkbox
               checked={isSelected}
               onCheckedChange={(checked) => onSelect(order.id, !!checked)}
-              className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+              className="data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
             />
           </div>
 
@@ -245,9 +245,9 @@ export const CompactOrderListItem = ({ order, isSelected, onSelect, onConfirmPay
             order.status === 'rejected' && 'bg-red-500',
             order.status === 'pending' && 'bg-yellow-500',
             order.status === 'approved' && 'bg-green-500',
-            order.status === 'paid' && 'bg-blue-500',
-            order.status === 'ordered' && 'bg-purple-500',
-            order.status === 'shipped' && 'bg-indigo-500',
+            order.status === 'paid' && 'bg-teal-500',
+            order.status === 'ordered' && 'bg-orange-500',
+            order.status === 'shipped' && 'bg-teal-500',
             order.status === 'completed' && 'bg-green-600',
             !['cancelled', 'rejected', 'pending', 'approved', 'paid', 'ordered', 'shipped', 'completed'].includes(order.status) && 'bg-gray-300',
           )} />
@@ -279,7 +279,7 @@ export const CompactOrderListItem = ({ order, isSelected, onSelect, onConfirmPay
                   {formatDate(order.created_at)}
                 </BodySmall>
                 {messageCount > 0 && (
-                  <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+                  <Badge variant="outline" className="text-xs bg-teal-50 border-teal-200 text-teal-700">
                     {messageCount} msg{messageCount !== 1 ? 's' : ''}
                   </Badge>
                 )}
@@ -302,7 +302,7 @@ export const CompactOrderListItem = ({ order, isSelected, onSelect, onConfirmPay
                   href={firstItem.product_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-teal-600 hover:text-teal-800"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink className="h-3 w-3" />
@@ -446,7 +446,7 @@ export const CompactOrderListItem = ({ order, isSelected, onSelect, onConfirmPay
                     href={firstItem.product_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800"
+                    className="text-teal-600 hover:text-teal-800"
                   >
                     <ExternalLink className="h-4 w-4" />
                   </a>
@@ -508,7 +508,7 @@ export const CompactOrderListItem = ({ order, isSelected, onSelect, onConfirmPay
                 setIsPreviewOpen(false);
                 navigate(`/admin/orders/${order.id}`);
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-teal-600 hover:bg-teal-700 text-white"
             >
               <ArrowRight className="h-4 w-4 mr-2" />
               View Full Details

@@ -160,7 +160,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   <Input 
                     placeholder="John Doe" 
                     {...field} 
-                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                   />
                 </FormControl>
                 <FormMessage />
@@ -180,7 +180,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   <Input 
                     placeholder="123 Main St" 
                     {...field} 
-                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                   />
                 </FormControl>
                 <FormMessage />
@@ -201,7 +201,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     placeholder="Apt 4B, Suite 100, etc." 
                     {...field} 
                     value={field.value ?? ''} 
-                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                   />
                 </FormControl>
                 <FormMessage />
@@ -222,7 +222,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     <Input 
                       placeholder="Anytown" 
                       {...field} 
-                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                     />
                   </FormControl>
                   <FormMessage />
@@ -241,7 +241,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     <Input 
                       placeholder="CA" 
                       {...field} 
-                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                     />
                   </FormControl>
                   <FormMessage />
@@ -263,7 +263,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     <Input 
                       placeholder="12345" 
                       {...field} 
-                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                     />
                   </FormControl>
                   <FormMessage />
@@ -284,7 +284,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     disabled={addressMutation.isPending || countriesLoading}
                   >
                     <FormControl>
-                      <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                      <SelectTrigger className="border-gray-300 focus:border-teal-500 focus:ring-teal-500">
                         <SelectValue placeholder="Select a country" />
                       </SelectTrigger>
                     </FormControl>
@@ -314,7 +314,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   <Input 
                     placeholder="+1 (555) 123-4567" 
                     {...field} 
-                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                   />
                 </FormControl>
                 <FormMessage />
@@ -332,7 +332,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     <Checkbox 
                       checked={field.value} 
                       onCheckedChange={field.onChange} 
-                      className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                      className="data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
                     />
                   </FormControl>
                   <div className="flex-1">
@@ -365,7 +365,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
           <Button 
             type="submit" 
             disabled={addressMutation.isPending}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+            className="bg-teal-600 hover:bg-teal-700 text-white px-6"
           >
             {addressMutation.isPending ? 'Saving...' : address ? 'Update Address' : 'Save Address'}
           </Button>

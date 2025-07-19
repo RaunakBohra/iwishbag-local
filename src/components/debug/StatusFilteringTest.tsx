@@ -185,8 +185,8 @@ export const StatusFilteringTest: React.FC = () => {
             </div>
 
             {/* Payment Pending Specific */}
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="font-medium mb-2 text-blue-800">Payment Pending Status Check</h4>
+            <div className="p-3 bg-teal-50 rounded-lg border border-teal-200">
+              <h4 className="font-medium mb-2 text-teal-800">Payment Pending Status Check</h4>
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
                   <span>Total payment_pending quotes:</span>

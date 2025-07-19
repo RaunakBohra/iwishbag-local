@@ -103,12 +103,12 @@ export const ShippingAddressDisplay = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg">
           <div className="flex items-start space-x-3">
-            <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
+            <MapPin className="h-5 w-5 text-teal-600 mt-0.5" />
             <div className="flex-1">
-              <h4 className="font-medium text-blue-800 mb-2">Shipping Address</h4>
-              <div className="text-sm text-blue-700 space-y-1">
+              <h4 className="font-medium text-teal-800 mb-2">Shipping Address</h4>
+              <div className="text-sm text-teal-700 space-y-1">
                 <p>
                   <strong>Recipient:</strong> {address.recipientName || address.fullName}
                 </p>
@@ -124,7 +124,7 @@ export const ShippingAddressDisplay = ({
                 </p>
                 {address.phone && <p>📞 {address.phone}</p>}
                 {address.countryCode && (
-                  <p className="text-xs text-blue-600">Country Code: {address.countryCode}</p>
+                  <p className="text-xs text-teal-600">Country Code: {address.countryCode}</p>
                 )}
               </div>
             </div>

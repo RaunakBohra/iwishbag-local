@@ -163,12 +163,12 @@ export const DeliveryEstimateDisplay = ({
             <strong>Latest expected delivery:</strong> {format(maxDate, 'EEEE, MMMM d, yyyy')}
           </div>
           {!isPaymentPhase && quote && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center gap-2 text-blue-800">
+            <div className="p-3 bg-teal-50 border border-teal-200 rounded-lg">
+              <div className="flex items-center gap-2 text-teal-800">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm font-medium">Timeline will be updated after payment</span>
               </div>
-              <p className="text-xs text-blue-700 mt-1">
+              <p className="text-xs text-teal-700 mt-1">
                 Once you complete payment, we'll recalculate the delivery timeline from your payment
                 date for more accurate estimates.
               </p>
@@ -185,12 +185,12 @@ export const DeliveryEstimateDisplay = ({
             >
               <div className="flex-shrink-0">
                 {/* Icon for each phase */}
-                {phase.icon === 'package' && <Package className="h-6 w-6 text-blue-500" />}
+                {phase.icon === 'package' && <Package className="h-6 w-6 text-teal-500" />}
                 {phase.icon === 'plane' && <Truck className="h-6 w-6 text-green-500" />}
                 {phase.icon === 'building2' && (
                   <AlertTriangle className="h-6 w-6 text-yellow-500" />
                 )}
-                {phase.icon === 'truck' && <CheckCircle className="h-6 w-6 text-purple-500" />}
+                {phase.icon === 'truck' && <CheckCircle className="h-6 w-6 text-orange-500" />}
               </div>
               <div className="flex-1">
                 <div className="font-medium text-gray-900">{phase.title}</div>

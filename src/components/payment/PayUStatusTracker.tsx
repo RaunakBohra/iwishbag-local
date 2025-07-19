@@ -43,9 +43,9 @@ const PAYMENT_STATUSES = {
   },
   processing: {
     icon: RefreshCw,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-50',
+    borderColor: 'border-teal-200',
     message: 'Processing payment',
     description: 'PayU is processing your payment',
   },

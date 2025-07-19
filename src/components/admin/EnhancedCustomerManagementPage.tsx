@@ -264,7 +264,7 @@ export const EnhancedCustomerManagementPage = () => {
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-4"></div>
                 <Body className="text-gray-600">Loading customers...</Body>
               </div>
             </div>
@@ -281,8 +281,8 @@ export const EnhancedCustomerManagementPage = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <Users className="h-4 w-4 text-blue-600" />
+              <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center">
+                <Users className="h-4 w-4 text-teal-600" />
               </div>
               <div>
                 <H1 className="text-gray-900">Customer Management</H1>
@@ -342,7 +342,7 @@ export const EnhancedCustomerManagementPage = () => {
                 placeholder="Search customers by name or email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="pl-10 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
 

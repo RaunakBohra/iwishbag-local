@@ -43,21 +43,21 @@ export default function ProductSummary({
         <CardHeader className="pb-6">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-semibold flex items-center gap-2 text-gray-900">
-              <Package className="h-6 w-6 text-blue-600" />
+              <Package className="h-6 w-6 text-teal-600" />
               {title}
             </CardTitle>
             {showEditButton && onEdit && (
               <button
                 onClick={onEdit}
-                className="text-sm text-blue-600 hover:text-blue-800 underline font-medium"
+                className="text-sm text-teal-600 hover:text-teal-800 underline font-medium"
               >
                 Edit Products
               </button>
             )}
           </div>
           <div className="flex items-center gap-6 text-sm text-gray-600">
-            <span className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full">
-              <Package className="h-4 w-4 text-blue-600" />
+            <span className="flex items-center gap-2 bg-teal-50 px-3 py-1 rounded-full">
+              <Package className="h-4 w-4 text-teal-600" />
               {products.length} product{products.length !== 1 ? 's' : ''}
             </span>
             <span className="flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full">
@@ -71,8 +71,8 @@ export default function ProductSummary({
                 showSkeleton={false}
               />
             </span>
-            <span className="flex items-center gap-2 bg-purple-50 px-3 py-1 rounded-full">
-              <Weight className="h-4 w-4 text-purple-600" />
+            <span className="flex items-center gap-2 bg-orange-50 px-3 py-1 rounded-full">
+              <Weight className="h-4 w-4 text-orange-600" />
               {totalItems} item{totalItems !== 1 ? 's' : ''}
             </span>
           </div>
@@ -87,8 +87,8 @@ export default function ProductSummary({
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="bg-blue-100 p-2 rounded-lg">
-                    <Package className="h-5 w-5 text-blue-600" />
+                  <div className="bg-teal-100 p-2 rounded-lg">
+                    <Package className="h-5 w-5 text-teal-600" />
                   </div>
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-900 text-lg mb-1">
@@ -100,7 +100,7 @@ export default function ProductSummary({
                           href={product.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1 hover:underline"
+                          className="text-teal-600 hover:text-teal-800 text-sm font-medium flex items-center gap-1 hover:underline"
                         >
                           <ExternalLink className="h-3 w-3" />
                           View Product
@@ -112,7 +112,7 @@ export default function ProductSummary({
                 <div className="flex flex-wrap gap-2">
                   <Badge
                     variant="secondary"
-                    className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-0"
+                    className="bg-teal-100 text-teal-700 hover:bg-teal-200 border-0"
                   >
                     Qty: {product.quantity}
                   </Badge>
@@ -133,7 +133,7 @@ export default function ProductSummary({
                   {product.weight && (
                     <Badge
                       variant="secondary"
-                      className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-0"
+                      className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-0"
                     >
                       {product.weight} kg
                     </Badge>

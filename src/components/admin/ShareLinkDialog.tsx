@@ -79,9 +79,9 @@ export const ShareLinkDialog: React.FC<ShareLinkDialogProps> = ({
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
             <div className="flex items-start gap-2">
-              <div className="text-blue-600 mt-0.5">
+              <div className="text-teal-600 mt-0.5">
                 <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
@@ -90,7 +90,7 @@ export const ShareLinkDialog: React.FC<ShareLinkDialogProps> = ({
                   />
                 </svg>
               </div>
-              <div className="text-sm text-blue-800">
+              <div className="text-sm text-teal-800">
                 <p className="font-medium mb-1">Important Notes:</p>
                 <ul className="space-y-1 text-xs">
                   <li>• This link will expire in 7 days</li>

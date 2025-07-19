@@ -325,35 +325,35 @@ export const DeliveryTimeline: React.FC<DeliveryTimelineProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Main Timeline Info */}
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-blue-900">Estimated Delivery</h4>
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+            <h4 className="font-medium text-teal-900">Estimated Delivery</h4>
+            <Badge variant="secondary" className="bg-teal-100 text-teal-800">
               {selectedOption.name}
             </Badge>
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-700">Delivery Window:</span>
-              <span className="font-medium text-blue-900">
+              <span className="text-sm text-teal-700">Delivery Window:</span>
+              <span className="font-medium text-teal-900">
                 {formatDateRange(timeline.minDate, timeline.maxDate)}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-700">Total Days:</span>
-              <span className="font-medium text-blue-900">
+              <span className="text-sm text-teal-700">Total Days:</span>
+              <span className="font-medium text-teal-900">
                 {timeline.totalMinDays}-{timeline.totalMaxDays} days
               </span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-700">Based on route:</span>
+              <span className="text-sm text-teal-700">Based on route:</span>
               <ShippingRouteDisplay
                 origin={shippingRoute.origin_country}
                 destination={shippingRoute.destination_country}
-                className="font-medium text-blue-900"
+                className="font-medium text-teal-900"
                 showIcon={false}
               />
             </div>

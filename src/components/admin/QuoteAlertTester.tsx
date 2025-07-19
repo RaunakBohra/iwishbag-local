@@ -125,8 +125,8 @@ export function QuoteAlertTester() {
               <div className="text-2xl font-bold text-yellow-600">{alertSummary.warningAlerts}</div>
               <div className="text-xs text-muted-foreground">Warnings (24h)</div>
             </div>
-            <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">
+            <div className="text-center p-4 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
+              <div className="text-2xl font-bold text-teal-600">
                 {alertSummary.recentAlerts.length}
               </div>
               <div className="text-xs text-muted-foreground">Recent Alerts</div>

@@ -29,7 +29,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   const quickLinks = [
-    { label: 'Home', icon: Home, to: '/', color: 'bg-blue-50 text-blue-600' },
+    { label: 'Home', icon: Home, to: '/', color: 'bg-teal-50 text-teal-600' },
     {
       label: 'Request Quote',
       icon: Package,
@@ -54,9 +54,9 @@ const NotFound = () => {
     <div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-0 -left-40 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" />
+        <div className="absolute top-0 -left-40 w-80 h-80 bg-teal-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" />
         <div
-          className="absolute top-0 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
+          className="absolute top-0 -right-40 w-80 h-80 bg-orange-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"
           style={{ animationDelay: '2s' }}
         />
         <div
@@ -85,9 +85,9 @@ const NotFound = () => {
             <div
               className={`w-3 h-3 rounded-full ${
                 i % 4 === 0
-                  ? 'bg-blue-300'
+                  ? 'bg-teal-300'
                   : i % 4 === 1
-                    ? 'bg-purple-300'
+                    ? 'bg-orange-300'
                     : i % 4 === 2
                       ? 'bg-pink-300'
                       : 'bg-yellow-300'
@@ -149,7 +149,7 @@ const NotFound = () => {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
                       placeholder="Search for what you need..."
-                      className="pl-10 h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors"
+                      className="pl-10 h-12 border-2 border-gray-200 focus:border-teal-500 transition-colors"
                     />
                   </div>
                 </AnimatedSection>
@@ -162,7 +162,7 @@ const NotFound = () => {
                       {quickLinks.map((link, index) => (
                         <AnimatedSection key={index} animation="zoomIn" delay={800 + index * 100}>
                           <Link to={link.to}>
-                            <div className="group p-4 bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 cursor-pointer hover:border-blue-300">
+                            <div className="group p-4 bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 cursor-pointer hover:border-teal-300">
                               <div
                                 className={`w-10 h-10 rounded-lg bg-gradient-to-br ${link.color} flex items-center justify-center text-white mx-auto mb-2 group-hover:scale-110 transition-transform`}
                               >

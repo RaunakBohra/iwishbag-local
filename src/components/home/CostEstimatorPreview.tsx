@@ -54,7 +54,7 @@ export const CostEstimatorPreview = () => {
 
               <h2 className="text-4xl md:text-5xl font-bold mb-6">
                 Know Your Total Cost
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-teal-600 to-orange-600 bg-clip-text text-transparent">
                   {' '}
                   Instantly
                 </span>
@@ -243,7 +243,7 @@ export const CostEstimatorPreview = () => {
                 >
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-semibold text-gray-900">Total Cost</span>
-                    <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    <span className="text-2xl font-bold bg-gradient-to-r from-teal-600 to-orange-600 bg-clip-text text-transparent">
                       ${total.toFixed(2)}
                     </span>
                   </div>

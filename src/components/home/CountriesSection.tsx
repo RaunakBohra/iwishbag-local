@@ -81,7 +81,7 @@ export const CountriesSection = () => {
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 right-20 w-96 h-96 bg-teal-100 rounded-full filter blur-3xl opacity-20" />
-        <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-100 rounded-full filter blur-3xl opacity-20" />
+        <div className="absolute bottom-20 left-20 w-96 h-96 bg-orange-100 rounded-full filter blur-3xl opacity-20" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -98,7 +98,7 @@ export const CountriesSection = () => {
           </span>
           <h2 className="text-4xl md:text-5xl font-bold mt-4 mb-6">
             Shop from{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-teal-600 to-orange-600 bg-clip-text text-transparent">
               100+ Countries
             </span>
           </h2>

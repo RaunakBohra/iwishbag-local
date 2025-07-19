@@ -163,7 +163,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         destination_country: destinationCountry, // Shipping country (where we deliver to)
         user_id: user?.id ?? null,
         currency: selectedCountryCurrency,
-        final_currency: destinationCurrency, // Use dynamic currency based on destination
+        destination_currency: destinationCurrency, // Use dynamic currency based on destination
         status: 'pending',
         in_cart: false,
       };
@@ -350,7 +350,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       destination_country: destinationCountry, // Shipping country (where we deliver to)
       user_id: user?.id ?? null,
       currency: selectedCountryCurrency,
-      final_currency: getCountryCurrency(shippingAddress?.countryCode || shippingAddress?.country || countryCode),
+      destination_currency: getCountryCurrency(shippingAddress?.countryCode || shippingAddress?.country || countryCode),
       status: 'pending',
       in_cart: false,
     };

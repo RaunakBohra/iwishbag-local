@@ -116,7 +116,7 @@ export const PayUErrorHandler: React.FC<PayUErrorHandlerProps> = ({
       case 'configuration':
         return <XCircle className="h-8 w-8 text-red-600" />;
       case 'network':
-        return <RefreshCw className="h-8 w-8 text-blue-600" />;
+        return <RefreshCw className="h-8 w-8 text-teal-600" />;
       case 'payment':
         return <AlertTriangle className="h-8 w-8 text-orange-600" />;
       default:
@@ -212,7 +212,7 @@ export const PayUErrorHandler: React.FC<PayUErrorHandlerProps> = ({
         <div className="text-center">
           <p className="text-xs text-gray-500">
             Need help? Contact support at{' '}
-            <a href="mailto:support@iwishbag.com" className="text-blue-600 hover:underline">
+            <a href="mailto:support@iwishbag.com" className="text-teal-600 hover:underline">
               support@iwishbag.com
             </a>
           </p>

@@ -246,7 +246,7 @@ export function MarkupManager() {
         <div className="space-y-4">
           <div className="grid gap-4">
             {routeMarkups.map((route) => (
-              <Card key={route.id} className={hasMarkup(route) ? 'border-blue-200 bg-blue-50' : ''}>
+              <Card key={route.id} className={hasMarkup(route) ? 'border-teal-200 bg-teal-50' : ''}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ export function MarkupManager() {
                       <div className="space-y-1">
                         {route.markup_percentage > 0 && (
                           <div className="flex items-center gap-2">
-                            <Percent className="h-3 w-3 text-blue-500" />
+                            <Percent className="h-3 w-3 text-teal-500" />
                             <span>Markup: {route.markup_percentage}%</span>
                           </div>
                         )}
@@ -297,7 +297,7 @@ export function MarkupManager() {
                         )}
                         {route.exchange_rate_markup > 0 && (
                           <div className="flex items-center gap-2">
-                            <TrendingUp className="h-3 w-3 text-purple-500" />
+                            <TrendingUp className="h-3 w-3 text-orange-500" />
                             <span>Exchange Rate: +{route.exchange_rate_markup}</span>
                           </div>
                         )}
@@ -334,7 +334,7 @@ export function MarkupManager() {
                     </div>
                   </div>
                   {hasMarkup(route) && (
-                    <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+                    <div className="mt-4 p-3 bg-teal-100 rounded-lg">
                       <p className="text-sm font-medium">Sample Calculation (100 USD, 1 kg):</p>
                       <p className="text-sm">
                         Total Extra Cost: {getCurrencySymbolFromCountry(route.origin_country)}{calculateTotalMarkup(route, 100, 1).toFixed(2)}
@@ -384,7 +384,7 @@ export function MarkupManager() {
                   <div className="space-y-2 text-sm">
                     {country.country_markup_percentage > 0 && (
                       <div className="flex items-center gap-2">
-                        <Percent className="h-3 w-3 text-blue-500" />
+                        <Percent className="h-3 w-3 text-teal-500" />
                         <span>Country Markup: {country.country_markup_percentage}%</span>
                       </div>
                     )}
@@ -396,7 +396,7 @@ export function MarkupManager() {
                     )}
                     {country.exchange_rate_adjustment !== 0 && (
                       <div className="flex items-center gap-2">
-                        <TrendingUp className="h-3 w-3 text-purple-500" />
+                        <TrendingUp className="h-3 w-3 text-orange-500" />
                         <span>Exchange Rate Adjustment: {country.exchange_rate_adjustment > 0 ? '+' : ''}{country.exchange_rate_adjustment}</span>
                       </div>
                     )}

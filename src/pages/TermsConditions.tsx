@@ -57,32 +57,32 @@ const TermsConditions = () => {
               and regulations when using our services.
             </p>
 
-            <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-12">
+            <div className="bg-teal-50 border border-teal-200 p-6 rounded-lg mb-12">
               <div className="flex items-start">
-                <AlertTriangle className="w-5 h-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
+                <AlertTriangle className="w-5 h-5 text-teal-600 mr-3 mt-0.5 flex-shrink-0" />
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Important Requirements</h3>
                   <ul className="space-y-3">
                     <li className="flex items-start">
-                      <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                      <span className="w-1.5 h-1.5 bg-teal-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                       <p className="text-gray-700 leading-relaxed">
                         Provide accurate shipping addresses and contact information
                       </p>
                     </li>
                     <li className="flex items-start">
-                      <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                      <span className="w-1.5 h-1.5 bg-teal-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                       <p className="text-gray-700 leading-relaxed">
                         Comply with import/export regulations of your country
                       </p>
                     </li>
                     <li className="flex items-start">
-                      <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                      <span className="w-1.5 h-1.5 bg-teal-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                       <p className="text-gray-700 leading-relaxed">
                         Pay all applicable duties, taxes, and fees
                       </p>
                     </li>
                     <li className="flex items-start">
-                      <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                      <span className="w-1.5 h-1.5 bg-teal-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                       <p className="text-gray-700 leading-relaxed">
                         Do not request prohibited or restricted items
                       </p>

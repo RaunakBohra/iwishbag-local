@@ -26,7 +26,7 @@ export const PaymentSyncDebugger = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('quotes')
-        .select('id, display_id, status, payment_status, amount_paid, final_total, final_currency');
+        .select('id, display_id, status, payment_status, amount_paid, final_total_usd, destination_currency');
 
       if (error) {
         console.error('Debug: Error fetching quotes:', error);
@@ -62,7 +62,7 @@ export const PaymentSyncDebugger = () => {
         console.log(`  Status: ${quote.status}`);
         console.log(`  Payment Status: ${quote.payment_status}`);
         console.log(`  Amount Paid: ${quote.amount_paid} ${quote.final_currency}`);
-        console.log(`  Final Total: ${quote.final_total} ${quote.final_currency}`);
+        console.log(`  Final Total: ${quote.final_total_usd} ${quote.destination_currency}`);
         console.log(`  Total Proofs: ${proofs.length}`);
         console.log(`  Verified Proofs: ${verifiedProofs.length}`);
         console.log(`  Pending Proofs: ${pendingProofs.length}`);

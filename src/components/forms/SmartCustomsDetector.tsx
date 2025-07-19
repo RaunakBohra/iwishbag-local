@@ -77,7 +77,7 @@ export const SmartCustomsDetector: React.FC<SmartCustomsDetectorProps> = ({
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Zap className="h-5 w-5 text-blue-500" />
+          <Zap className="h-5 w-5 text-teal-500" />
           Smart Customs Detection
         </CardTitle>
         <CardDescription>

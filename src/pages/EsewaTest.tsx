@@ -281,7 +281,7 @@ const EsewaTest = () => {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-blue-600" />
+              <Shield className="h-5 w-5 text-teal-600" />
               Authentication Status
             </CardTitle>
           </CardHeader>
@@ -392,7 +392,7 @@ const EsewaTest = () => {
           <Card className="relative">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full font-bold">
+                <div className="flex items-center justify-center w-8 h-8 bg-teal-100 text-teal-600 rounded-full font-bold">
                   1
                 </div>
                 Create Quote
@@ -461,7 +461,7 @@ const EsewaTest = () => {
           <Card className="relative">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <div className="flex items-center justify-center w-8 h-8 bg-purple-100 text-purple-600 rounded-full font-bold">
+                <div className="flex items-center justify-center w-8 h-8 bg-orange-100 text-orange-600 rounded-full font-bold">
                   3
                 </div>
                 Submit Form
@@ -519,7 +519,7 @@ const EsewaTest = () => {
         {paymentResponse && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="text-lg text-blue-700 flex items-center gap-2">
+              <CardTitle className="text-lg text-teal-700 flex items-center gap-2">
                 🔄 Payment API Response
                 {paymentResponse.success ? (
                   <CheckCircle className="h-5 w-5 text-green-600" />

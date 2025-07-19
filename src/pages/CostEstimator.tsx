@@ -242,7 +242,7 @@ const CostEstimatorPage = () => {
       </Section>
 
       {/* CTA Section */}
-      <Section className="py-20 bg-gradient-to-br from-blue-600 to-purple-600 text-white">
+      <Section className="py-20 bg-gradient-to-br from-teal-600 to-orange-600 text-white">
         <Container>
           <div className="text-center max-w-3xl mx-auto">
             <H2 className="mb-6 text-white">Ready to start shopping?</H2>

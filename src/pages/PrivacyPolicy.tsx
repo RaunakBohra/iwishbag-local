@@ -125,7 +125,7 @@ const PrivacyPolicy = () => {
               You can also opt out of marketing communications at any time.
             </p>
 
-            <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-12">
+            <div className="bg-teal-50 border border-teal-200 p-6 rounded-lg mb-12">
               <p className="text-gray-700 leading-relaxed">
                 <strong>Contact us</strong> at privacy@iwishbag.com if you have any questions about 
                 your privacy rights or want to exercise any of these rights.

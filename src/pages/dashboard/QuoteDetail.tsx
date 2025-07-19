@@ -551,7 +551,7 @@ export default function QuoteDetail() {
                                 href={item.product_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
+                                className="text-teal-600 hover:underline"
                               >
                                 {item.product_name}
                               </a>
@@ -568,16 +568,16 @@ export default function QuoteDetail() {
                               try {
                                 const options = JSON.parse(item.options);
                                 return options.notes ? (
-                                  <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
-                                    <span className="font-medium text-blue-800">Notes:</span>{' '}
+                                  <div className="mt-2 p-2 bg-teal-50 border border-teal-200 rounded text-xs text-teal-900 inline-block">
+                                    <span className="font-medium text-teal-800">Notes:</span>{' '}
                                     {options.notes}
                                   </div>
                                 ) : null;
                               } catch {
                                 // If not JSON, treat as plain text notes
                                 return (
-                                  <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
-                                    <span className="font-medium text-blue-800">Notes:</span>{' '}
+                                  <div className="mt-2 p-2 bg-teal-50 border border-teal-200 rounded text-xs text-teal-900 inline-block">
+                                    <span className="font-medium text-teal-800">Notes:</span>{' '}
                                     {item.options}
                                   </div>
                                 );
@@ -690,7 +690,7 @@ export default function QuoteDetail() {
                                 href={quote.quote_items[0].product_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
+                                className="text-teal-600 hover:underline"
                               >
                                 {quote.product_name || 'Product Name'}
                               </a>
@@ -707,16 +707,16 @@ export default function QuoteDetail() {
                             try {
                               const options = JSON.parse(quote.quote_items[0].options);
                               return options.notes ? (
-                                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
-                                  <span className="font-medium text-blue-800">Notes:</span>{' '}
+                                <div className="mt-2 p-2 bg-teal-50 border border-teal-200 rounded text-xs text-teal-900 inline-block">
+                                  <span className="font-medium text-teal-800">Notes:</span>{' '}
                                   {options.notes}
                                 </div>
                               ) : null;
                             } catch {
                               // If not JSON, treat as plain text notes
                               return (
-                                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 inline-block">
-                                  <span className="font-medium text-blue-800">Notes:</span>{' '}
+                                <div className="mt-2 p-2 bg-teal-50 border border-teal-200 rounded text-xs text-teal-900 inline-block">
+                                  <span className="font-medium text-teal-800">Notes:</span>{' '}
                                   {quote.quote_items[0].options}
                                 </div>
                               );
@@ -833,8 +833,8 @@ export default function QuoteDetail() {
                         className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
                         onClick={handleMessageSupport}
                       >
-                        <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
-                          <MessageCircle className="w-4 h-4 text-blue-600" />
+                        <div className="p-2 rounded-lg bg-teal-100 dark:bg-teal-900/50">
+                          <MessageCircle className="w-4 h-4 text-teal-600" />
                         </div>
                         Message Support
                       </button>
@@ -862,8 +862,8 @@ export default function QuoteDetail() {
                         className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
                         onClick={handleRequestChanges}
                       >
-                        <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
-                          <Edit2 className="w-4 h-4 text-purple-600" />
+                        <div className="p-2 rounded-lg bg-orange-100 dark:bg-purple-900/50">
+                          <Edit2 className="w-4 h-4 text-orange-600" />
                         </div>
                         Request Changes
                       </button>
@@ -887,8 +887,8 @@ export default function QuoteDetail() {
                         className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
                         onClick={handleMessageSupport}
                       >
-                        <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
-                          <MessageCircle className="w-4 h-4 text-blue-600" />
+                        <div className="p-2 rounded-lg bg-teal-100 dark:bg-teal-900/50">
+                          <MessageCircle className="w-4 h-4 text-teal-600" />
                         </div>
                         Message Support
                       </button>
@@ -916,8 +916,8 @@ export default function QuoteDetail() {
                         className="flex items-center gap-3 w-full px-4 py-4 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-sm transition-all duration-300 text-gray-700 hover:scale-105"
                         onClick={handleRequestChanges}
                       >
-                        <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
-                          <Edit2 className="w-4 h-4 text-purple-600" />
+                        <div className="p-2 rounded-lg bg-orange-100 dark:bg-purple-900/50">
+                          <Edit2 className="w-4 h-4 text-orange-600" />
                         </div>
                         Request Changes
                       </button>
@@ -947,7 +947,7 @@ export default function QuoteDetail() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200/50"
+                    className="gap-2 hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-blue-50 to-purple-50 border-teal-200/50"
                   >
                     <Download className="h-4 w-4" />
                     Download PDF
@@ -956,7 +956,7 @@ export default function QuoteDetail() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Items Section */}
                   <div className="space-y-4">
-                    <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    <h3 className="font-bold text-lg bg-gradient-to-r from-teal-600 to-orange-600 bg-clip-text text-transparent">
                       Items
                     </h3>
                     <div className="space-y-3">
@@ -1011,15 +1011,15 @@ export default function QuoteDetail() {
 
                   {/* Charges & Fees Section */}
                   <div className="space-y-4">
-                    <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    <h3 className="font-bold text-lg bg-gradient-to-r from-teal-600 to-orange-600 bg-clip-text text-transparent">
                       Charges & Fees
                     </h3>
-                    <div className="space-y-3 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/50">
+                    <div className="space-y-3 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl p-4 border border-teal-200/50 dark:border-teal-700/50">
                       {renderBreakdownRow(
                         'Total Item Price',
                         quote.item_price,
                         false,
-                        <Package className="h-4 w-4 text-blue-600" />,
+                        <Package className="h-4 w-4 text-teal-600" />,
                       )}
                       {renderBreakdownRow(
                         'Sales Tax',
@@ -1037,13 +1037,13 @@ export default function QuoteDetail() {
                         'International Shipping',
                         quote.international_shipping,
                         false,
-                        <Truck className="h-4 w-4 text-indigo-600" />,
+                        <Truck className="h-4 w-4 text-teal-600" />,
                       )}
                       {renderBreakdownRow(
                         'Customs & ECS',
                         quote.customs_and_ecs,
                         false,
-                        <Shield className="h-4 w-4 text-purple-600" />,
+                        <Shield className="h-4 w-4 text-orange-600" />,
                       )}
                       {renderBreakdownRow(
                         'Domestic Shipping',
@@ -1091,7 +1091,7 @@ export default function QuoteDetail() {
                         <Percent className="h-4 w-4 text-emerald-600" />,
                       )}
                     </div>
-                    <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 border border-purple-300/50 dark:border-purple-600/50 rounded-xl p-6 shadow-lg">
+                    <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 border border-orange-300/50 dark:border-orange-600/50 rounded-xl p-6 shadow-lg">
                       <div className="flex justify-between items-center font-bold text-lg">
                         <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                           Total Amount
@@ -1300,7 +1300,7 @@ export default function QuoteDetail() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200/50"
+                        className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-blue-50 to-indigo-50 border-teal-200/50"
                         onClick={() => setIsAddressDialogOpen(true)}
                       >
                         <Edit className="h-4 w-4 mr-2" />

@@ -42,8 +42,8 @@ const AddressCard = ({
     <div className="flex items-start justify-between">
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-            <MapPin className="h-4 w-4 text-blue-600" />
+          <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center">
+            <MapPin className="h-4 w-4 text-teal-600" />
           </div>
           <div className="flex items-center gap-2">
             <Body className="font-semibold text-gray-900">{address.recipient_name}</Body>
@@ -181,7 +181,7 @@ export function AddressList() {
         </div>
         <Button 
           onClick={handleAdd}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          className="bg-teal-600 hover:bg-teal-700 text-white"
         >
           <Plus className="mr-2 h-4 w-4" /> 
           Add Address
