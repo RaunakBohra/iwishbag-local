@@ -143,10 +143,10 @@ const QuoteCard = ({
 
         {/* Delivery Estimate */}
         {deliveryEstimate && (
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+          <div className="mb-4 p-3 bg-teal-50 rounded-lg border border-teal-100">
             <div className="flex items-center gap-2 text-xs">
-              <Calendar className="h-3 w-3 text-blue-500" />
-              <span className="text-blue-700 font-medium">
+              <Calendar className="h-3 w-3 text-teal-500" />
+              <span className="text-teal-700 font-medium">
                 Delivery: {deliveryEstimate.label} ({deliveryEstimate.days.replace('d', ' days')})
               </span>
             </div>

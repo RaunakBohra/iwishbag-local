@@ -92,7 +92,7 @@ export const QuoteManagementPage = () => {
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-4"></div>
                 <Body className="text-gray-600">Loading quotes...</Body>
               </div>
             </div>
@@ -236,8 +236,8 @@ export const QuoteManagementPage = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <BarChart3 className="h-4 w-4 text-blue-600" />
+              <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center">
+                <BarChart3 className="h-4 w-4 text-teal-600" />
               </div>
               <div>
                 <H1 className="text-gray-900">Quote Management</H1>
@@ -246,7 +246,7 @@ export const QuoteManagementPage = () => {
             </div>
             <Button 
               onClick={() => setIsCreateModalOpen(true)} 
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white"
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Quote
@@ -281,7 +281,7 @@ export const QuoteManagementPage = () => {
                 placeholder="Search quotes by ID, customer, email, or product..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="pl-10 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
 
@@ -372,7 +372,7 @@ export const QuoteManagementPage = () => {
                   priorityFilter === 'all' && (
                     <Button
                       onClick={() => setIsCreateModalOpen(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className="bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Create Quote

@@ -333,7 +333,7 @@ const AuthForm = () => {
                   <Input
                     type="password"
                     {...field}
-                    className="h-11 px-4 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900"
+                    className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900"
                   />
                 </FormControl>
                 <FormMessage  />
@@ -485,7 +485,7 @@ const AuthForm = () => {
                             type={showPassword ? 'text' : 'password'}
                             placeholder="••••••••"
                             {...field}
-                            className="h-11 px-4 pr-10 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
+                            className="h-11 px-4 pr-10 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                           />
                           <button
                             type="button"

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 const Hero = () => {
   return (
-    <section className="bg-blue-50 ">
+    <section className="bg-teal-50 ">
       {' '}
       <div className="container py-24 sm:py-32 md:py-40 text-center">
         {' '}
