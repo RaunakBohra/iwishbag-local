@@ -83,12 +83,12 @@ export const TestimonialsSection = () => {
       <div className="container mx-auto px-4 relative z-10">
         {/* Section Header */}
         <div className="text-center mb-16 animate-fadeInUp">
-          <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider">
+          <span className="text-sm font-semibold text-teal-600 uppercase tracking-wider">
             Testimonials
           </span>
           <h2 className="text-4xl md:text-5xl font-bold mt-4 mb-6">
             What Our{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-teal-600 to-orange-600 bg-clip-text text-transparent">
               Customers Say
             </span>
           </h2>
@@ -145,7 +145,7 @@ export const TestimonialsSection = () => {
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 mb-6">
                 <p className="text-sm font-medium text-gray-700">
                   Purchased:{' '}
-                  <span className="text-blue-600">{testimonials[currentIndex].product}</span>
+                  <span className="text-teal-600">{testimonials[currentIndex].product}</span>
                 </p>
                 <p className="text-sm font-medium text-green-600 mt-1">
                   Saved: {testimonials[currentIndex].savedAmount}
@@ -165,14 +165,14 @@ export const TestimonialsSection = () => {
             className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full ml-4 p-2 bg-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group"
             aria-label="Previous testimonial"
           >
-            <ChevronLeft className="w-6 h-6 text-gray-600 group-hover:text-blue-600 transition-colors" />
+            <ChevronLeft className="w-6 h-6 text-gray-600 group-hover:text-teal-600 transition-colors" />
           </button>
           <button
             onClick={handleNext}
             className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full mr-4 p-2 bg-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group"
             aria-label="Next testimonial"
           >
-            <ChevronRight className="w-6 h-6 text-gray-600 group-hover:text-blue-600 transition-colors" />
+            <ChevronRight className="w-6 h-6 text-gray-600 group-hover:text-teal-600 transition-colors" />
           </button>
 
           {/* Dots Indicator */}
@@ -183,7 +183,7 @@ export const TestimonialsSection = () => {
                 onClick={() => handleDotClick(index)}
                 className={`transition-all duration-300 ${
                   index === currentIndex
-                    ? 'w-8 h-2 bg-blue-600 rounded-full'
+                    ? 'w-8 h-2 bg-teal-600 rounded-full'
                     : 'w-2 h-2 bg-gray-300 rounded-full hover:bg-gray-400'
                 }`}
                 aria-label={`Go to testimonial ${index + 1}`}

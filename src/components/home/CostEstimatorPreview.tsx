@@ -22,16 +22,16 @@ export const CostEstimatorPreview = () => {
   ];
 
   return (
-    <section className="py-20 bg-gradient-to-b from-white via-blue-50/30 to-white relative overflow-hidden">
+    <section className="py-20 bg-gradient-to-b from-white via-teal-50/30 to-white relative overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0">
         <motion.div
-          className="absolute top-20 right-20 w-96 h-96 bg-blue-200 rounded-full filter blur-3xl opacity-20"
+          className="absolute top-20 right-20 w-96 h-96 bg-teal-200 rounded-full filter blur-3xl opacity-20"
           animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
           transition={{ duration: 20, repeat: Infinity }}
         />
         <motion.div
-          className="absolute bottom-20 left-20 w-96 h-96 bg-purple-200 rounded-full filter blur-3xl opacity-20"
+          className="absolute bottom-20 left-20 w-96 h-96 bg-orange-200 rounded-full filter blur-3xl opacity-20"
           animate={{ scale: [1, 1.2, 1], rotate: [0, -90, 0] }}
           transition={{ duration: 15, repeat: Infinity }}
         />
@@ -47,7 +47,7 @@ export const CostEstimatorPreview = () => {
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-sm font-medium mb-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 text-teal-700 text-sm font-medium mb-6">
                 <Sparkles className="w-4 h-4" />
                 No Hidden Fees
               </div>
@@ -131,7 +131,7 @@ export const CostEstimatorPreview = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-2xl font-bold text-gray-900">Quick Estimate</h3>
-                  <Calculator className="w-6 h-6 text-blue-600" />
+                  <Calculator className="w-6 h-6 text-teal-600" />
                 </div>
 
                 {/* Country Selection */}
@@ -146,7 +146,7 @@ export const CostEstimatorPreview = () => {
                         onClick={() => setSelectedCountry(country.code)}
                         className={`p-3 rounded-lg border-2 transition-all duration-200 ${
                           selectedCountry === country.code
-                            ? 'border-blue-500 bg-blue-50'
+                            ? 'border-teal-500 bg-teal-50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
@@ -160,7 +160,7 @@ export const CostEstimatorPreview = () => {
                 {/* Product Price Slider */}
                 <div className="mb-8">
                   <label className="text-sm font-medium text-gray-700 mb-2 block">
-                    Product Price: <span className="text-blue-600 font-bold">${productPrice}</span>
+                    Product Price: <span className="text-teal-600 font-bold">${productPrice}</span>
                   </label>
                   <input
                     type="range"

@@ -43,7 +43,7 @@ const Dashboard = () => {
       type: 'quote',
       text: `Quote #${q.display_id || q.id} - ${q.status}`,
       link: `/dashboard/quotes/${q.id}`,
-      icon: <Package className="h-4 w-4 text-blue-600" />,
+      icon: <Package className="h-4 w-4 text-teal-600" />,
       date: q.created_at,
       status: q.status,
     })) || []),
@@ -130,8 +130,8 @@ const Dashboard = () => {
         <AnimatedSection animation="fadeInDown">
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 rounded-lg bg-teal-50 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-teal-600" />
               </div>
               <div>
                 <H1 className="text-2xl sm:text-3xl">
@@ -158,8 +158,8 @@ const Dashboard = () => {
                   )}
                 >
                   <CardContent className="relative p-6">
-                    <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center mb-4">
-                      <metric.icon className="w-6 h-6 text-blue-600" />
+                    <div className="w-12 h-12 rounded-lg bg-teal-50 flex items-center justify-center mb-4">
+                      <metric.icon className="w-6 h-6 text-teal-600" />
                     </div>
                     <StatNumber className="mb-1">
                       <AnimatedCounter end={metric.value} />

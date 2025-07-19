@@ -47,7 +47,7 @@ export const RecentActivity = () => {
         case 'destructive':
           return 'bg-red-100 text-red-700';
         case 'outline':
-          return 'bg-blue-100 text-blue-700';
+          return 'bg-teal-100 text-teal-700';
         default:
           return 'bg-gray-100 text-gray-700';
       }
@@ -100,7 +100,7 @@ export const RecentActivity = () => {
                 className="flex items-center justify-between p-3 border rounded-lg"
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${isOrder ? 'bg-green-100' : 'bg-blue-100'}`}>
+                  <div className={`p-2 rounded-lg ${isOrder ? 'bg-green-100' : 'bg-teal-100'}`}>
                     {getActivityIcon(quote.status || 'pending')}
                   </div>
                   <div>

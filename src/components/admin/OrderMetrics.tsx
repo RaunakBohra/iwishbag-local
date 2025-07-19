@@ -185,8 +185,8 @@ export const OrderMetrics = ({ orders, isLoading }: OrderMetricsProps) => {
         value={totalOrders.toString()}
         change={ordersChange.change}
         changeType={ordersChange.type}
-        icon={<Package className="h-5 w-5 text-blue-600" />}
-        iconColor="bg-blue-50"
+        icon={<Package className="h-5 w-5 text-teal-600" />}
+        iconColor="bg-teal-50"
         description="All time"
       />
       

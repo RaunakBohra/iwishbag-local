@@ -66,8 +66,8 @@ const About = () => {
                 </Body>
               </div>
               <div className="p-6">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-8 h-8 text-purple-600" />
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-8 h-8 text-orange-600" />
                 </div>
                 <H3 className="mb-3">Simplicity</H3>
                 <Body className="text-gray-600">
@@ -96,7 +96,7 @@ const About = () => {
               <div className="relative">
                 <div className="w-full h-64 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl flex items-center justify-center">
                   <div className="text-center">
-                    <StatNumber className="text-purple-600 mb-2">50,000+</StatNumber>
+                    <StatNumber className="text-orange-600 mb-2">50,000+</StatNumber>
                     <StatLabel>Happy Customers</StatLabel>
                   </div>
                 </div>

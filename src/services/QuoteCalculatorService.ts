@@ -1,7 +1,7 @@
-import { getExchangeRate, ExchangeRateResult } from '@/lib/currencyUtils';
 import { getShippingCost } from '@/lib/unified-shipping-calculator';
 import { Tables } from '@/integrations/supabase/types';
 import { currencyService } from '@/services/CurrencyService';
+import { optimalExchangeRateService, ExchangeRateResult } from '@/services/OptimalExchangeRateService';
 import {
   startQuoteCalculationMonitoring,
   completeQuoteCalculationMonitoring,
@@ -60,7 +60,7 @@ export interface QuoteCalculationBreakdown {
   total_item_price: number;
   total_item_weight: number;
 
-  // Cost components
+  // Cost components (all in USD - universal base)
   sales_tax_price: number;
   merchant_shipping_price: number;
   international_shipping: number;
@@ -70,17 +70,20 @@ export interface QuoteCalculationBreakdown {
   customs_and_ecs: number;
   discount: number;
 
-  // Fees and totals
+  // Fees and totals (USD base)
   payment_gateway_fee: number;
   subtotal_before_fees: number;
   subtotal: number;
   vat: number;
-  final_total: number;
+  final_total_usd: number;      // USD amount (for storage)
+  final_total_local: number;    // Local currency amount (for display)
 
-  // Metadata
-  currency: string;
+  // Currency metadata
+  currency: string;             // Always 'USD' for calculations
+  destination_currency: string; // Customer's preferred currency
   exchange_rate: number;
   exchange_rate_source: string;
+  exchange_rate_method: string;
   shipping_method: string;
   shipping_route_id?: number;
   calculation_timestamp: Date;
@@ -218,7 +221,8 @@ export class QuoteCalculatorService {
           sessionId,
           metadata: {
             cacheKey,
-            finalTotal: cachedResult.breakdown?.final_total,
+            finalTotalUsd: cachedResult.breakdown?.final_total_usd,
+          finalTotalLocal: cachedResult.breakdown?.final_total_local,
             calculationTime: Date.now() - startTime,
           },
         });
@@ -227,7 +231,7 @@ export class QuoteCalculatorService {
         completeQuoteCalculationMonitoring(
           calculationId,
           true, // success
-          cachedResult.breakdown?.final_total,
+          cachedResult.breakdown?.final_total_usd,
           undefined, // no error
           tracking?.apiCalls || 0,
           tracking?.cacheHits || 1,
@@ -309,7 +313,8 @@ export class QuoteCalculatorService {
         userId,
         sessionId,
         metadata: {
-          finalTotal: breakdown.final_total,
+          finalTotalUsd: breakdown.final_total_usd,
+          finalTotalLocal: breakdown.final_total_local,
           currency: params.currency,
           calculationTime: result.performance?.calculation_time_ms,
           apiCalls: tracking?.apiCalls || 0,
@@ -322,7 +327,7 @@ export class QuoteCalculatorService {
       completeQuoteCalculationMonitoring(
         calculationId,
         true, // success
-        breakdown.final_total,
+        breakdown.final_total_usd,
         undefined, // no error
         tracking?.apiCalls || 0,
         tracking?.cacheHits || 0,
@@ -579,6 +584,23 @@ export class QuoteCalculatorService {
       params.destinationCountry,
     );
 
+    // Get optimal exchange rate using the new service
+    this.performanceMetrics.totalApiCalls++;
+    if (calculationId) {
+      const tracking = this.activeCalculations.get(calculationId);
+      if (tracking) {
+        tracking.apiCalls++;
+        recordQuoteCalculationApiCall(calculationId, false);
+      }
+    }
+
+    const exchangeRateResult = await optimalExchangeRateService.getOptimalExchangeRate(
+      'USD', // All calculations are based in USD
+      destinationCurrency,
+      params.originCountry,
+      params.destinationCountry
+    );
+
     // Log calculation details
     logger.debug(LogCategory.QUOTE_CALCULATION, 'Starting calculation breakdown', {
       quoteId: calculationId,
@@ -657,28 +679,15 @@ export class QuoteCalculatorService {
       },
     );
 
-    let international_shipping: number;
-    let shipping_method: string;
-    let shipping_route_id: number | undefined;
-    let exchange_rate: number;
-    let exchange_rate_source: string;
-
-    const purchaseCurrencyRate = params.countrySettings.rate_from_usd || 1;
-
-    if (shippingCost.method === 'route-specific' && shippingCost.route) {
-      international_shipping = shippingCost.cost;
-      shipping_method = 'route-specific';
-      shipping_route_id = shippingCost.route.id || undefined;
-      exchange_rate =
-        (shippingCost.route as { exchange_rate?: number })?.exchange_rate || purchaseCurrencyRate;
-      exchange_rate_source = 'shipping_route';
-    } else {
-      // Fallback calculation - already returns cost in purchase currency
-      international_shipping = shippingCost.cost;
-      shipping_method = 'country_settings';
-      exchange_rate = purchaseCurrencyRate;
-      exchange_rate_source = 'country_settings';
-    }
+    // All shipping costs are now in USD (universal base)
+    const international_shipping = shippingCost.cost; // Assumed to be in USD
+    const shipping_method = shippingCost.method === 'route-specific' ? 'route-specific' : 'country_settings';
+    const shipping_route_id = shippingCost.route?.id;
+    
+    // Use optimal exchange rate result
+    const exchange_rate = exchangeRateResult.rate;
+    const exchange_rate_source = exchangeRateResult.source;
+    const exchange_rate_method = exchangeRateResult.method;
 
     // Calculate customs and duties
     const customs_and_ecs =
@@ -706,17 +715,21 @@ export class QuoteCalculatorService {
       (params.countrySettings.payment_gateway_fixed_fee || 0) +
       (subtotal_before_fees * reasonable_percent_fee) / 100;
 
-    // Calculate final totals
+    // Calculate final totals in USD (universal base)
     const subtotal = subtotal_before_fees + payment_gateway_fee;
     const vat = Math.round(subtotal * ((params.countrySettings.vat || 0) / 100) * 100) / 100;
-    const final_total = Math.round((subtotal + vat) * 100) / 100;
+    const final_total_usd = Math.round((subtotal + vat) * 100) / 100;
+    
+    // Calculate local currency amount for display
+    const final_total_local = Math.round((final_total_usd * exchange_rate) * 100) / 100;
 
     // End performance tracking
     logPerformanceEnd(`calculation.${calculationId}`, LogCategory.QUOTE_CALCULATION, {
       quoteId: calculationId,
       metadata: {
-        finalTotal: final_total,
-        currency: params.currency,
+        finalTotalUsd: final_total_usd,
+        finalTotalLocal: final_total_local,
+        destinationCurrency: destinationCurrency,
       },
     });
 
@@ -730,7 +743,8 @@ export class QuoteCalculatorService {
           customsAndEcs: customs_and_ecs,
           paymentGatewayFee: payment_gateway_fee,
           vat,
-          finalTotal: final_total,
+          finalTotalUsd: final_total_usd,
+          finalTotalLocal: final_total_local,
         },
         exchangeRate: exchange_rate,
         exchangeRateSource: exchange_rate_source,
@@ -753,10 +767,13 @@ export class QuoteCalculatorService {
       subtotal_before_fees,
       subtotal,
       vat,
-      final_total,
-      currency: destinationCurrency,
+      final_total_usd,                // USD amount (for storage)
+      final_total_local,              // Local currency amount (for display)
+      currency: 'USD',                // Always USD for calculations
+      destination_currency: destinationCurrency,
       exchange_rate,
       exchange_rate_source,
+      exchange_rate_method,
       shipping_method,
       shipping_route_id,
       calculation_timestamp: new Date(),

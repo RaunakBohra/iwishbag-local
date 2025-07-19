@@ -21,13 +21,13 @@ const trustBadges = [
     icon: Lock,
     title: 'Data Protection',
     description: 'Your data is safe with us',
-    color: 'from-blue-500 to-blue-600',
+    color: 'from-teal-500 to-teal-600',
   },
   {
     icon: CreditCard,
     title: 'Secure Payments',
     description: 'Multiple payment options',
-    color: 'from-purple-500 to-purple-600',
+    color: 'from-orange-500 to-orange-600',
   },
   {
     icon: Award,
@@ -114,12 +114,12 @@ export const TrustIndicators = () => {
           transition={{ duration: 0.5 }}
           viewport={{ once: true }}
         >
-          <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider">
+          <span className="text-sm font-semibold text-teal-600 uppercase tracking-wider">
             Why Trust Us
           </span>
           <h2 className="text-4xl md:text-5xl font-bold mt-4 mb-6">
             Shop with{' '}
-            <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-teal-600 to-orange-600 bg-clip-text text-transparent">
               Complete Confidence
             </span>
           </h2>
@@ -166,8 +166,8 @@ export const TrustIndicators = () => {
             >
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
-                    <guarantee.icon className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-gradient-to-r from-teal-100 to-orange-100 rounded-lg flex items-center justify-center">
+                    <guarantee.icon className="w-6 h-6 text-teal-600" />
                   </div>
                 </div>
                 <div>
@@ -250,7 +250,7 @@ export const TrustIndicators = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={() => (window.location.href = '/quote')}
-              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-full hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
+              className="px-8 py-4 bg-gradient-to-r from-teal-600 to-orange-600 text-white font-semibold rounded-full hover:from-teal-700 hover:to-orange-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
             >
               Start Shopping Now
             </button>

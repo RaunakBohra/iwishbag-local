@@ -167,29 +167,29 @@ const QuoteForm = () => {
 
             {/* Origin-Destination Display */}
             {countryCode && selectedAddress && (
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="mt-4 p-4 bg-teal-50 border border-teal-200 rounded-lg">
                 <div className="flex items-center justify-center space-x-4">
                   <div className="text-center">
-                    <div className="text-sm font-medium text-blue-800">Where we'll buy from</div>
+                    <div className="text-sm font-medium text-teal-800">Where we'll buy from</div>
                     <div className="text-lg font-bold text-blue-900">
                       {(() => {
                         const country = allCountrySettings?.find((c) => c.code === countryCode);
                         return country ? `🌍 ${country.name}` : `🌍 ${countryCode}`;
                       })()}
                     </div>
-                    <div className="text-xs text-blue-600">Purchase country</div>
+                    <div className="text-xs text-teal-600">Purchase country</div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <div className="w-8 h-0.5 bg-blue-300"></div>
-                    <ArrowRight className="h-4 w-4 text-blue-500" />
-                    <div className="w-8 h-0.5 bg-blue-300"></div>
+                    <div className="w-8 h-0.5 bg-teal-300"></div>
+                    <ArrowRight className="h-4 w-4 text-teal-500" />
+                    <div className="w-8 h-0.5 bg-teal-300"></div>
                   </div>
                   <div className="text-center">
-                    <div className="text-sm font-medium text-blue-800">Where we'll deliver to</div>
+                    <div className="text-sm font-medium text-teal-800">Where we'll deliver to</div>
                     <div className="text-lg font-bold text-blue-900">
                       {selectedAddress.country ? `🌍 ${selectedAddress.country}` : 'Not selected'}
                     </div>
-                    <div className="text-xs text-blue-600">Your shipping address</div>
+                    <div className="text-xs text-teal-600">Your shipping address</div>
                   </div>
                 </div>
                 <div className="mt-3 text-center">

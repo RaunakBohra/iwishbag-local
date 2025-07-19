@@ -80,7 +80,7 @@ export const CountriesSection = () => {
     <section className="py-20 bg-white relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 right-20 w-96 h-96 bg-blue-100 rounded-full filter blur-3xl opacity-20" />
+        <div className="absolute top-20 right-20 w-96 h-96 bg-teal-100 rounded-full filter blur-3xl opacity-20" />
         <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-100 rounded-full filter blur-3xl opacity-20" />
       </div>
 
@@ -93,7 +93,7 @@ export const CountriesSection = () => {
           transition={{ duration: 0.5 }}
           viewport={{ once: true }}
         >
-          <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider">
+          <span className="text-sm font-semibold text-teal-600 uppercase tracking-wider">
             Global Access
           </span>
           <h2 className="text-4xl md:text-5xl font-bold mt-4 mb-6">
@@ -197,7 +197,7 @@ export const CountriesSection = () => {
                     onClick={() =>
                       setExpandedCountry(expandedCountry === country.id ? null : country.id)
                     }
-                    className="mt-4 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                    className="mt-4 flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"
                   >
                     <span>View all stores</span>
                     <ChevronDown

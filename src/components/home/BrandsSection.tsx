@@ -41,7 +41,7 @@ export const BrandsSection = () => {
           {duplicatedBrands.map((brand, index) => (
             <div key={`${brand.name}-${index}`} className="flex-shrink-0 group">
               <div className="w-40 h-20 flex items-center justify-center bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 px-6 cursor-pointer">
-                <span className="text-lg font-semibold text-gray-700 group-hover:text-blue-600 transition-colors">
+                <span className="text-lg font-semibold text-gray-700 group-hover:text-teal-600 transition-colors">
                   {brand.name}
                 </span>
               </div>
@@ -105,7 +105,7 @@ export const BrandsSection = () => {
                   {item.image}
                 </div>
                 <h4 className="text-sm font-medium text-gray-900 mb-1">{item.product}</h4>
-                <p className="text-lg font-bold text-blue-600">{item.price}</p>
+                <p className="text-lg font-bold text-teal-600">{item.price}</p>
                 <p className="text-xs text-gray-500 mt-1">from {item.from}</p>
               </div>
             ))}

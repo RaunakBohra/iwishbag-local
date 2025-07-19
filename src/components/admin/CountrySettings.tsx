@@ -201,7 +201,7 @@ export const CountrySettings = () => {
                 placeholder="Search countries, codes, or currencies..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="pl-10 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
               />
             </div>
           </div>

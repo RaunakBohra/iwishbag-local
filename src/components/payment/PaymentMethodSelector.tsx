@@ -137,7 +137,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         className={cn(
           'border rounded-lg transition-all duration-200',
           isSelected 
-            ? 'border-blue-500 bg-blue-50 shadow-sm' 
+            ? 'border-teal-500 bg-teal-50 shadow-sm' 
             : 'border-gray-200 bg-white hover:border-gray-300',
           disabled && 'opacity-50',
         )}
@@ -156,7 +156,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             <div className="flex items-center gap-2">
               <span className="font-medium">{method.name}</span>
               {isRecommended && showRecommended && (
-                <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
+                <Badge variant="outline" className="text-xs text-teal-600 border-teal-200">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   Recommended
                 </Badge>
@@ -217,9 +217,9 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
         {/* QR Code payment instructions */}
         {getPaymentMethodDisplay(validSelectedMethod).requires_qr && (
-          <Alert className="mt-4 border-blue-200 bg-blue-50">
-            <QrCode className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">
+          <Alert className="mt-4 border-teal-200 bg-teal-50">
+            <QrCode className="h-4 w-4 text-teal-600" />
+            <AlertDescription className="text-teal-800">
               <strong>QR Code Payment:</strong> After selecting this method, you'll see a QR code to
               scan with your mobile app. The payment will be processed once you complete the
               transaction in the app.

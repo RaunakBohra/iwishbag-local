@@ -33,7 +33,7 @@ const QuoteRow = React.memo<QuoteRowProps>(({ quote, isSelected, onSelect }) => 
         <Checkbox checked={isSelected} onCheckedChange={onSelect} />
       </TableCell>
       <TableCell>
-        <Link to={`/quote/${quote.id}`} className="text-blue-600 hover:underline">
+        <Link to={`/quote/${quote.id}`} className="text-teal-600 hover:underline">
           {quote.display_id || quote.id.substring(0, 8)}
         </Link>
       </TableCell>

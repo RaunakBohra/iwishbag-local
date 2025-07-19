@@ -5,14 +5,14 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
         default: [
-          'bg-blue-600',
+          'bg-gradient-to-r from-teal-500 to-cyan-500',
           'text-white',
-          'hover:bg-blue-700',
+          'hover:from-teal-600 hover:to-cyan-600',
           'font-medium',
           'rounded-lg',
           'px-4 py-2',
@@ -34,14 +34,14 @@ const buttonVariants = cva(
         ].join(' '),
         outline: [
           'bg-transparent',
-          'text-blue-600',
-          'border border-blue-600',
+          'text-teal-600',
+          'border border-teal-600',
           'rounded-lg',
           'px-4 py-2',
           'font-medium',
           'transition-colors',
           'duration-200',
-          'hover:bg-blue-50',
+          'hover:bg-teal-50',
         ].join(' '),
         ghost: [
           'bg-transparent',
@@ -65,14 +65,14 @@ const buttonVariants = cva(
           'duration-200',
         ].join(' '),
         link: [
-          'text-blue-600',
+          'text-teal-600',
           'font-medium',
           'bg-transparent',
           'border-none',
           'p-0',
           'transition-colors',
           'duration-200',
-          'hover:text-blue-700',
+          'hover:text-teal-700',
           'hover:underline',
         ].join(' '),
       },

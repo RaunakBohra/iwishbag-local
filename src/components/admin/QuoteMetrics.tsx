@@ -163,8 +163,8 @@ export const QuoteMetrics = ({ quotes, isLoading }: QuoteMetricsProps) => {
         value={totalQuotes.toString()}
         change={quotesChange.change}
         changeType={quotesChange.type}
-        icon={<FileText className="h-5 w-5 text-blue-600" />}
-        iconColor="bg-blue-50"
+        icon={<FileText className="h-5 w-5 text-teal-600" />}
+        iconColor="bg-teal-50"
         description="All time"
       />
       
