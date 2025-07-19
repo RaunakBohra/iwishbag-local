@@ -220,8 +220,8 @@ export const QuoteFormErrorFallback: React.FC<{
     <div className="min-h-[300px] flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-            <AlertTriangle className="h-6 w-6 text-blue-600" />
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-teal-100">
+            <AlertTriangle className="h-6 w-6 text-teal-600" />
           </div>
           <CardTitle className="text-xl">Quote Form Error</CardTitle>
         </CardHeader>

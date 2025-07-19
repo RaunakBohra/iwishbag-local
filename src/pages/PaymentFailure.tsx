@@ -274,13 +274,13 @@ const PaymentFailure: React.FC = () => {
 
               {/* Help Section */}
               <AnimatedSection animation="fadeInUp" delay={800}>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 text-sm">
-                    <HelpCircle className="w-5 h-5 text-blue-600" />
-                    <span className="font-medium text-blue-800">Need Help?</span>
+                    <HelpCircle className="w-5 h-5 text-teal-600" />
+                    <span className="font-medium text-teal-800">Need Help?</span>
                     <a
                       href="tel:+919999999999"
-                      className="text-blue-600 hover:underline ml-auto flex items-center gap-1"
+                      className="text-teal-600 hover:underline ml-auto flex items-center gap-1"
                     >
                       <Phone className="w-4 h-4" />
                       Call Support

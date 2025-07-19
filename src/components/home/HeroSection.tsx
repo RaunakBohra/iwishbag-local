@@ -59,16 +59,16 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
       <div className="container relative z-10 mx-auto px-4 py-20">
         <div className="max-w-5xl mx-auto text-center">
           {/* Simple Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-200 mb-8">
-            <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-            <span className="text-sm text-blue-700 font-medium">Free shipping on orders over $500</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-50 border border-teal-200 mb-8">
+            <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
+            <span className="text-sm text-teal-700 font-medium">Free shipping on orders over $500</span>
           </div>
 
           {/* Main Heading */}
           <Display className="mb-6">
             {settings.hero_headline || 'Shop the World,'}
             <br />
-            <span className="text-blue-600">
+            <span className="bg-gradient-to-r from-teal-600 to-orange-500 bg-clip-text text-transparent">
               Delivered to You
             </span>
           </Display>
@@ -83,7 +83,7 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <Button
               size="lg"
-              className="group bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all duration-200 px-8 py-4 text-lg font-medium rounded-lg"
+              className="group bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-8 py-4 text-lg font-medium rounded-lg"
               onClick={() => (window.location.href = settings.hero_cta_link || '/quote')}
             >
               {settings.hero_cta_text || 'Get Your Free Quote'}
@@ -92,7 +92,7 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
             <Button
               size="lg"
               variant="outline"
-              className="border-gray-200 bg-white text-gray-900 hover:bg-gray-50 hover:border-gray-300 px-8 py-4 text-lg font-medium rounded-lg"
+              className="border-teal-200 bg-white text-teal-700 hover:bg-teal-50 hover:border-teal-300 px-8 py-4 text-lg font-medium rounded-lg"
               onClick={() => (window.location.href = '/cost-estimator')}
             >
               Calculate Costs Instantly

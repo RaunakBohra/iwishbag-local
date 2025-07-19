@@ -214,7 +214,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
             <div className="flex items-center mb-2">
               <div
                 className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                  quoteType === 'separate' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                  quoteType === 'separate' ? 'border-teal-500 bg-teal-500' : 'border-gray-300'
                 }`}
               >
                 {quoteType === 'separate' && (
@@ -237,7 +237,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
             <div className="flex items-center mb-2">
               <div
                 className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                  quoteType === 'combined' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                  quoteType === 'combined' ? 'border-teal-500 bg-teal-500' : 'border-gray-300'
                 }`}
               >
                 {quoteType === 'combined' && (
@@ -455,7 +455,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
           <button
             type="button"
             onClick={addProduct}
-            className="flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm text-sm sm:text-base"
+            className="flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-200 font-medium shadow-sm text-sm sm:text-base"
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             Add Another Product
@@ -467,7 +467,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
         <button
           type="button"
           onClick={handleNext}
-          className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base sm:text-lg font-medium"
+          className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-200 text-base sm:text-lg font-medium"
         >
           Continue to Shipping
         </button>

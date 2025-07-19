@@ -102,7 +102,7 @@ export const AddressHistory: React.FC<AddressHistoryProps> = ({
       case 'create':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'update':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-teal-100 text-teal-800 border-teal-200';
       case 'lock':
         return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'unlock':

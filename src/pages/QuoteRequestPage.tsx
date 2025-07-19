@@ -355,14 +355,14 @@ export default function QuoteRequestPage() {
                     zip: '',
                   });
                 }}
-                className="w-full sm:w-auto px-6 py-3 rounded-lg border border-blue-600 text-blue-600 bg-white hover:bg-blue-50 font-medium shadow-sm transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
+                className="w-full sm:w-auto px-6 py-3 rounded-lg border border-teal-600 text-teal-600 bg-white hover:bg-teal-50 font-medium shadow-sm transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
               >
                 <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
                 Request Another Quote
               </button>
               <button
                 onClick={() => (window.location.href = '/dashboard')}
-                className="w-full sm:w-auto px-6 py-3 rounded-lg bg-blue-600 text-white font-medium shadow-sm hover:bg-blue-700 transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
+                className="w-full sm:w-auto px-6 py-3 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600 font-medium shadow-sm  transition text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
               >
                 <Package className="h-4 w-4 sm:h-5 sm:w-5" />
                 Go to Dashboard
@@ -394,10 +394,10 @@ export default function QuoteRequestPage() {
             <div className="mb-6 sm:mb-8">
               <div className="flex items-center justify-center space-x-2 sm:space-x-4">
                 <div
-                  className={`flex items-center ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}
+                  className={`flex items-center ${currentStep >= 1 ? 'text-teal-600' : 'text-gray-400'}`}
                 >
                   <div
-                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 1 ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300'}`}
+                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 1 ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-300'}`}
                   >
                     1
                   </div>
@@ -406,13 +406,13 @@ export default function QuoteRequestPage() {
                   </span>
                 </div>
                 <div
-                  className={`w-8 sm:w-12 h-0.5 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`}
+                  className={`w-8 sm:w-12 h-0.5 ${currentStep >= 2 ? 'bg-teal-600' : 'bg-gray-300'}`}
                 ></div>
                 <div
-                  className={`flex items-center ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}
+                  className={`flex items-center ${currentStep >= 2 ? 'text-teal-600' : 'text-gray-400'}`}
                 >
                   <div
-                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 2 ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300'}`}
+                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 2 ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-300'}`}
                   >
                     2
                   </div>
@@ -424,12 +424,12 @@ export default function QuoteRequestPage() {
               {/* Mobile step labels */}
               <div className="flex justify-center space-x-8 mt-2 sm:hidden">
                 <span
-                  className={`text-xs font-medium ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}
+                  className={`text-xs font-medium ${currentStep >= 1 ? 'text-teal-600' : 'text-gray-400'}`}
                 >
                   Product Info
                 </span>
                 <span
-                  className={`text-xs font-medium ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}
+                  className={`text-xs font-medium ${currentStep >= 2 ? 'text-teal-600' : 'text-gray-400'}`}
                 >
                   Shipping & Review
                 </span>

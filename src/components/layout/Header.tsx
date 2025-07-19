@@ -159,7 +159,7 @@ const Header = () => {
                 className={cn(
                   "h-8 px-3 text-sm font-medium transition-colors",
                   location.pathname === '/quote' 
-                    ? "bg-blue-600 text-white hover:bg-blue-700" 
+                    ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600" 
                     : "text-gray-700 hover:bg-gray-50"
                 )}
                 onClick={() => navigate('/quote')}
@@ -173,7 +173,7 @@ const Header = () => {
                 className={cn(
                   "h-8 px-3 text-sm font-medium transition-colors",
                   location.pathname === '/quote-auto' 
-                    ? "bg-blue-600 text-white hover:bg-blue-700" 
+                    ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600" 
                     : "text-gray-700 hover:bg-gray-50"
                 )}
                 onClick={() => navigate('/quote-auto')}
@@ -193,7 +193,7 @@ const Header = () => {
                 className={cn(
                   "h-8 px-3 text-sm font-medium transition-colors",
                   location.pathname.includes('/admin/quotes') 
-                    ? "bg-blue-600 text-white hover:bg-blue-700" 
+                    ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600" 
                     : "text-gray-700 hover:bg-gray-50"
                 )}
                 onClick={() => navigate('/admin/quotes')}
@@ -207,7 +207,7 @@ const Header = () => {
                 className={cn(
                   "h-8 px-3 text-sm font-medium transition-colors",
                   location.pathname.includes('/admin/orders') 
-                    ? "bg-blue-600 text-white hover:bg-blue-700" 
+                    ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600" 
                     : "text-gray-700 hover:bg-gray-50"
                 )}
                 onClick={() => navigate('/admin/orders')}
@@ -450,8 +450,8 @@ const Header = () => {
                       className="px-2 md:px-3 py-2 text-left hover:bg-gray-50 min-w-0 h-9 rounded-md transition-colors"
                     >
                       <div className="flex items-center space-x-2 min-w-0">
-                        <div className="h-6 w-6 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                          <User className="h-3 w-3 text-blue-600" />
+                        <div className="h-6 w-6 rounded-full bg-teal-50 flex items-center justify-center flex-shrink-0">
+                          <User className="h-3 w-3 text-teal-600" />
                         </div>
                         <div className="flex flex-col items-start min-w-0">
                           <span className="text-sm font-medium truncate text-gray-900">{getDisplayName()}</span>
@@ -559,7 +559,7 @@ const Header = () => {
                 asChild
                 variant="default"
                 size="sm"
-                className="h-8 px-3 md:px-4 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+                className="h-8 px-3 md:px-4 text-sm font-medium bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600"
               >
                 <Link to="/auth">Sign In</Link>
               </Button>

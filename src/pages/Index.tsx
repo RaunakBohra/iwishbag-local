@@ -24,8 +24,8 @@ export default function Index() {
     heroTitle: 'Shop International. Delivered to Your Door.',
     heroSubtitle:
       'Get quotes from Amazon, Flipkart, eBay, Alibaba and more. We handle shipping, customs, and delivery to India and Nepal.',
-    primaryColor: '#3B82F6',
-    secondaryColor: '#10B981',
+    primaryColor: '#14B8A6',
+    secondaryColor: '#F97316',
     logoUrl: '/logo.svg',
   };
 

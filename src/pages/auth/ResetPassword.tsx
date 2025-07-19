@@ -293,11 +293,11 @@ export default function ResetPassword() {
               )}
             </div>
 
-            <div className="bg-blue-50 p-3 rounded-md">
-              <p className="text-sm text-blue-800">
+            <div className="bg-teal-50 p-3 rounded-md">
+              <p className="text-sm text-teal-800">
                 <strong>Password Requirements:</strong>
               </p>
-              <ul className="text-sm text-blue-700 mt-1 space-y-1">
+              <ul className="text-sm text-teal-700 mt-1 space-y-1">
                 <li className="flex items-center space-x-1">
                   <span className={password.length >= 8 ? 'text-green-600' : ''}>
                     • At least 8 characters

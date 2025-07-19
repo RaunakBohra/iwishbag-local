@@ -40,7 +40,7 @@ const About = () => {
               </div>
               <div className="relative">
                 <div className="w-full h-64 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl flex items-center justify-center">
-                  <Globe className="w-24 h-24 text-blue-600" />
+                  <Globe className="w-24 h-24 text-teal-600" />
                 </div>
               </div>
             </div>
@@ -57,8 +57,8 @@ const About = () => {
             </H2>
             <div className="grid md:grid-cols-3 gap-8">
               <div className="p-6">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Heart className="w-8 h-8 text-blue-600" />
+                <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Heart className="w-8 h-8 text-teal-600" />
                 </div>
                 <H3 className="mb-3">Transparency</H3>
                 <Body className="text-gray-600">
@@ -152,7 +152,7 @@ const About = () => {
                 <div key={index} className="text-center">
                   <div className="w-24 h-24 bg-gray-300 rounded-full mx-auto mb-4"></div>
                   <H3 className="mb-2">{member.name}</H3>
-                  <Body className="text-blue-600 font-medium mb-3">{member.role}</Body>
+                  <Body className="text-teal-600 font-medium mb-3">{member.role}</Body>
                   <Body className="text-gray-600 text-sm">{member.description}</Body>
                 </div>
               ))}

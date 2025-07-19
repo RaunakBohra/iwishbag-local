@@ -80,11 +80,11 @@ const Auth = () => {
             <div className="mt-6 text-center">
               <p className="text-xs text-gray-500">
                 By continuing, you agree to our{' '}
-                <a href="/terms" className="text-purple-600 hover:text-purple-800">
+                <a href="/terms-conditions" className="text-teal-600 hover:text-teal-800 font-medium">
                   Terms of Service
                 </a>{' '}
                 and{' '}
-                <a href="/privacy" className="text-purple-600 hover:text-purple-800">
+                <a href="/privacy-policy" className="text-teal-600 hover:text-teal-800 font-medium">
                   Privacy Policy
                 </a>
               </p>

@@ -54,7 +54,7 @@ export function PayUDebugPage() {
     switch (event) {
       case 'response':
         return (
-          <Badge variant="outline" className="bg-blue-50">
+          <Badge variant="outline" className="bg-teal-50">
             Response
           </Badge>
         );

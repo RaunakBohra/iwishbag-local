@@ -146,8 +146,8 @@ export const CountrySettings = () => {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <Globe className="h-4 w-4 text-blue-600" />
+            <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center">
+              <Globe className="h-4 w-4 text-teal-600" />
             </div>
             <h1 className="text-2xl font-semibold text-gray-900">Country Settings</h1>
           </div>
@@ -186,7 +186,7 @@ export const CountrySettings = () => {
                   }}
                   disabled={isCreating || isUpdating || isDeleting}
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Country
@@ -269,7 +269,7 @@ export const CountrySettings = () => {
                     }}
                     disabled={isCreating || isUpdating || isDeleting}
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add First Country

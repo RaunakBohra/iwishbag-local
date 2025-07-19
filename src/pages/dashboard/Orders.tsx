@@ -441,7 +441,7 @@ function OrderItem({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                      className="bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100"
                     >
                       <MessageSquare className="h-3 w-3 mr-1" />
                       {messageCount}

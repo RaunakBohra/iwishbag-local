@@ -117,8 +117,8 @@ export function LogViewer({ embedded = false, maxHeight = '600px' }: LogViewerPr
       case LogLevel.INFO:
         return {
           icon: Info,
-          color: 'text-blue-500',
-          bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+          color: 'text-teal-500',
+          bgColor: 'bg-teal-50 dark:bg-teal-900/20',
         };
       case LogLevel.WARN:
         return {

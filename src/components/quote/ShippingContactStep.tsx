@@ -257,7 +257,7 @@ export default function ShippingContactStep({
             </button>
             <button
               type="button"
-              className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="flex-1 py-2 px-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-200 font-medium"
               onClick={() => {
                 setAddressToEdit(null);
                 setAddressModalOpen(true);
@@ -311,7 +311,7 @@ export default function ShippingContactStep({
           </button>
           <button
             type="button"
-            className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+            className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-200 font-medium shadow-sm"
             onClick={() => {
               // Always set shipping contact from the selected address
               if (address) {
@@ -360,7 +360,7 @@ export default function ShippingContactStep({
           <div className="flex gap-4 justify-center">
             <button
               type="button"
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-200 font-medium"
               onClick={() => {
                 setAddressToEdit(null);
                 setAddressModalOpen(true);
@@ -591,7 +591,7 @@ export default function ShippingContactStep({
             </button>
             <button
               type="button"
-              className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+              className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-200 font-medium shadow-sm"
               onClick={handleSubmit}
             >
               Submit Quote Request

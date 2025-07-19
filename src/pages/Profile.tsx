@@ -325,7 +325,7 @@ const Profile = () => {
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-semibold">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xl font-semibold">
                 {profile?.full_name
                   ? profile.full_name.charAt(0).toUpperCase()
                   : user?.email?.charAt(0).toUpperCase()}
@@ -370,8 +370,8 @@ const Profile = () => {
             to="/dashboard/orders"
             className="flex flex-col items-center gap-3 p-6 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
           >
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Package className="h-5 w-5 text-blue-600" />
+            <div className="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center">
+              <Package className="h-5 w-5 text-teal-600" />
             </div>
             <span className="text-sm font-medium text-gray-700">Orders</span>
           </Link>
@@ -432,7 +432,7 @@ const Profile = () => {
                           <Input
                             placeholder="Your full name"
                             {...field}
-                            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                           />
                         </FormControl>
                         <FormMessage />
@@ -452,7 +452,7 @@ const Profile = () => {
                             type="tel"
                             placeholder="+1 234 567 8901"
                             {...field}
-                            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                           />
                         </FormControl>
                         <FormMessage />
@@ -514,7 +514,7 @@ const Profile = () => {
                           disabled={updateProfileMutation.isPending}
                         >
                           <FormControl>
-                            <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                            <SelectTrigger className="border-gray-300 focus:border-teal-500 focus:ring-teal-500">
                               <SelectValue placeholder="Select your preferred currency" />
                             </SelectTrigger>
                           </FormControl>
@@ -562,7 +562,7 @@ const Profile = () => {
                           disabled={updateProfileMutation.isPending || methodsLoading}
                         >
                           <FormControl>
-                            <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                            <SelectTrigger className="border-gray-300 focus:border-teal-500 focus:ring-teal-500">
                               <SelectValue placeholder="Choose preferred payment method (optional)" />
                             </SelectTrigger>
                           </FormControl>
@@ -599,27 +599,27 @@ const Profile = () => {
                 </div>
 
                 {/* Current Settings Summary */}
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div className="bg-teal-50 rounded-lg p-4 border border-teal-200">
                   <div className="flex items-center gap-2 mb-3">
-                    <CheckCircle className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-900">Current Settings</span>
+                    <CheckCircle className="h-4 w-4 text-teal-600" />
+                    <span className="text-sm font-medium text-teal-900">Current Settings</span>
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="flex items-center gap-3">
-                      <DollarSign className="h-4 w-4 text-blue-600" />
+                      <DollarSign className="h-4 w-4 text-teal-600" />
                       <div>
-                        <BodySmall className="text-blue-800 font-medium">
+                        <BodySmall className="text-teal-800 font-medium">
                           {getCurrencyName(form.watch('preferred_display_currency'))} ({form.watch('preferred_display_currency')})
                         </BodySmall>
-                        <BodySmall className="text-blue-600">
+                        <BodySmall className="text-teal-600">
                           {getCountryName(form.watch('country'))}
                         </BodySmall>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <CreditCard className="h-4 w-4 text-blue-600" />
+                      <CreditCard className="h-4 w-4 text-teal-600" />
                       <div>
-                        <BodySmall className="text-blue-800 font-medium">
+                        <BodySmall className="text-teal-800 font-medium">
                           {form.watch('preferred_payment_gateway') === 'auto' ||
                           !form.watch('preferred_payment_gateway')
                             ? 'Auto-select'
@@ -627,7 +627,7 @@ const Profile = () => {
                                 (m) => m.code === form.watch('preferred_payment_gateway'),
                               )?.name || 'Unknown'}
                         </BodySmall>
-                        <BodySmall className="text-blue-600">Payment method</BodySmall>
+                        <BodySmall className="text-teal-600">Payment method</BodySmall>
                       </div>
                     </div>
                   </div>
@@ -640,7 +640,7 @@ const Profile = () => {
               <Button
                 type="submit"
                 disabled={updateProfileMutation.isPending || currencyLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
               >
                 <Save className="h-4 w-4 mr-2" />
                 {updateProfileMutation.isPending
@@ -698,7 +698,7 @@ const Profile = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-blue-600" />
+                    <Package className="h-4 w-4 text-teal-600" />
                     <span className="text-sm font-medium text-gray-700">{stats?.totalOrders || 0} orders</span>
                   </div>
                   <Link to="/dashboard/orders">

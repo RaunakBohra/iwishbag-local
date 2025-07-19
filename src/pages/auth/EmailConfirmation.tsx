@@ -222,9 +222,9 @@ export default function EmailConfirmation() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Alert className="border-blue-200 bg-blue-50">
-            <Mail className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">
+          <Alert className="border-teal-200 bg-teal-50">
+            <Mail className="h-4 w-4 text-teal-600" />
+            <AlertDescription className="text-teal-800">
               Please check your inbox and click the confirmation link to activate your iWishBag
               account.
             </AlertDescription>

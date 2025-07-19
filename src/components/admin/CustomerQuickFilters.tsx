@@ -193,10 +193,10 @@ export const CustomerQuickFilters = ({
       
       {/* Show active filter info */}
       {activeFilter !== 'all' && (
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="mt-4 p-3 bg-teal-50 rounded-lg border border-teal-200">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-600 rounded-full" />
-            <BodySmall className="text-blue-700">
+            <div className="w-2 h-2 bg-teal-600 rounded-full" />
+            <BodySmall className="text-teal-700">
               Showing {filterCounts[activeFilter as keyof typeof filterCounts] || 0} customers {getFilterDescription(activeFilter)}
             </BodySmall>
           </div>

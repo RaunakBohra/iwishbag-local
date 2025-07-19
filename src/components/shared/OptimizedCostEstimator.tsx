@@ -368,7 +368,7 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
 
         {/* Results */}
         {estimate && !error && (
-          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+          <div className="mt-6 p-4 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg border border-teal-200">
             <h3 className="font-semibold text-lg mb-3">Estimated Costs</h3>
             <div className="space-y-2">
               <div className="flex justify-between">

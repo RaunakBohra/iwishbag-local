@@ -80,7 +80,7 @@ const CostEstimatorPage = () => {
               isVisible.hero ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             )}
           >
-            <Badge className="mb-6 bg-blue-50 text-blue-700 border-blue-200">
+            <Badge className="mb-6 bg-teal-50 text-teal-700 border-teal-200">
               <Calculator className="w-3 h-3 mr-1" />
               Free Cost Calculator
             </Badge>
@@ -88,7 +88,7 @@ const CostEstimatorPage = () => {
             <Display className="mb-6 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
               Calculate your shopping costs
               <br />
-              <span className="text-blue-600">before you buy</span>
+              <span className="bg-gradient-to-r from-teal-600 to-orange-500 bg-clip-text text-transparent">before you buy</span>
             </Display>
             
             <BodyLarge className="mb-8 text-gray-600 max-w-2xl mx-auto">
@@ -99,7 +99,7 @@ const CostEstimatorPage = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
               <Button 
                 size="lg" 
-                className="group bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg"
+                className="group bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white px-8 py-4 text-lg"
                 onClick={() => {
                   document.getElementById('calculator-section')?.scrollIntoView({ 
                     behavior: 'smooth' 
@@ -132,8 +132,8 @@ const CostEstimatorPage = () => {
                   )}
                   style={{ transitionDelay: `${300 + index * 100}ms` }}
                 >
-                  <div className="w-16 h-16 mx-auto mb-4 bg-blue-50 rounded-full flex items-center justify-center">
-                    <feature.icon className="w-8 h-8 text-blue-600" />
+                  <div className="w-16 h-16 mx-auto mb-4 bg-teal-50 rounded-full flex items-center justify-center">
+                    <feature.icon className="w-8 h-8 bg-gradient-to-r from-teal-600 to-orange-500 bg-clip-text text-transparent" />
                   </div>
                   <H3 className="mb-2 text-gray-900">{feature.title}</H3>
                   <Body className="text-gray-600">{feature.description}</Body>
@@ -186,8 +186,8 @@ const CostEstimatorPage = () => {
                       ))}
                     </div>
                     
-                    <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-                      <Body className="text-blue-700 text-sm">
+                    <div className="mt-8 p-4 bg-teal-50 rounded-lg">
+                      <Body className="text-teal-700 text-sm">
                         <strong>Pro tip:</strong> Costs are calculated using real-time exchange rates and current shipping prices for maximum accuracy.
                       </Body>
                     </div>
@@ -228,8 +228,8 @@ const CostEstimatorPage = () => {
               </div>
               
               <div className="bg-white p-8 rounded-2xl border border-gray-200">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                  <Zap className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mb-4">
+                  <Zap className="w-6 h-6 bg-gradient-to-r from-teal-600 to-orange-500 bg-clip-text text-transparent" />
                 </div>
                 <H3 className="mb-3 text-gray-900">Instant Results</H3>
                 <Body className="text-gray-600">
@@ -246,14 +246,14 @@ const CostEstimatorPage = () => {
         <Container>
           <div className="text-center max-w-3xl mx-auto">
             <H2 className="mb-6 text-white">Ready to start shopping?</H2>
-            <BodyLarge className="mb-8 text-blue-100">
+            <BodyLarge className="mb-8 text-teal-100">
               Get a detailed quote with personalized assistance from our international shopping experts.
             </BodyLarge>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
-                className="group bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 text-lg font-medium"
+                className="group bg-white bg-gradient-to-r from-teal-600 to-orange-500 bg-clip-text text-transparent hover:bg-gray-100 px-8 py-4 text-lg font-medium"
                 asChild
               >
                 <Link to="/quote">
@@ -264,7 +264,7 @@ const CostEstimatorPage = () => {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 text-lg font-medium"
+                className="border-white text-white hover:bg-white hover:bg-gradient-to-r from-teal-600 to-orange-500 bg-clip-text text-transparent px-8 py-4 text-lg font-medium"
                 asChild
               >
                 <Link to="/contact">

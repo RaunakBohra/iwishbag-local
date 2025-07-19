@@ -316,7 +316,7 @@ const AuthForm = () => {
                     type="email"
                     placeholder="you@example.com"
                     {...field}
-                    className="h-11 px-4 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
+                    className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                   />
                 </FormControl>
                 <FormMessage  />
@@ -342,7 +342,7 @@ const AuthForm = () => {
           />
           <Button
             type="submit"
-            className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
+            className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg"
             disabled={loading}
           >
             {loading ? (
@@ -382,14 +382,14 @@ const AuthForm = () => {
           <div className="flex justify-between items-center pt-4">
             <button
               type="button"
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
+              className="text-sm text-teal-600 hover:text-teal-700 font-medium transition-colors duration-200"
               onClick={() => setShowForgot(true)}
             >
               Forgot Password?
             </button>
             <button
               type="button"
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
+              className="text-sm text-teal-600 hover:text-teal-700 font-medium transition-colors duration-200"
               onClick={() => setShowSignUp(true)}
             >
               Sign Up
@@ -400,15 +400,18 @@ const AuthForm = () => {
 
       {/* Sign Up Modal */}
       <Dialog open={showSignUp} onOpenChange={setShowSignUp}>
-        <DialogContent className="bg-white border-gray-200 shadow-2xl max-w-md rounded-lg">
-          <DialogHeader className="space-y-3 pb-4">
-            <DialogTitle className="text-gray-900 text-2xl font-semibold text-center">
-              Create your account
-            </DialogTitle>
-            <DialogDescription className="text-gray-600 text-center">
-              Start shopping internationally with iWishBag
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="bg-white border-gray-200 shadow-2xl max-w-md rounded-xl overflow-hidden">
+          {/* Brand gradient header */}
+          <div className="bg-gradient-to-r from-teal-500 via-cyan-500 to-orange-400 px-6 pt-6 pb-4 -mx-6 -mt-6 mb-6">
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-white text-2xl font-semibold text-center">
+                Create your account
+              </DialogTitle>
+              <DialogDescription className="text-white/90 text-center">
+                Start shopping internationally with iWishBag
+              </DialogDescription>
+            </DialogHeader>
+          </div>
           <Form {...signUpForm}>
             <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-5">
               <FormField
@@ -421,7 +424,7 @@ const AuthForm = () => {
                       <Input
                         placeholder="Your Name"
                         {...field}
-                        className="h-11 px-4 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
+                        className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                       />
                     </FormControl>
                     <FormMessage  />
@@ -439,7 +442,7 @@ const AuthForm = () => {
                         type="email"
                         placeholder="you@example.com"
                         {...field}
-                        className="h-11 px-4 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
+                        className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                       />
                     </FormControl>
                     <FormMessage  />
@@ -457,7 +460,7 @@ const AuthForm = () => {
                         type="tel"
                         placeholder="+1 234 567 8901"
                         {...field}
-                        className="h-11 px-4 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
+                        className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                       />
                     </FormControl>
                     <p className="text-xs text-gray-500 mt-1">
@@ -533,14 +536,14 @@ const AuthForm = () => {
                       <Checkbox 
                         checked={field.value} 
                         onCheckedChange={field.onChange} 
-                        className="mt-0.5 border-gray-200 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                        className="mt-0.5 border-gray-200 data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
                       />
                     </FormControl>
                     <FormLabel className="text-sm text-gray-700 leading-relaxed">
                       I agree to the{' '}
                       <a
-                        href="/terms"
-                        className="text-blue-600 hover:text-blue-700 underline font-medium"
+                        href="/terms-conditions"
+                        className="text-teal-600 hover:text-teal-700 underline font-medium"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -553,7 +556,7 @@ const AuthForm = () => {
               />
               <Button
                 type="submit"
-                className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-md transition-colors duration-200 mt-6"
+                className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-md transition-all duration-200 mt-6 shadow-lg"
                 disabled={loading}
               >
                 {loading ? (
@@ -658,7 +661,7 @@ const AuthForm = () => {
                           type="email"
                           placeholder="you@example.com"
                           {...field}
-                          className="h-11 px-4 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
+                          className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                           disabled={forgotLoading}
                         />
                       </FormControl>
@@ -668,7 +671,7 @@ const AuthForm = () => {
                 />
                 <Button
                   type="submit"
-                  className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
+                  className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg"
                   disabled={forgotLoading}
                 >
                   {forgotLoading ? (
