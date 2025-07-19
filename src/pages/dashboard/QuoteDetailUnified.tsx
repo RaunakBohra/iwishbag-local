@@ -456,8 +456,8 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
 
   const handleAddToCart = async () => {
     if (!user && isGuestMode) {
-      // For guest users, redirect to checkout with quote
-      navigate(`/checkout?quote=${quote?.id}`);
+      // For guest users, redirect to guest checkout to avoid login prompts
+      navigate(`/guest-checkout?quote=${quote?.id}`);
     } else {
       await addToCart();
     }
@@ -845,7 +845,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                             <Info className="h-3 w-3 text-gray-500 hover:text-gray-700" />
                           </button>
                         </div>
-                        <span className="text-xl font-semibold text-gray-900">{formatAmount(quote.final_total)}</span>
+                        <span className="text-xl font-semibold text-gray-900">{formatAmount(quote.final_total_usd)}</span>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <div className="flex items-center gap-2 mb-2">
@@ -1423,7 +1423,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                     Total Amount
                   </span>
                   <span className="text-gray-900 text-xl">
-                    {formatAmount(quote.final_total)}
+                    {formatAmount(quote.final_total_usd)}
                   </span>
                 </div>
               </div>

@@ -80,8 +80,8 @@ const EsewaTest = () => {
           user_id: user.id,
           product_name: 'eSewa Test Product',
           item_price: parseFloat(amount),
-          final_total: parseFloat(amount),
-          final_currency: 'NPR',
+          final_total_usd: parseFloat(amount),
+          destination_currency: 'NPR',
           origin_country: 'US',
           destination_country: 'NP',
           customer_name: 'Test Customer',
@@ -498,7 +498,7 @@ const EsewaTest = () => {
                 </div>
                 <div>
                   <span className="font-medium text-gray-500">Amount:</span>
-                  <p className="mt-1">NPR {testQuote.final_total}</p>
+                  <p className="mt-1">NPR {testQuote.final_total_usd}</p>
                 </div>
                 <div>
                   <span className="font-medium text-gray-500">Status:</span>

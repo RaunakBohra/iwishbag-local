@@ -62,8 +62,8 @@ const TestPayment = () => {
           user_id: user.id,
           product_name: 'eSewa Test Product',
           item_price: parseFloat(amount),
-          final_total: parseFloat(amount),
-          final_currency: 'NPR',
+          final_total_usd: parseFloat(amount),
+          destination_currency: 'NPR',
           origin_country: 'US',
           destination_country: 'NP',
           customer_name: 'Test Customer',
@@ -382,10 +382,10 @@ const TestPayment = () => {
                   <strong>Quote ID:</strong> {testQuote.id}
                 </div>
                 <div>
-                  <strong>Amount:</strong> NPR {testQuote.final_total}
+                  <strong>Amount:</strong> NPR {testQuote.final_total_usd}
                 </div>
                 <div>
-                  <strong>Currency:</strong> {testQuote.final_currency}
+                  <strong>Currency:</strong> {testQuote.destination_currency}
                 </div>
                 <div>
                   <strong>Status:</strong> <Badge variant="outline">{testQuote.status}</Badge>

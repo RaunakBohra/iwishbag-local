@@ -24,6 +24,8 @@ import {
   Phone,
   Globe,
   CheckCircle,
+  X,
+  Check,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
@@ -237,6 +239,11 @@ export default function Checkout() {
   const [showPaymentStatus, setShowPaymentStatus] = useState(false);
   const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+  
+  // Inline editing state
+  const [isEditingContact, setIsEditingContact] = useState(false);
+  const [editEmail, setEditEmail] = useState('');
+  const [isSavingContact, setIsSavingContact] = useState(false);
   const [addressFormData, setAddressFormData] = useState<AddressFormData>({
     address_line1: '',
     address_line2: '',
@@ -295,7 +302,7 @@ export default function Checkout() {
   });
 
   // Fetch guest quote if this is a guest checkout
-  const { data: guestQuote, isLoading: guestQuoteLoading } = useQuery({
+  const { data: guestQuote, isLoading: guestQuoteLoading, refetch: refetchGuestQuote } = useQuery({
     queryKey: ['guest-quote', guestQuoteId],
     queryFn: async () => {
       if (!guestQuoteId) return null;
@@ -305,7 +312,8 @@ export default function Checkout() {
         .select(
           `
           *,
-          quote_items (*)
+          quote_items (*),
+          share_token
         `,
         )
         .eq('id', guestQuoteId)
@@ -339,8 +347,8 @@ export default function Checkout() {
             productName: guestQuote.quote_items?.[0]?.product_name || 'Product',
             quantity: guestQuote.quote_items?.reduce((sum, item) => sum + item.quantity, 0) || 1,
             finalTotal: guestQuote.final_total_usd || 0,
-            countryCode: guestQuote.destination_country || 'Unknown',
-            purchaseCountryCode: guestQuote.destination_country || 'Unknown',
+            countryCode: guestQuote.destination_country || 'US', // FIXED: Use 'US' instead of 'Unknown'
+            purchaseCountryCode: guestQuote.origin_country || 'US', // FIXED: Use origin_country for purchase country
             destinationCountryCode: (() => {
               // Extract destination from shipping address for guest quotes
               if (guestQuote.shipping_address) {
@@ -354,13 +362,13 @@ export default function Checkout() {
                     addr?.countryCode ||
                     addr?.country ||
                     guestQuote.destination_country ||
-                    'Unknown'
+                    'US' // FIXED: Use 'US' instead of 'Unknown'
                   );
                 } catch {
-                  return guestQuote.destination_country || 'Unknown';
+                  return guestQuote.destination_country || 'US'; // FIXED: Use 'US' instead of 'Unknown'
                 }
               }
-              return guestQuote.destination_country || 'Unknown';
+              return guestQuote.destination_country || 'US'; // FIXED: Use 'US' instead of 'Unknown'
             })(),
           },
         ]
@@ -371,12 +379,14 @@ export default function Checkout() {
 
   // Get the shipping country from selected items
   // All quotes in checkout should have the same destination country
+  // FIXED: Provide 'US' fallback instead of null to ensure payment methods can load
   const shippingCountry =
     selectedCartItems.length > 0
       ? selectedCartItems[0].destinationCountryCode ||
         selectedCartItems[0].countryCode ||
-        selectedCartItems[0].purchaseCountryCode
-      : null;
+        selectedCartItems[0].purchaseCountryCode ||
+        'US' // FIXED: Add fallback
+      : 'US'; // FIXED: Use 'US' instead of null
 
   // Get default currency for guest checkout using CurrencyService
   const { data: defaultGuestCurrency } = useQuery({
@@ -398,9 +408,16 @@ export default function Checkout() {
 
   // Now that defaultGuestCurrency is available, define guestCurrency with fallback
   // Always provide a valid currency for guest checkout to ensure payment methods load
+  // FIXED: Ensure guestCurrency is never undefined to prevent payment methods from failing to load
   const guestCurrency = isGuestCheckout
     ? guestSelectedCurrency || defaultGuestCurrency || 'USD'
     : undefined;
+
+  // FIXED: For guest checkout, ensure we always pass a valid currency to prevent empty payment methods
+  // The hook should be called with USD as fallback if no currency is determined yet
+  const paymentGatewayCurrency = isGuestCheckout
+    ? guestCurrency || 'USD' // Always provide USD as final fallback
+    : undefined; // Let the hook use user profile currency for authenticated users
 
   // Payment gateway hook with currency override for guests
   const {
@@ -413,7 +430,7 @@ export default function Checkout() {
     validatePaymentRequest,
     isMobileOnlyPayment,
     requiresQRCode,
-  } = usePaymentGateways(guestCurrency, shippingCountry);
+  } = usePaymentGateways(paymentGatewayCurrency, shippingCountry);
 
   // Debug logging for guest checkout payment state (development only)
   useEffect(() => {
@@ -422,6 +439,7 @@ export default function Checkout() {
         guestCurrency,
         guestSelectedCurrency,
         defaultGuestCurrency,
+        paymentGatewayCurrency, // Added this new variable
         availableMethods,
         methodsLoading,
         shippingCountry,
@@ -436,6 +454,7 @@ export default function Checkout() {
     guestCurrency,
     guestSelectedCurrency,
     defaultGuestCurrency,
+    paymentGatewayCurrency, // Added to dependency array
     availableMethods,
     methodsLoading,
     shippingCountry,
@@ -788,6 +807,70 @@ export default function Checkout() {
       description: 'There was an issue processing your payment. Please try again.',
       variant: 'destructive',
     });
+  };
+
+  // Contact editing functions
+  const handleEditContact = () => {
+    setEditEmail(guestQuote?.email || '');
+    setIsEditingContact(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingContact(false);
+    setEditEmail('');
+  };
+
+  const handleSaveContact = async () => {
+    if (!editEmail) {
+      toast({
+        title: 'Error',
+        description: 'Please enter an email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Simple email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(editEmail)) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSavingContact(true);
+    try {
+      const { error } = await supabase
+        .from('quotes')
+        .update({
+          email: editEmail,
+        })
+        .eq('id', guestQuoteId);
+
+      if (error) throw error;
+
+      // Refresh the quote data
+      await refetchGuestQuote();
+
+      toast({
+        title: 'Success',
+        description: 'Email updated successfully',
+      });
+
+      setIsEditingContact(false);
+    } catch (error) {
+      console.error('Error updating email:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update email',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingContact(false);
+    }
   };
 
   const handlePlaceOrder = async () => {
@@ -1757,37 +1840,68 @@ export default function Checkout() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-center gap-3">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                        <div>
-                          <p className="font-medium text-green-900">{guestQuote.customer_name || 'Guest Customer'}</p>
-                          <p className="text-sm text-green-700">{guestQuote.email}</p>
+                    <div className={`rounded-lg p-4 ${isEditingContact ? 'bg-teal-50 border border-teal-200' : 'bg-green-50 border border-green-200'}`}>
+                      {isEditingContact ? (
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-1">
+                            <Edit3 className="h-5 w-5 text-teal-600" />
+                            <div className="flex-1">
+                              <Input
+                                type="email"
+                                value={editEmail}
+                                onChange={(e) => setEditEmail(e.target.value)}
+                                placeholder="Enter your email address"
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              onClick={handleSaveContact}
+                              disabled={isSavingContact}
+                              size="sm"
+                              className="bg-teal-600 hover:bg-teal-700 text-xs px-2 py-1"
+                            >
+                              {isSavingContact ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Check className="h-3 w-3" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={handleCancelEdit}
+                              disabled={isSavingContact}
+                              size="sm"
+                              className="text-xs px-2 py-1"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            <div>
+                              <p className="font-medium text-green-900">{guestQuote.customer_name || 'Guest Customer'}</p>
+                              <p className="text-sm text-green-700">{guestQuote.email}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleEditContact}
+                            className="text-xs"
+                            title="Edit email address"
+                          >
+                            <Edit3 className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                        </div>
+                      )}
                     </div>
                     
-                    {/* Currency Selection for Guest Checkout */}
-                    {availableCurrencies && (
-                      <div className="mb-4">
-                        <Label htmlFor="guest-currency">Payment Currency</Label>
-                        <select
-                          id="guest-currency"
-                          className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                          value={guestSelectedCurrency}
-                          onChange={(e) => setGuestSelectedCurrency(e.target.value)}
-                        >
-                          {availableCurrencies?.map((currency) => (
-                            <option key={currency.code} value={currency.code}>
-                              {currency.symbol} {currency.formatted}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Choose your preferred payment currency. Payment methods will be filtered accordingly.
-                        </p>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               ) : isGuestCheckout && (
@@ -2537,10 +2651,31 @@ export default function Checkout() {
               {/* Payment Method */}
               <Card className="bg-white border border-gray-200 shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-900">
-                    <CreditCard className="h-4 w-4 text-gray-600" />
-                    Payment Method
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-900">
+                      <CreditCard className="h-4 w-4 text-gray-600" />
+                      Payment Method
+                    </CardTitle>
+                    
+                    {/* Compact Currency Selector for Guest Checkout */}
+                    {isGuestCheckout && availableCurrencies && (
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="compact-currency" className="text-xs text-gray-600">Currency:</Label>
+                        <select
+                          id="compact-currency"
+                          className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+                          value={guestSelectedCurrency}
+                          onChange={(e) => setGuestSelectedCurrency(e.target.value)}
+                        >
+                          {availableCurrencies?.map((currency) => (
+                            <option key={currency.code} value={currency.code}>
+                              {currency.symbol} {currency.code}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <PaymentMethodSelector
@@ -2632,14 +2767,12 @@ export default function Checkout() {
                       </span>
                     </div>
                     
-                    {/* Currency conversion information */}
-                    <PaymentCurrencyConversion
-                      gateway={paymentMethod}
-                      amount={totalAmount}
-                      currency={paymentCurrency}
-                      originCountry={purchaseCountry || 'US'}
-                      className="mt-2"
-                    />
+                    {/* Compact Currency conversion - only show if conversion is needed */}
+                    {paymentConversion?.needsConversion && (
+                      <div className="text-xs text-gray-500 text-right">
+                        Exchange rate applied: {paymentConversion.convertedCurrency} calculation
+                      </div>
+                    )}
                   </div>
 
                   <Button
