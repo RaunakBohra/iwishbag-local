@@ -1,8 +1,9 @@
 import AuthForm from '@/components/forms/AuthForm';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, Link } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 
 const Auth = () => {
   const { session } = useAuth();
@@ -21,57 +22,41 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-semibold text-gray-900">iwishBag</h1>
-            </div>
-            <div className="text-sm text-gray-600">
-              New to iwishBag?{' '}
-              <span className="text-purple-600 font-medium">Get started →</span>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="h-screen flex flex-col">
+      {/* Back Button */}
+      <div className="absolute top-6 right-6 z-10">
+        <Link 
+          to="/" 
+          className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors duration-200"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="text-sm font-medium">Back to Home</span>
+        </Link>
+      </div>
 
-      {/* Main Content */}
-      <div className="min-h-screen bg-white flex">
-        {/* Left Side - Content */}
-        <div className="hidden lg:flex lg:flex-1 lg:flex-col lg:justify-center lg:px-20">
-          <div className="max-w-md">
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              Shop globally,
-              <br />
-              ship locally
-            </h2>
-            <p className="text-xl text-gray-600 mb-12">
-              Access products from Amazon, eBay, Flipkart, and Alibaba with transparent pricing and reliable shipping to India and Nepal.
-            </p>
-            
-            {/* Simple feature list */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                <span className="text-gray-700">Transparent pricing with no hidden fees</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                <span className="text-gray-700">Secure payment processing</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                <span className="text-gray-700">Real-time order tracking</span>
-              </div>
-            </div>
+      <div className="flex flex-1">
+        {/* Left Side - Brand Gradient Background */}
+        <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-teal-500 via-cyan-500 to-orange-400 relative overflow-hidden">
+          {/* Decorative elements */}
+          <div className="absolute inset-0">
+            <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-white bg-opacity-10 rounded-full blur-xl"></div>
+            <div className="absolute bottom-1/3 right-1/4 w-24 h-24 bg-white bg-opacity-10 rounded-full blur-lg"></div>
+            <div className="absolute top-2/3 left-1/3 w-16 h-16 bg-white bg-opacity-10 rounded-full blur-md"></div>
           </div>
         </div>
 
         {/* Right Side - Auth Form */}
-        <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-20 xl:px-24">
-          <div className="mx-auto w-full max-w-md">
+        <div className="flex-1 flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-md">
+            {/* Logo - Above Form */}
+            <div className="text-center mb-8">
+              <img 
+                src="https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png" 
+                alt="iwishBag"
+                className="h-16 mx-auto"
+              />
+            </div>
+
             {/* Success Message */}
             {message && (
               <Alert className="mb-6 border-green-200 bg-green-50">
@@ -79,30 +64,30 @@ const Auth = () => {
               </Alert>
             )}
 
-            {/* Auth Form */}
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900">Sign in to your account</h2>
-                <p className="mt-2 text-sm text-gray-600">
-                  Welcome back! Please enter your details.
-                </p>
+            {/* Auth Card */}
+            <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
+              {/* Header */}
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Login or Signup</h2>
+                <p className="text-gray-600">Get started & grab best offers on top brands!</p>
               </div>
 
+              {/* Auth Form */}
               <AuthForm />
+            </div>
 
-              {/* Footer */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <p className="text-xs text-gray-500 text-center">
-                  By continuing, you agree to our{' '}
-                  <a href="/terms" className="text-purple-600 hover:text-purple-800">
-                    Terms of Service
-                  </a>{' '}
-                  and{' '}
-                  <a href="/privacy" className="text-purple-600 hover:text-purple-800">
-                    Privacy Policy
-                  </a>
-                </p>
-              </div>
+            {/* Footer */}
+            <div className="mt-6 text-center">
+              <p className="text-xs text-gray-500">
+                By continuing, you agree to our{' '}
+                <a href="/terms" className="text-purple-600 hover:text-purple-800">
+                  Terms of Service
+                </a>{' '}
+                and{' '}
+                <a href="/privacy" className="text-purple-600 hover:text-purple-800">
+                  Privacy Policy
+                </a>
+              </p>
             </div>
           </div>
         </div>

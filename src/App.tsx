@@ -191,6 +191,19 @@ const router = createBrowserRouter([
       },
     ],
   },
+  // Auth routes - No Layout wrapper
+  {
+    path: 'auth',
+    element: <Auth />,
+  },
+  {
+    path: 'auth/reset',
+    element: <ResetPassword />,
+  },
+  {
+    path: 'auth/confirm',
+    element: <EmailConfirmation />,
+  },
   {
     path: '/',
     element: <Layout />,
@@ -206,18 +219,6 @@ const router = createBrowserRouter([
             <Quote />
           </ErrorBoundary>
         ),
-      },
-      {
-        path: 'auth',
-        element: <Auth />,
-      },
-      {
-        path: 'auth/reset',
-        element: <ResetPassword />,
-      },
-      {
-        path: 'auth/confirm',
-        element: <EmailConfirmation />,
       },
       {
         path: 'about',

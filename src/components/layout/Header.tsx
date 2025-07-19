@@ -44,7 +44,7 @@ const Header = () => {
 
   // Default homepage settings
   const homePageSettings = {
-    website_logo_url: null,
+    website_logo_url: 'https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png',
     company_name: 'iwishBag',
   };
 
@@ -141,7 +141,7 @@ const Header = () => {
               <img
                 src={homePageSettings.website_logo_url}
                 alt="Logo"
-                className="h-8 sm:h-9 w-auto object-contain transition-transform hover:scale-105"
+                className="h-10 sm:h-12 w-auto object-contain transition-transform hover:scale-105"
               />
             ) : (
               <span className="font-semibold text-lg sm:text-xl lg:text-2xl text-gray-900">
