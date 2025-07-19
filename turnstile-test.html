@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnstile Test</title>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
+<body>
+    <h1>Turnstile CAPTCHA Test</h1>
+    
+    <form id="testForm">
+        <div>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        
+        <div>
+            <label for="message">Message:</label>
+            <textarea id="message" name="message" required></textarea>
+        </div>
+        
+        <!-- Turnstile Widget -->
+        <div class="cf-turnstile" 
+             data-sitekey="0x4AAAAAABluNSYgD5S5Rf_j"
+             data-callback="onTurnstileSuccess"
+             data-error-callback="onTurnstileError">
+        </div>
+        
+        <button type="submit" id="submitBtn" disabled>Submit</button>
+    </form>
+
+    <div id="result" style="margin-top: 20px;"></div>
+
+    <script>
+        let turnstileToken = null;
+
+        function onTurnstileSuccess(token) {
+            console.log('Turnstile success:', token);
+            turnstileToken = token;
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('result').innerHTML = '<p style="color: green;">✅ Turnstile verification successful!</p>';
+        }
+
+        function onTurnstileError(error) {
+            console.error('Turnstile error:', error);
+            turnstileToken = null;
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('result').innerHTML = '<p style="color: red;">❌ Turnstile verification failed: ' + error + '</p>';
+        }
+
+        document.getElementById('testForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!turnstileToken) {
+                alert('Please complete the security verification');
+                return;
+            }
+
+            // Simulate form submission
+            document.getElementById('result').innerHTML = '<p style="color: blue;">🚀 Form submitted successfully with Turnstile token!</p>';
+            console.log('Form submitted with token:', turnstileToken);
+        });
+    </script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        
+        form {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #007cba;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .cf-turnstile {
+            margin: 15px 0;
+        }
+    </style>
+</body>
+</html>

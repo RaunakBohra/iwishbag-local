@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
 
 const QuoteForm = () => {
   const { form, fields, append, remove, onSubmit, loading, countryCode, user } = useQuoteForm();
@@ -99,10 +100,12 @@ const QuoteForm = () => {
     }
   };
 
-  const handleSubmit = (data: Record<string, unknown>) => {
+  const handleSubmit = async (turnstileToken?: string) => {
+    const formData = form.getValues();
     // Include selected address in the submission
     const submissionData = {
-      ...data,
+      ...formData,
+      turnstileToken,
       shippingAddress: selectedAddress
         ? {
             fullName: user?.full_name || '',
@@ -118,12 +121,20 @@ const QuoteForm = () => {
           }
         : undefined,
     };
-    onSubmit(submissionData);
+    await onSubmit(submissionData);
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+      <TurnstileProtectedForm
+        onSubmit={handleSubmit}
+        isSubmitting={loading}
+        submitButtonText="Get My Shopping Quote"
+        submitButtonClassName="w-full md:w-auto h-12 px-8 text-lg"
+        disabled={!selectedAddress}
+        action="quote_request"
+        className="space-y-8"
+      >
         {/* Quick Start Section */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center space-x-2">
@@ -433,31 +444,18 @@ const QuoteForm = () => {
           </Card>
         )}
 
-        {/* Submit Section */}
-        <div className="text-center space-y-4">
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full md:w-auto h-12 px-8 text-lg"
-            disabled={loading || !selectedAddress}
-          >
-            {loading ? (
-              'Getting Your Shopping Quote...'
-            ) : (
-              <>
-                Get My Shopping Quote
-                <ArrowRight className="h-5 w-5 ml-2" />
-              </>
-            )}
-          </Button>
-          {!selectedAddress && (
+        {/* Submit Section Info */}
+        {!selectedAddress && (
+          <div className="text-center">
             <p className="text-sm text-orange-600">Please select a shipping address to continue</p>
-          )}
+          </div>
+        )}
+        <div className="text-center">
           <p className="text-sm text-muted-foreground">
             You'll receive your shopping quote within 24 hours
           </p>
         </div>
-      </form>
+      </TurnstileProtectedForm>
 
       {/* Address Dialog */}
       <Dialog open={showAddressDialog} onOpenChange={setShowAddressDialog}>

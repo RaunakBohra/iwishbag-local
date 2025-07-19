@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/design-system';
 import { Link } from 'react-router-dom';
+import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -61,8 +62,7 @@ const Contact = () => {
     },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (turnstileToken?: string) => {
     setIsSubmitting(true);
 
     try {
@@ -72,6 +72,7 @@ const Contact = () => {
           email: formData.email,
           subject: formData.subject,
           message: formData.message,
+          turnstileToken,
         },
       });
 
@@ -210,7 +211,15 @@ const Contact = () => {
                         <DialogTitle>Send us a message</DialogTitle>
                       </DialogHeader>
                       <div className="mt-4">
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        <TurnstileProtectedForm
+                          onSubmit={handleSubmit}
+                          isSubmitting={isSubmitting}
+                          submitButtonText="Send Message"
+                          submitButtonClassName="w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-medium group"
+                          disabled={!formData.name || !formData.email || !formData.subject || !formData.message}
+                          action="contact_form"
+                          className="space-y-4"
+                        >
                           <div className="grid md:grid-cols-2 gap-4">
                             <div>
                               <Label htmlFor="modal-name" className="text-sm font-medium text-gray-700 mb-2 block">
@@ -275,25 +284,7 @@ const Contact = () => {
                               className="border-gray-200 focus:border-teal-500 focus:ring-teal-500 resize-none"
                             />
                           </div>
-
-                          <Button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-medium group"
-                          >
-                            {isSubmitting ? (
-                              <span className="flex items-center justify-center">
-                                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                                Sending...
-                              </span>
-                            ) : (
-                              <span className="flex items-center justify-center">
-                                Send Message
-                                <Send className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                              </span>
-                            )}
-                          </Button>
-                        </form>
+                        </TurnstileProtectedForm>
                       </div>
                     </DialogContent>
                   </Dialog>

@@ -7,9 +7,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { CheckCircle, Mail, ArrowLeft, User } from 'lucide-react';
 import { AuthModal } from '@/components/forms/AuthModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
 
 interface QuoteRequestContactFormProps {
-  onSubmit: (emailData: { email: string; name?: string; useAuth?: boolean }) => void;
+  onSubmit: (emailData: { email: string; name?: string; useAuth?: boolean; turnstileToken?: string }) => void;
   isSubmitting: boolean;
   submitError?: string;
   clearError?: () => void;
@@ -62,7 +63,7 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
     }
   };
 
-  const handleGuestSubmit = () => {
+  const handleGuestSubmit = async (turnstileToken?: string) => {
     // Clear previous errors
     if (clearError) clearError();
     
@@ -92,10 +93,11 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
     if (hasErrors) return;
 
     // Submit with guest data
-    onSubmit({ 
+    await onSubmit({ 
       email: guestEmail, 
       name: guestName.trim(),
-      useAuth: false 
+      useAuth: false,
+      turnstileToken
     });
   };
 
@@ -174,30 +176,17 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
                 {nameError && <p className="text-sm text-red-500 mt-1">{nameError}</p>}
               </div>
 
-              {/* Submit Error Display */}
-              {submitError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-red-600 text-sm">{submitError}</p>
-                </div>
-              )}
-              
-              <Button
-                onClick={handleGuestSubmit}
-                disabled={isSubmitting || !guestEmail || !guestName}
-                className="w-full h-12 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-base transition-all duration-200"
+              <TurnstileProtectedForm
+                onSubmit={handleGuestSubmit}
+                isSubmitting={isSubmitting}
+                submitButtonText="Submit Quote Request"
+                submitButtonClassName="w-full h-12 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-base transition-all duration-200"
+                disabled={!guestEmail || !guestName}
+                action="guest_quote_request"
+                errorMessage={submitError}
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                    Submitting Quote Request...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-5 w-5 mr-2" />
-                    Submit Quote Request
-                  </>
-                )}
-              </Button>
+                {/* This content will be rendered inside the form */}
+              </TurnstileProtectedForm>
             </div>
 
             {/* Optional Account Sign In */}
