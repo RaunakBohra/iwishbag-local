@@ -293,7 +293,7 @@ const PaymentFailure: React.FC = () => {
               <AnimatedSection animation="fadeInUp" delay={900}>
                 <Button
                   onClick={handleRetryPayment}
-                  className="w-full group bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                  className="w-full group bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700"
                 >
                   <RefreshCw className="h-4 w-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
                   Try Again

@@ -39,7 +39,7 @@ const About = () => {
                 </BodyLarge>
               </div>
               <div className="relative">
-                <div className="w-full h-64 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl flex items-center justify-center">
+                <div className="w-full h-64 bg-gradient-to-br from-teal-50 to-orange-50 rounded-2xl flex items-center justify-center">
                   <Globe className="w-24 h-24 text-teal-600" />
                 </div>
               </div>
@@ -94,7 +94,7 @@ const About = () => {
           <div className="max-w-4xl mx-auto">
             <div className="grid md:grid-cols-2 gap-16 items-center">
               <div className="relative">
-                <div className="w-full h-64 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl flex items-center justify-center">
+                <div className="w-full h-64 bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl flex items-center justify-center">
                   <div className="text-center">
                     <StatNumber className="text-orange-600 mb-2">50,000+</StatNumber>
                     <StatLabel>Happy Customers</StatLabel>

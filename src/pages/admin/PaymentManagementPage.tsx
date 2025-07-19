@@ -77,7 +77,7 @@ interface PaymentProofData {
   verified_by: string | null;
   // Joined data
   order_display_id: string;
-  final_total: number;
+  final_total_usd: number;
   final_currency: string;
   payment_method: string;
   payment_status: string;
@@ -202,7 +202,7 @@ const PaymentManagementPage = () => {
               verified_by: item.verified_by,
               // Joined data
               order_display_id: quote?.order_display_id || 'N/A',
-              final_total: quote?.final_total || 0,
+              final_total_usd: quote?.final_total_usd_usd || 0,
               destination_currency: quote?.destination_currency || 'USD',
               payment_method: quote?.payment_method || 'bank_transfer',
               payment_status: quote?.payment_status || 'unpaid',
@@ -327,7 +327,7 @@ const PaymentManagementPage = () => {
               verified_by: null, // Webhook auto-verification
               // Joined data
               order_display_id: quote?.order_display_id || 'N/A',
-              final_total: quote?.final_total || 0,
+              final_total_usd: quote?.final_total_usd_usd || 0,
               destination_currency: quote?.destination_currency || item.currency || 'USD',
               payment_method: item.payment_method || 'unknown',
               payment_status: quote?.payment_status || 'unpaid',
@@ -488,7 +488,7 @@ const PaymentManagementPage = () => {
       // For each message, calculate and set the verified amount
       const updatePromises = messages.map(async (message) => {
         const quote = quotes.find((q) => q.id === message.quote_id);
-        const orderTotal = quote?.final_total || 0;
+        const orderTotal = quote?.final_total_usd || 0;
         const existingPaid = quote?.amount_paid || 0;
         const _remainingBalance = orderTotal - existingPaid;
 
@@ -520,7 +520,7 @@ const PaymentManagementPage = () => {
           const quote = quotes.find((q) => q.id === message.quote_id);
           if (!quote) continue;
 
-          const orderTotal = quote.final_total || 0;
+          const orderTotal = quote.final_total_usd || 0;
           const existingPaid = quote.amount_paid || 0;
 
           // Use the remaining balance as the amount received

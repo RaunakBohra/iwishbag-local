@@ -78,13 +78,13 @@ const colorOptions = [
   {
     value: 'purple',
     label: 'Purple',
-    className: 'bg-orange-100 text-purple-800',
+    className: 'bg-orange-100 text-orange-800',
   },
   { value: 'pink', label: 'Pink', className: 'bg-pink-100 text-pink-800' },
   {
     value: 'indigo',
     label: 'Indigo',
-    className: 'bg-teal-100 text-indigo-800',
+    className: 'bg-teal-100 text-cyan-800',
   },
   {
     value: 'emerald',

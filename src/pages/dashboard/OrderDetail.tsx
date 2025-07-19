@@ -355,7 +355,7 @@ export default function OrderDetail() {
                   orderId={order.id}
                   orderDisplayId={order.order_display_id || order.display_id || order.id}
                   amount={order.final_total || 0}
-                  currency={order.final_currency || order.currency || 'USD'}
+                  currency={order.destination_currency || order.currency || 'USD'}
                 />
               </CardContent>
             </Card>

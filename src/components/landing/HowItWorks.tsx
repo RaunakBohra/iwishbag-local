@@ -30,7 +30,7 @@ const HowItWorks = () => {
   return (
     <section id="how-it-works" className="py-16 md:py-24 relative overflow-hidden">
       {/* Background Elements */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-blue-50" />
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-teal-50" />
       <div className="absolute top-0 left-0 w-full h-full">
         <div className="absolute top-20 right-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl animate-pulse delay-1000" />

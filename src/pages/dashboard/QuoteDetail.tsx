@@ -939,7 +939,7 @@ export default function QuoteDetail() {
               <DialogContent className="max-w-4xl w-[95vw] md:w-[90vw] bg-white/95 backdrop-blur-xl border border-white/30 shadow-2xl rounded-2xl">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold flex items-center gap-3 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                    <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600">
+                    <div className="p-2 rounded-lg bg-gradient-to-r from-teal-500 to-orange-600">
                       <Receipt className="h-5 w-5 text-white" />
                     </div>
                     Quote Breakdown
@@ -947,7 +947,7 @@ export default function QuoteDetail() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-blue-50 to-purple-50 border-teal-200/50"
+                    className="gap-2 hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-teal-50 to-orange-50 border-teal-200/50"
                   >
                     <Download className="h-4 w-4" />
                     Download PDF
@@ -1014,7 +1014,7 @@ export default function QuoteDetail() {
                     <h3 className="font-bold text-lg bg-gradient-to-r from-teal-600 to-orange-600 bg-clip-text text-transparent">
                       Charges & Fees
                     </h3>
-                    <div className="space-y-3 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl p-4 border border-teal-200/50 dark:border-teal-700/50">
+                    <div className="space-y-3 bg-gradient-to-br from-teal-50 to-orange-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl p-4 border border-teal-200/50 dark:border-teal-700/50">
                       {renderBreakdownRow(
                         'Total Item Price',
                         quote.item_price,
@@ -1093,10 +1093,10 @@ export default function QuoteDetail() {
                     </div>
                     <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 border border-orange-300/50 dark:border-orange-600/50 rounded-xl p-6 shadow-lg">
                       <div className="flex justify-between items-center font-bold text-lg">
-                        <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-orange-600 to-cyan-600 bg-clip-text text-transparent">
                           Total Amount
                         </span>
-                        <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent text-xl">
+                        <span className="bg-gradient-to-r from-orange-600 to-cyan-600 bg-clip-text text-transparent text-xl">
                           {formatAmount(quote.final_total)}
                         </span>
                       </div>

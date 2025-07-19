@@ -393,7 +393,7 @@ const PaymentSuccess: React.FC = () => {
       // First, verify the quotes exist and check their current status
       const { data: existingQuotes, error: fetchError } = await supabase
         .from('quotes')
-        .select('id, status, display_id, final_total')
+        .select('id, status, display_id, final_total_usd')
         .in('id', quoteIds);
 
       if (fetchError) {
@@ -551,10 +551,10 @@ const PaymentSuccess: React.FC = () => {
         <AnimatedSection animation="zoomIn">
           <Card className="w-full max-w-md text-center shadow-2xl hover:shadow-3xl transition-all duration-300">
             <CardContent className="p-8">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-500 to-orange-600 flex items-center justify-center mx-auto mb-4 animate-pulse">
                 <Package className="w-8 h-8 text-white" />
               </div>
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-teal-600 mx-auto"></div>
               <p className="mt-6 text-gray-600 font-medium">Processing your payment...</p>
               <p className="text-sm text-gray-500 mt-2">
                 Please wait while we confirm your transaction
@@ -605,7 +605,7 @@ const PaymentSuccess: React.FC = () => {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 p-4 overflow-hidden">
+    <div className="relative min-h-screen bg-gradient-to-br from-green-50 via-white to-teal-50 p-4 overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-0 -left-40 w-80 h-80 bg-green-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" />
@@ -691,7 +691,7 @@ const PaymentSuccess: React.FC = () => {
                   <div className="flex justify-between items-center px-4">
                     <span className="font-medium text-gray-600">Payment Method:</span>
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-orange-600 flex items-center justify-center text-white">
                         {getGatewayIcon(paymentData.gateway)}
                       </div>
                       <span className="text-sm font-medium">

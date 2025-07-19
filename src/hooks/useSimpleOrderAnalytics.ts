@@ -16,7 +16,7 @@ export const useSimpleOrderAnalytics = () => {
       // Get basic order counts
       const { data: orders, error: ordersError } = await supabase
         .from('quotes')
-        .select('id, payment_status, final_total, amount_paid')
+        .select('id, payment_status, final_total_usd, amount_paid')
         .not('status', 'in', '("draft","pending","rejected")'); // Only count real orders
 
       if (ordersError) {
@@ -64,7 +64,7 @@ export const useSimpleOrderAnalytics = () => {
 
       const totalOutstanding =
         orders?.reduce((sum, order) => {
-          const total = order.final_total || 0;
+          const total = order.final_total_usd || 0;
           const paid = order.amount_paid || 0;
           const outstanding = total - paid;
           return sum + (outstanding > 0 ? outstanding : 0);

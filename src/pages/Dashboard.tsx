@@ -73,7 +73,7 @@ const Dashboard = () => {
       icon: <Package className="h-5 w-5" />,
       to: '/dashboard/quotes',
       variant: 'outline',
-      color: 'from-purple-500 to-purple-600',
+      color: 'from-orange-500 to-orange-600',
     },
     {
       label: 'My Orders',
@@ -105,7 +105,7 @@ const Dashboard = () => {
       value: ordersInProgress,
       label: 'Orders in Progress',
       icon: ShoppingCart,
-      color: 'from-purple-500 to-purple-600',
+      color: 'from-orange-500 to-orange-600',
       bgColor: 'from-purple-50 to-purple-100',
       link: '/dashboard/orders',
     },

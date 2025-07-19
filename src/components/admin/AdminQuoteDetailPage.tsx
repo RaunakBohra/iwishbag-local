@@ -215,7 +215,7 @@ const AdminQuoteDetailPage = () => {
     async (formValues: Partial<Quote>) => {
       if (!quote || !canRecalculate) return;
 
-      if (!quote.final_total || quote.final_total === 0) {
+      if (!quote.final_total_usd || quote.final_total_usd === 0) {
         toast({
           title: 'Calculation Required',
           description: 'Please calculate the quote costs first',

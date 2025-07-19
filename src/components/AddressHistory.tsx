@@ -106,7 +106,7 @@ export const AddressHistory: React.FC<AddressHistoryProps> = ({
       case 'lock':
         return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'unlock':
-        return 'bg-orange-100 text-purple-800 border-orange-200';
+        return 'bg-orange-100 text-orange-800 border-orange-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -165,7 +165,7 @@ export const AddressHistory: React.FC<AddressHistoryProps> = ({
             const isSignificantChange = changes.length > 2 || hasCountryChange;
 
             return (
-              <Card key={change.id} className="border-l-4 border-l-blue-500">
+              <Card key={change.id} className="border-l-4 border-l-teal-500">
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">

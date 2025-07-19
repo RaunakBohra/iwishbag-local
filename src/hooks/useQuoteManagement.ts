@@ -133,19 +133,19 @@ export const useQuoteManagement = (filters = {}) => {
       if (amountRange && amountRange !== 'all') {
         switch (amountRange) {
           case '0-100':
-            query = query.gte('final_total', 0).lte('final_total', 100);
+            query = query.gte('final_total_usd', 0).lte('final_total_usd', 100);
             break;
           case '100-500':
-            query = query.gte('final_total', 100).lte('final_total', 500);
+            query = query.gte('final_total_usd', 100).lte('final_total_usd', 500);
             break;
           case '500-1000':
-            query = query.gte('final_total', 500).lte('final_total', 1000);
+            query = query.gte('final_total_usd', 500).lte('final_total_usd', 1000);
             break;
           case '1000-5000':
-            query = query.gte('final_total', 1000).lte('final_total', 5000);
+            query = query.gte('final_total_usd', 1000).lte('final_total_usd', 5000);
             break;
           case '5000+':
-            query = query.gte('final_total', 5000);
+            query = query.gte('final_total_usd', 5000);
             break;
         }
       }
@@ -391,7 +391,7 @@ export const useQuoteManagement = (filters = {}) => {
           quote.email,
           quote.status,
           quote.item_price || '',
-          quote.final_total || '',
+          quote.final_total_usd || '',
           new Date(quote.created_at).toLocaleDateString(),
           quote.id,
         ].join(','),

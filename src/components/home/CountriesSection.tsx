@@ -15,7 +15,7 @@ const countries = [
       'https://upload.wikimedia.org/wikipedia/commons/c/ca/Walmart_logo.svg',
       'https://upload.wikimedia.org/wikipedia/commons/f/f5/Best_Buy_logo_2018.svg',
     ],
-    color: 'from-blue-500 to-red-500',
+    color: 'from-teal-500 to-red-500',
   },
   {
     id: 'china',
@@ -48,7 +48,7 @@ const countries = [
     stores: ['Amazon UK', 'Argos', 'ASOS', 'John Lewis'],
     popularProducts: ['Fashion', 'Books', 'Home & Garden', 'Electronics'],
     brands: ['https://upload.wikimedia.org/wikipedia/commons/d/d5/ASOS_logo_2022.svg'],
-    color: 'from-blue-600 to-red-600',
+    color: 'from-teal-600 to-red-600',
   },
   {
     id: 'germany',
@@ -68,7 +68,7 @@ const countries = [
     stores: ['Coupang', 'Gmarket', '11st', 'SSG'],
     popularProducts: ['K-Beauty', 'K-Fashion', 'K-Pop Goods', 'Electronics'],
     brands: [],
-    color: 'from-blue-600 to-red-600',
+    color: 'from-teal-600 to-red-600',
   },
 ];
 

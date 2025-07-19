@@ -184,7 +184,7 @@ export const CustomerDeliveryInfo: React.FC<CustomerDeliveryInfoProps> = ({
                 <Truck className="h-4 w-4 text-orange-600" />
                 <span className="font-medium text-purple-900">Customs Processing</span>
               </div>
-              <p className="text-purple-800">
+              <p className="text-orange-800">
                 {estimate.customs_processing_days} business day
                 {estimate.customs_processing_days > 1 ? 's' : ''}
               </p>

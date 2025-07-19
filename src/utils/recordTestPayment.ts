@@ -38,7 +38,7 @@ export async function recordTestPayUPayment(quoteId: string, amount: number) {
     // Also update quote amount_paid
     const { data: quote } = await supabase
       .from('quotes')
-      .select('amount_paid, final_total')
+      .select('amount_paid, final_total_usd')
       .eq('id', quoteId)
       .single();
 
@@ -48,7 +48,7 @@ export async function recordTestPayUPayment(quoteId: string, amount: number) {
         .from('quotes')
         .update({
           amount_paid: newAmountPaid,
-          payment_status: newAmountPaid >= quote.final_total ? 'paid' : 'partial',
+          payment_status: newAmountPaid >= quote.final_total_usd ? 'paid' : 'partial',
         })
         .eq('id', quoteId);
 

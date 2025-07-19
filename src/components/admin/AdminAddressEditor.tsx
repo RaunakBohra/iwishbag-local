@@ -438,7 +438,7 @@ export const AdminAddressEditor: React.FC<AdminAddressEditorProps> = ({
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {history.map((change) => (
-                    <Card key={change.id} className="border-l-4 border-l-blue-500">
+                    <Card key={change.id} className="border-l-4 border-l-teal-500">
                       <CardContent className="pt-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">

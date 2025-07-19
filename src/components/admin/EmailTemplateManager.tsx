@@ -516,7 +516,7 @@ ${template.html_content}
                       </span>
                     )}
                     {template.template_type === 'status_notification' && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-purple-800">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                         Status
                       </span>
                     )}

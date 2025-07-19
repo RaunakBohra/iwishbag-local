@@ -147,7 +147,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
           normal: 500,
           urgent: 2000,
         }) as PriorityThresholds;
-        const finalTotal = finalQuoteData.final_total || 0;
+        const finalTotal = finalQuoteData.final_total_usd || 0;
         // Always recalculate priority on calculate
         let priority;
         if (finalTotal < thresholds.normal) {

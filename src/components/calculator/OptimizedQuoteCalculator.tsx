@@ -64,7 +64,7 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
       origin_country: '',
       destination_country: '',
       currency: '',
-      final_currency: '',
+      destination_currency: '',
       sales_tax_price: 0,
       merchant_shipping_price: 0,
       domestic_shipping: 0,
@@ -260,8 +260,8 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                   <Input {...form.register('currency')} placeholder="USD" />
                 </div>
                 <div>
-                  <Label htmlFor="final_currency">Final Currency</Label>
-                  <Input {...form.register('final_currency')} placeholder="USD" />
+                  <Label htmlFor="final_currency">Destination Currency</Label>
+                  <Input {...form.register('destination_currency')} placeholder="USD" />
                 </div>
               </div>
             </CardContent>

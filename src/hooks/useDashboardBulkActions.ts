@@ -50,7 +50,7 @@ export const useDashboardBulkActions = ({
             id: quote!.id,
             quoteId: quote!.id,
             productName: quote!.product_name || 'Unknown Product',
-            finalTotal: quote!.final_total || 0,
+            finalTotal: quote!.final_total_usd || 0,
             quantity: 1,
             itemWeight: quote!.item_weight || 0,
             countryCode: quote!.destination_country || 'US', // For backward compatibility

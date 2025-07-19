@@ -4,7 +4,7 @@ const CostEstimator = () => {
   return (
     <section
       id="cost-estimator"
-      className="py-10 md:py-16 bg-gradient-to-br from-gray-50 via-white to-blue-50"
+      className="py-10 md:py-16 bg-gradient-to-br from-gray-50 via-white to-teal-50"
     >
       <div className="container px-2 md:px-0">
         <div className="max-w-2xl mx-auto">

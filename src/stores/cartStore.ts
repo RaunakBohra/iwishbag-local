@@ -497,9 +497,9 @@ export const useCartStore = create<CartStore>()(
             // 🚨 DEBUG: Log quote data to check if local currency fields are loaded
             console.log('🔍 [CartStore] Raw quote data sample:', allQuotes?.slice(0, 1).map(q => ({
               id: q.id,
-              final_total: q.final_total,
+              final_total_usd: q.final_total_usd,
               final_total_local: q.final_total_local,
-              final_currency: q.final_currency,
+              final_currency: q.destination_currency,
               origin_country: q.origin_country,
               destination_country: q.destination_country
             })));
@@ -517,9 +517,9 @@ export const useCartStore = create<CartStore>()(
             interface QuoteWithItems {
               id: string;
               product_name: string;
-              final_total?: number;
+              final_total_usd?: number;
               final_total_local?: number;
-              final_currency?: string;
+              destination_currency?: string;
               quantity?: number;
               item_weight?: number;
               origin_country?: string;
@@ -550,8 +550,8 @@ export const useCartStore = create<CartStore>()(
 
               // FIXED: Use proper fallback chain for total price
               let totalPrice = 0;
-              if (quote.final_total && quote.final_total > 0) {
-                totalPrice = quote.final_total;
+              if (quote.final_total_usd && quote.final_total_usd > 0) {
+                totalPrice = quote.final_total_usd;
               } else if (quote.final_total_local && quote.final_total_local > 0) {
                 totalPrice = quote.final_total_local;
               } else if (totalFromItems > 0) {
@@ -609,9 +609,9 @@ export const useCartStore = create<CartStore>()(
                 id: quote.id,
                 quoteId: quote.id,
                 productName: firstItem?.product_name || quote.product_name || 'Unknown Product',
-                finalTotal: quote.final_total || totalPrice, // USD amount
+                finalTotal: quote.final_total_usd || totalPrice, // USD amount
                 finalTotalLocal: quote.final_total_local, // Local currency amount
-                finalCurrency: quote.final_currency, // Local currency code
+                finalCurrency: quote.destination_currency, // Local currency code
                 quantity: quantity,
                 itemWeight: itemWeight,
                 imageUrl: firstItem?.image_url || quote.image_url,
@@ -629,9 +629,9 @@ export const useCartStore = create<CartStore>()(
               console.log('🔍 [CartStore] Converting quote to cart item:', {
                 quoteId: quote.id,
                 rawQuote: {
-                  final_total: quote.final_total,
+                  final_total_usd: quote.final_total_usd,
                   final_total_local: quote.final_total_local,
-                  final_currency: quote.final_currency,
+                  destination_currency: quote.destination_currency,
                   origin_country: quote.origin_country,
                   destination_country: quote.destination_country
                 },

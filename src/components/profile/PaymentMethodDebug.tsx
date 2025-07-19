@@ -41,15 +41,15 @@ const getGatewayColor = (code: string) => {
     case 'stripe':
       return 'bg-teal-100 text-teal-800';
     case 'payu':
-      return 'bg-orange-100 text-purple-800';
+      return 'bg-orange-100 text-orange-800';
     case 'razorpay':
-      return 'bg-teal-100 text-indigo-800';
+      return 'bg-teal-100 text-cyan-800';
     case 'paypal':
       return 'bg-teal-100 text-teal-800';
     case 'esewa':
       return 'bg-green-100 text-green-800';
     case 'khalti':
-      return 'bg-orange-100 text-purple-800';
+      return 'bg-orange-100 text-orange-800';
     case 'fonepay':
       return 'bg-teal-100 text-teal-800';
     case 'upi':

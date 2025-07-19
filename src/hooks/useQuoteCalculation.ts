@@ -412,7 +412,7 @@ export const useQuoteCalculation = () => {
         id: quoteDataFromForm.id,
         item_price: total_item_price_in_purchase_currency, // Store in purchase currency
         item_weight: total_item_weight,
-        final_total: finalTotal,
+        final_total_usd: finalTotal,
         sub_total: subTotal,
         vat: vat,
         international_shipping: internationalShippingCost,
@@ -425,7 +425,7 @@ export const useQuoteCalculation = () => {
         handling_charge: cleanFormData.handling_charge,
         insurance_amount: cleanFormData.insurance_amount,
         discount: cleanFormData.discount,
-        final_currency: purchaseCurrency || countrySettings.currency,
+        destination_currency: purchaseCurrency || countrySettings.currency,
         final_total_local: finalTotal, // Already in purchase currency
         // Store the shipping route's exchange rate if available, otherwise use purchase currency rate
         exchange_rate:

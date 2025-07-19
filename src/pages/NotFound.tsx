@@ -34,7 +34,7 @@ const NotFound = () => {
       label: 'Request Quote',
       icon: Package,
       to: '/quote',
-      color: 'from-purple-500 to-purple-600',
+      color: 'from-orange-500 to-orange-600',
     },
     {
       label: 'Dashboard',
@@ -102,7 +102,7 @@ const NotFound = () => {
           {/* Large 404 */}
           <AnimatedSection animation="zoomIn">
             <div className="mb-8">
-              <h1 className="text-[12rem] md:text-[16rem] font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent leading-none select-none">
+              <h1 className="text-[12rem] md:text-[16rem] font-black bg-gradient-to-r from-teal-600 via-orange-600 to-pink-600 bg-clip-text text-transparent leading-none select-none">
                 <AnimatedCounter end={404} duration={2000} />
               </h1>
             </div>
@@ -113,7 +113,7 @@ const NotFound = () => {
             <Card className="bg-white/80 backdrop-blur-sm shadow-2xl hover:shadow-3xl transition-all duration-300 mx-auto max-w-2xl">
               <CardContent className="p-8 md:p-12">
                 <AnimatedSection animation="zoomIn" delay={300}>
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-6 animate-glow">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-500 to-orange-600 flex items-center justify-center mx-auto mb-6 animate-glow">
                     <Compass className="w-10 h-10 text-white" />
                   </div>
                 </AnimatedSection>
@@ -132,7 +132,7 @@ const NotFound = () => {
 
                 {/* Current Path Display */}
                 <AnimatedSection animation="fadeIn" delay={500}>
-                  <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-4 mb-8">
+                  <div className="bg-gradient-to-r from-gray-50 to-teal-50 rounded-lg p-4 mb-8">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <MapPin className="w-4 h-4" />
                       <span className="font-medium">You tried to visit:</span>
@@ -184,7 +184,7 @@ const NotFound = () => {
                   <div className="flex flex-col sm:flex-row gap-4 mt-8">
                     <Button
                       asChild
-                      className="flex-1 group bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 h-12"
+                      className="flex-1 group bg-gradient-to-r from-teal-500 to-orange-600 hover:from-teal-600 hover:to-orange-700 h-12"
                     >
                       <Link to="/">
                         <Home className="w-5 h-5 mr-2 group-hover:-translate-y-0.5 transition-transform" />

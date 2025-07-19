@@ -68,7 +68,7 @@ const getTriggerColor = (trigger: string) => {
     case 'quote_sent':
       return 'bg-teal-100 text-teal-800';
     case 'order_shipped':
-      return 'bg-orange-100 text-purple-800';
+      return 'bg-orange-100 text-orange-800';
     case 'quote_expired':
       return 'bg-red-100 text-red-800';
     case 'auto_calculation':
