@@ -364,12 +364,15 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
       : ['available-payment-methods', 'guest', overrideCurrency, guestShippingCountry],
     queryFn: async (): Promise<PaymentGateway[]> => {
       // Use override currency if provided (for guest checkout), otherwise use user's preferred currency
-      const currencyCode = overrideCurrency || userProfile?.preferred_display_currency;
+      // FIXED: Always provide USD fallback to prevent empty payment methods for users without currency set
+      const currencyCode = overrideCurrency || userProfile?.preferred_display_currency || 'USD';
       // Use guest shipping country or user's country
-      const countryCode = guestShippingCountry || userProfile?.country;
+      // FIXED: Provide US fallback for country code as well
+      const countryCode = guestShippingCountry || userProfile?.country || 'US';
 
+      // This should never happen now due to USD fallback, but keeping as safety check
       if (!currencyCode) {
-        console.log('Payment methods not available: missing currency data', {
+        console.error('UNEXPECTED: Payment methods not available: missing currency data despite fallback', {
           overrideCurrency,
           userProfileCurrency: userProfile?.preferred_display_currency,
           user: !!user,
