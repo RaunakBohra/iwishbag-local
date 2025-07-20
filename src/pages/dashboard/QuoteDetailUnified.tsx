@@ -61,6 +61,16 @@ import ConversionPrompt from '@/components/auth/ConversionPrompt';
 import { GuestCurrencyProvider, useGuestCurrency } from '@/contexts/GuestCurrencyContext';
 import { GuestCurrencySelector } from '@/components/guest/GuestCurrencySelector';
 
+// Utility function to extract clean domain from URL
+const extractDomain = (url: string): string => {
+  try {
+    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+    return urlObj.hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+};
+
 interface UnifiedQuoteDetailProps {
   isShareToken?: boolean;
 }
@@ -735,19 +745,55 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                               className="flex flex-col items-center min-w-[140px] max-w-[160px] bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200"
                             >
                               <div className="text-sm font-medium text-center truncate w-full">
-                                {item.product_url ? (
+                                {item.product_name && item.product_name.trim() !== '' ? (
+                                  /* If product name exists, make it clickable */
+                                  item.product_url ? (
+                                    <a
+                                      href={item.product_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-gray-900 hover:text-teal-600 transition-colors inline-flex items-center gap-1"
+                                      title={`View ${item.product_name} on ${extractDomain(item.product_url)}`}
+                                    >
+                                      {item.product_name}
+                                      <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                  ) : (
+                                    <span className="text-gray-900">{item.product_name}</span>
+                                  )
+                                ) : item.product_url ? (
+                                  /* If no product name, show clickable domain */
                                   <a
                                     href={item.product_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-teal-600 hover:underline"
+                                    className="text-teal-600 hover:text-teal-800 transition-colors inline-flex items-center gap-1"
+                                    title={`View product on ${extractDomain(item.product_url)}`}
                                   >
-                                    {item.product_name}
+                                    {extractDomain(item.product_url)}
+                                    <ExternalLink className="h-3 w-3" />
                                   </a>
                                 ) : (
-                                  item.product_name
+                                  /* Fallback if neither name nor URL */
+                                  <span className="text-gray-900">Product</span>
                                 )}
                               </div>
+                              
+                              {/* Show URL domain for verification when both name and URL exist */}
+                              {item.product_url && item.product_name && item.product_name.trim() !== '' && (
+                                <div className="text-xs text-gray-500 mt-1 text-center">
+                                  <span>Source: </span>
+                                  <a
+                                    href={item.product_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-teal-600 hover:text-teal-800 font-medium hover:underline"
+                                  >
+                                    {extractDomain(item.product_url)}
+                                  </a>
+                                </div>
+                              )}
+                              
                               <div className="text-xs text-gray-600 mt-1 bg-white px-2 py-1 rounded-full inline-block border border-gray-200">
                                 Qty: {item.quantity}
                               </div>
@@ -789,23 +835,66 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                               />
                             )}
                             <div className="flex-1 space-y-2">
-                              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                                {item.product_name}
-                              </h3>
-                              {item.product_url && (
-                                <a
-                                  href={item.product_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-sm text-teal-600 hover:text-teal-800 inline-flex items-center gap-1"
-                                >
-                                  View Product <ExternalLink className="h-3 w-3" />
-                                </a>
+                              {/* Enhanced Product Name or Domain Display */}
+                              {item.product_name && item.product_name.trim() !== '' ? (
+                                /* If product name exists, make it clickable */
+                                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                                  {item.product_url ? (
+                                    <a
+                                      href={item.product_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="hover:text-teal-600 transition-colors inline-flex items-center gap-2"
+                                      title={`View ${item.product_name} on ${extractDomain(item.product_url)}`}
+                                    >
+                                      {item.product_name}
+                                      <ExternalLink className="h-4 w-4" />
+                                    </a>
+                                  ) : (
+                                    item.product_name
+                                  )}
+                                </h3>
+                              ) : item.product_url ? (
+                                /* If no product name, show clickable domain */
+                                <h3 className="font-semibold">
+                                  <a
+                                    href={item.product_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-teal-600 hover:text-teal-800 transition-colors inline-flex items-center gap-2"
+                                    title={`View product on ${extractDomain(item.product_url)}`}
+                                  >
+                                    {extractDomain(item.product_url)}
+                                    <ExternalLink className="h-4 w-4" />
+                                  </a>
+                                </h3>
+                              ) : (
+                                /* Fallback if neither name nor URL */
+                                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Product</h3>
+                              )}
+                              
+                              {/* Show URL domain for verification when both name and URL exist */}
+                              {item.product_url && item.product_name && item.product_name.trim() !== '' && (
+                                <div className="text-sm">
+                                  <span className="text-gray-500">Source: </span>
+                                  <a
+                                    href={item.product_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-teal-600 hover:text-teal-800 font-medium hover:underline"
+                                  >
+                                    {extractDomain(item.product_url)}
+                                  </a>
+                                </div>
                               )}
                               <div className="flex items-center gap-4 text-sm text-gray-600">
                                 <span>Qty: {item.quantity}</span>
-                                <span>Price: {formatAmount(item.item_price)}</span>
-                                {item.item_weight && <span>Weight: {item.item_weight} kg</span>}
+                                {item.item_price && item.item_price > 0 && (
+                                  <span>Price: {formatAmount(item.item_price)}</span>
+                                )}
+                                {item.item_weight && item.item_weight > 0 && (
+                                  <span>Weight: {item.item_weight} kg</span>
+                                )}
                               </div>
                               {/* Product Notes for single product */}
                               {item.options &&
@@ -1310,8 +1399,60 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                           />
                         )}
                         <div className={item.image_url ? '' : 'flex-1'}>
-                          <div className="font-semibold text-sm">{item.product_name}</div>
-                          <div className="text-gray-600 text-xs bg-white px-2 py-1 rounded-full inline-block border border-gray-200">
+                          {/* Enhanced Product Name or Domain Display */}
+                          {item.product_name && item.product_name.trim() !== '' ? (
+                            /* If product name exists, make it clickable */
+                            <div className="font-semibold text-sm">
+                              {item.product_url ? (
+                                <a
+                                  href={item.product_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-gray-900 hover:text-teal-600 transition-colors inline-flex items-center gap-1"
+                                  title={`View ${item.product_name} on ${extractDomain(item.product_url)}`}
+                                >
+                                  {item.product_name}
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              ) : (
+                                item.product_name
+                              )}
+                            </div>
+                          ) : item.product_url ? (
+                            /* If no product name, show clickable domain */
+                            <div className="font-semibold text-sm">
+                              <a
+                                href={item.product_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-teal-600 hover:text-teal-800 transition-colors inline-flex items-center gap-1"
+                                title={`View product on ${extractDomain(item.product_url)}`}
+                              >
+                                {extractDomain(item.product_url)}
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </div>
+                          ) : (
+                            /* Fallback if neither name nor URL */
+                            <div className="font-semibold text-sm text-gray-900">Product</div>
+                          )}
+                          
+                          {/* Show URL domain for verification when both name and URL exist */}
+                          {item.product_url && item.product_name && item.product_name.trim() !== '' && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              <span>Source: </span>
+                              <a
+                                href={item.product_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-teal-600 hover:text-teal-800 font-medium hover:underline"
+                              >
+                                {extractDomain(item.product_url)}
+                              </a>
+                            </div>
+                          )}
+                          
+                          <div className="text-gray-600 text-xs bg-white px-2 py-1 rounded-full inline-block border border-gray-200 mt-1">
                             Quantity: {item.quantity}
                           </div>
                         </div>
