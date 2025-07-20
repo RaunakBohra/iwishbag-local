@@ -92,11 +92,11 @@ const CustomerOrderDetailPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {order.quote_items && order.quote_items.length > 0 ? (
+              {order.items && order.items.length > 0 ? (
                 <div className="space-y-4">
-                  {order.quote_items.map((item, index) => (
+                  {order.items.map((item, index) => (
                     <div key={item.id}>
-                      <p className="font-semibold">{item.product_name || 'N/A'}</p>
+                      <p className="font-semibold">{item.name || 'N/A'}</p>
                       {item.options &&
                         (() => {
                           try {
@@ -116,24 +116,24 @@ const CustomerOrderDetailPage = () => {
                       <p className="text-sm text-muted-foreground">
                         Quantity: {item.quantity || 1}
                       </p>
-                      {item.product_url && (
+                      {item.url && (
                         <Button variant="link" asChild className="p-0 h-auto mt-2">
-                          <a href={item.product_url} target="_blank" rel="noopener noreferrer">
+                          <a href={item.url} target="_blank" rel="noopener noreferrer">
                             View Product
                           </a>
                         </Button>
                       )}
-                      {index < order.quote_items.length - 1 && <Separator className="my-4" />}
+                      {index < order.items.length - 1 && <Separator className="my-4" />}
                     </div>
                   ))}
                 </div>
               ) : (
                 <>
-                  <p className="font-semibold">{order.product_name}</p>
+                  <p className="font-semibold">{order.items?.[0]?.name || 'Product'}</p>
                   <p className="text-sm text-muted-foreground">Quantity: {order.quantity || 1}</p>
-                  {order.product_url && (
+                  {order.items?.[0]?.url && (
                     <Button variant="link" asChild className="p-0 h-auto mt-2">
-                      <a href={order.product_url} target="_blank" rel="noopener noreferrer">
+                      <a href={order.items?.[0]?.url} target="_blank" rel="noopener noreferrer">
                         View Product
                       </a>
                     </Button>

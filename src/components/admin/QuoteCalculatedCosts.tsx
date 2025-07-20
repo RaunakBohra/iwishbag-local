@@ -91,8 +91,8 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
   }
 
   // Get the original entered item price (sum of all items in origin currency)
-  const originalItemPrice = Array.isArray(quote.quote_items)
-    ? quote.quote_items.reduce((sum, item) => sum + (item.item_price || 0), 0)
+  const originalItemPrice = Array.isArray(quote.items)
+    ? quote.items.reduce((sum, item) => sum + (item.price_usd || 0), 0)
     : null;
 
   // Render individual cost rows with dual currency

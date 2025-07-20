@@ -24,7 +24,7 @@ interface ProductInfoFieldsProps {
   setValue: UseFormSetValue<ProductFormData>;
 }
 
-export const ProductInfoFields = ({ control, index, _setValue }: ProductInfoFieldsProps) => {
+export const ProductInfoFields = ({ control, index, setValue }: ProductInfoFieldsProps) => {
   // Watch the product URL field
   const _productUrl = useWatch({
     control,
@@ -142,6 +142,7 @@ export const ProductInfoFields = ({ control, index, _setValue }: ProductInfoFiel
           </FormItem>
         )}
       />
+
     </div>
   );
 };

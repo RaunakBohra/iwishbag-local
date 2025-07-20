@@ -97,7 +97,7 @@ const CustomsCategories = React.lazy(() =>
     default: m.CustomsCategories,
   })),
 );
-const AdminQuoteDetailPage = React.lazy(() => import('@/components/admin/AdminQuoteDetailPage'));
+const UnifiedQuoteInterface = React.lazy(() => import('@/components/admin/UnifiedQuoteInterface'));
 const QuoteTemplatesPage = React.lazy(() =>
   import('@/components/admin/QuoteTemplatesPage').then((m) => ({
     default: m.QuoteTemplatesPage,
@@ -107,6 +107,11 @@ const BlogManagementPage = React.lazy(() => import('@/pages/admin/BlogManagement
 const BankAccountSettings = React.lazy(() =>
   import('@/components/admin/BankAccountSettings').then((m) => ({
     default: m.BankAccountSettings,
+  })),
+);
+const MLWeightEstimatorTester = React.lazy(() =>
+  import('@/components/admin/MLWeightEstimatorTester').then((m) => ({
+    default: m.MLWeightEstimatorTester,
   })),
 );
 const SystemSettings = React.lazy(() =>
@@ -120,11 +125,13 @@ const StatusDebug = React.lazy(() => import('@/pages/debug/StatusDebug'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
+import { usePreventNumberInputScroll } from '@/hooks/usePreventNumberInputScroll';
 
 // Import test utilities in development
 if (import.meta.env.DEV) {
   import('@/utils/recordTestPayment');
 }
+
 
 const router = createBrowserRouter([
   {
@@ -150,7 +157,7 @@ const router = createBrowserRouter([
             path: 'orders/:id',
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
-                <AdminQuoteDetailPage />
+                <UnifiedQuoteInterface />
               </ErrorBoundary>
             ),
           },
@@ -160,7 +167,7 @@ const router = createBrowserRouter([
             path: 'quotes/:id',
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
-                <AdminQuoteDetailPage />
+                <UnifiedQuoteInterface />
               </ErrorBoundary>
             ),
           },
@@ -182,6 +189,7 @@ const router = createBrowserRouter([
           { path: 'payment-proofs', element: <PaymentManagementPageNew /> },
           { path: 'debug/status', element: <StatusDebug /> },
           { path: 'debug/payu', element: <PayUDebugPage /> },
+          { path: 'ml/weight-estimator', element: <MLWeightEstimatorTester /> },
           { path: 'blog', element: <BlogManagementPage /> },
           { path: '*', element: <NotFound /> },
         ],
@@ -403,6 +411,9 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
+  // Prevent scroll wheel from changing number inputs globally
+  usePreventNumberInputScroll();
+
   return (
     <ErrorBoundary>
       <QueryProvider>

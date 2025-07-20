@@ -3,11 +3,16 @@
 // Features: Weight estimation, smart validation, optimization hints
 // ============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
+import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Package, 
   Plus, 
@@ -16,7 +21,8 @@ import {
   Scale, 
   AlertTriangle,
   CheckCircle,
-  Lightbulb
+  Lightbulb,
+  Loader2
 } from 'lucide-react';
 import type { UnifiedQuote, QuoteItem } from '@/types/unified-quote';
 
@@ -29,7 +35,10 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
   quote,
   onUpdateQuote,
 }) => {
+  const { toast } = useToast();
   const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [isAddingItem, setIsAddingItem] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [newItem, setNewItem] = useState<Partial<QuoteItem>>({
     name: '',
     quantity: 1,
@@ -49,6 +58,99 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
     return { variant: 'destructive' as const, text: 'Low' };
   };
 
+  // Handle item deletion
+  const handleDeleteItem = async (itemId: string) => {
+    if (quote.items.length <= 1) {
+      toast({
+        title: 'Cannot delete item',
+        description: 'Quote must have at least one item.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsDeleting(itemId);
+    try {
+      const success = await unifiedDataEngine.removeItem(quote.id, itemId);
+      if (success) {
+        toast({
+          title: 'Item deleted',
+          description: 'Item has been removed from the quote.',
+        });
+        onUpdateQuote(); // Refresh quote data and recalculate
+      } else {
+        throw new Error('Failed to delete item');
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast({
+        title: 'Delete failed',
+        description: 'Failed to delete item. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  // Handle item update
+  const handleUpdateItem = async (updatedItem: QuoteItem) => {
+    try {
+      const success = await unifiedDataEngine.updateItem(quote.id, updatedItem.id, updatedItem);
+      if (success) {
+        toast({
+          title: 'Item updated',
+          description: 'Item has been updated successfully.',
+        });
+        setEditingItem(null);
+        onUpdateQuote(); // Refresh quote data and recalculate
+      } else {
+        throw new Error('Failed to update item');
+      }
+    } catch (error) {
+      console.error('Error updating item:', error);
+      toast({
+        title: 'Update failed',
+        description: 'Failed to update item. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Handle item addition
+  const handleAddItem = async (newItem: Partial<QuoteItem>) => {
+    try {
+      const itemToAdd = {
+        ...newItem,
+        smart_data: {
+          weight_confidence: 0.5,
+          category_detected: 'general',
+          optimization_hints: [],
+          customs_suggestions: [],
+        },
+      } as Omit<QuoteItem, 'id'>;
+
+      const success = await unifiedDataEngine.addItem(quote.id, itemToAdd);
+      if (success) {
+        toast({
+          title: 'Item added',
+          description: 'New item has been added to the quote.',
+        });
+        setIsAddingItem(false);
+        onUpdateQuote(); // Refresh quote data and recalculate
+      } else {
+        throw new Error('Failed to add item');
+      }
+    } catch (error) {
+      console.error('Error adding item:', error);
+      toast({
+        title: 'Add failed',
+        description: 'Failed to add item. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -56,10 +158,13 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
           <h3 className="text-lg font-semibold">Smart Items Manager</h3>
           <p className="text-sm text-gray-600">
             {quote.items.length} items • Total weight: {' '}
-            {quote.items.reduce((sum, item) => sum + (item.weight_kg * item.quantity), 0).toFixed(2)} kg
+            {quote.items.reduce((sum, item) => sum + (Number(item.weight_kg || 0) * Number(item.quantity || 0)), 0).toFixed(2)} kg
           </p>
         </div>
-        <Button className="flex items-center">
+        <Button 
+          className="flex items-center"
+          onClick={() => setIsAddingItem(true)}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Add Item
         </Button>
@@ -90,14 +195,14 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
                     </div>
                     <div>
                       <span className="text-gray-600">Price (USD):</span>
-                      <div className="font-medium">${item.price_usd.toFixed(2)}</div>
+                      <div className="font-medium">${Number(item.price_usd || 0).toFixed(2)}</div>
                     </div>
                     <div>
                       <span className="text-gray-600">Weight:</span>
                       <div className="flex items-center space-x-1">
-                        <span className="font-medium">{item.weight_kg} kg</span>
-                        <Badge {...getWeightConfidenceBadge(item.smart_data.weight_confidence)}>
-                          {getWeightConfidenceBadge(item.smart_data.weight_confidence).text}
+                        <span className="font-medium">{Number(item.weight_kg || 0)} kg</span>
+                        <Badge {...getWeightConfidenceBadge(item.smart_data?.weight_confidence || 0)}>
+                          {getWeightConfidenceBadge(item.smart_data?.weight_confidence || 0).text}
                         </Badge>
                       </div>
                     </div>
@@ -113,10 +218,10 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
                     <div className="flex items-center space-x-2">
                       <Scale className="w-3 h-3 text-gray-400" />
                       <span className="text-xs text-gray-600">Weight confidence:</span>
-                      <span className={`text-xs font-medium ${getWeightConfidenceColor(item.smart_data.weight_confidence)}`}>
-                        {(item.smart_data.weight_confidence * 100).toFixed(0)}%
+                      <span className={`text-xs font-medium ${getWeightConfidenceColor(item.smart_data?.weight_confidence || 0)}`}>
+                        {(item.smart_data?.weight_confidence || 0 * 100).toFixed(0)}%
                       </span>
-                      {item.smart_data.weight_confidence < 0.7 && (
+                      {item.smart_data?.weight_confidence || 0 < 0.7 && (
                         <div className="flex items-center text-xs text-orange-600">
                           <AlertTriangle className="w-3 h-3 mr-1" />
                           Verify weight
@@ -125,24 +230,24 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
                     </div>
 
                     {/* Category Detection */}
-                    {item.smart_data.category_detected && (
+                    {item.smart_data?.category_detected && (
                       <div className="flex items-center space-x-2">
                         <CheckCircle className="w-3 h-3 text-green-500" />
                         <span className="text-xs text-gray-600">Category:</span>
                         <Badge variant="outline" className="text-xs">
-                          {item.smart_data.category_detected}
+                          {item.smart_data?.category_detected}
                         </Badge>
                       </div>
                     )}
 
                     {/* Optimization Hints */}
-                    {item.smart_data.optimization_hints.length > 0 && (
+                    {item.smart_data?.optimization_hints?.length > 0 && (
                       <div className="flex items-start space-x-2">
                         <Lightbulb className="w-3 h-3 text-yellow-500 mt-0.5" />
                         <div className="text-xs text-gray-600">
                           <span className="font-medium">Hints:</span>
                           <ul className="mt-1 space-y-1">
-                            {item.smart_data.optimization_hints.map((hint, index) => (
+                            {item.smart_data?.optimization_hints?.map((hint, index) => (
                               <li key={index}>• {hint}</li>
                             ))}
                           </ul>
@@ -151,13 +256,13 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
                     )}
 
                     {/* Customs Suggestions */}
-                    {item.smart_data.customs_suggestions.length > 0 && (
+                    {item.smart_data?.customs_suggestions?.length > 0 && (
                       <div className="flex items-start space-x-2">
                         <Package className="w-3 h-3 text-blue-500 mt-0.5" />
                         <div className="text-xs text-gray-600">
                           <span className="font-medium">Customs:</span>
                           <div className="mt-1 space-x-1">
-                            {item.smart_data.customs_suggestions.map((suggestion, index) => (
+                            {item.smart_data?.customs_suggestions?.map((suggestion, index) => (
                               <Badge key={index} variant="outline" className="text-xs">
                                 {suggestion}
                               </Badge>
@@ -182,8 +287,14 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
                     size="sm"
                     variant="ghost"
                     className="text-red-600 hover:text-red-700"
+                    onClick={() => handleDeleteItem(item.id)}
+                    disabled={isDeleting === item.id}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    {isDeleting === item.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -213,13 +324,13 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
             </div>
             <div>
               <div className="text-2xl font-bold text-purple-600">
-                {quote.items.reduce((sum, item) => sum + (item.weight_kg * item.quantity), 0).toFixed(1)}
+                {quote.items.reduce((sum, item) => sum + (Number(item.weight_kg || 0) * Number(item.quantity || 0)), 0).toFixed(1)}
               </div>
               <div className="text-sm text-gray-600">Total Weight (kg)</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-orange-600">
-                {(quote.items.reduce((sum, item) => sum + item.smart_data.weight_confidence, 0) / quote.items.length * 100).toFixed(0)}%
+                {(quote.items.reduce((sum, item) => sum + item.smart_data?.weight_confidence || 0, 0) / quote.items.length * 100).toFixed(0)}%
               </div>
               <div className="text-sm text-gray-600">Avg. Confidence</div>
             </div>
@@ -235,13 +346,13 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
             <span className="font-medium text-blue-800">Smart Recommendations</span>
           </div>
           <div className="space-y-2 text-sm">
-            {quote.items.some(item => item.smart_data.weight_confidence < 0.7) && (
+            {quote.items.some(item => item.smart_data?.weight_confidence || 0 < 0.7) && (
               <div className="flex items-center text-blue-700">
                 <AlertTriangle className="w-3 h-3 mr-2" />
                 Consider verifying weights for items with low confidence scores
               </div>
             )}
-            {quote.items.some(item => item.weight_kg < 0.1) && (
+            {quote.items.some(item => Number(item.weight_kg || 0) < 0.1) && (
               <div className="flex items-center text-blue-700">
                 <Scale className="w-3 h-3 mr-2" />
                 Some items have very low weights - this may affect shipping calculations
@@ -254,6 +365,408 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Item Dialog */}
+      {editingItem && (
+        <EditItemDialog
+          item={quote.items.find(item => item.id === editingItem)!}
+          onSave={handleUpdateItem}
+          onCancel={() => setEditingItem(null)}
+        />
+      )}
+
+      {/* Add Item Dialog */}
+      {isAddingItem && (
+        <AddItemDialog
+          onSave={handleAddItem}
+          onCancel={() => setIsAddingItem(false)}
+        />
+      )}
     </div>
+  );
+};
+
+// Edit Item Dialog Component
+interface EditItemDialogProps {
+  item: QuoteItem;
+  onSave: (item: QuoteItem) => void;
+  onCancel: () => void;
+}
+
+const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel }) => {
+  const [editForm, setEditForm] = useState({
+    name: item.name,
+    quantity: item.quantity,
+    price_usd: item.price_usd,
+    weight_kg: item.weight_kg,
+    options: item.options || '',
+  });
+  const [weightEstimation, setWeightEstimation] = useState<any>(null);
+  const [isEstimating, setIsEstimating] = useState(false);
+
+  // Auto-estimate weight when name changes
+  useEffect(() => {
+    if (editForm.name) {
+      const timeoutId = setTimeout(async () => {
+        setIsEstimating(true);
+        try {
+          const estimation = await smartWeightEstimator.estimateWeight(editForm.name);
+          setWeightEstimation(estimation);
+        } catch (error) {
+          console.error('Weight estimation error:', error);
+        } finally {
+          setIsEstimating(false);
+        }
+      }, 800);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [editForm.name]);
+
+  const handleSave = async () => {
+    // Learn from user input if different from estimation
+    if (weightEstimation && Math.abs(editForm.weight_kg - weightEstimation.estimated_weight) > 0.1) {
+      try {
+        await smartWeightEstimator.learnFromActualWeight(
+          editForm.name,
+          editForm.weight_kg,
+          undefined,
+          {
+            userConfirmed: true,
+            originalEstimate: weightEstimation.estimated_weight,
+          }
+        );
+        console.log('✅ ML learning completed from item edit');
+      } catch (error) {
+        console.error('Error learning from edit:', error);
+      }
+    }
+
+    const updatedItem: QuoteItem = {
+      ...item,
+      name: editForm.name,
+      quantity: editForm.quantity,
+      price_usd: editForm.price_usd,
+      weight_kg: editForm.weight_kg,
+      options: editForm.options,
+    };
+    
+    onSave(updatedItem);
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={() => onCancel()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit Item</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="name">Product Name</Label>
+            <Input
+              id="name"
+              value={editForm.name}
+              onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Product name"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="quantity">Quantity</Label>
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                value={editForm.quantity}
+                onChange={(e) => setEditForm(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="price">Price (USD)</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={editForm.price_usd}
+                onChange={(e) => setEditForm(prev => ({ ...prev, price_usd: parseFloat(e.target.value) || 0 }))}
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="weight" className="flex items-center space-x-2">
+              <span>Weight (kg)</span>
+              {isEstimating && (
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs text-blue-600">AI estimating...</span>
+                </div>
+              )}
+            </Label>
+            <Input
+              id="weight"
+              type="number"
+              step="0.001"
+              min="0"
+              value={editForm.weight_kg}
+              onChange={(e) => setEditForm(prev => ({ ...prev, weight_kg: parseFloat(e.target.value) || 0 }))}
+            />
+            
+            {/* AI Weight Suggestion */}
+            {weightEstimation && (
+              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-blue-800">
+                    AI suggests: {weightEstimation.estimated_weight} kg
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={weightEstimation.confidence >= 0.8 ? 'default' : 'secondary'}>
+                      {(weightEstimation.confidence * 100).toFixed(0)}% confident
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditForm(prev => ({ ...prev, weight_kg: weightEstimation.estimated_weight }))}
+                    >
+                      Use
+                    </Button>
+                  </div>
+                </div>
+                {weightEstimation.reasoning.length > 0 && (
+                  <div className="text-xs text-blue-600 mt-1">
+                    {weightEstimation.reasoning[0]}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="options">Options/Notes</Label>
+            <Input
+              id="options"
+              value={editForm.options}
+              onChange={(e) => setEditForm(prev => ({ ...prev, options: e.target.value }))}
+              placeholder="Size, color, specifications..."
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave}>
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Add Item Dialog Component
+interface AddItemDialogProps {
+  onSave: (item: Partial<QuoteItem>) => void;
+  onCancel: () => void;
+}
+
+const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
+  const [addForm, setAddForm] = useState({
+    name: '',
+    quantity: 1,
+    price_usd: 0,
+    weight_kg: 0,
+    options: '',
+    url: '',
+  });
+  const [weightEstimation, setWeightEstimation] = useState<any>(null);
+  const [isEstimating, setIsEstimating] = useState(false);
+
+  // Auto-estimate weight when name changes
+  useEffect(() => {
+    if (addForm.name) {
+      const timeoutId = setTimeout(async () => {
+        setIsEstimating(true);
+        try {
+          const estimation = await smartWeightEstimator.estimateWeight(
+            addForm.name, 
+            addForm.url || undefined
+          );
+          setWeightEstimation(estimation);
+        } catch (error) {
+          console.error('Weight estimation error:', error);
+        } finally {
+          setIsEstimating(false);
+        }
+      }, 800);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [addForm.name, addForm.url]);
+
+  const handleSave = async () => {
+    // Learn from user input if different from estimation
+    if (weightEstimation && Math.abs(addForm.weight_kg - weightEstimation.estimated_weight) > 0.1) {
+      try {
+        await smartWeightEstimator.learnFromActualWeight(
+          addForm.name,
+          addForm.weight_kg,
+          addForm.url || undefined,
+          {
+            userConfirmed: true,
+            originalEstimate: weightEstimation.estimated_weight,
+          }
+        );
+        console.log('✅ ML learning completed from new item');
+      } catch (error) {
+        console.error('Error learning from new item:', error);
+      }
+    }
+
+    const newItem: Partial<QuoteItem> = {
+      id: `item_${Date.now()}`, // Temporary ID
+      name: addForm.name,
+      quantity: addForm.quantity,
+      price_usd: addForm.price_usd,
+      weight_kg: addForm.weight_kg,
+      options: addForm.options,
+      url: addForm.url,
+    };
+    
+    onSave(newItem);
+  };
+
+  const isValid = addForm.name.trim() && addForm.quantity > 0;
+
+  return (
+    <Dialog open={true} onOpenChange={() => onCancel()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Add New Item</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="name">Product Name *</Label>
+            <Input
+              id="name"
+              value={addForm.name}
+              onChange={(e) => setAddForm(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="e.g., iPhone 15 Pro, Nike Air Jordan"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="url">Product URL (Optional)</Label>
+            <Input
+              id="url"
+              value={addForm.url}
+              onChange={(e) => setAddForm(prev => ({ ...prev, url: e.target.value }))}
+              placeholder="https://amazon.com/..."
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="quantity">Quantity *</Label>
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                value={addForm.quantity}
+                onChange={(e) => setAddForm(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="price">Price (USD)</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={addForm.price_usd}
+                onChange={(e) => setAddForm(prev => ({ ...prev, price_usd: parseFloat(e.target.value) || 0 }))}
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="weight" className="flex items-center space-x-2">
+              <span>Weight (kg)</span>
+              {isEstimating && (
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs text-blue-600">AI estimating...</span>
+                </div>
+              )}
+            </Label>
+            <Input
+              id="weight"
+              type="number"
+              step="0.001"
+              min="0"
+              value={addForm.weight_kg}
+              onChange={(e) => setAddForm(prev => ({ ...prev, weight_kg: parseFloat(e.target.value) || 0 }))}
+            />
+            
+            {/* AI Weight Suggestion */}
+            {weightEstimation && (
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-blue-800">
+                    🧠 AI suggests: {weightEstimation.estimated_weight} kg
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={weightEstimation.confidence >= 0.8 ? 'default' : 'secondary'}>
+                      {(weightEstimation.confidence * 100).toFixed(0)}% confident
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setAddForm(prev => ({ ...prev, weight_kg: weightEstimation.estimated_weight }))}
+                    >
+                      Use Suggestion
+                    </Button>
+                  </div>
+                </div>
+                {weightEstimation.reasoning.length > 0 && (
+                  <div className="text-xs text-blue-600">
+                    <strong>Reasoning:</strong> {weightEstimation.reasoning[0]}
+                  </div>
+                )}
+                {weightEstimation.suggestions.length > 0 && (
+                  <div className="text-xs text-blue-600 mt-1">
+                    <strong>Tip:</strong> {weightEstimation.suggestions[0]}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="options">Options/Notes</Label>
+            <Input
+              id="options"
+              value={addForm.options}
+              onChange={(e) => setAddForm(prev => ({ ...prev, options: e.target.value }))}
+              placeholder="Size, color, specifications..."
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!isValid}>
+            Add Item
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

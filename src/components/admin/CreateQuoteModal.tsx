@@ -151,19 +151,28 @@ export const CreateQuoteModal = ({
       return;
     }
 
-    const quoteItemsToInsert = items.map((item) => ({
-      quote_id: quote.id,
-      product_url: item.productUrl,
-      product_name: item.productName,
+    // Create items array for unified structure
+    const itemsArray = items.map((item) => ({
+      id: crypto.randomUUID(),
+      name: item.productName,
+      url: item.productUrl,
       quantity: item.quantity,
-      item_price: item.price,
-      item_weight: item.weight,
+      price_usd: item.price,
+      weight_kg: item.weight,
     }));
 
-    const { error: itemsError } = await supabase.from('quote_items').insert(quoteItemsToInsert);
+    // Update the quote with items in the unified structure
+    const { error: itemsError } = await supabase
+      .from('quotes')
+      .update({ 
+        items: itemsArray,
+        base_total_usd: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        final_total_usd: items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+      })
+      .eq('id', quote.id);
 
     if (itemsError) {
-      console.error('Error inserting quote items:', itemsError);
+      console.error('Error updating quote with items:', itemsError);
       await supabase.from('quotes').delete().eq('id', quote.id);
 
       toast({

@@ -20,13 +20,13 @@ import {
 // Types
 export interface QuoteItem {
   id: string;
-  item_price: number;
-  item_weight: number;
+  price_usd: number;
+  weight_kg: number;
   quantity: number;
-  product_name?: string | null;
+  name?: string | null;
   options?: string | null;
-  product_url?: string | null;
-  image_url?: string | null;
+  url?: string | null;
+  image?: string | null;
 }
 
 export interface QuoteCalculationParams {
@@ -161,7 +161,7 @@ export class QuoteCalculatorService {
 
     // **NEW: Generate unique calculation ID and start monitoring**
     const calculationId = `calc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const totalValue = params.items.reduce((sum, item) => sum + item.item_price * item.quantity, 0);
+    const totalValue = params.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
 
     // Initialize monitoring tracking
     this.activeCalculations.set(calculationId, {
@@ -440,7 +440,7 @@ export class QuoteCalculatorService {
 
     // Validate items
     params.items.forEach((item, index) => {
-      if (!item.item_price || item.item_price < 0) {
+      if (!item.price_usd || item.price_usd < 0) {
         errors.push({
           field: `items[${index}].item_price`,
           message: 'Item price must be greater than 0',
@@ -448,7 +448,7 @@ export class QuoteCalculatorService {
         });
       }
 
-      if (!item.item_weight || item.item_weight < 0) {
+      if (!item.weight_kg || item.weight_kg < 0) {
         errors.push({
           field: `items[${index}].item_weight`,
           message: 'Item weight must be greater than 0',
@@ -465,10 +465,10 @@ export class QuoteCalculatorService {
       }
 
       // Warn about extremely high values
-      if (item.item_price > 100000) {
+      if (item.price_usd > 100000) {
         warnings.push({
           field: `items[${index}].item_price`,
-          message: `Very high item price: ${item.item_price}`,
+          message: `Very high item price: ${item.price_usd}`,
           code: 'HIGH_ITEM_PRICE',
         });
       }
@@ -570,11 +570,11 @@ export class QuoteCalculatorService {
 
     // Calculate item totals
     const total_item_price = params.items.reduce(
-      (sum, item) => sum + item.item_price * item.quantity,
+      (sum, item) => sum + item.price_usd * item.quantity,
       0,
     );
     const total_item_weight = params.items.reduce(
-      (sum, item) => sum + item.item_weight * item.quantity,
+      (sum, item) => sum + item.weight_kg * item.quantity,
       0,
     );
 
@@ -783,8 +783,8 @@ export class QuoteCalculatorService {
   private generateCacheKey(params: QuoteCalculationParams): string {
     const keyData = {
       items: params.items.map((item) => ({
-        price: item.item_price,
-        weight: item.item_weight,
+        price: item.price_usd,
+        weight: item.weight_kg,
         quantity: item.quantity,
       })),
       origin: params.originCountry,

@@ -66,7 +66,7 @@ export const SmartCalculationBreakdown: React.FC<SmartCalculationBreakdownProps>
       percentage: getPercentage(breakdown.customs),
       icon: <Info className="w-4 h-4" />,
       color: 'text-purple-600',
-      insight: `${quote.operational_data.customs.percentage}% rate`,
+      insight: 'Customs duty applied',
     },
     {
       label: 'Taxes & VAT',

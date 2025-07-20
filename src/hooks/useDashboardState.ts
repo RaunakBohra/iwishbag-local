@@ -32,7 +32,6 @@ export const useDashboardState = () => {
         .select(
           `
           *,
-          quote_items (*),
           profiles!quotes_user_id_fkey(preferred_display_currency)
         `,
         )

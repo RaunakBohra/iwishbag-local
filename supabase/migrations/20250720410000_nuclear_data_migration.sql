@@ -87,7 +87,7 @@ SELECT
   
   -- Financial totals
   COALESCE(q.item_price, 0) as base_total_usd,
-  COALESCE(q.final_total, q.final_total_local, 0) as final_total_usd,
+  COALESCE(q.final_total_usd, 0) as final_total_usd,
   
   -- Smart Calculation Data JSONB
   jsonb_build_object(

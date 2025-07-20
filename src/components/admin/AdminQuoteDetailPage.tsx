@@ -271,13 +271,13 @@ const AdminQuoteDetailPage = () => {
   // Compute real-time price and weight from form items
   const formPrice = useMemo(() => {
     return (items || []).reduce(
-      (sum: number, item: Tables<'quote_items'>) => sum + (Number(item?.item_price) || 0),
+      (sum: number, item: any) => sum + (Number(item?.item_price) || 0),
       0,
     );
   }, [items]);
   const formWeight = useMemo(() => {
     return (items || []).reduce(
-      (sum: number, item: Tables<'quote_items'>) => sum + (Number(item?.item_weight) || 0),
+      (sum: number, item: any) => sum + (Number(item?.item_weight) || 0),
       0,
     );
   }, [items]);
@@ -845,6 +845,7 @@ const AdminQuoteDetailPage = () => {
                                   key={item.id}
                                   index={index}
                                   control={form.control}
+                                  setValue={form.setValue}
                                   allCountries={allCountries}
                                   onDelete={() => remove(index)}
                                   routeWeightUnit={routeWeightUnit}
@@ -1062,6 +1063,7 @@ const AdminQuoteDetailPage = () => {
                               key={item.id}
                               index={index}
                               control={form.control}
+                              setValue={form.setValue}
                               allCountries={allCountries}
                               onDelete={() => remove(index)}
                               routeWeightUnit={routeWeightUnit}

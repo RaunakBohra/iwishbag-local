@@ -33,7 +33,12 @@ export const CountryField = <TFieldValues extends FieldValues = FieldValues>({
   const rawCountries = filter === 'shipping' ? shippingCountries : purchaseCountries;
   const countriesLoading = filter === 'shipping' ? shippingLoading : purchaseLoading;
 
-  const countries = useCountryWithCurrency(rawCountries);
+  const { countries } = useCountryWithCurrency();
+  
+  // Filter countries based on the filter type if needed
+  const filteredCountries = rawCountries && Array.isArray(rawCountries) 
+    ? countries.filter(country => rawCountries.some(rc => rc.code === country.code))
+    : countries;
 
   return (
     <FormField
@@ -63,9 +68,9 @@ export const CountryField = <TFieldValues extends FieldValues = FieldValues>({
               </SelectTrigger>
             </FormControl>
             <SelectContent>
-              {countries?.map((country) => (
+              {filteredCountries?.map((country) => (
                 <SelectItem key={country.code} value={country.code}>
-                  {country.displayName}
+                  {country.name}
                 </SelectItem>
               ))}
             </SelectContent>

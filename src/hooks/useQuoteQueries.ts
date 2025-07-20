@@ -4,9 +4,7 @@ import { Tables } from '@/integrations/supabase/types';
 import { logger } from '@/lib/logger';
 
 type Quote = Tables<'quotes'>;
-type QuoteItem = Tables<'quote_items'>;
 type QuoteWithItems = Quote & {
-  quote_items: QuoteItem[];
   profiles?: {
     full_name?: string;
     email?: string;
@@ -27,7 +25,7 @@ export const useQuoteQueries = (id: string | undefined) => {
       const { data, error } = await supabase
         .from('quotes')
         .select(
-          '*, quote_items(*), profiles!quotes_user_id_fkey(full_name, email, phone, preferred_display_currency)',
+          '*, profiles!quotes_user_id_fkey(full_name, email, phone, preferred_display_currency)',
         )
         .eq('id', id)
         .single();

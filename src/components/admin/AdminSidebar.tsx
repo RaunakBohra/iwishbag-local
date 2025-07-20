@@ -14,6 +14,7 @@ import {
   Route,
   Receipt,
   Edit,
+  Brain,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -110,6 +111,11 @@ const menuGroups = [
         title: 'Bank Accounts',
         url: '/admin/bank-accounts',
         icon: Landmark,
+      },
+      {
+        title: 'ML Weight Estimator',
+        url: '/admin/ml/weight-estimator',
+        icon: Brain,
       },
     ],
   },

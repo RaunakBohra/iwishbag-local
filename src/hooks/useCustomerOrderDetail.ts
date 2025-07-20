@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Tables } from '@/integrations/supabase/types';
 
 type OrderDetail = Tables<'quotes'> & {
-  quote_items: Tables<'quote_items'>[];
   shipping_address: Tables<'user_addresses'> | null;
 };
 
@@ -20,7 +19,7 @@ export const useCustomerOrderDetail = (orderId: string | undefined) => {
 
       const { data: quoteData, error } = await supabase
         .from('quotes')
-        .select('*, quote_items(*)')
+        .select('*')
         .eq('id', orderId)
         .maybeSingle();
 

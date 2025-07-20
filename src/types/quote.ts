@@ -83,7 +83,16 @@ export interface Quote {
   shipping_carrier?: string;
   customs_percentage?: number;
   breakdown?: QuoteBreakdown;
-  quote_items?: QuoteItem[];
+  items?: {
+    id: string;
+    name: string;
+    price_usd: number;
+    weight_kg: number;
+    quantity: number;
+    url?: string;
+    image?: string;
+    options?: string;
+  }[];
   // Currency and shipping fields
   exchange_rate?: number;
   shipping_address?: ShippingAddress | string; // JSONB field - can be object or JSON string

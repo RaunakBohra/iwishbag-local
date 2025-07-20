@@ -213,7 +213,7 @@ export function QuoteBreakdown({
         <QuoteSummary
           status={uiState.summaryStatus}
           total={quoteTotal}
-          itemCount={quote.quote_items?.length || 0}
+          itemCount={quote.items?.length || 0}
           onApprove={
             uiState.step === 'approve' || (statusConfig?.allowApproval ?? false)
               ? handleApproveClick
@@ -265,7 +265,7 @@ export function QuoteBreakdown({
           /> */}
           {isItemsExpanded && (
             <div className="space-y-3 sm:space-y-4">
-              {quote.quote_items?.map((item) => (
+              {quote.items?.map((item) => (
                 <QuoteItemCard key={item.id} item={item} />
               ))}
             </div>

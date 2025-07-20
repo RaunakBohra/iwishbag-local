@@ -86,7 +86,7 @@ export class SmartCalculationEngine {
       const selectedOption = this.selectOptimalShippingOption(
         shippingOptions,
         input.preferences,
-        input.quote.operational_data.shipping.selected_option
+        input.quote.operational_data?.shipping?.selected_option
       );
 
       // Calculate all costs with selected shipping
@@ -485,7 +485,7 @@ export class SmartCalculationEngine {
     );
 
     // Calculate customs (from operational_data or default)
-    const customsPercentage = quote.operational_data.customs.percentage || 0;
+    const customsPercentage = quote.operational_data.customs?.percentage || 10; // Default 10%
     const customsAmount = (itemsTotal + selectedShipping.cost_usd) * (customsPercentage / 100);
 
     // Calculate taxes and fees

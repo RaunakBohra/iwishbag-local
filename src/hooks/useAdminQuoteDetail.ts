@@ -37,42 +37,46 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
         allCountries?.find((c) => c.code === purchaseCountry)?.currency || 'USD';
 
       // Always use the original input values from the quote (in purchase currency)
+      // Extract values from unified structure JSONB fields
+      const calculationData = quote.calculation_data || {};
+      const operationalData = quote.operational_data || {};
+      
       const formData: Partial<AdminQuoteFormValues> & Record<string, unknown> = {
         id: quote.id,
-        sales_tax_price: quote.sales_tax_price,
-        merchant_shipping_price: quote.merchant_shipping_price,
-        domestic_shipping: quote.domestic_shipping,
-        handling_charge: quote.handling_charge,
-        discount: quote.discount,
-        insurance_amount: quote.insurance_amount,
+        sales_tax_price: calculationData.sales_tax_price || 0,
+        merchant_shipping_price: calculationData.merchant_shipping_price || 0,
+        domestic_shipping: operationalData.domestic_shipping || 0,
+        handling_charge: operationalData.handling_charge || 0,
+        discount: calculationData.discount || 0,
+        insurance_amount: operationalData.insurance_amount || 0,
         origin_country: quote.origin_country || quote.destination_country || 'US', // Use origin_country or fallback to destination_country for legacy quotes
         destination_country: quote.destination_country,
-        customs_percentage: quote.customs_percentage ?? undefined,
+        customs_percentage: calculationData.customs_percentage ?? undefined,
         currency: quote.currency || purchaseCurrency, // Use quote currency or determine from country
-        destination_currency: quote.destination_currency || 'USD',
+        destination_currency: quote.currency || 'USD', // Note: destination_currency field no longer exists, using currency
         priority: quote.priority ?? undefined,
         internal_notes: quote.internal_notes ?? '',
         status: quote.status ?? '',
-        items: quote.quote_items.map((item) => ({
-          id: item.id,
-          item_price: item.item_price || 0,
-          item_weight: item.item_weight || 0,
-          quantity: item.quantity,
-          product_name: item.product_name,
-          options: item.options,
-          product_url: item.product_url,
-          image_url: item.image_url,
+        items: (quote.items || []).map((item, index) => ({
+          id: item.id || `item-${index}`,
+          item_price: item.price_usd || 0,
+          item_weight: item.weight_kg || 0,
+          quantity: item.quantity || 1,
+          product_name: item.name || '',
+          options: item.options || '',
+          product_url: item.url || '',
+          image_url: item.image || '',
         })),
       };
       // Map snake_case to camelCase for UI breakdown (for display only)
-      formData.salesTaxPrice = quote.sales_tax_price;
-      formData.merchantShippingPrice = quote.merchant_shipping_price;
-      formData.interNationalShipping = quote.international_shipping;
-      formData.customsAndECS = quote.customs_and_ecs;
-      formData.domesticShipping = quote.domestic_shipping;
-      formData.handlingCharge = quote.handling_charge;
-      formData.insuranceAmount = quote.insurance_amount;
-      formData.paymentGatewayFee = quote.payment_gateway_fee;
+      formData.salesTaxPrice = calculationData.sales_tax_price || 0;
+      formData.merchantShippingPrice = calculationData.merchant_shipping_price || 0;
+      formData.interNationalShipping = calculationData.international_shipping || 0;
+      formData.customsAndECS = calculationData.customs_and_ecs || 0;
+      formData.domesticShipping = operationalData.domestic_shipping || 0;
+      formData.handlingCharge = operationalData.handling_charge || 0;
+      formData.insuranceAmount = operationalData.insurance_amount || 0;
+      formData.paymentGatewayFee = operationalData.payment_gateway_fee || 0;
       try {
         form.reset(formData);
       } catch (error) {
@@ -186,15 +190,19 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
         }
 
         const extendedQuoteData = finalQuoteData as ExtendedQuoteData;
-        extendedQuoteData.salesTaxPrice = finalQuoteData.sales_tax_price;
-        extendedQuoteData.domesticShipping = finalQuoteData.domestic_shipping;
-        extendedQuoteData.handlingCharge = finalQuoteData.handling_charge;
-        extendedQuoteData.insuranceAmount = finalQuoteData.insurance_amount;
-        extendedQuoteData.merchantShippingPrice = finalQuoteData.merchant_shipping_price;
-        extendedQuoteData.discount = finalQuoteData.discount;
-        extendedQuoteData.interNationalShipping = finalQuoteData.international_shipping;
-        extendedQuoteData.customsAndECS = finalQuoteData.customs_and_ecs;
-        extendedQuoteData.paymentGatewayFee = finalQuoteData.payment_gateway_fee;
+        // Extract from unified structure if available, fallback to direct fields
+        const calcData = finalQuoteData.calculation_data || {};
+        const opData = finalQuoteData.operational_data || {};
+        
+        extendedQuoteData.salesTaxPrice = calcData.sales_tax_price || finalQuoteData.sales_tax_price;
+        extendedQuoteData.domesticShipping = opData.domestic_shipping || finalQuoteData.domestic_shipping;
+        extendedQuoteData.handlingCharge = opData.handling_charge || finalQuoteData.handling_charge;
+        extendedQuoteData.insuranceAmount = opData.insurance_amount || finalQuoteData.insurance_amount;
+        extendedQuoteData.merchantShippingPrice = calcData.merchant_shipping_price || finalQuoteData.merchant_shipping_price;
+        extendedQuoteData.discount = calcData.discount || finalQuoteData.discount;
+        extendedQuoteData.interNationalShipping = calcData.international_shipping || finalQuoteData.international_shipping;
+        extendedQuoteData.customsAndECS = calcData.customs_and_ecs || finalQuoteData.customs_and_ecs;
+        extendedQuoteData.paymentGatewayFee = opData.payment_gateway_fee || finalQuoteData.payment_gateway_fee;
         // --- End UI mapping ---
 
         // --- Remove camelCase fields before DB save ---

@@ -1,0 +1,2 @@
+id,quote_id,product_name,product_url,image_url,category,item_price,item_weight,quantity,options,created_at,updated_at
+2ebab73d-09e7-46e4-b088-763a7fb0641d,80e76ca6-5133-42ce-97f5-14a07f49dc30,iphone,http://localhost:8080/quote,"",,100.00,1.00,1,"",2025-07-20 10:34:02.201257+00,2025-07-20 10:34:02.201257+00

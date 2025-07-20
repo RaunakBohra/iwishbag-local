@@ -6,7 +6,16 @@ import { useStatusTransitions } from './useStatusTransitions';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 type Quote = Tables<'quotes'>;
-type QuoteItem = Tables<'quote_items'>;
+type QuoteItem = {
+  id: string;
+  name: string;
+  price_usd: number;
+  weight_kg: number;
+  quantity: number;
+  url?: string;
+  image?: string;
+  options?: string;
+};
 
 async function getAccessToken() {
   try {
@@ -86,8 +95,28 @@ export const useQuoteMutations = (id: string | undefined) => {
   });
 
   const updateQuoteItemMutation = useMutation({
-    mutationFn: async (itemData: Partial<QuoteItem> & { id: string }) => {
-      const { error } = await supabase.from('quote_items').update(itemData).eq('id', itemData.id);
+    mutationFn: async (itemData: Partial<QuoteItem> & { id: string; quoteId: string }) => {
+      // Get the current quote
+      const { data: quote, error: fetchError } = await supabase
+        .from('quotes')
+        .select('items')
+        .eq('id', itemData.quoteId)
+        .single();
+      
+      if (fetchError) throw new Error(fetchError.message);
+      
+      // Update the specific item in the items array
+      const items = Array.isArray(quote.items) ? quote.items : [];
+      const updatedItems = items.map(item => 
+        item.id === itemData.id ? { ...item, ...itemData } : item
+      );
+      
+      // Update the quote with the new items array
+      const { error } = await supabase
+        .from('quotes')
+        .update({ items: updatedItems })
+        .eq('id', itemData.quoteId);
+        
       if (error) throw new Error(error.message);
     },
   });
@@ -97,7 +126,9 @@ export const useQuoteMutations = (id: string | undefined) => {
       if (!quote) throw new Error('Quote data is required');
 
       // Generate email content
-      const emailSubject = `Quote ${quote.display_id || quote.id} - ${quote.product_name}`;
+      const firstItem = Array.isArray(quote.items) && quote.items.length > 0 ? quote.items[0] : null;
+      const productName = firstItem?.name || 'Your Items';
+      const emailSubject = `Quote ${quote.display_id || quote.id} - ${productName}`;
       const emailHtml = `
                 <html>
                 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -111,9 +142,9 @@ export const useQuoteMutations = (id: string | undefined) => {
                         <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
                             <h3 style="margin-top: 0;">Quote Details</h3>
                             <p><strong>Quote ID:</strong> ${quote.display_id || quote.id}</p>
-                            <p><strong>Product:</strong> ${quote.product_name}</p>
+                            <p><strong>Product:</strong> ${productName}</p>
                             <p><strong>Destination:</strong> ${quote.destination_country}</p>
-                            <p><strong>Total Amount:</strong> $${quote.final_total_usd || quote.item_price}</p>
+                            <p><strong>Total Amount:</strong> $${quote.final_total_usd || quote.base_total_usd}</p>
                         </div>
                         
                         <p>To view your complete quote and proceed with your order, please log in to your dashboard:</p>
@@ -138,10 +169,18 @@ export const useQuoteMutations = (id: string | undefined) => {
       const accessToken = await getAccessToken();
 
       if (accessToken) {
+        // Get customer email from customer_data
+        const customerData = quote.customer_data || {};
+        const customerEmail = customerData.info?.email || null;
+        
+        if (!customerEmail) {
+          throw new Error('Customer email not found in quote data');
+        }
+        
         // Send email using the edge function
         const { error: emailError } = await supabase.functions.invoke('send-email', {
           body: {
-            to: quote.email,
+            to: customerEmail,
             subject: emailSubject,
             html: emailHtml,
           },

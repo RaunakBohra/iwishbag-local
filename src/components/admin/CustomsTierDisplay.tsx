@@ -74,10 +74,10 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
     if (found) destinationCountry = found.code;
   }
   const quotePrice =
-    quote.quote_items?.reduce((sum: number, item: QuoteItem) => sum + (item.item_price || 0), 0) ||
+    quote.items?.reduce((sum: number, item: any) => sum + (item.price_usd || 0), 0) ||
     0;
   const quoteWeight =
-    quote.quote_items?.reduce((sum: number, item: QuoteItem) => sum + (item.item_weight || 0), 0) ||
+    quote.items?.reduce((sum: number, item: any) => sum + (item.weight_kg || 0), 0) ||
     0;
 
   // Check if conditions match

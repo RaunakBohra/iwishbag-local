@@ -97,9 +97,9 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const { countries: allCountries } = useCountryUtils();
 
-  const firstItem = quote.quote_items?.[0];
-  const totalItems = quote.quote_items?.length || 0;
-  const productName = firstItem?.product_name || quote.product_name || 'Product name not specified';
+  const firstItem = quote.items?.[0];
+  const totalItems = quote.items?.length || 0;
+  const productName = firstItem?.name || 'Product name not specified';
 
   const formattedAmount = formatAmount(quote.final_total_usd || 0);
 
@@ -315,7 +315,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
                   Quick Preview
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(`/admin/quotes/${quote.id}`)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Quote
                 </DropdownMenuItem>

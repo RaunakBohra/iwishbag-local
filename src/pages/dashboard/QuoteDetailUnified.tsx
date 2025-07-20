@@ -115,7 +115,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
       if (!identifier) return null;
 
       try {
-        let query = supabase.from('quotes').select('*, quote_items(*)');
+        let query = supabase.from('quotes').select('*');
 
         // Apply different filters based on mode
         if (isGuestMode) {
@@ -771,45 +771,45 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 pt-0">
-                {quote.quote_items && quote.quote_items.length > 0 && (
+                {quote.items && quote.items.length > 0 && (
                   <div className="space-y-4">
                     {/* Product details */}
-                    {quote.quote_items.length > 1 ? (
+                    {quote.items.length > 1 ? (
                       <>
                         {/* Horizontally scrollable product cards */}
                         <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                          {quote.quote_items.map((item) => (
+                          {quote.items.map((item) => (
                             <div
                               key={item.id}
                               className="flex flex-col items-center min-w-[140px] max-w-[160px] bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200"
                             >
                               <div className="text-sm font-medium text-center truncate w-full">
-                                {item.product_name && item.product_name.trim() !== '' ? (
+                                {item.name && item.name.trim() !== '' ? (
                                   /* If product name exists, make it clickable */
-                                  item.product_url ? (
+                                  item.url ? (
                                     <a
-                                      href={item.product_url}
+                                      href={item.url}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-gray-900 hover:text-teal-600 transition-colors inline-flex items-center gap-1"
-                                      title={`View ${item.product_name} on ${extractDomain(item.product_url)}`}
+                                      title={`View ${item.name} on ${extractDomain(item.url)}`}
                                     >
-                                      {item.product_name}
+                                      {item.name}
                                       <ExternalLink className="h-3 w-3" />
                                     </a>
                                   ) : (
-                                    <span className="text-gray-900">{item.product_name}</span>
+                                    <span className="text-gray-900">{item.name}</span>
                                   )
-                                ) : item.product_url ? (
+                                ) : item.url ? (
                                   /* If no product name, show clickable domain */
                                   <a
-                                    href={item.product_url}
+                                    href={item.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-teal-600 hover:text-teal-800 transition-colors inline-flex items-center gap-1"
-                                    title={`View product on ${extractDomain(item.product_url)}`}
+                                    title={`View product on ${extractDomain(item.url)}`}
                                   >
-                                    {extractDomain(item.product_url)}
+                                    {extractDomain(item.url)}
                                     <ExternalLink className="h-3 w-3" />
                                   </a>
                                 ) : (
@@ -819,16 +819,16 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                               </div>
                               
                               {/* Show URL domain for verification when both name and URL exist */}
-                              {item.product_url && item.product_name && item.product_name.trim() !== '' && (
+                              {item.url && item.name && item.name.trim() !== '' && (
                                 <div className="text-xs text-gray-500 mt-1 text-center">
                                   <span>Source: </span>
                                   <a
-                                    href={item.product_url}
+                                    href={item.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-teal-600 hover:text-teal-800 font-medium hover:underline"
                                   >
-                                    {extractDomain(item.product_url)}
+                                    {extractDomain(item.url)}
                                   </a>
                                 </div>
                               )}
@@ -862,48 +862,48 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                         </div>
                       </>
                     ) : (
-                      quote.quote_items.map((item, index) => (
+                      quote.items.map((item, index) => (
                         <div key={item.id} className="space-y-4">
                           {index > 0 && <Separator className="my-4" />}
                           <div className="flex flex-col sm:flex-row gap-4">
                             {item.image_url && (
                               <img
                                 src={item.image_url}
-                                alt={item.product_name}
+                                alt={item.name}
                                 className="w-full sm:w-24 h-24 object-cover rounded-lg shadow-sm"
                               />
                             )}
                             <div className="flex-1 space-y-2">
                               {/* Enhanced Product Name or Domain Display */}
-                              {item.product_name && item.product_name.trim() !== '' ? (
+                              {item.name && item.name.trim() !== '' ? (
                                 /* If product name exists, make it clickable */
                                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                                  {item.product_url ? (
+                                  {item.url ? (
                                     <a
-                                      href={item.product_url}
+                                      href={item.url}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="hover:text-teal-600 transition-colors inline-flex items-center gap-2"
-                                      title={`View ${item.product_name} on ${extractDomain(item.product_url)}`}
+                                      title={`View ${item.name} on ${extractDomain(item.url)}`}
                                     >
-                                      {item.product_name}
+                                      {item.name}
                                       <ExternalLink className="h-4 w-4" />
                                     </a>
                                   ) : (
-                                    item.product_name
+                                    item.name
                                   )}
                                 </h3>
-                              ) : item.product_url ? (
+                              ) : item.url ? (
                                 /* If no product name, show clickable domain */
                                 <h3 className="font-semibold">
                                   <a
-                                    href={item.product_url}
+                                    href={item.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-teal-600 hover:text-teal-800 transition-colors inline-flex items-center gap-2"
-                                    title={`View product on ${extractDomain(item.product_url)}`}
+                                    title={`View product on ${extractDomain(item.url)}`}
                                   >
-                                    {extractDomain(item.product_url)}
+                                    {extractDomain(item.url)}
                                     <ExternalLink className="h-4 w-4" />
                                   </a>
                                 </h3>
@@ -913,26 +913,26 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                               )}
                               
                               {/* Show URL domain for verification when both name and URL exist */}
-                              {item.product_url && item.product_name && item.product_name.trim() !== '' && (
+                              {item.url && item.name && item.name.trim() !== '' && (
                                 <div className="text-sm">
                                   <span className="text-gray-500">Source: </span>
                                   <a
-                                    href={item.product_url}
+                                    href={item.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-teal-600 hover:text-teal-800 font-medium hover:underline"
                                   >
-                                    {extractDomain(item.product_url)}
+                                    {extractDomain(item.url)}
                                   </a>
                                 </div>
                               )}
                               <div className="flex items-center gap-4 text-sm text-gray-600">
                                 <span>Qty: {item.quantity}</span>
-                                {item.item_price && item.item_price > 0 && (
-                                  <span>Price: {formatAmount(item.item_price)}</span>
+                                {item.price_usd && item.price_usd > 0 && (
+                                  <span>Price: {formatAmount(item.price_usd)}</span>
                                 )}
-                                {item.item_weight && item.item_weight > 0 && (
-                                  <span>Weight: {item.item_weight} kg</span>
+                                {item.weight_kg && item.weight_kg > 0 && (
+                                  <span>Weight: {item.weight_kg} kg</span>
                                 )}
                               </div>
                               {/* Product Notes for single product */}
@@ -997,15 +997,15 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                           <span className="text-xs text-gray-600 font-medium">Quantity</span>
                         </div>
                         <span className="text-xl font-semibold text-gray-900">
-                          {Array.isArray(quote.quote_items)
-                            ? quote.quote_items.reduce((sum, item) => sum + (item.quantity || 0), 0)
+                          {Array.isArray(quote.items)
+                            ? quote.items.reduce((sum, item) => sum + (item.quantity || 0), 0)
                             : quote.quantity || 1}
                         </span>
                       </div>
                     </div>
 
                     {/* Info Grid for single product */}
-                    {quote.quote_items.length === 1 && (
+                    {quote.items.length === 1 && (
                       <div className="grid grid-cols-2 gap-3 mt-4">
                         {/* Shipping Route in Info Grid */}
                         {(() => {
@@ -1090,7 +1090,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                     )}
 
                     {/* Additional info for multiple products */}
-                    {quote.quote_items.length > 1 && (
+                    {quote.items.length > 1 && (
                       <div className="grid grid-cols-2 gap-4 mt-2">
                         {/* Shipping Route in Info Grid - Multiple Products */}
                         {(() => {
@@ -1423,7 +1423,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                 Items
               </h3>
               <div className="space-y-3">
-                {quote.quote_items?.map((item) => (
+                {quote.items?.map((item) => (
                   <div
                     key={item.id}
                     className="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200"
@@ -1433,41 +1433,41 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                         {item.image_url && (
                           <img
                             src={item.image_url}
-                            alt={item.product_name}
+                            alt={item.name}
                             className="w-12 h-12 rounded-lg object-cover shadow-sm"
                           />
                         )}
                         <div className={item.image_url ? '' : 'flex-1'}>
                           {/* Enhanced Product Name or Domain Display */}
-                          {item.product_name && item.product_name.trim() !== '' ? (
+                          {item.name && item.name.trim() !== '' ? (
                             /* If product name exists, make it clickable */
                             <div className="font-semibold text-sm">
-                              {item.product_url ? (
+                              {item.url ? (
                                 <a
-                                  href={item.product_url}
+                                  href={item.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-gray-900 hover:text-teal-600 transition-colors inline-flex items-center gap-1"
-                                  title={`View ${item.product_name} on ${extractDomain(item.product_url)}`}
+                                  title={`View ${item.name} on ${extractDomain(item.url)}`}
                                 >
-                                  {item.product_name}
+                                  {item.name}
                                   <ExternalLink className="h-3 w-3" />
                                 </a>
                               ) : (
-                                item.product_name
+                                item.name
                               )}
                             </div>
-                          ) : item.product_url ? (
+                          ) : item.url ? (
                             /* If no product name, show clickable domain */
                             <div className="font-semibold text-sm">
                               <a
-                                href={item.product_url}
+                                href={item.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-teal-600 hover:text-teal-800 transition-colors inline-flex items-center gap-1"
-                                title={`View product on ${extractDomain(item.product_url)}`}
+                                title={`View product on ${extractDomain(item.url)}`}
                               >
-                                {extractDomain(item.product_url)}
+                                {extractDomain(item.url)}
                                 <ExternalLink className="h-3 w-3" />
                               </a>
                             </div>
@@ -1477,16 +1477,16 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                           )}
                           
                           {/* Show URL domain for verification when both name and URL exist */}
-                          {item.product_url && item.product_name && item.product_name.trim() !== '' && (
+                          {item.url && item.name && item.name.trim() !== '' && (
                             <div className="text-xs text-gray-500 mt-1">
                               <span>Source: </span>
                               <a
-                                href={item.product_url}
+                                href={item.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-teal-600 hover:text-teal-800 font-medium hover:underline"
                               >
-                                {extractDomain(item.product_url)}
+                                {extractDomain(item.url)}
                               </a>
                             </div>
                           )}
@@ -1497,7 +1497,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                         </div>
                       </div>
                       <span className="font-semibold text-sm text-gray-900">
-                        {formatAmount(item.item_price * item.quantity)}
+                        {formatAmount(item.price_usd * item.quantity)}
                       </span>
                     </div>
                     {/* Product Notes */}

@@ -169,7 +169,7 @@ export const StatusConfigFixer: React.FC = () => {
             <div className="text-sm space-y-1">
               {paymentPendingQuotes.slice(0, 5).map((quote) => (
                 <div key={quote.id} className="text-xs">
-                  {quote.display_id} - {quote.product_name?.substring(0, 40)}...
+                  {quote.display_id} - Items: {Array.isArray(quote.items) ? quote.items.length : 0}
                 </div>
               ))}
               {paymentPendingQuotes.length > 5 && (

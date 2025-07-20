@@ -19,8 +19,8 @@ export type Database = {
         Args: {
           operationName?: string
           extensions?: Json
-          query?: string
           variables?: Json
+          query?: string
         }
         Returns: Json
       }
@@ -559,11 +559,8 @@ export type Database = {
           default_gateway: string | null
           gateway_config: Json | null
           min_shipping: number | null
-          minimum_payment_amount: number | null
           name: string
           payment_gateway: string | null
-          payment_gateway_fixed_fee: number | null
-          payment_gateway_percent_fee: number | null
           priority_thresholds: Json | null
           purchase_allowed: boolean | null
           rate_from_usd: number
@@ -589,11 +586,8 @@ export type Database = {
           default_gateway?: string | null
           gateway_config?: Json | null
           min_shipping?: number | null
-          minimum_payment_amount?: number | null
           name: string
           payment_gateway?: string | null
-          payment_gateway_fixed_fee?: number | null
-          payment_gateway_percent_fee?: number | null
           priority_thresholds?: Json | null
           purchase_allowed?: boolean | null
           rate_from_usd: number
@@ -619,11 +613,8 @@ export type Database = {
           default_gateway?: string | null
           gateway_config?: Json | null
           min_shipping?: number | null
-          minimum_payment_amount?: number | null
           name?: string
           payment_gateway?: string | null
-          payment_gateway_fixed_fee?: number | null
-          payment_gateway_percent_fee?: number | null
           priority_thresholds?: Json | null
           purchase_allowed?: boolean | null
           rate_from_usd?: number
@@ -717,20 +708,6 @@ export type Database = {
             columns: ["payment_ledger_id"]
             isOneToOne: false
             referencedRelation: "payment_ledger"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "credit_note_applications_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "credit_note_applications_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
           {
@@ -890,20 +867,6 @@ export type Database = {
           valid_until?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "credit_notes_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "credit_notes_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "credit_notes_refund_request_id_fkey"
             columns: ["refund_request_id"]
@@ -1102,36 +1065,6 @@ export type Database = {
         }
         Relationships: []
       }
-      exchange_rate_cache: {
-        Row: {
-          created_at: string | null
-          expires_at: string
-          from_currency: string
-          method: string
-          rate: number
-          source: string
-          to_currency: string
-        }
-        Insert: {
-          created_at?: string | null
-          expires_at: string
-          from_currency: string
-          method: string
-          rate: number
-          source: string
-          to_currency: string
-        }
-        Update: {
-          created_at?: string | null
-          expires_at?: string
-          from_currency?: string
-          method?: string
-          rate?: number
-          source?: string
-          to_currency?: string
-        }
-        Relationships: []
-      }
       financial_transactions: {
         Row: {
           amount: number
@@ -1310,20 +1243,6 @@ export type Database = {
             referencedRelation: "payment_transactions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "gateway_refunds_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "gateway_refunds_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
         ]
       }
       guest_checkout_sessions: {
@@ -1375,22 +1294,7 @@ export type Database = {
           status?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "guest_checkout_sessions_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "guest_checkout_sessions_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       manual_analysis_tasks: {
         Row: {
@@ -1423,22 +1327,7 @@ export type Database = {
           status?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "manual_analysis_tasks_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "manual_analysis_tasks_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       messages: {
         Row: {
@@ -1558,6 +1447,145 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      ml_category_weights: {
+        Row: {
+          avg_weight: number
+          category: string
+          id: string
+          last_updated: string | null
+          max_weight: number
+          min_weight: number
+          sample_count: number | null
+        }
+        Insert: {
+          avg_weight: number
+          category: string
+          id?: string
+          last_updated?: string | null
+          max_weight: number
+          min_weight: number
+          sample_count?: number | null
+        }
+        Update: {
+          avg_weight?: number
+          category?: string
+          id?: string
+          last_updated?: string | null
+          max_weight?: number
+          min_weight?: number
+          sample_count?: number | null
+        }
+        Relationships: []
+      }
+      ml_product_weights: {
+        Row: {
+          accuracy_score: number | null
+          brand: string | null
+          category: string | null
+          confidence: number
+          created_at: string | null
+          created_by: string | null
+          id: string
+          learned_from_url: string | null
+          normalized_name: string
+          product_name: string
+          training_count: number | null
+          updated_at: string | null
+          weight_kg: number
+        }
+        Insert: {
+          accuracy_score?: number | null
+          brand?: string | null
+          category?: string | null
+          confidence: number
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          learned_from_url?: string | null
+          normalized_name: string
+          product_name: string
+          training_count?: number | null
+          updated_at?: string | null
+          weight_kg: number
+        }
+        Update: {
+          accuracy_score?: number | null
+          brand?: string | null
+          category?: string | null
+          confidence?: number
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          learned_from_url?: string | null
+          normalized_name?: string
+          product_name?: string
+          training_count?: number | null
+          updated_at?: string | null
+          weight_kg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ml_product_weights_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ml_training_history: {
+        Row: {
+          accuracy: number
+          actual_weight: number
+          brand: string | null
+          category: string | null
+          confidence: number
+          estimated_weight: number
+          id: string
+          product_name: string
+          trained_at: string | null
+          trained_by: string | null
+          url: string | null
+          user_confirmed: boolean | null
+        }
+        Insert: {
+          accuracy: number
+          actual_weight: number
+          brand?: string | null
+          category?: string | null
+          confidence: number
+          estimated_weight: number
+          id?: string
+          product_name: string
+          trained_at?: string | null
+          trained_by?: string | null
+          url?: string | null
+          user_confirmed?: boolean | null
+        }
+        Update: {
+          accuracy?: number
+          actual_weight?: number
+          brand?: string | null
+          category?: string | null
+          confidence?: number
+          estimated_weight?: number
+          id?: string
+          product_name?: string
+          trained_at?: string | null
+          trained_by?: string | null
+          url?: string | null
+          user_confirmed?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ml_training_history_trained_by_fkey"
+            columns: ["trained_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       oauth_tokens: {
         Row: {
@@ -1680,20 +1708,6 @@ export type Database = {
             columns: ["payment_ledger_id"]
             isOneToOne: false
             referencedRelation: "payment_ledger"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_adjustments_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "payment_adjustments_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]
@@ -1992,20 +2006,6 @@ export type Database = {
             referencedRelation: "payment_transactions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "payment_ledger_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "payment_ledger_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
         ]
       }
       payment_links: {
@@ -2099,20 +2099,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_links_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "payment_links_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
           {
@@ -2248,36 +2234,19 @@ export type Database = {
           reminder_type?: string
           sent_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "payment_reminders_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "payment_reminders_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       payment_transactions: {
         Row: {
           amount: number
           created_at: string | null
           currency: string | null
-          exchange_rate_at_payment: number | null
           exchange_rate_source: string | null
           exchange_rate_used: number | null
           gateway_response: Json | null
           id: string
           is_fully_refunded: boolean | null
           last_refund_at: string | null
-          local_currency: string | null
           payment_method: string | null
           paypal_capture_id: string | null
           paypal_order_id: string | null
@@ -2288,21 +2257,18 @@ export type Database = {
           status: string | null
           total_refunded: number | null
           updated_at: string | null
-          usd_equivalent: number | null
           user_id: string | null
         }
         Insert: {
           amount: number
           created_at?: string | null
           currency?: string | null
-          exchange_rate_at_payment?: number | null
           exchange_rate_source?: string | null
           exchange_rate_used?: number | null
           gateway_response?: Json | null
           id?: string
           is_fully_refunded?: boolean | null
           last_refund_at?: string | null
-          local_currency?: string | null
           payment_method?: string | null
           paypal_capture_id?: string | null
           paypal_order_id?: string | null
@@ -2313,21 +2279,18 @@ export type Database = {
           status?: string | null
           total_refunded?: number | null
           updated_at?: string | null
-          usd_equivalent?: number | null
           user_id?: string | null
         }
         Update: {
           amount?: number
           created_at?: string | null
           currency?: string | null
-          exchange_rate_at_payment?: number | null
           exchange_rate_source?: string | null
           exchange_rate_used?: number | null
           gateway_response?: Json | null
           id?: string
           is_fully_refunded?: boolean | null
           last_refund_at?: string | null
-          local_currency?: string | null
           payment_method?: string | null
           paypal_capture_id?: string | null
           paypal_order_id?: string | null
@@ -2338,25 +2301,9 @@ export type Database = {
           status?: string | null
           total_refunded?: number | null
           updated_at?: string | null
-          usd_equivalent?: number | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "payment_transactions_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "payment_transactions_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       payment_verification_logs: {
         Row: {
@@ -2513,20 +2460,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "paypal_refunds_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "paypal_refunds_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "paypal_refunds_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -2586,75 +2519,51 @@ export type Database = {
           cod_enabled: boolean | null
           country: string | null
           created_at: string
-          department: Database["public"]["Enums"]["department_enum"] | null
           email: string | null
-          emergency_contact: Json | null
-          employee_id: string | null
           full_name: string | null
-          hire_date: string | null
           id: string
           internal_notes: string | null
-          is_staff: boolean | null
-          job_title: string | null
           phone: string | null
           preferred_display_currency: string | null
           preferred_payment_gateway: string | null
           referral_code: string | null
-          salary: number | null
           total_orders: number | null
           total_spent: number | null
           updated_at: string
-          work_schedule: Json | null
         }
         Insert: {
           avatar_url?: string | null
           cod_enabled?: boolean | null
           country?: string | null
           created_at?: string
-          department?: Database["public"]["Enums"]["department_enum"] | null
           email?: string | null
-          emergency_contact?: Json | null
-          employee_id?: string | null
           full_name?: string | null
-          hire_date?: string | null
           id: string
           internal_notes?: string | null
-          is_staff?: boolean | null
-          job_title?: string | null
           phone?: string | null
           preferred_display_currency?: string | null
           preferred_payment_gateway?: string | null
           referral_code?: string | null
-          salary?: number | null
           total_orders?: number | null
           total_spent?: number | null
           updated_at?: string
-          work_schedule?: Json | null
         }
         Update: {
           avatar_url?: string | null
           cod_enabled?: boolean | null
           country?: string | null
           created_at?: string
-          department?: Database["public"]["Enums"]["department_enum"] | null
           email?: string | null
-          emergency_contact?: Json | null
-          employee_id?: string | null
           full_name?: string | null
-          hire_date?: string | null
           id?: string
           internal_notes?: string | null
-          is_staff?: boolean | null
-          job_title?: string | null
           phone?: string | null
           preferred_display_currency?: string | null
           preferred_payment_gateway?: string | null
           referral_code?: string | null
-          salary?: number | null
           total_orders?: number | null
           total_spent?: number | null
           updated_at?: string
-          work_schedule?: Json | null
         }
         Relationships: []
       }
@@ -2695,20 +2604,6 @@ export type Database = {
             columns: ["changed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quote_address_history_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "quote_address_history_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]
@@ -2758,84 +2653,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "quote_documents_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "quote_documents_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "quote_documents_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      quote_items: {
-        Row: {
-          category: string | null
-          created_at: string
-          id: string
-          image_url: string | null
-          item_price: number | null
-          item_weight: number | null
-          options: string | null
-          product_name: string | null
-          product_url: string | null
-          quantity: number | null
-          quote_id: string
-          updated_at: string
-        }
-        Insert: {
-          category?: string | null
-          created_at?: string
-          id?: string
-          image_url?: string | null
-          item_price?: number | null
-          item_weight?: number | null
-          options?: string | null
-          product_name?: string | null
-          product_url?: string | null
-          quantity?: number | null
-          quote_id: string
-          updated_at?: string
-        }
-        Update: {
-          category?: string | null
-          created_at?: string
-          id?: string
-          image_url?: string | null
-          item_price?: number | null
-          item_weight?: number | null
-          options?: string | null
-          product_name?: string | null
-          product_url?: string | null
-          quantity?: number | null
-          quote_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quote_items_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "quote_items_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]
@@ -2911,274 +2732,87 @@ export type Database = {
       }
       quotes: {
         Row: {
-          address_locked: boolean | null
-          address_updated_at: string | null
-          address_updated_by: string | null
           admin_notes: string | null
-          amount_paid: number | null
-          approval_status:
-            | Database["public"]["Enums"]["quote_approval_status"]
-            | null
-          approved_at: string | null
-          breakdown: Json | null
-          calculated_at: string | null
-          calculation_metadata: Json | null
+          base_total_usd: number
+          calculation_data: Json | null
           created_at: string
           currency: string
-          current_location: string | null
-          customer_name: string | null
-          customer_notes: string | null
-          customer_phone: string | null
-          customs_and_ecs: number | null
-          customs_category_name: string | null
-          customs_percentage: number | null
-          delivered_at: string | null
-          destination_country: string | null
-          destination_currency: string | null
-          discount: number | null
+          customer_data: Json | null
+          destination_country: string
           display_id: string | null
-          domestic_shipping: number | null
-          email: string | null
-          enabled_delivery_options: Json | null
-          estimated_delivery_date: string | null
-          exchange_rate: number | null
-          exchange_rate_method: string | null
-          exchange_rate_source: string | null
           expires_at: string | null
-          final_total_local: number | null
-          final_total_usd: number | null
-          handling_charge: number | null
+          final_total_usd: number
           id: string
-          image_url: string | null
           in_cart: boolean | null
-          insurance_amount: number | null
           internal_notes: string | null
-          international_shipping: number | null
           is_anonymous: boolean | null
-          item_price: number | null
-          item_weight: number | null
-          last_tracking_update: string | null
-          merchant_shipping_price: number | null
-          options: string | null
-          order_display_id: string | null
-          ordered_at: string | null
-          origin_country: string | null
-          overpayment_amount: number | null
-          paid_at: string | null
-          payment_details: Json | null
-          payment_gateway_fee: number | null
-          payment_method: string | null
-          payment_reminder_count: number | null
-          payment_reminder_sent_at: string | null
-          payment_status: string | null
-          priority: Database["public"]["Enums"]["quote_priority"] | null
-          priority_auto: boolean | null
-          product_name: string | null
-          product_url: string | null
-          quantity: number | null
+          items: Json
+          operational_data: Json | null
+          optimization_score: number | null
+          origin_country: string
           quote_source: string | null
-          rejected_at: string | null
-          rejection_details: string | null
-          rejection_reason_id: string | null
-          sales_tax_price: number | null
-          sent_at: string | null
           share_token: string | null
-          shipped_at: string | null
-          shipping_address: Json | null
-          shipping_carrier: string | null
-          shipping_delivery_days: string | null
-          shipping_method: string | null
-          shipping_route_id: number | null
-          social_handle: string | null
-          status: string | null
-          sub_total: number | null
-          tracking_number: string | null
+          smart_suggestions: Json | null
+          status: string
           updated_at: string
           user_id: string | null
-          vat: number | null
+          weight_confidence: number | null
         }
         Insert: {
-          address_locked?: boolean | null
-          address_updated_at?: string | null
-          address_updated_by?: string | null
           admin_notes?: string | null
-          amount_paid?: number | null
-          approval_status?:
-            | Database["public"]["Enums"]["quote_approval_status"]
-            | null
-          approved_at?: string | null
-          breakdown?: Json | null
-          calculated_at?: string | null
-          calculation_metadata?: Json | null
+          base_total_usd?: number
+          calculation_data?: Json | null
           created_at?: string
           currency?: string
-          current_location?: string | null
-          customer_name?: string | null
-          customer_notes?: string | null
-          customer_phone?: string | null
-          customs_and_ecs?: number | null
-          customs_category_name?: string | null
-          customs_percentage?: number | null
-          delivered_at?: string | null
-          destination_country?: string | null
-          destination_currency?: string | null
-          discount?: number | null
+          customer_data?: Json | null
+          destination_country: string
           display_id?: string | null
-          domestic_shipping?: number | null
-          email?: string | null
-          enabled_delivery_options?: Json | null
-          estimated_delivery_date?: string | null
-          exchange_rate?: number | null
-          exchange_rate_method?: string | null
-          exchange_rate_source?: string | null
           expires_at?: string | null
-          final_total_local?: number | null
-          final_total_usd?: number | null
-          handling_charge?: number | null
+          final_total_usd?: number
           id?: string
-          image_url?: string | null
           in_cart?: boolean | null
-          insurance_amount?: number | null
           internal_notes?: string | null
-          international_shipping?: number | null
           is_anonymous?: boolean | null
-          item_price?: number | null
-          item_weight?: number | null
-          last_tracking_update?: string | null
-          merchant_shipping_price?: number | null
-          options?: string | null
-          order_display_id?: string | null
-          ordered_at?: string | null
-          origin_country?: string | null
-          overpayment_amount?: number | null
-          paid_at?: string | null
-          payment_details?: Json | null
-          payment_gateway_fee?: number | null
-          payment_method?: string | null
-          payment_reminder_count?: number | null
-          payment_reminder_sent_at?: string | null
-          payment_status?: string | null
-          priority?: Database["public"]["Enums"]["quote_priority"] | null
-          priority_auto?: boolean | null
-          product_name?: string | null
-          product_url?: string | null
-          quantity?: number | null
+          items?: Json
+          operational_data?: Json | null
+          optimization_score?: number | null
+          origin_country?: string
           quote_source?: string | null
-          rejected_at?: string | null
-          rejection_details?: string | null
-          rejection_reason_id?: string | null
-          sales_tax_price?: number | null
-          sent_at?: string | null
           share_token?: string | null
-          shipped_at?: string | null
-          shipping_address?: Json | null
-          shipping_carrier?: string | null
-          shipping_delivery_days?: string | null
-          shipping_method?: string | null
-          shipping_route_id?: number | null
-          social_handle?: string | null
-          status?: string | null
-          sub_total?: number | null
-          tracking_number?: string | null
+          smart_suggestions?: Json | null
+          status?: string
           updated_at?: string
           user_id?: string | null
-          vat?: number | null
+          weight_confidence?: number | null
         }
         Update: {
-          address_locked?: boolean | null
-          address_updated_at?: string | null
-          address_updated_by?: string | null
           admin_notes?: string | null
-          amount_paid?: number | null
-          approval_status?:
-            | Database["public"]["Enums"]["quote_approval_status"]
-            | null
-          approved_at?: string | null
-          breakdown?: Json | null
-          calculated_at?: string | null
-          calculation_metadata?: Json | null
+          base_total_usd?: number
+          calculation_data?: Json | null
           created_at?: string
           currency?: string
-          current_location?: string | null
-          customer_name?: string | null
-          customer_notes?: string | null
-          customer_phone?: string | null
-          customs_and_ecs?: number | null
-          customs_category_name?: string | null
-          customs_percentage?: number | null
-          delivered_at?: string | null
-          destination_country?: string | null
-          destination_currency?: string | null
-          discount?: number | null
+          customer_data?: Json | null
+          destination_country?: string
           display_id?: string | null
-          domestic_shipping?: number | null
-          email?: string | null
-          enabled_delivery_options?: Json | null
-          estimated_delivery_date?: string | null
-          exchange_rate?: number | null
-          exchange_rate_method?: string | null
-          exchange_rate_source?: string | null
           expires_at?: string | null
-          final_total_local?: number | null
-          final_total_usd?: number | null
-          handling_charge?: number | null
+          final_total_usd?: number
           id?: string
-          image_url?: string | null
           in_cart?: boolean | null
-          insurance_amount?: number | null
           internal_notes?: string | null
-          international_shipping?: number | null
           is_anonymous?: boolean | null
-          item_price?: number | null
-          item_weight?: number | null
-          last_tracking_update?: string | null
-          merchant_shipping_price?: number | null
-          options?: string | null
-          order_display_id?: string | null
-          ordered_at?: string | null
-          origin_country?: string | null
-          overpayment_amount?: number | null
-          paid_at?: string | null
-          payment_details?: Json | null
-          payment_gateway_fee?: number | null
-          payment_method?: string | null
-          payment_reminder_count?: number | null
-          payment_reminder_sent_at?: string | null
-          payment_status?: string | null
-          priority?: Database["public"]["Enums"]["quote_priority"] | null
-          priority_auto?: boolean | null
-          product_name?: string | null
-          product_url?: string | null
-          quantity?: number | null
+          items?: Json
+          operational_data?: Json | null
+          optimization_score?: number | null
+          origin_country?: string
           quote_source?: string | null
-          rejected_at?: string | null
-          rejection_details?: string | null
-          rejection_reason_id?: string | null
-          sales_tax_price?: number | null
-          sent_at?: string | null
           share_token?: string | null
-          shipped_at?: string | null
-          shipping_address?: Json | null
-          shipping_carrier?: string | null
-          shipping_delivery_days?: string | null
-          shipping_method?: string | null
-          shipping_route_id?: number | null
-          social_handle?: string | null
-          status?: string | null
-          sub_total?: number | null
-          tracking_number?: string | null
+          smart_suggestions?: Json | null
+          status?: string
           updated_at?: string
           user_id?: string | null
-          vat?: number | null
+          weight_confidence?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "quotes_shipping_route_id_fkey"
-            columns: ["shipping_route_id"]
-            isOneToOne: false
-            referencedRelation: "shipping_routes"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "quotes_user_id_fkey"
             columns: ["user_id"]
@@ -3517,20 +3151,6 @@ export type Database = {
             referencedRelation: "payment_ledger"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "refund_requests_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "refund_requests_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
         ]
       }
       rejection_reasons: {
@@ -3559,63 +3179,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
-      }
-      role_audit_log: {
-        Row: {
-          change_reason: string | null
-          changed_at: string | null
-          changed_by: string
-          id: string
-          new_department: Database["public"]["Enums"]["department_enum"] | null
-          new_permissions: string[] | null
-          new_role: Database["public"]["Enums"]["app_role"] | null
-          old_department: Database["public"]["Enums"]["department_enum"] | null
-          old_permissions: string[] | null
-          old_role: Database["public"]["Enums"]["app_role"] | null
-          user_id: string
-        }
-        Insert: {
-          change_reason?: string | null
-          changed_at?: string | null
-          changed_by: string
-          id?: string
-          new_department?: Database["public"]["Enums"]["department_enum"] | null
-          new_permissions?: string[] | null
-          new_role?: Database["public"]["Enums"]["app_role"] | null
-          old_department?: Database["public"]["Enums"]["department_enum"] | null
-          old_permissions?: string[] | null
-          old_role?: Database["public"]["Enums"]["app_role"] | null
-          user_id: string
-        }
-        Update: {
-          change_reason?: string | null
-          changed_at?: string | null
-          changed_by?: string
-          id?: string
-          new_department?: Database["public"]["Enums"]["department_enum"] | null
-          new_permissions?: string[] | null
-          new_role?: Database["public"]["Enums"]["app_role"] | null
-          old_department?: Database["public"]["Enums"]["department_enum"] | null
-          old_permissions?: string[] | null
-          old_role?: Database["public"]["Enums"]["app_role"] | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "role_audit_log_changed_by_fkey"
-            columns: ["changed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "role_audit_log_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       route_customs_tiers: {
         Row: {
@@ -3686,8 +3249,6 @@ export type Database = {
           delivery_options: Json | null
           destination_country: string
           exchange_rate: number | null
-          exchange_rate_last_updated: string | null
-          exchange_rate_source: string | null
           id: number
           is_active: boolean | null
           max_weight: number | null
@@ -3711,8 +3272,6 @@ export type Database = {
           delivery_options?: Json | null
           destination_country: string
           exchange_rate?: number | null
-          exchange_rate_last_updated?: string | null
-          exchange_rate_source?: string | null
           id?: number
           is_active?: boolean | null
           max_weight?: number | null
@@ -3736,8 +3295,6 @@ export type Database = {
           delivery_options?: Json | null
           destination_country?: string
           exchange_rate?: number | null
-          exchange_rate_last_updated?: string | null
-          exchange_rate_source?: string | null
           id?: number
           is_active?: boolean | null
           max_weight?: number | null
@@ -3783,22 +3340,7 @@ export type Database = {
           to_status?: string
           trigger?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "status_transitions_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "status_transitions_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       system_settings: {
         Row: {
@@ -3893,57 +3435,25 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
-          department: Database["public"]["Enums"]["department_enum"] | null
-          end_date: string | null
           id: string
-          is_active: boolean | null
-          manager_id: string | null
-          notes: string | null
-          permissions: string[] | null
           role: Database["public"]["Enums"]["app_role"]
-          scope: string | null
-          start_date: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
-          department?: Database["public"]["Enums"]["department_enum"] | null
-          end_date?: string | null
           id?: string
-          is_active?: boolean | null
-          manager_id?: string | null
-          notes?: string | null
-          permissions?: string[] | null
           role: Database["public"]["Enums"]["app_role"]
-          scope?: string | null
-          start_date?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
-          department?: Database["public"]["Enums"]["department_enum"] | null
-          end_date?: string | null
           id?: string
-          is_active?: boolean | null
-          manager_id?: string | null
-          notes?: string | null
-          permissions?: string[] | null
           role?: Database["public"]["Enums"]["app_role"]
-          scope?: string | null
-          start_date?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_user_roles_manager"
-            columns: ["manager_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       webhook_logs: {
         Row: {
@@ -4067,20 +3577,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "payment_links_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "payment_summary_view"
-            referencedColumns: ["quote_id"]
-          },
-          {
-            foreignKeyName: "payment_links_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "payment_links_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -4088,26 +3584,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      payment_summary_view: {
-        Row: {
-          amount_paid: number | null
-          completed_count: number | null
-          display_id: string | null
-          email: string | null
-          latest_payment_date: string | null
-          payment_method: string | null
-          payment_status: string | null
-          quote_amount_local: number | null
-          quote_amount_usd: number | null
-          quote_created_at: string | null
-          quote_currency: string | null
-          quote_id: string | null
-          quote_status: string | null
-          total_paid_usd: number | null
-          transaction_count: number | null
-        }
-        Relationships: []
       }
       paypal_refund_summary: {
         Row: {
@@ -4126,8 +3602,8 @@ export type Database = {
     Functions: {
       apply_credit_note: {
         Args: {
-          p_amount?: number
           p_quote_id: string
+          p_amount?: number
           p_credit_note_id: string
         }
         Returns: Json
@@ -4177,60 +3653,60 @@ export type Database = {
         Returns: undefined
       }
       complete_reconciliation: {
-        Args: { p_reconciliation_id: string; p_notes?: string }
+        Args: { p_notes?: string; p_reconciliation_id: string }
         Returns: Json
       }
       confirm_payment_from_proof: {
         Args: {
-          p_amount_paid: number
-          p_quote_id: string
           p_payment_status: string
+          p_quote_id: string
+          p_amount_paid: number
         }
         Returns: Json
       }
       create_credit_note: {
         Args: {
-          p_reason: string
           p_description?: string
-          p_quote_id?: string
+          p_reason: string
+          p_currency: string
           p_amount: number
-          p_refund_request_id?: string
+          p_customer_id: string
           p_auto_approve?: boolean
           p_minimum_order_value?: number
-          p_customer_id: string
           p_valid_days?: number
-          p_currency: string
+          p_refund_request_id?: string
+          p_quote_id?: string
         }
         Returns: Json
       }
       create_payment_with_ledger_entry: {
         Args: {
+          p_gateway_code?: string
+          p_gateway_transaction_id?: string
           p_notes?: string
+          p_user_id?: string
+          p_message_id?: string
           p_quote_id: string
           p_amount: number
           p_currency: string
           p_payment_method: string
           p_payment_type?: string
           p_reference_number?: string
-          p_gateway_code?: string
-          p_gateway_transaction_id?: string
-          p_user_id?: string
-          p_message_id?: string
         }
         Returns: Json
       }
       create_refund_request: {
         Args: {
+          p_customer_notes?: string
           p_reason_description: string
           p_reason_code: string
-          p_refund_method?: string
-          p_payment_ids?: string[]
           p_currency: string
           p_amount: number
-          p_internal_notes?: string
-          p_customer_notes?: string
           p_refund_type: string
+          p_refund_method?: string
+          p_internal_notes?: string
           p_quote_id: string
+          p_payment_ids?: string[]
         }
         Returns: Json
       }
@@ -4242,16 +3718,8 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
-      ensure_user_profile_simple: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
       ensure_user_profile_with_oauth: {
         Args: { _user_metadata?: Json; _user_id: string }
-        Returns: boolean
-      }
-      ensure_user_role_simple: {
-        Args: { _user_id: string }
         Returns: boolean
       }
       expire_quotes: {
@@ -4264,13 +3732,13 @@ export type Database = {
       }
       force_update_payment: {
         Args: {
-          reference_number?: string
+          payment_method?: string
+          notes?: string
+          payment_currency?: string
           new_amount_paid: number
           p_quote_id: string
-          payment_currency?: string
-          notes?: string
           new_payment_status: string
-          payment_method?: string
+          reference_number?: string
         }
         Returns: Json
       }
@@ -4289,34 +3757,34 @@ export type Database = {
       get_active_payment_link_for_quote: {
         Args: { quote_uuid: string }
         Returns: {
-          api_version: string
-          expires_at: string
-          id: string
-          link_code: string
           payment_url: string
+          api_version: string
+          id: string
           status: string
+          expires_at: string
+          link_code: string
         }[]
       }
       get_all_user_emails: {
         Args: Record<PropertyKey, never>
         Returns: {
+          full_name: string
           email: string
           source: string
           user_id: string
-          full_name: string
         }[]
       }
       get_available_credit_notes: {
         Args: { p_customer_id?: string; p_min_amount?: number }
         Returns: {
-          reason: string
-          credit_note_id: string
           note_number: string
           amount: number
-          currency: string
           amount_available: number
+          reason: string
           valid_until: string
           minimum_order_value: number
+          currency: string
+          credit_note_id: string
         }[]
       }
       get_bank_account_for_order: {
@@ -4352,67 +3820,56 @@ export type Database = {
       get_currency_conversion_metrics: {
         Args: { start_date?: string; end_date?: string }
         Returns: {
-          currency_pair: string
           conversion_count: number
+          currency_pair: string
           average_variance: number
-          accuracy_score: number
           max_variance: number
+          accuracy_score: number
         }[]
       }
       get_currency_mismatches: {
-        Args: { start_date?: string; end_date?: string }
+        Args: { end_date?: string; start_date?: string }
         Returns: {
-          payment_method: string
-          created_at: string
-          gateway_transaction_id: string
           quote_id: string
           order_display_id: string
           quote_currency: string
           payment_currency: string
           quote_amount: number
           payment_amount: number
+          created_at: string
+          payment_method: string
+          gateway_transaction_id: string
         }[]
       }
       get_currency_statistics: {
         Args: { start_date?: string; end_date?: string }
         Returns: {
-          payment_count: number
-          average_payment: number
-          last_payment_date: string
-          unique_customers: number
           currency: string
           total_payments: number
           total_refunds: number
           net_amount: number
+          payment_count: number
           refund_count: number
+          average_payment: number
+          unique_customers: number
+          last_payment_date: string
         }[]
       }
       get_exchange_rate_health: {
         Args: Record<PropertyKey, never>
         Returns: {
-          is_stale: boolean
+          current_rate: number
+          currency: string
           last_updated: string
+          is_stale: boolean
           is_fallback: boolean
           age_minutes: number
-          currency: string
-          current_rate: number
         }[]
-      }
-      get_optimal_exchange_rate: {
-        Args: { to_curr: string; from_curr: string }
-        Returns: number
       }
       get_orders_with_payment_proofs: {
         Args: { status_filter?: string; limit_count?: number }
         Returns: {
           customer_id: string
-          order_id: string
-          order_display_id: string
-          final_total_usd: number
-          destination_currency: string
-          payment_status: string
-          payment_method: string
-          customer_email: string
           message_id: string
           verification_status: string
           admin_notes: string
@@ -4421,6 +3878,13 @@ export type Database = {
           attachment_url: string
           submitted_at: string
           verified_at: string
+          order_id: string
+          order_display_id: string
+          final_total: number
+          final_currency: string
+          payment_status: string
+          payment_method: string
+          customer_email: string
         }[]
       }
       get_payment_history: {
@@ -4431,21 +3895,21 @@ export type Database = {
           p_end_date?: string
         }
         Returns: {
-          reference_number: string
-          notes: string
-          created_by_name: string
-          running_balance: number
-          base_amount: number
-          currency: string
-          amount: number
-          gateway_name: string
-          payment_method: string
-          status: string
           payment_type: string
           payment_date: string
-          order_display_id: string
-          quote_id: string
+          payment_method: string
+          gateway_name: string
+          amount: number
+          currency: string
+          base_amount: number
+          running_balance: number
+          reference_number: string
+          status: string
+          notes: string
+          created_by_name: string
           payment_id: string
+          quote_id: string
+          order_display_id: string
         }[]
       }
       get_payment_proof_stats: {
@@ -4455,65 +3919,73 @@ export type Database = {
       get_popular_posts: {
         Args: { limit_count?: number }
         Returns: {
-          published_at: string
+          category_name: string
           id: string
           title: string
           slug: string
           excerpt: string
           featured_image_url: string
+          published_at: string
           reading_time_minutes: number
-          category_name: string
           views_count: number
         }[]
       }
       get_related_posts: {
         Args: { post_slug: string; limit_count?: number }
         Returns: {
-          published_at: string
           views_count: number
-          category_name: string
-          reading_time_minutes: number
           id: string
           title: string
           slug: string
           excerpt: string
           featured_image_url: string
+          published_at: string
+          reading_time_minutes: number
+          category_name: string
         }[]
       }
       get_shipping_cost: {
         Args: {
-          p_destination_country: string
           p_origin_country: string
+          p_destination_country: string
           p_weight: number
           p_price?: number
         }
         Returns: {
+          delivery_days: string
           cost: number
           method: string
-          delivery_days: string
           carrier: string
         }[]
+      }
+      get_shipping_options: {
+        Args: { quote_row: Database["public"]["Tables"]["quotes"]["Row"] }
+        Returns: Json
       }
       get_suspicious_payment_amounts: {
         Args: { start_date?: string; end_date?: string; tolerance?: number }
         Returns: {
-          payment_currency: string
-          suspicion_level: string
-          created_at: string
-          amount_difference: number
+          payment_amount: number
           quote_id: string
           order_display_id: string
           quote_amount: number
           quote_currency: string
-          payment_amount: number
+          payment_currency: string
+          amount_difference: number
+          created_at: string
+          suspicion_level: string
         }[]
+      }
+      get_timeline: {
+        Args: { quote_row: Database["public"]["Tables"]["quotes"]["Row"] }
+        Returns: Json
       }
       get_transaction_refund_eligibility: {
         Args: { transaction_id: string }
         Returns: {
-          reason: string
           can_refund: boolean
           refundable_amount: number
+          reason: string
         }[]
       }
       get_user_bank_accounts: {
@@ -4546,18 +4018,10 @@ export type Database = {
         Args: { roles: Database["public"]["Enums"]["app_role"][] }
         Returns: boolean
       }
-      has_department_access: {
-        Args: { dept: Database["public"]["Enums"]["department_enum"] }
-        Returns: boolean
-      }
-      has_permission: {
-        Args: { permission_name: string }
-        Returns: boolean
-      }
       has_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
       }
@@ -4566,6 +4030,10 @@ export type Database = {
         Returns: undefined
       }
       is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_anonymous_user: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
@@ -4583,17 +4051,17 @@ export type Database = {
       }
       process_payment_webhook_atomic: {
         Args: {
-          p_quote_ids: string[]
           p_payment_status: string
           p_payment_data: Json
           p_guest_session_token?: string
           p_guest_session_data?: Json
           p_create_order?: boolean
+          p_quote_ids: string[]
         }
         Returns: {
-          payment_ledger_entry_id: string
           success: boolean
           payment_transaction_id: string
+          payment_ledger_entry_id: string
           quotes_updated: boolean
           guest_session_updated: boolean
           order_id: string
@@ -4602,52 +4070,52 @@ export type Database = {
       }
       process_refund_atomic: {
         Args: {
-          p_quote_id: string
           p_refund_amount: number
           p_refund_data: Json
           p_gateway_response: Json
           p_processed_by: string
+          p_quote_id: string
         }
         Returns: {
-          ledger_entry_id: string
-          error_message: string
           success: boolean
           refund_id: string
           payment_transaction_updated: boolean
           quote_updated: boolean
+          ledger_entry_id: string
+          error_message: string
         }[]
       }
       process_refund_item: {
         Args: {
-          p_gateway_refund_id: string
-          p_status?: string
           p_refund_item_id: string
+          p_gateway_refund_id: string
           p_gateway_response?: Json
+          p_status?: string
         }
         Returns: Json
       }
       record_payment_with_ledger_and_triggers: {
         Args: {
-          p_currency: string
-          p_payment_date?: string
           p_recorded_by?: string
-          p_notes?: string
-          p_transaction_reference: string
+          p_payment_date?: string
           p_quote_id: string
           p_amount: number
+          p_currency: string
           p_payment_method: string
+          p_transaction_reference: string
+          p_notes?: string
         }
         Returns: Json
       }
       record_paypal_payment_to_ledger: {
         Args: {
-          p_currency: string
+          p_order_id: string
+          p_payer_email?: string
           p_quote_id: string
           p_transaction_id: string
           p_amount: number
-          p_order_id: string
+          p_currency: string
           p_capture_id?: string
-          p_payer_email?: string
         }
         Returns: Json
       }
@@ -4658,8 +4126,8 @@ export type Database = {
       start_reconciliation_session: {
         Args: {
           p_gateway_code?: string
-          p_statement_start_date?: string
           p_statement_date?: string
+          p_statement_start_date?: string
           p_statement_end_date?: string
           p_payment_method: string
         }
@@ -4667,30 +4135,15 @@ export type Database = {
       }
       test_payment_update_direct: {
         Args: {
-          quote_id: string
-          new_payment_status: string
           new_amount_paid: number
+          new_payment_status: string
+          quote_id: string
         }
         Returns: Json
       }
     }
     Enums: {
-      app_role:
-        | "admin"
-        | "user"
-        | "moderator"
-        | "customer_service"
-        | "quote_specialist"
-        | "accountant"
-        | "fulfillment"
-        | "manager"
-      department_enum:
-        | "administration"
-        | "customer_service"
-        | "quotes"
-        | "accounting"
-        | "fulfillment"
-        | "marketing"
+      app_role: "admin" | "user" | "moderator"
       quote_approval_status: "pending" | "approved" | "rejected"
       quote_priority: "low" | "normal" | "high" | "urgent"
     }
@@ -4811,24 +4264,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      app_role: [
-        "admin",
-        "user",
-        "moderator",
-        "customer_service",
-        "quote_specialist",
-        "accountant",
-        "fulfillment",
-        "manager",
-      ],
-      department_enum: [
-        "administration",
-        "customer_service",
-        "quotes",
-        "accounting",
-        "fulfillment",
-        "marketing",
-      ],
+      app_role: ["admin", "user", "moderator"],
       quote_approval_status: ["pending", "approved", "rejected"],
       quote_priority: ["low", "normal", "high", "urgent"],
     },

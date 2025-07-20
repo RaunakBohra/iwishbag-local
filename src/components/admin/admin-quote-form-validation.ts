@@ -12,8 +12,8 @@ export const adminQuoteItemSchema = z.object({
   quantity: z.coerce.number().min(1),
   product_name: z.string().optional().nullable(),
   options: z.string().optional().nullable(),
-  product_url: z.string().url().optional().or(z.literal('')).nullable(),
-  image_url: z.string().url().optional().or(z.literal('')).nullable(),
+  product_url: z.string().optional().nullable(),
+  image_url: z.string().optional().nullable(),
 });
 
 export const adminQuoteFormSchema = z.object({

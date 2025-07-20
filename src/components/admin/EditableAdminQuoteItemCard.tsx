@@ -4,18 +4,20 @@ import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/for
 import { Input } from '@/components/ui/input';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Control, useWatch } from 'react-hook-form';
+import { Control, useWatch, UseFormSetValue } from 'react-hook-form';
 import { AdminQuoteFormValues } from '@/components/admin/admin-quote-form-validation';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, Trash2 } from 'lucide-react';
 import { Tables } from '@/integrations/supabase/types';
 import { convertWeight } from '@/lib/weightUtils';
+import { AdminSmartWeightField } from './AdminSmartWeightField';
 
 type CountrySetting = Tables<'country_settings'>;
 
 interface EditableAdminQuoteItemCardProps {
   index: number;
   control: Control<AdminQuoteFormValues>;
+  setValue: UseFormSetValue<AdminQuoteFormValues>;
   allCountries?: CountrySetting[] | null;
   onDelete: () => void;
   routeWeightUnit?: string | null;
@@ -26,6 +28,7 @@ interface EditableAdminQuoteItemCardProps {
 export const EditableAdminQuoteItemCard = ({
   index,
   control,
+  setValue,
   allCountries: _allCountries,
   onDelete,
   routeWeightUnit,
@@ -207,100 +210,12 @@ export const EditableAdminQuoteItemCard = ({
               </FormItem>
             )}
           />
-          <FormField
+          <AdminSmartWeightField
+            index={index}
             control={control}
-            name={`items.${index}.item_weight`}
-            render={({ field }) => {
-              // Get the display value - if field.value is null/undefined, show empty
-              const getDisplayValue = () => {
-                if (!field.value) return '';
-                let displayValue = field.value;
-                if (displayWeightUnit && displayWeightUnit !== 'kg') {
-                  displayValue = convertWeight(field.value, 'kg', displayWeightUnit);
-                }
-                // Format to 2 decimal places, ensuring no floating point artifacts
-                const formatted = parseFloat(displayValue.toFixed(2));
-                return formatted.toString();
-              };
-
-              // Only allow up to 2 decimals
-              const restrictTo2Decimals = (value: string) => {
-                // Remove non-numeric except dot
-                let sanitized = value.replace(/[^\d.]/g, '');
-                // Only allow one dot
-                const parts = sanitized.split('.');
-                if (parts.length > 2) sanitized = parts[0] + '.' + parts.slice(1).join('');
-                // Restrict decimals
-                if (parts[1]?.length > 2) sanitized = parts[0] + '.' + parts[1].slice(0, 2);
-                return sanitized;
-              };
-
-              // Handle input change - just update the display, don't convert yet
-              const handleChange = (value: string) => {
-                const sanitized = restrictTo2Decimals(value);
-                if (!sanitized) {
-                  // Don't clear the field value immediately, let user finish typing
-                  return;
-                }
-                // Don't convert or update field value during typing
-              };
-
-              // Convert and update field value on blur
-              const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-                const value = e.target.value;
-                if (!value) {
-                  field.onChange(null);
-                  return;
-                }
-
-                const sanitized = restrictTo2Decimals(value);
-                const numValue = parseFloat(sanitized);
-                if (isNaN(numValue)) return;
-
-                // Format to 2 decimals
-                const formattedValue = numValue.toFixed(2);
-                e.target.value = formattedValue;
-
-                // Now convert and update the field value
-                if (displayWeightUnit && displayWeightUnit !== 'kg') {
-                  // Convert from display unit to kg for storage
-                  const kgWeight = convertWeight(numValue, displayWeightUnit, 'kg');
-                  field.onChange(Number(kgWeight.toFixed(2)));
-                } else {
-                  field.onChange(Number(numValue.toFixed(2)));
-                }
-              };
-
-              // Get current input value or initialize from field value
-              const currentInputValue = weightInputValues[index] ?? getDisplayValue();
-
-              return (
-                <FormItem className="m-0">
-                  <FormLabel className="text-xs font-medium text-muted-foreground">
-                    Weight ({displayWeightUnitFinal})
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="text"
-                      value={currentInputValue}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setWeightInputValues((prev) => ({
-                          ...prev,
-                          [index]: value,
-                        }));
-                        handleChange(value);
-                      }}
-                      onBlur={handleBlur}
-                      onWheel={handleNumberInputWheel}
-                      placeholder={`Weight in ${displayWeightUnitFinal}`}
-                      inputMode="decimal"
-                      className="h-9 mt-1"
-                    />
-                  </FormControl>
-                </FormItem>
-              );
-            }}
+            setValue={setValue}
+            displayWeightUnit={displayWeightUnit}
+            onNumberInputWheel={handleNumberInputWheel}
           />
           <FormField
             control={control}

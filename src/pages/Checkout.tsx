@@ -296,7 +296,6 @@ export default function Checkout() {
         .select(
           `
           *,
-          quote_items (*),
           share_token
         `,
         )
@@ -421,8 +420,8 @@ export default function Checkout() {
       ? [
           {
             quoteId: guestQuote.id,
-            productName: guestQuote.quote_items?.[0]?.product_name || 'Product',
-            quantity: guestQuote.quote_items?.reduce((sum, item) => sum + item.quantity, 0) || 1,
+            productName: guestQuote.items?.[0]?.name || 'Product',
+            quantity: guestQuote.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1,
             finalTotal: guestQuote.final_total_usd || 0,
             countryCode: guestQuote.destination_country || 'US', // FIXED: Use 'US' instead of 'Unknown'
             purchaseCountryCode: guestQuote.origin_country || 'US', // FIXED: Use origin_country for purchase country

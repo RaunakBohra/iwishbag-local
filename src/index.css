@@ -283,6 +283,22 @@
   .no-transition * {
     transition: none !important;
   }
+
+  /* Disable scroll wheel changes on number inputs globally */
+  input[type="number"] {
+    -moz-appearance: textfield; /* Firefox */
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none; /* Chrome, Safari, Edge */
+    margin: 0;
+  }
+
+  /* Prevent scroll wheel from changing number input values */
+  input[type="number"] {
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Custom button styles with theme support */

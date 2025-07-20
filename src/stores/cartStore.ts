@@ -277,9 +277,7 @@ export const useCartStore = create<CartStore>()(
             // This now works for both anonymous and authenticated users
             const { data: allQuotes, error: quotesError } = await supabase
               .from('quotes')
-              .select(
-                '*, quote_items(id, product_name, product_url, quantity, item_price, item_weight, image_url, options)',
-              )
+              .select('*')
               .eq('user_id', userId)
               .order('created_at', { ascending: false });
 
@@ -301,56 +299,49 @@ export const useCartStore = create<CartStore>()(
             // Filter only cart quotes (in_cart = true)
             const cartQuotes = allQuotes?.filter((q) => q.in_cart) || [];
 
-            // Helper function to convert quote to cart item
-            interface QuoteWithItems {
+            // Helper function to convert unified quote to cart item
+            interface UnifiedQuote {
               id: string;
-              product_name: string;
-              final_total_usd?: number;
-              final_total_local?: number;
-              destination_currency?: string;
-              quantity?: number;
-              item_weight?: number;
-              origin_country?: string;
-              destination_country?: string;
-              shipping_address?: Record<string, unknown>;
-              quote_items?: Array<{
-                item_price?: number;
-                quantity?: number;
-                item_weight?: number;
+              items: Array<{
+                id: string;
+                name: string;
+                quantity: number;
+                price_usd: number;
+                weight_kg: number;
+                url?: string;
                 image_url?: string;
+                options?: string;
               }>;
-              image_url?: string;
-              delivery_date?: string;
-              created_at?: string;
-              updated_at?: string;
+              final_total_usd: number;
+              destination_country: string;
+              origin_country: string;
+              currency: string;
+              customer_data?: {
+                shipping_address?: Record<string, unknown>;
+              };
+              operational_data?: {
+                shipping?: {
+                  delivery_estimate?: string;
+                };
+              };
+              created_at: string;
+              updated_at: string;
             }
 
-            const convertQuoteToCartItem = (quote: QuoteWithItems): CartItem => {
-              const firstItem = quote.quote_items?.[0];
-              const quoteItems = quote.quote_items || [];
+            const convertQuoteToCartItem = (quote: UnifiedQuote): CartItem => {
+              // Get first item from the JSONB items array
+              const firstItem = quote.items?.[0];
+              const items = quote.items || [];
 
-              // Calculate total from quote items with proper null checks
-              const totalFromItems = quoteItems.reduce((sum: number, item) => {
-                const itemPrice = item.item_price || 0;
-                const itemQuantity = item.quantity || 1;
-                return sum + itemPrice * itemQuantity;
-              }, 0);
+              // Calculate total quantity and weight from all items
+              const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+              const totalWeight = items.reduce((sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 1), 0);
 
-              // FIXED: Use proper fallback chain for total price
-              let totalPrice = 0;
-              if (quote.final_total_usd && quote.final_total_usd > 0) {
-                totalPrice = quote.final_total_usd;
-              } else if (quote.final_total_local && quote.final_total_local > 0) {
-                totalPrice = quote.final_total_local;
-              } else if (totalFromItems > 0) {
-                totalPrice = totalFromItems;
-              } else {
-                // If no price found, use the first item's price
-                totalPrice = firstItem?.item_price || 0;
-              }
+              // Use final_total_usd directly (this is the authoritative total)
+              const totalPrice = quote.final_total_usd || 0;
 
-              const quantity = quote.quantity || firstItem?.quantity || 1;
-              const itemWeight = firstItem?.item_weight || quote.item_weight || 0;
+              // Use calculated totals from items array
+              // Individual item fields are no longer needed
 
               // Extract destination country from shipping address or quote
               let destinationCountry = quote.destination_country || 'US'; // Default fallback
@@ -396,12 +387,12 @@ export const useCartStore = create<CartStore>()(
               const cartItem = {
                 id: quote.id,
                 quoteId: quote.id,
-                productName: firstItem?.product_name || quote.product_name || 'Unknown Product',
+                productName: firstItem?.name || quote.product_name || 'Unknown Product',
                 finalTotal: quote.final_total_usd || totalPrice, // USD amount
                 finalTotalLocal: quote.final_total_local, // Local currency amount
                 finalCurrency: quote.destination_currency, // Local currency code
-                quantity: quantity,
-                itemWeight: itemWeight,
+                quantity: totalQuantity,
+                itemWeight: totalWeight,
                 imageUrl: firstItem?.image_url || quote.image_url,
                 deliveryDate: quote.delivery_date,
                 countryCode: destinationCountry, // For backward compatibility

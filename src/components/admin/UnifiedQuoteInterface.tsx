@@ -4,8 +4,9 @@
 // ============================================================================
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useWatch } from 'react-hook-form';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,11 +22,15 @@ import {
   Lightbulb,
   Package,
   Clock,
-  DollarSign
+  DollarSign,
+  Edit,
+  Save,
+  X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
+import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import type { 
   UnifiedQuote, 
   ShippingOption, 
@@ -40,6 +45,11 @@ import { SmartCalculationBreakdown } from './smart-components/SmartCalculationBr
 import { SmartSuggestionCards } from './smart-components/SmartSuggestionCards';
 import { SmartCustomerInfo } from './smart-components/SmartCustomerInfo';
 import { SmartStatusManager } from './smart-components/SmartStatusManager';
+import { QuoteDetailForm } from './QuoteDetailForm';
+import { Form } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AdminQuoteFormValues, adminQuoteFormSchema } from './admin-quote-form-validation';
 
 interface UnifiedQuoteInterfaceProps {
   initialQuoteId?: string;
@@ -67,6 +77,28 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
   // UI state
   const [activeTab, setActiveTab] = useState('overview');
   const [showAllShippingOptions, setShowAllShippingOptions] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(true);
+  
+  // Form state for editing
+  const form = useForm<AdminQuoteFormValues>({
+    resolver: zodResolver(adminQuoteFormSchema),
+    defaultValues: {
+      id: '',
+      customs_percentage: 0,
+      sales_tax_price: 0,
+      merchant_shipping_price: 0,
+      domestic_shipping: 0,
+      handling_charge: 0,
+      discount: 0,
+      insurance_amount: 0,
+      origin_country: null,
+      destination_country: null,
+      currency: 'USD',
+      destination_currency: 'USD',
+      status: '',
+      items: [],
+    },
+  });
 
   // Load quote data
   useEffect(() => {
@@ -94,6 +126,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
       }
 
       setQuote(quoteData);
+      
+      // Populate form with quote data
+      populateFormFromQuote(quoteData);
       
       // Calculate smart features
       await calculateSmartFeatures(quoteData);
@@ -143,7 +178,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
     const updatedOperationalData = {
       ...quote.operational_data,
       shipping: {
-        ...quote.operational_data.shipping,
+        ...quote.operational_data?.shipping,
         selected_option: optionId,
       },
     };
@@ -180,23 +215,323 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
     setSmartSuggestions(updatedSuggestions);
   };
 
-  // Smart metrics calculation
-  const metrics = useMemo(() => {
-    if (!quote) return null;
+  // Watch form values for live updates
+  const formValues = useWatch({ control: form.control });
+  const [liveQuote, setLiveQuote] = useState<UnifiedQuote | null>(null);
+  
+  // Smart weight estimation state
+  const [weightEstimations, setWeightEstimations] = useState<{[key: string]: any}>({});
+  const [isEstimating, setIsEstimating] = useState<{[key: string]: boolean}>({});
+  const [estimationTimeouts, setEstimationTimeouts] = useState<{[key: string]: NodeJS.Timeout}>({});
 
-    const breakdown = quote.calculation_data.breakdown;
-    const totalItems = quote.items.reduce((sum, item) => sum + item.quantity, 0);
-    const totalWeight = quote.items.reduce((sum, item) => sum + (item.weight_kg * item.quantity), 0);
-    const avgWeightConfidence = quote.items.reduce((sum, item) => sum + item.smart_data.weight_confidence, 0) / quote.items.length;
+  // Function to estimate weight for an item
+  const estimateItemWeight = async (itemIndex: number, productName: string, productUrl?: string) => {
+    console.log('🔍 estimateItemWeight called:', { itemIndex, productName, productUrl });
+    
+    if (!productName.trim()) {
+      console.log('❌ Empty product name, clearing estimation');
+      setWeightEstimations(prev => ({ ...prev, [itemIndex]: null }));
+      return;
+    }
+
+    const estimationKey = itemIndex.toString();
+    console.log('⏳ Starting estimation for key:', estimationKey);
+    setIsEstimating(prev => ({ ...prev, [estimationKey]: true }));
+
+    try {
+      console.log('🧠 Calling smartWeightEstimator.estimateWeight...');
+      const estimation = await smartWeightEstimator.estimateWeight(productName, productUrl);
+      console.log('✅ Weight estimation result:', estimation);
+      setWeightEstimations(prev => ({ ...prev, [estimationKey]: estimation }));
+    } catch (error) {
+      console.error('❌ Weight estimation error:', error);
+      setWeightEstimations(prev => ({ ...prev, [estimationKey]: null }));
+    } finally {
+      setIsEstimating(prev => ({ ...prev, [estimationKey]: false }));
+    }
+  };
+
+  // Function to apply weight suggestion
+  const applyWeightSuggestion = (itemIndex: number, suggestedWeight: number) => {
+    console.log('🎯 Applying weight suggestion:', { itemIndex, suggestedWeight });
+    
+    try {
+      const items = form.getValues('items') || [];
+      items[itemIndex] = { ...items[itemIndex], item_weight: suggestedWeight };
+      
+      // Use setValue with shouldValidate: false to prevent triggering validation/submission
+      form.setValue('items', items, { shouldValidate: false, shouldDirty: true });
+      
+      console.log('✅ Weight suggestion applied successfully');
+      
+      // Optional: Show a brief success indicator
+      toast({
+        title: "Weight Updated",
+        description: `Applied AI suggestion: ${suggestedWeight} kg`,
+        duration: 2000,
+      });
+      
+    } catch (error) {
+      console.error('❌ Error applying weight suggestion:', error);
+    }
+  };
+
+  // Create live quote from form values
+  const createLiveQuote = useMemo(() => {
+    if (!quote || !formValues) return quote;
+    
+    // Calculate live totals from form values - CONVERT TO NUMBERS!
+    const itemsTotal = (formValues.items || []).reduce((sum, item) => 
+      sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1), 0
+    );
+    
+    const totalWeight = (formValues.items || []).reduce((sum, item) => 
+      sum + (Number(item.item_weight) || 0) * (Number(item.quantity) || 1), 0
+    );
+
+    // Basic calculation logic - CONVERT ALL FORM VALUES TO NUMBERS!
+    const salesTax = Number(formValues.sales_tax_price) || 0;
+    const merchantShipping = Number(formValues.merchant_shipping_price) || 0;
+    const domesticShipping = Number(formValues.domestic_shipping) || 0;
+    const handlingCharge = Number(formValues.handling_charge) || 0;
+    const insurance = Number(formValues.insurance_amount) || 0;
+    const discount = Number(formValues.discount) || 0;
+    
+    // Calculate customs based on percentage
+    const customsPercentage = (Number(formValues.customs_percentage) || 0) / 100;
+    const customsBase = itemsTotal + salesTax + merchantShipping;
+    const customs = customsBase * customsPercentage;
+    
+    // Calculate international shipping (placeholder - you may want more sophisticated logic)
+    const internationalShipping = quote.calculation_data?.breakdown?.shipping || 0;
+    
+    const finalTotal = itemsTotal + salesTax + merchantShipping + domesticShipping + 
+                      handlingCharge + insurance + customs + internationalShipping - discount;
+
+    // Debug calculation to verify numbers are correct
+    if (process.env.NODE_ENV === 'development') {
+      console.log('💰 Live Calculation Debug:', {
+        itemsTotal: itemsTotal,
+        salesTax: salesTax,
+        merchantShipping: merchantShipping,
+        domesticShipping: domesticShipping,
+        handlingCharge: handlingCharge,
+        insurance: insurance,
+        customs: customs,
+        internationalShipping: internationalShipping,
+        discount: discount,
+        finalTotal: finalTotal,
+        'types': {
+          itemsTotal: typeof itemsTotal,
+          salesTax: typeof salesTax,
+          merchantShipping: typeof merchantShipping,
+          domesticShipping: typeof domesticShipping,
+          handlingCharge: typeof handlingCharge,
+          insurance: typeof insurance,
+          customs: typeof customs,
+          finalTotal: typeof finalTotal,
+        }
+      });
+    }
+
+    return {
+      ...quote,
+      items: (formValues.items || []).map((item, index) => ({
+        ...quote.items[index],
+        name: item.product_name || '',
+        price_usd: Number(item.item_price) || 0,
+        weight_kg: Number(item.item_weight) || 0,
+        quantity: Number(item.quantity) || 1,
+        url: item.product_url || '',
+      })),
+      final_total_usd: finalTotal,
+      calculation_data: {
+        ...quote.calculation_data,
+        sales_tax_price: salesTax,
+        merchant_shipping_price: merchantShipping,
+        customs_percentage: Number(formValues.customs_percentage) || 0,
+        breakdown: {
+          items_total: itemsTotal,
+          shipping: internationalShipping,
+          customs: customs,
+          taxes: salesTax,
+          fees: handlingCharge + insurance,
+          discount: discount,
+        },
+      },
+      operational_data: {
+        ...quote.operational_data,
+        domestic_shipping: domesticShipping,
+        handling_charge: handlingCharge,
+        insurance_amount: insurance,
+      },
+    };
+  }, [quote, formValues]);
+
+  // Update live quote when form changes
+  useEffect(() => {
+    if (isEditMode && createLiveQuote) {
+      setLiveQuote(createLiveQuote);
+    } else {
+      setLiveQuote(quote);
+    }
+  }, [isEditMode, createLiveQuote, quote]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(estimationTimeouts).forEach(timeout => {
+        if (timeout) clearTimeout(timeout);
+      });
+    };
+  }, [estimationTimeouts]);
+
+  // Trigger weight estimation for existing items when edit mode is activated
+  useEffect(() => {
+    if (isEditMode && quote?.items) {
+      console.log('🚀 Edit mode activated, triggering weight estimation for existing items');
+      quote.items.forEach((item, index) => {
+        if (item.name && item.name.trim()) {
+          console.log(`🎯 Triggering estimation for item ${index}: ${item.name}`);
+          // Delay each estimation slightly to avoid overwhelming the service
+          setTimeout(() => {
+            estimateItemWeight(index, item.name, item.url);
+          }, index * 200);
+        }
+      });
+    }
+  }, [isEditMode, quote?.id]); // Only trigger when edit mode changes or quote changes
+
+  // Smart metrics calculation (now uses live quote in edit mode)
+  const metrics = useMemo(() => {
+    const activeQuote = isEditMode ? liveQuote : quote;
+    if (!activeQuote) return null;
+
+    const breakdown = activeQuote.calculation_data?.breakdown || {};
+    const totalItems = activeQuote.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
+    const totalWeight = activeQuote.items?.reduce((sum, item) => sum + ((item.weight_kg || 0) * (item.quantity || 0)), 0) || 0;
+    const avgWeightConfidence = activeQuote.items?.length > 0 
+      ? activeQuote.items.reduce((sum, item) => sum + (item.smart_data?.weight_confidence || 0), 0) / activeQuote.items.length
+      : 0;
 
     return {
       totalItems,
       totalWeight: totalWeight.toFixed(2),
       avgWeightConfidence: (avgWeightConfidence * 100).toFixed(0),
-      shippingPercentage: ((breakdown.shipping / quote.final_total_usd) * 100).toFixed(1),
-      customsPercentage: ((breakdown.customs / quote.final_total_usd) * 100).toFixed(1),
+      shippingPercentage: breakdown.shipping && activeQuote.final_total_usd 
+        ? ((breakdown.shipping / activeQuote.final_total_usd) * 100).toFixed(1)
+        : '0',
+      customsPercentage: breakdown.customs && activeQuote.final_total_usd
+        ? ((breakdown.customs / activeQuote.final_total_usd) * 100).toFixed(1) 
+        : '0',
     };
-  }, [quote]);
+  }, [quote, liveQuote, isEditMode]);
+
+  // Form population function
+  const populateFormFromQuote = (quoteData: UnifiedQuote) => {
+    const calculationData = quoteData.calculation_data || {};
+    const operationalData = quoteData.operational_data || {};
+    
+    form.reset({
+      id: quoteData.id,
+      customs_percentage: calculationData.customs_percentage || 0,
+      sales_tax_price: calculationData.sales_tax_price || 0,
+      merchant_shipping_price: calculationData.merchant_shipping_price || 0,
+      domestic_shipping: operationalData.domestic_shipping || 0,
+      handling_charge: operationalData.handling_charge || 0,
+      discount: calculationData.discount || 0,
+      insurance_amount: operationalData.insurance_amount || 0,
+      origin_country: quoteData.origin_country,
+      destination_country: quoteData.destination_country,
+      currency: quoteData.currency,
+      destination_currency: quoteData.currency || 'USD',
+      status: quoteData.status,
+      items: (quoteData.items || []).map((item, index) => ({
+        id: item.id || `item-${index}`,
+        item_price: item.price_usd || 0,
+        item_weight: item.weight_kg || 0,
+        quantity: item.quantity || 1,
+        product_name: item.name || '',
+        options: item.options || '',
+        product_url: item.url || '',
+        image_url: item.image || '',
+      })),
+    });
+  };
+
+  // Form save handler
+  const onFormSubmit = async (data: AdminQuoteFormValues) => {
+    try {
+      setIsCalculating(true);
+      console.log('Form data being submitted:', data);
+      
+      // Validate form data before submission
+      const formErrors = form.formState.errors;
+      if (Object.keys(formErrors).length > 0) {
+        console.error('Form validation errors:', formErrors);
+        toast({
+          title: 'Validation Error',
+          description: 'Please fix the form errors before saving.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Update quote with form data - CONVERT ALL VALUES TO NUMBERS!
+      const success = await unifiedDataEngine.updateQuote(quoteId!, {
+        customs_percentage: Number(data.customs_percentage) || 0,
+        calculation_data: {
+          ...quote?.calculation_data,
+          sales_tax_price: Number(data.sales_tax_price) || 0,
+          merchant_shipping_price: Number(data.merchant_shipping_price) || 0,
+          discount: Number(data.discount) || 0,
+          customs_percentage: Number(data.customs_percentage) || 0,
+        },
+        operational_data: {
+          ...quote?.operational_data,
+          domestic_shipping: Number(data.domestic_shipping) || 0,
+          handling_charge: Number(data.handling_charge) || 0,
+          insurance_amount: Number(data.insurance_amount) || 0,
+        },
+        items: data.items?.map(item => ({
+          id: item.id,
+          name: item.product_name || '',
+          price_usd: Number(item.item_price) || 0,
+          weight_kg: Number(item.item_weight) || 0,
+          quantity: Number(item.quantity) || 1,
+          url: item.product_url || '',
+          image: item.image_url || '',
+          options: item.options || '',
+        })) || [],
+      });
+      
+      console.log('Update success:', success);
+      
+      if (success) {
+        toast({
+          title: 'Quote updated',
+          description: 'Quote has been successfully updated.',
+        });
+        setIsEditMode(false);
+        await loadQuoteData(); // Reload to get fresh data
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to update quote.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error saving quote:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to save quote changes: ${error.message}`,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCalculating(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -255,12 +590,28 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
           </div>
         </div>
 
-        <div className="text-right">
+        <div className="text-right space-y-2">
           <div className="text-2xl font-bold text-blue-600">
-            ${quote.final_total_usd.toFixed(2)}
+            ${(isEditMode ? liveQuote?.final_total_usd || quote.final_total_usd : quote.final_total_usd).toFixed(2)}
+            {isEditMode && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                Live
+              </Badge>
+            )}
           </div>
           <div className="text-sm text-gray-600">
             {metrics?.totalItems} items • {metrics?.totalWeight} kg
+          </div>
+          <div className="flex items-center justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditMode(!isEditMode)}
+              disabled={isCalculating}
+            >
+              <Edit className="w-4 h-4 mr-1" />
+              {isEditMode ? 'View Mode' : 'Edit Quote'}
+            </Button>
           </div>
         </div>
       </div>
@@ -284,66 +635,391 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Smart Calculation Breakdown */}
-            <SmartCalculationBreakdown
-              quote={quote}
-              shippingOptions={shippingOptions}
-              isCalculating={isCalculating}
-            />
+          {isEditMode ? (
+            /* Edit Mode - Side-by-Side Layout */
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+              {/* Left Column - Edit Form (60%) */}
+              <div className="xl:col-span-3 space-y-6">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
+                    {/* Product Details Section - TOP PRIORITY */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <Package className="w-5 h-5 mr-2 text-blue-600" />
+                          Product Details
+                        </CardTitle>
+                        <CardDescription>
+                          Edit product information: name, URL, price, weight, and quantity
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {form.watch('items')?.map((item, index) => (
+                          <div key={item.id || index} className="p-4 border border-blue-200 rounded-lg bg-blue-50/30 space-y-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-medium text-blue-900">Item {index + 1}</h4>
+                              <Badge variant="outline" className="text-xs">
+                                {item.product_name || 'Unnamed Product'}
+                              </Badge>
+                            </div>
+                            
+                            {/* Product Name and URL - Full Width */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm font-medium text-gray-700">Product Name</label>
+                                <input
+                                  type="text"
+                                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                  value={item.product_name || ''}
+                                  onChange={(e) => {
+                                    console.log('📝 Product name changed:', { index, value: e.target.value });
+                                    const items = form.getValues('items') || [];
+                                    items[index] = { ...items[index], product_name: e.target.value };
+                                    form.setValue('items', items);
+                                    
+                                    // Clear existing timeout for this item
+                                    const timeoutKey = index.toString();
+                                    if (estimationTimeouts[timeoutKey]) {
+                                      console.log('🕐 Clearing existing timeout for:', timeoutKey);
+                                      clearTimeout(estimationTimeouts[timeoutKey]);
+                                    }
+                                    
+                                    // Trigger weight estimation after a delay
+                                    console.log('⏲️ Setting timeout for weight estimation...');
+                                    const timeoutId = setTimeout(() => {
+                                      console.log('🎯 Timeout triggered, calling estimateItemWeight');
+                                      estimateItemWeight(index, e.target.value, items[index].product_url);
+                                    }, 800);
+                                    
+                                    setEstimationTimeouts(prev => ({ ...prev, [timeoutKey]: timeoutId }));
+                                  }}
+                                  placeholder="Enter product name"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-700">Product URL</label>
+                                <input
+                                  type="text"
+                                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                  value={item.product_url || ''}
+                                  onChange={(e) => {
+                                    const items = form.getValues('items') || [];
+                                    items[index] = { ...items[index], product_url: e.target.value };
+                                    form.setValue('items', items);
+                                  }}
+                                  placeholder="https://amazon.com/..."
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Price, Weight, Quantity - Compact Row */}
+                            <div className="grid grid-cols-3 gap-4">
+                              <div>
+                                <label className="text-sm font-medium text-gray-700">Price (USD)</label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                  value={item.item_price || 0}
+                                  onChange={(e) => {
+                                    const items = form.getValues('items') || [];
+                                    items[index] = { ...items[index], item_price: parseFloat(e.target.value) || 0 };
+                                    form.setValue('items', items);
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-700 flex items-center space-x-2">
+                                  <span>Weight (kg)</span>
+                                  {isEstimating[index.toString()] && (
+                                    <div className="flex items-center space-x-1">
+                                      <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                      <span className="text-xs text-blue-600">AI estimating...</span>
+                                    </div>
+                                  )}
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  min="0"
+                                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                  value={item.item_weight || 0}
+                                  onChange={(e) => {
+                                    const items = form.getValues('items') || [];
+                                    items[index] = { ...items[index], item_weight: parseFloat(e.target.value) || 0 };
+                                    form.setValue('items', items);
+                                  }}
+                                />
+                                
+                                {/* Debug info */}
+                                {process.env.NODE_ENV === 'development' && (
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    Debug: isEstimating[{index}] = {String(isEstimating[index.toString()])}, 
+                                    estimation = {JSON.stringify(weightEstimations[index.toString()])}
+                                  </div>
+                                )}
+                                
+                                {/* AI Weight Suggestion */}
+                                {weightEstimations[index.toString()] && (
+                                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-sm font-medium text-blue-800">
+                                        🧠 AI suggests: {weightEstimations[index.toString()].estimated_weight} kg
+                                      </span>
+                                      <div className="flex items-center space-x-2">
+                                        <Badge variant={weightEstimations[index.toString()].confidence >= 0.8 ? 'default' : 'secondary'}>
+                                          {(weightEstimations[index.toString()].confidence * 100).toFixed(0)}% confident
+                                        </Badge>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            applyWeightSuggestion(index, weightEstimations[index.toString()].estimated_weight);
+                                          }}
+                                        >
+                                          Use
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    {weightEstimations[index.toString()].reasoning?.length > 0 && (
+                                      <div className="text-xs text-blue-600">
+                                        <strong>Reasoning:</strong> {weightEstimations[index.toString()].reasoning[0]}
+                                      </div>
+                                    )}
+                                    {weightEstimations[index.toString()].suggestions?.length > 0 && (
+                                      <div className="text-xs text-blue-600 mt-1">
+                                        <strong>Tip:</strong> {weightEstimations[index.toString()].suggestions[0]}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-700">Quantity</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                  value={item.quantity || 1}
+                                  onChange={(e) => {
+                                    const items = form.getValues('items') || [];
+                                    items[index] = { ...items[index], quantity: parseInt(e.target.value) || 1 };
+                                    form.setValue('items', items);
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
 
-            {/* Key Metrics Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Zap className="w-5 h-5 mr-2 text-yellow-500" />
-                  Smart Insights
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm text-gray-600">Weight Confidence</div>
-                    <div className="text-xl font-semibold">
-                      {metrics?.avgWeightConfidence}%
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-600">Shipping Cost</div>
-                    <div className="text-xl font-semibold">
-                      {metrics?.shippingPercentage}%
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-600">Customs Duty</div>
-                    <div className="text-xl font-semibold">
-                      {metrics?.customsPercentage}%
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-600">Options Available</div>
-                    <div className="text-xl font-semibold">
-                      {shippingOptions.length}
-                    </div>
-                  </div>
-                </div>
+                    {/* Quote-Level Costs Section - BELOW PRODUCTS */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <DollarSign className="w-5 h-5 mr-2 text-green-600" />
+                          Shipping & Cost Details
+                        </CardTitle>
+                        <CardDescription>
+                          Configure quote-level pricing: shipping, customs, taxes, and fees
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <QuoteDetailForm form={form} />
+                      </CardContent>
+                    </Card>
 
-                {shippingRecommendations.length > 0 && (
-                  <div className="pt-4 border-t">
-                    <div className="text-sm font-medium text-gray-900 mb-2">
-                      Top Recommendation
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-end space-x-3 pt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditMode(false);
+                          populateFormFromQuote(quote); // Reset form
+                        }}
+                        disabled={isCalculating}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => calculateSmartFeatures(quote)}
+                        disabled={isCalculating}
+                        variant="outline"
+                      >
+                        <Calculator className="w-4 h-4 mr-2" />
+                        {isCalculating ? 'Calculating...' : 'Recalculate'}
+                      </Button>
+                      <Button
+                        onClick={async () => {
+                          console.log('Save button clicked');
+                          console.log('Current form values:', form.getValues());
+                          const isValid = await form.trigger();
+                          console.log('Form is valid:', isValid);
+                          if (isValid) {
+                            form.handleSubmit(onFormSubmit)();
+                          } else {
+                            console.log('Form errors:', form.formState.errors);
+                            toast({
+                              title: 'Form Validation Failed',
+                              description: 'Please check your inputs and try again.',
+                              variant: 'destructive',
+                            });
+                          }
+                        }}
+                        disabled={isCalculating}
+                      >
+                        <Save className="w-4 h-4 mr-1" />
+                        Save Changes
+                      </Button>
                     </div>
-                    <div className="flex items-center text-sm text-green-600">
-                      <Lightbulb className="w-4 h-4 mr-1" />
-                      {shippingRecommendations[0].reason === 'cost_savings' && 
-                        `Save $${shippingRecommendations[0].savings_usd.toFixed(2)} with slower shipping`
-                      }
+                  </form>
+                </Form>
+              </div>
+
+              {/* Right Column - Live Breakdown (40%) */}
+              <div className="xl:col-span-2 space-y-6">
+                {/* Smart Calculation Breakdown - Always Visible */}
+                <SmartCalculationBreakdown
+                  quote={liveQuote || quote}
+                  shippingOptions={shippingOptions}
+                  isCalculating={isCalculating}
+                />
+
+                {/* Smart Insights - Always Visible */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Zap className="w-5 h-5 mr-2 text-yellow-500" />
+                      Smart Insights
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-gray-600">Weight Confidence</div>
+                        <div className="text-xl font-semibold">
+                          {metrics?.avgWeightConfidence}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-600">Shipping Cost</div>
+                        <div className="text-xl font-semibold">
+                          {metrics?.shippingPercentage}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-600">Customs Duty</div>
+                        <div className="text-xl font-semibold">
+                          {metrics?.customsPercentage}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-600">Options Available</div>
+                        <div className="text-xl font-semibold">
+                          {shippingOptions.length}
+                        </div>
+                      </div>
+                    </div>
+
+                    {shippingRecommendations.length > 0 && (
+                      <div className="pt-4 border-t">
+                        <div className="text-sm font-medium text-gray-900 mb-2">
+                          Top Recommendation
+                        </div>
+                        <div className="flex items-center text-sm text-green-600">
+                          <Lightbulb className="w-4 h-4 mr-1" />
+                          {shippingRecommendations[0].reason === 'cost_savings' && 
+                            `Save $${shippingRecommendations[0].savings_usd.toFixed(2)} with slower shipping`
+                          }
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Edit Mode Indicator */}
+                <Card className="border-blue-200 bg-blue-50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center text-blue-800">
+                      <Edit className="w-4 h-4 mr-2" />
+                      <span className="font-medium">Edit Mode Active</span>
+                    </div>
+                    <p className="text-sm text-blue-600 mt-1">
+                      Changes are reflected in real-time. Remember to save when finished.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            /* View Mode - Original Overview Layout */
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Smart Calculation Breakdown */}
+              <SmartCalculationBreakdown
+                quote={quote}
+                shippingOptions={shippingOptions}
+                isCalculating={isCalculating}
+              />
+
+              {/* Key Metrics Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Zap className="w-5 h-5 mr-2 text-yellow-500" />
+                    Smart Insights
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm text-gray-600">Weight Confidence</div>
+                      <div className="text-xl font-semibold">
+                        {metrics?.avgWeightConfidence}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Shipping Cost</div>
+                      <div className="text-xl font-semibold">
+                        {metrics?.shippingPercentage}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Customs Duty</div>
+                      <div className="text-xl font-semibold">
+                        {metrics?.customsPercentage}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Options Available</div>
+                      <div className="text-xl font-semibold">
+                        {shippingOptions.length}
+                      </div>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+
+                  {shippingRecommendations.length > 0 && (
+                    <div className="pt-4 border-t">
+                      <div className="text-sm font-medium text-gray-900 mb-2">
+                        Top Recommendation
+                      </div>
+                      <div className="flex items-center text-sm text-green-600">
+                        <Lightbulb className="w-4 h-4 mr-1" />
+                        {shippingRecommendations[0].reason === 'cost_savings' && 
+                          `Save $${shippingRecommendations[0].savings_usd.toFixed(2)} with slower shipping`
+                        }
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
 
         {/* Smart Items Tab */}
@@ -373,6 +1049,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
             onUpdateQuote={loadQuoteData}
           />
         </TabsContent>
+
       </Tabs>
 
       {/* Quick Actions Footer */}

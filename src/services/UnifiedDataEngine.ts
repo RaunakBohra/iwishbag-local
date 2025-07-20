@@ -68,6 +68,119 @@ export class UnifiedDataEngine {
   }
 
   /**
+   * Transform old database structure to UnifiedQuote
+   */
+  transformFromOldStructure(oldQuote: any): UnifiedQuote {
+    // Transform quote_items array to items JSONB
+    const items: QuoteItem[] = (oldQuote.quote_items || []).map((item: any) => ({
+      id: item.id || `item_${Date.now()}_${Math.random()}`,
+      name: item.product_name || item.name || 'Unknown Product',
+      quantity: item.quantity || 1,
+      price_usd: item.price_usd || item.price || 0,
+      weight_kg: item.weight_kg || item.weight || 0.5,
+      url: item.product_url || item.url || '',
+      image_url: item.image_url || '',
+      options: item.options || '',
+      smart_data: {
+        weight_confidence: 0.5, // Default confidence for old data
+        category_detected: 'general',
+        optimization_hints: [],
+        customs_suggestions: [],
+      },
+    }));
+
+    // Build calculation data from old fields
+    const calculation_data: CalculationData = {
+      base_total: oldQuote.item_price || 0,
+      breakdown: {
+        items: oldQuote.item_price || 0,
+        shipping: (oldQuote.international_shipping || 0) + (oldQuote.domestic_shipping || 0),
+        customs: oldQuote.customs_and_ecs || 0,
+        fees: oldQuote.handling_charge || 0,
+        tax: oldQuote.sales_tax_price || 0,
+        insurance: oldQuote.insurance_amount || 0,
+        discount: oldQuote.discount || 0,
+      },
+      exchange_rate: oldQuote.exchange_rate || 1,
+      last_calculated: oldQuote.updated_at || oldQuote.created_at,
+    };
+
+    // Build customer data
+    const customer_data: CustomerData = {
+      info: {
+        name: oldQuote.customer_name || '',
+        email: oldQuote.customer_email || '',
+        phone: oldQuote.customer_phone || '',
+        social_handle: oldQuote.customer_social_handle || '',
+      },
+      shipping_address: oldQuote.shipping_address || {
+        line1: '',
+        line2: '',
+        city: '',
+        state: '',
+        postal: '',
+        country: oldQuote.destination_country || '',
+        locked: false,
+      },
+    };
+
+    // Build operational data
+    const operational_data: OperationalData = {
+      customs: {
+        category: 'general',
+        percentage: oldQuote.customs_percentage || 10,
+        tier_suggestions: [],
+      },
+      shipping: {
+        carrier: oldQuote.shipping_carrier || 'DHL',
+        service: 'standard',
+        tracking_number: oldQuote.tracking_number || '',
+        estimated_delivery: undefined,
+      },
+      payment: {
+        method: oldQuote.payment_method || 'bank_transfer',
+        status: oldQuote.payment_status || 'unpaid',
+        gateway_fee: oldQuote.payment_gateway_fee || 0,
+      },
+      timeline: [
+        {
+          timestamp: oldQuote.created_at,
+          event: 'created',
+          description: 'Quote created',
+          actor: 'system',
+        },
+      ],
+      admin: {
+        notes: oldQuote.internal_notes || '',
+        tags: [],
+        priority: 'normal',
+        assigned_to: undefined,
+      },
+    };
+
+    return {
+      id: oldQuote.id,
+      display_id: oldQuote.display_id || oldQuote.id,
+      user_id: oldQuote.user_id,
+      status: oldQuote.status || 'pending',
+      origin_country: oldQuote.origin_country || 'US',
+      destination_country: oldQuote.destination_country || 'US',
+      items,
+      base_total_usd: oldQuote.item_price || 0,
+      final_total_usd: oldQuote.final_total_usd || 0,
+      currency: oldQuote.currency || oldQuote.destination_currency || 'USD',
+      calculation_data,
+      customer_data,
+      operational_data,
+      is_anonymous: !oldQuote.user_id,
+      quote_source: oldQuote.quote_source || 'website',
+      optimization_score: 0.7, // Default score for old quotes
+      created_at: oldQuote.created_at,
+      updated_at: oldQuote.updated_at,
+    };
+  }
+
+  /**
    * Get quote by ID with smart caching
    */
   async getQuote(id: string): Promise<UnifiedQuote | null> {
@@ -75,15 +188,20 @@ export class UnifiedDataEngine {
     const cached = this.getCached(cacheKey);
     if (cached) return cached;
 
-    const { data, error } = await supabase
-      .from('quotes_unified')
+    // Query the unified structure (quotes table with JSONB fields)
+    const { data: quoteData, error: quoteError } = await supabase
+      .from('quotes')
       .select('*')
       .eq('id', id)
       .single();
 
-    if (error || !data) return null;
+    if (quoteError || !quoteData) {
+      console.error('Error fetching quote:', quoteError);
+      return null;
+    }
 
-    const quote = this.transformFromDB(data);
+    // Transform to unified format
+    const quote = this.transformFromDB(quoteData);
     this.setCache(cacheKey, quote);
     return quote;
   }
@@ -98,7 +216,7 @@ export class UnifiedDataEngine {
     limit?: number;
     offset?: number;
   } = {}): Promise<{ quotes: UnifiedQuote[]; total: number }> {
-    let query = supabase.from('quotes_unified').select('*', { count: 'exact' });
+    let query = supabase.from('quotes').select('*', { count: 'exact' });
 
     // Smart filtering
     if (options.user_id) {
@@ -177,7 +295,7 @@ export class UnifiedDataEngine {
       };
 
       const { data, error } = await supabase
-        .from('quotes_unified')
+        .from('quotes')
         .insert(quoteData)
         .select()
         .single();
@@ -222,7 +340,7 @@ export class UnifiedDataEngine {
       if (updates.optimization_score !== undefined) dbUpdates.optimization_score = updates.optimization_score;
 
       const { error } = await supabase
-        .from('quotes_unified')
+        .from('quotes')
         .update(dbUpdates)
         .eq('id', id);
 
@@ -413,7 +531,7 @@ export class UnifiedDataEngine {
   async bulkUpdateStatus(quoteIds: string[], status: string): Promise<boolean> {
     try {
       const { error } = await supabase
-        .from('quotes_unified')
+        .from('quotes')
         .update({ status, updated_at: new Date().toISOString() })
         .in('id', quoteIds);
 
@@ -442,7 +560,7 @@ export class UnifiedDataEngine {
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
     const { data, error } = await supabase
-      .from('quotes_unified')
+      .from('quotes')
       .select('status, final_total_usd, optimization_score, destination_country')
       .gte('created_at', since);
 

@@ -8,7 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 type QuoteWithItems = Tables<'quotes'> & {
-  quote_items: Tables<'quote_items'>[];
   profiles?: {
     full_name?: string;
     email?: string;
@@ -54,33 +53,24 @@ export const useQuoteManagement = (filters = {}) => {
       let query = supabase
         .from('quotes')
         .select(
-          '*, quote_items(*), profiles!quotes_user_id_fkey(full_name, email, phone, preferred_display_currency)',
+          '*, profiles!quotes_user_id_fkey(full_name, email, phone, preferred_display_currency)',
         )
         .order('created_at', { ascending: false });
 
+      // TEMPORARY: Disable status filtering to debug "quotes not found" issue
       // Filter based on status management configuration
-      // Only show quotes with statuses that are configured to show in quotes list
       const quoteStatusNames = getStatusesForQuotesList();
       console.log('DEBUG: Quote statuses allowed in quotes list:', quoteStatusNames);
+      console.log('DEBUG: Current statusFilter:', statusFilter);
 
       if (statusFilter !== 'all') {
-        // Check if the selected status is allowed in quotes list
-        if (quoteStatusNames.includes(statusFilter)) {
-          query = query.eq('status', statusFilter);
-        } else {
-          // If selected status is not allowed, show all allowed statuses
-          console.log(
-            `DEBUG: Status '${statusFilter}' is not allowed in quotes list, showing all allowed statuses`,
-          );
-          if (quoteStatusNames.length > 0) {
-            query = query.in('status', quoteStatusNames);
-          }
-        }
+        // Apply specific status filter only
+        query = query.eq('status', statusFilter);
+        console.log(`DEBUG: Filtering by specific status: ${statusFilter}`);
       } else {
-        // No specific status selected, show all allowed statuses
-        if (quoteStatusNames.length > 0) {
-          query = query.in('status', quoteStatusNames);
-        }
+        // Show ALL quotes regardless of status (for debugging)
+        console.log('DEBUG: Showing ALL quotes (status filter disabled for debugging)');
+        // Temporarily disabled: query = query.in('status', quoteStatusNames);
       }
 
       if (purchaseCountryFilter && purchaseCountryFilter !== 'all') {
@@ -152,8 +142,10 @@ export const useQuoteManagement = (filters = {}) => {
 
       if (searchTerm) {
         const searchString = `%${searchTerm}%`;
+        // Updated search for unified structure: search in customer_data.info.email instead of email column
+        // and use items JSONB array instead of product_name column
         query = query.or(
-          `product_name.ilike.${searchString},email.ilike.${searchString},display_id.ilike.${searchString},destination_country.ilike.${searchString}`,
+          `display_id.ilike.${searchString},destination_country.ilike.${searchString},customer_data->>info->>email.ilike.${searchString}`,
         );
       }
 

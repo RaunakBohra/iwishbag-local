@@ -182,19 +182,33 @@ export default function QuoteRequestPage() {
           weight: product.weight,
         }));
 
-        // Submit combined quote to Supabase
+        // Submit combined quote to Supabase using unified structure
         const { data: quote, error: quoteError } = await supabase
           .from('quotes')
           .insert({
-            email: emailToUse,
-            product_name: products.map(p => p.name).join(', '),
             destination_country: destinationCountry || '',
             origin_country: products[0]?.country || '',
             status: 'pending',
             currency: 'USD',
-            destination_currency: 'USD',
             user_id: user?.id || null, // Now uses anonymous auth user ID
-            shipping_address: shippingAddressData,
+            items: products.map(product => ({
+              id: crypto.randomUUID(),
+              name: product.name,
+              url: product.url,
+              image: product.file ? product.url : null,
+              options: product.notes || null,
+              quantity: product.quantity || 1,
+              price_usd: product.price || 0,
+              weight_kg: product.weight || 0
+            })),
+            customer_data: {
+              info: {
+                email: emailToUse
+              },
+              shipping_address: shippingAddressData
+            },
+            base_total_usd: products.reduce((sum, p) => sum + (p.price || 0) * (p.quantity || 1), 0),
+            final_total_usd: products.reduce((sum, p) => sum + (p.price || 0) * (p.quantity || 1), 0)
           })
           .select('id')
           .single();
@@ -228,29 +242,33 @@ export default function QuoteRequestPage() {
       } else {
         // Separate quotes: Create individual quote for each product
         for (const product of products) {
-          const item = {
-            productUrl: product.url,
-            productName: product.name,
-            quantity: product.quantity,
-            options: product.notes || '',
-            imageUrl: product.file ? product.url : '',
-            price: product.price,
-            weight: product.weight,
-          };
-
-          // Submit individual quote to Supabase
+          // Submit individual quote to Supabase using unified structure
           const { data: quote, error: quoteError } = await supabase
             .from('quotes')
             .insert({
-              email: emailToUse,
-              product_name: product.name,
               destination_country: destinationCountry || '',
               origin_country: product.country || '',
               status: 'pending',
               currency: 'USD',
-              destination_currency: 'USD',
               user_id: user?.id || null, // Now uses anonymous auth user ID
-              shipping_address: shippingAddressData,
+              items: [{
+                id: crypto.randomUUID(),
+                name: product.name,
+                url: product.url,
+                image: product.file ? product.url : null,
+                options: product.notes || null,
+                quantity: product.quantity || 1,
+                price_usd: product.price || 0,
+                weight_kg: product.weight || 0
+              }],
+              customer_data: {
+                info: {
+                  email: emailToUse
+                },
+                shipping_address: shippingAddressData
+              },
+              base_total_usd: (product.price || 0) * (product.quantity || 1),
+              final_total_usd: (product.price || 0) * (product.quantity || 1)
             })
             .select('id')
             .single();
@@ -261,25 +279,9 @@ export default function QuoteRequestPage() {
             continue;
           }
 
-          const quoteItemToInsert = {
-            quote_id: quote.id,
-            product_url: item.productUrl,
-            product_name: item.productName,
-            quantity: item.quantity,
-            options: item.options,
-            image_url: item.imageUrl,
-            item_price: item.price && !isNaN(parseFloat(item.price)) ? parseFloat(item.price) : 0,
-            item_weight:
-              item.weight && !isNaN(parseFloat(item.weight)) ? parseFloat(item.weight) : 0,
-          };
-
-          const { error: itemsError } = await supabase
-            .from('quote_items')
-            .insert([quoteItemToInsert]);
-
-          if (itemsError) {
-            console.error('Error inserting quote item:', itemsError);
-          }
+          // Items are now stored in the JSONB items array within the quote
+          // No need for separate quote_items table insertion
+          console.log(`Quote created successfully for ${product.name} with ID: ${quote.id}`);
         }
       }
 

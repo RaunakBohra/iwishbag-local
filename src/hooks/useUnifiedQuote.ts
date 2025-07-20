@@ -334,7 +334,7 @@ export const useUnifiedQuote = ({
     const breakdown = quote.calculation_data.breakdown;
     const totalItems = quote.items.reduce((sum, item) => sum + item.quantity, 0);
     const totalWeight = quote.items.reduce((sum, item) => sum + (item.weight_kg * item.quantity), 0);
-    const avgWeightConfidence = quote.items.reduce((sum, item) => sum + item.smart_data.weight_confidence, 0) / quote.items.length;
+    const avgWeightConfidence = quote.items.reduce((sum, item) => sum + (item.smart_data?.weight_confidence || 0), 0) / quote.items.length;
 
     return {
       totalItems,

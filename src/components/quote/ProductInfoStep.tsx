@@ -57,23 +57,16 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
   const [countryValidationError, setCountryValidationError] = useState('');
   const [destinationCountryError, setDestinationCountryError] = useState('');
 
-  // IP geolocation auto-detection for destination country
+  // Smart default country selection (no external API calls to avoid CORS/rate limit issues)
   useEffect(() => {
-    if (!destinationCountry) {
-      // Try to auto-detect user's country via IP geolocation
-      fetch('https://ipapi.co/json/')
-        .then(response => response.json())
-        .then(data => {
-          if (data.country_code && allCountries) {
-            const detectedCountry = allCountries.find(c => c.code === data.country_code);
-            if (detectedCountry) {
-              setDestinationCountry(data.country_code);
-            }
-          }
-        })
-        .catch(error => {
-          console.log('IP geolocation failed, using manual selection:', error);
-        });
+    if (!destinationCountry && allCountries) {
+      // Set a reasonable default based on your primary markets
+      // India and Nepal are mentioned as primary markets in CLAUDE.md
+      const defaultCountry = allCountries.find(c => c.code === 'IN'); // India as default
+      if (defaultCountry) {
+        setDestinationCountry('IN');
+        console.log('Set default destination country to India (IN)');
+      }
     }
   }, [destinationCountry, allCountries, setDestinationCountry]);
 
