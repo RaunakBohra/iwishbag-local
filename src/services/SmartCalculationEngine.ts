@@ -6,6 +6,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { currencyService } from '@/services/CurrencyService';
+import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
 import type {
   UnifiedQuote,
   ShippingOption,
@@ -484,8 +485,33 @@ export class SmartCalculationEngine {
       quote.destination_country
     );
 
-    // Calculate customs (from operational_data or default)
-    const customsPercentage = quote.operational_data.customs?.percentage || 10; // Default 10%
+    // Calculate customs using smart tier calculator
+    let customsPercentage = 10; // Default fallback
+    let customsTierInfo = null;
+    
+    try {
+      // Calculate total weight for customs calculation
+      const totalWeight = quote.items.reduce((sum, item) => 
+        sum + (item.weight_kg * item.quantity), 0
+      );
+      
+      // Use smart customs tier calculation
+      customsTierInfo = await calculateCustomsTier(
+        quote.origin_country,
+        quote.destination_country,
+        itemsTotal,
+        totalWeight
+      );
+      
+      customsPercentage = customsTierInfo.customs_percentage;
+      console.log(`🎯 Smart customs: ${customsPercentage}% (tier: ${customsTierInfo.applied_tier?.rule_name || 'default'})`);
+      
+    } catch (error) {
+      console.warn('⚠️ Smart customs tier calculation failed, using manual/default:', error);
+      // Fallback to manual percentage or default
+      customsPercentage = quote.operational_data.customs?.percentage || 10;
+    }
+    
     const customsAmount = (itemsTotal + selectedShipping.cost_usd) * (customsPercentage / 100);
 
     // Calculate taxes and fees
@@ -522,6 +548,17 @@ export class SmartCalculationEngine {
       shipping: {
         ...quote.operational_data.shipping,
         selected_option: selectedShipping.id,
+      },
+      customs: {
+        ...quote.operational_data.customs,
+        percentage: customsPercentage,
+        smart_tier: customsTierInfo ? {
+          tier_name: customsTierInfo.applied_tier?.rule_name || 'default',
+          tier_id: customsTierInfo.applied_tier?.id || null,
+          fallback_used: customsTierInfo.fallback_used,
+          route: customsTierInfo.route,
+          vat_percentage: customsTierInfo.vat_percentage,
+        } : null,
       },
     };
 
@@ -564,6 +601,34 @@ export class SmartCalculationEngine {
           potential_impact: {
             cost_change: -savings,
             time_change: `Delivery: ${cheapestShipping.days}`,
+          },
+        });
+      }
+    }
+
+    // Customs optimization
+    const customsTier = calculationResult.updated_quote.operational_data.customs?.smart_tier;
+    if (customsTier) {
+      if (customsTier.fallback_used) {
+        suggestions.push({
+          id: crypto.randomUUID(),
+          type: 'customs',
+          message: `Using fallback customs rate. Consider configuring specific tiers for ${customsTier.route} route.`,
+          confidence: 0.60,
+          potential_impact: {
+            cost_change: 0,
+            time_change: 'Better accuracy',
+          },
+        });
+      } else {
+        suggestions.push({
+          id: crypto.randomUUID(),
+          type: 'customs',
+          message: `Applied smart customs tier: ${customsTier.tier_name} (${calculationResult.updated_quote.operational_data.customs?.percentage}%)`,
+          confidence: 0.90,
+          potential_impact: {
+            cost_change: 0,
+            time_change: 'Accurate calculation',
           },
         });
       }

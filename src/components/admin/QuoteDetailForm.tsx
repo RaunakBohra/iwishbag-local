@@ -38,6 +38,8 @@ interface QuoteDetailFormProps {
   detectedCustomsPercentage?: number;
   detectedCustomsTier?: CustomsTier;
   isOrder?: boolean;
+  onCalculateSmartCustoms?: () => void;
+  isCalculatingCustoms?: boolean;
 }
 
 export const QuoteDetailForm = ({
@@ -46,6 +48,8 @@ export const QuoteDetailForm = ({
   detectedCustomsPercentage,
   detectedCustomsTier,
   isOrder = false,
+  onCalculateSmartCustoms,
+  isCalculatingCustoms = false,
 }: QuoteDetailFormProps) => {
   const { toast: _toast } = useToast();
   const { data: allCountries } = useAllCountries();
@@ -146,7 +150,30 @@ export const QuoteDetailForm = ({
                   className="h-9"
                 />
               </FormControl>
-              {typeof detectedCustomsPercentage === 'number' &&
+              
+              {/* Show Smart Apply button, or regular Apply if we have detected percentage but no smart function */}
+              {onCalculateSmartCustoms ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={onCalculateSmartCustoms}
+                  disabled={isCalculatingCustoms}
+                  className="flex items-center"
+                >
+                  {isCalculatingCustoms ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-1"></div>
+                      Calculating...
+                    </>
+                  ) : (
+                    <>
+                      🧠 Smart Apply
+                    </>
+                  )}
+                </Button>
+              ) : (
+                typeof detectedCustomsPercentage === 'number' &&
                 detectedCustomsPercentage !== Number(field.value) && (
                   <Button
                     type="button"
@@ -156,22 +183,18 @@ export const QuoteDetailForm = ({
                   >
                     Apply
                   </Button>
-                )}
-            </div>
-            {/* Applied Customs Tier Box */}
-            {detectedCustomsTier && (
-              <div className="mt-2 p-2 rounded-md bg-teal-50 border border-teal-200 text-black text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">
-                    {detectedCustomsTier.name || 'Customs Tier'}{' '}
-                    {detectedCustomsTier.customs_percentage}%
+                )
+              )}
+              
+              {/* Inline tier information */}
+              {detectedCustomsTier && (
+                <div className="flex items-center">
+                  <span className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded border">
+                    {detectedCustomsTier.name} ({detectedCustomsTier.customs_percentage}%)
                   </span>
                 </div>
-                {detectedCustomsTier.description && (
-                  <div className="text-xs mt-1">{detectedCustomsTier.description}</div>
-                )}
-              </div>
-            )}
+              )}
+            </div>
             <FormMessage />
           </FormItem>
         )}

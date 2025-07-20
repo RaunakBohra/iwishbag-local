@@ -25,12 +25,16 @@ import {
   DollarSign,
   Edit,
   Save,
-  X
+  X,
+  Scale,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
+import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
 import type { 
   UnifiedQuote, 
   ShippingOption, 
@@ -39,7 +43,6 @@ import type {
 } from '@/types/unified-quote';
 
 // Smart sub-components
-import { SmartItemsManager } from './smart-components/SmartItemsManager';
 import { SmartShippingOptions } from './smart-components/SmartShippingOptions';
 import { SmartCalculationBreakdown } from './smart-components/SmartCalculationBreakdown';
 import { SmartSuggestionCards } from './smart-components/SmartSuggestionCards';
@@ -223,6 +226,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
   const [weightEstimations, setWeightEstimations] = useState<{[key: string]: any}>({});
   const [isEstimating, setIsEstimating] = useState<{[key: string]: boolean}>({});
   const [estimationTimeouts, setEstimationTimeouts] = useState<{[key: string]: NodeJS.Timeout}>({});
+  
+  // Smart customs calculation state
+  const [customsTierInfo, setCustomsTierInfo] = useState<any>(null);
+  const [isCalculatingCustoms, setIsCalculatingCustoms] = useState(false);
 
   // Function to estimate weight for an item
   const estimateItemWeight = async (itemIndex: number, productName: string, productUrl?: string) => {
@@ -248,6 +255,126 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
       setWeightEstimations(prev => ({ ...prev, [estimationKey]: null }));
     } finally {
       setIsEstimating(prev => ({ ...prev, [estimationKey]: false }));
+    }
+  };
+
+  // Function to add new item
+  const addNewItem = () => {
+    const currentItems = form.getValues('items') || [];
+    const newItem = {
+      id: `item_${Date.now()}`,
+      product_name: '',
+      product_url: '',
+      item_price: 0,
+      item_weight: 0,
+      quantity: 1,
+      options: '',
+      image_url: '',
+    };
+    
+    form.setValue('items', [...currentItems, newItem]);
+    
+    toast({
+      title: "Item Added",
+      description: "New item has been added to the quote.",
+      duration: 2000,
+    });
+  };
+
+  // Function to remove item
+  const removeItem = (itemIndex: number) => {
+    const currentItems = form.getValues('items') || [];
+    
+    if (currentItems.length <= 1) {
+      toast({
+        title: "Cannot Remove Item",
+        description: "Quote must have at least one item.",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+    
+    const updatedItems = currentItems.filter((_, index) => index !== itemIndex);
+    form.setValue('items', updatedItems);
+    
+    // Clear weight estimations for removed item
+    setWeightEstimations(prev => {
+      const updated = { ...prev };
+      delete updated[itemIndex.toString()];
+      // Reindex remaining estimations
+      const reindexed: {[key: string]: any} = {};
+      Object.keys(updated).forEach(key => {
+        const oldIndex = parseInt(key);
+        if (oldIndex > itemIndex) {
+          reindexed[(oldIndex - 1).toString()] = updated[key];
+        } else {
+          reindexed[key] = updated[key];
+        }
+      });
+      return reindexed;
+    });
+    
+    toast({
+      title: "Item Removed",
+      description: "Item has been removed from the quote.",
+      duration: 2000,
+    });
+  };
+
+  // Function to calculate smart customs tier
+  const calculateSmartCustoms = async () => {
+    if (!quote || !formValues) return;
+    
+    setIsCalculatingCustoms(true);
+    
+    try {
+      // Calculate totals from current form values
+      const itemsTotal = (formValues.items || []).reduce((sum, item) => 
+        sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1), 0
+      );
+      
+      const totalWeight = (formValues.items || []).reduce((sum, item) => 
+        sum + (Number(item.item_weight) || 0) * (Number(item.quantity) || 1), 0
+      );
+      
+      console.log('🧮 Calculating smart customs for:', {
+        origin: quote.origin_country,
+        destination: quote.destination_country,
+        itemsTotal,
+        totalWeight
+      });
+      
+      const tierResult = await calculateCustomsTier(
+        quote.origin_country,
+        quote.destination_country,
+        itemsTotal,
+        totalWeight
+      );
+      
+      console.log('✅ Smart customs result:', tierResult);
+      
+      setCustomsTierInfo(tierResult);
+      
+      // Auto-apply the calculated percentage
+      form.setValue('customs_percentage', tierResult.customs_percentage);
+      
+      toast({
+        title: "Smart Customs Applied",
+        description: `Applied ${tierResult.applied_tier?.rule_name || 'default'} tier: ${tierResult.customs_percentage}%`,
+        duration: 3000,
+      });
+      
+    } catch (error) {
+      console.error('❌ Smart customs calculation error:', error);
+      toast({
+        title: "Customs Calculation Failed",
+        description: "Unable to calculate smart customs tier. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    } finally {
+      setIsCalculatingCustoms(false);
     }
   };
 
@@ -297,8 +424,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
     const insurance = Number(formValues.insurance_amount) || 0;
     const discount = Number(formValues.discount) || 0;
     
-    // Calculate customs based on percentage
-    const customsPercentage = (Number(formValues.customs_percentage) || 0) / 100;
+    // Calculate customs based on percentage (use smart tier if available, otherwise form value)
+    const smartCustomsPercentage = quote?.operational_data?.customs?.percentage;
+    const formCustomsPercentage = Number(formValues.customs_percentage) || 0;
+    const customsPercentage = (smartCustomsPercentage || formCustomsPercentage) / 100;
     const customsBase = itemsTotal + salesTax + merchantShipping;
     const customs = customsBase * customsPercentage;
     
@@ -432,9 +561,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
     const calculationData = quoteData.calculation_data || {};
     const operationalData = quoteData.operational_data || {};
     
+    // Use smart customs percentage if available, otherwise use manual entry
+    const smartCustomsPercentage = operationalData.customs?.percentage || calculationData.customs_percentage || 0;
+    
     form.reset({
       id: quoteData.id,
-      customs_percentage: calculationData.customs_percentage || 0,
+      customs_percentage: smartCustomsPercentage,
       sales_tax_price: calculationData.sales_tax_price || 0,
       merchant_shipping_price: calculationData.merchant_shipping_price || 0,
       domestic_shipping: operationalData.domestic_shipping || 0,
@@ -626,9 +758,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="items">Smart Items</TabsTrigger>
           <TabsTrigger value="shipping">Shipping Options</TabsTrigger>
           <TabsTrigger value="customer">Customer</TabsTrigger>
         </TabsList>
@@ -645,22 +776,79 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                     {/* Product Details Section - TOP PRIORITY */}
                     <Card>
                       <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <Package className="w-5 h-5 mr-2 text-blue-600" />
-                          Product Details
-                        </CardTitle>
-                        <CardDescription>
-                          Edit product information: name, URL, price, weight, and quantity
-                        </CardDescription>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="flex items-center">
+                              <Package className="w-5 h-5 mr-2 text-blue-600" />
+                              Product Details
+                            </CardTitle>
+                            <CardDescription>
+                              Edit product information: name, URL, price, weight, and quantity
+                            </CardDescription>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addNewItem}
+                            className="flex items-center"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Item
+                          </Button>
+                        </div>
                       </CardHeader>
                       <CardContent className="space-y-6">
-                        {form.watch('items')?.map((item, index) => (
-                          <div key={item.id || index} className="p-4 border border-blue-200 rounded-lg bg-blue-50/30 space-y-4">
+                        {form.watch('items')?.map((item, index) => {
+                          const smartData = quote?.items[index]?.smart_data;
+                          const weightConfidence = smartData?.weight_confidence || 0;
+                          const category = smartData?.category_detected;
+                          const optimizationHints = smartData?.optimization_hints || [];
+                          const customsSuggestions = smartData?.customs_suggestions || [];
+                          
+                          const getWeightConfidenceBadge = (confidence: number) => {
+                            if (confidence >= 0.8) return { variant: 'default' as const, text: 'High', color: 'text-green-600' };
+                            if (confidence >= 0.6) return { variant: 'secondary' as const, text: 'Medium', color: 'text-yellow-600' };
+                            return { variant: 'destructive' as const, text: 'Low', color: 'text-red-600' };
+                          };
+                          
+                          return (
+                            <div key={item.id || index} className="p-4 border border-blue-200 rounded-lg bg-blue-50/30 space-y-4">
                             <div className="flex items-center justify-between mb-3">
-                              <h4 className="font-medium text-blue-900">Item {index + 1}</h4>
-                              <Badge variant="outline" className="text-xs">
-                                {item.product_name || 'Unnamed Product'}
-                              </Badge>
+                              <h4 className="font-medium text-blue-900 flex items-center space-x-2">
+                                <span>Item {index + 1}</span>
+                                {category && (
+                                  <div className="flex items-center space-x-1">
+                                    <CheckCircle className="w-3 h-3 text-green-500" />
+                                    <Badge variant="outline" className="text-xs">
+                                      {category}
+                                    </Badge>
+                                  </div>
+                                )}
+                              </h4>
+                              <div className="flex items-center space-x-2">
+                                {weightConfidence > 0 && (
+                                  <Badge {...getWeightConfidenceBadge(weightConfidence)} className="text-xs">
+                                    <Scale className="w-3 h-3 mr-1" />
+                                    {getWeightConfidenceBadge(weightConfidence).text}
+                                  </Badge>
+                                )}
+                                <Badge variant="outline" className="text-xs">
+                                  {item.product_name || 'Unnamed Product'}
+                                </Badge>
+                                {form.watch('items')?.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeItem(index)}
+                                    className="text-red-600 hover:text-red-700 p-1 h-6 w-6"
+                                    title="Remove item"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                             
                             {/* Product Name and URL - Full Width */}
@@ -729,75 +917,57 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                                   }}
                                 />
                               </div>
-                              <div>
-                                <label className="text-sm font-medium text-gray-700 flex items-center space-x-2">
+                              
+                              {/* Smart Weight Field */}
+                              <div className="relative">
+                                <label className="text-sm font-medium text-gray-700 flex items-center space-x-1">
                                   <span>Weight (kg)</span>
                                   {isEstimating[index.toString()] && (
-                                    <div className="flex items-center space-x-1">
-                                      <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                      <span className="text-xs text-blue-600">AI estimating...</span>
-                                    </div>
+                                    <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                                   )}
                                 </label>
-                                <input
-                                  type="number"
-                                  step="0.001"
-                                  min="0"
-                                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                  value={item.item_weight || 0}
-                                  onChange={(e) => {
-                                    const items = form.getValues('items') || [];
-                                    items[index] = { ...items[index], item_weight: parseFloat(e.target.value) || 0 };
-                                    form.setValue('items', items);
-                                  }}
-                                />
-                                
-                                {/* Debug info */}
-                                {process.env.NODE_ENV === 'development' && (
-                                  <div className="text-xs text-gray-400 mt-1">
-                                    Debug: isEstimating[{index}] = {String(isEstimating[index.toString()])}, 
-                                    estimation = {JSON.stringify(weightEstimations[index.toString()])}
-                                  </div>
-                                )}
-                                
-                                {/* AI Weight Suggestion */}
-                                {weightEstimations[index.toString()] && (
-                                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <span className="text-sm font-medium text-blue-800">
-                                        🧠 AI suggests: {weightEstimations[index.toString()].estimated_weight} kg
-                                      </span>
-                                      <div className="flex items-center space-x-2">
-                                        <Badge variant={weightEstimations[index.toString()].confidence >= 0.8 ? 'default' : 'secondary'}>
-                                          {(weightEstimations[index.toString()].confidence * 100).toFixed(0)}% confident
-                                        </Badge>
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            applyWeightSuggestion(index, weightEstimations[index.toString()].estimated_weight);
-                                          }}
-                                        >
-                                          Use
-                                        </Button>
-                                      </div>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    step="0.001"
+                                    min="0"
+                                    className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${
+                                      weightEstimations[index.toString()] 
+                                        ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500 pr-12' 
+                                        : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                                    }`}
+                                    value={item.item_weight || 0}
+                                    onChange={(e) => {
+                                      const items = form.getValues('items') || [];
+                                      items[index] = { ...items[index], item_weight: parseFloat(e.target.value) || 0 };
+                                      form.setValue('items', items);
+                                    }}
+                                  />
+                                  
+                                  {/* Inline AI Suggestion Button */}
+                                  {weightEstimations[index.toString()] && (
+                                    <div className="absolute inset-y-0 right-0 flex items-center">
+                                      <button
+                                        type="button"
+                                        className="mr-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          applyWeightSuggestion(index, weightEstimations[index.toString()].estimated_weight);
+                                        }}
+                                        title={`AI suggests: ${weightEstimations[index.toString()].estimated_weight} kg (${(weightEstimations[index.toString()].confidence * 100).toFixed(0)}% confident)`}
+                                      >
+                                        🧠 {weightEstimations[index.toString()].estimated_weight} 
+                                        <span className="ml-1 text-blue-600 font-medium">
+                                          ({(weightEstimations[index.toString()].confidence * 100).toFixed(0)}%)
+                                        </span>
+                                      </button>
                                     </div>
-                                    {weightEstimations[index.toString()].reasoning?.length > 0 && (
-                                      <div className="text-xs text-blue-600">
-                                        <strong>Reasoning:</strong> {weightEstimations[index.toString()].reasoning[0]}
-                                      </div>
-                                    )}
-                                    {weightEstimations[index.toString()].suggestions?.length > 0 && (
-                                      <div className="text-xs text-blue-600 mt-1">
-                                        <strong>Tip:</strong> {weightEstimations[index.toString()].suggestions[0]}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                                  )}
+                                </div>
+
                               </div>
+                              
                               <div>
                                 <label className="text-sm font-medium text-gray-700">Quantity</label>
                                 <input
@@ -813,10 +983,75 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                                 />
                               </div>
                             </div>
+                            
+                            {/* Smart Insights Section */}
+                            {(optimizationHints.length > 0 || customsSuggestions.length > 0) && (
+                              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded space-y-2">
+                                <div className="flex items-center text-sm font-medium text-blue-800">
+                                  <Lightbulb className="w-3 h-3 mr-1" />
+                                  Smart Insights
+                                </div>
+                                
+                                {optimizationHints.length > 0 && (
+                                  <div className="text-xs text-blue-700">
+                                    <span className="font-medium">Optimization Tips:</span>
+                                    <ul className="mt-1 space-y-1 list-disc list-inside">
+                                      {optimizationHints.map((hint, hintIndex) => (
+                                        <li key={hintIndex}>{hint}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                
+                                {customsSuggestions.length > 0 && (
+                                  <div className="text-xs text-blue-700">
+                                    <span className="font-medium">Customs Suggestions:</span>
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                      {customsSuggestions.map((suggestion, suggestionIndex) => (
+                                        <Badge key={suggestionIndex} variant="outline" className="text-xs">
+                                          {suggestion}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        ))}
+                          );
+                        })}
                       </CardContent>
                     </Card>
+
+                    {/* Smart Recommendations Panel */}
+                    {quote?.items && quote.items.length > 0 && (
+                      <Card className="border-blue-200 bg-blue-50">
+                        <CardContent className="p-4">
+                          <div className="flex items-center mb-3">
+                            <Lightbulb className="w-4 h-4 text-blue-600 mr-2" />
+                            <span className="font-medium text-blue-800">Smart Recommendations</span>
+                          </div>
+                          <div className="space-y-2 text-sm">
+                            {quote.items.some(item => (item.smart_data?.weight_confidence || 0) < 0.7) && (
+                              <div className="flex items-center text-blue-700">
+                                <AlertTriangle className="w-3 h-3 mr-2" />
+                                Consider verifying weights for items with low confidence scores
+                              </div>
+                            )}
+                            {quote.items.some(item => Number(item.weight_kg || 0) < 0.1) && (
+                              <div className="flex items-center text-blue-700">
+                                <Scale className="w-3 h-3 mr-2" />
+                                Some items have very low weights - this may affect shipping calculations
+                              </div>
+                            )}
+                            <div className="flex items-center text-blue-700">
+                              <CheckCircle className="w-3 h-3 mr-2" />
+                              All items have been categorized for optimal customs processing
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Quote-Level Costs Section - BELOW PRODUCTS */}
                     <Card>
@@ -830,7 +1065,17 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <QuoteDetailForm form={form} />
+                        <QuoteDetailForm 
+                          form={form} 
+                          detectedCustomsPercentage={customsTierInfo?.customs_percentage}
+                          detectedCustomsTier={customsTierInfo?.applied_tier ? {
+                            name: customsTierInfo.applied_tier.rule_name,
+                            customs_percentage: customsTierInfo.customs_percentage,
+                            description: customsTierInfo.fallback_used ? 'Fallback tier applied' : 'Smart tier applied'
+                          } : undefined}
+                          onCalculateSmartCustoms={calculateSmartCustoms}
+                          isCalculatingCustoms={isCalculatingCustoms}
+                        />
                       </CardContent>
                     </Card>
 
@@ -915,8 +1160,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                       </div>
                       <div>
                         <div className="text-sm text-gray-600">Customs Duty</div>
-                        <div className="text-xl font-semibold">
+                        <div className="text-xl font-semibold flex items-center">
                           {metrics?.customsPercentage}%
+                          {(isEditMode ? liveQuote : quote)?.operational_data?.customs?.smart_tier && (
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              Smart
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div>
@@ -926,6 +1176,24 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                         </div>
                       </div>
                     </div>
+
+                    {/* Smart Customs Tier Information */}
+                    {(isEditMode ? liveQuote : quote)?.operational_data?.customs?.smart_tier && (
+                      <div className="pt-4 border-t">
+                        <div className="text-sm font-medium text-gray-900 mb-2">
+                          Smart Customs Tier Applied
+                        </div>
+                        <div className="flex items-center text-sm text-blue-600">
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          {(isEditMode ? liveQuote : quote)?.operational_data?.customs?.smart_tier?.tier_name || 'Default Tier'}
+                          {(isEditMode ? liveQuote : quote)?.operational_data?.customs?.smart_tier?.fallback_used && (
+                            <Badge variant="secondary" className="ml-2 text-xs">
+                              Fallback
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {shippingRecommendations.length > 0 && (
                       <div className="pt-4 border-t">
@@ -991,8 +1259,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">Customs Duty</div>
-                      <div className="text-xl font-semibold">
+                      <div className="text-xl font-semibold flex items-center">
                         {metrics?.customsPercentage}%
+                        {quote?.operational_data?.customs?.smart_tier && (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            Smart
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -1002,6 +1275,24 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {/* Smart Customs Tier Information */}
+                  {quote?.operational_data?.customs?.smart_tier && (
+                    <div className="pt-4 border-t">
+                      <div className="text-sm font-medium text-gray-900 mb-2">
+                        Smart Customs Tier Applied
+                      </div>
+                      <div className="flex items-center text-sm text-blue-600">
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        {quote?.operational_data?.customs?.smart_tier?.tier_name || 'Default Tier'}
+                        {quote?.operational_data?.customs?.smart_tier?.fallback_used && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            Fallback
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {shippingRecommendations.length > 0 && (
                     <div className="pt-4 border-t">
@@ -1022,13 +1313,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
           )}
         </TabsContent>
 
-        {/* Smart Items Tab */}
-        <TabsContent value="items">
-          <SmartItemsManager
-            quote={quote}
-            onUpdateQuote={loadQuoteData}
-          />
-        </TabsContent>
 
         {/* Shipping Options Tab */}
         <TabsContent value="shipping">
