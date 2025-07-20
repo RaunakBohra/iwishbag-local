@@ -4,6 +4,7 @@ import { Navigate, useLocation, Link } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { PageTitle, Body } from '@/components/ui/typography';
 
 const Auth = () => {
   const { session, isAnonymous } = useAuth();
@@ -31,7 +32,7 @@ const Auth = () => {
           className="inline-flex items-center space-x-2 text-orange-500 lg:text-gray-600 hover:text-orange-600 lg:hover:text-gray-900 transition-colors duration-200"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span className="text-sm font-medium">Back to Home</span>
+          <span className="text-xs sm:text-sm font-medium">Back to Home</span>
         </Link>
       </div>
 
@@ -76,8 +77,8 @@ const Auth = () => {
             <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
               {/* Header */}
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Login or Signup</h2>
-                <p className="text-gray-600">Get started & grab best offers on top brands!</p>
+                <PageTitle className="mb-2">Login or Signup</PageTitle>
+                <Body className="text-gray-600">Get started & grab best offers on top brands!</Body>
               </div>
 
               {/* Auth Form */}
@@ -86,7 +87,7 @@ const Auth = () => {
 
             {/* Footer */}
             <div className="mt-6 text-center">
-              <p className="text-xs text-gray-500 lg:text-gray-500 text-white/80">
+              <p className="text-xs sm:text-sm text-gray-500 lg:text-gray-500 text-white/80 lg:text-white/80">
                 By continuing, you agree to our{' '}
                 <a href="/terms-conditions" className="text-teal-600 hover:text-teal-800 lg:text-teal-600 lg:hover:text-teal-800 text-white hover:text-white/90 font-medium underline">
                   Terms of Service

@@ -362,19 +362,9 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
 
       {/* Compact Products Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <FileText className="h-5 w-5 text-teal-600" />
-            <h3 className="text-xl font-semibold text-gray-900">Products</h3>
-          </div>
-          <button
-            type="button"
-            onClick={addProduct}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium"
-          >
-            <Plus className="h-4 w-4" />
-            Add Product
-          </button>
+        <div className="flex items-center gap-3 mb-6">
+          <FileText className="h-5 w-5 text-teal-600" />
+          <h3 className="text-xl font-semibold text-gray-900">Products</h3>
         </div>
 
         <div className="space-y-4">

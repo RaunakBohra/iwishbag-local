@@ -364,8 +364,8 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
               <Mail className="h-6 w-6 text-teal-600" />
             </div>
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Welcome to iWishBag</h3>
-          <p className="text-sm text-gray-600">Enter your email to get started</p>
+          <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 mb-2">Welcome to iWishBag</h3>
+          <p className="text-xs sm:text-sm lg:text-base text-gray-600">Enter your email to get started</p>
         </div>
 
         <Form {...emailForm}>
@@ -382,7 +382,7 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
                       placeholder="you@example.com"
                       {...field}
                       disabled={loading}
-                      className="h-12 text-base"
+                      className="h-10 sm:h-12 text-sm sm:text-base"
                     />
                   </FormControl>
                   <FormMessage />
@@ -390,7 +390,7 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
               )}
             />
 
-            <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
+            <Button type="submit" className="w-full h-10 sm:h-12 text-sm sm:text-base" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -467,8 +467,8 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
               <Mail className="h-6 w-6 text-teal-600" />
             </div>
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Welcome!</h3>
-          <p className="text-sm text-gray-600">
+          <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 mb-2">Welcome!</h3>
+          <p className="text-xs sm:text-sm lg:text-base text-gray-600">
             How would you like to continue with <span className="font-medium bg-teal-50 px-2 py-1 rounded">{userEmail}</span>?
           </p>
         </div>
@@ -599,7 +599,7 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
               )}
             />
 
-            <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
+            <Button type="submit" className="w-full h-10 sm:h-12 text-sm sm:text-base" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

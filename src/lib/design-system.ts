@@ -40,17 +40,39 @@ export const designSystem = {
     },
   },
 
-  // Typography Scale
+  // Typography Scale - Mobile-First Responsive
   typography: {
-    display: 'text-5xl font-semibold leading-tight', // 48px/56px
-    h1: 'text-4xl font-semibold leading-tight',      // 36px/44px
-    h2: 'text-3xl font-semibold leading-tight',      // 30px/36px
-    h3: 'text-2xl font-semibold leading-tight',      // 24px/28px
-    h4: 'text-xl font-semibold leading-tight',       // 20px/24px
-    bodyLarge: 'text-lg font-normal leading-relaxed', // 18px/28px
-    body: 'text-base font-normal leading-normal',     // 16px/24px
-    bodySmall: 'text-sm font-normal leading-normal',  // 14px/20px
-    caption: 'text-xs font-medium leading-tight',     // 12px/16px
+    // Hero/Display text - progressive scaling
+    display: 'text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-semibold leading-tight',
+    
+    // Headings - responsive scaling
+    h1: 'text-2xl sm:text-3xl lg:text-4xl font-semibold leading-tight',
+    h2: 'text-xl sm:text-2xl lg:text-3xl font-semibold leading-tight', 
+    h3: 'text-lg sm:text-xl lg:text-2xl font-semibold leading-tight',
+    h4: 'text-base sm:text-lg lg:text-xl font-semibold leading-tight',
+    
+    // Body text - readable on all devices
+    bodyLarge: 'text-base sm:text-lg lg:text-xl font-normal leading-relaxed',
+    body: 'text-sm sm:text-base lg:text-lg font-normal leading-normal',
+    bodySmall: 'text-xs sm:text-sm lg:text-base font-normal leading-normal',
+    
+    // UI text - interface elements
+    caption: 'text-xs sm:text-sm font-medium leading-tight',
+    label: 'text-xs sm:text-sm lg:text-base font-medium leading-normal',
+    
+    // Form elements - touch-friendly
+    input: 'text-sm sm:text-base font-normal',
+    button: 'text-sm sm:text-base font-medium',
+    link: 'text-xs sm:text-sm lg:text-base font-medium',
+    
+    // Navigation specific
+    navLink: 'text-sm sm:text-base font-medium',
+    navTitle: 'text-lg sm:text-xl lg:text-2xl font-semibold',
+    
+    // Page structure
+    pageTitle: 'text-xl sm:text-2xl lg:text-3xl font-bold leading-tight',
+    sectionTitle: 'text-lg sm:text-xl lg:text-2xl font-semibold leading-tight',
+    cardTitle: 'text-base sm:text-lg font-semibold leading-tight',
   },
 
   // Spacing System (based on 4px grid)
@@ -75,19 +97,19 @@ export const designSystem = {
       elevated: 'bg-white border border-gray-200 rounded-lg shadow-md',
     },
 
-    // Button patterns
+    // Button patterns - responsive sizing  
     button: {
-      primary: 'bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg px-4 py-2 transition-colors',
-      secondary: 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-medium rounded-lg px-4 py-2 transition-colors',
-      ghost: 'text-gray-700 hover:bg-gray-50 font-medium rounded-lg px-4 py-2 transition-colors',
-      danger: 'bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg px-4 py-2 transition-colors',
+      primary: 'bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg px-4 sm:px-6 py-2 sm:py-2.5 h-10 sm:h-11 lg:h-12 transition-colors',
+      secondary: 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-medium rounded-lg px-4 sm:px-6 py-2 sm:py-2.5 h-10 sm:h-11 lg:h-12 transition-colors',
+      ghost: 'text-gray-700 hover:bg-gray-50 font-medium rounded-lg px-4 sm:px-6 py-2 sm:py-2.5 h-10 sm:h-11 lg:h-12 transition-colors',
+      danger: 'bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg px-4 sm:px-6 py-2 sm:py-2.5 h-10 sm:h-11 lg:h-12 transition-colors',
     },
 
-    // Input patterns
+    // Input patterns - responsive sizing
     input: {
-      base: 'border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors',
-      error: 'border border-red-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors',
-      disabled: 'border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-500 cursor-not-allowed',
+      base: 'border border-gray-200 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 h-10 sm:h-11 lg:h-12 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors',
+      error: 'border border-red-300 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 h-10 sm:h-11 lg:h-12 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors',
+      disabled: 'border border-gray-200 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 h-10 sm:h-11 lg:h-12 bg-gray-50 text-gray-500 cursor-not-allowed',
     },
 
     // Badge patterns

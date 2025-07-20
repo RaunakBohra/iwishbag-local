@@ -31,7 +31,7 @@
 
 import React, { useState } from 'react';
 import ProductInfoStep from '@/components/quote/ProductInfoStep';
-import ShippingContactStep from '@/components/quote/ShippingContactStep';
+import SimplifiedContactStep from '@/components/quote/SimplifiedContactStep';
 import ProductSummary from '@/components/quote/ProductSummary';
 import ConversionPrompt from '@/components/auth/ConversionPrompt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -60,15 +60,9 @@ export default function QuoteRequestPage() {
       country: '',
     },
   ]);
-  const [shippingContact, setShippingContact] = useState({
+  const [contactInfo, setContactInfo] = useState({
     name: '',
     email: '',
-    whatsapp: '',
-    address: '',
-    country: '',
-    state: '',
-    city: '',
-    zip: '',
   });
   const [quoteSubmitted, setQuoteSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,9 +89,10 @@ export default function QuoteRequestPage() {
         );
       case 2:
         return (
-          <ShippingContactStep
-            shippingContact={shippingContact}
-            setShippingContact={setShippingContact}
+          <SimplifiedContactStep
+            contactInfo={contactInfo}
+            setContactInfo={setContactInfo}
+            destinationCountry={destinationCountry}
             next={handleSubmit}
             back={prevStep}
             products={products}
@@ -121,11 +116,11 @@ export default function QuoteRequestPage() {
       console.log('handleSubmit called with:', { 
         submissionData, 
         userEmail: user?.email, 
-        shippingContactEmail: shippingContact.email 
+        contactEmail: contactInfo.email 
       });
       
-      // Determine email to use - prioritize passed data, then user email, then shippingContact
-      const emailToUse = submissionData?.email || user?.email || shippingContact.email;
+      // Determine email to use - prioritize passed data, then user email, then contactInfo
+      const emailToUse = submissionData?.email || user?.email || contactInfo.email;
       
       // For anonymous users, email is optional (they can request quotes without email)
       // For authenticated (non-anonymous) users, validate email if provided
@@ -135,16 +130,11 @@ export default function QuoteRequestPage() {
         return;
       }
 
-      // Store shipping address in the proper format
+      // Store minimal contact and shipping info
       const shippingAddressData = {
-        fullName: submissionData?.name || shippingContact.name,
-        streetAddress: shippingContact.address,
-        city: shippingContact.city,
-        state: shippingContact.state,
-        postalCode: shippingContact.zip,
+        fullName: submissionData?.name || contactInfo.name,
         country: destinationCountry, // Store country code for logic and DB
         destination_country: destinationCountry, // Add destination_country for calculation compatibility
-        phone: shippingContact.whatsapp || '',
         email: emailToUse,
       };
 

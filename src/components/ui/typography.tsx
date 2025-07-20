@@ -93,7 +93,7 @@ Caption.displayName = 'Caption';
 // Specialized typography components for specific use cases
 export const SectionHeading = React.forwardRef<HTMLHeadingElement, TypographyProps>(
   ({ children, className, ...props }, ref) => (
-    <h2 ref={ref} className={cn(designSystem.typography.h2, 'text-gray-900 mb-4', className)} {...props}>
+    <h2 ref={ref} className={cn(designSystem.typography.sectionTitle, 'text-gray-900 mb-4', className)} {...props}>
       {children}
     </h2>
   )
@@ -120,7 +120,7 @@ SectionDescription.displayName = 'SectionDescription';
 
 export const StatNumber = React.forwardRef<HTMLDivElement, TypographyProps>(
   ({ children, className, ...props }, ref) => (
-    <div ref={ref} className={cn('text-4xl font-semibold text-gray-900', className)} {...props}>
+    <div ref={ref} className={cn('text-2xl sm:text-3xl lg:text-4xl font-semibold text-gray-900', className)} {...props}>
       {children}
     </div>
   )
@@ -135,6 +135,43 @@ export const StatLabel = React.forwardRef<HTMLParagraphElement, TypographyProps>
   )
 );
 StatLabel.displayName = 'StatLabel';
+
+// New responsive typography components
+export const PageTitle = React.forwardRef<HTMLHeadingElement, TypographyProps>(
+  ({ children, className, ...props }, ref) => (
+    <h1 ref={ref} className={cn(designSystem.typography.pageTitle, 'text-gray-900', className)} {...props}>
+      {children}
+    </h1>
+  )
+);
+PageTitle.displayName = 'PageTitle';
+
+export const CardTitle = React.forwardRef<HTMLHeadingElement, TypographyProps>(
+  ({ children, className, ...props }, ref) => (
+    <h3 ref={ref} className={cn(designSystem.typography.cardTitle, 'text-gray-900', className)} {...props}>
+      {children}
+    </h3>
+  )
+);
+CardTitle.displayName = 'CardTitle';
+
+export const NavLink = React.forwardRef<HTMLAnchorElement, TypographyProps & React.AnchorHTMLAttributes<HTMLAnchorElement>>(
+  ({ children, className, ...props }, ref) => (
+    <a ref={ref} className={cn(designSystem.typography.navLink, 'text-gray-700 hover:text-gray-900', className)} {...props}>
+      {children}
+    </a>
+  )
+);
+NavLink.displayName = 'NavLink';
+
+export const FormLabel = React.forwardRef<HTMLLabelElement, TypographyProps & React.LabelHTMLAttributes<HTMLLabelElement>>(
+  ({ children, className, ...props }, ref) => (
+    <label ref={ref} className={cn(designSystem.typography.label, 'text-gray-700', className)} {...props}>
+      {children}
+    </label>
+  )
+);
+FormLabel.displayName = 'FormLabel';
 
 // Export all typography components
 export const Typography = {
@@ -152,4 +189,8 @@ export const Typography = {
   SectionDescription,
   StatNumber,
   StatLabel,
+  PageTitle,
+  CardTitle,
+  NavLink,
+  FormLabel,
 };

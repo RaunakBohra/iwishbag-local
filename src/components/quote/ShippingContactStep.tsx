@@ -35,8 +35,9 @@ function validateEmail(email) {
 }
 
 export default function ShippingContactStep({
-  shippingContact,
-  setShippingContact,
+  contactInfo,
+  setContactInfo,
+  destinationCountry,
   next,
   back,
   products,
@@ -46,156 +47,42 @@ export default function ShippingContactStep({
   clearError = () => {},
 }) {
   const { user } = useAuth();
-  const { data: profile } = useUserProfile();
-  const { countries, getCountryDisplayName } = useCountryUtils();
-  const { isLoading: countriesLoading, error: countriesError } = useAllCountries();
-  const [error, setError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [emailError, setEmailError] = useState('');
-  const [selectedAddressId, setSelectedAddressId] = useState(null);
-  const [addressModalOpen, setAddressModalOpen] = useState(false);
-  const [addressToEdit, setAddressToEdit] = useState(null);
-
-  // Fetch user addresses if logged in
-  const {
-    data: addresses,
-    isLoading: addressesLoading,
-    refetch,
-  } = useQuery({
-    queryKey: ['user_addresses', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data, error } = await supabase
-        .from('user_addresses')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('is_default', { ascending: false })
-        .order('created_at', { ascending: false });
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    enabled: !!user,
-  });
+  const { getCountryDisplayName } = useCountryUtils();
 
   // Get purchase country from first product
   const purchaseCountry = products && products[0]?.country;
-  // Get shipping country from address or form
-  let shippingCountry = '';
-  let shippingCity = '';
-  let shippingAddressSummary = '';
-  let address = null;
-  if (user && addresses && addresses.length > 0) {
-    address = selectedAddressId ? addresses.find((a) => a.id === selectedAddressId) : addresses[0];
-    if (address) {
-      shippingCountry = address.destination_country || '';
-      shippingCity = address.city;
-      shippingAddressSummary = `${address.address_line1}, ${address.city}`;
-    }
-  } else if (shippingContact && shippingContact.country) {
-    shippingCountry = shippingContact.country;
-    shippingCity = shippingContact.city;
-    shippingAddressSummary = `${shippingContact.address}, ${shippingContact.city}`;
-  }
+  // Use destination country from props
+  const shippingCountry = destinationCountry;
 
   // Origin-Destination Route Display
   const showRoute = purchaseCountry && shippingCountry;
 
-  const handleChange = (field, value) => {
-    setShippingContact({ ...shippingContact, [field]: value });
-    
-    // Real-time validation for email
-    if (field === 'email') {
-      if (value && !validateEmail(value)) {
-        setEmailError('Please enter a valid email address');
-      } else {
-        setEmailError('');
-      }
-    }
-    
-    // Clear field errors when user starts typing
-    if (fieldErrors[field]) {
-      setFieldErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const validate = () => {
-    // For authenticated users with addresses, we don't need to validate form fields
-    if (user && addresses && addresses.length > 0 && address) {
-      return true;
-    }
-
-    // For guests, only validate email (simplified form)
-    const newFieldErrors = {};
-    
-    if (!shippingContact.email) newFieldErrors.email = 'Email is required';
-    else if (!validateEmail(shippingContact.email)) newFieldErrors.email = 'Please enter a valid email address';
-    
-    setFieldErrors(newFieldErrors);
-    
-    return Object.keys(newFieldErrors).length === 0;
-  };
-
-  const handleSubmit = () => {
-    const isValid = validate();
-    if (isValid) next();
-  };
+  // No longer needed - contact form handles all input
 
   const handleContactFormSubmit = (emailData: { email: string; name?: string; useAuth?: boolean }) => {
-    // Update shippingContact with the provided data
-    const updatedShippingContact = {
-      ...shippingContact,
+    // Update contactInfo with the provided data
+    const updatedContactInfo = {
       email: emailData.email,
       name: emailData.name || '',
     };
     
-    setShippingContact(updatedShippingContact);
+    setContactInfo(updatedContactInfo);
     
     // Proceed to submission with the updated data passed directly
     next({ email: emailData.email, name: emailData.name || '' });
   };
 
-  // NEW: Auto-populate shippingContact from address on initial load
+  // Auto-populate contact info for authenticated users
   useEffect(() => {
-    if (
-      user &&
-      addresses &&
-      addresses.length > 0 &&
-      address &&
-      (!shippingContact || !shippingContact.country)
-    ) {
-      setShippingContact({
-        name: address.recipient_name || '',
-        email: profile?.email || '',
-        whatsapp: address.phone || '',
-        address: address.address_line1 || '',
-        country: address.destination_country || '',
-        destination_country: address.destination_country || '',
-        state: address.state_province_region || '',
-        city: address.city || '',
-        zip: address.postal_code || '',
+    if (user && (!contactInfo.email || !contactInfo.name)) {
+      setContactInfo({
+        name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+        email: user.email || '',
       });
     }
-  }, [user, addresses, address, profile, setShippingContact]);
+  }, [user, contactInfo, setContactInfo]);
 
-  // Update shippingContact when user selects a different address
-  useEffect(() => {
-    if (user && addresses && addresses.length > 0 && selectedAddressId) {
-      const selectedAddr = addresses.find((addr) => addr.id === selectedAddressId);
-      if (selectedAddr) {
-        setShippingContact({
-          name: selectedAddr.recipient_name || '',
-          email: profile?.email || '',
-          whatsapp: selectedAddr.phone || '',
-          address: selectedAddr.address_line1 || '',
-          country: selectedAddr.country || '',
-          destination_country: selectedAddr.destination_country || selectedAddr.country || '',
-          state: selectedAddr.state_province_region || '',
-          city: selectedAddr.city || '',
-          zip: selectedAddr.postal_code || '',
-        });
-      }
-    }
-  }, [selectedAddressId, addresses, profile, setShippingContact]);
+  // Simplified component - no complex address management needed for quotes
 
   // If logged in and has addresses, show summary card
   if (user && addresses && addresses.length > 0) {
