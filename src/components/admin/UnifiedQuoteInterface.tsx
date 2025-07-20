@@ -420,8 +420,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
     const salesTax = Number(formValues.sales_tax_price) || 0;
     const merchantShipping = Number(formValues.merchant_shipping_price) || 0;
     const domesticShipping = Number(formValues.domestic_shipping) || 0;
-    const handlingCharge = Number(formValues.handling_charge) || 0;
-    const insurance = Number(formValues.insurance_amount) || 0;
+    
+    // Use form values with fallback to original quote values, with minimum defaults for testing
+    const handlingCharge = Number(formValues.handling_charge) || quote?.operational_data?.handling_charge || 5.00; // Default $5 handling
+    const insurance = Number(formValues.insurance_amount) || quote?.operational_data?.insurance_amount || (itemsTotal * 0.005); // Default 0.5% insurance
     const discount = Number(formValues.discount) || 0;
     
     // Calculate customs based on percentage (use smart tier if available, otherwise form value)
@@ -434,11 +436,29 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
     // Calculate international shipping (placeholder - you may want more sophisticated logic)
     const internationalShipping = quote.calculation_data?.breakdown?.shipping || 0;
     
+    // Calculate payment gateway fee (similar to SmartCalculationEngine)
+    const subtotalForGateway = itemsTotal + salesTax + merchantShipping + internationalShipping + customs + domesticShipping;
+    const paymentGatewayFee = Math.max(((subtotalForGateway * 0.029) + 0.30), 1.00); // Standard 2.9% + $0.30, minimum $1.00
+    
+    // Calculate VAT (if applicable) - use country settings or default
+    const vatPercentage = quote.operational_data?.customs?.smart_tier?.vat_percentage || 0;
+    const vatAmount = vatPercentage > 0 ? (itemsTotal * (vatPercentage / 100)) : 0;
+    
     const finalTotal = itemsTotal + salesTax + merchantShipping + domesticShipping + 
-                      handlingCharge + insurance + customs + internationalShipping - discount;
+                      handlingCharge + insurance + customs + internationalShipping + 
+                      paymentGatewayFee + vatAmount - discount;
 
     // Debug calculation to verify numbers are correct
     if (process.env.NODE_ENV === 'development') {
+      console.log('📋 Form Values Debug:', {
+        'formValues.handling_charge': formValues.handling_charge,
+        'formValues.insurance_amount': formValues.insurance_amount,
+        'quote.operational_data.handling_charge': quote?.operational_data?.handling_charge,
+        'quote.operational_data.insurance_amount': quote?.operational_data?.insurance_amount,
+        'final handlingCharge': handlingCharge,
+        'final insurance': insurance,
+      });
+      
       console.log('💰 Live Calculation Debug:', {
         itemsTotal: itemsTotal,
         salesTax: salesTax,
@@ -448,6 +468,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
         insurance: insurance,
         customs: customs,
         internationalShipping: internationalShipping,
+        paymentGatewayFee: paymentGatewayFee,
+        vatAmount: vatAmount,
         discount: discount,
         finalTotal: finalTotal,
         'types': {
@@ -458,6 +480,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
           handlingCharge: typeof handlingCharge,
           insurance: typeof insurance,
           customs: typeof customs,
+          paymentGatewayFee: typeof paymentGatewayFee,
+          vatAmount: typeof vatAmount,
           finalTotal: typeof finalTotal,
         }
       });
@@ -483,8 +507,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
           items_total: itemsTotal,
           shipping: internationalShipping,
           customs: customs,
-          taxes: salesTax,
-          fees: handlingCharge + insurance,
+          taxes: salesTax + vatAmount,
+          fees: handlingCharge + insurance + paymentGatewayFee,
           discount: discount,
         },
       },
@@ -493,6 +517,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
         domestic_shipping: domesticShipping,
         handling_charge: handlingCharge,
         insurance_amount: insurance,
+        payment_gateway_fee: paymentGatewayFee,
+        vat_amount: vatAmount,
       },
     };
   }, [quote, formValues]);
