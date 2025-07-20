@@ -167,20 +167,6 @@ const Header = () => {
                 <Package className="h-4 w-4 mr-2" />
                 Get Quote
               </Button>
-              <Button
-                variant={location.pathname === '/quote-auto' ? 'default' : 'ghost'}
-                size="sm"
-                className={cn(
-                  "h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors",
-                  location.pathname === '/quote-auto' 
-                    ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600" 
-                    : "text-gray-700 hover:bg-gray-50"
-                )}
-                onClick={() => navigate('/quote-auto')}
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Instant Quote
-              </Button>
             </nav>
           )}
 

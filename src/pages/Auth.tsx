@@ -87,13 +87,13 @@ const Auth = () => {
 
             {/* Footer */}
             <div className="mt-6 text-center">
-              <p className="text-xs sm:text-sm text-gray-500 lg:text-gray-500 text-white/80 lg:text-white/80">
+              <p className="text-xs sm:text-sm text-white/80 lg:text-gray-600 leading-relaxed whitespace-nowrap">
                 By continuing, you agree to our{' '}
-                <a href="/terms-conditions" className="text-teal-600 hover:text-teal-800 lg:text-teal-600 lg:hover:text-teal-800 text-white hover:text-white/90 font-medium underline">
+                <a href="/terms-conditions" className="text-white hover:text-white/90 lg:text-gray-600 lg:hover:text-gray-900 font-medium underline">
                   Terms of Service
                 </a>{' '}
                 and{' '}
-                <a href="/privacy-policy" className="text-teal-600 hover:text-teal-800 lg:text-teal-600 lg:hover:text-teal-800 text-white hover:text-white/90 font-medium underline">
+                <a href="/privacy-policy" className="text-white hover:text-white/90 lg:text-gray-600 lg:hover:text-gray-900 font-medium underline">
                   Privacy Policy
                 </a>
               </p>

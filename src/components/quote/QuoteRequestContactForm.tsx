@@ -98,11 +98,11 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
     <div className="space-y-6">
       {/* Contact Details */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Details</h3>
+        <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-4">Contact Details</h3>
         
         <div className="space-y-4">
           <div>
-            <Label htmlFor="guestEmail" className="text-sm font-medium text-gray-700 mb-2 block">
+            <Label htmlFor="guestEmail" className="text-xs sm:text-sm font-medium text-gray-700 mb-2 block">
               Email address
             </Label>
             <Input
@@ -115,15 +115,15 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
                 setEmailError('');
                 if (clearError) clearError();
               }}
-              className={`h-12 text-base ${emailError ? 'border-red-500' : 'border-gray-200 focus:border-teal-500 focus:ring-teal-500'} transition-colors`}
+              className={`h-10 sm:h-12 text-sm sm:text-base ${emailError ? 'border-red-500' : 'border-gray-200 focus:border-teal-500 focus:ring-teal-500'} transition-colors`}
               autoFocus
             />
-            {emailError && <p className="text-sm text-red-500 mt-1">{emailError}</p>}
+            {emailError && <p className="text-xs sm:text-sm text-red-500 mt-1">{emailError}</p>}
           </div>
           
           <div>
-            <Label htmlFor="guestName" className="text-sm font-medium text-gray-700 mb-2 block">
-              Full name <span className="text-gray-400 font-normal">(optional)</span>
+            <Label htmlFor="guestName" className="text-xs sm:text-sm font-medium text-gray-700 mb-2 block">
+              Full name <span className="text-gray-400 font-normal text-xs sm:text-sm">(optional)</span>
             </Label>
             <Input
               id="guestName"
@@ -135,7 +135,7 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
                 setNameError('');
                 if (clearError) clearError();
               }}
-              className="h-12 text-base border-gray-200 focus:border-teal-500 focus:ring-teal-500 transition-colors"
+              className="h-10 sm:h-12 text-sm sm:text-base border-gray-200 focus:border-teal-500 focus:ring-teal-500 transition-colors"
             />
           </div>
         </div>
@@ -146,7 +146,7 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
         onSubmit={handleGuestSubmit}
         isSubmitting={isSubmitting}
         submitButtonText="Submit Quote Request"
-        submitButtonClassName="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg rounded-lg transition-all duration-200 shadow-sm"
+        submitButtonClassName="w-full h-12 sm:h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-sm sm:text-base lg:text-lg rounded-lg transition-all duration-200 shadow-sm"
         disabled={!guestEmail}
         action="guest_quote_request"
         errorMessage={submitError}
@@ -158,11 +158,11 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
       {/* Optional Account Creation */}
       <div className="pt-4 border-t border-gray-200">
         <div className="text-center">
-          <p className="text-sm text-gray-600 mb-3">
+          <p className="text-xs sm:text-sm text-gray-600 mb-3">
             Want to track your quotes? <button
               onClick={() => handleSocialLogin('google')}
               disabled={isSubmitting}
-              className="text-teal-600 hover:text-teal-700 underline font-medium"
+              className="text-teal-600 hover:text-teal-700 underline font-medium text-xs sm:text-sm"
             >
               Sign up with Google
             </button>
@@ -170,7 +170,7 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
         </div>
       </div>
 
-      <div className="text-xs text-center text-gray-500">
+      <div className="text-xs sm:text-sm text-center text-gray-500">
         By submitting, you agree to our{' '}
         <a href="/terms-conditions" className="text-teal-600 hover:text-teal-700 underline" target="_blank" rel="noopener noreferrer">
           terms & conditions

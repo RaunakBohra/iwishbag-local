@@ -424,7 +424,10 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
           })
           .eq('id', quote?.id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Quote transfer error:', updateError);
+          throw new Error(`Database update failed: ${updateError.message}`);
+        }
 
         await approveQuote();
 
@@ -439,9 +442,10 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
         navigate(`/dashboard/quotes/${quote?.id}`);
       } catch (error) {
         console.error('Error transferring quote:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         toast({
           title: 'Error',
-          description: 'Failed to approve quote. Please try again.',
+          description: `Failed to approve quote: ${errorMessage}`,
           variant: 'destructive',
         });
       }
