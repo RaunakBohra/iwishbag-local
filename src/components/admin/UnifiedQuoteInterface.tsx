@@ -1373,141 +1373,137 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
 
         </Tabs>
       ) : (
-        /* View Mode: Seamless integrated layout with customer info */
+        /* View Mode: Professional e-commerce admin layout */
         <div className="space-y-6">
-          {/* Quote Overview Cards */}
+          {/* Main Content Area - Professional 2-Column Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Quote Items Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Package className="w-5 h-5 mr-2 text-blue-600" />
-                  Items Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {(liveQuote || quote).items?.map((item, index) => (
-                    <div key={item.id || index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{item.name || `Item ${index + 1}`}</div>
-                        <div className="text-xs text-gray-500">
-                          {item.quantity}x • {item.weight_kg}kg each
+            
+            {/* Left Column - Primary Information (2/3 width) */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* Quote Items - Professional Table Style */}
+              <Card>
+                <CardHeader className="border-b border-gray-100">
+                  <CardTitle className="text-lg font-semibold text-gray-900">Order Items</CardTitle>
+                  <p className="text-sm text-gray-500 mt-1">{metrics?.totalItems} items • {metrics?.totalWeight} kg total weight</p>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-hidden">
+                    {(liveQuote || quote).items?.map((item, index) => (
+                      <div key={item.id || index} className="flex items-center justify-between p-4 border-b border-gray-50 last:border-0 hover:bg-gray-25">
+                        <div className="flex items-center space-x-4 flex-1">
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <Package className="w-5 h-5 text-gray-500" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900 text-sm">{item.name || `Product ${index + 1}`}</h4>
+                            <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                              <span>Qty: {item.quantity}</span>
+                              <span>•</span>
+                              <span>Weight: {item.weight_kg} kg each</span>
+                              <span>•</span>
+                              <span>Unit Price: ${item.price_usd.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-gray-900">${(item.price_usd * item.quantity).toFixed(2)}</div>
+                          <div className="text-xs text-gray-500">Total</div>
                         </div>
                       </div>
-                      <div className="text-sm font-medium">
-                        ${(item.price_usd * item.quantity).toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="pt-2 border-t">
-                    <div className="flex justify-between text-sm font-medium">
-                      <span>Total Items</span>
-                      <span>{metrics?.totalItems} items • {metrics?.totalWeight} kg</span>
-                    </div>
+                    ))}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Customer Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <User className="w-5 h-5 mr-2 text-green-600" />
-                  Customer
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SmartCustomerInfo
-                  quote={liveQuote || quote}
-                  onUpdateQuote={loadQuoteData}
-                  compact={true}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Quote Status & Key Metrics */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <TrendingUp className="w-5 h-5 mr-2 text-purple-600" />
-                  Status & Metrics
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Status</span>
-                  <SmartStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} compact={true} />
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <div className="text-gray-600">Weight Confidence</div>
-                    <div className="font-semibold">{metrics?.avgWeightConfidence}%</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-600">Optimization</div>
-                    <div className="font-semibold">{optimizationScore.toFixed(0)}%</div>
-                  </div>
-                </div>
-                <div className="pt-2 border-t">
-                  <div className="text-lg font-bold text-blue-600">
-                    ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
-                  </div>
-                  <div className="text-xs text-gray-500">Final Total</div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Detailed Breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Cost Breakdown - Full Width on Mobile, 2 columns on Desktop */}
-            <div className="lg:col-span-2">
+              {/* Cost Breakdown - Clean Professional Style */}
               <SmartCalculationBreakdown
                 quote={liveQuote || quote}
                 shippingOptions={shippingOptions}
                 isCalculating={isCalculating}
               />
+
+              {/* Customer Information - Horizontal Layout */}
+              <Card>
+                <CardHeader className="border-b border-gray-100">
+                  <CardTitle className="text-lg font-semibold text-gray-900">Customer Information</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <SmartCustomerInfo
+                    quote={liveQuote || quote}
+                    onUpdateQuote={loadQuoteData}
+                    compact={true}
+                  />
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Smart Insights & Actions */}
+            {/* Right Sidebar - Status & Actions (1/3 width) */}
             <div className="space-y-6">
-              {/* Smart Insights */}
+              
+              {/* Quote Status Card */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Zap className="w-5 h-5 mr-2 text-yellow-500" />
-                    Smart Insights
-                  </CardTitle>
+                <CardHeader className="border-b border-gray-100 pb-3">
+                  <CardTitle className="text-base font-semibold text-gray-900">Quote Status</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Shipping Cost</span>
-                      <span className="font-semibold">{metrics?.shippingPercentage}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Customs Duty</span>
-                      <div className="flex items-center">
-                        <span className="font-semibold">{metrics?.customsPercentage}%</span>
-                        {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
-                          <Badge variant="outline" className="ml-2 text-xs">Smart</Badge>
-                        )}
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">Current Status</span>
+                    <SmartStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
+                  </div>
+                  
+                  <div className="pt-3 border-t border-gray-100">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600 mb-1">
+                        ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
                       </div>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Options Available</span>
-                      <span className="font-semibold">{shippingOptions.length}</span>
+                      <div className="text-sm text-gray-500">Quote Total</div>
                     </div>
                   </div>
+                  
+                  <div className="pt-3 border-t border-gray-100 grid grid-cols-2 gap-3 text-center">
+                    <div>
+                      <div className="text-lg font-semibold text-gray-900">{optimizationScore.toFixed(0)}%</div>
+                      <div className="text-xs text-gray-500">Optimized</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-semibold text-gray-900">{metrics?.avgWeightConfidence}%</div>
+                      <div className="text-xs text-gray-500">Weight Accuracy</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
+              {/* Key Metrics Card */}
+              <Card>
+                <CardHeader className="border-b border-gray-100 pb-3">
+                  <CardTitle className="text-base font-semibold text-gray-900">Cost Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">Shipping Cost</span>
+                    <span className="font-medium">{metrics?.shippingPercentage}% of total</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">Customs & Duties</span>
+                    <div className="flex items-center">
+                      <span className="font-medium">{metrics?.customsPercentage}% of total</span>
+                      {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
+                        <Badge variant="outline" className="ml-2 text-xs">Smart</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">Shipping Options</span>
+                    <span className="font-medium">{shippingOptions.length} available</span>
+                  </div>
+                  
                   {/* Smart Customs Tier Information */}
                   {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
-                    <div className="pt-3 border-t">
-                      <div className="text-sm font-medium text-gray-900 mb-2">Smart Customs Tier</div>
-                      <div className="flex items-center text-sm text-blue-600">
-                        <CheckCircle className="w-4 h-4 mr-1" />
+                    <div className="pt-3 border-t border-gray-100">
+                      <div className="text-xs font-medium text-gray-700 mb-1">Smart Customs Applied</div>
+                      <div className="flex items-center text-xs text-blue-600">
+                        <CheckCircle className="w-3 h-3 mr-1" />
                         {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.tier_name || 'Default Tier'}
                         {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.fallback_used && (
                           <Badge variant="secondary" className="ml-2 text-xs">Fallback</Badge>
@@ -1518,31 +1514,50 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                 </CardContent>
               </Card>
 
-              {/* Shipping Options */}
+              {/* Shipping Options Card */}
               {shippingOptions.length > 0 && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Truck className="w-5 h-5 mr-2 text-blue-600" />
-                      Shipping Options
-                      <Badge variant="outline" className="ml-2 text-xs">
-                        {shippingOptions.length} available
-                      </Badge>
-                    </CardTitle>
+                  <CardHeader className="border-b border-gray-100 pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base font-semibold text-gray-900">Shipping Options</CardTitle>
+                      <Badge variant="outline" className="text-xs">{shippingOptions.length}</Badge>
+                    </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-4">
                     <SmartShippingOptions
                       quote={liveQuote || quote}
                       shippingOptions={shippingOptions}
                       recommendations={shippingRecommendations}
                       onSelectOption={handleShippingOptionSelect}
-                      showAllOptions={showAllShippingOptions}
+                      showAllOptions={false}
                       onToggleShowAll={setShowAllShippingOptions}
                       compact={true}
                     />
                   </CardContent>
                 </Card>
               )}
+
+              {/* Quick Actions */}
+              <Card>
+                <CardHeader className="border-b border-gray-100 pb-3">
+                  <CardTitle className="text-base font-semibold text-gray-900">Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 space-y-3">
+                  <Button
+                    onClick={() => calculateSmartFeatures(liveQuote || quote)}
+                    disabled={isCalculating}
+                    className="w-full"
+                    size="sm"
+                  >
+                    <Calculator className="w-4 h-4 mr-2" />
+                    {isCalculating ? 'Calculating...' : 'Recalculate'}
+                  </Button>
+                  <Button variant="outline" className="w-full" size="sm">
+                    <Clock className="w-4 h-4 mr-2" />
+                    View Timeline
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
