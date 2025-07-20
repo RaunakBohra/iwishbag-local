@@ -39,7 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { EditableAdminQuoteItemCard } from './EditableAdminQuoteItemCard';
-import { OrderActions } from './OrderActions';
+// OrderActions removed - will be replaced by unified actions
 import { OrderTimeline } from '@/components/dashboard/OrderTimeline';
 import { Badge } from '@/components/ui/badge';
 import { extractShippingAddressFromNotes } from '@/lib/addressUpdates';
@@ -1438,7 +1438,10 @@ const AdminQuoteDetailPage = () => {
             </Card>
 
             {/* Order Actions */}
-            <OrderActions quote={quote} />
+            {/* OrderActions placeholder - will be replaced by unified actions */}
+            <div className="p-4 bg-gray-50 rounded">
+              Order actions will be unified with quote actions
+            </div>
           </>
         )}
 

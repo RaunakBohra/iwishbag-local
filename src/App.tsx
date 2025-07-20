@@ -81,11 +81,7 @@ const QuoteManagementPage = React.lazy(() =>
     default: m.QuoteManagementPage,
   })),
 );
-const OrderManagementPage = React.lazy(() =>
-  import('@/components/admin/OrderManagementPage').then((m) => ({
-    default: m.OrderManagementPage,
-  })),
-);
+// OrderManagementPage removed - will be replaced by unified interface
 const EnhancedCustomerManagementPage = React.lazy(() =>
   import('@/components/admin/EnhancedCustomerManagementPage').then((m) => ({
     default: m.EnhancedCustomerManagementPage,
@@ -149,7 +145,7 @@ const router = createBrowserRouter([
               </ErrorBoundary>
             ),
           },
-          { path: 'orders', element: <OrderManagementPage /> },
+          { path: 'orders', element: <div>Order management will be unified with quotes</div> },
           {
             path: 'orders/:id',
             element: (
