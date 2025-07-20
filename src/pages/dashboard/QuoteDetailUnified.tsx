@@ -490,12 +490,8 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
   };
 
   const handleAddToCart = async () => {
-    if (!user && isGuestMode) {
-      // For guest users, redirect to guest checkout to avoid login prompts
-      navigate(`/guest-checkout?quote=${quote?.id}`);
-    } else {
-      await addToCart();
-    }
+    // Always try to add to cart - works for both anonymous and authenticated users
+    await addToCart();
   };
 
   const handleCheckout = () => {
