@@ -123,7 +123,23 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Update quote with email, name and approve
+      // First, initialize anonymous authentication if needed
+      const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+      
+      let userId = currentUser?.id;
+      
+      // If no user session, create anonymous user
+      if (!currentUser) {
+        const { data: anonUser, error: anonError } = await supabase.auth.signInAnonymously();
+        if (anonError) throw anonError;
+        userId = anonUser.user?.id;
+      }
+
+      if (!userId) {
+        throw new Error('Failed to establish user session');
+      }
+
+      // Update quote with email, name, approve, and link to anonymous user
       const { error } = await supabase
         .from('quotes')
         .update({
@@ -131,17 +147,30 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
           customer_name: guestName,
           status: 'approved',
           approved_at: new Date().toISOString(),
+          user_id: userId, // Link to anonymous user
+          is_anonymous: true, // Mark as anonymous user quote
         })
         .eq('id', quoteId);
 
       if (error) throw error;
 
+      // Add quote to cart automatically for seamless checkout
+      const { error: cartError } = await supabase
+        .from('quotes')
+        .update({ in_cart: true })
+        .eq('id', quoteId);
+
+      if (cartError) {
+        console.error('Failed to add to cart:', cartError);
+        // Don't throw error - approval was successful
+      }
+
       toast({
         title: 'Quote Approved!',
-        description: 'Redirecting to checkout...',
+        description: 'Added to cart. Redirecting to checkout...',
       });
 
-      // Redirect to guest checkout
+      // Redirect to guest checkout with quote parameter (now works with anonymous auth)
       setTimeout(() => {
         window.location.href = `/guest-checkout?quote=${quoteId}`;
       }, 1000);
