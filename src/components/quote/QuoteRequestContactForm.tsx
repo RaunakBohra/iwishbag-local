@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, Mail, ArrowLeft, User } from 'lucide-react';
+import { CheckCircle, Mail, ArrowLeft, User, AlertCircle } from 'lucide-react';
 import { AuthModal } from '@/components/forms/AuthModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
@@ -67,7 +67,7 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
     // Clear previous errors
     if (clearError) clearError();
     
-    // Validate email and name
+    // Validate email only
     let hasErrors = false;
     
     if (!guestEmail) {
@@ -83,19 +83,12 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
       }
     }
 
-    if (!guestName.trim()) {
-      setNameError('Name is required');
-      hasErrors = true;
-    } else {
-      setNameError('');
-    }
-
     if (hasErrors) return;
 
-    // Submit with guest data
+    // Submit with guest data (name is optional)
     await onSubmit({ 
       email: guestEmail, 
-      name: guestName.trim(),
+      name: guestName.trim() || '', // Optional name
       useAuth: false,
       turnstileToken
     });
@@ -130,21 +123,20 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
           
           <div>
             <Label htmlFor="guestName" className="text-sm font-medium text-gray-700 mb-2 block">
-              Full name
+              Full name <span className="text-gray-400 font-normal">(optional)</span>
             </Label>
             <Input
               id="guestName"
               type="text"
-              placeholder="John Doe"
+              placeholder="John Doe (optional)"
               value={guestName}
               onChange={(e) => {
                 setGuestName(e.target.value);
                 setNameError('');
                 if (clearError) clearError();
               }}
-              className={`h-12 text-base ${nameError ? 'border-red-500' : 'border-gray-200 focus:border-teal-500 focus:ring-teal-500'} transition-colors`}
+              className="h-12 text-base border-gray-200 focus:border-teal-500 focus:ring-teal-500 transition-colors"
             />
-            {nameError && <p className="text-sm text-red-500 mt-1">{nameError}</p>}
           </div>
         </div>
       </div>
@@ -155,7 +147,7 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
         isSubmitting={isSubmitting}
         submitButtonText="Submit Quote Request"
         submitButtonClassName="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg rounded-lg transition-all duration-200 shadow-sm"
-        disabled={!guestEmail || !guestName}
+        disabled={!guestEmail}
         action="guest_quote_request"
         errorMessage={submitError}
         id="quote-contact-form"

@@ -86,17 +86,6 @@ export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
       {/* Turnstile Widget */}
       {showTurnstile && siteKey && (
         <div className="turnstile-section mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Shield className="h-4 w-4 text-teal-600" />
-            <span className="text-sm font-medium text-gray-700">Security Verification</span>
-            {isVerified && (
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-xs text-green-600 font-medium">Verified</span>
-              </div>
-            )}
-          </div>
-          
           <TurnstileWidget
             siteKey={siteKey}
             onSuccess={handleSuccess}
@@ -140,21 +129,10 @@ export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
             Submitting...
           </>
         ) : (
-          <>
-            {showTurnstile && isVerified && (
-              <CheckCircle className="h-4 w-4 mr-2" />
-            )}
-            {submitButtonText}
-          </>
+          submitButtonText
         )}
       </Button>
 
-      {/* Verification Status */}
-      {showTurnstile && !isVerified && (
-        <div className="verification-status mt-2 text-xs text-gray-500 text-center">
-          <span>Complete security verification to continue</span>
-        </div>
-      )}
     </form>
   );
 };

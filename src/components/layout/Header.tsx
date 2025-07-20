@@ -144,7 +144,7 @@ const Header = () => {
                 className="h-10 sm:h-12 w-auto object-contain transition-transform hover:scale-105"
               />
             ) : (
-              <span className="font-semibold text-lg sm:text-xl lg:text-2xl text-gray-900">
+              <span className="font-semibold text-base sm:text-lg lg:text-xl xl:text-2xl text-gray-900">
                 {homePageSettings?.company_name || 'WishBag'}
               </span>
             )}
@@ -157,7 +157,7 @@ const Header = () => {
                 variant={location.pathname === '/quote' ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
-                  "h-8 px-3 text-sm font-medium transition-colors",
+                  "h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors",
                   location.pathname === '/quote' 
                     ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600" 
                     : "text-gray-700 hover:bg-gray-50"
@@ -171,7 +171,7 @@ const Header = () => {
                 variant={location.pathname === '/quote-auto' ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
-                  "h-8 px-3 text-sm font-medium transition-colors",
+                  "h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors",
                   location.pathname === '/quote-auto' 
                     ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600" 
                     : "text-gray-700 hover:bg-gray-50"
@@ -191,7 +191,7 @@ const Header = () => {
                 variant={location.pathname.includes('/admin/quotes') ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
-                  "h-8 px-3 text-sm font-medium transition-colors",
+                  "h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors",
                   location.pathname.includes('/admin/quotes') 
                     ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600" 
                     : "text-gray-700 hover:bg-gray-50"
@@ -205,7 +205,7 @@ const Header = () => {
                 variant={location.pathname.includes('/admin/orders') ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
-                  "h-8 px-3 text-sm font-medium transition-colors",
+                  "h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors",
                   location.pathname.includes('/admin/orders') 
                     ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600" 
                     : "text-gray-700 hover:bg-gray-50"
@@ -290,7 +290,7 @@ const Header = () => {
                           }}
                         >
                           <LayoutDashboard className="h-6 w-6 mb-2" />
-                          <span className="text-sm">Dashboard</span>
+                          <span className="text-xs sm:text-sm">Dashboard</span>
                         </Button>
                         <Button
                           variant="outline"
@@ -301,7 +301,7 @@ const Header = () => {
                           }}
                         >
                           <MessageSquare className="h-6 w-6 mb-2" />
-                          <span className="text-sm">Messages</span>
+                          <span className="text-xs sm:text-sm">Messages</span>
                           {unreadMessagesCount > 0 && (
                             <Badge variant="destructive" className="absolute top-2 right-2">
                               {unreadMessagesCount}
