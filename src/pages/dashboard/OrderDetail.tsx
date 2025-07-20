@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { useAllCountries } from '@/hooks/useAllCountries';
-import { useOrderMutations } from '@/hooks/useOrderMutations';
+// Removed useOrderMutations - using unified system
 import { OrderTimeline } from '@/components/dashboard/OrderTimeline';
 import { TrackingInfo } from '@/components/dashboard/TrackingInfo';
 import { OrderReceipt } from '@/components/dashboard/OrderReceipt';
@@ -49,8 +49,8 @@ export default function OrderDetail() {
   const [_isBreakdownExpanded, _setIsBreakdownExpanded] = useState(false);
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
 
-  // Use order mutations for order-specific actions
-  const { updateOrderStatus, isUpdatingStatus } = useOrderMutations(id || '');
+  // Status update state
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const {
     data: order,
@@ -121,8 +121,23 @@ export default function OrderDetail() {
     }
   };
 
-  const handleMarkAsCompleted = () => {
-    updateOrderStatus('completed');
+  const handleMarkAsCompleted = async () => {
+    setIsUpdatingStatus(true);
+    try {
+      const { error } = await supabase
+        .from('quotes')
+        .update({ status: 'completed' })
+        .eq('id', order.id);
+      
+      if (error) throw error;
+      
+      // Refresh the order data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating status:', error);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   if (isLoading) {
