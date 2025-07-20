@@ -207,6 +207,13 @@ export default function Checkout() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
 
+  // Debug log on component mount
+  console.log('💳 CHECKOUT PAGE LOADED:', {
+    user: user ? { id: user.id, email: user.email, is_anonymous: user.is_anonymous } : null,
+    searchParams: Object.fromEntries(searchParams.entries()),
+    url: window.location.href
+  });
+
   // Cart store with enforced loading
   const {
     items: cartItems,

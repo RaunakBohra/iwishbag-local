@@ -495,9 +495,21 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
   };
 
   const handleCheckout = () => {
-    if (!user && isGuestMode) {
-      navigate(`/checkout?quote=${quote?.id}`);
+    const isAnonymousUser = user?.is_anonymous || !user;
+    
+    console.log('🛒 CHECKOUT DEBUG:', {
+      user: user ? { id: user.id, email: user.email, is_anonymous: user.is_anonymous } : null,
+      isGuestMode,
+      isAnonymousUser,
+      quoteId: quote?.id,
+      route: isAnonymousUser && isGuestMode ? `/guest-checkout?quote=${quote?.id}` : '/checkout'
+    });
+
+    if (isAnonymousUser && isGuestMode) {
+      console.log('🚀 Navigating to guest checkout with quote:', quote?.id);
+      navigate(`/guest-checkout?quote=${quote?.id}`);
     } else {
+      console.log('🚀 Navigating to regular checkout');
       navigate('/checkout');
     }
   };
