@@ -297,7 +297,31 @@ export default function Checkout() {
   const { sendBankTransferEmail } = useEmailNotifications();
   const { findStatusForPaymentMethod } = useStatusManagement();
 
-  // Get guest quote destination country early for location detection
+  // Fetch guest quote if this is a guest checkout
+  const { data: guestQuote, isLoading: guestQuoteLoading, refetch: refetchGuestQuote } = useQuery({
+    queryKey: ['guest-quote', guestQuoteId],
+    queryFn: async () => {
+      if (!guestQuoteId) return null;
+
+      const { data, error } = await supabase
+        .from('quotes')
+        .select(
+          `
+          *,
+          quote_items (*),
+          share_token
+        `,
+        )
+        .eq('id', guestQuoteId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!guestQuoteId,
+  });
+
+  // Get guest quote destination country for location detection
   const guestQuoteDestinationCountry = isGuestCheckout && guestQuote 
     ? guestQuote.destination_country 
     : undefined;
@@ -329,30 +353,6 @@ export default function Checkout() {
     },
     // CHANGED: Enable for both guest and logged-in users
     enabled: true,
-  });
-
-  // Fetch guest quote if this is a guest checkout
-  const { data: guestQuote, isLoading: guestQuoteLoading, refetch: refetchGuestQuote } = useQuery({
-    queryKey: ['guest-quote', guestQuoteId],
-    queryFn: async () => {
-      if (!guestQuoteId) return null;
-
-      const { data, error } = await supabase
-        .from('quotes')
-        .select(
-          `
-          *,
-          quote_items (*),
-          share_token
-        `,
-        )
-        .eq('id', guestQuoteId)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!guestQuoteId,
   });
 
   // Determine currency to use for payment methods
