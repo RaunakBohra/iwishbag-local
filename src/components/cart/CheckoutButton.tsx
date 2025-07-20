@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface CheckoutButtonProps {
   selectedQuoteIds: string[];
@@ -14,7 +14,7 @@ export const CheckoutButton = ({
   disabled,
 }: CheckoutButtonProps) => {
   const navigate = useNavigate();
-  const { formatAmount } = useUserCurrency();
+  const { formatAmount } = useCurrency('USD');
 
   const handleCheckout = () => {
     if (selectedQuoteIds.length === 0) return;

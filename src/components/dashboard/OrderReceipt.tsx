@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tables } from '@/integrations/supabase/types';
-import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { useQuoteCurrency } from '@/hooks/useCurrency';
 
 interface OrderReceiptProps {
   order: Tables<'quotes'> & {
@@ -10,7 +10,7 @@ interface OrderReceiptProps {
 }
 
 export const OrderReceipt = ({ order }: OrderReceiptProps) => {
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: order });
+  const { formatAmount } = useQuoteCurrency(order);
 
   const costItems = [
     { label: 'Item Price', value: order.item_price },

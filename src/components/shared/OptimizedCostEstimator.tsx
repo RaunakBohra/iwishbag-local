@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
 import { useCountryWithCurrency } from '@/hooks/useCountryWithCurrency';
-import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { useCurrency } from '@/hooks/useCurrency';
 import { quoteCalculatorService } from '@/services/QuoteCalculatorService';
 import { useToast } from '@/components/ui/use-toast';
 import { Calculator, Package, Globe, DollarSign } from 'lucide-react';
@@ -53,7 +53,7 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
   const [isCalculating, setIsCalculating] = useState(false);
   const [error, setError] = useState('');
 
-  const { formatAmount } = useUserCurrency();
+  const { formatAmount } = useCurrency('USD');
   const { toast } = useToast();
 
   // Memoized query for country settings - single query instead of multiple

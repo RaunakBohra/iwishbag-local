@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tables } from '@/integrations/supabase/types';
 import { DualCurrencyDisplay } from './DualCurrencyDisplay';
-import { useQuoteCurrencyDisplay } from '@/hooks/useCurrencyConversion';
+import { useDualCurrency } from '@/hooks/useCurrency';
+import { useAllCountries } from '@/hooks/useAllCountries';
 import { Badge } from '@/components/ui/badge';
 import { getCurrencySymbolFromCountry } from '@/lib/currencyUtils';
 import { useQuoteRoute } from '@/hooks/useQuoteRoute';
@@ -39,11 +41,38 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
   const originCountry = routeInfo?.origin || 'US';
   const destinationCountry = routeInfo?.destination || 'US';
 
-  // Use our new currency display hook
-  const currencyDisplay = useQuoteCurrencyDisplay({
+  const { data: allCountries } = useAllCountries();
+  
+  // Get destination currency from countries data
+  const destinationCurrency = useMemo(() => {
+    if (!allCountries || !destinationCountry) return 'USD';
+    const country = allCountries.find((c) => c.code === destinationCountry);
+    return country?.currency || 'USD';
+  }, [allCountries, destinationCountry]);
+
+  // Use dual currency display for admin views, but prioritize route exchange rate
+  const dualCurrencyDisplay = useDualCurrency(
+    destinationCurrency,
     originCountry,
-    destinationCountry,
-    isAdminView: true,
+    destinationCountry
+  );
+  
+  // Create compatibility object for existing display logic
+  // Prioritize route-specific exchange rate over country settings
+  const routeExchangeRate = routeInfo?.route?.exchange_rate;
+  const finalExchangeRate = routeExchangeRate || dualCurrencyDisplay.local?.exchangeRate || 1;
+  
+  const currencyDisplay = {
+    exchangeRate: finalExchangeRate,
+    exchangeRateSource: routeExchangeRate ? 'shipping_route' : 'database' as const,
+    warning: null
+  };
+  
+  console.log('[QuoteCalculatedCosts Debug] Exchange rate selection:', {
+    routeExchangeRate,
+    dualCurrencyExchangeRate: dualCurrencyDisplay.local?.exchangeRate,
+    finalExchangeRate,
+    source: currencyDisplay.exchangeRateSource
   });
 
   if (!quote.final_total_usd) {

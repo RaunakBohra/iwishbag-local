@@ -44,7 +44,6 @@ import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
 import { useCountryUtils } from '@/lib/countryUtils';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { Body, BodySmall } from '@/components/ui/typography';
-import { MultiCurrencyDisplay } from './MultiCurrencyDisplay';
 
 type QuoteWithItems = Tables<'quotes'> & {
   quote_items: Tables<'quote_items'>[];
@@ -86,7 +85,7 @@ const getPriorityBadge = (priority: QuoteWithItems['priority']) => {
 
 export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuoteListItemProps) => {
   const navigate = useNavigate();
-  const { formatMultiCurrency } = useAdminCurrencyDisplay();
+  const { formatAmount } = useAdminCurrencyDisplay(quote);
   const [routeCountries, setRouteCountries] = useState<{
     origin: string;
     destination: string;
@@ -102,10 +101,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
   const totalItems = quote.quote_items?.length || 0;
   const productName = firstItem?.product_name || quote.product_name || 'Product name not specified';
 
-  const currencyDisplays = formatMultiCurrency({
-    usdAmount: quote.final_total_usd,
-    quoteCurrency: quote.destination_currency,
-  });
+  const formattedAmount = formatAmount(quote.final_total_usd || 0);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -261,7 +257,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
               <div className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-gray-500" />
                 <BodySmall className="text-gray-700 font-medium">
-                  <MultiCurrencyDisplay {...currencyDisplays} />
+                  {formattedAmount}
                 </BodySmall>
               </div>
               <div className="flex items-center gap-2">
@@ -389,7 +385,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
               <div>
                 <BodySmall className="text-gray-500 font-medium mb-1">Total Amount</BodySmall>
                 <Body className="font-semibold">
-                  <MultiCurrencyDisplay {...currencyDisplays} />
+                  {formattedAmount}
                 </Body>
               </div>
               <div>

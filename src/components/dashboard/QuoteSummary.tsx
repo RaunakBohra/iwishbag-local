@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { useCurrency } from '@/hooks/useCurrency';
 // Removed unused useQuery and supabase imports
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 
@@ -28,7 +28,7 @@ export const QuoteSummary: React.FC<QuoteSummaryProps> = ({
   renderActions,
   _countryCode,
 }) => {
-  const { formatAmount } = useUserCurrency();
+  const { formatAmount } = useCurrency('USD');
   const { getStatusConfig } = useStatusManagement();
 
   // DYNAMIC: Get status configuration from the management system

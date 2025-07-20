@@ -12,7 +12,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge } from './StatusBadge';
 import { Tables } from '@/integrations/supabase/types';
-import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { useQuoteCurrency } from '@/hooks/useCurrency';
 
 type Quote = Tables<'quotes'>;
 type CountrySetting = Tables<'country_settings'>;
@@ -25,7 +25,7 @@ interface QuoteRowProps {
 }
 
 const QuoteRow = React.memo<QuoteRowProps>(({ quote, isSelected, onSelect }) => {
-  const { formatAmount } = useQuoteDisplayCurrency({ quote });
+  const { formatAmount } = useQuoteCurrency(quote);
 
   return (
     <TableRow>

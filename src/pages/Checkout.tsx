@@ -1,5 +1,5 @@
 // src/pages/Checkout.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,13 +26,17 @@ import {
   CheckCircle,
   X,
   Check,
+  Mail,
+  UserPlus,
+  ChevronDown,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ProgressiveAuthModal } from '@/components/auth/ProgressiveAuthModal';
 import { Tables } from '@/integrations/supabase/types';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { useUserCurrency } from '@/hooks/useUserCurrency';
-import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { useCurrency, useQuoteCurrency } from '@/hooks/useCurrency';
 import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/stores/cartStore';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
@@ -40,10 +44,8 @@ import { useAllCountries } from '@/hooks/useAllCountries';
 import { currencyService } from '@/services/CurrencyService';
 import { useLocationDetection } from '@/hooks/useLocationDetection';
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
-import { PaymentCurrencyConversion } from '@/components/payment/PaymentCurrencyConversion';
 import { StripePaymentForm } from '@/components/payment/StripePaymentForm';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
-import { usePaymentCurrencyConversion } from '@/hooks/usePaymentCurrencyConversion';
 import { QRPaymentModal } from '@/components/payment/QRPaymentModal';
 import { PaymentStatusTracker } from '@/components/payment/PaymentStatusTracker';
 import { PaymentGateway, PaymentRequest } from '@/types/payment';
@@ -101,16 +103,11 @@ interface AddressFormData {
 const CheckoutItemPrice = ({
   item,
   displayCurrency,
-  paymentConversion,
+  exchangeRate = 1,
 }: {
   item: CartItem;
   displayCurrency?: string;
-  paymentConversion?: {
-    convertedAmount: number;
-    convertedCurrency: string;
-    needsConversion: boolean;
-    originalAmount: number;
-  } | null;
+  exchangeRate?: number;
 }) => {
   // Always call hooks at the top
   const { data: _userProfile } = useUserProfile();
@@ -125,23 +122,14 @@ const CheckoutItemPrice = ({
     },
   };
 
-  const { formatAmount } = useQuoteDisplayCurrency({
-    quote: mockQuote as QuoteType,
-  });
+  const currency = useQuoteCurrency(mockQuote as QuoteType);
+  const { formatAmount } = currency;
 
-  // If payment conversion is active, show the converted amount proportionally
-  if (paymentConversion?.needsConversion) {
-    const itemTotalOriginal = (item.finalTotal || 0) * (item.quantity || 1);
-    const conversionRatio = paymentConversion.convertedAmount / paymentConversion.originalAmount;
-    const convertedItemTotal = itemTotalOriginal * conversionRatio;
-    const convertedItemPrice = convertedItemTotal / (item.quantity || 1);
-    
-    return <>{formatAmountForDisplay(convertedItemPrice, paymentConversion.convertedCurrency, 1)}</>;
-  }
+  // Payment conversion removed - using simplified currency system
 
-  // If displayCurrency is provided (for guest checkout), use that currency directly
+  // If displayCurrency is provided, use that currency with proper exchange rate from country settings
   if (displayCurrency) {
-    return <>{formatAmountForDisplay(item.finalTotal, displayCurrency, 1)}</>;
+    return <>{formatAmountForDisplay(item.finalTotal, displayCurrency, exchangeRate)}</>;
   }
 
   // For authenticated users, use the existing quote display currency logic
@@ -152,16 +140,11 @@ const CheckoutItemPrice = ({
 const CheckoutTotal = ({
   items,
   displayCurrency,
-  paymentConversion,
+  exchangeRate = 1,
 }: {
   items: CartItem[];
   displayCurrency?: string;
-  paymentConversion?: {
-    convertedAmount: number;
-    convertedCurrency: string;
-    needsConversion: boolean;
-    originalAmount: number;
-  } | null;
+  exchangeRate?: number;
 }) => {
   // Use the first item to determine the quote format (all items should have same destination)
   const firstItem = items[0];
@@ -177,23 +160,19 @@ const CheckoutTotal = ({
   };
 
   // Always call hooks at the top with consistent parameters
-  const { formatAmount } = useQuoteDisplayCurrency({
-    quote: mockQuote as QuoteType,
-  });
+  const currency = useQuoteCurrency(mockQuote as QuoteType);
+  const { formatAmount } = currency;
 
   if (!firstItem) return <>$0.00</>;
 
-  // If payment conversion is active, show the converted total amount
-  if (paymentConversion?.needsConversion) {
-    return <>{formatAmountForDisplay(paymentConversion.convertedAmount, paymentConversion.convertedCurrency, 1)}</>;
-  }
+  // Payment conversion removed - using simplified currency system
 
   // Calculate total from all items
   const totalAmount = items.reduce((sum, item) => sum + item.finalTotal, 0);
 
-  // If displayCurrency is provided (for guest checkout), use that currency directly
+  // If displayCurrency is provided, use that currency with proper exchange rate
   if (displayCurrency) {
-    return <>{formatAmountForDisplay(totalAmount, displayCurrency, 1)}</>;
+    return <>{formatAmountForDisplay(totalAmount, displayCurrency, exchangeRate)}</>;
   }
 
   // For authenticated users, use the existing quote display currency logic
@@ -233,6 +212,20 @@ export default function Checkout() {
   const guestQuoteId = searchParams.get('quote');
   const isGuestCheckout = !!guestQuoteId;
 
+  // DEBUG: Log authentication and checkout state
+  console.log('🔍 CHECKOUT DEBUG:', {
+    user: user ? {
+      id: user.id,
+      email: user.email,
+      is_anonymous: user.is_anonymous,
+      isAuthenticated: !!user
+    } : 'No user',
+    guestQuoteId,
+    isGuestCheckout,
+    currentUrl: window.location.href,
+    searchParams: Object.fromEntries(searchParams.entries())
+  });
+
   // State
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -265,22 +258,17 @@ export default function Checkout() {
     save_to_profile: true, // Default to true for better UX
   });
 
-  // Guest checkout mode: 'guest', 'signup', 'signin'
-  const [checkoutMode, setCheckoutMode] = useState<'guest' | 'signup' | 'signin'>('guest');
-
-  // Account creation fields (only used for signup/signin)
-  const [accountData, setAccountData] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
-
-  // Guest contact info (for guest checkout)
+  // Guest contact info (for guest checkout) - simplified to email only
   const [guestContact, setGuestContact] = useState({
     email: '',
-    fullName: '',
   });
+
+  // Guest checkout flow state
+  const [guestFlowChoice, setGuestFlowChoice] = useState<'guest' | 'member' | null>(null);
+  const [contactStepCompleted, setContactStepCompleted] = useState(false);
+  
+  // Auth modal state
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Guest currency selection (defaults to destination country currency)
   const [guestSelectedCurrency, setGuestSelectedCurrency] = useState<string>('');
@@ -292,7 +280,7 @@ export default function Checkout() {
   const [guestSessionToken, setGuestSessionToken] = useState<string>('');
 
   const { data: userProfile } = useUserProfile();
-  const { formatAmount: _formatAmount } = useUserCurrency();
+  // Note: _formatAmount was unused, removing to simplify
   const { data: countries } = useAllCountries();
   const { sendBankTransferEmail } = useEmailNotifications();
   const { findStatusForPaymentMethod } = useStatusManagement();
@@ -363,9 +351,68 @@ export default function Checkout() {
   useEffect(() => {
     if (user && !cartLoading && !hasLoadedFromServer && !isGuestCheckout) {
       // Only load from server if not already loading and not already loaded, and not guest checkout
+      console.log('📥 Loading cart from server for authenticated user');
       loadFromServer(user.id);
     }
   }, [user, loadFromServer, cartLoading, hasLoadedFromServer, isGuestCheckout]);
+
+  // Add quotes from URL to cart if they're not already there
+  useEffect(() => {
+    if (user && !isGuestCheckout && selectedQuoteIds.length > 0 && cartItems.length > 0 && hasLoadedFromServer) {
+      const missingQuoteIds = selectedQuoteIds.filter(
+        quoteId => !cartItems.some(item => item.quoteId === quoteId)
+      );
+      
+      if (missingQuoteIds.length > 0) {
+        console.log('🔗 Found quotes in URL not in cart, adding them:', missingQuoteIds);
+        
+        // Add missing quotes to cart - this handles quotes that were in saved items
+        // or were transferred from guest checkout but not added to cart
+        missingQuoteIds.forEach(async (quoteId) => {
+          try {
+            const { error } = await supabase
+              .from('quotes')
+              .update({ in_cart: true })
+              .eq('id', quoteId)
+              .eq('user_id', user.id); // Ensure we only update user's own quotes
+              
+            if (error) {
+              console.error('❌ Failed to add quote to cart:', error);
+            } else {
+              console.log('✅ Added quote to cart:', quoteId);
+            }
+          } catch (error) {
+            console.error('❌ Error adding quote to cart:', error);
+          }
+        });
+        
+        // Reload cart after adding quotes
+        setTimeout(() => {
+          console.log('🔄 Reloading cart after adding missing quotes');
+          loadFromServer(user.id);
+        }, 500);
+      } else {
+        console.log('✅ All quotes from URL are already in user cart');
+      }
+    }
+  }, [user, isGuestCheckout, selectedQuoteIds, cartItems, hasLoadedFromServer]);
+
+  // DEBUG: Log cart and quote selection logic  
+  console.log('🛒 CART SELECTION DEBUG:', {
+    isGuestCheckout,
+    selectedQuoteIds,
+    selectedQuoteIdsValues: selectedQuoteIds,
+    cartItemsCount: cartItems.length,
+    cartItems: cartItems.map(item => ({
+      quoteId: item.quoteId,
+      productName: item.productName,
+      isSelected: item.isSelected
+    })),
+    cartLoading,
+    hasLoadedFromServer,
+    shouldShowLoading: cartLoading || (isGuestCheckout && guestQuoteLoading) || (!isGuestCheckout && user && !hasLoadedFromServer),
+    guestQuote: guestQuote ? { id: guestQuote.id, status: guestQuote.status } : null
+  });
 
   // Get selected cart items based on quote IDs
   // If no URL parameters, use all cart items (for direct navigation to /checkout)
@@ -406,6 +453,16 @@ export default function Checkout() {
     : selectedQuoteIds.length > 0
       ? cartItems.filter((item) => selectedQuoteIds.includes(item.quoteId))
       : cartItems; // Use all cart items when no specific quotes are selected
+
+  // DEBUG: Log the final selected cart items
+  console.log('📦 SELECTED CART ITEMS:', {
+    selectedCartItemsCount: selectedCartItems.length,
+    selectedCartItems: selectedCartItems.map(item => ({
+      quoteId: item.quoteId,
+      productName: item.productName || 'N/A',
+      finalTotal: item.finalTotal
+    }))
+  });
 
   // Get the shipping country from selected items
   // All quotes in checkout should have the same destination country
@@ -463,6 +520,19 @@ export default function Checkout() {
     isMobileOnlyPayment,
     requiresQRCode,
   } = usePaymentGateways(paymentGatewayCurrency, shippingCountry);
+
+  // Determine the currency for payment - defined here so it's available throughout the component
+  // Priority: Manual Selection > Profile Preference > IP Auto-detection > Quote Destination > USD
+  const paymentCurrency = isGuestCheckout
+    ? guestSelectedCurrency || defaultGuestCurrency || autoDetectedCurrency || 'USD'
+    : userSelectedCurrency || userProfile?.preferred_display_currency || autoDetectedCurrency || 'USD';
+
+  // Calculate exchange rate for the selected payment currency
+  const exchangeRate = useMemo(() => {
+    if (paymentCurrency === 'USD') return 1;
+    const country = countries?.find((c) => c.currency === paymentCurrency);
+    return country?.rate_from_usd || 1;
+  }, [countries, paymentCurrency]);
 
   // Debug logging for payment state (development only)
   useEffect(() => {
@@ -527,12 +597,6 @@ export default function Checkout() {
     }
   }, [availableMethods, getRecommendedPaymentMethod, paymentMethod]);
 
-  // Determine the currency for payment - defined here so it's available throughout the component
-  // Priority: Manual Selection > Profile Preference > IP Auto-detection > Quote Destination > USD
-  const paymentCurrency = isGuestCheckout
-    ? guestSelectedCurrency || defaultGuestCurrency || autoDetectedCurrency || 'USD'
-    : userSelectedCurrency || userProfile?.preferred_display_currency || autoDetectedCurrency || 'USD';
-
   // Get purchase country for route display (where we buy from)
   const purchaseCountry =
     selectedCartItems.length > 0 ? selectedCartItems[0].purchaseCountryCode : null;
@@ -546,23 +610,22 @@ export default function Checkout() {
     return total + item.finalTotal * item.quantity;
   }, 0);
 
-  // Get currency conversion for the selected payment method
-  const { conversion: paymentConversion } = usePaymentCurrencyConversion({
-    gateway: paymentMethod,
-    amount: totalAmount,
-    currency: paymentCurrency,
-    originCountry: purchaseCountry || 'US',
-    enabled: !!paymentMethod && totalAmount > 0,
-  });
+  // Simplified: Use the payment currency directly without complex conversions
+  const paymentConversion = null; // Removing payment conversion complexity
 
   // Pre-fill guest contact info and address from quote if available
   useEffect(() => {
     if (guestQuote && isGuestCheckout) {
-      // Set guest contact info
+      // Set guest contact info - simplified to email only
       setGuestContact({
         email: guestQuote.email || '',
-        fullName: guestQuote.customer_name || '',
       });
+
+      // If quote already has email, mark contact step as completed
+      if (guestQuote.email) {
+        setGuestFlowChoice('guest');
+        setContactStepCompleted(true);
+      }
 
       // Set default currency based on destination country if not already set
       if (!guestSelectedCurrency && defaultGuestCurrency) {
@@ -770,15 +833,7 @@ export default function Checkout() {
     (selectedAddress || hasValidGuestAddress || hasValidTempAddress) &&
     paymentMethod &&
     selectedCartItems.length > 0 &&
-    (!isGuestCheckout ||
-      (checkoutMode === 'guest'
-        ? guestContact.email && (guestContact.fullName || guestQuote?.email) // Allow approved quotes without fullName
-        : checkoutMode === 'signin'
-          ? accountData.email && accountData.password
-          : accountData.email &&
-            accountData.password &&
-            accountData.fullName &&
-            accountData.password === accountData.confirmPassword));
+    (!isGuestCheckout || guestContact.email); // Simplified: only email required for guest checkout
 
   const handleAddAddress = async (data?: AddressFormData) => {
     const formData = data || addressFormData;
@@ -944,52 +999,23 @@ export default function Checkout() {
 
     // Validate guest checkout data
     if (isGuestCheckout) {
-      if (checkoutMode === 'guest') {
-        if (!guestContact.email || !guestContact.fullName) {
-          toast({
-            title: 'Missing Information',
-            description: 'Please fill in your contact details.',
-            variant: 'destructive',
-          });
-          return;
-        }
+      if (!guestContact.email) {
+        toast({
+          title: 'Missing Information',
+          description: 'Please provide your email address.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-        // Validate shipping address
-        if (!isAddressComplete(addressFormData)) {
-          toast({
-            title: 'Missing Shipping Address',
-            description: 'Please provide a complete shipping address.',
-            variant: 'destructive',
-          });
-          return;
-        }
-      } else if (checkoutMode === 'signin') {
-        if (!accountData.email || !accountData.password) {
-          toast({
-            title: 'Missing Information',
-            description: 'Please fill in email and password.',
-            variant: 'destructive',
-          });
-          return;
-        }
-      } else if (checkoutMode === 'signup') {
-        if (!accountData.email || !accountData.password || !accountData.fullName) {
-          toast({
-            title: 'Missing Information',
-            description: 'Please fill in all account details.',
-            variant: 'destructive',
-          });
-          return;
-        }
-
-        if (accountData.password !== accountData.confirmPassword) {
-          toast({
-            title: 'Password Mismatch',
-            description: 'Passwords do not match.',
-            variant: 'destructive',
-          });
-          return;
-        }
+      // Validate shipping address
+      if (!isAddressComplete(addressFormData)) {
+        toast({
+          title: 'Missing Shipping Address',
+          description: 'Please provide a complete shipping address.',
+          variant: 'destructive',
+        });
+        return;
       }
     }
 
@@ -1006,14 +1032,14 @@ export default function Checkout() {
 
     const paymentRequest: PaymentRequest = {
       quoteIds: cartQuoteIds,
-      amount: paymentConversion?.convertedAmount || totalAmount,
-      currency: paymentConversion?.convertedCurrency || paymentCurrency,
+      amount: totalAmount,
+      currency: paymentCurrency,
       gateway: paymentMethod,
       success_url: `${window.location.origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${window.location.origin}/checkout?quotes=${cartQuoteIds.join(',')}`,
       customerInfo: {
         name: isGuestCheckout
-          ? addressFormData.recipient_name || guestContact.fullName
+          ? addressFormData.recipient_name || 'Guest Customer'
           : addressFormData.recipient_name || userProfile?.full_name || '',
         email: isGuestCheckout ? guestContact.email : user?.email || '',
         phone: addressFormData.phone || '',
@@ -1044,74 +1070,60 @@ export default function Checkout() {
         try {
           const _userId: string | null = null;
 
-          if (checkoutMode === 'guest') {
-            // Pure guest checkout - store details temporarily without updating quote
+          // Pure guest checkout - store details temporarily without updating quote
 
-            // Prepare shipping address for session storage
-            const shippingAddressForSession = {
-              streetAddress: addressFormData.address_line1,
-              city: addressFormData.city,
-              state: addressFormData.state_province_region,
-              postalCode: addressFormData.postal_code,
-              country: addressFormData.country,
-              destination_country: addressFormData.destination_country || addressFormData.country,
-              fullName: addressFormData.recipient_name || guestContact.fullName,
-              phone: addressFormData.phone,
-            };
+          // Prepare shipping address for session storage
+          const shippingAddressForSession = {
+            streetAddress: addressFormData.address_line1,
+            city: addressFormData.city,
+            state: addressFormData.state_province_region,
+            postalCode: addressFormData.postal_code,
+            country: addressFormData.country,
+            destination_country: addressFormData.destination_country || addressFormData.country,
+            fullName: addressFormData.recipient_name || 'Guest Customer',
+            phone: addressFormData.phone,
+          };
 
-            // Create or update guest checkout session instead of updating quote
-            let sessionResult;
-            if (guestSessionToken) {
-              // Update existing session
-              sessionResult = await checkoutSessionService.updateSession({
-                session_token: guestSessionToken,
-                guest_name: guestContact.fullName,
-                guest_email: guestContact.email,
-                shipping_address: shippingAddressForSession,
-                payment_currency: paymentCurrency,
-                payment_method: paymentMethod,
-                payment_amount: paymentConversion?.convertedAmount || totalAmount,
-              });
-            } else {
-              // Create new session
-              sessionResult = await checkoutSessionService.createSession({
-                quote_id: guestQuoteId!,
-                guest_name: guestContact.fullName,
-                guest_email: guestContact.email,
-                shipping_address: shippingAddressForSession,
-                payment_currency: paymentCurrency,
-                payment_method: paymentMethod,
-                payment_amount: paymentConversion?.convertedAmount || totalAmount,
-              });
-
-              // Store session token for future updates
-              if (sessionResult.success && sessionResult.session) {
-                setGuestSessionToken(sessionResult.session.session_token);
-              }
-            }
-
-            if (!sessionResult.success) {
-              throw new Error(sessionResult.error || 'Failed to create checkout session');
-            }
-
-            toast({
-              title: 'Processing Order',
-              description:
-                'Processing your order as a guest. Your quote remains available to others until payment is confirmed.',
+          // Create or update guest checkout session instead of updating quote
+          let sessionResult;
+          if (guestSessionToken) {
+            // Update existing session
+            sessionResult = await checkoutSessionService.updateSession({
+              session_token: guestSessionToken,
+              guest_name: addressFormData.recipient_name || 'Guest Customer',
+              guest_email: guestContact.email,
+              shipping_address: shippingAddressForSession,
+              payment_currency: paymentCurrency,
+              payment_method: paymentMethod,
+              payment_amount: totalAmount,
             });
           } else {
-            // For signin/signup modes, this shouldn't be reached
-            toast({
-              title: 'Action Required',
-              description:
-                checkoutMode === 'signin'
-                  ? "Please use the 'Sign In' button above first."
-                  : "Please use the 'Create Account' button above first.",
-              variant: 'destructive',
+            // Create new session
+            sessionResult = await checkoutSessionService.createSession({
+              quote_id: guestQuoteId!,
+              guest_name: addressFormData.recipient_name || 'Guest Customer',
+              guest_email: guestContact.email,
+              shipping_address: shippingAddressForSession,
+              payment_currency: paymentCurrency,
+              payment_method: paymentMethod,
+              payment_amount: totalAmount,
             });
-            setIsProcessing(false);
-            return;
+
+            // Store session token for future updates
+            if (sessionResult.success && sessionResult.session) {
+              setGuestSessionToken(sessionResult.session.session_token);
+            }
           }
+
+          if (!sessionResult.success) {
+            throw new Error(sessionResult.error || 'Failed to create checkout session');
+          }
+
+          toast({
+            title: 'Processing Order',
+            description:
+              'Processing your order as a guest. Your quote remains available to others until payment is confirmed.',
+          });
         } catch (error) {
           console.error('Guest checkout failed:', error);
           const errorMessage =
@@ -1417,10 +1429,10 @@ export default function Checkout() {
           const formData = {
             key: payuConfig.merchant_key,
             txnid: txnid,
-            amount: (paymentConversion?.convertedAmount || totalAmount).toFixed(2),
+            amount: totalAmount.toFixed(2),
             productinfo: productinfo,
             firstname: isGuestCheckout
-              ? guestContact.fullName || 'Test Customer'
+              ? addressFormData.recipient_name || 'Guest Customer'
               : userProfile?.full_name || 'Test Customer',
             email: isGuestCheckout
               ? guestContact.email || 'test@example.com'
@@ -1749,7 +1761,7 @@ export default function Checkout() {
                 display_id: updateResult.display_id,
                 email: isGuestCheckout ? guestContact.email : user?.email || '',
                 customer_name: isGuestCheckout
-                  ? guestContact.fullName
+                  ? addressFormData.recipient_name || 'Guest Customer'
                   : userProfile?.full_name || '',
                 final_total_usd: totalAmount,
                 currency: paymentCurrency,
@@ -1761,7 +1773,7 @@ export default function Checkout() {
                 display_id: updateResult[0].display_id || '',
                 email: isGuestCheckout ? guestContact.email : user?.email || '',
                 customer_name: isGuestCheckout
-                  ? guestContact.fullName
+                  ? addressFormData.recipient_name || 'Guest Customer'
                   : userProfile?.full_name || '',
                 final_total_usd: totalAmount,
                 currency: paymentCurrency,
@@ -1795,8 +1807,25 @@ export default function Checkout() {
     }
   };
 
+  // Enhanced loading check with additional debugging
+  const shouldShowLoading = cartLoading || 
+    (isGuestCheckout && guestQuoteLoading) || 
+    (!isGuestCheckout && user && !hasLoadedFromServer);
+    // Removed problematic condition: (!isGuestCheckout && selectedQuoteIds.length > 0 && cartItems.length === 0 && !cartLoading)
+    
+  console.log('🔄 LOADING CHECK:', {
+    cartLoading,
+    isGuestCheckout,
+    guestQuoteLoading,
+    hasLoadedFromServer,
+    user: !!user,
+    selectedQuoteIdsLength: selectedQuoteIds.length,
+    cartItemsLength: cartItems.length,
+    shouldShowLoading
+  });
+
   // Show loading spinner while cart is rehydrating or guest quote is loading
-  if (cartLoading || (isGuestCheckout && guestQuoteLoading)) {
+  if (shouldShowLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="h-10 w-10 animate-spin text-muted-foreground mb-2" />
@@ -1880,6 +1909,95 @@ export default function Checkout() {
           <div className="grid gap-6 lg:grid-cols-5">
             {/* Main Checkout Form */}
             <div className="lg:col-span-3 space-y-6">
+              {/* Currency Selection - Always visible for better UX */}
+              {availableCurrencies && (
+                <Card className="bg-white border border-gray-200 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-900">
+                      <Globe className="h-4 w-4 text-gray-600" />
+                      Display Currency
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex items-center gap-3">
+                      <div className="relative flex-1 max-w-xs">
+                        <label htmlFor="display-currency-selector" className="sr-only">
+                          Select display currency
+                        </label>
+                        <select
+                          id="display-currency-selector"
+                          className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500 cursor-pointer hover:border-gray-400 transition-colors w-full"
+                          value={isGuestCheckout ? guestSelectedCurrency || autoDetectedCurrency || 'USD' : userSelectedCurrency || userProfile?.preferred_display_currency || autoDetectedCurrency || 'USD'}
+                          onChange={(e) => {
+                            if (isGuestCheckout) {
+                              setGuestSelectedCurrency(e.target.value);
+                            } else {
+                              setUserSelectedCurrency(e.target.value);
+                            }
+                          }}
+                          disabled={isProcessing}
+                        >
+                          {availableCurrencies?.map((currency) => {
+                            // Determine if this currency was auto-detected
+                            const isAutoDetected = currency.code === autoDetectedCurrency;
+                            const isUserDefault = !isGuestCheckout && currency.code === userProfile?.preferred_display_currency;
+                            
+                            let label = `${currency.symbol} ${currency.code}`;
+                            
+                            if (isUserDefault && !isGuestCheckout && !userSelectedCurrency) {
+                              label += ' (Your default)';
+                            } else if (isAutoDetected && !isUserDefault && !(isGuestCheckout ? guestSelectedCurrency : userSelectedCurrency)) {
+                              label += ` (Detected from ${locationData?.country || 'your location'})`;
+                            }
+                            
+                            return (
+                              <option key={currency.code} value={currency.code}>
+                                {label}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        {/* Custom dropdown arrow */}
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                          <ChevronDown className="h-4 w-4 text-gray-400" />
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500 flex items-center gap-1">
+                        Prices will be shown in your selected currency
+                        {/* Show detection status indicator */}
+                        {isDetecting && (
+                          <div className="text-xs text-gray-500" title="Detecting your location...">
+                            🌍
+                          </div>
+                        )}
+                        {locationData && !isDetecting && (
+                          <div className="text-xs text-gray-500" title={`Detected: ${locationData.country}`}>
+                            📍
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* DEBUG: Show which checkout flow is being rendered */}
+              {(() => {
+                console.log('🎯 CHECKOUT FLOW DEBUG:', {
+                  isGuestCheckout,
+                  hasGuestQuoteEmail: !!guestQuote?.email,
+                  guestQuote: guestQuote ? {
+                    id: guestQuote.id,
+                    email: guestQuote.email,
+                    status: guestQuote.status
+                  } : 'No guestQuote',
+                  willShowApprovedQuoteFlow: isGuestCheckout && guestQuote?.email,
+                  willShowGuestChoiceFlow: isGuestCheckout && !guestQuote?.email,
+                  willShowRegularCheckout: !isGuestCheckout
+                });
+                return null;
+              })()}
+              
               {/* Guest Checkout - Streamlined for approved quotes */}
               {isGuestCheckout && guestQuote?.email ? (
                 <Card className="bg-white border border-gray-200 shadow-sm">
@@ -1959,387 +2077,153 @@ export default function Checkout() {
                   <CardHeader className="pb-4">
                     <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-900">
                       <User className="h-4 w-4 text-gray-600" />
-                      Checkout Options
+                      Contact Information
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Three checkout mode buttons */}
-                    <div className="grid grid-cols-3 gap-2">
-                      <Button
-                        type="button"
-                        variant={checkoutMode === 'guest' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setCheckoutMode('guest')}
-                        className="text-xs"
-                      >
-                        Guest Checkout
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={checkoutMode === 'signup' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setCheckoutMode('signup')}
-                        className="text-xs"
-                      >
-                        Create Account
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={checkoutMode === 'signin' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setCheckoutMode('signin')}
-                        className="text-xs"
-                      >
-                        Sign In
-                      </Button>
-                    </div>
-
-                    {/* Currency Selection for Guest Checkout */}
-                    {checkoutMode === 'guest' && availableCurrencies && (
-                      <div className="mb-4">
-                        <Label htmlFor="guest-currency">Payment Currency</Label>
-                        <select
-                          id="guest-currency"
-                          className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                          value={guestSelectedCurrency}
-                          onChange={(e) => setGuestSelectedCurrency(e.target.value)}
-                        >
-                          {availableCurrencies?.map((currency) => (
-                            <option key={currency.code} value={currency.code}>
-                              {currency.symbol} {currency.formatted}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Choose your preferred payment currency. Payment methods will be filtered
-                          accordingly.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Dynamic form based on checkout mode */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {checkoutMode === 'guest' && (
-                        <>
-                          <div>
-                            <Label htmlFor="guest-full-name">Full Name *</Label>
-                            <Input
-                              id="guest-full-name"
-                              value={guestContact.fullName}
-                              onChange={(e) =>
-                                setGuestContact({
-                                  ...guestContact,
-                                  fullName: e.target.value,
-                                })
-                              }
-                              placeholder="John Doe"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="guest-email">Email Address *</Label>
-                            <Input
-                              id="guest-email"
-                              type="email"
-                              value={guestContact.email}
-                              onChange={(e) =>
-                                setGuestContact({
-                                  ...guestContact,
-                                  email: e.target.value,
-                                })
-                              }
-                              placeholder="john@example.com"
-                              required
-                            />
-                          </div>
-                        </>
-                      )}
-
-                      {(checkoutMode === 'signup' || checkoutMode === 'signin') && (
-                        <>
-                          {checkoutMode === 'signup' && (
+                  <CardContent className="space-y-6">
+                    {/* Contact Step Completed - Show Summary */}
+                    {contactStepCompleted ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
                             <div>
-                              <Label htmlFor="account-full-name">Full Name *</Label>
-                              <Input
-                                id="account-full-name"
-                                value={accountData.fullName}
-                                onChange={(e) =>
-                                  setAccountData({
-                                    ...accountData,
-                                    fullName: e.target.value,
-                                  })
-                                }
-                                placeholder="John Doe"
-                                required
-                              />
+                              <p className="font-medium text-green-900">
+                                {guestFlowChoice === 'guest' ? 'Guest Checkout' : 'Member Account'}
+                              </p>
+                              <p className="text-sm text-green-700">{guestContact.email}</p>
                             </div>
-                          )}
-                          <div className={checkoutMode === 'signup' ? '' : 'md:col-span-2'}>
-                            <Label htmlFor="account-email">Email Address *</Label>
-                            <Input
-                              id="account-email"
-                              type="email"
-                              value={accountData.email}
-                              onChange={(e) =>
-                                setAccountData({
-                                  ...accountData,
-                                  email: e.target.value,
-                                })
-                              }
-                              placeholder="john@example.com"
-                              required
-                            />
                           </div>
-                          <div className={checkoutMode === 'signup' ? '' : 'md:col-span-2'}>
-                            <Label htmlFor="account-password">Password *</Label>
-                            <Input
-                              id="account-password"
-                              type="password"
-                              value={accountData.password}
-                              onChange={(e) =>
-                                setAccountData({
-                                  ...accountData,
-                                  password: e.target.value,
-                                })
-                              }
-                              placeholder={
-                                checkoutMode === 'signin'
-                                  ? 'Enter your password'
-                                  : 'Create a secure password'
-                              }
-                              required
-                            />
-                          </div>
-                          {checkoutMode === 'signup' && (
-                            <div>
-                              <Label htmlFor="account-confirm-password">Confirm Password *</Label>
-                              <Input
-                                id="account-confirm-password"
-                                type="password"
-                                value={accountData.confirmPassword}
-                                onChange={(e) =>
-                                  setAccountData({
-                                    ...accountData,
-                                    confirmPassword: e.target.value,
-                                  })
-                                }
-                                placeholder="Confirm your password"
-                                required
-                              />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setContactStepCompleted(false);
+                              setGuestFlowChoice(null);
+                            }}
+                            className="text-xs border-green-300 text-green-700 hover:bg-green-100"
+                          >
+                            <Edit3 className="h-3 w-3 mr-1" />
+                            Change
+                          </Button>
+                        </div>
+                      </div>
+                    ) : guestFlowChoice === null ? (
+                      /* Choice Screen - Guest vs Member */
+                      <div className="space-y-6">
+                        <div className="text-center">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">How would you like to continue?</h3>
+                          <p className="text-gray-600">Choose the option that works best for you</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Guest Option */}
+                          <div 
+                            className="bg-white rounded-lg border-2 border-gray-200 p-6 hover:border-teal-300 hover:shadow-md transition-all cursor-pointer group"
+                            onClick={() => setGuestFlowChoice('guest')}
+                          >
+                            <div className="text-center">
+                              <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-teal-200 transition-colors">
+                                <Mail className="h-6 w-6 text-teal-600" />
+                              </div>
+                              <h4 className="font-semibold text-gray-900 mb-2">Guest</h4>
+                              <p className="text-sm text-gray-600 mb-4">Quick checkout with just your email</p>
+                              <ul className="text-xs text-gray-500 space-y-1 mb-4">
+                                <li>✓ Fast checkout</li>
+                                <li>✓ Email-only required</li>
+                                <li>✓ No account needed</li>
+                              </ul>
+                              <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
+                                Continue as Guest
+                              </Button>
                             </div>
-                          )}
-                        </>
-                      )}
-                    </div>
+                          </div>
 
-                    <div className="text-sm text-gray-600 bg-teal-50 p-3 rounded-lg">
-                      <p>
-                        {checkoutMode === 'guest' &&
-                          "Complete your order without creating an account. You'll receive order updates via email."}
-                        {checkoutMode === 'signin' &&
-                          'Sign in to your existing account to track your order and access your purchase history.'}
-                        {checkoutMode === 'signup' &&
-                          'Create an account to easily track your order and manage future purchases.'}
-                      </p>
-                    </div>
-
-                    {/* Action buttons for signin/signup */}
-                    {checkoutMode === 'signin' && (
-                      <div className="flex justify-between items-center">
-                        <Button
-                          type="button"
-                          onClick={async () => {
-                            if (!accountData.email || !accountData.password) {
-                              toast({
-                                title: 'Missing Information',
-                                description: 'Please enter your email and password',
-                                variant: 'destructive',
-                              });
-                              return;
-                            }
-
-                            setIsProcessing(true);
-                            try {
-                              const { data: signInData, error: signInError } =
-                                await supabase.auth.signInWithPassword({
-                                  email: accountData.email,
-                                  password: accountData.password,
-                                });
-
-                              if (signInError) {
-                                toast({
-                                  title: 'Sign In Failed',
-                                  description:
-                                    'Invalid email or password. Please check your credentials.',
-                                  variant: 'destructive',
-                                });
-                                return;
-                              }
-
-                              // Update quote ownership
-                              if (signInData.user) {
-                                await supabase
-                                  .from('quotes')
-                                  .update({
-                                    user_id: signInData.user.id,
-                                    is_anonymous: false,
-                                  })
-                                  .eq('id', guestQuoteId);
-                              }
-
-                              toast({
-                                title: 'Welcome Back!',
-                                description: 'Successfully signed in. Redirecting...',
-                              });
-
-                              // Reload to refresh auth state
-                              setTimeout(() => window.location.reload(), 1000);
-                            } catch {
-                              toast({
-                                title: 'Error',
-                                description: 'Failed to sign in. Please try again.',
-                                variant: 'destructive',
-                              });
-                            } finally {
-                              setIsProcessing(false);
-                            }
-                          }}
-                          disabled={isProcessing}
-                          className="w-full"
-                        >
-                          {isProcessing ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Signing in...
-                            </>
-                          ) : (
-                            <>
-                              <User className="mr-2 h-4 w-4" />
-                              Sign In
-                            </>
-                          )}
-                        </Button>
+                          {/* Member Option */}
+                          <div 
+                            className="bg-white rounded-lg border-2 border-gray-200 p-6 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
+                            onClick={() => {
+                              console.log('🔵 MEMBER OPTION CLICKED - Opening auth modal');
+                              setShowAuthModal(true);
+                            }}
+                          >
+                            <div className="text-center">
+                              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-200 transition-colors">
+                                <UserPlus className="h-6 w-6 text-blue-600" />
+                              </div>
+                              <h4 className="font-semibold text-gray-900 mb-2">Member</h4>
+                              <p className="text-sm text-gray-600 mb-4">Sign in to track your orders</p>
+                              <ul className="text-xs text-gray-500 space-y-1 mb-4">
+                                <li>✓ Order tracking</li>
+                                <li>✓ Order history</li>
+                                <li>✓ Saved addresses</li>
+                              </ul>
+                              <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50">
+                                Sign In / Sign Up
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    )}
+                    ) : guestFlowChoice === 'guest' ? (
+                      /* Guest Email Form */
+                      <div className="space-y-4">
+                        <div className="text-center">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Almost Done!</h3>
+                          <p className="text-gray-600">Just need your email to send order updates</p>
+                        </div>
 
-                    {checkoutMode === 'signup' && (
-                      <div className="flex justify-between items-center">
-                        <Button
-                          type="button"
-                          onClick={async () => {
-                            if (
-                              !accountData.email ||
-                              !accountData.password ||
-                              !accountData.fullName
-                            ) {
-                              toast({
-                                title: 'Missing Information',
-                                description: 'Please fill in all required fields',
-                                variant: 'destructive',
-                              });
-                              return;
+                        <div>
+                          <Label htmlFor="guest-email" className="text-base font-medium text-gray-900">
+                            Email Address *
+                          </Label>
+                          <Input
+                            id="guest-email"
+                            type="email"
+                            value={guestContact.email}
+                            onChange={(e) =>
+                              setGuestContact({
+                                ...guestContact,
+                                email: e.target.value,
+                              })
                             }
+                            placeholder="Enter your email address"
+                            className="mt-2 h-12"
+                            required
+                          />
+                          <p className="text-sm text-gray-500 mt-2">
+                            We'll send order confirmation and updates to this email
+                          </p>
+                        </div>
 
-                            if (accountData.password !== accountData.confirmPassword) {
-                              toast({
-                                title: 'Password Mismatch',
-                                description: 'Passwords do not match',
-                                variant: 'destructive',
-                              });
-                              return;
-                            }
-
-                            setIsProcessing(true);
-                            try {
-                              const { data: authData, error: authError } =
-                                await supabase.auth.signUp({
-                                  email: accountData.email,
-                                  password: accountData.password,
-                                  options: {
-                                    data: {
-                                      full_name: accountData.fullName,
-                                      created_via: 'guest_checkout',
-                                    },
-                                  },
-                                });
-
-                              if (authError) {
-                                if (authError.message.includes('already registered')) {
-                                  toast({
-                                    title: 'Account Already Exists',
-                                    description:
-                                      'An account with this email already exists. Please sign in instead.',
-                                    variant: 'destructive',
-                                  });
-                                  setCheckoutMode('signin');
-                                  return;
-                                }
-                                throw authError;
+                        <div className="flex gap-3">
+                          <Button
+                            variant="outline"
+                            onClick={() => setGuestFlowChoice(null)}
+                            className="flex-1"
+                          >
+                            ← Back
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              if (guestContact.email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestContact.email)) {
+                                setContactStepCompleted(true);
                               }
-
-                              // Update quote ownership
-                              if (authData.user) {
-                                await supabase
-                                  .from('quotes')
-                                  .update({
-                                    user_id: authData.user.id,
-                                    is_anonymous: false,
-                                  })
-                                  .eq('id', guestQuoteId);
-                              }
-
-                              toast({
-                                title: 'Account Created!',
-                                description: 'Please check your email to verify your account.',
-                              });
-
-                              // Sign in immediately after signup
-                              const { error: signInError } = await supabase.auth.signInWithPassword(
-                                {
-                                  email: accountData.email,
-                                  password: accountData.password,
-                                },
-                              );
-
-                              if (!signInError) {
-                                setTimeout(() => window.location.reload(), 1000);
-                              }
-                            } catch (error) {
-                              const errorMessage =
-                                error instanceof Error
-                                  ? error.message
-                                  : 'Failed to create account. Please try again.';
-                              toast({
-                                title: 'Error',
-                                description: errorMessage,
-                                variant: 'destructive',
-                              });
-                            } finally {
-                              setIsProcessing(false);
-                            }
-                          }}
-                          disabled={isProcessing}
-                          className="w-full"
-                        >
-                          {isProcessing ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Creating Account...
-                            </>
-                          ) : (
-                            <>
-                              <User className="mr-2 h-4 w-4" />
-                              Create Account
-                            </>
-                          )}
-                        </Button>
+                            }}
+                            disabled={!guestContact.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestContact.email)}
+                            className="flex-1 bg-teal-600 hover:bg-teal-700"
+                          >
+                            Continue
+                          </Button>
+                        </div>
                       </div>
-                    )}
+                    ) : null}
                   </CardContent>
                 </Card>
               )}
 
-              {/* Shipping Address */}
+              {/* Shipping Address - Only show when contact step is completed */}
+              {(!isGuestCheckout || contactStepCompleted) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -2360,9 +2244,7 @@ export default function Checkout() {
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-gray-900">
-                                  {addressFormData.recipient_name ||
-                                    guestContact.fullName ||
-                                    'Guest'}
+                                  {addressFormData.recipient_name || 'Guest Customer'}
                                 </span>
                                 <Badge variant="outline" className="text-xs text-teal-600 border-teal-200 bg-teal-50">Guest Address</Badge>
                               </div>
@@ -2697,81 +2579,23 @@ export default function Checkout() {
                   )}
                 </CardContent>
               </Card>
+              )}
 
-              {/* Payment Method */}
+              {/* Payment Method - Only show when contact step is completed */}
+              {(!isGuestCheckout || contactStepCompleted) && (
               <Card className="bg-white border border-gray-200 shadow-sm">
                 <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-900">
-                      <CreditCard className="h-4 w-4 text-gray-600" />
-                      Payment Method
-                    </CardTitle>
-                    
-                    {/* Smart Currency Selector for Both Guest and Logged-in Users */}
-                    {availableCurrencies && (
-                      <div className="flex items-center gap-2">
-                        <Label 
-                          htmlFor="compact-currency" 
-                          className="text-xs text-gray-600"
-                        >
-                          {isGuestCheckout ? 'Currency:' : 'Pay in:'}
-                        </Label>
-                        <div className="flex items-center gap-1">
-                          <select
-                            id="compact-currency"
-                            className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
-                            value={isGuestCheckout ? guestSelectedCurrency || autoDetectedCurrency || 'USD' : userSelectedCurrency || userProfile?.preferred_display_currency || autoDetectedCurrency || 'USD'}
-                            onChange={(e) => {
-                              if (isGuestCheckout) {
-                                setGuestSelectedCurrency(e.target.value);
-                              } else {
-                                setUserSelectedCurrency(e.target.value);
-                              }
-                            }}
-                          >
-                            {availableCurrencies?.map((currency) => {
-                              // Determine if this currency was auto-detected
-                              const isAutoDetected = currency.code === autoDetectedCurrency;
-                              const isUserDefault = !isGuestCheckout && currency.code === userProfile?.preferred_display_currency;
-                              
-                              let label = `${currency.symbol} ${currency.code}`;
-                              
-                              if (isUserDefault && !isGuestCheckout && !userSelectedCurrency) {
-                                label += ' (Your default)';
-                              } else if (isAutoDetected && !isUserDefault && !(isGuestCheckout ? guestSelectedCurrency : userSelectedCurrency)) {
-                                label += ` (Detected from ${locationData?.country || 'your location'})`;
-                              }
-                              
-                              return (
-                                <option key={currency.code} value={currency.code}>
-                                  {label}
-                                </option>
-                              );
-                            })}
-                          </select>
-                          
-                          {/* Show detection status indicator */}
-                          {isDetecting && (
-                            <div className="text-xs text-gray-500" title="Detecting your location...">
-                              🌍
-                            </div>
-                          )}
-                          {locationData && !isDetecting && (
-                            <div className="text-xs text-gray-500" title={`Detected: ${locationData.country}`}>
-                              📍
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-900">
+                    <CreditCard className="h-4 w-4 text-gray-600" />
+                    Payment Method
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <PaymentMethodSelector
                     selectedMethod={paymentMethod}
                     onMethodChange={handlePaymentMethodChange}
-                    amount={paymentConversion?.convertedAmount || totalAmount}
-                    currency={paymentConversion?.convertedCurrency || paymentCurrency}
+                    amount={totalAmount}
+                    currency={paymentCurrency}
                     showRecommended={true}
                     disabled={isProcessing}
                     availableMethods={availableMethods}
@@ -2779,8 +2603,10 @@ export default function Checkout() {
                   />
                 </CardContent>
               </Card>
+              )}
 
-              {/* Security Notice */}
+              {/* Security Notice - Only show when contact step is completed */}
+              {(!isGuestCheckout || contactStepCompleted) && (
               <Card className="bg-white border border-gray-200 shadow-sm">
                 <CardContent className="pt-4 pb-4">
                   <div className="flex items-start gap-2">
@@ -2795,6 +2621,7 @@ export default function Checkout() {
                   </div>
                 </CardContent>
               </Card>
+              )}
             </div>
 
             {/* Order Summary Sidebar */}
@@ -2834,8 +2661,8 @@ export default function Checkout() {
                           <div className="font-semibold text-sm">
                             <CheckoutItemPrice
                               item={item}
-                              displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
-                              paymentConversion={paymentConversion}
+                              displayCurrency={paymentCurrency}
+                              exchangeRate={exchangeRate}
                             />
                           </div>
                         </div>
@@ -2850,18 +2677,13 @@ export default function Checkout() {
                       <span>
                         <CheckoutTotal
                           items={selectedCartItems}
-                          displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
-                          paymentConversion={paymentConversion}
+                          displayCurrency={paymentCurrency}
+                          exchangeRate={exchangeRate}
                         />
                       </span>
                     </div>
                     
-                    {/* Compact Currency conversion - only show if conversion is needed */}
-                    {paymentConversion?.needsConversion && (
-                      <div className="text-xs text-gray-500 text-right">
-                        Exchange rate applied: {paymentConversion.convertedCurrency} calculation
-                      </div>
-                    )}
+                    {/* Currency conversion info removed - simplified system */}
                   </div>
 
                   <Button
@@ -2869,8 +2691,7 @@ export default function Checkout() {
                     disabled={
                       !canPlaceOrder ||
                       isProcessing ||
-                      (!isGuestCheckout && (!addresses || addresses.length === 0)) ||
-                      (isGuestCheckout && checkoutMode !== 'guest' && !user)
+                      (!isGuestCheckout && (!addresses || addresses.length === 0))
                     }
                     className="w-full h-12 bg-teal-600 hover:bg-teal-700 text-white font-medium transition-colors duration-200"
                     size="default"
@@ -2882,22 +2703,12 @@ export default function Checkout() {
                       </>
                     ) : (
                       <>
-                        {isGuestCheckout &&
-                          checkoutMode === 'signin' &&
-                          'Please Sign In Above First'}
-                        {isGuestCheckout &&
-                          checkoutMode === 'signup' &&
-                          'Please Create Account Above First'}
-                        {(!isGuestCheckout || checkoutMode === 'guest') && (
-                          <>
-                            Place Order -{' '}
-                            <CheckoutTotal
-                              items={selectedCartItems}
-                              displayCurrency={isGuestCheckout ? paymentCurrency : undefined}
-                              paymentConversion={paymentConversion}
-                            />
-                          </>
-                        )}
+                        Place Order -{' '}
+                        <CheckoutTotal
+                          items={selectedCartItems}
+                          displayCurrency={paymentCurrency}
+                          exchangeRate={exchangeRate}
+                        />
                       </>
                     )}
                   </Button>
@@ -2919,8 +2730,8 @@ export default function Checkout() {
           onClose={() => setShowQRModal(false)}
           gateway={qrPaymentData.gateway}
           qrCodeUrl={qrPaymentData.qrCodeUrl}
-          amount={paymentConversion?.convertedAmount || totalAmount}
-          currency={paymentConversion?.convertedCurrency || paymentCurrency}
+          amount={totalAmount}
+          currency={paymentCurrency}
           transactionId={qrPaymentData.transactionId}
           onPaymentComplete={handleQRPaymentComplete}
           onPaymentFailed={handleQRPaymentFailed}
@@ -2939,11 +2750,11 @@ export default function Checkout() {
             </div>
             <StripePaymentForm
               client_secret={stripeClientSecret}
-              amount={paymentConversion?.convertedAmount || totalAmount}
-              currency={paymentConversion?.convertedCurrency || paymentCurrency}
+              amount={totalAmount}
+              currency={paymentCurrency}
               customerInfo={{
                 name: isGuestCheckout
-                  ? addressFormData.recipient_name || guestContact.fullName
+                  ? addressFormData.recipient_name || 'Guest Customer'
                   : addressFormData.recipient_name || userProfile?.full_name || '',
                 email: isGuestCheckout ? guestContact.email : user?.email || '',
                 phone: addressFormData.phone || '',
@@ -3065,6 +2876,78 @@ export default function Checkout() {
         isGuest={isGuestCheckout}
         isLoading={addAddressMutation.isPending}
       />
+
+      {/* Auth Modal */}
+      <Dialog open={showAuthModal} onOpenChange={(open) => {
+        console.log('🔵 AUTH MODAL STATE CHANGE:', { open, showAuthModal });
+        setShowAuthModal(open);
+      }}>
+        <DialogContent className="max-w-md">
+          <ProgressiveAuthModal
+            prefilledEmail={guestContact.email}
+            onSuccess={async () => {
+              console.log('🎉 PROGRESSIVE AUTH MODAL - onSuccess called');
+              console.log('🎉 AUTH SUCCESS DEBUG:', {
+                beforeRedirect: {
+                  user: user ? {
+                    id: user.id,
+                    email: user.email,
+                    is_anonymous: user.is_anonymous
+                  } : 'No user',
+                  guestQuoteId,
+                  isGuestCheckout,
+                  currentUrl: window.location.href
+                }
+              });
+              
+              setShowAuthModal(false);
+              
+              // Link guest quote to authenticated user before redirecting
+              if (guestQuoteId) {
+                try {
+                  console.log('🔗 Linking guest quote to authenticated user:', guestQuoteId);
+                  
+                  // Get the current authenticated user
+                  const { data: { user: currentUser } } = await supabase.auth.getUser();
+                  
+                  if (currentUser) {
+                    // Update the quote to belong to the authenticated user and add to cart
+                    const { error: linkError } = await supabase
+                      .from('quotes')
+                      .update({
+                        user_id: currentUser.id,
+                        is_anonymous: false,
+                        in_cart: true  // 🔧 FIX: Add quote to cart when linking to authenticated user
+                      })
+                      .eq('id', guestQuoteId);
+                    
+                    if (linkError) {
+                      console.error('❌ Failed to link quote to user:', linkError);
+                    } else {
+                      console.log('✅ Successfully linked quote to authenticated user and added to cart');
+                      
+                      // 🔧 FIX: Reload cart from server to include the newly linked quote
+                      if (currentUser?.id) {
+                        console.log('🔄 Reloading cart after quote ownership transfer');
+                        await loadFromServer(currentUser.id);
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error('❌ Error linking quote to user:', error);
+                }
+                
+                console.log('🎉 AUTH SUCCESS - Redirecting with quote:', guestQuoteId);
+                navigate(`/checkout?quotes=${guestQuoteId}`);
+              } else {
+                console.log('🎉 AUTH SUCCESS - Redirecting to regular checkout');
+                navigate('/checkout');
+              }
+            }}
+            onBack={() => setShowAuthModal(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

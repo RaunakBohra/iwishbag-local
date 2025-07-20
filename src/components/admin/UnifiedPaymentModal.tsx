@@ -47,7 +47,7 @@ import {
   Copy,
   ExternalLink,
 } from 'lucide-react';
-import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { useQuoteCurrency } from '@/hooks/useCurrency';
 import {
   getCurrencySymbol,
   getCountryCurrency,
@@ -181,7 +181,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabValue>('overview');
   const [showRefundModal, setShowRefundModal] = useState(false);
-  const { formatAmount } = useQuoteDisplayCurrency({ quote });
+  const { formatAmount } = useQuoteCurrency(quote);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

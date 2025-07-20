@@ -3,12 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, Activity, CheckCircle, TrendingUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { useCurrency } from '@/hooks/useCurrency';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 
 export const RecentActivity = () => {
-  const { formatAmount } = useUserCurrency();
+  const { formatAmount } = useCurrency('USD');
   const { getStatusesForOrdersList, getStatusConfig } = useStatusManagement();
 
   const { data: recentQuotes } = useQuery({

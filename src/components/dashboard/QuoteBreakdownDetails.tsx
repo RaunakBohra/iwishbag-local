@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { Tables } from '@/integrations/supabase/types';
-import { useQuoteCurrencyDisplay } from '@/hooks/useCurrencyConversion';
+import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { getCountryCurrency, formatAmountForDisplay } from '@/lib/currencyUtils';
 import {
   Receipt,
@@ -65,24 +65,13 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(
     const originCountry = routeInfo?.origin || 'US';
     const destinationCountry = routeInfo?.destination || 'US';
 
-    const customerPreferredCurrency =
-      quote.profiles?.preferred_display_currency || getCountryCurrency(destinationCountry);
-
-    // Use our new currency display hook - show customer's preferred currency only
-    const currencyDisplay = useQuoteCurrencyDisplay({
-      originCountry,
-      destinationCountry,
-      customerPreferredCurrency,
-      isAdminView: false, // Show single currency in customer preferred format
-    });
+    // Use the new unified currency hook
+    const currencyDisplay = useQuoteCurrency(quote);
 
     console.log('[QuoteBreakdownDetails] Debug info:', {
       originCountry,
       destinationCountry,
-      customerPreferredCurrency,
       exchangeRate: currencyDisplay.exchangeRate,
-      exchangeRateSource: currencyDisplay.exchangeRateSource,
-      warning: currencyDisplay.warning,
       quote_id: quote.id,
     });
 
@@ -152,13 +141,7 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(
                   </TooltipProvider>
                 </div>
                 <span className="text-base sm:text-lg font-semibold text-foreground">
-                  {typeof currencyDisplay.formatAmount(quote.item_price || 0) === 'string'
-                    ? currencyDisplay.formatAmount(quote.item_price || 0)
-                    : (
-                        currencyDisplay.formatAmount(quote.item_price || 0) as {
-                          short: string;
-                        }
-                      ).short || '0'}
+                  {currencyDisplay.formatAmount(quote.item_price || 0)}
                 </span>
               </div>
               <div className="flex items-center justify-between">

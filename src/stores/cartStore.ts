@@ -27,7 +27,6 @@ export interface CartItem {
 interface CartStore {
   // State
   items: CartItem[];
-  savedItems: CartItem[];
   selectedItems: string[];
   isLoading: boolean;
   error: string | null;
@@ -40,15 +39,10 @@ interface CartStore {
   addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
-  moveToSaved: (id: string) => void;
-  moveToCart: (id: string) => void;
   toggleSelection: (id: string) => void;
   selectAll: () => void;
-  selectAllCart: () => void;
-  selectAllSaved: () => void;
   clearSelection: () => void;
   bulkDelete: (ids: string[]) => void;
-  bulkMove: (ids: string[], toSaved: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -78,7 +72,6 @@ export const useCartStore = create<CartStore>()(
       return {
         // Initial state
         items: [],
-        savedItems: [],
         selectedItems: [],
         isLoading: true,
         error: null,
@@ -145,79 +138,6 @@ export const useCartStore = create<CartStore>()(
           }));
         },
 
-        moveToSaved: async (id: string) => {
-          const state = get();
-          const item = state.items.find((i) => i.id === id);
-          if (!item) return;
-
-          // Update local state immediately
-          set((state) => ({
-            ...state,
-            items: state.items.filter((i) => i.id !== id),
-            savedItems: [...state.savedItems, { ...item, inCart: false }],
-            selectedItems: state.selectedItems.filter((itemId) => itemId !== id),
-          }));
-
-          // Sync with server
-          try {
-            const { error } = await supabase.from('quotes').update({ in_cart: false }).eq('id', id);
-
-            if (error) {
-              console.error('Error syncing moveToSaved with server:', error);
-              // Revert local state on error
-              set((state) => ({
-                ...state,
-                savedItems: state.savedItems.filter((i) => i.id !== id),
-                items: [...state.items, { ...item, inCart: true }],
-              }));
-            }
-          } catch (error) {
-            console.error('Error syncing moveToSaved with server:', error);
-            // Revert local state on error
-            set((state) => ({
-              ...state,
-              savedItems: state.savedItems.filter((i) => i.id !== id),
-              items: [...state.items, { ...item, inCart: true }],
-            }));
-          }
-        },
-
-        moveToCart: async (id: string) => {
-          const state = get();
-          const item = state.savedItems.find((i) => i.id === id);
-          if (!item) return;
-
-          // Update local state immediately
-          set((state) => ({
-            ...state,
-            savedItems: state.savedItems.filter((i) => i.id !== id),
-            items: [...state.items, { ...item, inCart: true }],
-            selectedItems: state.selectedItems.filter((itemId) => itemId !== id),
-          }));
-
-          // Sync with server
-          try {
-            const { error } = await supabase.from('quotes').update({ in_cart: true }).eq('id', id);
-
-            if (error) {
-              console.error('Error syncing moveToCart with server:', error);
-              // Revert local state on error
-              set((state) => ({
-                ...state,
-                items: state.items.filter((i) => i.id !== id),
-                savedItems: [...state.savedItems, { ...item, inCart: false }],
-              }));
-            }
-          } catch (error) {
-            console.error('Error syncing moveToCart with server:', error);
-            // Revert local state on error
-            set((state) => ({
-              ...state,
-              items: state.items.filter((i) => i.id !== id),
-              savedItems: [...state.savedItems, { ...item, inCart: false }],
-            }));
-          }
-        },
 
         toggleSelection: (id: string) => {
           set((state) => ({
@@ -229,19 +149,7 @@ export const useCartStore = create<CartStore>()(
 
         selectAll: () => {
           set((state) => ({
-            selectedItems: [...state.items, ...state.savedItems].map((item) => item.id),
-          }));
-        },
-
-        selectAllCart: () => {
-          set((state) => ({
             selectedItems: state.items.map((item) => item.id),
-          }));
-        },
-
-        selectAllSaved: () => {
-          set((state) => ({
-            selectedItems: state.savedItems.map((item) => item.id),
           }));
         },
 
@@ -254,15 +162,12 @@ export const useCartStore = create<CartStore>()(
         bulkDelete: async (ids: string[]) => {
           // Store items to revert if needed
           const state = get();
-          const itemsToDelete = [...state.items, ...state.savedItems].filter((item) =>
-            ids.includes(item.id),
-          );
+          const itemsToDelete = state.items.filter((item) => ids.includes(item.id));
 
           // Update local state immediately
           set((state) => ({
             ...state,
             items: state.items.filter((item) => !ids.includes(item.id)),
-            savedItems: state.savedItems.filter((item) => !ids.includes(item.id)),
             selectedItems: state.selectedItems.filter((id) => !ids.includes(id)),
           }));
 
@@ -278,18 +183,7 @@ export const useCartStore = create<CartStore>()(
               // Revert local state on error
               set((state) => ({
                 ...state,
-                items: [
-                  ...state.items,
-                  ...itemsToDelete.filter(
-                    (item) => !state.savedItems.some((saved) => saved.id === item.id),
-                  ),
-                ],
-                savedItems: [
-                  ...state.savedItems,
-                  ...itemsToDelete.filter((item) =>
-                    state.savedItems.some((saved) => saved.id === item.id),
-                  ),
-                ],
+                items: [...state.items, ...itemsToDelete],
               }));
             }
           } catch (error) {
@@ -297,111 +191,11 @@ export const useCartStore = create<CartStore>()(
             // Revert local state on error
             set((state) => ({
               ...state,
-              items: [
-                ...state.items,
-                ...itemsToDelete.filter(
-                  (item) => !state.savedItems.some((saved) => saved.id === item.id),
-                ),
-              ],
-              savedItems: [
-                ...state.savedItems,
-                ...itemsToDelete.filter((item) =>
-                  state.savedItems.some((saved) => saved.id === item.id),
-                ),
-              ],
+              items: [...state.items, ...itemsToDelete],
             }));
           }
         },
 
-        bulkMove: async (ids: string[], toSaved: boolean) => {
-          const state = get();
-
-          if (toSaved) {
-            const itemsToMove = state.items.filter((item) => ids.includes(item.id));
-
-            // Update local state immediately
-            set((state) => ({
-              ...state,
-              items: state.items.filter((item) => !ids.includes(item.id)),
-              savedItems: [
-                ...state.savedItems,
-                ...itemsToMove.map((item) => ({ ...item, inCart: false })),
-              ],
-              selectedItems: state.selectedItems.filter((id) => !ids.includes(id)),
-            }));
-
-            // Sync with server
-            try {
-              const { error } = await supabase
-                .from('quotes')
-                .update({ in_cart: false })
-                .in('id', ids);
-
-              if (error) {
-                console.error('Error syncing bulkMove to saved with server:', error);
-                // Revert local state on error
-                set((state) => ({
-                  ...state,
-                  savedItems: state.savedItems.filter((item) => !ids.includes(item.id)),
-                  items: [
-                    ...state.items,
-                    ...itemsToMove.map((item) => ({ ...item, inCart: true })),
-                  ],
-                }));
-              }
-            } catch (error) {
-              console.error('Error syncing bulkMove to saved with server:', error);
-              // Revert local state on error
-              set((state) => ({
-                ...state,
-                savedItems: state.savedItems.filter((item) => !ids.includes(item.id)),
-                items: [...state.items, ...itemsToMove.map((item) => ({ ...item, inCart: true }))],
-              }));
-            }
-          } else {
-            const itemsToMove = state.savedItems.filter((item) => ids.includes(item.id));
-
-            // Update local state immediately
-            set((state) => ({
-              ...state,
-              savedItems: state.savedItems.filter((item) => !ids.includes(item.id)),
-              items: [...state.items, ...itemsToMove.map((item) => ({ ...item, inCart: true }))],
-              selectedItems: state.selectedItems.filter((id) => !ids.includes(id)),
-            }));
-
-            // Sync with server
-            try {
-              const { error } = await supabase
-                .from('quotes')
-                .update({ in_cart: true })
-                .in('id', ids);
-
-              if (error) {
-                console.error('Error syncing bulkMove to cart with server:', error);
-                // Revert local state on error
-                set((state) => ({
-                  ...state,
-                  items: state.items.filter((item) => !ids.includes(item.id)),
-                  savedItems: [
-                    ...state.savedItems,
-                    ...itemsToMove.map((item) => ({ ...item, inCart: false })),
-                  ],
-                }));
-              }
-            } catch (error) {
-              console.error('Error syncing bulkMove to cart with server:', error);
-              // Revert local state on error
-              set((state) => ({
-                ...state,
-                items: state.items.filter((item) => !ids.includes(item.id)),
-                savedItems: [
-                  ...state.savedItems,
-                  ...itemsToMove.map((item) => ({ ...item, inCart: false })),
-                ],
-              }));
-            }
-          }
-        },
 
         setLoading: (loading: boolean) => {
           set({ isLoading: loading });
@@ -423,7 +217,6 @@ export const useCartStore = create<CartStore>()(
         clearCart: () => {
           set({
             items: [],
-            savedItems: [],
             selectedItems: [],
             isLoading: false,
             error: null,
@@ -448,18 +241,6 @@ export const useCartStore = create<CartStore>()(
 
               if (error) {
                 console.error(`Error syncing cart item ${item.id}:`, error);
-              }
-            }
-
-            // Sync saved items (in_cart = false)
-            for (const item of state.savedItems) {
-              const { error } = await supabase
-                .from('quotes')
-                .update({ in_cart: false })
-                .eq('id', item.id);
-
-              if (error) {
-                console.error(`Error syncing saved item ${item.id}:`, error);
               }
             }
           } catch (error) {
@@ -517,9 +298,8 @@ export const useCartStore = create<CartStore>()(
               throw quotesError;
             }
 
-            // Separate cart and saved quotes locally (more efficient than 2 DB calls)
+            // Filter only cart quotes (in_cart = true)
             const cartQuotes = allQuotes?.filter((q) => q.in_cart) || [];
-            const savedQuotes = allQuotes?.filter((q) => !q.in_cart) || [];
 
             // Helper function to convert quote to cart item
             interface QuoteWithItems {
@@ -666,16 +446,22 @@ export const useCartStore = create<CartStore>()(
 
             // Convert quotes to cart items
             const cartItems: CartItem[] = cartQuotes.map(convertQuoteToCartItem);
-            const savedItems: CartItem[] = savedQuotes.map(convertQuoteToCartItem);
 
             // Update state
             set({
               items: cartItems,
-              savedItems,
               isLoading: false,
               hasLoadedFromServer: true,
               selectedItems: [],
               isInitialized: true,
+            });
+
+            // 🚨 DEBUG: Log final cart state after successful load
+            console.log('🔍 [CartStore] Cart state updated after load:', {
+              cartItemsCount: cartItems.length,
+              isLoading: false,
+              hasLoadedFromServer: true,
+              cartItems: cartItems.slice(0, 2).map(item => ({ id: item.id, quoteId: item.quoteId, finalTotal: item.finalTotal }))
             });
 
             logger.cart('Cart loaded successfully from server');
@@ -699,7 +485,6 @@ export const useCartStore = create<CartStore>()(
       },
       partialize: (state) => ({
         items: state.items,
-        savedItems: state.savedItems,
         selectedItems: state.selectedItems,
         userId: state.userId,
       }),

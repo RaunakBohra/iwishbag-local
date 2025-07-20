@@ -8,7 +8,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useUserCurrency } from '@/hooks/useUserCurrency';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface QuoteApprovalDialogProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ export const QuoteApprovalDialog: React.FC<QuoteApprovalDialogProps> = ({
   quoteTotal,
   isProcessing,
 }) => {
-  const { formatAmount } = useUserCurrency();
+  const { formatAmount } = useCurrency('USD');
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

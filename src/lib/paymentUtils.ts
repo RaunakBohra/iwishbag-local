@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { optimalExchangeRateService } from '@/services/OptimalExchangeRateService';
+import { currencyService } from '@/services/CurrencyService';
 
 export interface PaymentSummary {
   finalTotal: number;           // Local currency amount (for display)
@@ -36,9 +36,9 @@ export async function calculatePaymentSummary(
   currency: string,
 ): Promise<PaymentSummary> {
   try {
-    // Get current exchange rate for calculations
-    const exchangeRateResult = await optimalExchangeRateService.getOptimalExchangeRate('USD', currency);
-    const exchangeRate = exchangeRateResult.rate;
+    // Get current exchange rate for calculations  
+    const currencyInfo = await currencyService.getCurrency(currency);
+    const exchangeRate = currencyInfo?.rate_from_usd || 1;
 
     // Fetch payment ledger with USD equivalents
     const { data: paymentLedger, error } = await supabase
@@ -257,9 +257,10 @@ export async function recordPaymentWithUsdEquivalent(
   transactionId?: string,
 ): Promise<{ success: boolean; usdEquivalent?: number; error?: string }> {
   try {
-    // Get optimal exchange rate for USD equivalent
-    const exchangeRateResult = await optimalExchangeRateService.getOptimalExchangeRate(currency, 'USD');
-    const usdEquivalent = amount / exchangeRateResult.rate;
+    // Get exchange rate for USD equivalent
+    const currencyInfo = await currencyService.getCurrency(currency);
+    const exchangeRate = currencyInfo?.rate_from_usd || 1;
+    const usdEquivalent = amount / exchangeRate;
 
     // Record in payment_transactions with USD equivalent
     const { error: transactionError } = await supabase

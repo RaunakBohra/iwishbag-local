@@ -29,7 +29,7 @@ import { Card, CardContent } from '@/components/ui/card';
 // useNavigate removed - not used
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 // formatDistanceToNow removed - not used
-import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { useToast } from '@/components/ui/use-toast';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -54,9 +54,7 @@ export default function Orders() {
 
   // For summary statistics, use the first order's currency display
   const firstOrder = orders?.[0];
-  const { formatAmount: formatSummaryAmount } = useQuoteDisplayCurrency({
-    quote: firstOrder,
-  });
+  const { formatAmount: formatSummaryAmount } = useQuoteCurrency(firstOrder);
 
   // Filter orders based on status and search
   const filteredOrders =
@@ -340,7 +338,7 @@ function OrderItem({
   order: Tables<'quotes'> & { quote_items?: Tables<'quote_items'>[] };
   countries: { code: string; name: string }[] | undefined;
 }) {
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: order });
+  const { formatAmount } = useQuoteCurrency(order);
   // Get route information using unified hook
   const route = useQuoteRoute(order);
 

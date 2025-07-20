@@ -584,6 +584,99 @@ class CurrencyService {
   isSupportedByPaymentGateway(currencyCode: string): boolean {
     return this.getPaymentGatewayCurrencies().includes(currencyCode);
   }
+
+  /**
+   * Get exchange rate using 2-tier system: Shipping Routes → Country Settings → Error
+   * This replaces the old complex fallback system with a simple, business-focused approach
+   * 
+   * @param originCountry - Origin country code (e.g. 'US', 'IN')
+   * @param destinationCountry - Destination country code (e.g. 'IN', 'NP')
+   * @returns Promise<number> - Exchange rate or throws error
+   */
+  async getExchangeRate(originCountry: string, destinationCountry: string): Promise<number> {
+    // Same currency = 1.0
+    if (originCountry === destinationCountry) {
+      return 1.0;
+    }
+
+    try {
+      // Tier 1: Check shipping routes for direct exchange rates (highest priority)
+      const { data: shippingRoute, error: routeError } = await supabase
+        .from('shipping_routes')
+        .select('exchange_rate')
+        .eq('origin_country', originCountry)
+        .eq('destination_country', destinationCountry)
+        .not('exchange_rate', 'is', null)
+        .single();
+
+      if (!routeError && shippingRoute?.exchange_rate) {
+        console.log(`[CurrencyService] Using shipping route rate: ${originCountry}→${destinationCountry} = ${shippingRoute.exchange_rate}`);
+        return shippingRoute.exchange_rate;
+      }
+
+      // Tier 2: Fallback to country settings USD-based conversion
+      const [originResult, destResult] = await Promise.all([
+        supabase
+          .from('country_settings')
+          .select('currency, rate_from_usd')
+          .eq('code', originCountry)
+          .single(),
+        supabase
+          .from('country_settings')
+          .select('currency, rate_from_usd')
+          .eq('code', destinationCountry)
+          .single()
+      ]);
+
+      if (originResult.error || destResult.error) {
+        throw new Error(`Country settings not found: ${originCountry} or ${destinationCountry}`);
+      }
+
+      const originRate = originResult.data.rate_from_usd;
+      const destRate = destResult.data.rate_from_usd;
+
+      if (!originRate || !destRate || originRate <= 0 || destRate <= 0) {
+        throw new Error(`Invalid exchange rates: ${originCountry}=${originRate}, ${destinationCountry}=${destRate}`);
+      }
+
+      // Calculate cross rate via USD: destination_rate / origin_rate
+      const crossRate = destRate / originRate;
+      console.log(`[CurrencyService] Using USD cross-rate: ${originCountry}→${destinationCountry} = ${crossRate} (${destRate}/${originRate})`);
+      
+      return crossRate;
+
+    } catch (error) {
+      console.error(`[CurrencyService] Failed to get exchange rate ${originCountry}→${destinationCountry}:`, error);
+      throw new Error(`Exchange rate unavailable for ${originCountry} to ${destinationCountry}`);
+    }
+  }
+
+  /**
+   * Get exchange rate for currency conversion (simplified interface)
+   * @param fromCurrency - Source currency code (e.g. 'USD', 'INR')
+   * @param toCurrency - Target currency code (e.g. 'INR', 'NPR')
+   * @returns Promise<number> - Exchange rate or throws error
+   */
+  async getExchangeRateByCurrency(fromCurrency: string, toCurrency: string): Promise<number> {
+    if (fromCurrency === toCurrency) {
+      return 1.0;
+    }
+
+    try {
+      // Get countries for these currencies
+      const fromCountry = await this.getCountryForCurrency(fromCurrency);
+      const toCountry = await this.getCountryForCurrency(toCurrency);
+
+      if (!fromCountry || !toCountry) {
+        throw new Error(`Cannot find countries for currencies: ${fromCurrency}, ${toCurrency}`);
+      }
+
+      return await this.getExchangeRate(fromCountry, toCountry);
+    } catch (error) {
+      console.error(`[CurrencyService] Currency exchange rate failed ${fromCurrency}→${toCurrency}:`, error);
+      throw new Error(`Exchange rate unavailable for ${fromCurrency} to ${toCurrency}`);
+    }
+  }
 }
 
 // Export singleton instance

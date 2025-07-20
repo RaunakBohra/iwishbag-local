@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { useOrderMutations } from '@/hooks/useOrderMutations';
 import { OrderTimeline } from '@/components/dashboard/OrderTimeline';
@@ -78,7 +78,7 @@ export default function OrderDetail() {
   });
 
   // Get currency display formatter for the order
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: order });
+  const { formatAmount } = useQuoteCurrency(order);
 
   // Get country name for display
   const _countryName = useMemo(() => {

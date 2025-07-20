@@ -30,7 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrendingUp, Clock, Zap, BarChart3, RefreshCw } from 'lucide-react';
 import { DualCurrencyDisplay } from '@/components/admin/DualCurrencyDisplay';
 import { getCurrencySymbolFromCountry } from '@/lib/currencyUtils';
-import { useQuoteCurrencyDisplay } from '@/hooks/useCurrencyConversion';
+import { useDualCurrency } from '@/hooks/useCurrency';
 
 interface OptimizedQuoteCalculatorProps {
   initialData?: Partial<AdminQuoteFormValues>;
@@ -154,12 +154,26 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
   const originCountry: string = watchedValues.origin_country || '';
   const destinationCountry: string = watchedValues.destination_country || '';
 
-  // Use proper currency display hook like QuoteCalculatedCosts
-  const currencyDisplay = useQuoteCurrencyDisplay({
+  // Get destination currency from countries data
+  const destinationCurrency = useMemo(() => {
+    if (!allCountries || !destinationCountry) return 'USD';
+    const country = allCountries.find((c) => c.code === destinationCountry);
+    return country?.currency || 'USD';
+  }, [allCountries, destinationCountry]);
+
+  // Use dual currency display for admin views
+  const currencyDisplay = useDualCurrency(
+    destinationCurrency,
     originCountry,
-    destinationCountry,
-    isAdminView: true,
-  });
+    destinationCountry
+  );
+  
+  // Create compatibility object for existing display logic
+  const currencyDisplayCompat = {
+    exchangeRate: currencyDisplay.local?.exchangeRate || 1,
+    exchangeRateSource: 'database',
+    warning: null
+  };
 
   // Manual calculation trigger
   const handleCalculate = useCallback(async () => {
@@ -448,9 +462,9 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                             amount={displayResult.breakdown.final_total}
                             originCountry={originCountry}
                             destinationCountry={destinationCountry}
-                            exchangeRate={currencyDisplay.exchangeRate}
-                            exchangeRateSource={currencyDisplay.exchangeRateSource}
-                            warning={currencyDisplay.warning}
+                            exchangeRate={currencyDisplayCompat.exchangeRate}
+                            exchangeRateSource={currencyDisplayCompat.exchangeRateSource}
+                            warning={currencyDisplayCompat.warning}
                             showTooltip={true}
                             className="text-2xl font-bold"
                           />
@@ -463,9 +477,9 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                             amount={displayResult.breakdown.total_item_price}
                             originCountry={originCountry}
                             destinationCountry={destinationCountry}
-                            exchangeRate={currencyDisplay.exchangeRate}
-                            exchangeRateSource={currencyDisplay.exchangeRateSource}
-                            warning={currencyDisplay.warning}
+                            exchangeRate={currencyDisplayCompat.exchangeRate}
+                            exchangeRateSource={currencyDisplayCompat.exchangeRateSource}
+                            warning={currencyDisplayCompat.warning}
                             showTooltip={true}
                             className="text-xl font-semibold"
                           />
@@ -516,9 +530,9 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                               amount={Math.abs(amount)}
                               originCountry={originCountry}
                               destinationCountry={destinationCountry}
-                              exchangeRate={currencyDisplay.exchangeRate}
-                              exchangeRateSource={currencyDisplay.exchangeRateSource}
-                              warning={currencyDisplay.warning}
+                              exchangeRate={currencyDisplayCompat.exchangeRate}
+                              exchangeRateSource={currencyDisplayCompat.exchangeRateSource}
+                              warning={currencyDisplayCompat.warning}
                               showTooltip={false}
                               className="text-sm"
                             />
@@ -533,9 +547,9 @@ export const OptimizedQuoteCalculator: React.FC<OptimizedQuoteCalculatorProps> =
                           amount={displayResult.breakdown.final_total}
                           originCountry={originCountry}
                           destinationCountry={destinationCountry}
-                          exchangeRate={currencyDisplay.exchangeRate}
-                          exchangeRateSource={currencyDisplay.exchangeRateSource}
-                          warning={currencyDisplay.warning}
+                          exchangeRate={currencyDisplayCompat.exchangeRate}
+                          exchangeRateSource={currencyDisplayCompat.exchangeRateSource}
+                          warning={currencyDisplayCompat.warning}
                           showTooltip={true}
                           className="font-bold"
                         />

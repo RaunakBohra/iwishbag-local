@@ -1,19 +1,27 @@
-import { useMemo } from 'react';
+import { useAllCountries } from '@/hooks/useAllCountries';
+import { currencyService } from '@/services/CurrencyService';
 
-interface Country {
-  code: string;
-  name: string;
-  currency: string;
-}
+/**
+ * Hook to get country information with currency details
+ * Replacement for deleted hook after currency system simplification
+ */
+export const useCountryWithCurrency = () => {
+  const { data: countries, isLoading } = useAllCountries();
 
-export const useCountryWithCurrency = (countries: Country[] | undefined) => {
-  return useMemo(() => {
-    if (!countries) return [];
+  const getCountryWithCurrency = (countryCode: string) => {
+    const country = countries?.find(c => c.code === countryCode);
+    if (!country) return null;
 
-    return countries.map((country) => ({
+    return {
       ...country,
-      displayName: `${country.name} (${country.currency?.toUpperCase() || 'USD'})`,
-      currencyCode: country.currency || 'USD',
-    }));
-  }, [countries]);
+      currency: country.currency || 'USD',
+      currencySymbol: currencyService.getCurrencySymbol(country.currency || 'USD'),
+    };
+  };
+
+  return {
+    getCountryWithCurrency,
+    countries: countries || [],
+    isLoading,
+  };
 };

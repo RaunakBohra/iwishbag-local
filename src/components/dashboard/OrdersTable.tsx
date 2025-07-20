@@ -11,7 +11,7 @@ import { Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { OrderStatusProgress } from './OrderStatusProgress';
 import { Tables } from '@/integrations/supabase/types';
-import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { useQuoteCurrency } from '@/hooks/useCurrency';
 
 type Order = Tables<'quotes'>;
 
@@ -20,7 +20,7 @@ interface OrdersTableProps {
 }
 
 const OrderRow = ({ order, onViewOrder }: { order: Order; onViewOrder: (id: string) => void }) => {
-  const { formatAmount } = useQuoteDisplayCurrency({ quote: order });
+  const { formatAmount } = useQuoteCurrency(order);
 
   return (
     <TableRow

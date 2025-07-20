@@ -37,34 +37,43 @@ export const useQuoteQueries = (id: string | undefined) => {
       }
       // Map snake_case to camelCase for UI breakdown
       if (data) {
-        // Use original values in purchase currency - no USD conversion needed
-        logger.debug('Purchase currency values', {
-          sales_tax_price: data.sales_tax_price,
-          merchant_shipping_price: data.merchant_shipping_price,
-          domestic_shipping: data.domestic_shipping,
-          handling_charge: data.handling_charge,
-          insurance_amount: data.insurance_amount,
-          discount: data.discount,
+        // 🔧 FIX: Restore proper currency conversion for display components
+        // Database values are stored in USD, but some components expect proper conversion
+        const exchangeRate = data.exchange_rate || 1;
+        
+        logger.debug('Currency conversion data', {
+          exchange_rate: data.exchange_rate,
+          origin_country: data.origin_country,
+          raw_values: {
+            sales_tax_price: data.sales_tax_price,
+            merchant_shipping_price: data.merchant_shipping_price,
+            domestic_shipping: data.domestic_shipping,
+            handling_charge: data.handling_charge,
+            insurance_amount: data.insurance_amount,
+            discount: data.discount,
+          }
         });
 
-        // Map values directly without USD conversion
+        // Database values are already stored in USD, no conversion needed
+        // Just map to camelCase for UI consistency
         data.salesTaxPrice = data.sales_tax_price || 0;
         data.merchantShippingPrice = data.merchant_shipping_price || 0;
-        data.interNationalShipping = data.international_shipping || 0;
-        data.customsAndECS = data.customs_and_ecs || 0;
         data.domesticShipping = data.domestic_shipping || 0;
         data.handlingCharge = data.handling_charge || 0;
         data.insuranceAmount = data.insurance_amount || 0;
-        data.paymentGatewayFee = data.payment_gateway_fee || 0;
         data.discount = data.discount || 0;
+        data.interNationalShipping = data.international_shipping || 0;
+        data.customsAndECS = data.customs_and_ecs || 0;
+        data.paymentGatewayFee = data.payment_gateway_fee || 0;
 
-        logger.debug('Mapped values (purchase currency)', {
+        logger.debug('Mapped values (USD from database)', {
           salesTaxPrice: data.salesTaxPrice,
           merchantShippingPrice: data.merchantShippingPrice,
           domesticShipping: data.domesticShipping,
           handlingCharge: data.handlingCharge,
           insuranceAmount: data.insuranceAmount,
           discount: data.discount,
+          exchangeRate: exchangeRate
         });
       }
       return data;

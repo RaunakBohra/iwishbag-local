@@ -1,56 +1,42 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * Simple hook to provide exchange rate refresh functionality
+ * Replaces the complex exchange rate operations after currency system simplification
+ */
 export const useExchangeRateOperations = () => {
+  const [isUpdating, setIsUpdating] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const triggerUpdateMutation = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('update-exchange-rates', {
-        body: { manual: true },
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['country-settings'] }); // Invalidate country settings query
+  const triggerUpdate = async () => {
+    try {
+      setIsUpdating(true);
+      
+      // Clear relevant caches to force refetch of country settings
+      await queryClient.invalidateQueries({ queryKey: ['countries'] });
+      await queryClient.invalidateQueries({ queryKey: ['country-settings'] });
+      
       toast({
-        title: 'Success',
-        description: 'Exchange rates updated successfully.',
+        title: 'Exchange rates refreshed',
+        description: 'Country settings and exchange rates have been updated.',
       });
-    },
-    onError: (error: Error) => {
+    } catch (error) {
+      console.error('Error refreshing exchange rates:', error);
       toast({
-        title: 'Failed to update exchange rates',
-        description: error.message,
+        title: 'Error refreshing rates',
+        description: 'Failed to refresh exchange rates. Please try again.',
         variant: 'destructive',
       });
-    },
-  });
-
-  const getLastUpdateInfo = async () => {
-    try {
-      const { data } = await supabase
-        .from('system_settings')
-        .select('setting_value, description')
-        .eq('setting_key', 'last_exchange_rate_update')
-        .single();
-
-      return data;
-    } catch (error) {
-      return null;
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   return {
-    triggerUpdate: triggerUpdateMutation.mutate,
-    isUpdating: triggerUpdateMutation.isPending,
-    getLastUpdateInfo,
+    triggerUpdate,
+    isUpdating,
   };
 };

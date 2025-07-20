@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import { useAllCountries } from '@/hooks/useAllCountries';
-import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { useQuoteState } from '@/hooks/useQuoteState';
 import { useCartStore } from '@/stores/cartStore';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
@@ -78,7 +78,7 @@ const QuoteCard = ({
   countries: Country[] | undefined;
   isQuoteInCart: (quoteId: string) => boolean;
 }) => {
-  const { formatAmount } = useQuoteDisplayCurrency({ quote });
+  const { formatAmount } = useQuoteCurrency(quote);
   const { getStatusConfig } = useStatusManagement();
 
   const numberOfItems = Array.isArray(quote.quote_items) ? quote.quote_items.length : 1;
@@ -260,7 +260,7 @@ export default function Quotes() {
 
   const { data: countries } = useAllCountries();
   const { quoteStatuses } = useStatusManagement();
-  // formatAmount will be handled per quote with useQuoteDisplayCurrency
+  // formatAmount will be handled per quote with useQuoteCurrency
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deliveryEstimates, setDeliveryEstimates] = useState<Record<string, DeliveryEstimate>>({});
 

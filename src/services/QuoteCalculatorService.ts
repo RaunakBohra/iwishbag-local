@@ -1,7 +1,6 @@
 import { getShippingCost } from '@/lib/unified-shipping-calculator';
 import { Tables } from '@/integrations/supabase/types';
 import { currencyService } from '@/services/CurrencyService';
-import { optimalExchangeRateService, ExchangeRateResult } from '@/services/OptimalExchangeRateService';
 import {
   startQuoteCalculationMonitoring,
   completeQuoteCalculationMonitoring,
@@ -125,7 +124,7 @@ export class QuoteCalculatorService {
     string,
     { result: QuoteCalculationResult; timestamp: number }
   >();
-  private exchangeRateCache = new Map<string, { rate: ExchangeRateResult; timestamp: number }>();
+  private exchangeRateCache = new Map<string, { rate: number; timestamp: number }>();
   private readonly CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
   private performanceMetrics = {
     totalCalculations: 0,
@@ -594,9 +593,8 @@ export class QuoteCalculatorService {
       }
     }
 
-    const exchangeRateResult = await optimalExchangeRateService.getOptimalExchangeRate(
-      'USD', // All calculations are based in USD
-      destinationCurrency,
+    // Get exchange rate using the simplified 2-tier system
+    const exchange_rate = await currencyService.getExchangeRate(
       params.originCountry,
       params.destinationCountry
     );
@@ -685,9 +683,8 @@ export class QuoteCalculatorService {
     const shipping_route_id = shippingCost.route?.id;
     
     // Use optimal exchange rate result
-    const exchange_rate = exchangeRateResult.rate;
-    const exchange_rate_source = exchangeRateResult.source;
-    const exchange_rate_method = exchangeRateResult.method;
+    const exchange_rate_source = 'currency_service';
+    const exchange_rate_method = '2_tier_fallback';
 
     // Calculate customs and duties
     const customs_and_ecs =

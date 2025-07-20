@@ -246,8 +246,15 @@ export const useQuoteCalculation = () => {
       let customsAndECS: number;
       let paymentGatewayFee: number;
 
-      const purchaseCurrencyRate = countrySettings.rate_from_usd || 1;
-      console.log('[QuoteCalc Debug] Purchase currency rate from USD:', purchaseCurrencyRate);
+      // Use shipping route exchange rate if available, otherwise fall back to country settings
+      let purchaseCurrencyRate: number;
+      if (shippingCost.method === 'route-specific' && shippingCost.route?.exchange_rate) {
+        purchaseCurrencyRate = shippingCost.route.exchange_rate;
+        console.log('[QuoteCalc Debug] Using route-specific exchange rate:', purchaseCurrencyRate);
+      } else {
+        purchaseCurrencyRate = countrySettings.rate_from_usd || 1;
+        console.log('[QuoteCalc Debug] Using country settings exchange rate:', purchaseCurrencyRate);
+      }
 
       if (shippingCost.method === 'route-specific' && shippingCost.route) {
         console.log('[QuoteCalc Debug] Using route-specific shipping');

@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { useQuoteState } from '@/hooks/useQuoteState';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -177,9 +177,10 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
   // Guest currency hook (always call but only use if in guest mode)
   const { guestCurrency } = useGuestCurrency();
 
-  const { formatAmount } = useQuoteDisplayCurrency({
-    quote,
-    guestCurrency: isGuestMode ? guestCurrency : null,
+  const { formatAmount } = useQuoteCurrency({
+    origin_country: quote?.origin_country,
+    destination_country: quote?.destination_country,
+    destination_currency: isGuestMode ? guestCurrency : quote?.destination_currency,
   });
 
   // Subscribe to cart store to make quote detail reactive to cart changes
@@ -509,8 +510,9 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
       console.log('🚀 Navigating to guest checkout with quote:', quote?.id);
       navigate(`/guest-checkout?quote=${quote?.id}`);
     } else {
-      console.log('🚀 Navigating to regular checkout');
-      navigate('/checkout');
+      console.log('🚀 Navigating to regular checkout with quote:', quote?.id);
+      // Include the quote ID in URL for authenticated users too
+      navigate(`/checkout?quotes=${quote?.id}`);
     }
   };
 

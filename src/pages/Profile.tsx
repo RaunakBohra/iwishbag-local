@@ -263,20 +263,13 @@ const Profile = () => {
       return currency.name;
     }
 
-    // Fallback to hardcoded names
-    const currencyNames: Record<string, string> = {
-      USD: 'US Dollar',
-      EUR: 'Euro',
-      GBP: 'British Pound',
-      INR: 'Indian Rupee',
-      NPR: 'Nepalese Rupee',
-      CAD: 'Canadian Dollar',
-      AUD: 'Australian Dollar',
-      JPY: 'Japanese Yen',
-      CNY: 'Chinese Yuan',
-      SGD: 'Singapore Dollar',
-    };
-    return currencyNames[currencyCode] || currencyCode;
+    // Use CurrencyService fallback instead of hardcoded values
+    try {
+      return currencyService.getCurrencyName(currencyCode);
+    } catch (error) {
+      console.warn('Failed to get currency name from service:', error);
+      return currencyCode;
+    }
   };
 
 

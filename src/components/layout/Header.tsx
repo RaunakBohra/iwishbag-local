@@ -28,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { CartDrawer } from '@/components/cart/CartDrawer';
+import { useCart } from '@/hooks/useCart';
 import { useSidebar } from '@/hooks/use-sidebar';
 import { AdminSearch } from '@/components/admin/AdminSearch';
 import { useState } from 'react';
@@ -41,6 +42,7 @@ const Header = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const { data: hasAdminRole } = useAdminRole();
+  const { itemCount: cartItemCount } = useCart();
 
   // Default homepage settings
   const homePageSettings = {
@@ -218,7 +220,23 @@ const Header = () => {
             <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4">
               {/* Desktop View - Show all actions */}
               <div className="hidden sm:flex items-center space-x-1 md:space-x-2 lg:space-x-3">
-                <CartDrawer />
+                <CartDrawer>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative hover:bg-gray-50 flex-shrink-0 h-9 w-9 transition-colors"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    {cartItemCount > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs font-medium bg-red-500 text-white border-2 border-white"
+                      >
+                        {cartItemCount > 9 ? '9+' : cartItemCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </CartDrawer>
 
                 {/* Messages with improved badge */}
                 <Button
@@ -244,7 +262,23 @@ const Header = () => {
 
               {/* Mobile View - Only show Cart and More menu */}
               <div className="flex sm:hidden items-center space-x-1">
-                <CartDrawer />
+                <CartDrawer>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative hover:bg-gray-50 flex-shrink-0 h-9 w-9 transition-colors"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    {cartItemCount > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs font-medium bg-red-500 text-white border-2 border-white"
+                      >
+                        {cartItemCount > 9 ? '9+' : cartItemCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </CartDrawer>
                 <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                   <SheetTrigger asChild>
                     <Button

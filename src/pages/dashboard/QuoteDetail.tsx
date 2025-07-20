@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { useQuoteState } from '@/hooks/useQuoteState';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -59,7 +59,7 @@ import { ShareQuoteButton } from '@/components/admin/ShareQuoteButton';
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  // Will get formatAmount from useQuoteDisplayCurrency when quote is loaded
+  // Will get formatAmount from useQuoteCurrency when quote is loaded
   const { data: countries } = useAllCountries();
   const { data: _isAdmin, isLoading: _isAdminLoading } = useAdminRole();
   const { getStatusConfig } = useStatusManagement();
@@ -140,7 +140,7 @@ export default function QuoteDetail() {
     );
   }, [countries, quote?.destination_country]);
 
-  // Currency formatting is now handled by useQuoteDisplayCurrency hook
+  // Currency formatting is now handled by useQuoteCurrency hook
 
   // Calculate delivery timeline
   const _getDeliveryTimeline = () => {
@@ -155,7 +155,7 @@ export default function QuoteDetail() {
   };
 
   // Get quote-specific currency formatting (must be called before any conditional returns)
-  const { formatAmount } = useQuoteDisplayCurrency({ quote });
+  const { formatAmount } = useQuoteCurrency(quote);
 
   // Parse shipping address from JSONB
   const shippingAddress = quote?.shipping_address as unknown as ShippingAddress | null;
