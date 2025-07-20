@@ -103,27 +103,27 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
 
   return (
     <div className="max-w-lg mx-auto">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="text-center mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-xl font-semibold text-gray-900 mb-3">
             {currentView !== 'options' ? (
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-3">
                 <button
                   onClick={() => setCurrentView('options')}
-                  className="p-1 hover:bg-gray-100 rounded"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="h-5 w-5" />
                 </button>
                 {currentView === 'signin' ? 'Sign In' : 'Create Account'}
               </div>
             ) : (
               <>
-                <User className="h-5 w-5 mx-auto mb-2 text-teal-600" />
+                <User className="h-6 w-6 mx-auto mb-3 text-teal-600" />
                 Contact Information
               </>
             )}
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-gray-600">
             {currentView === 'options'
               ? 'Enter your details to receive your quote'
               : currentView === 'signin'
@@ -135,9 +135,9 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
         {currentView === 'options' ? (
           <div className="space-y-4">
             {/* Guest Email and Name Entry */}
-            <div className="space-y-3">
+            <div className="space-y-5">
               <div>
-                <Label htmlFor="guestEmail" className="text-sm font-medium text-gray-900">
+                <Label htmlFor="guestEmail" className="text-sm font-medium text-gray-900 mb-2 block">
                   Email address *
                 </Label>
                 <Input
@@ -150,15 +150,15 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
                     setEmailError('');
                     if (clearError) clearError();
                   }}
-                  className={`mt-2 h-12 ${emailError ? 'border-red-500' : 'border-gray-300 focus:border-teal-500 focus:ring-teal-500'}`}
+                  className={`h-14 text-base rounded-lg ${emailError ? 'border-red-500' : 'border-gray-200 focus:border-teal-500 focus:ring-teal-500'} transition-colors`}
                   autoFocus
                 />
-                {emailError && <p className="text-sm text-red-500 mt-1">{emailError}</p>}
-                <p className="text-xs text-gray-500 mt-1">We'll send your quote to this email address</p>
+                {emailError && <p className="text-sm text-red-500 mt-2">{emailError}</p>}
+                <p className="text-xs text-gray-500 mt-2">We'll send your quote to this email address</p>
               </div>
               
               <div>
-                <Label htmlFor="guestName" className="text-sm font-medium text-gray-900">
+                <Label htmlFor="guestName" className="text-sm font-medium text-gray-900 mb-2 block">
                   Full name *
                 </Label>
                 <Input
@@ -171,28 +171,29 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
                     setNameError('');
                     if (clearError) clearError();
                   }}
-                  className={`mt-2 h-12 ${nameError ? 'border-red-500' : 'border-gray-300 focus:border-teal-500 focus:ring-teal-500'}`}
+                  className={`h-14 text-base rounded-lg ${nameError ? 'border-red-500' : 'border-gray-200 focus:border-teal-500 focus:ring-teal-500'} transition-colors`}
                 />
-                {nameError && <p className="text-sm text-red-500 mt-1">{nameError}</p>}
+                {nameError && <p className="text-sm text-red-500 mt-2">{nameError}</p>}
               </div>
 
               <TurnstileProtectedForm
                 onSubmit={handleGuestSubmit}
                 isSubmitting={isSubmitting}
                 submitButtonText="Submit Quote Request"
-                submitButtonClassName="w-full h-12 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-base transition-all duration-200"
+                submitButtonClassName="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg rounded-lg transition-all duration-200 shadow-sm"
                 disabled={!guestEmail || !guestName}
                 action="guest_quote_request"
                 errorMessage={submitError}
+                id="quote-contact-form"
               >
                 {/* This content will be rendered inside the form */}
               </TurnstileProtectedForm>
             </div>
 
             {/* Optional Account Sign In */}
-            <div className="pt-4 border-t border-gray-200">
+            <div className="pt-6 border-t border-gray-200">
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-3">
+                <p className="text-gray-600 mb-4">
                   Want to save your info and track quotes?
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -200,7 +201,7 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
                     variant="outline"
                     onClick={() => handleSocialLogin('google')}
                     disabled={isSubmitting}
-                    className="h-10 text-sm border-gray-200 hover:bg-gray-50"
+                    className="h-12 text-sm border-gray-200 hover:bg-gray-50 rounded-lg transition-colors"
                   >
                     <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -214,7 +215,7 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
                     variant="outline"
                     onClick={() => setCurrentView('signin')}
                     disabled={isSubmitting}
-                    className="h-10 text-sm border-gray-200 hover:bg-gray-50"
+                    className="h-12 text-sm border-gray-200 hover:bg-gray-50 rounded-lg transition-colors"
                   >
                     <Mail className="h-4 w-4 mr-2" />
                     Email

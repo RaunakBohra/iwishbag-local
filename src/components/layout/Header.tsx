@@ -34,7 +34,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/design-system';
 
 const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAnonymous } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toggleSidebar } = useSidebar();
@@ -228,7 +228,7 @@ const Header = () => {
             </div>
           )}
 
-          {user ? (
+          {user && !isAnonymous ? (
             <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4">
               {/* Desktop View - Show all actions */}
               <div className="hidden sm:flex items-center space-x-1 md:space-x-2 lg:space-x-3">
@@ -537,7 +537,7 @@ const Header = () => {
               </div>
             </div>
           ) : (
-            /* Guest User Actions - Enhanced styling */
+            /* Anonymous/Guest User Actions - Enhanced styling */
             <div className="flex items-center space-x-2 md:space-x-3">
               <Button
                 asChild

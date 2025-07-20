@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 const Auth = () => {
-  const { session } = useAuth();
+  const { session, isAnonymous } = useAuth();
   const location = useLocation();
   const message = location.state?.message;
 
@@ -17,7 +17,8 @@ const Auth = () => {
     }
   }, [message]);
 
-  if (session) {
+  // Only redirect if user has a session AND is not anonymous
+  if (session && !isAnonymous) {
     return <Navigate to="/" replace />;
   }
 
@@ -27,7 +28,7 @@ const Auth = () => {
       <div className="absolute top-6 right-6 z-10">
         <Link 
           to="/" 
-          className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors duration-200"
+          className="inline-flex items-center space-x-2 text-orange-500 lg:text-gray-600 hover:text-orange-600 lg:hover:text-gray-900 transition-colors duration-200"
         >
           <ArrowLeft className="h-4 w-4" />
           <span className="text-sm font-medium">Back to Home</span>
@@ -46,12 +47,19 @@ const Auth = () => {
         </div>
 
         {/* Right Side - Auth Form */}
-        <div className="flex-1 flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
+        <div className="flex-1 flex items-center justify-center bg-gray-50 lg:bg-gray-50 bg-gradient-to-t from-teal-500 from-40% via-cyan-500/70 via-60% to-transparent lg:bg-none px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+          {/* Mobile Decorative elements */}
+          <div className="absolute inset-0 lg:hidden pointer-events-none">
+            <div className="absolute top-1/6 right-1/4 w-24 h-24 bg-white bg-opacity-10 rounded-full blur-xl"></div>
+            <div className="absolute bottom-1/4 left-1/5 w-32 h-32 bg-white bg-opacity-10 rounded-full blur-lg"></div>
+            <div className="absolute top-1/2 right-1/3 w-16 h-16 bg-white bg-opacity-10 rounded-full blur-md"></div>
+            <div className="absolute bottom-1/6 right-1/6 w-20 h-20 bg-white bg-opacity-10 rounded-full blur-lg"></div>
+          </div>
           <div className="w-full max-w-md">
             {/* Logo - Above Form */}
             <div className="text-center mb-8">
               <img 
-                src="https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png" 
+                src="https://res.cloudinary.com/dto2xew5c/image/upload/v1750167745/wb-logo-final_1_f7bqrp.png" 
                 alt="iwishBag"
                 className="h-16 mx-auto"
               />
@@ -78,13 +86,13 @@ const Auth = () => {
 
             {/* Footer */}
             <div className="mt-6 text-center">
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 lg:text-gray-500 text-white/80">
                 By continuing, you agree to our{' '}
-                <a href="/terms-conditions" className="text-teal-600 hover:text-teal-800 font-medium">
+                <a href="/terms-conditions" className="text-teal-600 hover:text-teal-800 lg:text-teal-600 lg:hover:text-teal-800 text-white hover:text-white/90 font-medium underline">
                   Terms of Service
                 </a>{' '}
                 and{' '}
-                <a href="/privacy-policy" className="text-teal-600 hover:text-teal-800 font-medium">
+                <a href="/privacy-policy" className="text-teal-600 hover:text-teal-800 lg:text-teal-600 lg:hover:text-teal-800 text-white hover:text-white/90 font-medium underline">
                   Privacy Policy
                 </a>
               </p>

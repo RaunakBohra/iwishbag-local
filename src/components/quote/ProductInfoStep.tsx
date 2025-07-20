@@ -226,103 +226,102 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
   const quoteTypeMessage = getQuoteTypeMessage();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-      {/* Quote Type Selection */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 sm:p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <Globe className="h-5 w-5 mr-2" />
-          How would you like your quote?
-        </h3>
-        <div className="flex flex-row flex-wrap gap-3 sm:gap-4">
-          <div
-            className={`flex-1 min-w-[180px] p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
-              quoteType === 'separate'
-                ? 'border-teal-500 bg-teal-50'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-            onClick={() => setQuoteType('separate')}
-          >
-            <div className="flex items-center mb-2">
-              <div
-                className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                  quoteType === 'separate' ? 'border-teal-500 bg-teal-500' : 'border-gray-300'
-                }`}
-              >
-                {quoteType === 'separate' && (
-                  <div className="w-2 h-2 bg-white rounded-full m-0.5"></div>
-                )}
-              </div>
-              <span className="font-medium">Separate Quotes</span>
-            </div>
-            <p className="text-sm text-gray-600 ml-7">Get individual quotes for each item</p>
-          </div>
-
-          <div
-            className={`flex-1 min-w-[180px] p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
-              quoteType === 'combined'
-                ? 'border-teal-500 bg-teal-50'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-            onClick={() => setQuoteType('combined')}
-          >
-            <div className="flex items-center mb-2">
-              <div
-                className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                  quoteType === 'combined' ? 'border-teal-500 bg-teal-500' : 'border-gray-300'
-                }`}
-              >
-                {quoteType === 'combined' && (
-                  <div className="w-2 h-2 bg-white rounded-full m-0.5"></div>
-                )}
-              </div>
-              <span className="font-medium">Combined Quote</span>
-            </div>
-            <p className="text-sm text-gray-600 ml-7">Get one quote for all items together</p>
-          </div>
+    <div className="space-y-6">
+      {/* Clear Quote Type Selection */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">How would you like your quote?</h3>
+          <p className="text-gray-600 text-sm">Choose the option that works best for your shopping needs</p>
         </div>
 
-        {/* Quote Type Information Message - Only for Combined Quotes */}
-        {quoteTypeMessage && (
-          <div
-            className={`mt-4 p-3 sm:p-4 rounded-lg border border-${quoteTypeMessage.color}-200 bg-${quoteTypeMessage.color}-50`}
-          >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Separate Quotes Option */}
+          <label className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-teal-300 ${
+            quoteType === 'separate' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 hover:bg-gray-50'
+          }`}>
+            <input
+              type="radio"
+              name="quoteType"
+              value="separate"
+              checked={quoteType === 'separate'}
+              onChange={(e) => setQuoteType(e.target.value)}
+              className="sr-only"
+            />
             <div className="flex items-start gap-3">
-              <quoteTypeMessage.icon
-                className={`h-5 w-5 text-${quoteTypeMessage.color}-600 mt-0.5 flex-shrink-0`}
-              />
-              <div className="text-sm">
-                <p className={`font-medium text-${quoteTypeMessage.color}-800 mb-1`}>
-                  Combined Quote Requirements
-                </p>
-                <p className={`text-${quoteTypeMessage.color}-700`}>{quoteTypeMessage.message}</p>
+              <div className={`w-5 h-5 rounded-full border-2 mt-0.5 transition-all ${
+                quoteType === 'separate' ? 'border-teal-500 bg-teal-500' : 'border-gray-300'
+              }`}>
+                {quoteType === 'separate' && (
+                  <div className="w-2.5 h-2.5 bg-white rounded-full m-0.5"></div>
+                )}
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900 mb-1">Separate Quotes</div>
+                <div className="text-sm text-gray-600 mb-2">Get individual quotes for each product</div>
+                <div className="text-xs text-gray-500">
+                  ✓ Products can be from different countries<br/>
+                  ✓ More flexibility in ordering<br/>
+                  ✓ Easier to compare individual costs
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          </label>
+
+          {/* Combined Quote Option */}
+          <label className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-teal-300 ${
+            quoteType === 'combined' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 hover:bg-gray-50'
+          }`}>
+            <input
+              type="radio"
+              name="quoteType"
+              value="combined"
+              checked={quoteType === 'combined'}
+              onChange={(e) => setQuoteType(e.target.value)}
+              className="sr-only"
+            />
+            <div className="flex items-start gap-3">
+              <div className={`w-5 h-5 rounded-full border-2 mt-0.5 transition-all ${
+                quoteType === 'combined' ? 'border-teal-500 bg-teal-500' : 'border-gray-300'
+              }`}>
+                {quoteType === 'combined' && (
+                  <div className="w-2.5 h-2.5 bg-white rounded-full m-0.5"></div>
+                )}
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900 mb-1">Single Combined Quote</div>
+                <div className="text-sm text-gray-600 mb-2">Get one quote for all products together</div>
+                <div className="text-xs text-gray-500">
+                  ✓ Potentially lower shipping costs<br/>
+                  ✓ One simple quote to review<br/>
+                  ⚠️ All products must be from same country
+                </div>
+              </div>
+            </div>
+          </label>
+        </div>
+
+
       </div>
 
-      {/* Destination Country Selection */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 sm:p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <MapPin className="h-5 w-5 mr-2" />
-          Where should we deliver?
-        </h3>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Destination Country *
-            </label>
+      {/* Compact Destination Selection */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-teal-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Deliver to</h3>
+          </div>
+          
+          <div className="flex-1 max-w-xs">
             <select
               value={destinationCountry}
               onChange={(e) => setDestinationCountry(e.target.value)}
-              className={`w-full border rounded-lg p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${
+              className={`w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors bg-white ${
                 destinationCountryError ? 'border-red-300 bg-red-50' : 'border-gray-200'
               }`}
             >
-              <option value="">Select destination country</option>
+              <option value="">🌍 Select country</option>
               {allCountriesLoading ? (
-                <option>Loading countries...</option>
+                <option>Loading...</option>
               ) : (
                 allCountries?.map((country) => (
                   <option key={country.code} value={country.code}>
@@ -331,29 +330,12 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                 ))
               )}
             </select>
-            {destinationCountryError && (
-              <p className="text-red-500 text-xs mt-1">{destinationCountryError}</p>
-            )}
           </div>
 
-          {/* Visual Shipping Route Preview */}
-          {destinationCountry && products[0]?.country && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <div className="text-sm font-medium text-gray-700 mb-2">Shipping Route Preview</div>
-              <div className="flex items-center justify-center">
-                <ShippingRouteDisplay
-                  origin={products[0]?.country}
-                  destination={destinationCountry}
-                  showIcon={true}
-                  variant="compact"
-                  className="text-lg font-medium"
-                />
-              </div>
-              <div className="mt-2 text-center">
-                <span className="text-xs text-gray-600 bg-white border border-gray-200 px-2 py-1 rounded">
-                  We'll find the most cost-effective shipping route for you
-                </span>
-              </div>
+          {destinationCountryError && (
+            <div className="text-red-500 text-sm flex items-center gap-1">
+              <AlertCircle className="h-4 w-4" />
+              Required
             </div>
           )}
         </div>
@@ -378,40 +360,61 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
         </div>
       )}
 
-      {/* Products Section */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 sm:p-6">
-        <div className="mb-4 sm:mb-6">
-          <h3 className="text-lg font-semibold">Product Information</h3>
+      {/* Compact Products Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <FileText className="h-5 w-5 text-teal-600" />
+            <h3 className="text-xl font-semibold text-gray-900">Products</h3>
+          </div>
+          <button
+            type="button"
+            onClick={addProduct}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium"
+          >
+            <Plus className="h-4 w-4" />
+            Add Product
+          </button>
         </div>
 
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-4">
           {products.map((product, index) => (
-            <div key={index} className="border border-gray-200 rounded-lg p-3 sm:p-4">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h4 className="font-medium">Product {index + 1}</h4>
+            <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-teal-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                    {index + 1}
+                  </div>
+                  <span className="font-medium text-gray-900">Product {index + 1}</span>
+                </div>
                 {products.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeProduct(index)}
-                    className="text-red-500 hover:text-red-700 p-1"
+                    className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Purchase Country *
                     {quoteType === 'combined' && index > 0 && (
-                      <span className="text-teal-600 ml-2 text-xs">(Auto-synced)</span>
+                      <span className="text-teal-600 ml-2 text-xs font-normal">(Auto-synced)</span>
                     )}
                   </label>
                   <select
                     value={product.country}
                     onChange={(e) => updateProduct(index, 'country', e.target.value)}
-                    {...getCountryFieldProps(index)}
+                    className={`w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors ${
+                      quoteType === 'combined' && index > 0 
+                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                        : 'border-gray-200 bg-white'
+                    }`}
+                    disabled={quoteType === 'combined' && index > 0}
                   >
                     <option value="">Select country</option>
                     {isLoading ? (
@@ -430,7 +433,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     <p className="text-red-500 text-xs mt-1">{errors[`country-${index}`]}</p>
                   )}
                   {quoteType === 'combined' && index > 0 && product.country && (
-                    <div className="flex items-center gap-1 mt-1">
+                    <div className="flex items-center gap-1 mt-2">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                       <span className="text-xs text-green-600">Synced with Product 1</span>
                     </div>
@@ -438,35 +441,32 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Product Name (optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
                   <input
                     type="text"
                     value={product.name}
                     onChange={(e) => updateProduct(index, 'name', e.target.value)}
-                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="Enter product name"
+                    className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                    placeholder="Product name (optional)"
                   />
                 </div>
               </div>
 
-              <div className="mt-3 sm:mt-4">
-                <label className="block text-sm font-medium mb-1">
-                  Product URL or File Upload *
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Product URL or Upload Image *
                 </label>
-                <p className="text-xs text-gray-500 mb-2">
-                  📝 Examples: Amazon, eBay, Flipkart, Alibaba, or any product page URL
-                </p>
-                <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex gap-3">
                   <input
                     type="url"
                     value={product.url}
                     onChange={(e) => updateProduct(index, 'url', e.target.value)}
-                    className="flex-1 border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="https://amazon.com/dp/B123456789 or paste any product URL"
+                    className="flex-1 border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                    placeholder="Paste product URL (Amazon, eBay, etc.)"
                   />
-                  <label className="flex items-center justify-center px-3 py-2 bg-gray-100 border border-gray-300 rounded cursor-pointer hover:bg-gray-200 min-h-[42px]">
-                    <Upload className="h-4 w-4 mr-1" />
-                    Upload
+                  <label className="flex items-center justify-center px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
+                    <Upload className="h-4 w-4 mr-2" />
+                    <span className="text-sm font-medium">Upload</span>
                     <input
                       type="file"
                       className="hidden"
@@ -476,18 +476,21 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                   </label>
                 </div>
                 {errors[`url-${index}`] && (
-                  <p className="text-red-500 text-xs mt-1">{errors[`url-${index}`]}</p>
+                  <p className="text-red-500 text-xs mt-2">{errors[`url-${index}`]}</p>
                 )}
                 {product.file && (
-                  <p className="text-green-600 text-xs mt-1">
-                    ✓ File uploaded: {product.file.name}
-                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <p className="text-green-600 text-sm font-medium">
+                      {product.file.name}
+                    </p>
+                  </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-3 sm:mt-4">
+              <div className="grid grid-cols-3 gap-4 mt-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Quantity *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
                   <input
                     type="number"
                     min="1"
@@ -495,7 +498,8 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     onChange={(e) =>
                       updateProduct(index, 'quantity', parseInt(e.target.value) || 1)
                     }
-                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                    placeholder="1"
                   />
                   {errors[`quantity-${index}`] && (
                     <p className="text-red-500 text-xs mt-1">{errors[`quantity-${index}`]}</p>
@@ -503,65 +507,69 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Price (optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Price</label>
                   <input
                     type="number"
                     step="0.01"
                     value={product.price}
                     onChange={(e) => updateProduct(index, 'price', e.target.value)}
-                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                     placeholder="0.00"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Weight (optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Weight (kg)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={product.weight}
                     onChange={(e) => updateProduct(index, 'weight', e.target.value)}
-                    className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="0.00 kg"
+                    className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                    placeholder="0.00"
                   />
                 </div>
               </div>
 
               {/* Product Notes */}
-              <div className="mt-3 sm:mt-4">
-                <label className="block text-sm font-medium mb-1">Product Notes (optional)</label>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Product Notes (optional)</label>
                 <textarea
                   value={product.notes}
                   onChange={(e) => updateProduct(index, 'notes', e.target.value)}
-                  className="w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 min-h-[60px] resize-vertical"
+                  className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 min-h-[80px] resize-vertical transition-colors"
                   placeholder="E.g., Size, color, specific model, or any other product details..."
-                  rows={2}
+                  rows={3}
                 />
               </div>
             </div>
           ))}
         </div>
 
-        {/* Add Product Button - Moved to bottom center */}
-        <div className="flex justify-center mt-4 sm:mt-6 pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={addProduct}
-            className="flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-200 font-medium shadow-sm text-sm sm:text-base"
-          >
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-            Add Another Product
-          </button>
-        </div>
+        {/* Add Product Button - Streamlined */}
+        {products.length < 10 && (
+          <div className="flex justify-center mt-6 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={addProduct}
+              className="flex items-center gap-2 px-6 py-3 bg-white text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 hover:border-teal-300 transition-all duration-200 font-medium"
+            >
+              <Plus className="h-4 w-4" />
+              Add Another Product
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="flex justify-end">
+      {/* Continue Button */}
+      <div className="flex justify-end pt-2">
         <button
           type="button"
           onClick={handleNext}
-          className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-200 text-base sm:text-lg font-medium"
+          className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-lg hover:from-teal-700 hover:to-cyan-700 transition-all duration-200 text-lg font-medium shadow-sm flex items-center justify-center gap-2"
         >
-          Continue to Shipping
+          Continue to Contact
+          <ArrowRight className="h-5 w-5" />
         </button>
       </div>
     </div>

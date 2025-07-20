@@ -132,10 +132,11 @@ export const Cart = () => {
   // Debounced search
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Load cart data from server when component mounts
+  // Load cart data from server when component mounts (works for both anonymous and authenticated users)
   useEffect(() => {
-    if (user && !cartLoading && !hasLoadedFromServer) {
+    if (user?.id && !cartLoading && !hasLoadedFromServer) {
       // Only load from server if not already loading and not already loaded
+      // This now works for both anonymous and authenticated users
       loadFromServer(user.id);
     }
   }, [user, loadFromServer, cartLoading, hasLoadedFromServer]);

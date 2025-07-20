@@ -326,8 +326,12 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'payment-test', // Test page for debugging PayU callbacks
-        element: <PaymentTest />,
+        path: 'payment-test', // Test page for debugging PayU callbacks - Admin only
+        element: (
+          <AdminProtectedRoute>
+            <PaymentTest />
+          </AdminProtectedRoute>
+        ),
       },
       {
         element: <ProtectedRoute />,

@@ -1,6 +1,5 @@
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
-import { GuestEmailField } from '@/components/forms/quote-form-fields/GuestEmailField';
 import QuoteItem from './quote-form-fields/QuoteItem';
 import { Plus, Sparkles, ArrowRight, CheckCircle, MapPin, PlusCircle } from 'lucide-react';
 import { CountryField } from './quote-form-fields/CountryField';
@@ -134,6 +133,7 @@ const QuoteForm = () => {
         disabled={!selectedAddress}
         action="quote_request"
         className="space-y-8"
+        id="main-quote-form"
       >
         {/* Quick Start Section */}
         <div className="text-center space-y-4">
@@ -422,27 +422,7 @@ const QuoteForm = () => {
           </CardContent>
         </Card>
 
-        {/* Step 5: Contact Info */}
-        {!user && (
-          <Card className="border-2 border-primary/10 bg-primary/5">
-            <CardHeader className="pb-4">
-              <div className="flex items-center space-x-3">
-                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
-                  5
-                </div>
-                <div>
-                  <CardTitle className="text-lg">How can we reach you?</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    We'll send your shopping quotes to this email address
-                  </p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <GuestEmailField control={form.control} setValue={form.setValue} />
-            </CardContent>
-          </Card>
-        )}
+        {/* Contact info now handled by the new quote request flow with anonymous auth */}
 
         {/* Submit Section Info */}
         {!selectedAddress && (

@@ -174,6 +174,26 @@ export function isTurnstileEnabled(): boolean {
 }
 
 /**
+ * Turnstile widget configuration options
+ */
+export const TURNSTILE_CONFIG = {
+  // Only render once per form - don't re-render on input changes
+  STABLE_RENDERING: true,
+  
+  // Reset behavior
+  RESET_ON_ERROR: true,
+  RESET_ON_SUBMIT_FAILURE: true,
+  RESET_ON_FORM_RESET: false, // Let form handle its own reset
+  
+  // UI behavior
+  HIDE_WHEN_DISABLED: true,
+  SHOW_LOADING_STATE: true,
+  
+  // Performance
+  CACHE_VERIFICATION: true,
+} as const;
+
+/**
  * Get Turnstile site key from environment
  */
 export function getTurnstileSiteKey(): string {

@@ -214,8 +214,10 @@ export const useQuoteState = (quoteId: string) => {
       // Convert quote to cart item
       const cartItem = convertQuoteToCartItem(quote);
 
-      // Set userId in cart store first
-      useCartStore.getState().setUserId(user?.id || '');
+      // Set userId in cart store first (works for both anonymous and authenticated users)
+      if (user?.id) {
+        useCartStore.getState().setUserId(user.id);
+      }
 
       // Add item to cart store
       addItem(cartItem);

@@ -33,9 +33,10 @@ import React, { useState } from 'react';
 import ProductInfoStep from '@/components/quote/ProductInfoStep';
 import ShippingContactStep from '@/components/quote/ShippingContactStep';
 import ProductSummary from '@/components/quote/ProductSummary';
+import ConversionPrompt from '@/components/auth/ConversionPrompt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Sparkles, Clock, CheckCircle, Package } from 'lucide-react';
+import { Sparkles, Clock, CheckCircle, Package, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountryUtils } from '@/lib/countryUtils';
@@ -73,6 +74,7 @@ export default function QuoteRequestPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [destinationCountry, setDestinationCountry] = useState('');
+  const [submittedEmail, setSubmittedEmail] = useState('');
 
   const nextStep = () => setCurrentStep(currentStep + 1);
   const prevStep = () => setCurrentStep(currentStep - 1);
@@ -110,22 +112,32 @@ export default function QuoteRequestPage() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (submissionData?: { email?: string; name?: string }) => {
     setIsSubmitting(true);
     setSubmitError('');
     
     try {
-      // Determine email to use
-      const emailToUse = user?.email || shippingContact.email;
-      if (!emailToUse || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailToUse)) {
-        setSubmitError('A valid email is required to submit a quote.');
+      // Debug logging to track email data flow
+      console.log('handleSubmit called with:', { 
+        submissionData, 
+        userEmail: user?.email, 
+        shippingContactEmail: shippingContact.email 
+      });
+      
+      // Determine email to use - prioritize passed data, then user email, then shippingContact
+      const emailToUse = submissionData?.email || user?.email || shippingContact.email;
+      
+      // For anonymous users, email is optional (they can request quotes without email)
+      // For authenticated (non-anonymous) users, validate email if provided
+      if (emailToUse && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailToUse)) {
+        setSubmitError('Please enter a valid email address.');
         setIsSubmitting(false);
         return;
       }
 
       // Store shipping address in the proper format
       const shippingAddressData = {
-        fullName: shippingContact.name,
+        fullName: submissionData?.name || shippingContact.name,
         streetAddress: shippingContact.address,
         city: shippingContact.city,
         state: shippingContact.state,
@@ -153,12 +165,13 @@ export default function QuoteRequestPage() {
           .from('quotes')
           .insert({
             email: emailToUse,
+            product_name: products.map(p => p.name).join(', '),
             destination_country: destinationCountry || '',
             origin_country: products[0]?.country || '',
             status: 'pending',
             currency: 'USD',
             destination_currency: 'USD',
-            user_id: user ? user.id : null,
+            user_id: user?.id || null, // Now uses anonymous auth user ID
             shipping_address: shippingAddressData,
           })
           .select('id')
@@ -208,12 +221,13 @@ export default function QuoteRequestPage() {
             .from('quotes')
             .insert({
               email: emailToUse,
+              product_name: product.name,
               destination_country: destinationCountry || '',
               origin_country: product.country || '',
               status: 'pending',
               currency: 'USD',
               destination_currency: 'USD',
-              user_id: user ? user.id : null,
+              user_id: user?.id || null, // Now uses anonymous auth user ID
               shipping_address: shippingAddressData,
             })
             .select('id')
@@ -248,7 +262,8 @@ export default function QuoteRequestPage() {
       }
 
       // Auto-update user profile with shipping address country and currency
-      if (user?.id) {
+      // Only for authenticated (non-anonymous) users
+      if (user?.id && !user.is_anonymous) {
         const { data: existingProfile } = await supabase
           .from('profiles')
           .select('id, country, preferred_display_currency')
@@ -293,6 +308,7 @@ export default function QuoteRequestPage() {
       }
 
       setQuoteSubmitted(true);
+      setSubmittedEmail(emailToUse || '');
       setIsSubmitting(false);
     } catch (error) {
       console.error('Error submitting quote:', error);
@@ -302,17 +318,31 @@ export default function QuoteRequestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto py-4 sm:py-8 px-4 sm:px-6">
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-2">Request a Quote</h1>
-          <p className="text-sm sm:text-base text-gray-600 px-2">
-            Get a detailed quote for your international shipping needs
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">Request a Quote</h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Get accurate shipping costs for your international purchases
           </p>
         </div>
 
         {quoteSubmitted ? (
           <div className="space-y-6 sm:space-y-8">
+            {/* Anonymous User Conversion Prompt */}
+            {user?.is_anonymous && (
+              <ConversionPrompt 
+                trigger="quote_submitted"
+                submittedEmail={submittedEmail}
+                onConversionSuccess={() => {
+                  // Optionally redirect to dashboard after conversion
+                  setTimeout(() => {
+                    window.location.href = '/dashboard';
+                  }, 2000);
+                }}
+              />
+            )}
+
             {/* Success Message */}
             <div className="text-center space-y-4 sm:space-y-6 bg-white border border-gray-200 rounded-lg p-6 sm:p-10 shadow-sm">
               <div className="flex justify-center">
@@ -323,8 +353,8 @@ export default function QuoteRequestPage() {
               <div className="space-y-3 sm:space-y-4">
                 <h2 className="text-2xl sm:text-4xl font-semibold text-gray-900">
                   {quoteType === 'combined'
-                    ? 'Quote Request Submitted!'
-                    : 'Quote Requests Submitted!'}
+                    ? 'Your Combined Quote Request is Submitted!'
+                    : 'Your Individual Quote Requests are Submitted!'}
                 </h2>
                 <div className="flex items-center justify-center gap-2 sm:gap-3 text-gray-700 bg-gray-50 border border-gray-200 px-4 sm:px-6 py-2 sm:py-3 rounded-lg inline-flex">
                   <Clock className="h-4 w-4 sm:h-6 sm:w-6" />
@@ -335,13 +365,21 @@ export default function QuoteRequestPage() {
                 <div className="max-w-2xl mx-auto space-y-2 sm:space-y-3">
                   <p className="text-gray-700 text-base sm:text-lg leading-relaxed">
                     {quoteType === 'combined'
-                      ? "Thank you for your quote request. We'll review your products and get back to you with a detailed quote."
-                      : "Thank you for your quote requests. We'll review each product individually and get back to you with separate detailed quotes."}
+                      ? "Thank you! We'll review all your products together and send you one comprehensive quote with combined shipping costs."
+                      : "Thank you! We'll review each product separately and send you individual quotes for maximum flexibility."}
                   </p>
+                  {submittedEmail && (
+                    <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 sm:p-4">
+                      <p className="text-teal-800 text-sm sm:text-base font-medium flex items-center gap-2">
+                        <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
+                        Updates will be sent to: {submittedEmail}
+                      </p>
+                    </div>
+                  )}
                   <p className="text-gray-500 text-xs sm:text-sm">
                     {quoteType === 'combined'
-                      ? "You'll receive a confirmation email shortly with your quote request details."
-                      : "You'll receive confirmation emails shortly with your quote request details."}
+                      ? "You'll receive one confirmation email with your combined quote details."
+                      : "You'll receive separate confirmation emails for each product quote."}
                   </p>
                 </div>
               </div>
@@ -350,7 +388,7 @@ export default function QuoteRequestPage() {
             {/* What's Next - Focus on User's Immediate Needs */}
             <div className="text-center space-y-6">
               {/* Primary Action: What Most Users Want */}
-              {user ? (
+              {user && !user.is_anonymous ? (
                 <button
                   onClick={() => (window.location.href = '/dashboard')}
                   className="px-8 py-4 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600 font-medium shadow-lg transition text-lg flex items-center justify-center gap-3 mx-auto"
@@ -374,10 +412,10 @@ export default function QuoteRequestPage() {
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <p className="text-gray-700 text-sm font-medium mb-2">What happens next?</p>
                 <div className="text-xs text-gray-600 space-y-1">
-                  <p>✓ You'll receive a confirmation email shortly</p>
+                  {submittedEmail && <p>✓ You'll receive a confirmation email shortly</p>}
                   <p>✓ Our team will review your products within 24-48 hours</p>
-                  <p>✓ You'll get detailed quotes via email</p>
-                  {!user && <p>✓ Create an account anytime to track progress</p>}
+                  {submittedEmail && <p>✓ You'll get detailed quotes via email</p>}
+                  {(!user || user.is_anonymous) && <p>✓ Create an account anytime to track progress</p>}
                 </div>
               </div>
               
@@ -428,49 +466,42 @@ export default function QuoteRequestPage() {
           </div>
         ) : (
           <>
-            {/* Progress Bar - Only shown during active flow */}
-            <div className="mb-6 sm:mb-8">
-              <div className="flex items-center justify-center space-x-2 sm:space-x-4">
-                <div
-                  className={`flex items-center ${currentStep >= 1 ? 'text-teal-600' : 'text-gray-400'}`}
-                >
-                  <div
-                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 1 ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-300'}`}
-                  >
-                    1
+            {/* Modernized Progress Indicator */}
+            <div className="mb-8">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between max-w-md mx-auto">
+                  <div className="flex items-center">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                        currentStep >= 1 
+                          ? 'bg-teal-600 text-white shadow-lg' 
+                          : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >
+                      1
+                    </div>
+                    <span className={`ml-3 text-sm font-medium ${currentStep >= 1 ? 'text-gray-900' : 'text-gray-400'}`}>
+                      Products
+                    </span>
                   </div>
-                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:inline">
-                    Product Info
-                  </span>
-                </div>
-                <div
-                  className={`w-8 sm:w-12 h-0.5 ${currentStep >= 2 ? 'bg-teal-600' : 'bg-gray-300'}`}
-                ></div>
-                <div
-                  className={`flex items-center ${currentStep >= 2 ? 'text-teal-600' : 'text-gray-400'}`}
-                >
-                  <div
-                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 text-xs sm:text-sm ${currentStep >= 2 ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-300'}`}
-                  >
-                    2
+                  
+                  <div className={`flex-1 mx-4 h-0.5 transition-colors ${currentStep >= 2 ? 'bg-teal-600' : 'bg-gray-200'}`}></div>
+                  
+                  <div className="flex items-center">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                        currentStep >= 2 
+                          ? 'bg-teal-600 text-white shadow-lg' 
+                          : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >
+                      2
+                    </div>
+                    <span className={`ml-3 text-sm font-medium ${currentStep >= 2 ? 'text-gray-900' : 'text-gray-400'}`}>
+                      Contact
+                    </span>
                   </div>
-                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:inline">
-                    Contact & Submit
-                  </span>
                 </div>
-              </div>
-              {/* Mobile step labels */}
-              <div className="flex justify-center space-x-8 mt-2 sm:hidden">
-                <span
-                  className={`text-xs font-medium ${currentStep >= 1 ? 'text-teal-600' : 'text-gray-400'}`}
-                >
-                  Product Info
-                </span>
-                <span
-                  className={`text-xs font-medium ${currentStep >= 2 ? 'text-teal-600' : 'text-gray-400'}`}
-                >
-                  Contact & Submit
-                </span>
               </div>
             </div>
 

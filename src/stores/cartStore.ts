@@ -478,6 +478,13 @@ export const useCartStore = create<CartStore>()(
             return;
           }
 
+          // Handle both anonymous and authenticated users
+          if (!userId) {
+            logger.debug('No user ID provided, skipping cart load');
+            set({ isLoading: false, hasLoadedFromServer: true });
+            return;
+          }
+
           logger.cart('Loading cart from server', { userId });
           set({ isLoading: true, error: null });
 
@@ -486,6 +493,7 @@ export const useCartStore = create<CartStore>()(
             set({ userId });
 
             // Fetch all quotes in a single query (optimized for performance)
+            // This now works for both anonymous and authenticated users
             const { data: allQuotes, error: quotesError } = await supabase
               .from('quotes')
               .select(

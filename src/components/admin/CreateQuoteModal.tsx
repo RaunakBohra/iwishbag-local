@@ -24,7 +24,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { GuestEmailField } from '@/components/forms/quote-form-fields/GuestEmailField';
 import {
   Select,
   SelectContent,
@@ -216,10 +215,22 @@ export const CreateQuoteModal = ({
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">Customer & Shipping</h3>
 
-              <GuestEmailField
+              <FormField
                 control={form.control}
-                setValue={form.setValue}
-                enableUserSearch={true}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Customer Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="customer@example.com"
+                        type="email"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
 
               <div className="grid grid-cols-2 gap-4">

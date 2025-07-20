@@ -1,4 +1,23 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+
+/**
+ * TurnstileWidget - Cloudflare Turnstile CAPTCHA Integration
+ * 
+ * IMPORTANT: This component is optimized for stable rendering to prevent
+ * unnecessary re-renders when form inputs change. Key features:
+ * 
+ * 1. STABLE RENDERING: Widget renders once and stays stable during form interactions
+ * 2. CALLBACK REFS: Uses refs to store latest callbacks, preventing re-renders
+ * 3. MINIMAL DEPENDENCIES: Only re-renders when essential props change (siteKey, theme, size, disabled)
+ * 4. PROPER CLEANUP: Automatically cleans up widgets on unmount
+ * 5. DUPLICATE PREVENTION: Global registry prevents multiple widgets
+ * 
+ * Industry Best Practices Implemented:
+ * - Widget stays stable during form typing
+ * - Only resets on explicit actions (errors, expiration)
+ * - Hidden when disabled (not showing "disabled" message)
+ * - Graceful loading and error states
+ */
 
 interface TurnstileWidgetProps {
   siteKey: string;
@@ -12,6 +31,9 @@ interface TurnstileWidgetProps {
   className?: string;
   disabled?: boolean;
 }
+
+// Global registry to track active widgets
+let activeWidgets = new Set<string>();
 
 declare global {
   interface Window {
@@ -52,6 +74,36 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
   const [widgetId, setWidgetId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isRendering = useRef(false);
+  const componentId = useRef(`turnstile-${Date.now()}-${Math.random()}`);
+
+  // Store latest callbacks and config in refs to avoid re-renders when they change
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+  const onExpiredRef = useRef(onExpired);
+  const actionRef = useRef(action);
+  const cDataRef = useRef(cData);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
+  useEffect(() => {
+    onExpiredRef.current = onExpired;
+  }, [onExpired]);
+
+  useEffect(() => {
+    actionRef.current = action;
+  }, [action]);
+
+  useEffect(() => {
+    cDataRef.current = cData;
+  }, [cData]);
 
   // Load Turnstile script
   useEffect(() => {
@@ -86,38 +138,68 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
 
   // Render widget when script is loaded
   useEffect(() => {
-    if (isLoading || !window.turnstile || !containerRef.current || disabled) {
+    if (isLoading || !window.turnstile || !containerRef.current || disabled || isRendering.current) {
       return;
+    }
+
+    // Check if this widget is already being rendered
+    const currentId = componentId.current;
+    if (activeWidgets.has(currentId)) {
+      console.warn('Turnstile widget already rendered for this component');
+      return;
+    }
+
+    isRendering.current = true;
+    activeWidgets.add(currentId);
+
+    // Clear any existing widget in the container first
+    if (containerRef.current) {
+      containerRef.current.innerHTML = '';
+    }
+
+    // Cleanup any existing widget before creating a new one
+    if (widgetId && window.turnstile) {
+      try {
+        window.turnstile.remove(widgetId);
+        setWidgetId(null);
+      } catch (err) {
+        console.warn('Failed to cleanup previous Turnstile widget:', err);
+      }
     }
 
     try {
       const id = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
         callback: (token: string) => {
-          onSuccess(token);
+          onSuccessRef.current(token);
         },
         'error-callback': (error: string) => {
           setError(`Turnstile error: ${error}`);
-          onError?.(error);
+          onErrorRef.current?.(error);
         },
         'expired-callback': () => {
-          onExpired?.();
+          onExpiredRef.current?.();
         },
         theme,
         size,
-        action,
-        cData,
+        action: actionRef.current,
+        cData: cDataRef.current,
       });
 
       setWidgetId(id);
+      isRendering.current = false;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(`Failed to render Turnstile: ${errorMessage}`);
       onError?.(errorMessage);
+      isRendering.current = false;
+      activeWidgets.delete(currentId);
     }
 
     // Cleanup function
     return () => {
+      isRendering.current = false;
+      activeWidgets.delete(currentId);
       if (widgetId && window.turnstile) {
         try {
           window.turnstile.remove(widgetId);
@@ -126,7 +208,7 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
         }
       }
     };
-  }, [isLoading, siteKey, theme, size, action, cData, disabled, onSuccess, onError, onExpired]);
+  }, [isLoading, siteKey, theme, size, disabled]);
 
   // Reset widget method
   const reset = () => {
@@ -143,14 +225,8 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
     return undefined;
   };
 
-  // Expose methods via ref (if needed)
-  React.useImperativeHandle(
-    React.forwardRef(() => null),
-    () => ({
-      reset,
-      getResponse,
-    })
-  );
+  // Note: No useImperativeHandle needed since this component doesn't use forwardRef
+  // Methods can be accessed through component state if needed in the future
 
   if (error) {
     return (
@@ -162,18 +238,18 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
 
   if (isLoading) {
     return (
-      <div className={`turnstile-loading p-3 border border-gray-300 rounded bg-gray-50 text-gray-600 text-sm ${className}`}>
-        Loading security verification...
+      <div className={`turnstile-loading p-4 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 text-sm ${className}`}>
+        <div className="flex items-center gap-2">
+          <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-teal-600 rounded-full"></div>
+          <span>Loading security verification...</span>
+        </div>
       </div>
     );
   }
 
   if (disabled) {
-    return (
-      <div className={`turnstile-disabled p-3 border border-gray-300 rounded bg-gray-100 text-gray-500 text-sm ${className}`}>
-        Security verification disabled
-      </div>
-    );
+    // Return null to hide the widget entirely when disabled (better UX)
+    return null;
   }
 
   return (

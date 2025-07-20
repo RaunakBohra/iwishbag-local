@@ -161,7 +161,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         email: finalEmail || null, // Allow null email for anonymous quotes
         origin_country: countryCode, // Purchase country (where we buy from)
         destination_country: destinationCountry, // Shipping country (where we deliver to)
-        user_id: user?.id ?? null,
+        user_id: user?.id || null, // Now uses anonymous auth instead of null
         currency: selectedCountryCurrency,
         destination_currency: destinationCurrency, // Use dynamic currency based on destination
         status: 'pending',
@@ -348,7 +348,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       email: finalEmail || null, // Allow null email for anonymous quotes
       origin_country: countryCode, // Purchase country (where we buy from)
       destination_country: destinationCountry, // Shipping country (where we deliver to)
-      user_id: user?.id ?? null,
+      user_id: user?.id || null, // Now uses anonymous auth instead of null
       currency: selectedCountryCurrency,
       destination_currency: getCountryCurrency(shippingAddress?.countryCode || shippingAddress?.country || countryCode),
       status: 'pending',
@@ -436,8 +436,8 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
 
     const finalEmail = user?.email || values.email;
 
-    // Only require email for authenticated users or when email is provided
-    if (user && (!finalEmail || !z.string().email().safeParse(finalEmail).success)) {
+    // For authenticated (non-anonymous) users, email is required
+    if (user && !user.is_anonymous && (!finalEmail || !z.string().email().safeParse(finalEmail).success)) {
       form.setError('email', {
         type: 'manual',
         message: 'Please enter a valid email address.',
@@ -451,7 +451,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       return;
     }
 
-    // If email is provided (even for anonymous), validate it
+    // If email is provided (for any user type), validate it
     if (finalEmail && !z.string().email().safeParse(finalEmail).success) {
       form.setError('email', {
         type: 'manual',

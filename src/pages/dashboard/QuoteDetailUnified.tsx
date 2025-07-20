@@ -56,6 +56,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { StickyActionBar } from '@/components/dashboard/StickyActionBar';
 import { GuestApprovalDialog } from '@/components/share/GuestApprovalDialog';
 import { useToast } from '@/components/ui/use-toast';
+import ConversionPrompt from '@/components/auth/ConversionPrompt';
 // Tables removed - not used
 import { GuestCurrencyProvider, useGuestCurrency } from '@/contexts/GuestCurrencyContext';
 import { GuestCurrencySelector } from '@/components/guest/GuestCurrencySelector';
@@ -240,32 +241,27 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                 });
               }
             } else {
-              // Execute the full approve action
+              // Execute the full approve action (simplified for anonymous auth)
               try {
-                // Transfer ownership to the logged-in user
-                const { error: updateError } = await supabase
-                  .from('quotes')
-                  .update({
-                    user_id: user.id,
-                    is_anonymous: false,
-                    email: user.email,
-                  })
-                  .eq('id', quote.id);
-
-                if (updateError) throw updateError;
-
-                // Approve the quote
+                // With anonymous auth, user is always authenticated, no transfer needed
                 await approveQuote();
 
                 toast({
                   title: 'Quote Approved!',
-                  description: 'This quote has been transferred to your account and approved.',
+                  description: user.is_anonymous 
+                    ? 'Quote approved! You can now add it to your cart.' 
+                    : 'Quote has been approved and is ready to add to cart.',
                 });
 
-                // Navigate to the user's quote page
-                setTimeout(() => {
-                  navigate(`/dashboard/quotes/${quote.id}`);
-                }, 1000);
+                // For anonymous users, show conversion prompt instead of navigating
+                if (user.is_anonymous) {
+                  // Stay on the same page, quote actions will be available
+                } else {
+                  // Navigate to the user's quote page for registered users
+                  setTimeout(() => {
+                    navigate(`/dashboard/quotes/${quote.id}`);
+                  }, 1000);
+                }
               } catch (error) {
                 console.error('Error processing pending approval:', error);
                 toast({
@@ -690,6 +686,19 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
             )}
           </div>
         </div>
+
+        {/* Anonymous User Conversion Prompt */}
+        {user?.is_anonymous && quote?.status === 'approved' && (
+          <div className="mb-6">
+            <ConversionPrompt 
+              trigger="quote_submitted"
+              onConversionSuccess={() => {
+                // Refresh the page to show updated user state
+                window.location.reload();
+              }}
+            />
+          </div>
+        )}
 
         {/* Progress Stepper - Only for authenticated users */}
         {!isGuestMode && user && (

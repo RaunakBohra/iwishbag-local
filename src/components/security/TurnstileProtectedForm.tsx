@@ -12,10 +12,12 @@ interface TurnstileProtectedFormProps {
   submitButtonText?: string;
   submitButtonClassName?: string;
   isSubmitting?: boolean;
-  disabled?: boolean;
+  disabled?: boolean; // Disables form submission, not Turnstile widget
+  disableTurnstile?: boolean; // Specifically disable Turnstile widget
   showTurnstile?: boolean;
   className?: string;
   errorMessage?: string;
+  id?: string; // Add unique ID to prevent duplicates
 }
 
 export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
@@ -26,9 +28,11 @@ export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
   submitButtonClassName = '',
   isSubmitting = false,
   disabled = false,
+  disableTurnstile = false,
   showTurnstile = isTurnstileEnabled(),
   className = '',
   errorMessage,
+  id = 'default-form',
 }) => {
   const siteKey = getTurnstileSiteKey();
   const [formError, setFormError] = useState<string | null>(null);
@@ -76,17 +80,20 @@ export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
   const displayError = formError || turnstileError || errorMessage;
 
   return (
-    <form onSubmit={handleFormSubmit} className={`turnstile-protected-form ${className}`}>
+    <form onSubmit={handleFormSubmit} className={`turnstile-protected-form ${className}`} id={`turnstile-form-${id}`}>
       {children}
 
       {/* Turnstile Widget */}
       {showTurnstile && siteKey && (
         <div className="turnstile-section mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Shield className="h-4 w-4 text-gray-600" />
+          <div className="flex items-center gap-2 mb-3">
+            <Shield className="h-4 w-4 text-teal-600" />
             <span className="text-sm font-medium text-gray-700">Security Verification</span>
             {isVerified && (
-              <CheckCircle className="h-4 w-4 text-green-600" />
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-xs text-green-600 font-medium">Verified</span>
+              </div>
             )}
           </div>
           
@@ -99,7 +106,7 @@ export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
             theme="auto"
             size="normal"
             className="mb-3"
-            disabled={disabled}
+            disabled={disableTurnstile}
           />
           
           {turnstileError && (
@@ -143,13 +150,9 @@ export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
       </Button>
 
       {/* Verification Status */}
-      {showTurnstile && (
+      {showTurnstile && !isVerified && (
         <div className="verification-status mt-2 text-xs text-gray-500 text-center">
-          {isVerified ? (
-            <span className="text-green-600">✓ Security verification completed</span>
-          ) : (
-            <span>Complete security verification to continue</span>
-          )}
+          <span>Complete security verification to continue</span>
         </div>
       )}
     </form>

@@ -29,21 +29,21 @@ export const useTurnstile = (options: UseTurnstileOptions): UseTurnstileReturn =
     setError(null);
     setIsLoading(false);
     options.onSuccess?.(newToken);
-  }, [options]);
+  }, [options.onSuccess]);
 
   const handleError = useCallback((errorMessage: string) => {
     setToken(null);
     setError(errorMessage);
     setIsLoading(false);
     options.onError?.(errorMessage);
-  }, [options]);
+  }, [options.onError]);
 
   const handleExpired = useCallback(() => {
     setToken(null);
     setError('Verification expired. Please try again.');
     setIsLoading(false);
     options.onExpired?.();
-  }, [options]);
+  }, [options.onExpired]);
 
   const reset = useCallback(() => {
     setToken(null);

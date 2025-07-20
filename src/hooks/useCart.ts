@@ -2,6 +2,7 @@ import { useMemo, useEffect } from 'react';
 import { useCartStore, CartItem, setCartStorageKey } from '@/stores/cartStore';
 import { useUserCurrency } from '@/hooks/useUserCurrency';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useCart = () => {
   const {
@@ -34,7 +35,10 @@ export const useCart = () => {
 
   const { formatAmount } = useUserCurrency();
   const userProfile = useUserProfile();
-  const userId = userProfile?.data?.id;
+  const { user } = useAuth();
+  
+  // Use auth user ID for both anonymous and authenticated users
+  const userId = user?.id || userProfile?.data?.id;
 
   // Set the storage key per user for cart persistence
   useEffect(() => {
