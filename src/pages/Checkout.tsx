@@ -297,6 +297,11 @@ export default function Checkout() {
   const { sendBankTransferEmail } = useEmailNotifications();
   const { findStatusForPaymentMethod } = useStatusManagement();
 
+  // Get guest quote destination country early for location detection
+  const guestQuoteDestinationCountry = isGuestCheckout && guestQuote 
+    ? guestQuote.destination_country 
+    : undefined;
+
   // IP-based location detection with smart currency/country selection
   const {
     smartCurrency: autoDetectedCurrency,
@@ -306,9 +311,7 @@ export default function Checkout() {
   } = useLocationDetection({
     userProfileCurrency: userProfile?.preferred_display_currency,
     userProfileCountry: userProfile?.country,
-    quoteDestinationCountry: isGuestCheckout 
-      ? selectedCartItems[0]?.destinationCountryCode 
-      : undefined,
+    quoteDestinationCountry: guestQuoteDestinationCountry,
     enabled: true, // Always enabled for smart defaults
   });
 
