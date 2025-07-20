@@ -152,9 +152,20 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
     setLoading(true);
     setUserEmail(values.email);
     
-    // Always go to choice step to give user control
-    // We'll do smart detection in the background for hints
-    setStep('choice');
+    // Smart detection: Check if user exists and route accordingly
+    const userExists = await checkUserExists(values.email);
+    
+    if (userExists === true) {
+      // User exists - go directly to sign in (password field)
+      signInForm.setValue('email', values.email);
+      signInForm.setValue('password', ''); // Clear password field
+      setStep('signin');
+    } else {
+      // User doesn't exist OR uncertain - show choice
+      // (Give unregistered users option to create account or continue as guest)
+      setStep('choice');
+    }
+    
     setLoading(false);
   };
 
@@ -566,6 +577,21 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
 
         <Form {...signInForm}>
           <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="space-y-4">
+            {/* Hidden email field for browser autofill */}
+            <FormField
+              control={signInForm.control}
+              name="email"
+              render={({ field }) => (
+                <Input
+                  type="email"
+                  {...field}
+                  style={{ display: 'none' }}
+                  tabIndex={-1}
+                  autoComplete="username"
+                />
+              )}
+            />
+            
             <FormField
               control={signInForm.control}
               name="password"
@@ -580,6 +606,7 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
                         {...field}
                         disabled={loading}
                         className="h-12 pr-10 text-base"
+                        autoComplete="current-password"
                       />
                       <button
                         type="button"
@@ -624,11 +651,11 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
           <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
             <button
               type="button"
-              onClick={() => setStep('choice')}
+              onClick={() => setStep('email')}
               className="flex items-center hover:text-gray-700"
             >
               <ArrowLeft className="h-3 w-3 mr-1" />
-              Back
+              Use different email
             </button>
             <span>•</span>
             <button
@@ -794,11 +821,11 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
         <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
           <button
             type="button"
-            onClick={() => setStep('choice')}
+            onClick={() => setStep('email')}
             className="flex items-center hover:text-gray-700"
           >
             <ArrowLeft className="h-3 w-3 mr-1" />
-            Back
+            Use different email
           </button>
           <span>•</span>
           <button
