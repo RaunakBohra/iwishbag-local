@@ -415,18 +415,43 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
     } else if (user && isGuestMode && quote?.user_id !== user.id) {
       // Transfer ownership for logged-in users on shared quotes
       try {
-        const { error: updateError } = await supabase
-          .from('quotes')
-          .update({
-            user_id: user.id,
-            is_anonymous: false,
-            email: user.email,
-          })
-          .eq('id', quote?.id);
+        // Check if this is an anonymous user or a real authenticated user
+        const isAnonymousUser = user.is_anonymous || !user.email;
+        
+        // For anonymous users, keep the quote anonymous but link to the user session
+        if (isAnonymousUser) {
+          const { error: updateError } = await supabase
+            .from('quotes')
+            .update({
+              user_id: user.id,
+              is_anonymous: true, // Keep anonymous
+              // Don't update email for anonymous users
+            })
+            .eq('id', quote?.id);
 
-        if (updateError) {
-          console.error('Quote transfer error:', updateError);
-          throw new Error(`Database update failed: ${updateError.message}`);
+          if (updateError) {
+            console.error('Quote transfer error (anonymous):', updateError);
+            throw new Error(`Database update failed: ${updateError.message}`);
+          }
+        } else {
+          // For real authenticated users, transfer ownership fully
+          if (!user.email || user.email.trim() === '') {
+            throw new Error('User email is required to transfer quote ownership');
+          }
+
+          const { error: updateError } = await supabase
+            .from('quotes')
+            .update({
+              user_id: user.id,
+              is_anonymous: false,
+              email: user.email,
+            })
+            .eq('id', quote?.id);
+
+          if (updateError) {
+            console.error('Quote transfer error (authenticated):', updateError);
+            throw new Error(`Database update failed: ${updateError.message}`);
+          }
         }
 
         await approveQuote();
