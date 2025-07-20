@@ -417,13 +417,19 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
     );
 
     // Basic calculation logic - CONVERT ALL FORM VALUES TO NUMBERS!
-    const salesTax = Number(formValues.sales_tax_price) || 0;
+    // Use form input with fallback to SmartEngine's 10% rate
+    const salesTax = Number(formValues.sales_tax_price) || (itemsTotal * 0.1);
     const merchantShipping = Number(formValues.merchant_shipping_price) || 0;
     const domesticShipping = Number(formValues.domestic_shipping) || 0;
     
-    // Use form values with fallback to original quote values, with minimum defaults for testing
-    const handlingCharge = Number(formValues.handling_charge) || quote?.operational_data?.handling_charge || 5.00; // Default $5 handling
-    const insurance = Number(formValues.insurance_amount) || quote?.operational_data?.insurance_amount || (itemsTotal * 0.005); // Default 0.5% insurance
+    // Use form values with fallback to SmartEngine calculation method
+    const handlingCharge = Number(formValues.handling_charge) || 
+                          quote?.operational_data?.handling_charge || 
+                          Math.max(5, itemsTotal * 0.02); // Same as SmartEngine: min $5 or 2%
+    
+    const insurance = Number(formValues.insurance_amount) || 
+                     quote?.operational_data?.insurance_amount || 
+                     (itemsTotal * 0.005); // Same as SmartEngine: 0.5% of items
     const discount = Number(formValues.discount) || 0;
     
     // Calculate customs based on percentage (use smart tier if available, otherwise form value)
@@ -436,17 +442,20 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
     // Calculate international shipping (placeholder - you may want more sophisticated logic)
     const internationalShipping = quote.calculation_data?.breakdown?.shipping || 0;
     
-    // Calculate payment gateway fee (similar to SmartCalculationEngine)
-    const subtotalForGateway = itemsTotal + salesTax + merchantShipping + internationalShipping + customs + domesticShipping;
-    const paymentGatewayFee = Math.max(((subtotalForGateway * 0.029) + 0.30), 1.00); // Standard 2.9% + $0.30, minimum $1.00
+    // Calculate payment gateway fee (aligned with SmartCalculationEngine)
+    const subtotalForGateway = itemsTotal + internationalShipping + customs;
+    const paymentGatewayFee = (subtotalForGateway * 0.029) + 0.30; // Standard 2.9% + $0.30
     
     // Calculate VAT (if applicable) - use country settings or default
     const vatPercentage = quote.operational_data?.customs?.smart_tier?.vat_percentage || 0;
     const vatAmount = vatPercentage > 0 ? (itemsTotal * (vatPercentage / 100)) : 0;
     
-    const finalTotal = itemsTotal + salesTax + merchantShipping + domesticShipping + 
-                      handlingCharge + insurance + customs + internationalShipping + 
-                      paymentGatewayFee + vatAmount - discount;
+    // Calculate subtotal first (matching SmartEngine order)
+    const subtotal = itemsTotal + internationalShipping + customs + 
+                    salesTax + handlingCharge + insurance + merchantShipping + domesticShipping + vatAmount;
+    
+    // Add payment gateway fee to subtotal and apply discount
+    const finalTotal = subtotal + paymentGatewayFee - discount;
 
     // Debug calculation to verify numbers are correct
     if (process.env.NODE_ENV === 'development') {
@@ -468,8 +477,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
         insurance: insurance,
         customs: customs,
         internationalShipping: internationalShipping,
-        paymentGatewayFee: paymentGatewayFee,
         vatAmount: vatAmount,
+        subtotal: subtotal,
+        paymentGatewayFee: paymentGatewayFee,
         discount: discount,
         finalTotal: finalTotal,
         'types': {
