@@ -432,15 +432,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                      (itemsTotal * 0.005); // Same as SmartEngine: 0.5% of items
     const discount = Number(formValues.discount) || 0;
     
+    // Calculate international shipping first (needed for customs calculation)
+    const internationalShipping = quote.calculation_data?.breakdown?.shipping || 0;
+    
     // Calculate customs based on percentage (use smart tier if available, otherwise form value)
+    // Customs base = items total + international shipping (matching SmartCalculationEngine)
     const smartCustomsPercentage = quote?.operational_data?.customs?.percentage;
     const formCustomsPercentage = Number(formValues.customs_percentage) || 0;
     const customsPercentage = (smartCustomsPercentage || formCustomsPercentage) / 100;
-    const customsBase = itemsTotal + salesTax + merchantShipping;
+    const customsBase = itemsTotal + internationalShipping;
     const customs = customsBase * customsPercentage;
-    
-    // Calculate international shipping (placeholder - you may want more sophisticated logic)
-    const internationalShipping = quote.calculation_data?.breakdown?.shipping || 0;
     
     // Calculate payment gateway fee (aligned with SmartCalculationEngine)
     const subtotalForGateway = itemsTotal + internationalShipping + customs;
