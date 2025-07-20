@@ -3,7 +3,7 @@
 // Features: Multiple shipping options, smart suggestions, real-time optimization
 // ============================================================================
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWatch } from 'react-hook-form';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -28,7 +28,10 @@ import {
   X,
   Scale,
   Plus,
-  Trash2
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  User
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
@@ -80,6 +83,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
   // UI state
   const [activeTab, setActiveTab] = useState('overview');
   const [showAllShippingOptions, setShowAllShippingOptions] = useState(false);
+  const [showShippingDetails, setShowShippingDetails] = useState(false);
   const [isEditMode, setIsEditMode] = useState(true);
   
   // Form state for editing
@@ -94,6 +98,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
       handling_charge: 0,
       discount: 0,
       insurance_amount: 0,
+      international_shipping: 0,
+      selected_shipping_option: null,
       origin_country: null,
       destination_country: null,
       currency: 'USD',
@@ -178,6 +184,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
   const handleShippingOptionSelect = async (optionId: string) => {
     if (!quote) return;
 
+    // Find the selected shipping option
+    const selectedOption = shippingOptions.find(opt => opt.id === optionId);
+    
+    // Update form values to reflect the selection
+    if (selectedOption) {
+      form.setValue('selected_shipping_option', optionId);
+      form.setValue('international_shipping', selectedOption.cost_usd);
+    }
+
     const updatedOperationalData = {
       ...quote.operational_data,
       shipping: {
@@ -220,6 +235,76 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
 
   // Watch form values for live updates
   const formValues = useWatch({ control: form.control });
+
+  // Dynamic shipping calculation function
+  const recalculateShipping = useCallback(async () => {
+    if (!quote || !formValues.items || formValues.items.length === 0) return;
+
+    try {
+      const itemsTotal = (formValues.items || []).reduce((sum, item) => 
+        sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1), 0
+      );
+      
+      const totalWeight = (formValues.items || []).reduce((sum, item) => 
+        sum + (Number(item.item_weight) || 0) * (Number(item.quantity) || 1), 0
+      );
+
+      if (itemsTotal > 0 && totalWeight > 0 && formValues.origin_country && formValues.destination_country) {
+        console.log('🚢 Recalculating shipping options...', {
+          itemsTotal,
+          totalWeight,
+          origin: formValues.origin_country,
+          destination: formValues.destination_country
+        });
+
+        const tempQuote = {
+          ...quote,
+          origin_country: formValues.origin_country,
+          destination_country: formValues.destination_country,
+          items: (formValues.items || []).map((item, index) => ({
+            ...quote.items[index],
+            price_usd: Number(item.item_price) || 0,
+            weight_kg: Number(item.item_weight) || 0,
+            quantity: Number(item.quantity) || 1,
+          })),
+        };
+
+        const result = await smartCalculationEngine.calculateWithShippingOptions({
+          quote: tempQuote,
+          preferences: {
+            speed_priority: 'medium',
+            cost_priority: 'medium',
+            show_all_options: true,
+          },
+        });
+
+        if (result.success) {
+          setShippingOptions(result.shipping_options);
+          setShippingRecommendations(result.smart_recommendations);
+          
+          // Auto-select optimal option if none selected
+          if (!formValues.selected_shipping_option && result.shipping_options.length > 0) {
+            const optimalOption = result.shipping_options[0]; // First option is usually optimal
+            form.setValue('selected_shipping_option', optimalOption.id);
+            form.setValue('international_shipping', optimalOption.cost_usd);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error recalculating shipping:', error);
+    }
+  }, [quote, formValues.items, formValues.origin_country, formValues.destination_country, formValues.selected_shipping_option, form]);
+
+  // Watch for changes that should trigger shipping recalculation
+  useEffect(() => {
+    if (isEditMode) {
+      const debounceTimer = setTimeout(() => {
+        recalculateShipping();
+      }, 1000); // Debounce for 1 second
+
+      return () => clearTimeout(debounceTimer);
+    }
+  }, [isEditMode, recalculateShipping]);
   const [liveQuote, setLiveQuote] = useState<UnifiedQuote | null>(null);
   
   // Smart weight estimation state
@@ -403,141 +488,98 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
     }
   };
 
-  // Create live quote from form values
+  // Single calculator for ALL calculations - SmartCalculationEngine (fast sync mode for live editing)
   const createLiveQuote = useMemo(() => {
     if (!quote || !formValues) return quote;
     
-    // Calculate live totals from form values - CONVERT TO NUMBERS!
-    const itemsTotal = (formValues.items || []).reduce((sum, item) => 
-      sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1), 0
-    );
-    
-    const totalWeight = (formValues.items || []).reduce((sum, item) => 
-      sum + (Number(item.item_weight) || 0) * (Number(item.quantity) || 1), 0
-    );
-
-    // Basic calculation logic - CONVERT ALL FORM VALUES TO NUMBERS!
-    // Use form input with fallback to SmartEngine's 10% rate
-    const salesTax = Number(formValues.sales_tax_price) || (itemsTotal * 0.1);
-    const merchantShipping = Number(formValues.merchant_shipping_price) || 0;
-    const domesticShipping = Number(formValues.domestic_shipping) || 0;
-    
-    // Use form values with fallback to SmartEngine calculation method
-    const handlingCharge = Number(formValues.handling_charge) || 
-                          quote?.operational_data?.handling_charge || 
-                          Math.max(5, itemsTotal * 0.02); // Same as SmartEngine: min $5 or 2%
-    
-    const insurance = Number(formValues.insurance_amount) || 
-                     quote?.operational_data?.insurance_amount || 
-                     (itemsTotal * 0.005); // Same as SmartEngine: 0.5% of items
-    const discount = Number(formValues.discount) || 0;
-    
-    // Calculate international shipping first (needed for customs calculation)
-    const internationalShipping = quote.calculation_data?.breakdown?.shipping || 0;
-    
-    // Calculate customs based on percentage (use smart tier if available, otherwise form value)
-    // Customs base = items total + international shipping (matching SmartCalculationEngine)
-    const smartCustomsPercentage = quote?.operational_data?.customs?.percentage;
-    const formCustomsPercentage = Number(formValues.customs_percentage) || 0;
-    const customsPercentage = (smartCustomsPercentage || formCustomsPercentage) / 100;
-    const customsBase = itemsTotal + internationalShipping;
-    const customs = customsBase * customsPercentage;
-    
-    // Calculate payment gateway fee (aligned with SmartCalculationEngine)
-    const subtotalForGateway = itemsTotal + internationalShipping + customs;
-    const paymentGatewayFee = (subtotalForGateway * 0.029) + 0.30; // Standard 2.9% + $0.30
-    
-    // Calculate VAT (if applicable) - use country settings or default
-    const vatPercentage = quote.operational_data?.customs?.smart_tier?.vat_percentage || 0;
-    const vatAmount = vatPercentage > 0 ? (itemsTotal * (vatPercentage / 100)) : 0;
-    
-    // Calculate subtotal first (matching SmartEngine order)
-    const subtotal = itemsTotal + internationalShipping + customs + 
-                    salesTax + handlingCharge + insurance + merchantShipping + domesticShipping + vatAmount;
-    
-    // Add payment gateway fee to subtotal and apply discount
-    const finalTotal = subtotal + paymentGatewayFee - discount;
-
-    // Debug calculation to verify numbers are correct
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📋 Form Values Debug:', {
-        'formValues.handling_charge': formValues.handling_charge,
-        'formValues.insurance_amount': formValues.insurance_amount,
-        'quote.operational_data.handling_charge': quote?.operational_data?.handling_charge,
-        'quote.operational_data.insurance_amount': quote?.operational_data?.insurance_amount,
-        'final handlingCharge': handlingCharge,
-        'final insurance': insurance,
-      });
-      
-      console.log('💰 Live Calculation Debug:', {
-        itemsTotal: itemsTotal,
-        salesTax: salesTax,
-        merchantShipping: merchantShipping,
-        domesticShipping: domesticShipping,
-        handlingCharge: handlingCharge,
-        insurance: insurance,
-        customs: customs,
-        internationalShipping: internationalShipping,
-        vatAmount: vatAmount,
-        subtotal: subtotal,
-        paymentGatewayFee: paymentGatewayFee,
-        discount: discount,
-        finalTotal: finalTotal,
-        'types': {
-          itemsTotal: typeof itemsTotal,
-          salesTax: typeof salesTax,
-          merchantShipping: typeof merchantShipping,
-          domesticShipping: typeof domesticShipping,
-          handlingCharge: typeof handlingCharge,
-          insurance: typeof insurance,
-          customs: typeof customs,
-          paymentGatewayFee: typeof paymentGatewayFee,
-          vatAmount: typeof vatAmount,
-          finalTotal: typeof finalTotal,
-        }
-      });
-    }
-
-    return {
-      ...quote,
-      items: (formValues.items || []).map((item, index) => ({
-        ...quote.items[index],
-        name: item.product_name || '',
-        price_usd: Number(item.item_price) || 0,
-        weight_kg: Number(item.item_weight) || 0,
-        quantity: Number(item.quantity) || 1,
-        url: item.product_url || '',
-      })),
-      final_total_usd: finalTotal,
-      calculation_data: {
-        ...quote.calculation_data,
-        sales_tax_price: salesTax,
-        merchant_shipping_price: merchantShipping,
-        customs_percentage: Number(formValues.customs_percentage) || 0,
-        breakdown: {
-          items_total: itemsTotal,
-          shipping: internationalShipping,
-          customs: customs,
-          taxes: salesTax + vatAmount,
-          fees: handlingCharge + insurance + paymentGatewayFee,
-          discount: discount,
+    try {
+      // Build updated quote from form values
+      const updatedQuote = {
+        ...quote,
+        items: (formValues.items || []).map((item, index) => ({
+          ...quote.items[index],
+          name: item.product_name || '',
+          price_usd: Number(item.item_price) || 0,
+          weight_kg: Number(item.item_weight) || 0,
+          quantity: Number(item.quantity) || 1,
+          url: item.product_url || '',
+        })),
+        operational_data: {
+          ...quote.operational_data,
+          customs: {
+            ...quote.operational_data?.customs,
+            percentage: Number(formValues.customs_percentage) || quote.operational_data?.customs?.percentage || 0,
+          },
+          shipping: {
+            ...quote.operational_data?.shipping,
+            selected_option: formValues.selected_shipping_option || quote.operational_data?.shipping?.selected_option,
+          },
+          domestic_shipping: Number(formValues.domestic_shipping) || 0,
+          handling_charge: Number(formValues.handling_charge) || 0,
+          insurance_amount: Number(formValues.insurance_amount) || 0,
         },
-      },
-      operational_data: {
-        ...quote.operational_data,
-        domestic_shipping: domesticShipping,
-        handling_charge: handlingCharge,
-        insurance_amount: insurance,
-        payment_gateway_fee: paymentGatewayFee,
-        vat_amount: vatAmount,
-      },
-    };
+        calculation_data: {
+          ...quote.calculation_data,
+          sales_tax_price: Number(formValues.sales_tax_price) || 0,
+          merchant_shipping_price: Number(formValues.merchant_shipping_price) || 0,
+          discount: Number(formValues.discount) || 0,
+        },
+      };
+
+      // Use SmartCalculationEngine sync mode for instant live updates
+      const calculationResult = smartCalculationEngine.calculateLiveSync({
+        quote: updatedQuote,
+        preferences: {
+          speed_priority: 'medium',
+          cost_priority: 'medium',
+          show_all_options: false, // Simplified for live editing
+        },
+      });
+
+      if (calculationResult.success) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('⚡ Live calculation (SmartCalculationEngine sync):', {
+            finalTotal: calculationResult.updated_quote.final_total_usd,
+            breakdown: calculationResult.updated_quote.calculation_data.breakdown,
+          });
+        }
+        return calculationResult.updated_quote;
+      } else {
+        console.warn('⚠️ SmartCalculationEngine sync failed:', calculationResult.error);
+        return quote;
+      }
+    } catch (error) {
+      console.error('❌ Live calculation error:', error);
+      return quote;
+    }
   }, [quote, formValues]);
 
-  // Update live quote when form changes
+  // Always use SmartCalculationEngine for consistent calculations in both modes
   useEffect(() => {
     if (isEditMode && createLiveQuote) {
+      // Edit mode: Use real-time calculated quote
       setLiveQuote(createLiveQuote);
+    } else if (quote) {
+      // View mode: Recalculate using SmartCalculationEngine for consistency
+      try {
+        const calculationResult = smartCalculationEngine.calculateLiveSync({
+          quote,
+          preferences: {
+            speed_priority: 'medium',
+            cost_priority: 'medium',
+            show_all_options: false,
+          },
+        });
+        
+        if (calculationResult.success) {
+          setLiveQuote(calculationResult.updated_quote);
+        } else {
+          setLiveQuote(quote); // Fallback to original
+        }
+      } catch (error) {
+        console.warn('View mode recalculation failed:', error);
+        setLiveQuote(quote); // Fallback to original
+      }
     } else {
       setLiveQuote(quote);
     }
@@ -568,9 +610,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
     }
   }, [isEditMode, quote?.id]); // Only trigger when edit mode changes or quote changes
 
-  // Smart metrics calculation (now uses live quote in edit mode)
+  // Smart metrics calculation (always uses live quote for consistency)
   const metrics = useMemo(() => {
-    const activeQuote = isEditMode ? liveQuote : quote;
+    const activeQuote = liveQuote || quote;
     if (!activeQuote) return null;
 
     const breakdown = activeQuote.calculation_data?.breakdown || {};
@@ -591,7 +633,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
         ? ((breakdown.customs / activeQuote.final_total_usd) * 100).toFixed(1) 
         : '0',
     };
-  }, [quote, liveQuote, isEditMode]);
+  }, [quote, liveQuote]);
 
   // Form population function
   const populateFormFromQuote = (quoteData: UnifiedQuote) => {
@@ -610,6 +652,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
       handling_charge: operationalData.handling_charge || 0,
       discount: calculationData.discount || 0,
       insurance_amount: operationalData.insurance_amount || 0,
+      international_shipping: calculationData.breakdown?.shipping || 0,
+      selected_shipping_option: operationalData.shipping?.selected_option || null,
       origin_country: quoteData.origin_country,
       destination_country: quoteData.destination_country,
       currency: quoteData.currency,
@@ -655,12 +699,20 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
           merchant_shipping_price: Number(data.merchant_shipping_price) || 0,
           discount: Number(data.discount) || 0,
           customs_percentage: Number(data.customs_percentage) || 0,
+          breakdown: {
+            ...quote?.calculation_data?.breakdown,
+            shipping: Number(data.international_shipping) || quote?.calculation_data?.breakdown?.shipping || 0,
+          },
         },
         operational_data: {
           ...quote?.operational_data,
           domestic_shipping: Number(data.domestic_shipping) || 0,
           handling_charge: Number(data.handling_charge) || 0,
           insurance_amount: Number(data.insurance_amount) || 0,
+          shipping: {
+            ...quote?.operational_data?.shipping,
+            selected_option: data.selected_shipping_option || null,
+          },
         },
         items: data.items?.map(item => ({
           id: item.id,
@@ -744,7 +796,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
               Quote {quote.display_id}
             </h1>
             <div className="flex items-center space-x-4 mt-1">
-              <SmartStatusManager quote={quote} onStatusUpdate={loadQuoteData} />
+              <SmartStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
               <Badge variant="outline" className="flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1" />
                 {optimizationScore.toFixed(0)}% Optimized
@@ -761,12 +813,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
 
         <div className="text-right space-y-2">
           <div className="text-2xl font-bold text-blue-600">
-            ${(isEditMode ? liveQuote?.final_total_usd || quote.final_total_usd : quote.final_total_usd).toFixed(2)}
-            {isEditMode && (
-              <Badge variant="secondary" className="ml-2 text-xs">
-                Live
-              </Badge>
-            )}
+            ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
           </div>
           <div className="text-sm text-gray-600">
             {metrics?.totalItems} items • {metrics?.totalWeight} kg
@@ -793,21 +840,20 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
         />
       )}
 
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="shipping">Shipping Options</TabsTrigger>
-          <TabsTrigger value="customer">Customer</TabsTrigger>
-        </TabsList>
+      {/* Smart Adaptive Layout */}
+      {isEditMode ? (
+        /* Edit Mode: Keep tabs for organization */
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="customer">Customer</TabsTrigger>
+          </TabsList>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          {isEditMode ? (
-            /* Edit Mode - Side-by-Side Layout */
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
               {/* Left Column - Edit Form (60%) */}
-              <div className="xl:col-span-3 space-y-6">
+              <div className="space-y-6 xl:col-span-3">
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
                     {/* Product Details Section - TOP PRIORITY */}
@@ -1112,6 +1158,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                           } : undefined}
                           onCalculateSmartCustoms={calculateSmartCustoms}
                           isCalculatingCustoms={isCalculatingCustoms}
+                          shippingOptions={shippingOptions}
+                          onSelectShippingOption={handleShippingOptionSelect}
+                          onShowShippingDetails={() => setShowShippingDetails(true)}
                         />
                       </CardContent>
                     </Card>
@@ -1122,7 +1171,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                         variant="outline"
                         onClick={() => {
                           setIsEditMode(false);
-                          populateFormFromQuote(quote); // Reset form
+                          populateFormFromQuote(liveQuote || quote); // Reset form
                         }}
                         disabled={isCalculating}
                       >
@@ -1130,7 +1179,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                         Cancel
                       </Button>
                       <Button
-                        onClick={() => calculateSmartFeatures(quote)}
+                        onClick={() => calculateSmartFeatures(liveQuote || quote)}
                         disabled={isCalculating}
                         variant="outline"
                       >
@@ -1199,7 +1248,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                         <div className="text-sm text-gray-600">Customs Duty</div>
                         <div className="text-xl font-semibold flex items-center">
                           {metrics?.customsPercentage}%
-                          {(isEditMode ? liveQuote : quote)?.operational_data?.customs?.smart_tier && (
+                          {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
                             <Badge variant="outline" className="ml-2 text-xs">
                               Smart
                             </Badge>
@@ -1215,15 +1264,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                     </div>
 
                     {/* Smart Customs Tier Information */}
-                    {(isEditMode ? liveQuote : quote)?.operational_data?.customs?.smart_tier && (
+                    {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
                       <div className="pt-4 border-t">
                         <div className="text-sm font-medium text-gray-900 mb-2">
                           Smart Customs Tier Applied
                         </div>
                         <div className="flex items-center text-sm text-blue-600">
                           <CheckCircle className="w-4 h-4 mr-1" />
-                          {(isEditMode ? liveQuote : quote)?.operational_data?.customs?.smart_tier?.tier_name || 'Default Tier'}
-                          {(isEditMode ? liveQuote : quote)?.operational_data?.customs?.smart_tier?.fallback_used && (
+                          {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.tier_name || 'Default Tier'}
+                          {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.fallback_used && (
                             <Badge variant="secondary" className="ml-2 text-xs">
                               Fallback
                             </Badge>
@@ -1248,6 +1297,56 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                   </CardContent>
                 </Card>
 
+                {/* Collapsible Shipping Options */}
+                {shippingOptions.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center text-base">
+                          <Truck className="w-4 h-4 mr-2 text-blue-600" />
+                          Shipping Options
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            {shippingOptions.length} available
+                          </Badge>
+                        </CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowShippingDetails(!showShippingDetails)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {showShippingDetails ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                      {!showShippingDetails && (
+                        <div className="text-sm text-gray-600">
+                          Current: {shippingOptions.find(opt => 
+                            opt.id === (liveQuote || quote)?.operational_data?.shipping?.selected_option
+                          )?.carrier} {shippingOptions.find(opt => 
+                            opt.id === (liveQuote || quote)?.operational_data?.shipping?.selected_option
+                          )?.name || 'None selected'}
+                        </div>
+                      )}
+                    </CardHeader>
+                    {showShippingDetails && (
+                      <CardContent className="pt-0">
+                        <SmartShippingOptions
+                          quote={liveQuote || quote}
+                          shippingOptions={shippingOptions}
+                          recommendations={shippingRecommendations}
+                          onSelectOption={handleShippingOptionSelect}
+                          showAllOptions={showAllShippingOptions}
+                          onToggleShowAll={setShowAllShippingOptions}
+                        />
+                      </CardContent>
+                    )}
+                  </Card>
+                )}
+
                 {/* Edit Mode Indicator */}
                 <Card className="border-blue-200 bg-blue-50">
                   <CardContent className="p-4">
@@ -1262,17 +1361,119 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                 </Card>
               </div>
             </div>
-          ) : (
-            /* View Mode - Original Overview Layout */
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Smart Calculation Breakdown */}
+        </TabsContent>
+
+          {/* Customer Tab */}
+          <TabsContent value="customer">
+            <SmartCustomerInfo
+              quote={liveQuote || quote}
+              onUpdateQuote={loadQuoteData}
+            />
+          </TabsContent>
+
+        </Tabs>
+      ) : (
+        /* View Mode: Seamless integrated layout with customer info */
+        <div className="space-y-6">
+          {/* Quote Overview Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Quote Items Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Package className="w-5 h-5 mr-2 text-blue-600" />
+                  Items Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {(liveQuote || quote).items?.map((item, index) => (
+                    <div key={item.id || index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{item.name || `Item ${index + 1}`}</div>
+                        <div className="text-xs text-gray-500">
+                          {item.quantity}x • {item.weight_kg}kg each
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium">
+                        ${(item.price_usd * item.quantity).toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t">
+                    <div className="flex justify-between text-sm font-medium">
+                      <span>Total Items</span>
+                      <span>{metrics?.totalItems} items • {metrics?.totalWeight} kg</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Customer Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <User className="w-5 h-5 mr-2 text-green-600" />
+                  Customer
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SmartCustomerInfo
+                  quote={liveQuote || quote}
+                  onUpdateQuote={loadQuoteData}
+                  compact={true}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Quote Status & Key Metrics */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <TrendingUp className="w-5 h-5 mr-2 text-purple-600" />
+                  Status & Metrics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Status</span>
+                  <SmartStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} compact={true} />
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-gray-600">Weight Confidence</div>
+                    <div className="font-semibold">{metrics?.avgWeightConfidence}%</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-600">Optimization</div>
+                    <div className="font-semibold">{optimizationScore.toFixed(0)}%</div>
+                  </div>
+                </div>
+                <div className="pt-2 border-t">
+                  <div className="text-lg font-bold text-blue-600">
+                    ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
+                  </div>
+                  <div className="text-xs text-gray-500">Final Total</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Detailed Breakdown */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Cost Breakdown - Full Width on Mobile, 2 columns on Desktop */}
+            <div className="lg:col-span-2">
               <SmartCalculationBreakdown
-                quote={quote}
+                quote={liveQuote || quote}
                 shippingOptions={shippingOptions}
                 isCalculating={isCalculating}
               />
+            </div>
 
-              {/* Key Metrics Card */}
+            {/* Smart Insights & Actions */}
+            <div className="space-y-6">
+              {/* Smart Insights */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -1281,97 +1482,71 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm text-gray-600">Weight Confidence</div>
-                      <div className="text-xl font-semibold">
-                        {metrics?.avgWeightConfidence}%
-                      </div>
+                  <div className="grid grid-cols-1 gap-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Shipping Cost</span>
+                      <span className="font-semibold">{metrics?.shippingPercentage}%</span>
                     </div>
-                    <div>
-                      <div className="text-sm text-gray-600">Shipping Cost</div>
-                      <div className="text-xl font-semibold">
-                        {metrics?.shippingPercentage}%
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-600">Customs Duty</div>
-                      <div className="text-xl font-semibold flex items-center">
-                        {metrics?.customsPercentage}%
-                        {quote?.operational_data?.customs?.smart_tier && (
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            Smart
-                          </Badge>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Customs Duty</span>
+                      <div className="flex items-center">
+                        <span className="font-semibold">{metrics?.customsPercentage}%</span>
+                        {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
+                          <Badge variant="outline" className="ml-2 text-xs">Smart</Badge>
                         )}
                       </div>
                     </div>
-                    <div>
-                      <div className="text-sm text-gray-600">Options Available</div>
-                      <div className="text-xl font-semibold">
-                        {shippingOptions.length}
-                      </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Options Available</span>
+                      <span className="font-semibold">{shippingOptions.length}</span>
                     </div>
                   </div>
 
                   {/* Smart Customs Tier Information */}
-                  {quote?.operational_data?.customs?.smart_tier && (
-                    <div className="pt-4 border-t">
-                      <div className="text-sm font-medium text-gray-900 mb-2">
-                        Smart Customs Tier Applied
-                      </div>
+                  {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
+                    <div className="pt-3 border-t">
+                      <div className="text-sm font-medium text-gray-900 mb-2">Smart Customs Tier</div>
                       <div className="flex items-center text-sm text-blue-600">
                         <CheckCircle className="w-4 h-4 mr-1" />
-                        {quote?.operational_data?.customs?.smart_tier?.tier_name || 'Default Tier'}
-                        {quote?.operational_data?.customs?.smart_tier?.fallback_used && (
-                          <Badge variant="secondary" className="ml-2 text-xs">
-                            Fallback
-                          </Badge>
+                        {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.tier_name || 'Default Tier'}
+                        {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.fallback_used && (
+                          <Badge variant="secondary" className="ml-2 text-xs">Fallback</Badge>
                         )}
-                      </div>
-                    </div>
-                  )}
-
-                  {shippingRecommendations.length > 0 && (
-                    <div className="pt-4 border-t">
-                      <div className="text-sm font-medium text-gray-900 mb-2">
-                        Top Recommendation
-                      </div>
-                      <div className="flex items-center text-sm text-green-600">
-                        <Lightbulb className="w-4 h-4 mr-1" />
-                        {shippingRecommendations[0].reason === 'cost_savings' && 
-                          `Save $${shippingRecommendations[0].savings_usd.toFixed(2)} with slower shipping`
-                        }
                       </div>
                     </div>
                   )}
                 </CardContent>
               </Card>
+
+              {/* Shipping Options */}
+              {shippingOptions.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Truck className="w-5 h-5 mr-2 text-blue-600" />
+                      Shipping Options
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {shippingOptions.length} available
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <SmartShippingOptions
+                      quote={liveQuote || quote}
+                      shippingOptions={shippingOptions}
+                      recommendations={shippingRecommendations}
+                      onSelectOption={handleShippingOptionSelect}
+                      showAllOptions={showAllShippingOptions}
+                      onToggleShowAll={setShowAllShippingOptions}
+                      compact={true}
+                    />
+                  </CardContent>
+                </Card>
+              )}
             </div>
-          )}
-        </TabsContent>
-
-
-        {/* Shipping Options Tab */}
-        <TabsContent value="shipping">
-          <SmartShippingOptions
-            quote={quote}
-            shippingOptions={shippingOptions}
-            recommendations={shippingRecommendations}
-            onSelectOption={handleShippingOptionSelect}
-            showAllOptions={showAllShippingOptions}
-            onToggleShowAll={setShowAllShippingOptions}
-          />
-        </TabsContent>
-
-        {/* Customer Tab */}
-        <TabsContent value="customer">
-          <SmartCustomerInfo
-            quote={quote}
-            onUpdateQuote={loadQuoteData}
-          />
-        </TabsContent>
-
-      </Tabs>
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions Footer */}
       <Card>
@@ -1379,7 +1554,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Button
-                onClick={() => calculateSmartFeatures(quote)}
+                onClick={() => calculateSmartFeatures(liveQuote || quote)}
                 disabled={isCalculating}
                 className="flex items-center"
               >

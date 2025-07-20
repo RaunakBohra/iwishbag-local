@@ -24,6 +24,8 @@ export const adminQuoteFormSchema = z.object({
   handling_charge: emptyStringToNull,
   discount: emptyStringToNull,
   insurance_amount: emptyStringToNull,
+  international_shipping: emptyStringToNull,
+  selected_shipping_option: z.string().optional().nullable(),
   origin_country: z.string().nullable(),
   destination_country: z.string().nullable(),
   customs_percentage: emptyStringToNull,

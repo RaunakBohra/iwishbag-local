@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
 import { useCountryWithCurrency } from '@/hooks/useCountryWithCurrency';
 import { useCurrency } from '@/hooks/useCurrency';
-import { quoteCalculatorService } from '@/services/QuoteCalculatorService';
+import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
 import { useToast } from '@/components/ui/use-toast';
 import { Calculator, Package, Globe, DollarSign } from 'lucide-react';
 
@@ -133,46 +133,68 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
         throw new Error(`Country settings not found for ${purchaseCountry}`);
       }
 
-      // Create calculation parameters following the expected format
-      const calculationParams = {
+      // Create unified quote for SmartCalculationEngine
+      const mockQuote = {
+        id: 'cost-estimator-temp',
         items: [
           {
             id: '1',
-            item_price: parseFloat(itemPrice) || 0,
-            item_weight: parseFloat(itemWeight) || 0,
+            name: 'Product',
+            price_usd: parseFloat(itemPrice) || 0,
+            weight_kg: parseFloat(itemWeight) || 0,
             quantity: 1,
-            product_name: 'Product',
+            url: '',
           },
         ],
-        originCountry: purchaseCountry,
-        destinationCountry: destinationCountry,
+        origin_country: purchaseCountry,
+        destination_country: destinationCountry,
         currency: countrySettings.currency || 'USD',
-        sales_tax_price: 0,
-        merchant_shipping_price: 0,
-        domestic_shipping: 0,
-        handling_charge: 0,
-        discount: 0,
-        insurance_amount: 0,
-        customs_percentage: customsCategory
-          ? customsCategories?.find((c) => c.id === customsCategory)?.duty_percent || 0
-          : 0,
-        countrySettings: countrySettings,
+        final_total_usd: 0,
+        calculation_data: {
+          sales_tax_price: 0,
+          merchant_shipping_price: 0,
+          discount: 0,
+          breakdown: { items_total: 0, shipping: 0, customs: 0, taxes: 0, fees: 0, discount: 0 },
+        },
+        operational_data: {
+          domestic_shipping: 0,
+          handling_charge: 0,
+          insurance_amount: 0,
+          customs: {
+            percentage: customsCategory
+              ? customsCategories?.find((c) => c.id === customsCategory)?.duty_percent || 0
+              : 10, // Default 10%
+          },
+        },
+        optimization_score: 0,
       };
 
-      const result = await quoteCalculatorService.calculateQuote(calculationParams);
+      const result = await smartCalculationEngine.calculateWithShippingOptions({
+        quote: mockQuote,
+        preferences: {
+          speed_priority: 'medium',
+          cost_priority: 'medium',
+          show_all_options: false,
+        },
+      });
 
-      if (!result.success || !result.breakdown) {
-        throw new Error(result.error?.message || 'Calculation failed');
+      if (!result.success || !result.updated_quote) {
+        throw new Error(result.error || 'Calculation failed');
+      }
+
+      const breakdown = result.updated_quote.calculation_data?.breakdown;
+      if (!breakdown) {
+        throw new Error('Calculation breakdown not available');
       }
 
       // Transform the result to match the expected format for display
       const estimateData = {
-        itemTotal: result.breakdown.total_item_price,
-        shippingCost: result.breakdown.international_shipping,
-        customsDuty: result.breakdown.customs_and_ecs,
-        serviceFee: result.breakdown.payment_gateway_fee,
-        total: result.breakdown.final_total,
-        breakdown: result.breakdown,
+        itemTotal: breakdown.items_total || 0,
+        shippingCost: breakdown.shipping || 0,
+        customsDuty: breakdown.customs || 0,
+        serviceFee: breakdown.fees || 0,
+        total: result.updated_quote.final_total_usd || 0,
+        breakdown: breakdown,
         currency: countrySettings.currency || 'USD',
       };
 

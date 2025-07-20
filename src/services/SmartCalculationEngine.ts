@@ -53,7 +53,64 @@ export class SmartCalculationEngine {
   }
 
   /**
-   * Main calculation with enhanced shipping options
+   * Fast synchronous calculation for live editing (no DB calls)
+   */
+  calculateLiveSync(input: EnhancedCalculationInput): EnhancedCalculationResult {
+    try {
+      // Calculate base totals
+      const itemsTotal = input.quote.items.reduce(
+        (sum, item) => sum + (item.price_usd * item.quantity), 0
+      );
+      const totalWeight = input.quote.items.reduce(
+        (sum, item) => sum + (item.weight_kg * item.quantity), 0
+      );
+
+      // Use existing shipping options from context or calculate simple shipping
+      const shippingOptions = this.calculateSimpleShippingOptions({
+        originCountry: input.quote.origin_country,
+        destinationCountry: input.quote.destination_country,
+        weight: totalWeight,
+        value: itemsTotal,
+      });
+
+      // Select shipping option
+      const selectedOption = this.selectOptimalShippingOption(
+        shippingOptions,
+        input.preferences,
+        input.quote.operational_data?.shipping?.selected_option
+      );
+
+      // Fast calculation without async operations
+      const calculationResult = this.calculateCompleteCostsSync({
+        quote: input.quote,
+        selectedShipping: selectedOption,
+        itemsTotal,
+        totalWeight,
+      });
+
+      return {
+        success: true,
+        updated_quote: calculationResult.updated_quote,
+        shipping_options: shippingOptions,
+        smart_recommendations: [],
+        optimization_suggestions: [],
+      };
+
+    } catch (error) {
+      console.error('Fast calculation error:', error);
+      return {
+        success: false,
+        updated_quote: input.quote,
+        shipping_options: [],
+        smart_recommendations: [],
+        optimization_suggestions: [],
+        error: error instanceof Error ? error.message : 'Fast calculation failed',
+      };
+    }
+  }
+
+  /**
+   * Main calculation with enhanced shipping options (full async version)
    */
   async calculateWithShippingOptions(input: EnhancedCalculationInput): Promise<EnhancedCalculationResult> {
     try {
@@ -209,14 +266,37 @@ export class SmartCalculationEngine {
       active: boolean;
     }>;
 
+    // Debug logging for route analysis
+    console.log('🚢 Route Analysis:', {
+      route_id: route.id,
+      origin: route.origin_country,
+      destination: route.destination_country,
+      carriers: carriers,
+      delivery_options: deliveryOptions,
+      weight: params.weight,
+      value: params.value,
+      base_shipping_cost: route.base_shipping_cost,
+      cost_per_kg: route.cost_per_kg,
+      shipping_per_kg: route.shipping_per_kg
+    });
+
     // Generate options for each carrier + delivery option combination
     for (const carrier of carriers || []) {
       const baseCost = this.calculateRouteBaseCost(route, params.weight, params.value);
       const carrierCost = baseCost * (carrier.costMultiplier || 1);
 
-      // Standard option for this carrier
+      console.log('💰 Carrier Cost Calculation:', {
+        carrier: carrier.name,
+        baseCost,
+        costMultiplier: carrier.costMultiplier,
+        finalCarrierCost: carrierCost,
+        weight: params.weight,
+        weightCostComponent: params.weight * (route.cost_per_kg || route.shipping_per_kg || 5)
+      });
+
+      // Standard option for this carrier (use carrier_ prefix to differentiate)
       options.push({
-        id: `${route.id}_${carrier.name.toLowerCase()}_standard`,
+        id: `${route.id}_carrier_${carrier.name.toLowerCase().replace(/\s+/g, '_')}_standard`,
         carrier: carrier.name,
         name: 'Standard',
         cost_usd: Math.round(carrierCost * 100) / 100,
@@ -226,12 +306,12 @@ export class SmartCalculationEngine {
         tracking: true,
       });
 
-      // Add specific delivery options for this carrier
+      // Add specific delivery options for this carrier (use delivery_ prefix)
       for (const deliveryOption of deliveryOptions || []) {
         if (deliveryOption.active && deliveryOption.carrier === carrier.name) {
           const optionCost = carrierCost + (deliveryOption.price || 0);
           options.push({
-            id: `${route.id}_${carrier.name.toLowerCase()}_${deliveryOption.id}`,
+            id: `${route.id}_delivery_${carrier.name.toLowerCase().replace(/\s+/g, '_')}_${deliveryOption.id}`,
             carrier: carrier.name,
             name: deliveryOption.name,
             cost_usd: Math.round(optionCost * 100) / 100,
@@ -341,6 +421,7 @@ export class SmartCalculationEngine {
    */
   private calculateRouteBaseCost(route: any, weight: number, value: number): number {
     let baseCost = route.base_shipping_cost || 25;
+    const initialBaseCost = baseCost;
 
     // Weight-based cost
     if (route.weight_tiers && route.weight_tiers.length > 0) {
@@ -349,14 +430,33 @@ export class SmartCalculationEngine {
       );
       if (tier) {
         baseCost = tier.cost;
+        console.log('📦 Using weight tier:', { tier, weight, newBaseCost: baseCost });
+      } else {
+        console.log('⚠️ No matching weight tier found for:', { weight, weight_tiers: route.weight_tiers });
       }
     } else {
-      baseCost += weight * (route.cost_per_kg || route.shipping_per_kg || 5);
+      const perKgRate = route.cost_per_kg || route.shipping_per_kg || 5;
+      const weightCost = weight * perKgRate;
+      baseCost += weightCost;
+      console.log('⚖️ Weight-based calculation:', {
+        weight,
+        perKgRate,
+        weightCost,
+        initialBaseCost,
+        newBaseCost: baseCost
+      });
     }
 
     // Value-based percentage
     if (route.cost_percentage && route.cost_percentage > 0) {
-      baseCost += value * (route.cost_percentage / 100);
+      const valueCost = value * (route.cost_percentage / 100);
+      baseCost += valueCost;
+      console.log('💎 Value-based calculation:', {
+        value,
+        percentage: route.cost_percentage,
+        valueCost,
+        finalBaseCost: baseCost
+      });
     }
 
     return baseCost;
@@ -469,6 +569,120 @@ export class SmartCalculationEngine {
   }
 
   /**
+   * Calculate simple shipping options without DB calls (for live editing)
+   */
+  private calculateSimpleShippingOptions(params: {
+    originCountry: string;
+    destinationCountry: string;
+    weight: number;
+    value: number;
+  }): ShippingOption[] {
+    // For live editing, use basic calculations
+    let baseCost = 25; // Default base cost
+    
+    // Special case for Chile -> India route (hardcoded for speed)
+    if (params.originCountry === 'CL' && params.destinationCountry === 'IN') {
+      baseCost = 15 + (params.weight * 8); // $15 base + $8/kg
+    } else {
+      baseCost = 25 + (params.weight * 5); // Default calculation
+    }
+
+    return [
+      {
+        id: 'standard_live',
+        carrier: 'Standard',
+        name: 'Standard Shipping',
+        cost_usd: Math.round(baseCost * 100) / 100,
+        days: '7-14',
+        confidence: 0.85,
+        restrictions: [],
+        tracking: true,
+      },
+      {
+        id: 'express_live',
+        carrier: 'Express',
+        name: 'Express Shipping',
+        cost_usd: Math.round(baseCost * 1.5 * 100) / 100,
+        days: '3-7',
+        confidence: 0.80,
+        restrictions: [],
+        tracking: true,
+      },
+    ];
+  }
+
+  /**
+   * Synchronous version of calculateCompleteCosts (for live editing)
+   */
+  private calculateCompleteCostsSync(params: {
+    quote: UnifiedQuote;
+    selectedShipping: ShippingOption;
+    itemsTotal: number;
+    totalWeight: number;
+  }): { updated_quote: UnifiedQuote } {
+    const { quote, selectedShipping, itemsTotal } = params;
+
+    // Use existing exchange rate or default
+    const exchangeRate = quote.calculation_data?.exchange_rate?.rate || 1.0;
+
+    // Calculate customs using existing percentage or default
+    const customsPercentage = quote.operational_data?.customs?.percentage || 10;
+    const customsAmount = (itemsTotal + selectedShipping.cost_usd) * (customsPercentage / 100);
+
+    // Calculate other costs (same logic as async version but faster)
+    const salesTax = quote.calculation_data?.sales_tax_price || itemsTotal * 0.1;
+    const handlingFee = quote.operational_data?.handling_charge || Math.max(5, itemsTotal * 0.02);
+    const insuranceAmount = quote.operational_data?.insurance_amount || itemsTotal * 0.005;
+    const paymentGatewayFee = quote.operational_data?.payment_gateway_fee || 
+                             (itemsTotal + selectedShipping.cost_usd + customsAmount) * 0.029 + 0.30;
+
+    // Calculate VAT
+    const vatPercentage = quote.operational_data?.customs?.smart_tier?.vat_percentage || 0;
+    const vatAmount = vatPercentage > 0 ? (itemsTotal * (vatPercentage / 100)) : 0;
+
+    // Calculate totals
+    const subtotal = itemsTotal + selectedShipping.cost_usd + customsAmount + 
+                    salesTax + handlingFee + insuranceAmount + vatAmount;
+    const finalTotal = subtotal + paymentGatewayFee;
+
+    // Update quote data structures
+    const updatedQuote: UnifiedQuote = {
+      ...quote,
+      final_total_usd: Math.round(finalTotal * 100) / 100,
+      calculation_data: {
+        ...quote.calculation_data,
+        breakdown: {
+          items_total: itemsTotal,
+          shipping: selectedShipping.cost_usd,
+          customs: customsAmount,
+          taxes: salesTax + vatAmount,
+          fees: handlingFee + insuranceAmount + paymentGatewayFee,
+          discount: quote.calculation_data?.breakdown?.discount || 0,
+        },
+        exchange_rate: {
+          rate: exchangeRate,
+          source: 'cached',
+          confidence: 0.90,
+        },
+      },
+      operational_data: {
+        ...quote.operational_data,
+        shipping: {
+          ...quote.operational_data?.shipping,
+          selected_option: selectedShipping.id,
+        },
+        handling_charge: handlingFee,
+        insurance_amount: insuranceAmount,
+        payment_gateway_fee: paymentGatewayFee,
+        vat_amount: vatAmount,
+      },
+      optimization_score: this.calculateOptimizationScore(finalTotal, itemsTotal),
+    };
+
+    return { updated_quote: updatedQuote };
+  }
+
+  /**
    * Calculate complete costs with selected shipping
    */
   private async calculateCompleteCosts(params: {
@@ -514,15 +728,19 @@ export class SmartCalculationEngine {
     
     const customsAmount = (itemsTotal + selectedShipping.cost_usd) * (customsPercentage / 100);
 
-    // Calculate taxes and fees
-    const salesTax = itemsTotal * 0.1; // Example rate
+    // Calculate taxes and fees (aligned with live calculator)
+    const salesTax = itemsTotal * 0.1; // Standard 10% rate
     const handlingFee = Math.max(5, itemsTotal * 0.02);
     const insuranceAmount = itemsTotal * 0.005;
     const paymentGatewayFee = (itemsTotal + selectedShipping.cost_usd + customsAmount) * 0.029 + 0.30;
 
-    // Calculate totals
+    // Calculate VAT (if applicable) - use smart tier VAT percentage
+    const vatPercentage = customsTierInfo?.vat_percentage || 0;
+    const vatAmount = vatPercentage > 0 ? (itemsTotal * (vatPercentage / 100)) : 0;
+
+    // Calculate totals (including VAT in subtotal like live calculator)
     const subtotal = itemsTotal + selectedShipping.cost_usd + customsAmount + 
-                    salesTax + handlingFee + insuranceAmount;
+                    salesTax + handlingFee + insuranceAmount + vatAmount;
     const finalTotal = subtotal + paymentGatewayFee;
 
     // Update quote data structures
@@ -532,7 +750,7 @@ export class SmartCalculationEngine {
         items_total: itemsTotal,
         shipping: selectedShipping.cost_usd,
         customs: customsAmount,
-        taxes: salesTax,
+        taxes: salesTax + vatAmount, // Include VAT in taxes like live calculator
         fees: handlingFee + insuranceAmount + paymentGatewayFee,
         discount: 0,
       },
@@ -560,6 +778,12 @@ export class SmartCalculationEngine {
           vat_percentage: customsTierInfo.vat_percentage,
         } : null,
       },
+      // Add operational data to match live calculator structure
+      domestic_shipping: quote.operational_data?.domestic_shipping || 0,
+      handling_charge: handlingFee,
+      insurance_amount: insuranceAmount,
+      payment_gateway_fee: paymentGatewayFee,
+      vat_amount: vatAmount,
     };
 
     const updatedQuote: UnifiedQuote = {

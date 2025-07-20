@@ -1,8 +1,8 @@
 import { useToast } from '@/components/ui/use-toast';
 import { useQuoteQueries } from './useQuoteQueries';
 import { useQuoteMutations } from './useQuoteMutations';
-import { useQuoteCalculation } from './useQuoteCalculation';
 import { useAllCountries } from './useAllCountries';
+import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -18,7 +18,6 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
   const { data: allCountries } = useAllCountries();
   const { updateQuote, updateQuoteItem, sendQuoteEmail, isUpdating, isSendingEmail } =
     useQuoteMutations(id);
-  const { calculateUpdatedQuote } = useQuoteCalculation();
 
   const form = useForm<AdminQuoteFormValues>({
     resolver: zodResolver(adminQuoteFormSchema),
@@ -116,13 +115,50 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
     }
 
     try {
-      const finalQuoteData = await calculateUpdatedQuote(
-        data,
-        itemsToUpdate,
-        allCountries || [],
-        quote?.shipping_address,
-        quote?.status,
-      );
+      // Create updated quote for SmartCalculationEngine
+      const updatedQuote = {
+        ...quote!,
+        items: itemsToUpdate.map((item, index) => ({
+          ...quote!.items[index],
+          name: item.product_name || '',
+          price_usd: item.item_price || 0,
+          weight_kg: item.item_weight || 0,
+          quantity: item.quantity || 1,
+          url: item.product_url || '',
+        })),
+        operational_data: {
+          ...quote!.operational_data,
+          customs: {
+            ...quote!.operational_data?.customs,
+            percentage: Number(data.customs_percentage) || 0,
+          },
+          domestic_shipping: Number(data.domestic_shipping) || 0,
+          handling_charge: Number(data.handling_charge) || 0,
+          insurance_amount: Number(data.insurance_amount) || 0,
+        },
+        calculation_data: {
+          ...quote!.calculation_data,
+          sales_tax_price: Number(data.sales_tax_price) || 0,
+          merchant_shipping_price: Number(data.merchant_shipping_price) || 0,
+          discount: Number(data.discount) || 0,
+        },
+      };
+
+      // Use SmartCalculationEngine to recalculate
+      const result = await smartCalculationEngine.calculateWithShippingOptions({
+        quote: updatedQuote,
+        preferences: {
+          speed_priority: 'medium',
+          cost_priority: 'medium',
+          show_all_options: false,
+        },
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Calculation failed');
+      }
+
+      const finalQuoteData = result.updated_quote;
 
       if (finalQuoteData) {
         if (itemsToUpdate.length > 1) {

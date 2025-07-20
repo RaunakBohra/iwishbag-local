@@ -37,7 +37,7 @@ export const SmartCalculationBreakdown: React.FC<SmartCalculationBreakdownProps>
   
   // Get selected shipping option details
   const selectedShippingOption = shippingOptions.find(
-    opt => opt.id === quote.operational_data.shipping.selected_option
+    opt => opt.id === quote.operational_data?.shipping?.selected_option
   );
 
   // Breakdown items with smart insights

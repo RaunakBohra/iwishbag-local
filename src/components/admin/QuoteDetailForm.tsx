@@ -17,6 +17,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { AdminQuoteFormValues } from '@/components/admin/admin-quote-form-validation';
+import type { ShippingOption } from '@/types/unified-quote';
 
 interface CustomsTier {
   name?: string;
@@ -40,6 +41,9 @@ interface QuoteDetailFormProps {
   isOrder?: boolean;
   onCalculateSmartCustoms?: () => void;
   isCalculatingCustoms?: boolean;
+  shippingOptions?: ShippingOption[];
+  onSelectShippingOption?: (optionId: string) => void;
+  onShowShippingDetails?: () => void;
 }
 
 export const QuoteDetailForm = ({
@@ -50,6 +54,9 @@ export const QuoteDetailForm = ({
   isOrder = false,
   onCalculateSmartCustoms,
   isCalculatingCustoms = false,
+  shippingOptions = [],
+  onSelectShippingOption,
+  onShowShippingDetails,
 }: QuoteDetailFormProps) => {
   const { toast: _toast } = useToast();
   const { data: allCountries } = useAllCountries();
@@ -244,6 +251,92 @@ export const QuoteDetailForm = ({
             </FormItem>
           )}
         />
+        
+        {/* International Shipping Section */}
+        <div className="space-y-3">
+          <FormField
+            control={form.control}
+            name="international_shipping"
+            render={({ field }) => (
+              <FormItem className="m-0">
+                <FormLabel className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                  International Shipping ({currencySymbol})
+                  {shippingOptions.length > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline" className="text-xs">
+                        {shippingOptions.length} options available
+                      </Badge>
+                      {onShowShippingDetails && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={onShowShippingDetails}
+                          className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                        >
+                          View Details
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...field}
+                    value={field.value ?? ''}
+                    onWheel={handleNumberInputWheel}
+                    className="h-9 mt-1"
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          
+          {/* Shipping Option Selector */}
+          {shippingOptions.length > 0 && (
+            <FormField
+              control={form.control}
+              name="selected_shipping_option"
+              render={({ field }) => (
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-medium text-muted-foreground">
+                    Shipping Method
+                  </FormLabel>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      if (onSelectShippingOption) {
+                        onSelectShippingOption(value);
+                      }
+                    }} 
+                    value={field.value || ''}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="h-9 mt-1">
+                        <SelectValue placeholder="Select shipping method" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {shippingOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>{option.carrier} {option.name}</span>
+                            <span className="text-muted-foreground ml-2">
+                              ${option.cost_usd.toFixed(2)} • {option.days} days
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          )}
+        </div>
+        
         <FormField
           control={form.control}
           name="domestic_shipping"

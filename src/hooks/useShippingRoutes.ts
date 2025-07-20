@@ -4,9 +4,9 @@ import {
   getShippingRoutes,
   upsertShippingRoute,
   deleteShippingRoute,
-  getShippingCost,
-  calculateUnifiedQuote,
-} from '../lib/unified-shipping-calculator';
+  getShippingRouteById,
+} from '../services/ShippingRoutesService';
+import { smartCalculationEngine } from '../services/SmartCalculationEngine';
 import type {
   ShippingRoute,
   ShippingRouteDB,
@@ -105,6 +105,9 @@ export function useShippingRoutes() {
   };
 }
 
+// Export individual function for AdminQuoteDetailPage
+export { getShippingRouteById };
+
 /**
  * Hook for calculating shipping costs
  */
@@ -121,7 +124,33 @@ export function useShippingCalculator() {
     try {
       setLoading(true);
       setError(null);
-      return await getShippingCost(originCountry, destinationCountry, weight, price);
+      
+      // Use SmartCalculationEngine to get shipping options
+      const mockQuote = {
+        id: 'temp',
+        items: [{ id: 'temp', price_usd: price, weight_kg: weight, quantity: 1, name: 'temp' }],
+        origin_country: originCountry,
+        destination_country: destinationCountry,
+        currency: 'USD',
+        final_total_usd: 0,
+        calculation_data: { breakdown: { items_total: price, shipping: 0, customs: 0, taxes: 0, fees: 0, discount: 0 } },
+        operational_data: {},
+        optimization_score: 0,
+      };
+
+      const result = await smartCalculationEngine.calculateWithShippingOptions({
+        quote: mockQuote,
+        preferences: { speed_priority: 'medium', cost_priority: 'medium', show_all_options: true },
+      });
+
+      if (result.success && result.shipping_options.length > 0) {
+        return {
+          cost: result.shipping_options[0].cost_usd,
+          options: result.shipping_options,
+        };
+      } else {
+        throw new Error('No shipping options found');
+      }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to calculate shipping';
       setError(errorMsg);
@@ -135,7 +164,35 @@ export function useShippingCalculator() {
     try {
       setLoading(true);
       setError(null);
-      return await calculateUnifiedQuote(input);
+      
+      // Convert input to SmartCalculationEngine format
+      const quote = {
+        id: input.id || 'temp',
+        items: input.items,
+        origin_country: input.originCountry,
+        destination_country: input.destinationCountry,
+        currency: input.currency || 'USD',
+        final_total_usd: 0,
+        calculation_data: { breakdown: { items_total: 0, shipping: 0, customs: 0, taxes: 0, fees: 0, discount: 0 } },
+        operational_data: {},
+        optimization_score: 0,
+      };
+
+      const result = await smartCalculationEngine.calculateWithShippingOptions({
+        quote,
+        preferences: { speed_priority: 'medium', cost_priority: 'medium', show_all_options: true },
+      });
+
+      if (result.success) {
+        return {
+          success: true,
+          quote: result.updated_quote,
+          shipping_options: result.shipping_options,
+          recommendations: result.smart_recommendations,
+        };
+      } else {
+        throw new Error(result.error || 'Calculation failed');
+      }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to calculate quote';
       setError(errorMsg);
@@ -223,15 +280,3 @@ export function useDestinationCountries() {
   return { countries, loading };
 }
 
-/**
- * Fetch a single shipping route by ID
- */
-export async function getShippingRouteById(routeId: string | number) {
-  const { data, error } = await supabase
-    .from('shipping_routes')
-    .select('*')
-    .eq('id', routeId)
-    .single();
-  if (error) throw new Error(error.message);
-  return data;
-}
