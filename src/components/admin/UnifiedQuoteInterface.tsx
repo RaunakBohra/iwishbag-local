@@ -1400,15 +1400,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                     </div>
                                   </div>
                                   <div className="flex space-x-1">
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-gray-400 hover:text-blue-600 p-1 h-7 w-7"
-                                      title="Edit product"
-                                    >
-                                      <Edit className="w-3 h-3" />
-                                    </Button>
                                     {form.watch('items')?.length > 1 && (
                                       <Button
                                         type="button"
