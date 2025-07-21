@@ -341,6 +341,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
     quote_user_id: quote.user_id,
     current_user_id: user?.id,
     is_current_user: user && quote.user_id === user.id,
+    editMode: editMode, // Add editMode to debug
     customer_data: quote.customer_data,
     customerInfo,
     auth_context: user
@@ -507,8 +508,8 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
                             </Badge>
                           )}
                         </div>
-                        {/* Admin Action Buttons - Only in Edit Mode */}
-                        {editMode && (
+                        {/* Admin Action Buttons - Debug: Always Show */}
+                        {true && (
                           <div className="flex items-center gap-1">
                             <Button
                               variant="ghost"
@@ -550,8 +551,8 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
                 </div>
               ))}
 
-              {/* Admin Actions Row - Only in Edit Mode */}
-              {editMode && (
+              {/* Admin Actions Row - Debug: Always Show */}
+              {true && (
                 <div className="text-center pt-2 border-t border-gray-200">
                   <div className="flex justify-center gap-2">
                     <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600" onClick={handleAddAddress}>
@@ -591,7 +592,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
               <Home className="w-6 h-6 mx-auto mb-2 text-gray-300" />
               <p className="text-xs mb-2">No saved addresses</p>
               <div className="space-y-2">
-                {editMode && (
+                {true && (
                   <Button size="sm" className="h-7 px-3 text-xs" onClick={handleAddAddress}>
                     <Plus className="w-3 h-3 mr-1" />
                     Add Address
@@ -655,8 +656,8 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
       <CompactHeader />
       {isExpanded && <DetailTabs />}
       
-      {/* Address Management Modal - Only in Edit Mode */}
-      {editMode && (
+      {/* Address Management Modal - Debug: Always Show */}
+      {true && (
         <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>

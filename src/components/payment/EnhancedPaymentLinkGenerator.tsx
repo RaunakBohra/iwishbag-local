@@ -168,12 +168,7 @@ export function EnhancedPaymentLinkGenerator({
         quote?.email ||
         customerInfo?.email ||
         '',
-      phone:
-        shipping?.phone ||
-        user?.phone ||
-        quote?.customer_phone ||
-        customerInfo?.phone ||
-        '',
+      phone: shipping?.phone || user?.phone || quote?.customer_phone || customerInfo?.phone || '',
     };
 
     console.log(

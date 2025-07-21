@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { ChevronDown, ChevronRight, ArrowRight, Zap } from 'lucide-react';
 import {
@@ -91,7 +92,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
       event.preventDefault();
       event.stopPropagation();
     }
-    
+
     setIsUpdating(true);
 
     try {
@@ -254,7 +255,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
           title: 'Status Updated',
           description: message,
         });
-        
+
         // Trigger parent component refresh to sync with database
         // Delay to ensure database update is processed and to avoid interrupting optimistic update
         setTimeout(() => {
@@ -271,10 +272,10 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      
+
       // Revert optimistic update on error
       setOptimisticStatus(null);
-      
+
       toast({
         title: 'Update Failed',
         description: 'Failed to update status. Please try again.',
@@ -391,220 +392,229 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
 
   if (compact) {
     return (
-      <div className="flex items-center space-x-2">
-        {/* Current Status Badge */}
-        <StatusBadge status={displayStatus} category={category} className="text-xs" />
+      <Card className="shadow-sm border-gray-200">
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              {/* Current Status Badge */}
+              <StatusBadge status={displayStatus} category={category} className="text-xs" />
 
-        {/* Progress Bar (if enabled) */}
+              {/* Progress Bar (if enabled) */}
+              {showProgress && (
+                <div className="flex-1 max-w-16">
+                  <div className="w-full bg-gray-200 rounded-full h-1">
+                    <div
+                      className="bg-blue-600 h-1 rounded-full transition-all duration-300"
+                      style={{ width: `${statusConfig?.progressPercentage || 50}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Smart Action + Dropdown - Always show both when transitions available */}
+            {canTransition ? (
+              <div className="flex items-center space-x-1">
+                {/* Smart Quick Action Button (Primary Action) */}
+                {smartAction && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => handleAction(smartAction.action, smartAction.actionType, e)}
+                    disabled={isUpdating}
+                    className="h-7 px-2 text-xs flex items-center space-x-1"
+                  >
+                    {smartAction.icon}
+                    <span>{smartAction.text}</span>
+                  </Button>
+                )}
+
+                {/* Always show dropdown for ALL transitions */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isUpdating}
+                      className="h-7 w-7 p-0 flex items-center justify-center"
+                      title="More status options"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                      Available Transitions
+                    </div>
+                    {allowedTransitions.map((nextStatus) => {
+                      const isPrimary = smartAction?.action === nextStatus;
+                      return (
+                        <DropdownMenuItem
+                          key={nextStatus}
+                          onClick={(e) => handleAction(nextStatus, 'status', e)}
+                          className="flex items-center justify-between text-xs py-2"
+                        >
+                          <StatusBadge
+                            status={nextStatus}
+                            category={category}
+                            className="text-xs h-5"
+                            showIcon={true}
+                          />
+                          {isPrimary && (
+                            <span className="text-xs text-blue-600 font-medium ml-2">Primary</span>
+                          )}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
+              // Show enhanced messaging for terminal statuses
+              <div className="flex items-center space-x-1">
+                {statusConfig?.isTerminal ? (
+                  <Badge variant="secondary" className="text-xs h-6 px-2">
+                    {statusConfig.isSuccessful ? '✓ Complete' : '⚬ Final'}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs h-6 px-2">
+                    No actions
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Extended view (when not compact)
+  return (
+    <Card className="shadow-sm border-gray-200">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <StatusBadge status={displayStatus} category={category} className="px-3 py-1" />
+
+            {/* Priority Indicator */}
+            {statusConfig?.requiresAction && (
+              <Badge variant="destructive" className="text-xs px-2 py-0">
+                Action Required
+              </Badge>
+            )}
+          </div>
+
+          {/* Quick Actions - Always show smart action + dropdown */}
+          <div className="flex items-center space-x-2">
+            {canTransition ? (
+              // Show transition actions for active statuses
+              <div className="flex items-center space-x-2">
+                {/* Smart Quick Action Button */}
+                {smartAction && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={(e) => handleAction(smartAction.action, smartAction.actionType, e)}
+                    disabled={isUpdating}
+                    className="flex items-center space-x-1"
+                  >
+                    <Zap className="w-3 h-3" />
+                    <span>{smartAction.text}</span>
+                  </Button>
+                )}
+
+                {/* Always show dropdown for ALL transitions */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isUpdating}
+                      className="flex items-center space-x-1"
+                    >
+                      <span>All Actions</span>
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                      Available Transitions
+                    </div>
+                    {allowedTransitions.map((nextStatus) => {
+                      const isPrimary = smartAction?.action === nextStatus;
+                      return (
+                        <DropdownMenuItem
+                          key={nextStatus}
+                          onClick={(e) => handleAction(nextStatus, 'status', e)}
+                          className="flex items-center justify-between py-2"
+                        >
+                          <StatusBadge
+                            status={nextStatus}
+                            category={category}
+                            className="text-xs h-6"
+                            showIcon={true}
+                          />
+                          {isPrimary && (
+                            <span className="text-xs text-blue-600 font-medium ml-2">Primary</span>
+                          )}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
+              // Show informational actions for terminal statuses
+              <div className="flex items-center space-x-2">
+                <Badge variant="secondary" className="text-xs px-3 py-1">
+                  {statusConfig?.isTerminal
+                    ? statusConfig.isSuccessful
+                      ? '✓ Completed'
+                      : 'Final Status'
+                    : 'No Actions Available'}
+                </Badge>
+                {statusConfig?.customerMessage && (
+                  <div
+                    className="text-xs text-gray-500 italic max-w-48 truncate"
+                    title={statusConfig.customerMessage}
+                  >
+                    "{statusConfig.customerMessage}"
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="pt-0 space-y-3">
+        {/* Progress Bar */}
         {showProgress && (
-          <div className="flex-1 max-w-16">
-            <div className="w-full bg-gray-200 rounded-full h-1">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-gray-600">
+              <span>Progress</span>
+              <span>{statusConfig?.progressPercentage || 50}% complete</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
               <div
-                className="bg-blue-600 h-1 rounded-full transition-all duration-300"
+                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
                 style={{ width: `${statusConfig?.progressPercentage || 50}%` }}
               />
             </div>
           </div>
         )}
 
-        {/* Smart Action + Dropdown - Always show both when transitions available */}
-        {canTransition ? (
-          <div className="flex items-center space-x-1">
-            {/* Smart Quick Action Button (Primary Action) */}
-            {smartAction && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={(e) => handleAction(smartAction.action, smartAction.actionType, e)}
-                disabled={isUpdating}
-                className="h-7 px-2 text-xs flex items-center space-x-1"
-              >
-                {smartAction.icon}
-                <span>{smartAction.text}</span>
-              </Button>
-            )}
-
-            {/* Always show dropdown for ALL transitions */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isUpdating}
-                  className="h-7 w-7 p-0 flex items-center justify-center"
-                  title="More status options"
-                >
-                  <ChevronDown className="w-3 h-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
-                  Available Transitions
-                </div>
-                {allowedTransitions.map((nextStatus) => {
-                  const isPrimary = smartAction?.action === nextStatus;
-                  return (
-                    <DropdownMenuItem
-                      key={nextStatus}
-                      onClick={(e) => handleAction(nextStatus, 'status', e)}
-                      className="flex items-center justify-between text-xs py-2"
-                    >
-                      <StatusBadge
-                        status={nextStatus}
-                        category={category}
-                        className="text-xs h-5"
-                        showIcon={true}
-                      />
-                      {isPrimary && (
-                        <span className="text-xs text-blue-600 font-medium ml-2">Primary</span>
-                      )}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ) : (
-          // Show enhanced messaging for terminal statuses
-          <div className="flex items-center space-x-1">
-            {statusConfig?.isTerminal ? (
-              <Badge variant="secondary" className="text-xs h-6 px-2">
-                {statusConfig.isSuccessful ? '✓ Complete' : '⚬ Final'}
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-xs h-6 px-2">
-                No actions
-              </Badge>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Extended view (when not compact)
-  return (
-    <div className="space-y-3">
-      {/* Status Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <StatusBadge status={displayStatus} category={category} className="px-3 py-1" />
-
-          {/* Priority Indicator */}
-          {statusConfig?.requiresAction && (
-            <Badge variant="destructive" className="text-xs px-2 py-0">
-              Action Required
-            </Badge>
+        {/* Status Timeline (mini) - Dynamic based on category */}
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          {statusConfig?.customerMessage && (
+            <div className="text-xs text-gray-600 italic">"{statusConfig.customerMessage}"</div>
           )}
         </div>
-
-        {/* Quick Actions - Always show smart action + dropdown */}
-        <div className="flex items-center space-x-2">
-          {canTransition ? (
-            // Show transition actions for active statuses
-            <div className="flex items-center space-x-2">
-              {/* Smart Quick Action Button */}
-              {smartAction && (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={(e) => handleAction(smartAction.action, smartAction.actionType, e)}
-                  disabled={isUpdating}
-                  className="flex items-center space-x-1"
-                >
-                  <Zap className="w-3 h-3" />
-                  <span>{smartAction.text}</span>
-                </Button>
-              )}
-
-              {/* Always show dropdown for ALL transitions */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={isUpdating}
-                    className="flex items-center space-x-1"
-                  >
-                    <span>All Actions</span>
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
-                    Available Transitions
-                  </div>
-                  {allowedTransitions.map((nextStatus) => {
-                    const isPrimary = smartAction?.action === nextStatus;
-                    return (
-                      <DropdownMenuItem
-                        key={nextStatus}
-                        onClick={(e) => handleAction(nextStatus, 'status', e)}
-                        className="flex items-center justify-between py-2"
-                      >
-                        <StatusBadge
-                          status={nextStatus}
-                          category={category}
-                          className="text-xs h-6"
-                          showIcon={true}
-                        />
-                        {isPrimary && (
-                          <span className="text-xs text-blue-600 font-medium ml-2">Primary</span>
-                        )}
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          ) : (
-            // Show informational actions for terminal statuses
-            <div className="flex items-center space-x-2">
-              <Badge variant="secondary" className="text-xs px-3 py-1">
-                {statusConfig?.isTerminal
-                  ? statusConfig.isSuccessful
-                    ? '✓ Completed'
-                    : 'Final Status'
-                  : 'No Actions Available'}
-              </Badge>
-              {statusConfig?.customerMessage && (
-                <div
-                  className="text-xs text-gray-500 italic max-w-48 truncate"
-                  title={statusConfig.customerMessage}
-                >
-                  "{statusConfig.customerMessage}"
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      {showProgress && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-600">
-            <span>Progress</span>
-            <span>{statusConfig?.progressPercentage || 50}% complete</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${statusConfig?.progressPercentage || 50}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Status Timeline (mini) - Dynamic based on category */}
-      <div className="flex items-center justify-between text-xs text-gray-500">
-        {statusConfig?.customerMessage && (
-          <div className="text-xs text-gray-600 italic">"{statusConfig.customerMessage}"</div>
-        )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

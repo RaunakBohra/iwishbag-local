@@ -156,6 +156,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ mode, onSuccess, onBack, o
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
+        scopes:
+          provider === 'google'
+            ? 'openid profile email https://www.googleapis.com/auth/user.addresses.read'
+            : 'email',
         redirectTo: window.location.href, // Return to current page after auth
       },
     });

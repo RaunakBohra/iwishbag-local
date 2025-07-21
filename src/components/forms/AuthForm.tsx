@@ -126,7 +126,7 @@ const AuthForm = () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        scopes: 'openid profile email phone',
+        scopes: 'openid profile email https://www.googleapis.com/auth/user.addresses.read',
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });

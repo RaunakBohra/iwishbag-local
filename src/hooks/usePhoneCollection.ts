@@ -1,69 +1,83 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface PhoneCollectionState {
-  showModal: boolean;
-  isRequired: boolean;
-  provider: string | null;
-}
+import { supabase } from '@/integrations/supabase/client';
 
 export const usePhoneCollection = () => {
-  const { user } = useAuth();
-  const [state, setState] = useState<PhoneCollectionState>({
-    showModal: false,
-    isRequired: false,
-    provider: null,
-  });
+  const { user, isAnonymous } = useAuth();
+  const [needsPhoneCollection, setNeedsPhoneCollection] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Check if user needs to provide phone number
-  const needsPhone = () => {
-    if (!user) return false;
-    
-    // If user already has phone, no need to collect
-    if (user.phone) return false;
-    
-    // Check if user signed up via Facebook (no phone from OAuth)
-    const provider = user.app_metadata?.provider;
-    return provider === 'facebook';
+  useEffect(() => {
+    const checkPhoneStatus = async () => {
+      if (!user || isAnonymous) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Check if user has phone number in auth.users
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+
+        if (authError) {
+          console.error('Error fetching user:', authError);
+          setIsLoading(false);
+          return;
+        }
+
+        const hasPhone = authData.user?.phone && authData.user.phone.trim() !== '';
+
+        // Check if user skipped phone collection before
+        const hasSkippedBefore = localStorage.getItem(`phone-skipped-${user.id}`);
+
+        // Also check if this is a recent OAuth user without phone
+        const isOAuthUser = authData.user?.app_metadata?.provider;
+        const createdRecently = authData.user?.created_at
+          ? new Date(authData.user.created_at) > new Date(Date.now() - 10 * 60 * 1000) // 10 minutes ago
+          : false;
+
+        // Show phone collection if:
+        // 1. No phone number AND
+        // 2. OAuth user created recently AND
+        // 3. Haven't skipped before
+        const shouldShowCollection =
+          !hasPhone && createdRecently && isOAuthUser && !hasSkippedBefore;
+
+        setNeedsPhoneCollection(shouldShowCollection);
+      } catch (error) {
+        console.error('Error checking phone status:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkPhoneStatus();
+  }, [user, isAnonymous]);
+
+  const markPhoneCollected = () => {
+    setNeedsPhoneCollection(false);
   };
 
-  // Get provider info
-  const getProviderInfo = () => {
-    if (!user) return null;
-    return user.app_metadata?.provider || null;
-  };
-
-  // Prompt user to add phone number
-  const promptPhoneCollection = (required = false) => {
-    if (needsPhone()) {
-      setState({
-        showModal: true,
-        isRequired: required,
-        provider: getProviderInfo(),
-      });
-      return true;
+  const skipPhoneCollection = () => {
+    setNeedsPhoneCollection(false);
+    // Store that user skipped (can show again later in profile)
+    if (user?.id) {
+      localStorage.setItem(`phone-skipped-${user.id}`, 'true');
     }
-    return false;
   };
 
-  // Close the modal
-  const closeModal = () => {
-    setState(prev => ({ ...prev, showModal: false }));
-  };
-
-  // Check if phone collection was successful
-  const onPhoneAdded = () => {
-    closeModal();
-    // Optionally refresh user data or trigger success callback
+  const resetPhoneCollection = () => {
+    // Allow showing the modal again (useful for testing or profile page)
+    if (user?.id) {
+      localStorage.removeItem(`phone-skipped-${user.id}`);
+    }
+    setNeedsPhoneCollection(true);
   };
 
   return {
-    needsPhone: needsPhone(),
-    showModal: state.showModal,
-    isRequired: state.isRequired,
-    provider: state.provider,
-    promptPhoneCollection,
-    closeModal,
-    onPhoneAdded,
+    needsPhoneCollection,
+    isLoading,
+    markPhoneCollected,
+    skipPhoneCollection,
+    resetPhoneCollection,
   };
 };

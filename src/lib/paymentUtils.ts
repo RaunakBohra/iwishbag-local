@@ -348,11 +348,7 @@ export function extractCustomerInfo(quote: Record<string, unknown>) {
       quote.email ||
       quote.customer_email ||
       '',
-    phone:
-      quote.shipping_address?.phone ||
-      quote.user?.phone ||
-      quote.customer_phone ||
-      '',
+    phone: quote.shipping_address?.phone || quote.user?.phone || quote.customer_phone || '',
   };
 }
 

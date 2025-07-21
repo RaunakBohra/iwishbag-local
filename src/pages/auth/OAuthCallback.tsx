@@ -13,7 +13,7 @@ const OAuthCallback = () => {
       try {
         // Handle the OAuth callback
         const { data, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error('OAuth callback error:', error);
           toast({
@@ -29,7 +29,7 @@ const OAuthCallback = () => {
           // Successfully authenticated
           const user = data.session.user;
           const provider = user.app_metadata?.provider;
-          
+
           // Log OAuth metadata for debugging
           console.log('OAuth user metadata:', {
             provider,
@@ -53,7 +53,8 @@ const OAuthCallback = () => {
           } else if (provider === 'facebook') {
             toast({
               title: 'Welcome back!',
-              description: 'Signed in with Facebook successfully. Complete your profile when ready.',
+              description:
+                'Signed in with Facebook successfully. Complete your profile when ready.',
             });
           } else {
             toast({
@@ -87,7 +88,9 @@ const OAuthCallback = () => {
       <div className="text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-teal-600" />
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Completing sign-in...</h2>
-        <p className="text-sm text-gray-600">Please wait while we finish setting up your account.</p>
+        <p className="text-sm text-gray-600">
+          Please wait while we finish setting up your account.
+        </p>
       </div>
     </div>
   );

@@ -1162,10 +1162,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                               quote.profiles?.email ||
                               quote.email ||
                               '',
-                            phone:
-                              quote.shipping_address?.phone ||
-                              quote.customer_phone ||
-                              '',
+                            phone: quote.shipping_address?.phone || quote.customer_phone || '',
                           }}
                           onLinkCreated={(link) => {
                             toast({

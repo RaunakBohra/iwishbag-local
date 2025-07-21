@@ -52,9 +52,7 @@ export const useQuoteManagement = (filters = {}) => {
     queryFn: async () => {
       let query = supabase
         .from('quotes')
-        .select(
-          '*, profiles!quotes_user_id_fkey(full_name, email, preferred_display_currency)',
-        )
+        .select('*, profiles!quotes_user_id_fkey(full_name, email, preferred_display_currency)')
         .order('created_at', { ascending: false });
 
       // TEMPORARY: Disable status filtering to debug "quotes not found" issue

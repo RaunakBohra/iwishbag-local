@@ -43,8 +43,8 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
   open,
   onOpenChange,
   onPhoneAdded,
-  title = "Add Your Phone Number",
-  description = "We need your phone number to complete this action and keep you updated on your orders.",
+  title = 'Add Your Phone Number',
+  description = 'We need your phone number to complete this action and keep you updated on your orders.',
   skipOption = false,
 }) => {
   const { user } = useAuth();
@@ -126,9 +126,7 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700">
-                    Phone Number
-                  </FormLabel>
+                  <FormLabel className="text-sm font-medium text-gray-700">Phone Number</FormLabel>
                   <FormControl>
                     <Input
                       type="tel"
@@ -161,7 +159,7 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
                   </>
                 )}
               </Button>
-              
+
               {skipOption && (
                 <Button
                   type="button"
