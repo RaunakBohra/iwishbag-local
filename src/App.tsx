@@ -52,6 +52,7 @@ const PaypalFailure = React.lazy(() => import('@/pages/PaypalFailure'));
 const QuoteDetailUnified = React.lazy(() => import('@/pages/dashboard/QuoteDetailUnified'));
 const ResetPassword = React.lazy(() => import('@/pages/auth/ResetPassword'));
 const EmailConfirmation = React.lazy(() => import('@/pages/auth/EmailConfirmation'));
+const OAuthCallback = React.lazy(() => import('@/pages/auth/OAuthCallback'));
 const FonepayCallback = React.lazy(() => import('@/pages/api/fonepay-callback'));
 const EsewaSuccess = React.lazy(() => import('@/pages/payment-callback/esewa-success'));
 const EsewaFailure = React.lazy(() => import('@/pages/payment-callback/esewa-failure'));
@@ -205,6 +206,10 @@ const router = createBrowserRouter([
   {
     path: 'auth/confirm',
     element: <EmailConfirmation />,
+  },
+  {
+    path: 'auth/callback',
+    element: <OAuthCallback />,
   },
   {
     path: '/',

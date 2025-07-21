@@ -125,6 +125,10 @@ const AuthForm = () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
+      options: {
+        scopes: 'openid profile email phone',
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
     if (error) {
       toast({
@@ -140,6 +144,10 @@ const AuthForm = () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'facebook',
+      options: {
+        scopes: 'email,user_mobile_phone',
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
     if (error) {
       toast({
