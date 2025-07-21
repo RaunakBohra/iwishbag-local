@@ -15,6 +15,8 @@ import {
   Receipt,
   Edit,
   Brain,
+  Ticket,
+  MessageSquare,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -61,6 +63,16 @@ const menuGroups = [
         title: 'Customer Management',
         url: '/admin/customers',
         icon: UserCheck,
+      },
+      {
+        title: 'Messages',
+        url: '/messages',
+        icon: MessageSquare,
+      },
+      {
+        title: 'Support Tickets',
+        url: '/admin/support-tickets',
+        icon: Ticket,
       },
       {
         title: 'Payment Proofs',

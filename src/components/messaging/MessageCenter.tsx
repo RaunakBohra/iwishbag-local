@@ -1,5 +1,5 @@
 import { useAdminRole } from '@/hooks/useAdminRole';
-import { AdminMessageCenter } from './AdminMessageCenter';
+import { AdminMessageCenterComplete as AdminMessageCenter } from './AdminMessageCenterComplete';
 import { CustomerMessageCenter } from './CustomerMessageCenter';
 
 export const MessageCenter = () => {

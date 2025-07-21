@@ -36,44 +36,53 @@ export class FileUploadService {
   private readonly configs = {
     message_attachment: {
       maxSizeBytes: 10 * 1024 * 1024, // 10MB
-      allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-      maxImageDimensions: { width: 2048, height: 2048 }
+      allowedTypes: [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'application/pdf',
+        'text/plain',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ],
+      maxImageDimensions: { width: 2048, height: 2048 },
     },
     payment_proof: {
       maxSizeBytes: 5 * 1024 * 1024, // 5MB
       allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
-      maxImageDimensions: { width: 1920, height: 1920 }
+      maxImageDimensions: { width: 1920, height: 1920 },
     },
     profile_avatar: {
       maxSizeBytes: 2 * 1024 * 1024, // 2MB
       allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
-      maxImageDimensions: { width: 512, height: 512 }
-    }
+      maxImageDimensions: { width: 512, height: 512 },
+    },
   };
 
   /**
    * Validates a file against specified criteria
    */
-  validateFile(file: File, configType: keyof typeof this.configs): { valid: boolean; error?: string } {
+  validateFile(
+    file: File,
+    configType: keyof typeof this.configs,
+  ): { valid: boolean; error?: string } {
     const config = this.configs[configType];
 
     // Check file size
     if (file.size > config.maxSizeBytes) {
       const maxMB = (config.maxSizeBytes / (1024 * 1024)).toFixed(1);
-      return { 
-        valid: false, 
-        error: `File size must be less than ${maxMB}MB. Current size: ${(file.size / (1024 * 1024)).toFixed(1)}MB` 
+      return {
+        valid: false,
+        error: `File size must be less than ${maxMB}MB. Current size: ${(file.size / (1024 * 1024)).toFixed(1)}MB`,
       };
     }
 
     // Check file type
     if (!config.allowedTypes.includes(file.type)) {
-      const allowedExtensions = config.allowedTypes
-        .map(type => type.split('/')[1])
-        .join(', ');
-      return { 
-        valid: false, 
-        error: `File type not allowed. Supported formats: ${allowedExtensions}` 
+      const allowedExtensions = config.allowedTypes.map((type) => type.split('/')[1]).join(', ');
+      return {
+        valid: false,
+        error: `File type not allowed. Supported formats: ${allowedExtensions}`,
       };
     }
 
@@ -83,7 +92,12 @@ export class FileUploadService {
   /**
    * Compresses an image file to reduce size while maintaining quality
    */
-  async compressImage(file: File, maxWidth: number = 1920, maxHeight: number = 1920, quality: number = 0.8): Promise<File> {
+  async compressImage(
+    file: File,
+    maxWidth: number = 1920,
+    maxHeight: number = 1920,
+    quality: number = 0.8,
+  ): Promise<File> {
     return new Promise((resolve, reject) => {
       // Skip compression for non-image files
       if (!file.type.startsWith('image/')) {
@@ -98,7 +112,12 @@ export class FileUploadService {
       img.onload = () => {
         try {
           // Calculate new dimensions while maintaining aspect ratio
-          let { width, height } = this.calculateDimensions(img.width, img.height, maxWidth, maxHeight);
+          const { width, height } = this.calculateDimensions(
+            img.width,
+            img.height,
+            maxWidth,
+            maxHeight,
+          );
 
           canvas.width = width;
           canvas.height = height;
@@ -116,14 +135,16 @@ export class FileUploadService {
               // Create new file with compressed blob
               const compressedFile = new File([blob], file.name, {
                 type: file.type,
-                lastModified: Date.now()
+                lastModified: Date.now(),
               });
 
-              console.log(`📸 Image compressed: ${(file.size / 1024).toFixed(1)}KB → ${(compressedFile.size / 1024).toFixed(1)}KB`);
+              console.log(
+                `📸 Image compressed: ${(file.size / 1024).toFixed(1)}KB → ${(compressedFile.size / 1024).toFixed(1)}KB`,
+              );
               resolve(compressedFile);
             },
             file.type,
-            quality
+            quality,
           );
         } catch (error) {
           reject(error);
@@ -139,10 +160,10 @@ export class FileUploadService {
    * Uploads a file to Supabase storage
    */
   async uploadToSupabase(
-    file: File, 
-    bucket: string, 
+    file: File,
+    bucket: string,
     folder: string = '',
-    configType: keyof typeof this.configs = 'message_attachment'
+    configType: keyof typeof this.configs = 'message_attachment',
   ): Promise<UploadResult> {
     try {
       // Validate file first
@@ -159,7 +180,7 @@ export class FileUploadService {
           processedFile = await this.compressImage(
             file,
             config.maxImageDimensions.width,
-            config.maxImageDimensions.height
+            config.maxImageDimensions.height,
           );
         }
       }
@@ -172,12 +193,10 @@ export class FileUploadService {
       const filePath = folder ? `${folder}/${fileName}` : fileName;
 
       // Upload to Supabase
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, processedFile, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      const { data, error } = await supabase.storage.from(bucket).upload(filePath, processedFile, {
+        cacheControl: '3600',
+        upsert: false,
+      });
 
       if (error) {
         console.error('❌ Upload error:', error);
@@ -185,28 +204,25 @@ export class FileUploadService {
       }
 
       // Get public URL
-      const { data: urlData } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath);
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
 
       console.log('✅ File uploaded successfully:', {
         fileName,
         size: `${(processedFile.size / 1024).toFixed(1)}KB`,
-        url: urlData.publicUrl
+        url: urlData.publicUrl,
       });
 
       return {
         success: true,
         url: urlData.publicUrl,
         fileName: file.name,
-        size: processedFile.size
+        size: processedFile.size,
       };
-
     } catch (error) {
       console.error('❌ Upload service error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Upload failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed',
       };
     }
   }
@@ -218,10 +234,10 @@ export class FileUploadService {
     files: File[],
     bucket: string,
     folder: string = '',
-    configType: keyof typeof this.configs = 'message_attachment'
+    configType: keyof typeof this.configs = 'message_attachment',
   ): Promise<UploadResult[]> {
-    const uploadPromises = files.map(file => 
-      this.uploadToSupabase(file, bucket, folder, configType)
+    const uploadPromises = files.map((file) =>
+      this.uploadToSupabase(file, bucket, folder, configType),
     );
 
     return Promise.all(uploadPromises);
@@ -230,11 +246,12 @@ export class FileUploadService {
   /**
    * Deletes a file from Supabase storage
    */
-  async deleteFile(bucket: string, filePath: string): Promise<{ success: boolean; error?: string }> {
+  async deleteFile(
+    bucket: string,
+    filePath: string,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { error } = await supabase.storage
-        .from(bucket)
-        .remove([filePath]);
+      const { error } = await supabase.storage.from(bucket).remove([filePath]);
 
       if (error) {
         return { success: false, error: error.message };
@@ -242,9 +259,9 @@ export class FileUploadService {
 
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Delete failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Delete failed',
       };
     }
   }
@@ -257,7 +274,7 @@ export class FileUploadService {
       const { data, error } = await supabase.storage
         .from(bucket)
         .list(filePath.substring(0, filePath.lastIndexOf('/')), {
-          search: filePath.split('/').pop()
+          search: filePath.split('/').pop(),
         });
 
       if (error || !data?.length) {
@@ -274,10 +291,10 @@ export class FileUploadService {
    * Calculate dimensions while maintaining aspect ratio
    */
   private calculateDimensions(
-    originalWidth: number, 
-    originalHeight: number, 
-    maxWidth: number, 
-    maxHeight: number
+    originalWidth: number,
+    originalHeight: number,
+    maxWidth: number,
+    maxHeight: number,
   ): { width: number; height: number } {
     let width = originalWidth;
     let height = originalHeight;

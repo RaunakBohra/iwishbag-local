@@ -13,8 +13,10 @@ import {
   Globe,
   ArrowRight,
   Sparkles,
+  Ticket,
 } from 'lucide-react';
 import { useDashboardState } from '@/hooks/useDashboardState';
+import { useUserTickets } from '@/hooks/useTickets';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { AnimatedSection } from '@/components/shared/AnimatedSection';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
@@ -25,6 +27,7 @@ import { cn } from '@/lib/design-system';
 
 const Dashboard = () => {
   const { user, quotes, orders, isLoading, isError } = useDashboardState();
+  const { data: tickets = [] } = useUserTickets(user?.id);
 
   // Metrics
   const activeQuotes =
@@ -35,6 +38,8 @@ const Dashboard = () => {
   const ordersInProgress =
     orders?.filter((o) => o.status !== 'completed' && o.status !== 'cancelled').length || 0;
   const deliveredOrders = orders?.filter((o) => o.status === 'completed').length || 0;
+  const openTickets =
+    tickets?.filter((t) => t.status === 'open' || t.status === 'in_progress').length || 0;
   const unreadMessages = 0; // TODO: Connect to real unread messages count
 
   // Recent activity (quotes and orders, most recent 5)
@@ -82,6 +87,13 @@ const Dashboard = () => {
       variant: 'outline',
       color: 'from-green-500 to-green-600',
     },
+    {
+      label: 'Get Help',
+      icon: <Ticket className="h-5 w-5" />,
+      to: '/support/my-tickets',
+      variant: 'outline',
+      color: 'from-purple-500 to-purple-600',
+    },
   ];
 
   const metricCards = [
@@ -117,6 +129,14 @@ const Dashboard = () => {
       bgColor: 'from-green-50 to-green-100',
       link: '/dashboard/orders',
     },
+    {
+      value: openTickets,
+      label: 'Active Help Requests',
+      icon: Ticket,
+      color: 'from-purple-500 to-purple-600',
+      bgColor: 'from-purple-50 to-purple-100',
+      link: '/support/my-tickets',
+    },
   ];
 
   if (isLoading) {
@@ -147,7 +167,7 @@ const Dashboard = () => {
         </AnimatedSection>
 
         {/* Metric Cards - Clickable */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-8">
           {metricCards.map((metric, index) => (
             <AnimatedSection key={index} animation="zoomIn" delay={index * 100}>
               <Link to={metric.link}>
@@ -180,7 +200,7 @@ const Dashboard = () => {
               Quick Actions
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {quickActions.map((action, index) => (
                 <AnimatedSection key={index} animation="fadeInUp" delay={500 + index * 100}>
                   <Link to={action.to}>
@@ -194,6 +214,7 @@ const Dashboard = () => {
                           {action.label === 'Request Quote' && 'Start a new quote request'}
                           {action.label === 'View All Quotes' && 'Manage your quote requests'}
                           {action.label === 'My Orders' && 'Track your shipments'}
+                          {action.label === 'Get Help' && 'Get support with your orders'}
                         </BodySmall>
                         <div className="mt-4 flex items-center text-teal-600 group-hover:translate-x-1 transition-transform">
                           <span className="text-sm font-medium">Go</span>

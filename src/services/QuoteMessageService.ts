@@ -42,7 +42,9 @@ export class QuoteMessageService {
   /**
    * Send a new message in a quote thread
    */
-  async sendMessage(request: SendMessageRequest): Promise<{ success: boolean; message?: Message; error?: string }> {
+  async sendMessage(
+    request: SendMessageRequest,
+  ): Promise<{ success: boolean; message?: Message; error?: string }> {
     try {
       const user = await this.getCurrentUser();
       if (!user) {
@@ -65,7 +67,7 @@ export class QuoteMessageService {
           file,
           'message-attachments',
           `quote-${request.quoteId}`,
-          request.messageType === 'payment_proof' ? 'payment_proof' : 'message_attachment'
+          request.messageType === 'payment_proof' ? 'payment_proof' : 'message_attachment',
         );
 
         if (!uploadResult.success) {
@@ -78,7 +80,7 @@ export class QuoteMessageService {
 
       // Determine recipient
       let recipientId: string | undefined = request.recipientId;
-      
+
       // If no explicit recipient, determine based on sender
       if (!recipientId) {
         const isAdmin = await this.isUserAdmin(user.id);
@@ -110,9 +112,13 @@ export class QuoteMessageService {
           priority: request.priority || 'normal',
           attachment_url: attachmentUrl,
           attachment_file_name: attachmentFileName,
-          sender_name: user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown',
+          sender_name:
+            user.user_metadata?.name ||
+            user.user_metadata?.full_name ||
+            user.email?.split('@')[0] ||
+            'Unknown',
           sender_email: user.email,
-          is_internal: request.isInternal || false
+          is_internal: request.isInternal || false,
         })
         .select()
         .single();
@@ -129,12 +135,11 @@ export class QuoteMessageService {
 
       console.log('✅ Message sent successfully:', message.id);
       return { success: true, message };
-
     } catch (error) {
       console.error('❌ Error sending message:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to send message' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to send message',
       };
     }
   }
@@ -150,8 +155,9 @@ export class QuoteMessageService {
       }
 
       // Get messages using the database function
-      const { data: messages, error } = await supabase
-        .rpc('get_quote_message_thread', { p_quote_id: quoteId });
+      const { data: messages, error } = await supabase.rpc('get_quote_message_thread', {
+        p_quote_id: quoteId,
+      });
 
       if (error) {
         console.error('❌ Failed to fetch message thread:', error);
@@ -169,11 +175,10 @@ export class QuoteMessageService {
         messages: messages || [],
         unreadCount,
         lastMessage: messages && messages.length > 0 ? messages[messages.length - 1] : undefined,
-        participants
+        participants,
       };
 
       return messageThread;
-
     } catch (error) {
       console.error('❌ Error getting message thread:', error);
       return {
@@ -181,8 +186,8 @@ export class QuoteMessageService {
         unreadCount: 0,
         participants: {
           customer: { id: '', name: 'Unknown', email: 'unknown@example.com' },
-          admins: []
-        }
+          admins: [],
+        },
       };
     }
   }
@@ -215,9 +220,9 @@ export class QuoteMessageService {
    * Update message verification status (admin only)
    */
   async updateMessageVerification(
-    messageId: string, 
+    messageId: string,
     status: 'pending' | 'verified' | 'confirmed' | 'rejected',
-    adminNotes?: string
+    adminNotes?: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const user = await this.getCurrentUser();
@@ -237,7 +242,7 @@ export class QuoteMessageService {
           admin_notes: adminNotes,
           verified_by: user.id,
           verified_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', messageId);
 
@@ -248,12 +253,11 @@ export class QuoteMessageService {
 
       console.log('✅ Message verification updated:', { messageId, status });
       return { success: true };
-
     } catch (error) {
       console.error('❌ Error updating verification:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Update failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Update failed',
       };
     }
   }
@@ -262,7 +266,10 @@ export class QuoteMessageService {
    * Get current authenticated user
    */
   private async getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
     if (error || !user) {
       console.error('❌ Failed to get current user:', error);
       return null;
@@ -275,11 +282,7 @@ export class QuoteMessageService {
    */
   private async getQuoteById(quoteId: string): Promise<UnifiedQuote | null> {
     try {
-      const { data, error } = await supabase
-        .from('quotes')
-        .select('*')
-        .eq('id', quoteId)
-        .single();
+      const { data, error } = await supabase.from('quotes').select('*').eq('id', quoteId).single();
 
       if (error) {
         console.error('❌ Failed to fetch quote:', error);
@@ -317,7 +320,7 @@ export class QuoteMessageService {
   private async getThreadParticipants(quoteId: string, quote: UnifiedQuote | null) {
     const participants = {
       customer: { id: '', name: 'Unknown', email: 'unknown@example.com' },
-      admins: [] as { id: string; name: string; email: string }[]
+      admins: [] as { id: string; name: string; email: string }[],
     };
 
     try {
@@ -326,23 +329,25 @@ export class QuoteMessageService {
         participants.customer = {
           id: quote.user_id || '',
           name: quote.customer_data?.info?.name || quote.customer_name || 'Customer',
-          email: quote.customer_data?.info?.email || quote.email || 'No email provided'
+          email: quote.customer_data?.info?.email || quote.email || 'No email provided',
         };
 
         // Get admin users
         const { data: admins, error } = await supabase
           .from('user_roles')
-          .select(`
+          .select(
+            `
             user_id,
             profiles!inner(email, full_name)
-          `)
+          `,
+          )
           .eq('role', 'admin');
 
         if (!error && admins) {
-          participants.admins = admins.map(admin => ({
+          participants.admins = admins.map((admin) => ({
             id: admin.user_id,
             name: (admin.profiles as any)?.full_name || 'Admin',
-            email: (admin.profiles as any)?.email || 'admin@iwishbag.com'
+            email: (admin.profiles as any)?.email || 'admin@iwishbag.com',
           }));
         }
       }
@@ -356,7 +361,11 @@ export class QuoteMessageService {
   /**
    * Handle message notifications based on sender and message type
    */
-  private async handleMessageNotifications(quote: UnifiedQuote, message: Message, senderId: string) {
+  private async handleMessageNotifications(
+    quote: UnifiedQuote,
+    message: Message,
+    senderId: string,
+  ) {
     try {
       const isAdmin = await this.isUserAdmin(senderId);
 

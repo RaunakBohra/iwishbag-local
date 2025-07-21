@@ -25,6 +25,7 @@ import {
   Globe,
   Zap,
   Shield,
+  Ticket,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -32,6 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/design-system';
 import { Link } from 'react-router-dom';
 import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
+import { ContactTicketForm } from '@/components/support/ContactTicketForm';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -41,6 +43,7 @@ const Contact = () => {
     message: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showTicketForm, setShowTicketForm] = useState(false);
   const [isVisible, setIsVisible] = useState({ hero: false, form: false, faq: false });
   const { toast } = useToast();
 
@@ -127,30 +130,33 @@ const Contact = () => {
   const contactMethods = [
     {
       icon: Mail,
-      title: 'Send Message',
-      description: 'Send us a message anytime',
+      title: 'Quick Contact',
+      description: 'General questions & inquiries',
       contact: footerSettings?.email || 'contact@iwishbag.com',
       availability: 'We respond within 24 hours',
       bgColor: 'bg-teal-50',
       iconColor: 'text-teal-600',
+      type: 'email',
+    },
+    {
+      icon: Ticket,
+      title: 'Order Support',
+      description: 'Help with orders & tracking',
+      contact: 'Track your issue with tickets',
+      availability: 'Full conversation history',
+      bgColor: 'bg-purple-50',
+      iconColor: 'text-purple-600',
+      type: 'ticket',
     },
     {
       icon: MessageCircle,
       title: 'Live Chat',
-      description: 'Get instant help',
+      description: 'Real-time assistance',
       contact: 'Available 24/7',
       availability: 'Average response time: 2 minutes',
       bgColor: 'bg-green-50',
       iconColor: 'text-green-600',
-    },
-    {
-      icon: Phone,
-      title: 'Phone Support',
-      description: 'Call us directly',
-      contact: footerSettings?.phone || '+1 (555) 123-4567',
-      availability: 'Mon-Fri 9AM-6PM EST',
-      bgColor: 'bg-orange-50',
-      iconColor: 'text-orange-600',
+      type: 'chat',
     },
   ];
 
@@ -200,17 +206,16 @@ const Contact = () => {
       <Section className="py-8 bg-white">
         <Container>
           <div className="text-center mb-8">
-            <H2 className="mb-4 text-gray-900 text-2xl">Choose how to reach us</H2>
+            <H2 className="mb-4 text-gray-900 text-2xl">Help Center</H2>
             <Body className="text-gray-600 max-w-2xl mx-auto text-sm">
-              Pick the method that works best for you. We're committed to providing quick, helpful
-              responses.
+              Choose the best way to get help with your international shopping needs.
             </Body>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {contactMethods.map((method, index) => (
               <div key={index}>
-                {index === 0 ? (
+                {method.type === 'email' ? (
                   <Dialog>
                     <DialogTrigger asChild>
                       <div className="group p-4 md:p-6 rounded-2xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300 cursor-pointer">
@@ -334,6 +339,55 @@ const Contact = () => {
                       </div>
                     </DialogContent>
                   </Dialog>
+                ) : method.type === 'ticket' ? (
+                  <div
+                    className="group p-4 md:p-6 rounded-2xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                    onClick={() => setShowTicketForm(true)}
+                  >
+                    <div className="flex flex-col md:flex-col items-center md:items-center text-center md:text-center">
+                      <div
+                        className={`w-12 h-12 md:w-16 md:h-16 ${method.bgColor} rounded-full flex items-center justify-center mb-4 md:mb-4 group-hover:scale-110 transition-transform flex-shrink-0`}
+                      >
+                        <method.icon className={`w-6 h-6 md:w-8 md:h-8 ${method.iconColor}`} />
+                      </div>
+                      <div className="flex-1 md:flex-none">
+                        <H3 className="mb-1 md:mb-2 text-gray-900 text-base md:text-lg">
+                          {method.title}
+                        </H3>
+                        <Body className="text-gray-600 mb-2 md:mb-3 text-xs md:text-sm">
+                          {method.description}
+                        </Body>
+                        <Body className="font-medium text-gray-900 mb-1 text-xs md:text-sm">
+                          {method.contact}
+                        </Body>
+                        <Body className="text-xs text-gray-500">{method.availability}</Body>
+                      </div>
+                    </div>
+                  </div>
+                ) : method.type === 'chat' ? (
+                  <Link to="/messages" className="block">
+                    <div className="group p-4 md:p-6 rounded-2xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300 cursor-pointer">
+                      <div className="flex flex-col md:flex-col items-center md:items-center text-center md:text-center">
+                        <div
+                          className={`w-12 h-12 md:w-16 md:h-16 ${method.bgColor} rounded-full flex items-center justify-center mb-4 md:mb-4 group-hover:scale-110 transition-transform flex-shrink-0`}
+                        >
+                          <method.icon className={`w-6 h-6 md:w-8 md:h-8 ${method.iconColor}`} />
+                        </div>
+                        <div className="flex-1 md:flex-none">
+                          <H3 className="mb-1 md:mb-2 text-gray-900 text-base md:text-lg">
+                            {method.title}
+                          </H3>
+                          <Body className="text-gray-600 mb-2 md:mb-3 text-xs md:text-sm">
+                            {method.description}
+                          </Body>
+                          <Body className="font-medium text-gray-900 mb-1 text-xs md:text-sm">
+                            {method.contact}
+                          </Body>
+                          <Body className="text-xs text-gray-500">{method.availability}</Body>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
                 ) : (
                   <div className="group p-4 md:p-6 rounded-2xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300 cursor-pointer">
                     <div className="flex flex-col md:flex-col items-center md:items-center text-center md:text-center">
@@ -362,6 +416,16 @@ const Contact = () => {
           </div>
         </Container>
       </Section>
+
+      {/* Ticket Form Dialog */}
+      <Dialog open={showTicketForm} onOpenChange={setShowTicketForm}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Support Ticket</DialogTitle>
+          </DialogHeader>
+          <ContactTicketForm onSuccess={() => setShowTicketForm(false)} className="mt-4" />
+        </DialogContent>
+      </Dialog>
 
       {/* FAQ Section */}
       <Section id="faq-section" className="py-8 bg-white">

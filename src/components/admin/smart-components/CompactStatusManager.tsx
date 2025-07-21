@@ -590,7 +590,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="pt-0 space-y-3">
         {/* Progress Bar */}
         {showProgress && (

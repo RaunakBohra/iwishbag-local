@@ -138,7 +138,8 @@
       "WebFetch(domain:help.shopify.com)",
       "WebFetch(domain:polaris.shopify.com)",
       "WebFetch(domain:polaris-react.shopify.com)",
-      "WebFetch(domain:www.nngroup.com)"
+      "WebFetch(domain:www.nngroup.com)",
+      "Bash(npx playwright install:*)"
     ],
     "deny": []
   }

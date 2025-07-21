@@ -4,14 +4,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Message, User, Conversation } from '@/components/messaging/types';
-import { useCustomerManagement } from './useCustomerManagement';
+import { useCustomerManagementFixed } from './useCustomerManagementFixed';
 import imageCompression from 'browser-image-compression';
 
 export const useMessaging = (hasAdminRole: boolean | undefined) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { customers: allUsers, isLoading: isLoadingUsers } = useCustomerManagement();
+  const { customers: allUsers, isLoading: isLoadingUsers } = useCustomerManagementFixed();
 
   const users = useMemo(() => {
     return allUsers?.filter((u) => u.role !== 'admin') || [];
@@ -22,18 +22,28 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
     queryFn: async () => {
       if (!user || hasAdminRole === undefined) return [];
 
-      let query = supabase.from('messages').select('*');
+      try {
+        const query = supabase.from('messages').select('*');
 
-      if (hasAdminRole) {
-        query = query.is('quote_id', null);
+        if (hasAdminRole) {
+          // For admin, get all messages or messages not tied to quotes
+          // Remove the filter to get all messages for admin view
+        }
+
+        const { data, error } = await query.order('created_at', {
+          ascending: true,
+        });
+
+        if (error) {
+          console.error('Messages query error:', error);
+          // Return empty array instead of throwing to prevent crash
+          return [];
+        }
+        return data || [];
+      } catch (error) {
+        console.error('Messages fetch error:', error);
+        return [];
       }
-
-      const { data, error } = await query.order('created_at', {
-        ascending: true,
-      });
-
-      if (error) throw error;
-      return data;
     },
     enabled: !!user && hasAdminRole !== undefined,
   });
@@ -103,11 +113,19 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
         attachment_file_name = attachment.name;
       }
 
+      // CRITICAL: Prevent self-messaging constraint violation
+      // Database constraint: sender_id <> recipient_id
+      let finalRecipientId = recipientId;
+      if (recipientId === user.id) {
+        console.warn('[useMessaging] Admin cannot send message to themselves, converting to general message');
+        finalRecipientId = null; // Convert to general admin message
+      }
+
       const { data, error } = await supabase
         .from('messages')
         .insert({
           sender_id: user.id,
-          recipient_id: recipientId,
+          recipient_id: finalRecipientId,
           subject: subject || 'No Subject',
           content,
           attachment_url,

@@ -1,0 +1,24 @@
+<testsuites id="" name="" tests="3" failures="0" skipped="0" errors="0" time="4.263584">
+<testsuite name="setup-test.spec.ts" timestamp="2025-07-21T17:45:04.780Z" hostname="chromium" tests="3" failures="0" skipped="0" time="5.464" errors="0">
+<testcase name="Setup Verification › should load iwishBag homepage successfully" classname="setup-test.spec.ts" time="2.305">
+<system-out>
+<![CDATA[✅ Homepage loaded successfully
+📄 Page title: iWishBag Shop Internationally
+🌐 Page URL: http://localhost:8081/
+]]>
+</system-out>
+</testcase>
+<testcase name="Setup Verification › should have functional navigation" classname="setup-test.spec.ts" time="1.584">
+<system-out>
+<![CDATA[ℹ️ No standard navigation found - this might be expected for your design
+]]>
+</system-out>
+</testcase>
+<testcase name="Setup Verification › should handle 404 errors gracefully" classname="setup-test.spec.ts" time="1.575">
+<system-out>
+<![CDATA[📊 404 test status: 200
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

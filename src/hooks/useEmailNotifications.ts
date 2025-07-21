@@ -14,7 +14,13 @@ type EmailTemplate =
   | 'bank_transfer_details'
   | 'password_reset'
   | 'password_reset_success'
-  | 'payment_link';
+  | 'payment_link'
+  | 'ticket_created'
+  | 'ticket_status_update'
+  | 'ticket_reply'
+  | 'ticket_closed'
+  | 'admin_new_ticket'
+  | 'admin_new_reply';
 
 interface QuoteEmailData {
   quoteId: string;
@@ -47,11 +53,24 @@ interface PaymentLinkEmailData {
   paymentLink: string;
 }
 
+interface TicketEmailData {
+  ticketId: string;
+  ticketSubject?: string;
+  customerName?: string;
+  ticketStatus?: string;
+  replyMessage?: string;
+  ticketCategory?: string;
+  assignedTo?: string;
+  priority?: string;
+  relatedOrderId?: string;
+}
+
 type EmailData =
   | QuoteEmailData
   | PasswordResetEmailData
   | ContactFormEmailData
-  | PaymentLinkEmailData;
+  | PaymentLinkEmailData
+  | TicketEmailData;
 
 interface EmailNotificationOptions {
   to: string;
@@ -75,12 +94,14 @@ export const useEmailNotifications = () => {
   const sendEmailMutation = useMutation({
     mutationFn: async ({ to, template, data, from }: EmailNotificationOptions) => {
       // Determine email type for settings check
-      let emailType: 'quote_notification' | 'order_notification' | undefined;
+      let emailType: 'quote_notification' | 'order_notification' | 'ticket_notification' | undefined;
 
       if (['quote_sent', 'quote_approved', 'quote_rejected'].includes(template)) {
         emailType = 'quote_notification';
       } else if (['order_shipped', 'order_delivered'].includes(template)) {
         emailType = 'order_notification';
+      } else if (['ticket_created', 'ticket_status_update', 'ticket_reply', 'ticket_closed', 'admin_new_ticket', 'admin_new_reply'].includes(template)) {
+        emailType = 'ticket_notification';
       }
 
       // Check if this type of email is enabled
@@ -106,6 +127,24 @@ export const useEmailNotifications = () => {
           break;
         case 'contact_form':
           subject = 'subject' in data ? `Contact Form: ${data.subject}` : 'Contact Form';
+          break;
+        case 'ticket_created':
+          subject = 'ticketSubject' in data ? `New Support Ticket: ${data.ticketSubject}` : 'New Support Ticket Created';
+          break;
+        case 'ticket_status_update':
+          subject = 'ticketSubject' in data ? `Ticket Update: ${data.ticketSubject}` : 'Support Ticket Update';
+          break;
+        case 'ticket_reply':
+          subject = 'ticketSubject' in data ? `New Reply: ${data.ticketSubject}` : 'New Support Ticket Reply';
+          break;
+        case 'ticket_closed':
+          subject = 'ticketSubject' in data ? `Ticket Closed: ${data.ticketSubject}` : 'Support Ticket Closed';
+          break;
+        case 'admin_new_ticket':
+          subject = 'ticketSubject' in data ? `[ADMIN] New Ticket: ${data.ticketSubject}` : '[ADMIN] New Support Ticket';
+          break;
+        case 'admin_new_reply':
+          subject = 'ticketSubject' in data ? `[ADMIN] New Reply: ${data.ticketSubject}` : '[ADMIN] New Ticket Reply';
           break;
         default: {
           const quoteId = 'quoteId' in data ? data.quoteId : 'N/A';
@@ -155,11 +194,18 @@ export const useEmailNotifications = () => {
   // Helper function to generate email HTML
   const generateEmailHtml = (template: EmailTemplate, data: EmailData) => {
     const customerName = 'customerName' in data ? data.customerName : 'Customer';
+    
+    // Determine header title based on template type
+    let headerTitle = 'Quote Update';
+    if (['ticket_created', 'ticket_status_update', 'ticket_reply', 'ticket_closed', 'admin_new_ticket', 'admin_new_reply'].includes(template)) {
+      headerTitle = 'Support Ticket Update';
+    }
+    
     const baseHtml = `
       <html>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #2563eb;">Quote Update</h2>
+          <h2 style="color: #2563eb;">${headerTitle}</h2>
           <p>Dear ${customerName || 'Customer'},</p>
     `;
 
@@ -295,6 +341,114 @@ export const useEmailNotifications = () => {
             </ul>
           </div>
         `;
+        break;
+      case 'ticket_created':
+        if ('ticketId' in data) {
+          content = `
+            <p>Thank you for contacting our support team. We have received your support ticket and will respond as soon as possible.</p>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Ticket Details</h3>
+              <p><strong>Ticket ID:</strong> #${data.ticketId.slice(0, 8)}</p>
+              <p><strong>Subject:</strong> ${data.ticketSubject || 'Support Request'}</p>
+              <p><strong>Category:</strong> ${data.ticketCategory || 'General'}</p>
+              <p><strong>Status:</strong> Open</p>
+            </div>
+            <p>You can track the progress of your ticket by logging into your account. We'll notify you of any updates.</p>
+          `;
+        }
+        break;
+      case 'ticket_status_update':
+        if ('ticketId' in data) {
+          content = `
+            <p>Your support ticket has been updated.</p>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Updated Ticket</h3>
+              <p><strong>Ticket ID:</strong> #${data.ticketId.slice(0, 8)}</p>
+              <p><strong>Subject:</strong> ${data.ticketSubject || 'Support Request'}</p>
+              <p><strong>New Status:</strong> <span style="background-color: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: bold;">${data.ticketStatus || 'Updated'}</span></p>
+              ${data.assignedTo ? `<p><strong>Assigned to:</strong> ${data.assignedTo}</p>` : ''}
+            </div>
+            <p>You can view the full details by logging into your account and visiting the support section.</p>
+          `;
+        }
+        break;
+      case 'ticket_reply':
+        if ('ticketId' in data) {
+          content = `
+            <p>You have received a new reply to your support ticket.</p>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Ticket Reply</h3>
+              <p><strong>Ticket ID:</strong> #${data.ticketId.slice(0, 8)}</p>
+              <p><strong>Subject:</strong> ${data.ticketSubject || 'Support Request'}</p>
+            </div>
+            ${data.replyMessage ? `
+            <div style="background-color: #e0f2fe; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+              <p style="margin: 0;"><strong>Reply:</strong></p>
+              <p style="margin: 10px 0 0 0;">${data.replyMessage}</p>
+            </div>
+            ` : ''}
+            <p>You can reply to this message by logging into your account and visiting the support section.</p>
+          `;
+        }
+        break;
+      case 'ticket_closed':
+        if ('ticketId' in data) {
+          content = `
+            <p>Your support ticket has been resolved and closed.</p>
+            <div style="background-color: #d1fae5; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #10b981;">
+              <h3 style="margin-top: 0; color: #065f46;">Ticket Resolved</h3>
+              <p><strong>Ticket ID:</strong> #${data.ticketId.slice(0, 8)}</p>
+              <p><strong>Subject:</strong> ${data.ticketSubject || 'Support Request'}</p>
+              <p style="color: #047857;">Status: <strong>Closed</strong></p>
+            </div>
+            <p>If you need further assistance or have additional questions, please feel free to create a new support ticket.</p>
+            <p>Thank you for contacting iwishBag support!</p>
+          `;
+        }
+        break;
+      case 'admin_new_ticket':
+        if ('ticketId' in data) {
+          content = `
+            <p><strong>ADMIN NOTIFICATION:</strong> A new support ticket has been created and requires attention.</p>
+            <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #f59e0b;">
+              <h3 style="margin-top: 0; color: #d97706;">New Ticket Details</h3>
+              <p><strong>Ticket ID:</strong> #${data.ticketId.slice(0, 8)}</p>
+              <p><strong>Subject:</strong> ${data.ticketSubject || 'Support Request'}</p>
+              <p><strong>Customer:</strong> ${data.customerName || 'Unknown'}</p>
+              <p><strong>Category:</strong> ${data.ticketCategory || 'General'}</p>
+              <p><strong>Priority:</strong> ${data.priority || 'Normal'}</p>
+              ${data.relatedOrderId ? `<p><strong>Related Order:</strong> ${data.relatedOrderId}</p>` : ''}
+            </div>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${window.location.origin}/admin/support" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">View in Admin Panel</a>
+            </div>
+            <p>Please review and assign this ticket as appropriate.</p>
+          `;
+        }
+        break;
+      case 'admin_new_reply':
+        if ('ticketId' in data) {
+          content = `
+            <p><strong>ADMIN NOTIFICATION:</strong> A customer has replied to a support ticket.</p>
+            <div style="background-color: #e0f2fe; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #0284c7;">
+              <h3 style="margin-top: 0; color: #0284c7;">Customer Reply</h3>
+              <p><strong>Ticket ID:</strong> #${data.ticketId.slice(0, 8)}</p>
+              <p><strong>Subject:</strong> ${data.ticketSubject || 'Support Request'}</p>
+              <p><strong>Customer:</strong> ${data.customerName || 'Unknown'}</p>
+              ${data.assignedTo ? `<p><strong>Assigned to:</strong> ${data.assignedTo}</p>` : ''}
+            </div>
+            ${data.replyMessage ? `
+            <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6b7280;">
+              <p style="margin: 0;"><strong>Customer's Reply:</strong></p>
+              <p style="margin: 10px 0 0 0;">${data.replyMessage}</p>
+            </div>
+            ` : ''}
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${window.location.origin}/admin/support" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">View and Respond</a>
+            </div>
+            <p>Please review and respond to the customer as soon as possible.</p>
+          `;
+        }
         break;
       default:
         content = `<p>You have received an update regarding your quote.</p>`;
@@ -469,6 +623,127 @@ export const useEmailNotifications = () => {
     }
   };
 
+  // Ticket notification functions
+  const sendTicketCreatedEmail = (ticketData: {
+    customerEmail: string;
+    customerName: string;
+    ticketId: string;
+    subject: string;
+    category: string;
+  }) => {
+    return sendEmailMutation.mutate({
+      to: ticketData.customerEmail,
+      template: 'ticket_created',
+      data: {
+        ticketId: ticketData.ticketId,
+        ticketSubject: ticketData.subject,
+        customerName: ticketData.customerName,
+        ticketCategory: ticketData.category,
+      },
+    });
+  };
+
+  const sendTicketStatusUpdateEmail = (ticketData: {
+    customerEmail: string;
+    customerName: string;
+    ticketId: string;
+    subject: string;
+    status: string;
+    assignedTo?: string;
+  }) => {
+    return sendEmailMutation.mutate({
+      to: ticketData.customerEmail,
+      template: 'ticket_status_update',
+      data: {
+        ticketId: ticketData.ticketId,
+        ticketSubject: ticketData.subject,
+        customerName: ticketData.customerName,
+        ticketStatus: ticketData.status,
+        assignedTo: ticketData.assignedTo,
+      },
+    });
+  };
+
+  const sendTicketReplyEmail = (ticketData: {
+    customerEmail: string;
+    customerName: string;
+    ticketId: string;
+    subject: string;
+    replyMessage?: string;
+  }) => {
+    return sendEmailMutation.mutate({
+      to: ticketData.customerEmail,
+      template: 'ticket_reply',
+      data: {
+        ticketId: ticketData.ticketId,
+        ticketSubject: ticketData.subject,
+        customerName: ticketData.customerName,
+        replyMessage: ticketData.replyMessage,
+      },
+    });
+  };
+
+  const sendTicketClosedEmail = (ticketData: {
+    customerEmail: string;
+    customerName: string;
+    ticketId: string;
+    subject: string;
+  }) => {
+    return sendEmailMutation.mutate({
+      to: ticketData.customerEmail,
+      template: 'ticket_closed',
+      data: {
+        ticketId: ticketData.ticketId,
+        ticketSubject: ticketData.subject,
+        customerName: ticketData.customerName,
+      },
+    });
+  };
+
+  const sendAdminNewTicketEmail = (ticketData: {
+    adminEmail: string;
+    ticketId: string;
+    subject: string;
+    customerName: string;
+    category: string;
+    priority: string;
+    relatedOrderId?: string;
+  }) => {
+    return sendEmailMutation.mutate({
+      to: ticketData.adminEmail,
+      template: 'admin_new_ticket',
+      data: {
+        ticketId: ticketData.ticketId,
+        ticketSubject: ticketData.subject,
+        customerName: ticketData.customerName,
+        ticketCategory: ticketData.category,
+        priority: ticketData.priority,
+        relatedOrderId: ticketData.relatedOrderId,
+      },
+    });
+  };
+
+  const sendAdminNewReplyEmail = (ticketData: {
+    adminEmail: string;
+    ticketId: string;
+    subject: string;
+    customerName: string;
+    replyMessage: string;
+    assignedTo?: string;
+  }) => {
+    return sendEmailMutation.mutate({
+      to: ticketData.adminEmail,
+      template: 'admin_new_reply',
+      data: {
+        ticketId: ticketData.ticketId,
+        ticketSubject: ticketData.subject,
+        customerName: ticketData.customerName,
+        replyMessage: ticketData.replyMessage,
+        assignedTo: ticketData.assignedTo,
+      },
+    });
+  };
+
   return {
     sendEmail: sendEmailMutation.mutate,
     isSending: sendEmailMutation.isPending,
@@ -482,5 +757,12 @@ export const useEmailNotifications = () => {
     sendPasswordResetEmail,
     sendPasswordResetSuccessEmail,
     sendPaymentLinkEmail,
+    // Ticket notification functions
+    sendTicketCreatedEmail,
+    sendTicketStatusUpdateEmail,
+    sendTicketReplyEmail,
+    sendTicketClosedEmail,
+    sendAdminNewTicketEmail,
+    sendAdminNewReplyEmail,
   };
 };

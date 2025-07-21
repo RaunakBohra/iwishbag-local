@@ -12,6 +12,7 @@ import {
   Home,
   Package,
   Settings,
+  HelpCircle,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -201,7 +202,7 @@ const Header = () => {
                 <Package className="h-4 w-4 mr-2" />
                 Track Order
               </Button>
-              
+
               {/* Show Get Quote for authenticated users */}
               {user && (
                 <Button
@@ -217,6 +218,24 @@ const Header = () => {
                 >
                   <Package className="h-4 w-4 mr-2" />
                   Get Quote
+                </Button>
+              )}
+
+              {/* Show Get Help for authenticated users */}
+              {user && (
+                <Button
+                  variant={location.pathname === '/support/my-tickets' ? 'default' : 'ghost'}
+                  size="sm"
+                  className={cn(
+                    'h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors',
+                    location.pathname === '/support/my-tickets'
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600'
+                      : 'text-gray-700 hover:bg-gray-50',
+                  )}
+                  onClick={() => navigate('/support/my-tickets')}
+                >
+                  <HelpCircle className="h-4 w-4 mr-2" />
+                  Get Help
                 </Button>
               )}
             </nav>
@@ -447,6 +466,19 @@ const Header = () => {
                             </Badge>
                           )}
                         </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => {
+                            navigate('/support/my-tickets');
+                            setIsSheetOpen(false);
+                          }}
+                        >
+                          <HelpCircle className="mr-3 h-4 w-4" />
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">Get Help</span>
+                          </div>
+                        </Button>
                         {/* Admin Section */}
                         {hasAdminRole && (
                           <>
@@ -582,6 +614,18 @@ const Header = () => {
                           <span className="text-xs text-gray-500">
                             Manage your shipping addresses
                           </span>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      asChild
+                      className="cursor-pointer rounded-md hover:bg-gray-50"
+                    >
+                      <Link to="/support/my-tickets" className="flex items-center w-full">
+                        <HelpCircle className="mr-3 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-900">Get Help</span>
+                          <span className="text-xs text-gray-500">Support & assistance</span>
                         </div>
                       </Link>
                     </DropdownMenuItem>

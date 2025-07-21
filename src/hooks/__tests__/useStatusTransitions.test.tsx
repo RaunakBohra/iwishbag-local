@@ -123,16 +123,20 @@ const mockStatusConfigs = {
 };
 
 // Mock transition validation logic
-const isValidTransition = (fromStatus: string, toStatus: string, category: 'quote' | 'order'): boolean => {
+const isValidTransition = (
+  fromStatus: string,
+  toStatus: string,
+  category: 'quote' | 'order',
+): boolean => {
   const statuses = mockStatusConfigs.quote;
-  const currentConfig = statuses.find(s => s.name === fromStatus);
+  const currentConfig = statuses.find((s) => s.name === fromStatus);
   if (!currentConfig || !currentConfig.isActive) return false;
   return currentConfig.allowedTransitions.includes(toStatus);
 };
 
 const getStatusConfig = (statusName: string, category: 'quote' | 'order') => {
   const statuses = mockStatusConfigs.quote;
-  return statuses.find(s => s.name === statusName) || null;
+  return statuses.find((s) => s.name === statusName) || null;
 };
 
 // Test wrapper component
@@ -143,16 +147,18 @@ const createWrapper = () => {
       mutations: { retry: false },
     },
   });
-  
-  return ({ children }: { children: React.ReactNode }) => (
+
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
+
+  return wrapper;
 };
 
 describe('useStatusTransitions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Setup default mocks
     vi.mocked(useStatusManagement).mockReturnValue({
       isValidTransition,
@@ -201,7 +207,12 @@ describe('useStatusTransitions', () => {
     const mockSelect = vi.fn().mockReturnValue({
       eq: vi.fn().mockReturnValue({
         single: vi.fn().mockResolvedValue({
-          data: { email: 'test@example.com', display_id: 'Q123', product_name: 'Test Product', final_total_usd: 100 },
+          data: {
+            email: 'test@example.com',
+            display_id: 'Q123',
+            product_name: 'Test Product',
+            final_total_usd: 100,
+          },
           error: null,
         }),
       }),
@@ -315,7 +326,7 @@ describe('useStatusTransitions', () => {
           fromStatus: 'pending',
           toStatus: 'shipped',
           trigger: 'manual',
-        })
+        }),
       ).rejects.toThrow('Invalid status transition from "pending" to "shipped"');
     });
 
@@ -329,7 +340,7 @@ describe('useStatusTransitions', () => {
           fromStatus: 'paid',
           toStatus: 'rejected',
           trigger: 'manual',
-        })
+        }),
       ).rejects.toThrow('Invalid status transition from "paid" to "rejected"');
     });
 
@@ -343,7 +354,7 @@ describe('useStatusTransitions', () => {
           fromStatus: 'completed',
           toStatus: 'shipped',
           trigger: 'manual',
-        })
+        }),
       ).rejects.toThrow('Invalid status transition from "completed" to "shipped"');
     });
   });
@@ -543,7 +554,7 @@ describe('useStatusTransitions', () => {
           fromStatus: 'approved',
           toStatus: 'paid',
           trigger: 'payment_received',
-        })
+        }),
       ).rejects.toThrow('Database error');
     });
 

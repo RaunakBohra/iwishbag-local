@@ -37,6 +37,14 @@ jobs:
           npm ci
           pip install semgrep
         
+      - name: Run Unit & Integration Tests
+        run: |
+          echo "🧪 Running Vitest test suite..."
+          npm test -- --run || {
+            echo "❌ Tests failed. Please fix the failing tests before merging."
+            exit 1
+          }
+          
       - name: Run Audit-CI
         run: |
           echo "🔍 Running Audit-CI for dependency vulnerabilities..."

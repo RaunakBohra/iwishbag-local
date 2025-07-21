@@ -58,6 +58,12 @@ import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
+
+// Performance optimization hooks
+import { useBatchedFormUpdates } from '@/hooks/useBatchedFormUpdates';
+import { useLayoutShiftPrevention } from '@/hooks/useLayoutShiftPrevention';
+import { useDebouncedCalculations } from '@/hooks/useDebouncedCalculations';
+import { useAdminScrollProtection } from '@/hooks/useAdminScrollProtection';
 import type {
   UnifiedQuote,
   ShippingOption,
@@ -113,7 +119,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const [showSmartSuggestions, setShowSmartSuggestions] = useState(false);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
   const [isEditingRoute, setIsEditingRoute] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<{ index: number; name: string } | null>(null);
+  const [productToDelete, setProductToDelete] = useState<{ index: number; name: string } | null>(
+    null,
+  );
 
   // Form state for editing
   const form = useForm<AdminQuoteFormValues>({
@@ -136,6 +144,39 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       status: '',
       items: [],
     },
+  });
+
+  // Performance optimization hooks
+  const { batchUpdate, batchMultipleUpdates, flushUpdates } = useBatchedFormUpdates(form, {
+    debounceMs: 500,
+    onBatchComplete: () => {
+      console.log('[PERF] Batch form update completed');
+    },
+  });
+
+  const { containerRef, batchDOMUpdate, setStableMinHeight } = useLayoutShiftPrevention({
+    reserveSpace: true,
+    minHeight: 600,
+    transitionDuration: 200,
+    debounceMs: 150,
+  });
+
+  const { scheduleCalculation, isCalculating: isDebouncedCalculating } = useDebouncedCalculations({
+    debounceMs: 800,
+    maxPendingCalculations: 3,
+    enableLogging: true,
+  });
+
+  const { startOperation, endOperation, lockDuringCallback } = useAdminScrollProtection({
+    autoLockOnEdit: true,
+    lockDuringOperations: [
+      'quote-calculation',
+      'shipping-recalculation',
+      'weight-estimation',
+      'route-editing',
+      'quote-save',
+      'form-submit',
+    ],
   });
 
   // Load quote data
@@ -194,6 +235,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   };
 
   const calculateSmartFeatures = async (quoteData: UnifiedQuote) => {
+    const operationId = startOperation('quote-calculation', 'Calculating smart quote features');
     try {
       setIsCalculating(true);
 
@@ -217,6 +259,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       console.error('Error calculating smart features:', error);
     } finally {
       setIsCalculating(false);
+      endOperation(operationId);
     }
   };
 
@@ -359,11 +402,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     setSmartSuggestions(updatedSuggestions);
   };
 
-  // Enhanced mode toggle handler with notifications and scroll prevention
+  // Enhanced mode toggle handler with notifications - SCROLL PREVENTION REMOVED
   const handleModeToggle = (newEditMode: boolean) => {
-    // Store current scroll position
-    const currentScroll = window.scrollY;
-    
     setIsEditMode(newEditMode);
 
     // Toast notification for mode changes
@@ -379,11 +419,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     if (!newEditMode && quote) {
       populateFormFromQuote(liveQuote || quote);
     }
-
-    // Prevent auto-scroll by restoring scroll position
-    requestAnimationFrame(() => {
-      window.scrollTo(0, currentScroll);
-    });
   };
 
   // Watch form values for live updates
@@ -394,70 +429,81 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     window.lastFormChangeTime = Date.now();
   }, [formValues]);
 
-  // Dynamic shipping calculation function
+  // Dynamic shipping calculation function with scroll protection
   const recalculateShipping = useCallback(async () => {
     if (!quote || !formValues.items || formValues.items.length === 0) return;
 
-    try {
-      const itemsTotal = (formValues.items || []).reduce(
-        (sum, item) => sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1),
-        0,
+    return await lockDuringCallback(async () => {
+      const operationId = startOperation(
+        'shipping-recalculation',
+        'Recalculating shipping options',
       );
 
-      const totalWeight = (formValues.items || []).reduce(
-        (sum, item) => sum + (Number(item.item_weight) || 0) * (Number(item.quantity) || 1),
-        0,
-      );
+      try {
+        const itemsTotal = (formValues.items || []).reduce(
+          (sum, item) => sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1),
+          0,
+        );
 
-      if (
-        itemsTotal > 0 &&
-        totalWeight > 0 &&
-        formValues.origin_country &&
-        formValues.destination_country
-      ) {
-        console.log('Recalculating shipping options...', {
-          itemsTotal,
-          totalWeight,
-          origin: formValues.origin_country,
-          destination: formValues.destination_country,
-        });
+        const totalWeight = (formValues.items || []).reduce(
+          (sum, item) => sum + (Number(item.item_weight) || 0) * (Number(item.quantity) || 1),
+          0,
+        );
 
-        const tempQuote = {
-          ...quote,
-          origin_country: formValues.origin_country,
-          destination_country: formValues.destination_country,
-          items: (formValues.items || []).map((item, index) => ({
-            ...quote.items[index],
-            price_usd: Number(item.item_price) || 0,
-            weight_kg: Number(item.item_weight) || 0,
-            quantity: Number(item.quantity) || 1,
-          })),
-        };
+        if (
+          itemsTotal > 0 &&
+          totalWeight > 0 &&
+          formValues.origin_country &&
+          formValues.destination_country
+        ) {
+          console.log('Recalculating shipping options...', {
+            itemsTotal,
+            totalWeight,
+            origin: formValues.origin_country,
+            destination: formValues.destination_country,
+          });
 
-        const result = await smartCalculationEngine.calculateWithShippingOptions({
-          quote: tempQuote,
-          preferences: {
-            speed_priority: 'medium',
-            cost_priority: 'medium',
-            show_all_options: true,
-          },
-        });
+          const tempQuote = {
+            ...quote,
+            origin_country: formValues.origin_country,
+            destination_country: formValues.destination_country,
+            items: (formValues.items || []).map((item, index) => ({
+              ...quote.items[index],
+              price_usd: Number(item.item_price) || 0,
+              weight_kg: Number(item.item_weight) || 0,
+              quantity: Number(item.quantity) || 1,
+            })),
+          };
 
-        if (result.success) {
-          setShippingOptions(result.shipping_options);
-          setShippingRecommendations(result.smart_recommendations);
+          const result = await smartCalculationEngine.calculateWithShippingOptions({
+            quote: tempQuote,
+            preferences: {
+              speed_priority: 'medium',
+              cost_priority: 'medium',
+              show_all_options: true,
+            },
+          });
 
-          // Auto-select optimal option if none selected
-          if (!formValues.selected_shipping_option && result.shipping_options.length > 0) {
-            const optimalOption = result.shipping_options[0]; // First option is usually optimal
-            form.setValue('selected_shipping_option', optimalOption.id);
-            form.setValue('international_shipping', optimalOption.cost_usd);
+          if (result.success) {
+            setShippingOptions(result.shipping_options);
+            setShippingRecommendations(result.smart_recommendations);
+
+            // Auto-select optimal option if none selected - using batched updates
+            if (!formValues.selected_shipping_option && result.shipping_options.length > 0) {
+              const optimalOption = result.shipping_options[0]; // First option is usually optimal
+              batchMultipleUpdates([
+                { field: 'selected_shipping_option', value: optimalOption.id },
+                { field: 'international_shipping', value: optimalOption.cost_usd },
+              ]);
+            }
           }
         }
+      } catch (error) {
+        console.error('❌ Error recalculating shipping:', error);
+      } finally {
+        endOperation(operationId);
       }
-    } catch (error) {
-      console.error('❌ Error recalculating shipping:', error);
-    }
+    });
   }, [
     quote,
     formValues.items,
@@ -465,18 +511,26 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     formValues.destination_country,
     formValues.selected_shipping_option,
     form,
+    batchMultipleUpdates,
+    lockDuringCallback,
+    startOperation,
+    endOperation,
   ]);
 
-  // Watch for changes that should trigger shipping recalculation
+  // Optimized calculation scheduling - prevents layout shifts
   useEffect(() => {
-    if (isEditMode) {
-      const debounceTimer = setTimeout(() => {
-        recalculateShipping();
-      }, 1000); // Debounce for 1 second
+    if (isEditMode && quote) {
+      const formValues = form.getValues();
+      const dependencies = [
+        formValues.items,
+        formValues.origin_country,
+        formValues.destination_country,
+        formValues.selected_shipping_option,
+      ];
 
-      return () => clearTimeout(debounceTimer);
+      scheduleCalculation('shipping-recalculation', () => recalculateShipping(), dependencies);
     }
-  }, [isEditMode, recalculateShipping]);
+  }, [isEditMode, scheduleCalculation, recalculateShipping, quote]);
   const [liveQuote, setLiveQuote] = useState<UnifiedQuote | null>(null);
 
   // Smart weight estimation state
@@ -490,39 +544,45 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const [customsTierInfo, setCustomsTierInfo] = useState<any>(null);
   const [isCalculatingCustoms, setIsCalculatingCustoms] = useState(false);
 
-  // Function to estimate weight for an item
-  const estimateItemWeight = async (
-    itemIndex: number,
-    productName: string,
-    productUrl?: string,
-  ) => {
-    console.log('🔍 estimateItemWeight called:', { itemIndex, productName, productUrl });
+  // Optimized weight estimation using debounced calculations
+  const estimateItemWeight = useCallback(
+    (itemIndex: number, productName: string, productUrl?: string) => {
+      console.log('🔍 estimateItemWeight called:', { itemIndex, productName, productUrl });
 
-    if (!productName.trim()) {
-      console.log('❌ Empty product name, clearing estimation');
-      setWeightEstimations((prev) => ({ ...prev, [itemIndex]: null }));
-      return;
-    }
+      if (!productName.trim()) {
+        console.log('❌ Empty product name, clearing estimation');
+        batchDOMUpdate(() => {
+          setWeightEstimations((prev) => ({ ...prev, [itemIndex]: null }));
+        });
+        return;
+      }
 
-    const estimationKey = itemIndex.toString();
-    console.log('⏳ Starting estimation for key:', estimationKey);
-    setIsEstimating((prev) => ({ ...prev, [estimationKey]: true }));
+      const estimationKey = `weight-${itemIndex}`;
 
-    try {
-      console.log('Calling smartWeightEstimator.estimateWeight...');
-      const estimation = await smartWeightEstimator.estimateWeight(productName, productUrl);
-      console.log('✅ Weight estimation result:', estimation);
-      setWeightEstimations((prev) => ({ ...prev, [estimationKey]: estimation }));
-    } catch (error) {
-      console.error('❌ Weight estimation error:', error);
-      setWeightEstimations((prev) => ({ ...prev, [estimationKey]: null }));
-    } finally {
-      setIsEstimating((prev) => ({ ...prev, [estimationKey]: false }));
-    }
-  };
+      scheduleCalculation(estimationKey, async () => {
+        setIsEstimating((prev) => ({ ...prev, [itemIndex]: true }));
+        try {
+          const estimation = await smartWeightEstimator.estimateWeight(productName, productUrl);
+          console.log('✅ Weight estimation result:', estimation);
 
-  // Function to add new item
-  const addNewItem = () => {
+          batchDOMUpdate(() => {
+            setWeightEstimations((prev) => ({ ...prev, [itemIndex]: estimation }));
+            setIsEstimating((prev) => ({ ...prev, [itemIndex]: false }));
+          });
+        } catch (error) {
+          console.error('❌ Weight estimation error:', error);
+          batchDOMUpdate(() => {
+            setWeightEstimations((prev) => ({ ...prev, [itemIndex]: null }));
+            setIsEstimating((prev) => ({ ...prev, [itemIndex]: false }));
+          });
+        }
+      }, [productName, productUrl, itemIndex]);
+    },
+    [scheduleCalculation, batchDOMUpdate],
+  );
+
+  // Optimized function to add new item with batched updates
+  const addNewItem = useCallback(() => {
     const currentItems = form.getValues('items') || [];
     const newItem = {
       id: `item_${Date.now()}`,
@@ -535,14 +595,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       image_url: '',
     };
 
-    form.setValue('items', [...currentItems, newItem]);
+    batchDOMUpdate(() => {
+      batchUpdate('items', [...currentItems, newItem]);
 
-    toast({
-      title: 'Item Added',
-      description: 'New item has been added to the quote.',
-      duration: 2000,
+      toast({
+        title: 'Item Added',
+        description: 'New item has been added to the quote.',
+        duration: 2000,
+      });
     });
-  };
+  }, [form, batchUpdate, batchDOMUpdate]);
 
   // Function to remove item with confirmation
   const handleRemoveItemConfirm = (itemIndex: number) => {
@@ -559,134 +621,146 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     }
   };
 
-  // Handle route editing done - save changes with optimistic updates
+  // Handle route editing done - save changes with optimistic updates and scroll protection
   const handleRouteEditingDone = async () => {
     if (!quote?.id || !isEditingRoute) {
       setIsEditingRoute(false);
       return;
     }
 
-    const formData = form.getValues();
-    
-    // Only save if routes have actually changed
-    const routeChanged = 
-      formData.origin_country !== quote.origin_country ||
-      formData.destination_country !== quote.destination_country;
-
-    if (!routeChanged) {
-      // No changes, just exit editing mode
-      setIsEditingRoute(false);
-      return;
-    }
-
-    console.log('🗺️ [ROUTE-SAVE] Saving route changes:', {
-      from: `${quote.origin_country} → ${quote.destination_country}`,
-      to: `${formData.origin_country} → ${formData.destination_country}`
-    });
-
-    // OPTIMISTIC UPDATE: Exit editing mode immediately for instant UI feedback
-    setIsEditingRoute(false);
-
-    // OPTIMISTIC UPDATE: Immediately update the quote state with new routes
-    const updatedQuote = {
-      ...quote,
-      origin_country: formData.origin_country,
-      destination_country: formData.destination_country,
-    };
-    setQuote(updatedQuote);
-
-    // Show immediate success toast
-    toast({
-      title: 'Route Updated',
-      description: `Route changed to ${formData.origin_country} → ${formData.destination_country}`,
-    });
+    const operationId = startOperation('route-editing', 'Saving route changes');
 
     try {
-      // Save to database in background
-      const success = await unifiedDataEngine.updateQuote(quote.id, {
-        origin_country: formData.origin_country,
-        destination_country: formData.destination_country,
+      const formData = form.getValues();
+
+      // Only save if routes have actually changed
+      const routeChanged =
+        formData.origin_country !== quote.origin_country ||
+        formData.destination_country !== quote.destination_country;
+
+      if (!routeChanged) {
+        // No changes, just exit editing mode
+        setIsEditingRoute(false);
+        return;
+      }
+
+      console.log('🗺️ [ROUTE-SAVE] Saving route changes:', {
+        from: `${quote.origin_country} → ${quote.destination_country}`,
+        to: `${formData.origin_country} → ${formData.destination_country}`,
       });
 
-      if (success) {
-        console.log('✅ [ROUTE-SAVE] Database update successful');
-        
-        // Intelligent delayed refresh to sync with database without overwriting optimistic updates
-        setTimeout(async () => {
-          try {
-            // Fetch fresh data from database with force refresh
-            const freshQuoteData = await unifiedDataEngine.getQuote(quote.id, true);
-            
-            if (freshQuoteData) {
-              // Check if database has the updated route values that match our optimistic update
-              const databaseMatchesOptimistic = 
-                freshQuoteData.origin_country === formData.origin_country &&
-                freshQuoteData.destination_country === formData.destination_country;
-              
-              if (databaseMatchesOptimistic) {
-                console.log('✅ [ROUTE-SYNC] Database has updated route values, syncing UI');
-                // Database is in sync, safe to update UI with fresh data
-                setQuote(freshQuoteData);
-                populateFormFromQuote(freshQuoteData);
-                // Trigger shipping recalculation after route change
-                recalculateShipping();
-              } else {
-                console.log('⏳ [ROUTE-SYNC] Database not yet updated, keeping optimistic state');
-                // Database hasn't updated yet, keep optimistic state and try again
-                setTimeout(async () => {
-                  try {
-                    const retryQuoteData = await unifiedDataEngine.getQuote(quote.id, true);
-                    if (retryQuoteData) {
-                      console.log('🔄 [ROUTE-SYNC] Retry - checking database again...');
-                      const retryMatches = 
-                        retryQuoteData.origin_country === formData.origin_country &&
-                        retryQuoteData.destination_country === formData.destination_country;
-                      
-                      if (retryMatches) {
-                        console.log('✅ [ROUTE-SYNC] Retry successful, syncing UI');
-                        setQuote(retryQuoteData);
-                        populateFormFromQuote(retryQuoteData);
-                        recalculateShipping();
-                      } else {
-                        console.log('⚠️ [ROUTE-SYNC] Database still not updated after retry, keeping optimistic state');
-                        // Keep the optimistic state - it will be corrected on next user action or refresh
+      // OPTIMISTIC UPDATE: Exit editing mode immediately for instant UI feedback
+      setIsEditingRoute(false);
+
+      // OPTIMISTIC UPDATE: Immediately update the quote state with new routes
+      const updatedQuote = {
+        ...quote,
+        origin_country: formData.origin_country,
+        destination_country: formData.destination_country,
+      };
+      setQuote(updatedQuote);
+
+      // Show immediate success toast
+      toast({
+        title: 'Route Updated',
+        description: `Route changed to ${formData.origin_country} → ${formData.destination_country}`,
+      });
+
+      try {
+        // Save to database in background
+        const success = await unifiedDataEngine.updateQuote(quote.id, {
+          origin_country: formData.origin_country,
+          destination_country: formData.destination_country,
+        });
+
+        if (success) {
+          console.log('✅ [ROUTE-SAVE] Database update successful');
+
+          // Intelligent delayed refresh to sync with database without overwriting optimistic updates
+          setTimeout(async () => {
+            try {
+              // Fetch fresh data from database with force refresh
+              const freshQuoteData = await unifiedDataEngine.getQuote(quote.id, true);
+
+              if (freshQuoteData) {
+                // Check if database has the updated route values that match our optimistic update
+                const databaseMatchesOptimistic =
+                  freshQuoteData.origin_country === formData.origin_country &&
+                  freshQuoteData.destination_country === formData.destination_country;
+
+                if (databaseMatchesOptimistic) {
+                  console.log('✅ [ROUTE-SYNC] Database has updated route values, syncing UI');
+                  // Database is in sync, safe to update UI with fresh data
+                  setQuote(freshQuoteData);
+                  populateFormFromQuote(freshQuoteData);
+                  // Trigger shipping recalculation after route change
+                  recalculateShipping();
+                } else {
+                  console.log('⏳ [ROUTE-SYNC] Database not yet updated, keeping optimistic state');
+                  // Database hasn't updated yet, keep optimistic state and try again
+                  setTimeout(async () => {
+                    try {
+                      const retryQuoteData = await unifiedDataEngine.getQuote(quote.id, true);
+                      if (retryQuoteData) {
+                        console.log('🔄 [ROUTE-SYNC] Retry - checking database again...');
+                        const retryMatches =
+                          retryQuoteData.origin_country === formData.origin_country &&
+                          retryQuoteData.destination_country === formData.destination_country;
+
+                        if (retryMatches) {
+                          console.log('✅ [ROUTE-SYNC] Retry successful, syncing UI');
+                          setQuote(retryQuoteData);
+                          populateFormFromQuote(retryQuoteData);
+                          recalculateShipping();
+                        } else {
+                          console.log(
+                            '⚠️ [ROUTE-SYNC] Database still not updated after retry, keeping optimistic state',
+                          );
+                          // Keep the optimistic state - it will be corrected on next user action or refresh
+                        }
                       }
+                    } catch (retryError) {
+                      console.error('❌ [ROUTE-SYNC] Retry fetch failed:', retryError);
+                      // Keep optimistic state on error
                     }
-                  } catch (retryError) {
-                    console.error('❌ [ROUTE-SYNC] Retry fetch failed:', retryError);
-                    // Keep optimistic state on error
-                  }
-                }, 1000); // Retry after 1 second
+                  }, 1000); // Retry after 1 second
+                }
               }
+            } catch (error) {
+              console.error('❌ [ROUTE-SYNC] Error fetching fresh data:', error);
+              // Keep optimistic state on error - don't break user experience
             }
-          } catch (error) {
-            console.error('❌ [ROUTE-SYNC] Error fetching fresh data:', error);
-            // Keep optimistic state on error - don't break user experience
-          }
-        }, 500);
-      } else {
-        // Revert optimistic update on failure
+          }, 500);
+        } else {
+          // Revert optimistic update on failure
+          setQuote(quote);
+          setIsEditingRoute(false);
+
+          toast({
+            title: 'Error Saving Route',
+            description: 'Failed to save route changes. Changes have been reverted.',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        console.error('❌ [ROUTE-SAVE] Error saving route:', error);
+
+        // Revert optimistic update on error
         setQuote(quote);
         setIsEditingRoute(false);
-        
+
         toast({
           title: 'Error Saving Route',
-          description: 'Failed to save route changes. Changes have been reverted.',
+          description: 'Network error occurred. Changes have been reverted.',
           variant: 'destructive',
         });
+      } finally {
+        endOperation(operationId);
       }
-    } catch (error) {
-      console.error('❌ [ROUTE-SAVE] Error saving route:', error);
-      
-      // Revert optimistic update on error
-      setQuote(quote);
+    } catch (initialError) {
+      console.error('❌ [ROUTE-EDITING] Initial operation error:', initialError);
       setIsEditingRoute(false);
-      
-      toast({
-        title: 'Error Saving Route',
-        description: 'Network error occurred. Changes have been reverted.',
-        variant: 'destructive',
-      });
+      endOperation(operationId);
     }
   };
 
@@ -1249,11 +1323,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   return (
     <div
-      className={`max-w-7xl mx-auto p-6 space-y-6 rounded-lg ${
+      ref={containerRef}
+      className={`max-w-7xl mx-auto p-6 space-y-6 rounded-lg transition-all duration-200 ${
         isEditMode
           ? 'border border-teal-200 bg-teal-50/20 shadow-sm'
           : 'border border-blue-200 bg-blue-50/20 shadow-sm'
       }`}
+      style={{ minHeight: '600px' }}
     >
       {/* Smart Header with Key Metrics - Enterprise Layout */}
       <div className="space-y-4">
@@ -1301,11 +1377,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 {isEditingRoute ? (
                   <Select
                     onValueChange={(value) => {
-                      form.setValue('origin_country', value);
-                      // Trigger recalculation if needed
-                      if (isEditMode) {
-                        // The form watching will trigger recalculation automatically
-                      }
+                      batchUpdate('origin_country', value);
                     }}
                     value={form.watch('origin_country') || quote.origin_country || ''}
                   >
@@ -1333,18 +1405,14 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     })()}
                   </div>
                 )}
-                
+
                 <ArrowRight className="w-4 h-4 text-slate-400" />
-                
+
                 {/* Destination Country - Inline Editable */}
                 {isEditingRoute ? (
                   <Select
                     onValueChange={(value) => {
-                      form.setValue('destination_country', value);
-                      // Trigger recalculation if needed
-                      if (isEditMode) {
-                        // The form watching will trigger recalculation automatically
-                      }
+                      batchUpdate('destination_country', value);
                     }}
                     value={form.watch('destination_country') || quote.destination_country || ''}
                   >
@@ -1372,14 +1440,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     })()}
                   </div>
                 )}
-                
+
                 {/* Edit Route Button - Only show in edit mode */}
                 {isEditMode && (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={isEditingRoute ? handleRouteEditingDone : () => setIsEditingRoute(true)}
+                    onClick={
+                      isEditingRoute ? handleRouteEditingDone : () => setIsEditingRoute(true)
+                    }
                     className="h-6 px-2 ml-2 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                   >
                     <Edit className="w-3 h-3 mr-1" />
@@ -2221,8 +2291,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             <AlertDialogTitle>Remove Product</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to remove{' '}
-              <span className="font-medium">{productToDelete?.name}</span> from this quote?
-              This action cannot be undone.
+              <span className="font-medium">{productToDelete?.name}</span> from this quote? This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2236,7 +2306,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </div>
   );
 };

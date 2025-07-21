@@ -35,24 +35,27 @@ export const useUserRoles = () => {
       try {
         console.log('Fetching users with roles for local development...');
 
-        // Get all user roles with profile information
+        // Get all user roles - we'll join with profiles manually
         const { data: userRoles, error: rolesError } = await supabase
           .from('user_roles')
-          .select(
-            `
-            *,
-            profiles!inner (
-              id,
-              full_name,
-              created_at
-            )
-          `,
-          )
+          .select('*')
           .order('created_at', { ascending: false });
 
         if (rolesError) {
           console.error('Error fetching user roles:', rolesError);
           throw new Error('Failed to fetch user roles');
+        }
+
+        // Get profiles for the users who have roles
+        const userIds = userRoles?.map((role) => role.user_id) || [];
+
+        const { data: roleProfiles, error: roleProfilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, created_at')
+          .in('id', userIds);
+
+        if (roleProfilesError) {
+          console.error('Error fetching role profiles:', roleProfilesError);
         }
 
         // Get all profiles to see all users

@@ -50,7 +50,7 @@ import {
   X,
 } from 'lucide-react';
 import type { UnifiedQuote } from '@/types/unified-quote';
-import { QuoteMessageThread } from '@/components/messaging/QuoteMessageThread';
+import { QuoteMessageThreadRefactored as QuoteMessageThread } from '@/components/messaging/QuoteMessageThreadRefactored';
 import { quoteMessageService } from '@/services/QuoteMessageService';
 
 interface CompactCustomerInfoProps {
@@ -88,19 +88,19 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
         return [];
       }
       console.log('🔍 [DEBUG] Fetching addresses for user:', quote.user_id);
-      
+
       const { data, error } = await supabase
         .from('user_addresses')
         .select('*')
         .eq('user_id', quote.user_id)
         .order('is_default', { ascending: false })
         .order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error('❌ [DEBUG] Error fetching saved addresses:', error);
         return [];
       }
-      
+
       console.log('✅ [DEBUG] Found addresses:', data?.length || 0, data);
       return data || [];
     },
@@ -112,9 +112,9 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
     queryKey: ['unread-messages', quote.id],
     queryFn: () => quoteMessageService.getUnreadMessageCount(quote.id),
     refetchInterval: 30000, // Refresh every 30 seconds
-    initialData: 0
+    initialData: 0,
   });
-  
+
   // Only log when addresses are found/loaded (reduce console spam)
   if (savedAddresses && savedAddresses.length > 0 && !addressesLoading) {
     console.log('✅ [DEBUG] Addresses loaded successfully:', savedAddresses.length);
@@ -139,13 +139,16 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
         })
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user_addresses', quote.user_id] });
-      toast({ title: 'Address Added', description: 'Customer address has been added successfully.' });
+      toast({
+        title: 'Address Added',
+        description: 'Customer address has been added successfully.',
+      });
       setShowAddressModal(false);
       setEditingAddress(null);
     },
@@ -176,13 +179,16 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
         .eq('id', editingAddress.id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user_addresses', quote.user_id] });
-      toast({ title: 'Address Updated', description: 'Customer address has been updated successfully.' });
+      toast({
+        title: 'Address Updated',
+        description: 'Customer address has been updated successfully.',
+      });
       setShowAddressModal(false);
       setEditingAddress(null);
     },
@@ -197,16 +203,16 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
 
   const deleteAddressMutation = useMutation({
     mutationFn: async (addressId: string) => {
-      const { error } = await supabase
-        .from('user_addresses')
-        .delete()
-        .eq('id', addressId);
-      
+      const { error } = await supabase.from('user_addresses').delete().eq('id', addressId);
+
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user_addresses', quote.user_id] });
-      toast({ title: 'Address Deleted', description: 'Customer address has been deleted successfully.' });
+      toast({
+        title: 'Address Deleted',
+        description: 'Customer address has been deleted successfully.',
+      });
     },
     onError: (error: any) => {
       toast({
@@ -221,7 +227,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   const handleAddressSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    
+
     const addressData = {
       recipient_name: formData.get('recipient_name') as string,
       address_line1: formData.get('address_line1') as string,
@@ -391,7 +397,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
     is_anonymous: isAnonymous,
     saved_addresses: {
       count: savedAddresses?.length || 0,
-      has_default: savedAddresses?.some(addr => addr.is_default) || false,
+      has_default: savedAddresses?.some((addr) => addr.is_default) || false,
       loading: addressesLoading,
     },
   });
@@ -416,24 +422,16 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
           </div>
         </div>
         <div className="flex items-center space-x-1">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-8 w-8 p-0 relative"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              
-              // Store current scroll position
-              const currentScroll = window.scrollY;
-              
+
               setIsExpanded(true);
               setActiveTab('messages');
-              
-              // Prevent auto-scroll by restoring position
-              requestAnimationFrame(() => {
-                window.scrollTo(0, currentScroll);
-              });
             }}
             title="Open messages"
           >
@@ -474,9 +472,14 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
             {!addressesLoading && savedAddresses && savedAddresses.length > 0 && (
               <div className="flex items-center text-blue-600">
                 <Home className="w-3 h-3 mr-1" />
-                <span>{savedAddresses.length} saved address{savedAddresses.length > 1 ? 'es' : ''}</span>
-                {savedAddresses.find(addr => addr.is_default) && (
-                  <Badge variant="outline" className="text-xs h-4 px-1 ml-1 text-green-700 border-green-300">
+                <span>
+                  {savedAddresses.length} saved address{savedAddresses.length > 1 ? 'es' : ''}
+                </span>
+                {savedAddresses.find((addr) => addr.is_default) && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs h-4 px-1 ml-1 text-green-700 border-green-300"
+                  >
                     Default
                   </Badge>
                 )}
@@ -513,16 +516,8 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              
-              // Store current scroll position
-              const currentScroll = window.scrollY;
-              
+
               setIsExpanded(!isExpanded);
-              
-              // Prevent auto-scroll by restoring position
-              requestAnimationFrame(() => {
-                window.scrollTo(0, currentScroll);
-              });
             }}
             className="h-6 px-2 text-xs"
           >
@@ -535,7 +530,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
 
   // Expandable Detail Tabs (Shown when expanded)
   const DetailTabs = () => (
-    <div className="border-t border-gray-100 animate-in fade-in-50 slide-in-from-top-2 duration-200">
+    <div className="border-t border-gray-100">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-8 text-xs">
           <TabsTrigger value="addresses" className="text-xs">
@@ -545,7 +540,8 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
             Actions
           </TabsTrigger>
           <TabsTrigger value="messages" className="text-xs">
-            Messages {unreadCount && unreadCount > 0 && (
+            Messages{' '}
+            {unreadCount && unreadCount > 0 && (
               <Badge className="ml-1 bg-red-500 text-white text-xs h-3 px-1">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </Badge>
@@ -626,7 +622,12 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
               {editMode && (
                 <div className="text-center pt-2 border-t border-gray-200">
                   <div className="flex justify-center gap-2">
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600" onClick={handleAddAddress}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-blue-600"
+                      onClick={handleAddAddress}
+                    >
                       <Plus className="w-3 h-3 mr-1" />
                       Add New
                     </Button>
@@ -670,9 +671,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
                   </Button>
                 )}
                 {formattedAddress && (
-                  <div className="text-xs text-gray-600">
-                    Quote has shipping address
-                  </div>
+                  <div className="text-xs text-gray-600">Quote has shipping address</div>
                 )}
               </div>
             </div>
@@ -736,137 +735,133 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
     <Card className="shadow-sm border-gray-200 overflow-hidden transition-all duration-200">
       <CompactHeader />
       {isExpanded && <DetailTabs />}
-      
+
       {/* Address Management Modal - Only in Edit Mode */}
       {editMode && (
         <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingAddress ? 'Edit Customer Address' : 'Add New Address'}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAddressSubmit} className="space-y-4">
-            <div className="grid gap-4">
-              <div>
-                <Label htmlFor="recipient_name">Recipient Name *</Label>
-                <Input
-                  id="recipient_name"
-                  name="recipient_name"
-                  defaultValue={editingAddress?.recipient_name || ''}
-                  placeholder="Full name"
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="address_line1">Address Line 1 *</Label>
-                <Input
-                  id="address_line1"
-                  name="address_line1"
-                  defaultValue={editingAddress?.address_line1 || ''}
-                  placeholder="Street address"
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="address_line2">Address Line 2</Label>
-                <Input
-                  id="address_line2"
-                  name="address_line2"
-                  defaultValue={editingAddress?.address_line2 || ''}
-                  placeholder="Apartment, suite, etc."
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2">
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {editingAddress ? 'Edit Customer Address' : 'Add New Address'}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddressSubmit} className="space-y-4">
+              <div className="grid gap-4">
                 <div>
-                  <Label htmlFor="city">City *</Label>
+                  <Label htmlFor="recipient_name">Recipient Name *</Label>
                   <Input
-                    id="city"
-                    name="city"
-                    defaultValue={editingAddress?.city || ''}
-                    placeholder="City"
+                    id="recipient_name"
+                    name="recipient_name"
+                    defaultValue={editingAddress?.recipient_name || ''}
+                    placeholder="Full name"
                     required
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="postal_code">Postal Code *</Label>
+                  <Label htmlFor="address_line1">Address Line 1 *</Label>
                   <Input
-                    id="postal_code"
-                    name="postal_code"
-                    defaultValue={editingAddress?.postal_code || ''}
-                    placeholder="ZIP/Postal"
+                    id="address_line1"
+                    name="address_line1"
+                    defaultValue={editingAddress?.address_line1 || ''}
+                    placeholder="Street address"
                     required
                   />
                 </div>
+
+                <div>
+                  <Label htmlFor="address_line2">Address Line 2</Label>
+                  <Input
+                    id="address_line2"
+                    name="address_line2"
+                    defaultValue={editingAddress?.address_line2 || ''}
+                    placeholder="Apartment, suite, etc."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="city">City *</Label>
+                    <Input
+                      id="city"
+                      name="city"
+                      defaultValue={editingAddress?.city || ''}
+                      placeholder="City"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="postal_code">Postal Code *</Label>
+                    <Input
+                      id="postal_code"
+                      name="postal_code"
+                      defaultValue={editingAddress?.postal_code || ''}
+                      placeholder="ZIP/Postal"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="state_province_region">State/Province *</Label>
+                  <Input
+                    id="state_province_region"
+                    name="state_province_region"
+                    defaultValue={editingAddress?.state_province_region || ''}
+                    placeholder="State or province"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="destination_country">Country *</Label>
+                  <Input
+                    id="destination_country"
+                    name="destination_country"
+                    defaultValue={editingAddress?.destination_country || ''}
+                    placeholder="Country"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    defaultValue={editingAddress?.phone || ''}
+                    placeholder="Phone number"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is_default"
+                    name="is_default"
+                    defaultChecked={editingAddress?.is_default || false}
+                  />
+                  <Label htmlFor="is_default">Set as default address</Label>
+                </div>
               </div>
-              
-              <div>
-                <Label htmlFor="state_province_region">State/Province *</Label>
-                <Input
-                  id="state_province_region"
-                  name="state_province_region"
-                  defaultValue={editingAddress?.state_province_region || ''}
-                  placeholder="State or province"
-                  required
-                />
+
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setShowAddressModal(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={addAddressMutation.isPending || updateAddressMutation.isPending}
+                >
+                  {addAddressMutation.isPending || updateAddressMutation.isPending
+                    ? 'Saving...'
+                    : editingAddress
+                      ? 'Update Address'
+                      : 'Add Address'}
+                </Button>
               </div>
-              
-              <div>
-                <Label htmlFor="destination_country">Country *</Label>
-                <Input
-                  id="destination_country"
-                  name="destination_country"
-                  defaultValue={editingAddress?.destination_country || ''}
-                  placeholder="Country"
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  defaultValue={editingAddress?.phone || ''}
-                  placeholder="Phone number"
-                />
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="is_default"
-                  name="is_default"
-                  defaultChecked={editingAddress?.is_default || false}
-                />
-                <Label htmlFor="is_default">Set as default address</Label>
-              </div>
-            </div>
-            
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowAddressModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={addAddressMutation.isPending || updateAddressMutation.isPending}
-              >
-                {addAddressMutation.isPending || updateAddressMutation.isPending
-                  ? 'Saving...'
-                  : editingAddress
-                  ? 'Update Address'
-                  : 'Add Address'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </form>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Address Delete Confirmation Dialog */}
@@ -876,8 +871,8 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
             <AlertDialogTitle>Delete Address</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete the address for{' '}
-              <span className="font-medium">{addressToDelete?.recipient_name}</span>?
-              This action cannot be undone.
+              <span className="font-medium">{addressToDelete?.recipient_name}</span>? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

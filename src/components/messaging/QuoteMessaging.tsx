@@ -157,11 +157,13 @@ export const QuoteMessaging = ({ quoteId, quoteUserId }: QuoteMessagingProps) =>
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Scroll disabled to prevent admin interface auto-scrolling issues
+    // messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
-    scrollToBottom();
+    // Auto-scroll disabled to prevent page jumping during admin operations
+    // scrollToBottom();
   }, [messages]);
 
   // Auto-expand if there are unread messages

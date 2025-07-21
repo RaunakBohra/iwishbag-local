@@ -8,7 +8,9 @@ import React from 'react';
 vi.mock('@/hooks/useStatusManagement');
 vi.mock('@/integrations/supabase/client');
 vi.mock('react-router-dom', () => ({
-  Link: ({ children, to }: { children: React.ReactNode; to: string }) => <a href={to}>{children}</a>,
+  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+    <a href={to}>{children}</a>
+  ),
 }));
 
 // Mock child components
@@ -40,15 +42,13 @@ vi.mock('../QuoteSummary', () => ({
 }));
 
 vi.mock('../QuoteApprovalDialog', () => ({
-  QuoteApprovalDialog: ({ isOpen }: { isOpen: boolean }) => (
-    isOpen ? <div data-testid="approval-dialog">Approval Dialog</div> : null
-  ),
+  QuoteApprovalDialog: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="approval-dialog">Approval Dialog</div> : null,
 }));
 
 vi.mock('../CustomerRejectQuoteDialog', () => ({
-  CustomerRejectQuoteDialog: ({ isOpen }: { isOpen: boolean }) => (
-    isOpen ? <div data-testid="reject-dialog">Reject Dialog</div> : null
-  ),
+  CustomerRejectQuoteDialog: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="reject-dialog">Reject Dialog</div> : null,
 }));
 
 vi.mock('../messaging/QuoteMessaging', () => ({
@@ -70,7 +70,7 @@ const createMockQuote = (overrides = {}) => ({
   id: 'test-quote-123',
   user_id: 'test-user',
   status: 'approved',
-  final_total_usd: 150.00,
+  final_total_usd: 150.0,
   destination_country: 'NP',
   origin_country: 'US',
   in_cart: false,
@@ -92,7 +92,7 @@ const createMockQuote = (overrides = {}) => ({
 const mockStatusManagement = {
   getStatusConfig: vi.fn((status: string) => {
     const mockConfigs = {
-      'approved': {
+      approved: {
         id: 'approved',
         name: 'approved',
         allowCartActions: true,
@@ -101,7 +101,7 @@ const mockStatusManagement = {
         isTerminal: false,
         showInOrdersList: false,
       },
-      'rejected': {
+      rejected: {
         id: 'rejected',
         name: 'rejected',
         allowCartActions: false,
@@ -110,7 +110,7 @@ const mockStatusManagement = {
         isTerminal: true,
         showInOrdersList: false,
       },
-      'pending': {
+      pending: {
         id: 'pending',
         name: 'pending',
         allowCartActions: false,
@@ -132,7 +132,7 @@ const createWrapper = () => {
       mutations: { retry: false },
     },
   });
-  
+
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
@@ -165,10 +165,12 @@ describe('QuoteBreakdown', () => {
         from: vi.fn(() => ({
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
-              single: vi.fn(() => Promise.resolve({
-                data: { code: 'NP', currency: 'NPR', rate_from_usd: 133.0 },
-                error: null,
-              })),
+              single: vi.fn(() =>
+                Promise.resolve({
+                  data: { code: 'NP', currency: 'NPR', rate_from_usd: 133.0 },
+                  error: null,
+                }),
+              ),
             })),
           })),
         })),
@@ -184,17 +186,11 @@ describe('QuoteBreakdown', () => {
       });
 
       const wrapper = createWrapper();
-      render(
-        <QuoteBreakdown
-          quote={mockQuote}
-          {...mockProps}
-        />,
-        { wrapper }
-      );
+      render(<QuoteBreakdown quote={mockQuote} {...mockProps} />, { wrapper });
 
       // Should render the breakdown details component
       expect(screen.getByTestId('quote-breakdown-details')).toBeInTheDocument();
-      
+
       // Should display amounts
       expect(screen.getByText('Items Total: $100')).toBeInTheDocument();
       expect(screen.getByText('Currency: NPR')).toBeInTheDocument();
@@ -221,13 +217,7 @@ describe('QuoteBreakdown', () => {
       });
 
       const wrapper = createWrapper();
-      render(
-        <QuoteBreakdown
-          quote={mockQuote}
-          {...mockProps}
-        />,
-        { wrapper }
-      );
+      render(<QuoteBreakdown quote={mockQuote} {...mockProps} />, { wrapper });
 
       // Should render both items
       expect(screen.getByText('Laptop')).toBeInTheDocument();
@@ -243,13 +233,7 @@ describe('QuoteBreakdown', () => {
       });
 
       const wrapper = createWrapper();
-      render(
-        <QuoteBreakdown
-          quote={mockQuote}
-          {...mockProps}
-        />,
-        { wrapper }
-      );
+      render(<QuoteBreakdown quote={mockQuote} {...mockProps} />, { wrapper });
 
       // Should render summary with NPR currency
       expect(screen.getByTestId('quote-summary')).toBeInTheDocument();
@@ -266,13 +250,7 @@ describe('QuoteBreakdown', () => {
       });
 
       const wrapper = createWrapper();
-      render(
-        <QuoteBreakdown
-          quote={mockQuote}
-          {...mockProps}
-        />,
-        { wrapper }
-      );
+      render(<QuoteBreakdown quote={mockQuote} {...mockProps} />, { wrapper });
 
       // Should render the breakdown for approved quote
       expect(screen.getByTestId('quote-breakdown-details')).toBeInTheDocument();
@@ -286,13 +264,7 @@ describe('QuoteBreakdown', () => {
       });
 
       const wrapper = createWrapper();
-      render(
-        <QuoteBreakdown
-          quote={mockQuote}
-          {...mockProps}
-        />,
-        { wrapper }
-      );
+      render(<QuoteBreakdown quote={mockQuote} {...mockProps} />, { wrapper });
 
       // Should still render breakdown for rejected quote
       expect(screen.getByTestId('quote-breakdown-details')).toBeInTheDocument();
@@ -306,13 +278,7 @@ describe('QuoteBreakdown', () => {
       });
 
       const wrapper = createWrapper();
-      render(
-        <QuoteBreakdown
-          quote={mockQuote}
-          {...mockProps}
-        />,
-        { wrapper }
-      );
+      render(<QuoteBreakdown quote={mockQuote} {...mockProps} />, { wrapper });
 
       // Should still render components, but with zero amounts
       expect(screen.getByTestId('quote-breakdown-details')).toBeInTheDocument();
@@ -342,13 +308,7 @@ describe('QuoteBreakdown', () => {
       });
 
       const wrapper = createWrapper();
-      render(
-        <QuoteBreakdown
-          quote={mockQuote}
-          {...mockProps}
-        />,
-        { wrapper }
-      );
+      render(<QuoteBreakdown quote={mockQuote} {...mockProps} />, { wrapper });
 
       // Should display all product details
       expect(screen.getByText('iPhone 15')).toBeInTheDocument();
@@ -364,13 +324,7 @@ describe('QuoteBreakdown', () => {
       });
 
       const wrapper = createWrapper();
-      render(
-        <QuoteBreakdown
-          quote={mockQuote}
-          {...mockProps}
-        />,
-        { wrapper }
-      );
+      render(<QuoteBreakdown quote={mockQuote} {...mockProps} />, { wrapper });
 
       // Should still render breakdown with zero amounts
       expect(screen.getByTestId('quote-breakdown-details')).toBeInTheDocument();
@@ -386,13 +340,7 @@ describe('QuoteBreakdown', () => {
       });
 
       const wrapper = createWrapper();
-      render(
-        <QuoteBreakdown
-          quote={mockQuote}
-          {...mockProps}
-        />,
-        { wrapper }
-      );
+      render(<QuoteBreakdown quote={mockQuote} {...mockProps} />, { wrapper });
 
       // Should show NPR currency preference
       expect(screen.getByText('Currency: NPR')).toBeInTheDocument();
@@ -409,10 +357,12 @@ describe('QuoteBreakdown', () => {
       const mockSupabase = vi.fn(() => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            single: vi.fn(() => Promise.resolve({
-              data: { code: 'IN', currency: 'INR', rate_from_usd: 83.0 },
-              error: null,
-            })),
+            single: vi.fn(() =>
+              Promise.resolve({
+                data: { code: 'IN', currency: 'INR', rate_from_usd: 83.0 },
+                error: null,
+              }),
+            ),
           })),
         })),
       }));
@@ -422,13 +372,7 @@ describe('QuoteBreakdown', () => {
       }));
 
       const wrapper = createWrapper();
-      render(
-        <QuoteBreakdown
-          quote={mockQuote}
-          {...mockProps}
-        />,
-        { wrapper }
-      );
+      render(<QuoteBreakdown quote={mockQuote} {...mockProps} />, { wrapper });
 
       // Should render the quote breakdown
       expect(screen.getByTestId('quote-breakdown-details')).toBeInTheDocument();
@@ -443,13 +387,7 @@ describe('QuoteBreakdown', () => {
       });
 
       const wrapper = createWrapper();
-      render(
-        <QuoteBreakdown
-          quote={mockQuote}
-          {...mockProps}
-        />,
-        { wrapper }
-      );
+      render(<QuoteBreakdown quote={mockQuote} {...mockProps} />, { wrapper });
 
       // Should display zero instead of throwing error
       expect(screen.getByText('Items Total: $0')).toBeInTheDocument();
@@ -470,13 +408,7 @@ describe('QuoteBreakdown', () => {
       });
 
       const wrapper = createWrapper();
-      render(
-        <QuoteBreakdown
-          quote={mockQuote}
-          {...mockProps}
-        />,
-        { wrapper }
-      );
+      render(<QuoteBreakdown quote={mockQuote} {...mockProps} />, { wrapper });
 
       // Should still render without crashing
       expect(screen.getByTestId('quote-item-card')).toBeInTheDocument();

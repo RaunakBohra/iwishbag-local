@@ -157,7 +157,6 @@ export const QuoteDetailForm = ({
         )}
       />
 
-
       {/* Customs & Taxes */}
       <div className="border border-gray-200 rounded-lg">
         <div className="bg-gradient-to-r from-orange-50 to-yellow-50 px-4 py-2 border-b border-gray-200 rounded-t-lg">
@@ -168,101 +167,101 @@ export const QuoteDetailForm = ({
         </div>
         <div className="p-4">
           <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="customs_percentage"
-                render={({ field }) => (
-                  <FormItem className="m-0">
-                    <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
-                      Customs %
-                    </FormLabel>
-                    <div className="flex items-center gap-2">
-                      <FormControl>
-                        <div className="relative flex-1">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...field}
-                            value={field.value ?? ''}
-                            onWheel={handleNumberInputWheel}
-                            placeholder="15.00"
-                            className="h-8 pr-8"
-                          />
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                            %
-                          </span>
-                        </div>
-                      </FormControl>
-                      {onCalculateSmartCustoms ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={onCalculateSmartCustoms}
-                          disabled={isCalculatingCustoms}
-                          className="h-8 px-2 text-xs bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
-                        >
-                          {isCalculatingCustoms ? (
-                            <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                          ) : (
-                            <Brain className="w-3 h-3" />
-                          )}
-                        </Button>
-                      ) : (
-                        typeof detectedCustomsPercentage === 'number' &&
-                        detectedCustomsPercentage !== Number(field.value) && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              form.setValue('customs_percentage', detectedCustomsPercentage)
-                            }
-                            className="h-8 px-2 text-xs"
-                          >
-                            Apply
-                          </Button>
-                        )
-                      )}
-                    </div>
-                    {detectedCustomsTier && (
-                      <div className="mt-1">
-                        <span className="text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">
-                          {detectedCustomsTier.name} ({detectedCustomsTier.customs_percentage}%)
-                        </span>
-                      </div>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="sales_tax_price"
-                render={({ field }) => (
-                  <FormItem className="m-0">
-                    <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
-                      Sales Tax
-                    </FormLabel>
+            <FormField
+              control={form.control}
+              name="customs_percentage"
+              render={({ field }) => (
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
+                    Customs %
+                  </FormLabel>
+                  <div className="flex items-center gap-2">
                     <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                          {currencySymbol}
-                        </span>
+                      <div className="relative flex-1">
                         <Input
                           type="number"
                           step="0.01"
                           {...field}
                           value={field.value ?? ''}
                           onWheel={handleNumberInputWheel}
-                          className="h-8 pl-6"
-                          placeholder="0.00"
+                          placeholder="15.00"
+                          className="h-8 pr-8"
                         />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                          %
+                        </span>
                       </div>
                     </FormControl>
-                  </FormItem>
-                )}
-              />
+                    {onCalculateSmartCustoms ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={onCalculateSmartCustoms}
+                        disabled={isCalculatingCustoms}
+                        className="h-8 px-2 text-xs bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                      >
+                        {isCalculatingCustoms ? (
+                          <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <Brain className="w-3 h-3" />
+                        )}
+                      </Button>
+                    ) : (
+                      typeof detectedCustomsPercentage === 'number' &&
+                      detectedCustomsPercentage !== Number(field.value) && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            form.setValue('customs_percentage', detectedCustomsPercentage)
+                          }
+                          className="h-8 px-2 text-xs"
+                        >
+                          Apply
+                        </Button>
+                      )
+                    )}
+                  </div>
+                  {detectedCustomsTier && (
+                    <div className="mt-1">
+                      <span className="text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">
+                        {detectedCustomsTier.name} ({detectedCustomsTier.customs_percentage}%)
+                      </span>
+                    </div>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="sales_tax_price"
+              render={({ field }) => (
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
+                    Sales Tax
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                        {currencySymbol}
+                      </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        value={field.value ?? ''}
+                        onWheel={handleNumberInputWheel}
+                        className="h-8 pl-6"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
           </div>
         </div>
       </div>
@@ -277,133 +276,133 @@ export const QuoteDetailForm = ({
         </div>
         <div className="p-4">
           <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="merchant_shipping_price"
-                render={({ field }) => (
-                  <FormItem className="m-0">
-                    <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
-                      Merchant
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                          {currencySymbol}
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...field}
-                          value={field.value ?? ''}
-                          onWheel={handleNumberInputWheel}
-                          className="h-8 pl-6"
-                          placeholder="50.00"
-                        />
+            <FormField
+              control={form.control}
+              name="merchant_shipping_price"
+              render={({ field }) => (
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
+                    Merchant
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                        {currencySymbol}
+                      </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        value={field.value ?? ''}
+                        onWheel={handleNumberInputWheel}
+                        className="h-8 pl-6"
+                        placeholder="50.00"
+                      />
+                    </div>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="international_shipping"
+              render={({ field }) => (
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block flex items-center justify-between">
+                    <span>Intl Ship</span>
+                    {shippingOptions.length > 0 && (
+                      <div className="flex items-center space-x-1">
+                        <Badge variant="outline" className="text-xs h-4 px-1">
+                          {shippingOptions.length}
+                        </Badge>
+                        {shippingOptions.length > 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowShippingModal(true)}
+                            className="h-4 px-1 text-xs text-blue-600 hover:text-blue-800"
+                          >
+                            [Auto]
+                          </Button>
+                        )}
                       </div>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="international_shipping"
-                render={({ field }) => (
-                  <FormItem className="m-0">
-                    <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block flex items-center justify-between">
-                      <span>Intl Ship</span>
-                      {shippingOptions.length > 0 && (
-                        <div className="flex items-center space-x-1">
-                          <Badge variant="outline" className="text-xs h-4 px-1">
-                            {shippingOptions.length}
-                          </Badge>
-                          {shippingOptions.length > 0 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setShowShippingModal(true)}
-                              className="h-4 px-1 text-xs text-blue-600 hover:text-blue-800"
-                            >
-                              [Auto]
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                          {currencySymbol}
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...field}
-                          value={field.value ?? ''}
-                          onWheel={handleNumberInputWheel}
-                          className="h-8 pl-6 bg-blue-50"
-                          readOnly
-                          placeholder="100.00"
-                        />
-                      </div>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="domestic_shipping"
-                render={({ field }) => (
-                  <FormItem className="m-0">
-                    <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
-                      Domestic
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                          {currencySymbol}
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...field}
-                          value={field.value ?? ''}
-                          onWheel={handleNumberInputWheel}
-                          className="h-8 pl-6"
-                          placeholder="25.00"
-                        />
-                      </div>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="insurance_amount"
-                render={({ field }) => (
-                  <FormItem className="m-0">
-                    <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
-                      Insurance
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                          {currencySymbol}
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...field}
-                          value={field.value ?? ''}
-                          onWheel={handleNumberInputWheel}
-                          className="h-8 pl-6"
-                          placeholder="10.00"
-                        />
-                      </div>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                    )}
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                        {currencySymbol}
+                      </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        value={field.value ?? ''}
+                        onWheel={handleNumberInputWheel}
+                        className="h-8 pl-6 bg-blue-50"
+                        readOnly
+                        placeholder="100.00"
+                      />
+                    </div>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="domestic_shipping"
+              render={({ field }) => (
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
+                    Domestic
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                        {currencySymbol}
+                      </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        value={field.value ?? ''}
+                        onWheel={handleNumberInputWheel}
+                        className="h-8 pl-6"
+                        placeholder="25.00"
+                      />
+                    </div>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="insurance_amount"
+              render={({ field }) => (
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
+                    Insurance
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                        {currencySymbol}
+                      </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        value={field.value ?? ''}
+                        onWheel={handleNumberInputWheel}
+                        className="h-8 pl-6"
+                        placeholder="10.00"
+                      />
+                    </div>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
           </div>
         </div>
       </div>
@@ -418,64 +417,63 @@ export const QuoteDetailForm = ({
         </div>
         <div className="p-4">
           <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="handling_charge"
-                render={({ field }) => (
-                  <FormItem className="m-0">
-                    <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
-                      Handling
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                          {currencySymbol}
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...field}
-                          value={field.value ?? ''}
-                          onWheel={handleNumberInputWheel}
-                          className="h-8 pl-6"
-                          placeholder="15.00"
-                        />
-                      </div>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="discount"
-                render={({ field }) => (
-                  <FormItem className="m-0">
-                    <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
-                      Discount
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                          {currencySymbol}
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...field}
-                          value={field.value ?? ''}
-                          onWheel={handleNumberInputWheel}
-                          className="h-8 pl-6"
-                          placeholder="0.00"
-                        />
-                      </div>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="handling_charge"
+              render={({ field }) => (
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
+                    Handling
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                        {currencySymbol}
+                      </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        value={field.value ?? ''}
+                        onWheel={handleNumberInputWheel}
+                        className="h-8 pl-6"
+                        placeholder="15.00"
+                      />
+                    </div>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="discount"
+              render={({ field }) => (
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
+                    Discount
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                        {currencySymbol}
+                      </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        value={field.value ?? ''}
+                        onWheel={handleNumberInputWheel}
+                        className="h-8 pl-6"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
           </div>
         </div>
       </div>
-
 
       {/* Notes Field */}
       <FormField

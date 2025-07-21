@@ -9,7 +9,7 @@ describe('CurrencyService', () => {
   beforeEach(() => {
     // Clear all mocks before each test
     vi.clearAllMocks();
-    
+
     // Clear the service cache to ensure clean state
     currencyService.clearCache();
   });
@@ -66,7 +66,7 @@ describe('CurrencyService', () => {
 
       expect(supabase.from).toHaveBeenCalledWith('country_settings');
       expect(mockSelect).toHaveBeenCalledWith(
-        'currency, minimum_payment_amount, decimal_places, thousand_separator, decimal_separator'
+        'currency, minimum_payment_amount, decimal_places, thousand_separator, decimal_separator',
       );
     });
 
@@ -222,8 +222,8 @@ describe('CurrencyService', () => {
 
     it('should handle all supported gateway currencies correctly', () => {
       const supportedCurrencies = ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD', 'SGD', 'AED', 'SAR'];
-      
-      supportedCurrencies.forEach(currency => {
+
+      supportedCurrencies.forEach((currency) => {
         expect(currencyService.isSupportedByPaymentGateway(currency)).toBe(true);
       });
     });
@@ -451,7 +451,7 @@ describe('CurrencyService', () => {
         .mockReturnValue({ select: mockCountrySelect } as any);
 
       await expect(currencyService.getExchangeRate('XX', 'YY')).rejects.toThrow(
-        'Country settings not found: XX or YY'
+        'Country settings not found: XX or YY',
       );
     });
   });

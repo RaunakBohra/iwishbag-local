@@ -280,7 +280,7 @@ describe('TrackingService', () => {
         'test-quote-123',
         'FedEx',
         'FX123456789',
-        '2025-07-30'
+        '2025-07-30',
       );
 
       expect(result).toBe(true);
@@ -325,11 +325,7 @@ describe('TrackingService', () => {
         update: mockUpdate,
       } as any);
 
-      const result = await trackingService.markAsShipped(
-        'test-quote-456',
-        'UPS',
-        'UPS987654321'
-      );
+      const result = await trackingService.markAsShipped('test-quote-456', 'UPS', 'UPS987654321');
 
       expect(result).toBe(true);
       expect(supabase.rpc).toHaveBeenCalledWith('generate_iwish_tracking_id');
@@ -359,11 +355,7 @@ describe('TrackingService', () => {
         select: mockSelect,
       } as any);
 
-      const result = await trackingService.markAsShipped(
-        'test-quote-fail',
-        'DHL',
-        'DHL111111111'
-      );
+      const result = await trackingService.markAsShipped('test-quote-fail', 'DHL', 'DHL111111111');
 
       expect(result).toBe(false);
     });
@@ -391,7 +383,7 @@ describe('TrackingService', () => {
         'test-quote-details',
         'USPS',
         'USPS555666777',
-        '2025-08-01'
+        '2025-08-01',
       );
 
       expect(result).toBe(true);
@@ -432,7 +424,7 @@ describe('TrackingService', () => {
 
       expect(result).toEqual(mockTrackingData);
       expect(mockSelect).toHaveBeenCalledWith(
-        'iwish_tracking_id, tracking_status, shipping_carrier, tracking_number, estimated_delivery_date, display_id'
+        'iwish_tracking_id, tracking_status, shipping_carrier, tracking_number, estimated_delivery_date, display_id',
       );
     });
 

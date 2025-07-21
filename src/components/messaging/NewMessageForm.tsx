@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { User } from './types';
 import { Tables } from '@/integrations/supabase/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NewMessageFormProps {
   sendMessageMutation: UseMutationResult<
@@ -36,6 +37,8 @@ interface NewMessageFormProps {
   users?: User[];
   recipientIdLocked?: string | null;
   noCardWrapper?: boolean;
+  initialContent?: string;
+  onTemplateUsed?: () => void;
 }
 
 export const NewMessageForm = ({
@@ -45,13 +48,27 @@ export const NewMessageForm = ({
   users = [],
   recipientIdLocked = null,
   noCardWrapper = false,
+  initialContent = '',
+  onTemplateUsed,
 }: NewMessageFormProps) => {
+  const { user: currentUser } = useAuth();
   const [subject, setSubject] = useState('');
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState(initialContent);
   const [recipientId, setRecipientId] = useState<string | null>(recipientIdLocked);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
+
+  // Filter out current user from recipient options to prevent self-messaging
+  const availableRecipients = users.filter(user => user.id !== currentUser?.id);
+
+  // Update content when initialContent changes (for templates)
+  useEffect(() => {
+    if (initialContent && initialContent !== content) {
+      setContent(initialContent);
+      onTemplateUsed?.();
+    }
+  }, [initialContent, content, onTemplateUsed]);
 
   useEffect(() => {
     if (recipientIdLocked) {
@@ -62,13 +79,21 @@ export const NewMessageForm = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
-    if (isAdmin && !recipientId) return;
+    
+    // Better validation for admin users
+    if (isAdmin && !recipientId) {
+      console.error('Admin must select a recipient');
+      return;
+    }
+    
+    // Ensure recipientId is properly null or a valid string
+    const validRecipientId = isAdmin ? (recipientId || null) : null;
 
     sendMessageMutation.mutate(
       {
         subject,
         content,
-        recipientId: isAdmin ? recipientId : null,
+        recipientId: validRecipientId,
         attachment,
       },
       {
@@ -106,7 +131,7 @@ export const NewMessageForm = ({
                 className="w-full justify-between font-normal"
               >
                 {recipientId
-                  ? users.find((user) => user.id === recipientId)?.email
+                  ? availableRecipients.find((user) => user.id === recipientId)?.email || 'Selected user'
                   : 'Select a user to message'}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
@@ -117,7 +142,7 @@ export const NewMessageForm = ({
                 <CommandEmpty>No user found.</CommandEmpty>
                 <CommandList>
                   <CommandGroup>
-                    {users.map((user) => (
+                    {availableRecipients.map((user) => (
                       <CommandItem
                         key={user.id}
                         value={user.email}

@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { DualCurrencyDisplay, SimpleDualCurrency, CurrencyInputLabel } from '../DualCurrencyDisplay';
+import {
+  DualCurrencyDisplay,
+  SimpleDualCurrency,
+  CurrencyInputLabel,
+} from '../DualCurrencyDisplay';
 
 // Mock the currency utilities
 vi.mock('../../../lib/currencyUtils', () => ({
@@ -8,7 +12,7 @@ vi.mock('../../../lib/currencyUtils', () => ({
     // Mock implementation that formats amounts based on countries
     const originSymbol = originCountry === 'US' ? '$' : originCountry === 'IN' ? '₹' : '€';
     const destSymbol = destinationCountry === 'US' ? '$' : destinationCountry === 'IN' ? '₹' : '€';
-    
+
     if (!amount) {
       return {
         origin: `${originSymbol}0.00`,
@@ -16,9 +20,9 @@ vi.mock('../../../lib/currencyUtils', () => ({
         short: `${originSymbol}0.00 / ${destSymbol}0.00`,
       };
     }
-    
+
     const destAmount = exchangeRate ? amount * exchangeRate : amount;
-    
+
     return {
       origin: `${originSymbol}${amount.toFixed(2)}`,
       destination: `${destSymbol}${destAmount.toFixed(2)}`,
@@ -27,11 +31,11 @@ vi.mock('../../../lib/currencyUtils', () => ({
   }),
   getCurrencySymbolFromCountry: vi.fn((countryCode) => {
     const symbols = {
-      'US': '$',
-      'IN': '₹',
-      'NP': '₨',
-      'GB': '£',
-      'EU': '€',
+      US: '$',
+      IN: '₹',
+      NP: '₨',
+      GB: '£',
+      EU: '€',
     };
     return symbols[countryCode as keyof typeof symbols] || '$';
   }),
@@ -39,10 +43,26 @@ vi.mock('../../../lib/currencyUtils', () => ({
 
 // Mock lucide-react icons
 vi.mock('lucide-react', () => ({
-  AlertTriangle: ({ className }: { className?: string }) => <div className={className} data-testid="alert-triangle-icon">⚠️</div>,
-  CheckCircle: ({ className }: { className?: string }) => <div className={className} data-testid="check-circle-icon">✓</div>,
-  Info: ({ className }: { className?: string }) => <div className={className} data-testid="info-icon">ℹ️</div>,
-  Calculator: ({ className }: { className?: string }) => <div className={className} data-testid="calculator-icon">🧮</div>,
+  AlertTriangle: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="alert-triangle-icon">
+      ⚠️
+    </div>
+  ),
+  CheckCircle: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="check-circle-icon">
+      ✓
+    </div>
+  ),
+  Info: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="info-icon">
+      ℹ️
+    </div>
+  ),
+  Calculator: ({ className }: { className?: string }) => (
+    <div className={className} data-testid="calculator-icon">
+      🧮
+    </div>
+  ),
 }));
 
 describe('DualCurrencyDisplay', () => {
@@ -59,7 +79,7 @@ describe('DualCurrencyDisplay', () => {
           destinationCountry="IN"
           exchangeRate={82.5}
           showTooltip={false}
-        />
+        />,
       );
 
       // Should show the short format with both currencies
@@ -73,7 +93,7 @@ describe('DualCurrencyDisplay', () => {
           originCountry="US"
           destinationCountry="IN"
           showTooltip={false}
-        />
+        />,
       );
 
       expect(screen.getByText('$0.00 / ₹0.00')).toBeInTheDocument();
@@ -86,7 +106,7 @@ describe('DualCurrencyDisplay', () => {
           originCountry="US"
           destinationCountry="IN"
           showTooltip={false}
-        />
+        />,
       );
 
       expect(screen.getByText('$0.00 / ₹0.00')).toBeInTheDocument();
@@ -99,7 +119,7 @@ describe('DualCurrencyDisplay', () => {
           originCountry="US"
           destinationCountry="US"
           showTooltip={false}
-        />
+        />,
       );
 
       // When same currency, should only show once
@@ -118,7 +138,7 @@ describe('DualCurrencyDisplay', () => {
           destinationCountry="IN"
           exchangeRateSource="shipping_route"
           showTooltip={false}
-        />
+        />,
       );
 
       expect(screen.getByText('Route Rate')).toBeInTheDocument();
@@ -133,7 +153,7 @@ describe('DualCurrencyDisplay', () => {
           destinationCountry="IN"
           exchangeRateSource="country_settings"
           showTooltip={false}
-        />
+        />,
       );
 
       expect(screen.getByText('USD Rate')).toBeInTheDocument();
@@ -148,7 +168,7 @@ describe('DualCurrencyDisplay', () => {
           destinationCountry="IN"
           exchangeRateSource="fallback"
           showTooltip={false}
-        />
+        />,
       );
 
       expect(screen.getByText('Fallback')).toBeInTheDocument();
@@ -166,7 +186,7 @@ describe('DualCurrencyDisplay', () => {
           isTransactional={false}
           showEstimateIndicator={true}
           showTooltip={false}
-        />
+        />,
       );
 
       expect(screen.getByText('Estimate')).toBeInTheDocument();
@@ -182,7 +202,7 @@ describe('DualCurrencyDisplay', () => {
           isTransactional={true}
           showEstimateIndicator={true}
           showTooltip={false}
-        />
+        />,
       );
 
       expect(screen.queryByText('Estimate')).not.toBeInTheDocument();
@@ -198,7 +218,7 @@ describe('DualCurrencyDisplay', () => {
           isTransactional={false}
           showEstimateIndicator={false}
           showTooltip={false}
-        />
+        />,
       );
 
       expect(screen.queryByText('Estimate')).not.toBeInTheDocument();
@@ -213,7 +233,7 @@ describe('DualCurrencyDisplay', () => {
           isTransactional={false}
           showEstimateIndicator={true}
           showTooltip={false}
-        />
+        />,
       );
 
       expect(screen.queryByText('Estimate')).not.toBeInTheDocument();
@@ -229,7 +249,7 @@ describe('DualCurrencyDisplay', () => {
           destinationCountry="IN"
           warning="Exchange rate may be outdated"
           showTooltip={false}
-        />
+        />,
       );
 
       expect(screen.getByTestId('alert-triangle-icon')).toBeInTheDocument();
@@ -243,7 +263,7 @@ describe('DualCurrencyDisplay', () => {
           destinationCountry="IN"
           exchangeRateSource="fallback"
           showTooltip={false}
-        />
+        />,
       );
 
       expect(screen.getByTestId('alert-triangle-icon')).toBeInTheDocument();
@@ -258,7 +278,7 @@ describe('DualCurrencyDisplay', () => {
           originCountry="US"
           destinationCountry="US"
           showTooltip={true}
-        />
+        />,
       );
 
       expect(screen.getByTestId('info-icon')).toBeInTheDocument();
@@ -271,7 +291,7 @@ describe('DualCurrencyDisplay', () => {
           originCountry="US"
           destinationCountry="IN"
           showTooltip={false}
-        />
+        />,
       );
 
       // Should still show the badges but not wrapped in tooltip
@@ -288,7 +308,7 @@ describe('DualCurrencyDisplay', () => {
           destinationCountry="IN"
           className="custom-test-class"
           showTooltip={false}
-        />
+        />,
       );
 
       expect(container.firstChild).toHaveClass('custom-test-class');
@@ -304,7 +324,7 @@ describe('SimpleDualCurrency', () => {
         originCountry="US"
         destinationCountry="IN"
         exchangeRate={80}
-      />
+      />,
     );
 
     expect(screen.getByText('$150.00 / ₹12000.00')).toBeInTheDocument();
@@ -317,7 +337,7 @@ describe('SimpleDualCurrency', () => {
         originCountry="US"
         destinationCountry="IN"
         className="simple-custom-class"
-      />
+      />,
     );
 
     expect(container.firstChild).toHaveClass('simple-custom-class');
@@ -326,37 +346,20 @@ describe('SimpleDualCurrency', () => {
 
 describe('CurrencyInputLabel', () => {
   it('should render label with currency symbol', () => {
-    render(
-      <CurrencyInputLabel
-        countryCode="US"
-        label="Amount"
-      />
-    );
+    render(<CurrencyInputLabel countryCode="US" label="Amount" />);
 
     expect(screen.getByText('Amount ($)')).toBeInTheDocument();
   });
 
   it('should show required asterisk when required is true', () => {
-    render(
-      <CurrencyInputLabel
-        countryCode="IN"
-        label="Total Price"
-        required={true}
-      />
-    );
+    render(<CurrencyInputLabel countryCode="IN" label="Total Price" required={true} />);
 
     expect(screen.getByText('Total Price (₹)')).toBeInTheDocument();
     expect(screen.getByText('*')).toBeInTheDocument();
   });
 
   it('should not show required asterisk when required is false', () => {
-    render(
-      <CurrencyInputLabel
-        countryCode="GB"
-        label="Optional Amount"
-        required={false}
-      />
-    );
+    render(<CurrencyInputLabel countryCode="GB" label="Optional Amount" required={false} />);
 
     expect(screen.getByText('Optional Amount (£)')).toBeInTheDocument();
     expect(screen.queryByText('*')).not.toBeInTheDocument();
@@ -364,39 +367,20 @@ describe('CurrencyInputLabel', () => {
 
   it('should apply custom className', () => {
     const { container } = render(
-      <CurrencyInputLabel
-        countryCode="NP"
-        label="Price"
-        className="label-custom-class"
-      />
+      <CurrencyInputLabel countryCode="NP" label="Price" className="label-custom-class" />,
     );
 
     expect(container.firstChild).toHaveClass('label-custom-class');
   });
 
   it('should handle different country codes with correct symbols', () => {
-    const { rerender } = render(
-      <CurrencyInputLabel
-        countryCode="US"
-        label="USD Price"
-      />
-    );
+    const { rerender } = render(<CurrencyInputLabel countryCode="US" label="USD Price" />);
     expect(screen.getByText('USD Price ($)')).toBeInTheDocument();
 
-    rerender(
-      <CurrencyInputLabel
-        countryCode="IN"
-        label="INR Price"
-      />
-    );
+    rerender(<CurrencyInputLabel countryCode="IN" label="INR Price" />);
     expect(screen.getByText('INR Price (₹)')).toBeInTheDocument();
 
-    rerender(
-      <CurrencyInputLabel
-        countryCode="NP"
-        label="NPR Price"
-      />
-    );
+    rerender(<CurrencyInputLabel countryCode="NP" label="NPR Price" />);
     expect(screen.getByText('NPR Price (₨)')).toBeInTheDocument();
   });
 });

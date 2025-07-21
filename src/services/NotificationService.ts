@@ -64,9 +64,9 @@ export class NotificationService {
           customer_email: this.getCustomerEmail(quote),
           message_content: message.content,
           admin_quote_url: `${window.location.origin}/admin/quotes/${quote.id}`,
-          sender_name: message.sender_name || 'Customer'
+          sender_name: message.sender_name || 'Customer',
         },
-        priority: message.priority as any || 'normal'
+        priority: (message.priority as any) || 'normal',
       };
 
       await this.sendEmailNotification(emailData);
@@ -79,7 +79,7 @@ export class NotificationService {
         priority: message.priority || 'normal',
         subject: `New customer message - Quote #${quote.display_id || quote.id}`,
         content: `Customer ${this.getCustomerName(quote)} sent: "${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}"`,
-        sender_id: message.sender_id
+        sender_id: message.sender_id,
       });
 
       console.log('✅ Admin notification sent for new customer message');
@@ -108,9 +108,9 @@ export class NotificationService {
           customer_name: this.getCustomerName(quote),
           sender_name: message.sender_name || 'iwishBag Team',
           message_content: message.content,
-          quote_url: `${window.location.origin}/quotes/${quote.id}`
+          quote_url: `${window.location.origin}/quotes/${quote.id}`,
         },
-        priority: message.priority as any || 'normal'
+        priority: (message.priority as any) || 'normal',
       };
 
       await this.sendEmailNotification(emailData);
@@ -141,9 +141,9 @@ export class NotificationService {
           customer_email: this.getCustomerEmail(quote),
           message_content: message.content,
           attachment_name: message.attachment_file_name || 'Payment proof',
-          admin_quote_url: `${window.location.origin}/admin/quotes/${quote.id}`
+          admin_quote_url: `${window.location.origin}/admin/quotes/${quote.id}`,
         },
-        priority: 'high'
+        priority: 'high',
       };
 
       await this.sendEmailNotification(emailData);
@@ -156,7 +156,7 @@ export class NotificationService {
         priority: 'high',
         subject: `Payment proof submitted - Quote #${quote.display_id || quote.id}`,
         content: `Customer ${this.getCustomerName(quote)} submitted payment proof. Requires verification.`,
-        sender_id: message.sender_id
+        sender_id: message.sender_id,
       });
 
       console.log('✅ Admin notification sent for payment proof upload');
@@ -168,7 +168,11 @@ export class NotificationService {
   /**
    * Send quote status update notification
    */
-  async notifyQuoteStatusUpdate(quote: UnifiedQuote, oldStatus: string, newStatus: string): Promise<void> {
+  async notifyQuoteStatusUpdate(
+    quote: UnifiedQuote,
+    oldStatus: string,
+    newStatus: string,
+  ): Promise<void> {
     try {
       const customerEmail = this.getCustomerEmail(quote);
       if (!customerEmail || customerEmail === 'No email provided') {
@@ -201,7 +205,7 @@ export class NotificationService {
       console.log('📧 Email notification prepared:', {
         to: data.to,
         subject: data.subject,
-        template: data.templateName
+        template: data.templateName,
       });
 
       // This will be replaced with direct Resend API calls in Phase 3
@@ -224,20 +228,18 @@ export class NotificationService {
     sender_id: string;
   }): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          quote_id: data.quote_id,
-          sender_id: data.sender_id,
-          subject: data.subject,
-          content: data.content,
-          message_type: data.message_type,
-          thread_type: data.thread_type,
-          priority: data.priority,
-          is_internal: true,
-          sender_name: 'System',
-          sender_email: 'system@iwishbag.com'
-        });
+      const { error } = await supabase.from('messages').insert({
+        quote_id: data.quote_id,
+        sender_id: data.sender_id,
+        subject: data.subject,
+        content: data.content,
+        message_type: data.message_type,
+        thread_type: data.thread_type,
+        priority: data.priority,
+        is_internal: true,
+        sender_name: 'System',
+        sender_email: 'system@iwishbag.com',
+      });
 
       if (error) {
         console.error('❌ Failed to create internal notification:', error);
@@ -268,11 +270,12 @@ export class NotificationService {
         return [];
       }
 
-      const adminUserIds = adminRoles.map(role => role.user_id);
+      const adminUserIds = adminRoles.map((role) => role.user_id);
 
       // Get emails from auth.users table using RPC function
-      const { data: adminEmails, error: emailsError } = await supabase
-        .rpc('get_admin_emails', { admin_user_ids: adminUserIds });
+      const { data: adminEmails, error: emailsError } = await supabase.rpc('get_admin_emails', {
+        admin_user_ids: adminUserIds,
+      });
 
       if (emailsError) {
         console.error('❌ Failed to fetch admin emails via RPC:', emailsError);
@@ -306,11 +309,10 @@ export class NotificationService {
    */
   async getUnreadMessageCount(userId: string, quoteId?: string): Promise<number> {
     try {
-      const { data, error } = await supabase
-        .rpc('get_unread_message_count', {
-          p_quote_id: quoteId || null,
-          p_user_id: userId
-        });
+      const { data, error } = await supabase.rpc('get_unread_message_count', {
+        p_quote_id: quoteId || null,
+        p_user_id: userId,
+      });
 
       if (error) {
         console.error('❌ Failed to get unread count:', error);
@@ -329,10 +331,9 @@ export class NotificationService {
    */
   async markMessagesAsRead(messageIds: string[]): Promise<number> {
     try {
-      const { data, error } = await supabase
-        .rpc('mark_messages_as_read', {
-          p_message_ids: messageIds
-        });
+      const { data, error } = await supabase.rpc('mark_messages_as_read', {
+        p_message_ids: messageIds,
+      });
 
       if (error) {
         console.error('❌ Failed to mark messages as read:', error);
@@ -358,9 +359,9 @@ export class NotificationService {
           event: '*',
           schema: 'public',
           table: 'messages',
-          filter: `quote_id=eq.${quoteId}`
+          filter: `quote_id=eq.${quoteId}`,
         },
-        callback
+        callback,
       )
       .subscribe();
 

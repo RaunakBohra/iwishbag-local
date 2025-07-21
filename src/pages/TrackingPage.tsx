@@ -250,12 +250,15 @@ export const TrackingPage: React.FC = () => {
                         <div>
                           <p className="text-sm text-gray-600">Estimated Delivery</p>
                           <p className="font-semibold text-gray-900">
-                            {new Date(quote?.estimated_delivery_date || '').toLocaleDateString('en-US', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })}
+                            {new Date(quote?.estimated_delivery_date || '').toLocaleDateString(
+                              'en-US',
+                              {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              },
+                            )}
                           </p>
                         </div>
                       </div>
@@ -290,7 +293,10 @@ export const TrackingPage: React.FC = () => {
                         <Button asChild variant="outline" className="w-full">
                           <a
                             href={
-                              getCarrierTrackingLink(quote?.shipping_carrier, quote?.tracking_number)!
+                              getCarrierTrackingLink(
+                                quote?.shipping_carrier,
+                                quote?.tracking_number,
+                              )!
                             }
                             target="_blank"
                             rel="noopener noreferrer"
@@ -436,7 +442,11 @@ export const TrackingPage: React.FC = () => {
                   <Separator />
                   <div className="flex justify-between text-sm">
                     <span>Created</span>
-                    <span>{quote?.created_at ? new Date(quote.created_at).toLocaleDateString() : 'Unknown'}</span>
+                    <span>
+                      {quote?.created_at
+                        ? new Date(quote.created_at).toLocaleDateString()
+                        : 'Unknown'}
+                    </span>
                   </div>
                 </CardContent>
               </Card>

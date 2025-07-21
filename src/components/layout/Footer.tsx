@@ -52,7 +52,7 @@ const Footer = () => {
               Blog
             </Link>
             <Link to="/contact" className="text-gray-600 hover:text-teal-600 transition-colors">
-              Contact Us
+              Help Center
             </Link>
           </div>
           {/* Services */}
@@ -72,9 +72,15 @@ const Footer = () => {
             </Link>
             <Link
               to="/cost-estimator"
-              className="text-gray-600 hover:text-teal-600 transition-colors"
+              className="text-gray-600 hover:text-teal-600 transition-colors mb-0.5"
             >
               Cost Estimator
+            </Link>
+            <Link
+              to="/support/my-tickets"
+              className="text-gray-600 hover:text-teal-600 transition-colors"
+            >
+              Get Help
             </Link>
           </div>
           {/* Legal */}
