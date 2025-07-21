@@ -46,11 +46,13 @@ import type {
 } from '@/types/unified-quote';
 
 // Smart sub-components
-import { SmartShippingOptions } from './smart-components/SmartShippingOptions';
-import { SmartCalculationBreakdown } from './smart-components/SmartCalculationBreakdown';
 import { SmartSuggestionCards } from './smart-components/SmartSuggestionCards';
 import { SmartCustomerInfo } from './smart-components/SmartCustomerInfo';
-import { SmartStatusManager } from './smart-components/SmartStatusManager';
+import { CompactCustomerInfo } from './smart-components/CompactCustomerInfo';
+import { CompactStatusManager } from './smart-components/CompactStatusManager';
+import { CompactShippingOptions } from './smart-components/CompactShippingOptions';
+import { CompactPaymentManager } from './smart-components/CompactPaymentManager';
+import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
 import { QuoteDetailForm } from './QuoteDetailForm';
 import { Form } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
@@ -796,7 +798,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
               Quote {quote.display_id}
             </h1>
             <div className="flex items-center space-x-4 mt-1">
-              <SmartStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
+              <CompactStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
               <Badge variant="outline" className="flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1" />
                 {optimizationScore.toFixed(0)}% Optimized
@@ -840,199 +842,211 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
         />
       )}
 
-      {/* Smart Adaptive Layout */}
+      {/* Professional E-commerce Admin Layout */}
       {isEditMode ? (
-        /* Edit Mode: Keep tabs for organization */
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="customer">Customer</TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-              {/* Left Column - Edit Form (60%) */}
-              <div className="space-y-6 xl:col-span-3">
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
-                    {/* Product Details Section - TOP PRIORITY */}
-                    <Card>
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle className="flex items-center">
-                              <Package className="w-5 h-5 mr-2 text-blue-600" />
-                              Product Details
-                            </CardTitle>
-                            <CardDescription>
-                              Edit product information: name, URL, price, weight, and quantity
-                            </CardDescription>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={addNewItem}
-                            className="flex items-center"
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add Item
-                          </Button>
+        /* Edit Mode: Professional single-page layout inspired by Shopify Admin */
+        <div className="space-y-6">
+          {/* Main Content Area */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Primary Edit Form (2/3 width) */}
+            <div className="lg:col-span-2 space-y-6">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
+                  {/* Products Section */}
+                  <Card className="shadow-sm border-gray-200">
+                    <CardHeader className="bg-gray-50 border-b border-gray-200 py-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg font-semibold text-gray-900">
+                            Products
+                          </CardTitle>
+                          <CardDescription className="text-sm text-gray-600 mt-1">
+                            Manage product details, pricing, and quantities
+                          </CardDescription>
                         </div>
-                      </CardHeader>
-                      <CardContent className="space-y-6">
-                        {form.watch('items')?.map((item, index) => {
-                          const smartData = quote?.items[index]?.smart_data;
-                          const weightConfidence = smartData?.weight_confidence || 0;
-                          const category = smartData?.category_detected;
-                          const optimizationHints = smartData?.optimization_hints || [];
-                          const customsSuggestions = smartData?.customs_suggestions || [];
-                          
-                          const getWeightConfidenceBadge = (confidence: number) => {
-                            if (confidence >= 0.8) return { variant: 'default' as const, text: 'High', color: 'text-green-600' };
-                            if (confidence >= 0.6) return { variant: 'secondary' as const, text: 'Medium', color: 'text-yellow-600' };
-                            return { variant: 'destructive' as const, text: 'Low', color: 'text-red-600' };
-                          };
-                          
-                          return (
-                            <div key={item.id || index} className="p-4 border border-blue-200 rounded-lg bg-blue-50/30 space-y-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <h4 className="font-medium text-blue-900 flex items-center space-x-2">
-                                <span>Item {index + 1}</span>
-                                {category && (
-                                  <div className="flex items-center space-x-1">
-                                    <CheckCircle className="w-3 h-3 text-green-500" />
-                                    <Badge variant="outline" className="text-xs">
-                                      {category}
-                                    </Badge>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addNewItem}
+                          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Product
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      {form.watch('items')?.map((item, index) => {
+                        const smartData = quote?.items[index]?.smart_data;
+                        const weightConfidence = smartData?.weight_confidence || 0;
+                        const category = smartData?.category_detected;
+                        const optimizationHints = smartData?.optimization_hints || [];
+                        const customsSuggestions = smartData?.customs_suggestions || [];
+                        
+                        const getWeightConfidenceBadge = (confidence: number) => {
+                          if (confidence >= 0.8) return { variant: 'default' as const, text: 'High', color: 'text-green-600' };
+                          if (confidence >= 0.6) return { variant: 'secondary' as const, text: 'Medium', color: 'text-yellow-600' };
+                          return { variant: 'destructive' as const, text: 'Low', color: 'text-red-600' };
+                        };
+                        
+                        return (
+                          <div key={item.id || index} className={`border-b border-gray-200 ${index === 0 ? 'border-t' : ''}`}>
+                            <div className="p-6 space-y-4">
+                              {/* Product Header */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div className="flex-shrink-0">
+                                    <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                                      <Package className="w-4 h-4 text-gray-600" />
+                                    </div>
                                   </div>
-                                )}
-                              </h4>
-                              <div className="flex items-center space-x-2">
-                                {weightConfidence > 0 && (
-                                  <Badge {...getWeightConfidenceBadge(weightConfidence)} className="text-xs">
-                                    <Scale className="w-3 h-3 mr-1" />
-                                    {getWeightConfidenceBadge(weightConfidence).text}
-                                  </Badge>
-                                )}
-                                <Badge variant="outline" className="text-xs">
-                                  {item.product_name || 'Unnamed Product'}
-                                </Badge>
-                                {form.watch('items')?.length > 1 && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeItem(index)}
-                                    className="text-red-600 hover:text-red-700 p-1 h-6 w-6"
-                                    title="Remove item"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Product Name and URL - Full Width */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-sm font-medium text-gray-700">Product Name</label>
-                                <input
-                                  type="text"
-                                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                  value={item.product_name || ''}
-                                  onChange={(e) => {
-                                    console.log('📝 Product name changed:', { index, value: e.target.value });
-                                    const items = form.getValues('items') || [];
-                                    items[index] = { ...items[index], product_name: e.target.value };
-                                    form.setValue('items', items);
-                                    
-                                    // Clear existing timeout for this item
-                                    const timeoutKey = index.toString();
-                                    if (estimationTimeouts[timeoutKey]) {
-                                      console.log('🕐 Clearing existing timeout for:', timeoutKey);
-                                      clearTimeout(estimationTimeouts[timeoutKey]);
-                                    }
-                                    
-                                    // Trigger weight estimation after a delay
-                                    console.log('⏲️ Setting timeout for weight estimation...');
-                                    const timeoutId = setTimeout(() => {
-                                      console.log('🎯 Timeout triggered, calling estimateItemWeight');
-                                      estimateItemWeight(index, e.target.value, items[index].product_url);
-                                    }, 800);
-                                    
-                                    setEstimationTimeouts(prev => ({ ...prev, [timeoutKey]: timeoutId }));
-                                  }}
-                                  placeholder="Enter product name"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-gray-700">Product URL</label>
-                                <input
-                                  type="text"
-                                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                  value={item.product_url || ''}
-                                  onChange={(e) => {
-                                    const items = form.getValues('items') || [];
-                                    items[index] = { ...items[index], product_url: e.target.value };
-                                    form.setValue('items', items);
-                                  }}
-                                  placeholder="https://amazon.com/..."
-                                />
-                              </div>
-                            </div>
-                            
-                            {/* Price, Weight, Quantity - Compact Row */}
-                            <div className="grid grid-cols-3 gap-4">
-                              <div>
-                                <label className="text-sm font-medium text-gray-700">Price (USD)</label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                  value={item.item_price || 0}
-                                  onChange={(e) => {
-                                    const items = form.getValues('items') || [];
-                                    items[index] = { ...items[index], item_price: parseFloat(e.target.value) || 0 };
-                                    form.setValue('items', items);
-                                  }}
-                                />
+                                  <div>
+                                    <h4 className="text-sm font-medium text-gray-900">
+                                      Product {index + 1}
+                                    </h4>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                      {category && (
+                                        <Badge variant="outline" className="text-xs text-gray-600 border-gray-300">
+                                          {category}
+                                        </Badge>
+                                      )}
+                                      {weightConfidence > 0 && (
+                                        <Badge {...getWeightConfidenceBadge(weightConfidence)} className="text-xs">
+                                          AI: {getWeightConfidenceBadge(weightConfidence).text}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm text-gray-500">
+                                    ${(Number(item.item_price) * Number(item.quantity)).toFixed(2)} total
+                                  </span>
+                                  {form.watch('items')?.length > 1 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removeItem(index)}
+                                      className="text-gray-400 hover:text-red-600 p-1 h-8 w-8"
+                                      title="Remove product"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                               
-                              {/* Smart Weight Field */}
-                              <div className="relative">
-                                <label className="text-sm font-medium text-gray-700 flex items-center space-x-1">
-                                  <span>Weight (kg)</span>
-                                  {isEstimating[index.toString()] && (
-                                    <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                  )}
-                                </label>
-                                <div className="relative">
+                              {/* Product Details Form */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Product Name *
+                                  </label>
                                   <input
-                                    type="number"
-                                    step="0.001"
-                                    min="0"
-                                    className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${
-                                      weightEstimations[index.toString()] 
-                                        ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500 pr-12' 
-                                        : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                                    }`}
-                                    value={item.item_weight || 0}
+                                    type="text"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    value={item.product_name || ''}
+                                    onChange={(e) => {
+                                      console.log('📝 Product name changed:', { index, value: e.target.value });
+                                      const items = form.getValues('items') || [];
+                                      items[index] = { ...items[index], product_name: e.target.value };
+                                      form.setValue('items', items);
+                                      
+                                      // Clear existing timeout for this item
+                                      const timeoutKey = index.toString();
+                                      if (estimationTimeouts[timeoutKey]) {
+                                        console.log('🕐 Clearing existing timeout for:', timeoutKey);
+                                        clearTimeout(estimationTimeouts[timeoutKey]);
+                                      }
+                                      
+                                      // Trigger weight estimation after a delay
+                                      console.log('⏲️ Setting timeout for weight estimation...');
+                                      const timeoutId = setTimeout(() => {
+                                        console.log('🎯 Timeout triggered, calling estimateItemWeight');
+                                        estimateItemWeight(index, e.target.value, items[index].product_url);
+                                      }, 800);
+                                      
+                                      setEstimationTimeouts(prev => ({ ...prev, [timeoutKey]: timeoutId }));
+                                    }}
+                                    placeholder="Enter product name"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Product URL
+                                  </label>
+                                  <input
+                                    type="url"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    value={item.product_url || ''}
                                     onChange={(e) => {
                                       const items = form.getValues('items') || [];
-                                      items[index] = { ...items[index], item_weight: parseFloat(e.target.value) || 0 };
+                                      items[index] = { ...items[index], product_url: e.target.value };
                                       form.setValue('items', items);
                                     }}
+                                    placeholder="https://amazon.com/product..."
                                   />
-                                  
-                                  {/* Inline AI Suggestion Button */}
-                                  {weightEstimations[index.toString()] && (
-                                    <div className="absolute inset-y-0 right-0 flex items-center">
+                                </div>
+                              </div>
+                              
+                              {/* Pricing and Specifications */}
+                              <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Unit Price *
+                                  </label>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                      value={item.item_price || ''}
+                                      onChange={(e) => {
+                                        const items = form.getValues('items') || [];
+                                        items[index] = { ...items[index], item_price: parseFloat(e.target.value) || 0 };
+                                        form.setValue('items', items);
+                                      }}
+                                      placeholder="0.00"
+                                    />
+                                  </div>
+                                </div>
+                                
+                                {/* Smart Weight Field */}
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                    Weight (kg)
+                                    {isEstimating[index.toString()] && (
+                                      <div className="ml-2 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                    )}
+                                  </label>
+                                  <div className="relative">
+                                    <input
+                                      type="number"
+                                      step="0.001"
+                                      min="0"
+                                      className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 ${
+                                        weightEstimations[index.toString()] 
+                                          ? 'border-blue-300 focus:ring-blue-500 focus:border-blue-500 pr-16' 
+                                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                                      }`}
+                                      value={item.item_weight || ''}
+                                      onChange={(e) => {
+                                        const items = form.getValues('items') || [];
+                                        items[index] = { ...items[index], item_weight: parseFloat(e.target.value) || 0 };
+                                        form.setValue('items', items);
+                                      }}
+                                      placeholder="0.000"
+                                    />
+                                    
+                                    {/* AI Suggestion Overlay */}
+                                    {weightEstimations[index.toString()] && (
                                       <button
                                         type="button"
-                                        className="mr-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="absolute right-1 top-1/2 -translate-y-1/2 px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                         onClick={(e) => {
                                           e.preventDefault();
                                           e.stopPropagation();
@@ -1040,114 +1054,88 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                                         }}
                                         title={`AI suggests: ${weightEstimations[index.toString()].estimated_weight} kg (${(weightEstimations[index.toString()].confidence * 100).toFixed(0)}% confident)`}
                                       >
-                                        🧠 {weightEstimations[index.toString()].estimated_weight} 
-                                        <span className="ml-1 text-blue-600 font-medium">
-                                          ({(weightEstimations[index.toString()].confidence * 100).toFixed(0)}%)
-                                        </span>
+                                        AI: {weightEstimations[index.toString()].estimated_weight}
                                       </button>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Quantity *
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    value={item.quantity || 1}
+                                    onChange={(e) => {
+                                      const items = form.getValues('items') || [];
+                                      items[index] = { ...items[index], quantity: parseInt(e.target.value) || 1 };
+                                      form.setValue('items', items);
+                                    }}
+                                    placeholder="1"
+                                  />
+                                </div>
+                              </div>
+                            
+                              {/* AI Insights */}
+                              {(optimizationHints.length > 0 || customsSuggestions.length > 0) && (
+                                <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
+                                  <div className="flex items-center text-sm font-medium text-gray-800 mb-3">
+                                    <Lightbulb className="w-4 h-4 mr-2 text-amber-500" />
+                                    AI Insights
+                                  </div>
+                                  
+                                  {optimizationHints.length > 0 && (
+                                    <div className="mb-3">
+                                      <span className="text-sm font-medium text-gray-700">Optimization Tips:</span>
+                                      <ul className="mt-1 space-y-1 text-sm text-gray-600">
+                                        {optimizationHints.map((hint, hintIndex) => (
+                                          <li key={hintIndex} className="flex items-start">
+                                            <span className="inline-block w-1 h-1 bg-gray-400 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                                            {hint}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  
+                                  {customsSuggestions.length > 0 && (
+                                    <div>
+                                      <span className="text-sm font-medium text-gray-700">Customs Suggestions:</span>
+                                      <div className="mt-2 flex flex-wrap gap-2">
+                                        {customsSuggestions.map((suggestion, suggestionIndex) => (
+                                          <span 
+                                            key={suggestionIndex} 
+                                            className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                                          >
+                                            {suggestion}
+                                          </span>
+                                        ))}
+                                      </div>
                                     </div>
                                   )}
                                 </div>
-
-                              </div>
-                              
-                              <div>
-                                <label className="text-sm font-medium text-gray-700">Quantity</label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                  value={item.quantity || 1}
-                                  onChange={(e) => {
-                                    const items = form.getValues('items') || [];
-                                    items[index] = { ...items[index], quantity: parseInt(e.target.value) || 1 };
-                                    form.setValue('items', items);
-                                  }}
-                                />
-                              </div>
+                              )}
                             </div>
-                            
-                            {/* Smart Insights Section */}
-                            {(optimizationHints.length > 0 || customsSuggestions.length > 0) && (
-                              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded space-y-2">
-                                <div className="flex items-center text-sm font-medium text-blue-800">
-                                  <Lightbulb className="w-3 h-3 mr-1" />
-                                  Smart Insights
-                                </div>
-                                
-                                {optimizationHints.length > 0 && (
-                                  <div className="text-xs text-blue-700">
-                                    <span className="font-medium">Optimization Tips:</span>
-                                    <ul className="mt-1 space-y-1 list-disc list-inside">
-                                      {optimizationHints.map((hint, hintIndex) => (
-                                        <li key={hintIndex}>{hint}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-                                
-                                {customsSuggestions.length > 0 && (
-                                  <div className="text-xs text-blue-700">
-                                    <span className="font-medium">Customs Suggestions:</span>
-                                    <div className="mt-1 flex flex-wrap gap-1">
-                                      {customsSuggestions.map((suggestion, suggestionIndex) => (
-                                        <Badge key={suggestionIndex} variant="outline" className="text-xs">
-                                          {suggestion}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
                           </div>
-                          );
-                        })}
+                        );
+                      })}
                       </CardContent>
                     </Card>
 
-                    {/* Smart Recommendations Panel */}
-                    {quote?.items && quote.items.length > 0 && (
-                      <Card className="border-blue-200 bg-blue-50">
-                        <CardContent className="p-4">
-                          <div className="flex items-center mb-3">
-                            <Lightbulb className="w-4 h-4 text-blue-600 mr-2" />
-                            <span className="font-medium text-blue-800">Smart Recommendations</span>
-                          </div>
-                          <div className="space-y-2 text-sm">
-                            {quote.items.some(item => (item.smart_data?.weight_confidence || 0) < 0.7) && (
-                              <div className="flex items-center text-blue-700">
-                                <AlertTriangle className="w-3 h-3 mr-2" />
-                                Consider verifying weights for items with low confidence scores
-                              </div>
-                            )}
-                            {quote.items.some(item => Number(item.weight_kg || 0) < 0.1) && (
-                              <div className="flex items-center text-blue-700">
-                                <Scale className="w-3 h-3 mr-2" />
-                                Some items have very low weights - this may affect shipping calculations
-                              </div>
-                            )}
-                            <div className="flex items-center text-blue-700">
-                              <CheckCircle className="w-3 h-3 mr-2" />
-                              All items have been categorized for optimal customs processing
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Quote-Level Costs Section - BELOW PRODUCTS */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <DollarSign className="w-5 h-5 mr-2 text-green-600" />
-                          Shipping & Cost Details
-                        </CardTitle>
-                        <CardDescription>
-                          Configure quote-level pricing: shipping, customs, taxes, and fees
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
+                  {/* Shipping & Costs Section */}
+                  <Card className="shadow-sm border-gray-200">
+                    <CardHeader className="bg-gray-50 border-b border-gray-200 py-4">
+                      <CardTitle className="text-lg font-semibold text-gray-900">
+                        Shipping & Costs
+                      </CardTitle>
+                      <CardDescription className="text-sm text-gray-600 mt-1">
+                        Configure shipping routes, customs, taxes, and additional fees
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-6">
                         <QuoteDetailForm 
                           form={form} 
                           detectedCustomsPercentage={customsTierInfo?.customs_percentage}
@@ -1159,11 +1147,65 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                           onCalculateSmartCustoms={calculateSmartCustoms}
                           isCalculatingCustoms={isCalculatingCustoms}
                           shippingOptions={shippingOptions}
-                          onSelectShippingOption={handleShippingOptionSelect}
+                          onShippingOptionSelect={handleShippingOptionSelect}
                           onShowShippingDetails={() => setShowShippingDetails(true)}
                         />
                       </CardContent>
                     </Card>
+
+                  {/* Shipping Options Section */}
+                  {shippingOptions.length > 0 && (
+                    <Card className="shadow-sm border-gray-200">
+                      <CardHeader className="bg-gray-50 border-b border-gray-200 py-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
+                              <Truck className="w-5 h-5 mr-2 text-gray-600" />
+                              Shipping Options
+                            </CardTitle>
+                            <CardDescription className="text-sm text-gray-600 mt-1">
+                              {shippingOptions.length} shipping methods available
+                            </CardDescription>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowShippingDetails(!showShippingDetails)}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            {showShippingDetails ? (
+                              <ChevronUp className="w-4 h-4" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      {showShippingDetails && (
+                        <CardContent className="p-6">
+                          <CompactShippingOptions
+                            quote={liveQuote || quote}
+                            shippingOptions={shippingOptions}
+                            recommendations={shippingRecommendations}
+                            onSelectOption={handleShippingOptionSelect}
+                            showAllOptions={showAllShippingOptions}
+                            onToggleShowAll={setShowAllShippingOptions}
+                          />
+                        </CardContent>
+                      )}
+                      {!showShippingDetails && (
+                        <CardContent className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                          <div className="text-sm text-gray-600">
+                            Selected: {shippingOptions.find(opt => 
+                              opt.id === (liveQuote || quote)?.operational_data?.shipping?.selected_option
+                            )?.carrier} {shippingOptions.find(opt => 
+                              opt.id === (liveQuote || quote)?.operational_data?.shipping?.selected_option
+                            )?.name || 'None selected'}
+                          </div>
+                        </CardContent>
+                      )}
+                    </Card>
+                  )}
 
                     {/* Action Buttons */}
                     <div className="flex items-center justify-end space-x-3 pt-4">
@@ -1213,165 +1255,134 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                 </Form>
               </div>
 
-              {/* Right Column - Live Breakdown (40%) */}
-              <div className="xl:col-span-2 space-y-6">
-                {/* Smart Calculation Breakdown - Always Visible */}
-                <SmartCalculationBreakdown
-                  quote={liveQuote || quote}
-                  shippingOptions={shippingOptions}
-                  isCalculating={isCalculating}
-                />
+            {/* Right Sidebar - Live Calculations & Summary (1/3 width) */}
+            <div className="space-y-6">
+              {/* Quote Summary */}
+              <Card className="shadow-sm border-gray-200">
+                <CardHeader className="bg-gray-50 border-b border-gray-200 py-4">
+                  <CardTitle className="text-lg font-semibold text-gray-900">
+                    Quote Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Total Value</span>
+                      <span className="text-lg font-semibold text-gray-900">
+                        ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Items</span>
+                      <span className="font-medium">{metrics?.totalItems || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Total Weight</span>
+                      <span className="font-medium">{metrics?.totalWeight || 0} kg</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Status</span>
+                      <Badge variant="outline" className="text-xs">
+                        {quote.status || 'draft'}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Smart Insights - Always Visible */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Zap className="w-5 h-5 mr-2 text-yellow-500" />
-                      Smart Insights
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm text-gray-600">Weight Confidence</div>
-                        <div className="text-xl font-semibold">
-                          {metrics?.avgWeightConfidence}%
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-gray-600">Shipping Cost</div>
-                        <div className="text-xl font-semibold">
-                          {metrics?.shippingPercentage}%
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-gray-600">Customs Duty</div>
-                        <div className="text-xl font-semibold flex items-center">
-                          {metrics?.customsPercentage}%
-                          {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              Smart
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-gray-600">Options Available</div>
-                        <div className="text-xl font-semibold">
-                          {shippingOptions.length}
-                        </div>
+              {/* Live Cost Breakdown */}
+              <CompactCalculationBreakdown
+                quote={liveQuote || quote}
+                shippingOptions={shippingOptions}
+                isCalculating={isCalculating}
+              />
+
+              {/* AI Insights Card */}
+              <Card className="shadow-sm border-gray-200">
+                <CardHeader className="bg-gray-50 border-b border-gray-200 py-4">
+                  <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
+                    <Lightbulb className="w-5 h-5 mr-2 text-amber-500" />
+                    AI Insights
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide">Weight Confidence</div>
+                      <div className="text-lg font-semibold text-gray-900 mt-1">
+                        {metrics?.avgWeightConfidence}%
                       </div>
                     </div>
-
-                    {/* Smart Customs Tier Information */}
-                    {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
-                      <div className="pt-4 border-t">
-                        <div className="text-sm font-medium text-gray-900 mb-2">
-                          Smart Customs Tier Applied
-                        </div>
-                        <div className="flex items-center text-sm text-blue-600">
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.tier_name || 'Default Tier'}
-                          {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.fallback_used && (
-                            <Badge variant="secondary" className="ml-2 text-xs">
-                              Fallback
-                            </Badge>
-                          )}
-                        </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide">Shipping Cost</div>
+                      <div className="text-lg font-semibold text-gray-900 mt-1">
+                        {metrics?.shippingPercentage}%
                       </div>
-                    )}
-
-                    {shippingRecommendations.length > 0 && (
-                      <div className="pt-4 border-t">
-                        <div className="text-sm font-medium text-gray-900 mb-2">
-                          Top Recommendation
-                        </div>
-                        <div className="flex items-center text-sm text-green-600">
-                          <Lightbulb className="w-4 h-4 mr-1" />
-                          {shippingRecommendations[0].reason === 'cost_savings' && 
-                            `Save $${shippingRecommendations[0].savings_usd.toFixed(2)} with slower shipping`
-                          }
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Collapsible Shipping Options */}
-                {shippingOptions.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center text-base">
-                          <Truck className="w-4 h-4 mr-2 text-blue-600" />
-                          Shipping Options
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            {shippingOptions.length} available
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide">Customs Rate</div>
+                      <div className="text-lg font-semibold text-gray-900 mt-1 flex items-center">
+                        {metrics?.customsPercentage}%
+                        {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
+                          <Badge variant="outline" className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            AI
                           </Badge>
-                        </CardTitle>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowShippingDetails(!showShippingDetails)}
-                          className="h-8 w-8 p-0"
-                        >
-                          {showShippingDetails ? (
-                            <ChevronUp className="w-4 h-4" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4" />
-                          )}
-                        </Button>
+                        )}
                       </div>
-                      {!showShippingDetails && (
-                        <div className="text-sm text-gray-600">
-                          Current: {shippingOptions.find(opt => 
-                            opt.id === (liveQuote || quote)?.operational_data?.shipping?.selected_option
-                          )?.carrier} {shippingOptions.find(opt => 
-                            opt.id === (liveQuote || quote)?.operational_data?.shipping?.selected_option
-                          )?.name || 'None selected'}
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide">Ship Options</div>
+                      <div className="text-lg font-semibold text-gray-900 mt-1">
+                        {shippingOptions.length}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AI Recommendations */}
+                  {(
+                    (liveQuote || quote)?.operational_data?.customs?.smart_tier ||
+                    shippingRecommendations.length > 0
+                  ) && (
+                    <div className="pt-4 border-t border-gray-200">
+                      {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
+                        <div className="mb-3">
+                          <div className="flex items-center text-sm text-gray-600 mb-1">
+                            <CheckCircle className="w-4 h-4 mr-1 text-green-500" />
+                            Smart customs tier applied
+                          </div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.tier_name || 'Default Tier'}
+                          </div>
                         </div>
                       )}
-                    </CardHeader>
-                    {showShippingDetails && (
-                      <CardContent className="pt-0">
-                        <SmartShippingOptions
-                          quote={liveQuote || quote}
-                          shippingOptions={shippingOptions}
-                          recommendations={shippingRecommendations}
-                          onSelectOption={handleShippingOptionSelect}
-                          showAllOptions={showAllShippingOptions}
-                          onToggleShowAll={setShowAllShippingOptions}
-                        />
-                      </CardContent>
-                    )}
-                  </Card>
-                )}
-
-                {/* Edit Mode Indicator */}
-                <Card className="border-blue-200 bg-blue-50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center text-blue-800">
-                      <Edit className="w-4 h-4 mr-2" />
-                      <span className="font-medium">Edit Mode Active</span>
+                      
+                      {shippingRecommendations.length > 0 && (
+                        <div className="flex items-start text-sm text-gray-600">
+                          <Lightbulb className="w-4 h-4 mr-1 mt-0.5 text-amber-500 flex-shrink-0" />
+                          <div>
+                            {shippingRecommendations[0].reason === 'cost_savings' && 
+                              `Save $${shippingRecommendations[0].savings_usd.toFixed(2)} with slower shipping`
+                            }
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-blue-600 mt-1">
-                      Changes are reflected in real-time. Remember to save when finished.
-                    </p>
+                  )}
                   </CardContent>
                 </Card>
-              </div>
+
+                {/* Payment Management - Also in Edit Mode */}
+                {(['sent', 'approved', 'paid', 'payment_pending', 'ordered', 'shipped', 'completed'].includes(quote.status)) && (
+                  <CompactPaymentManager
+                    quote={liveQuote || quote}
+                    onPaymentUpdate={loadQuoteData}
+                    compact={true}
+                  />
+                )}
+
             </div>
-        </TabsContent>
-
-          {/* Customer Tab */}
-          <TabsContent value="customer">
-            <SmartCustomerInfo
-              quote={liveQuote || quote}
-              onUpdateQuote={loadQuoteData}
-            />
-          </TabsContent>
-
-        </Tabs>
+          </div>
+        </div>
       ) : (
         /* View Mode: Professional e-commerce admin layout */
         <div className="space-y-6">
@@ -1417,144 +1428,161 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
               </Card>
 
               {/* Cost Breakdown - Clean Professional Style */}
-              <SmartCalculationBreakdown
+              <CompactCalculationBreakdown
                 quote={liveQuote || quote}
                 shippingOptions={shippingOptions}
                 isCalculating={isCalculating}
               />
 
-              {/* Customer Information - Horizontal Layout */}
-              <Card>
-                <CardHeader className="border-b border-gray-100">
-                  <CardTitle className="text-lg font-semibold text-gray-900">Customer Information</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <SmartCustomerInfo
-                    quote={liveQuote || quote}
-                    onUpdateQuote={loadQuoteData}
-                    compact={true}
-                  />
-                </CardContent>
-              </Card>
             </div>
 
-            {/* Right Sidebar - Status & Actions (1/3 width) */}
+            {/* Right Sidebar - Professional Priority Layout (1/3 width) */}
             <div className="space-y-6">
               
-              {/* Quote Status Card */}
-              <Card>
-                <CardHeader className="border-b border-gray-100 pb-3">
-                  <CardTitle className="text-base font-semibold text-gray-900">Quote Status</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 space-y-4">
+              {/* 1. Customer Information Card - COMPACT WORLD-CLASS DESIGN */}
+              <CompactCustomerInfo
+                quote={liveQuote || quote}
+                onUpdateQuote={loadQuoteData}
+                compact={true}
+              />
+
+              {/* 2. Quote Status & Metrics Card - COMPACT DESIGN */}
+              <Card className="shadow-sm border-gray-200">
+                <CardContent className="p-4 space-y-3">
+                  {/* Status Row */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Current Status</span>
-                    <SmartStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
+                    <span className="text-sm font-medium text-gray-600">Status</span>
+                    <CompactStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
                   </div>
                   
-                  <div className="pt-3 border-t border-gray-100">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600 mb-1">
+                  {/* Total & Metrics Grid */}
+                  <div className="grid grid-cols-3 gap-3 text-center py-3 bg-blue-50 rounded-lg">
+                    <div>
+                      <div className="text-lg font-bold text-blue-600">
                         ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
                       </div>
-                      <div className="text-sm text-gray-500">Quote Total</div>
+                      <div className="text-xs text-blue-700">Total</div>
                     </div>
-                  </div>
-                  
-                  <div className="pt-3 border-t border-gray-100 grid grid-cols-2 gap-3 text-center">
                     <div>
                       <div className="text-lg font-semibold text-gray-900">{optimizationScore.toFixed(0)}%</div>
                       <div className="text-xs text-gray-500">Optimized</div>
                     </div>
                     <div>
                       <div className="text-lg font-semibold text-gray-900">{metrics?.avgWeightConfidence}%</div>
-                      <div className="text-xs text-gray-500">Weight Accuracy</div>
+                      <div className="text-xs text-gray-500">AI Confidence</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Key Metrics Card */}
-              <Card>
-                <CardHeader className="border-b border-gray-100 pb-3">
-                  <CardTitle className="text-base font-semibold text-gray-900">Cost Breakdown</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">Shipping Cost</span>
-                    <span className="font-medium">{metrics?.shippingPercentage}% of total</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">Customs & Duties</span>
-                    <div className="flex items-center">
-                      <span className="font-medium">{metrics?.customsPercentage}% of total</span>
-                      {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
-                        <Badge variant="outline" className="ml-2 text-xs">Smart</Badge>
-                      )}
+              {/* 3. Cost Breakdown Card - ULTRA COMPACT */}
+              <Card className="shadow-sm border-gray-200">
+                <CardContent className="p-4 space-y-2">
+                  <div className="text-sm font-medium text-gray-700 mb-2">Cost Breakdown</div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Shipping</span>
+                      <span className="font-medium">{metrics?.shippingPercentage}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Customs</span>
+                      <div className="flex items-center">
+                        <span className="font-medium">{metrics?.customsPercentage}%</span>
+                        {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
+                          <Badge variant="outline" className="ml-1 text-xs h-4 px-1">AI</Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">Shipping Options</span>
+                  
+                  <div className="flex justify-between items-center text-xs pt-2 border-t border-gray-100">
+                    <span className="text-gray-600">Ship Options</span>
                     <span className="font-medium">{shippingOptions.length} available</span>
                   </div>
                   
-                  {/* Smart Customs Tier Information */}
+                  {/* Smart Customs Compact Info */}
                   {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
-                    <div className="pt-3 border-t border-gray-100">
-                      <div className="text-xs font-medium text-gray-700 mb-1">Smart Customs Applied</div>
-                      <div className="flex items-center text-xs text-blue-600">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.tier_name || 'Default Tier'}
-                        {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.fallback_used && (
-                          <Badge variant="secondary" className="ml-2 text-xs">Fallback</Badge>
-                        )}
-                      </div>
+                    <div className="flex items-center text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      <span>Smart tier: {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.tier_name || 'Default'}</span>
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Shipping Options Card */}
+              {/* 4. Shipping Options Card - COLLAPSIBLE COMPACT */}
               {shippingOptions.length > 0 && (
-                <Card>
-                  <CardHeader className="border-b border-gray-100 pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base font-semibold text-gray-900">Shipping Options</CardTitle>
-                      <Badge variant="outline" className="text-xs">{shippingOptions.length}</Badge>
-                    </div>
-                  </CardHeader>
+                <Card className="shadow-sm border-gray-200">
                   <CardContent className="p-4">
-                    <SmartShippingOptions
-                      quote={liveQuote || quote}
-                      shippingOptions={shippingOptions}
-                      recommendations={shippingRecommendations}
-                      onSelectOption={handleShippingOptionSelect}
-                      showAllOptions={false}
-                      onToggleShowAll={setShowAllShippingOptions}
-                      compact={true}
-                    />
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center text-sm font-medium text-gray-700">
+                        <Truck className="w-4 h-4 mr-2 text-gray-600" />
+                        Shipping ({shippingOptions.length})
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowShippingDetails(!showShippingDetails)}
+                        className="h-6 px-2 text-xs"
+                      >
+                        {showShippingDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </Button>
+                    </div>
+                    
+                    {showShippingDetails && (
+                      <CompactShippingOptions
+                        quote={liveQuote || quote}
+                        shippingOptions={shippingOptions}
+                        recommendations={shippingRecommendations}
+                        onSelectOption={handleShippingOptionSelect}
+                        showAllOptions={false}
+                        onToggleShowAll={setShowAllShippingOptions}
+                        compact={true}
+                      />
+                    )}
+                    
+                    {!showShippingDetails && (
+                      <div className="text-xs text-gray-600">
+                        Selected: {shippingOptions.find(opt => 
+                          opt.id === (liveQuote || quote)?.operational_data?.shipping?.selected_option
+                        )?.carrier} {shippingOptions.find(opt => 
+                          opt.id === (liveQuote || quote)?.operational_data?.shipping?.selected_option
+                        )?.name || 'None'}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
 
-              {/* Quick Actions */}
-              <Card>
-                <CardHeader className="border-b border-gray-100 pb-3">
-                  <CardTitle className="text-base font-semibold text-gray-900">Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 space-y-3">
+              {/* 5. Payment Management - NEW COMPACT COMPONENT */}
+              {(['sent', 'approved', 'paid', 'payment_pending', 'ordered', 'shipped', 'completed'].includes(quote.status)) && (
+                <CompactPaymentManager
+                  quote={liveQuote || quote}
+                  onPaymentUpdate={loadQuoteData}
+                  compact={true}
+                />
+              )}
+
+              {/* 6. Quick Actions Card - MINIMAL DESIGN */}
+              <Card className="shadow-sm border-gray-200">
+                <CardContent className="p-4 space-y-2">
+                  <div className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <Zap className="w-4 h-4 mr-2 text-gray-600" />
+                    Quick Actions
+                  </div>
                   <Button
                     onClick={() => calculateSmartFeatures(liveQuote || quote)}
                     disabled={isCalculating}
-                    className="w-full"
+                    className="w-full h-8"
                     size="sm"
                   >
-                    <Calculator className="w-4 h-4 mr-2" />
+                    <Calculator className="w-3 h-3 mr-2" />
                     {isCalculating ? 'Calculating...' : 'Recalculate'}
                   </Button>
-                  <Button variant="outline" className="w-full" size="sm">
-                    <Clock className="w-4 h-4 mr-2" />
-                    View Timeline
+                  <Button variant="outline" className="w-full h-8" size="sm">
+                    <Clock className="w-3 h-3 mr-2" />
+                    Timeline
                   </Button>
                 </CardContent>
               </Card>

@@ -130,7 +130,9 @@
       "Bash(for file in \"src/pages/auth/ResetPassword.tsx\" \"src/pages/PaymentFailure.tsx\" \"src/components/AddressHistory.tsx\" \"src/pages/About.tsx\" \"src/pages/auth/EmailConfirmation.tsx\")",
       "Bash(do echo \"=== $file ===\")",
       "mcp__ide__getDiagnostics",
-      "mcp__ide__executeCode"
+      "mcp__ide__executeCode",
+      "Bash(for file in Compact*.tsx)",
+      "Bash(do echo \"=== $file exports ===\")"
     ],
     "deny": []
   }

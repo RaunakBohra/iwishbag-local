@@ -184,28 +184,6 @@ export const SmartCalculationBreakdown: React.FC<SmartCalculationBreakdownProps>
           </div>
         </div>
 
-        {/* Alternative Options Preview */}
-        {shippingOptions.length > 1 && (
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <div className="text-sm font-medium text-blue-800 mb-2">
-              Alternative Options Available
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-blue-600">Cheapest: </span>
-                <span className="font-medium">
-                  ${Math.min(...shippingOptions.map(o => o.cost_usd)).toFixed(2)}
-                </span>
-              </div>
-              <div>
-                <span className="text-blue-600">Fastest: </span>
-                <span className="font-medium">
-                  {Math.min(...shippingOptions.map(o => parseInt(o.days.split('-')[0])))} days
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

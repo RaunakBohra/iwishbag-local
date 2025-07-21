@@ -1,0 +1,353 @@
+// ============================================================================
+// COMPACT CALCULATION BREAKDOWN - World-Class E-commerce Admin Layout
+// Based on Shopify Polaris & Amazon Seller Central design patterns 2025
+// Features: Ultra-compact cost display, smart insights, collapsible details
+// ============================================================================
+
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { 
+  Calculator, 
+  DollarSign, 
+  TrendingUp, 
+  Info,
+  ExternalLink,
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  PieChart
+} from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { UnifiedQuote, ShippingOption } from '@/types/unified-quote';
+
+interface CompactCalculationBreakdownProps {
+  quote: UnifiedQuote;
+  shippingOptions: ShippingOption[];
+  isCalculating: boolean;
+  compact?: boolean;
+}
+
+export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownProps> = ({
+  quote,
+  shippingOptions,
+  isCalculating,
+  compact = true,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState('breakdown');
+
+  const breakdown = quote.calculation_data?.breakdown || {};
+  const exchangeRate = quote.calculation_data?.exchange_rate || { rate: 1, source: 'standard' };
+  const totalCost = quote.final_total_usd || 0;
+  
+  // Calculate percentages for insights
+  const getPercentage = (amount: number) => ((amount / totalCost) * 100).toFixed(1);
+  
+  // Get selected shipping option details
+  const selectedShippingOption = shippingOptions.find(
+    opt => opt.id === quote.operational_data?.shipping?.selected_option
+  );
+
+  // Key cost components for compact view
+  const keyComponents = [
+    { label: 'Items', amount: breakdown.items_total || 0, color: 'text-blue-600' },
+    { label: 'Shipping', amount: breakdown.shipping || 0, color: 'text-green-600' },
+    { label: 'Customs', amount: breakdown.customs || 0, color: 'text-purple-600' },
+    { label: 'Fees', amount: breakdown.fees || 0, color: 'text-gray-600' },
+  ];
+
+  // Compact header view
+  const CompactHeader = () => (
+    <div className="p-4">
+      {/* Header Row */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center space-x-2">
+          <Calculator className="w-4 h-4 text-gray-600" />
+          <span className="font-medium text-gray-900 text-sm">Cost Breakdown</span>
+          {isCalculating && (
+            <Badge variant="secondary" className="text-xs animate-pulse">
+              Calculating...
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center space-x-1">
+          <span className="text-lg font-bold text-blue-600">
+            ${totalCost.toFixed(2)}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="h-6 w-6 p-0"
+          >
+            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </Button>
+        </div>
+      </div>
+
+      {/* Compact Cost Grid */}
+      <div className="grid grid-cols-4 gap-2 text-xs">
+        {keyComponents.map((component, index) => (
+          <div key={index} className="text-center">
+            <div className={`font-semibold ${component.color}`}>
+              ${component.amount.toFixed(0)}
+            </div>
+            <div className="text-gray-500 text-xs">{component.label}</div>
+            <div className="text-gray-400 text-xs">
+              {getPercentage(component.amount)}%
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Exchange Rate (if not USD) */}
+      {quote.currency !== 'USD' && (
+        <div className="mt-3 flex items-center justify-between text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded">
+          <span>Exchange Rate:</span>
+          <div className="flex items-center space-x-1">
+            <span>1 USD = {exchangeRate.rate.toFixed(4)} {quote.currency}</span>
+            <Badge variant="outline" className="text-xs h-4 px-1">
+              {exchangeRate.source === 'shipping_route' ? 'Route' : 'Standard'}
+            </Badge>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Expandable detail tabs
+  const ExpandedDetails = () => (
+    <div className="border-t border-gray-100">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 h-8 text-xs">
+          <TabsTrigger value="breakdown" className="text-xs">Breakdown</TabsTrigger>
+          <TabsTrigger value="insights" className="text-xs">Insights</TabsTrigger>
+          <TabsTrigger value="exchange" className="text-xs">Exchange</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="breakdown" className="p-4 pt-3 space-y-3">
+          {/* Detailed Breakdown */}
+          <div className="space-y-3">
+            {/* Items Total */}
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center space-x-2">
+                <DollarSign className="w-4 h-4 text-blue-600" />
+                <span className="text-gray-700">Items Total</span>
+                <Badge variant="outline" className="text-xs h-4 px-1">
+                  {quote.items?.length || 0} items
+                </Badge>
+              </div>
+              <div className="text-right">
+                <div className="font-medium">${(breakdown.items_total || 0).toFixed(2)}</div>
+                <div className="text-xs text-gray-500">{getPercentage(breakdown.items_total || 0)}%</div>
+              </div>
+            </div>
+
+            {/* Shipping */}
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center space-x-2">
+                <ExternalLink className="w-4 h-4 text-green-600" />
+                <span className="text-gray-700">International Shipping</span>
+                {selectedShippingOption && (
+                  <Badge variant="outline" className="text-xs h-4 px-1">
+                    {selectedShippingOption.carrier}
+                  </Badge>
+                )}
+              </div>
+              <div className="text-right">
+                <div className="font-medium">${(breakdown.shipping || 0).toFixed(2)}</div>
+                <div className="text-xs text-gray-500">{getPercentage(breakdown.shipping || 0)}%</div>
+              </div>
+            </div>
+
+            {/* Customs & Duties */}
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center space-x-2">
+                <Info className="w-4 h-4 text-purple-600" />
+                <span className="text-gray-700">Customs & Duties</span>
+                {quote.operational_data?.customs?.smart_tier && (
+                  <Badge variant="outline" className="text-xs h-4 px-1">Smart</Badge>
+                )}
+              </div>
+              <div className="text-right">
+                <div className="font-medium">${(breakdown.customs || 0).toFixed(2)}</div>
+                <div className="text-xs text-gray-500">{getPercentage(breakdown.customs || 0)}%</div>
+              </div>
+            </div>
+
+            {/* Taxes & VAT */}
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center space-x-2">
+                <Calculator className="w-4 h-4 text-orange-600" />
+                <span className="text-gray-700">Taxes & VAT</span>
+              </div>
+              <div className="text-right">
+                <div className="font-medium">${(breakdown.taxes || 0).toFixed(2)}</div>
+                <div className="text-xs text-gray-500">{getPercentage(breakdown.taxes || 0)}%</div>
+              </div>
+            </div>
+
+            {/* Processing Fees */}
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center space-x-2">
+                <Zap className="w-4 h-4 text-gray-600" />
+                <span className="text-gray-700">Processing Fees</span>
+                <Badge variant="outline" className="text-xs h-4 px-1">
+                  Gateway + Handling
+                </Badge>
+              </div>
+              <div className="text-right">
+                <div className="font-medium">${(breakdown.fees || 0).toFixed(2)}</div>
+                <div className="text-xs text-gray-500">{getPercentage(breakdown.fees || 0)}%</div>
+              </div>
+            </div>
+
+            {/* Discount */}
+            {(breakdown.discount || 0) > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="w-4 h-4 text-red-600" />
+                  <span className="text-gray-700">Discount</span>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium text-red-600">-${(breakdown.discount || 0).toFixed(2)}</div>
+                  <div className="text-xs text-gray-500">{getPercentage(breakdown.discount || 0)}%</div>
+                </div>
+              </div>
+            )}
+
+            {/* Total */}
+            <div className="pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between text-lg font-semibold">
+                <span className="text-gray-900">Final Total</span>
+                <div className="text-right">
+                  <div className="text-blue-600">${totalCost.toFixed(2)}</div>
+                  {quote.currency !== 'USD' && (
+                    <div className="text-sm text-gray-500 font-normal">
+                      ≈ {(totalCost * exchangeRate.rate).toFixed(2)} {quote.currency}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="insights" className="p-4 pt-3 space-y-3">
+          {/* Smart Insights */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center bg-green-50 p-3 rounded-lg">
+              <div className="text-sm text-gray-600 mb-1">Shipping Cost</div>
+              <div className="text-2xl font-bold text-green-600">
+                {getPercentage(breakdown.shipping || 0)}%
+              </div>
+              <div className="text-xs text-gray-500">of total cost</div>
+            </div>
+            <div className="text-center bg-blue-50 p-3 rounded-lg">
+              <div className="text-sm text-gray-600 mb-1">Optimization Score</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {quote.optimization_score?.toFixed(0) || '0'}%
+              </div>
+              <div className="text-xs text-gray-500">efficiency</div>
+            </div>
+          </div>
+
+          {/* Cost Analysis */}
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-gray-700">Cost Analysis</div>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Item cost ratio:</span>
+                <span className="font-medium">{getPercentage(breakdown.items_total || 0)}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Shipping efficiency:</span>
+                <span className={`font-medium ${
+                  parseFloat(getPercentage(breakdown.shipping || 0)) < 20 ? 'text-green-600' : 'text-orange-600'
+                }`}>
+                  {parseFloat(getPercentage(breakdown.shipping || 0)) < 20 ? 'Excellent' : 'High'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total overhead:</span>
+                <span className="font-medium">
+                  {getPercentage(totalCost - (breakdown.items_total || 0))}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Smart Recommendations */}
+          {quote.operational_data?.customs?.smart_tier && (
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <div className="flex items-center text-sm text-blue-800 mb-1">
+                <Zap className="w-3 h-3 mr-1" />
+                <span className="font-medium">Smart Optimization Applied</span>
+              </div>
+              <div className="text-xs text-blue-700">
+                Customs rate optimized using AI: {quote.operational_data.customs.smart_tier.tier_name || 'Default tier'}
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="exchange" className="p-4 pt-3 space-y-3">
+          {/* Exchange Rate Details */}
+          <div className="space-y-3">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Current Rate</span>
+                <Badge variant="outline" className="text-xs">
+                  {exchangeRate.source === 'shipping_route' ? 'Route-specific' : 'Standard'}
+                </Badge>
+              </div>
+              <div className="text-lg font-bold text-gray-900">
+                1 USD = {exchangeRate.rate.toFixed(4)} {quote.currency}
+              </div>
+            </div>
+
+            {/* Currency Conversion */}
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-700">Amount Conversion</div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">USD Amount:</span>
+                  <span className="font-medium">${totalCost.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">{quote.currency} Amount:</span>
+                  <span className="font-medium">
+                    {(totalCost * exchangeRate.rate).toFixed(2)} {quote.currency}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Rate Source Info */}
+            <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+              <div className="flex items-center space-x-1 mb-1">
+                <Info className="w-3 h-3" />
+                <span className="font-medium">Rate Source</span>
+              </div>
+              <div>
+                {exchangeRate.source === 'shipping_route' 
+                  ? 'Using shipping route specific exchange rate for better accuracy'
+                  : 'Using standard market exchange rate'
+                }
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+
+  return (
+    <Card className="shadow-sm border-gray-200 overflow-hidden">
+      <CompactHeader />
+      {isExpanded && <ExpandedDetails />}
+    </Card>
+  );
+};
