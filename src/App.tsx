@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AccessibilityProvider } from '@/components/ui/AccessibilityProvider';
@@ -151,7 +151,7 @@ const router = createBrowserRouter([
               </ErrorBoundary>
             ),
           },
-          { path: 'orders', element: <div>Order management will be unified with quotes</div> },
+          { path: 'orders', element: <Navigate to="/admin/quotes" replace /> },
           {
             path: 'orders/:id',
             element: (

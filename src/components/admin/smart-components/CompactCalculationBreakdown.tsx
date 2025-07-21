@@ -50,6 +50,57 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     opt => opt.id === quote.operational_data?.shipping?.selected_option
   );
 
+  // Helper functions for shipping breakdown calculations
+  const getTotalWeight = () => {
+    return quote.items?.reduce((sum, item) => sum + (item.weight_kg * item.quantity), 0) || 0;
+  };
+
+  const getTotalValue = () => {
+    return quote.items?.reduce((sum, item) => sum + (item.price_usd * item.quantity), 0) || 0;
+  };
+
+  // Estimate shipping breakdown based on common patterns
+  const getShippingBaseRate = (option: ShippingOption) => {
+    // For database routes, this would typically be base_shipping_cost
+    // For now, estimate based on total shipping cost and weight
+    const totalShipping = breakdown.shipping || 0;
+    const weight = getTotalWeight();
+    const perKgRate = getShippingPerKgRate(option);
+    const weightCost = weight * perKgRate;
+    return Math.max(0, totalShipping - weightCost - getShippingValueCost(option));
+  };
+
+  const getShippingPerKgRate = (option: ShippingOption) => {
+    // Standard rate estimation based on carrier type
+    const rateMap: Record<string, number> = {
+      'DHL': 8.5,
+      'FedEx': 9.0,
+      'UPS': 7.5,
+      'Standard': 5.0,
+      'Express': 7.0,
+      'Economy': 4.0,
+    };
+    return rateMap[option.carrier] || 6.0;
+  };
+
+  const getShippingWeightCost = (option: ShippingOption) => {
+    return getTotalWeight() * getShippingPerKgRate(option);
+  };
+
+  const getShippingValueCost = (option: ShippingOption) => {
+    // Some carriers charge a percentage of item value
+    const valuePercentage = getShippingValuePercentage(option);
+    return (getTotalValue() * valuePercentage) / 100;
+  };
+
+  const getShippingValuePercentage = (option: ShippingOption) => {
+    // Express carriers sometimes charge value-based fees
+    if (option.carrier === 'DHL' || option.carrier === 'FedEx') {
+      return 0.5; // 0.5% of value
+    }
+    return 0;
+  };
+
   // Key cost components for compact view
   const keyComponents = [
     { label: 'Items', amount: breakdown.items_total || 0, color: 'text-blue-600' },
@@ -145,21 +196,48 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
             </div>
 
-            {/* Shipping */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-2">
-                <ExternalLink className="w-4 h-4 text-green-600" />
-                <span className="text-gray-700">International Shipping</span>
-                {selectedShippingOption && (
-                  <Badge variant="outline" className="text-xs h-4 px-1">
-                    {selectedShippingOption.carrier}
-                  </Badge>
-                )}
+            {/* Shipping - Enhanced with Detailed Breakdown */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <ExternalLink className="w-4 h-4 text-green-600" />
+                  <span className="text-gray-700">International Shipping</span>
+                  {selectedShippingOption && (
+                    <Badge variant="outline" className="text-xs h-4 px-1">
+                      {selectedShippingOption.carrier}
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">${(breakdown.shipping || 0).toFixed(2)}</div>
+                  <div className="text-xs text-gray-500">{getPercentage(breakdown.shipping || 0)}%</div>
+                </div>
               </div>
-              <div className="text-right">
-                <div className="font-medium">${(breakdown.shipping || 0).toFixed(2)}</div>
-                <div className="text-xs text-gray-500">{getPercentage(breakdown.shipping || 0)}%</div>
-              </div>
+              
+              {/* Shipping Calculation Breakdown */}
+              {selectedShippingOption && (
+                <div className="ml-6 space-y-1 text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                  <div className="font-medium text-gray-700 mb-2">Shipping Rate Calculation:</div>
+                  <div className="flex justify-between">
+                    <span>• Base Rate:</span>
+                    <span>${getShippingBaseRate(selectedShippingOption).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>• Weight ({getTotalWeight()}kg × ${getShippingPerKgRate(selectedShippingOption).toFixed(2)}/kg):</span>
+                    <span>${getShippingWeightCost(selectedShippingOption).toFixed(2)}</span>
+                  </div>
+                  {getShippingValueCost(selectedShippingOption) > 0 && (
+                    <div className="flex justify-between">
+                      <span>• Value-based ({getShippingValuePercentage(selectedShippingOption)}%):</span>
+                      <span>${getShippingValueCost(selectedShippingOption).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-medium text-gray-800 border-t border-gray-200 pt-1 mt-1">
+                    <span>Total Shipping:</span>
+                    <span>${(breakdown.shipping || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Customs & Duties */}

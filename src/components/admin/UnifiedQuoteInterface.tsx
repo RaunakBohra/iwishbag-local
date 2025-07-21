@@ -188,29 +188,67 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
     // Find the selected shipping option
     const selectedOption = shippingOptions.find(opt => opt.id === optionId);
     
-    // Update form values to reflect the selection
-    if (selectedOption) {
-      form.setValue('selected_shipping_option', optionId);
-      form.setValue('international_shipping', selectedOption.cost_usd);
+    if (!selectedOption) {
+      console.warn('Selected shipping option not found:', optionId);
+      return;
     }
 
-    const updatedOperationalData = {
-      ...quote.operational_data,
-      shipping: {
-        ...quote.operational_data?.shipping,
-        selected_option: optionId,
+    // Optimistic update: Update form values immediately for instant UI feedback
+    form.setValue('selected_shipping_option', optionId);
+    form.setValue('international_shipping', selectedOption.cost_usd);
+
+    // Optimistic update: Update local quote state immediately
+    const optimisticQuote = {
+      ...quote,
+      operational_data: {
+        ...quote.operational_data,
+        shipping: {
+          ...quote.operational_data?.shipping,
+          selected_option: optionId,
+        },
       },
     };
 
-    const success = await unifiedDataEngine.updateQuote(quote.id, {
-      operational_data: updatedOperationalData,
+    // Set optimistic state immediately (no page refresh)
+    setQuote(optimisticQuote);
+
+    // Show immediate feedback
+    toast({
+      title: 'Shipping updated',
+      description: `Selected ${selectedOption.carrier} ${selectedOption.name}`,
+      duration: 2000,
     });
 
-    if (success) {
-      await loadQuoteData(); // Refresh with new calculations
+    try {
+      // Update database in background
+      const success = await unifiedDataEngine.updateQuote(quote.id, {
+        operational_data: optimisticQuote.operational_data,
+      });
+
+      if (!success) {
+        // Rollback on failure
+        setQuote(quote);
+        form.setValue('selected_shipping_option', quote.operational_data?.shipping?.selected_option || '');
+        form.setValue('international_shipping', quote.calculation_data?.breakdown?.shipping || 0);
+        
+        toast({
+          title: 'Update failed',
+          description: 'Failed to save shipping option. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error updating shipping option:', error);
+      
+      // Rollback on error
+      setQuote(quote);
+      form.setValue('selected_shipping_option', quote.operational_data?.shipping?.selected_option || '');
+      form.setValue('international_shipping', quote.calculation_data?.breakdown?.shipping || 0);
+      
       toast({
-        title: 'Shipping updated',
-        description: 'Quote recalculated with new shipping option.',
+        title: 'Update failed',
+        description: 'Network error. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -1146,7 +1184,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
                           onCalculateSmartCustoms={calculateSmartCustoms}
                           isCalculatingCustoms={isCalculatingCustoms}
                           shippingOptions={shippingOptions}
-                          onShippingOptionSelect={handleShippingOptionSelect}
                           onShowShippingDetails={() => setShowShippingDetails(true)}
                         />
                       </CardContent>
