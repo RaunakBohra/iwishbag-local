@@ -339,6 +339,7 @@ export class UnifiedDataEngine {
 
       // Create quote data
       const quoteData = {
+        display_id: null, // Let database trigger generate sequential ID (#1001, #1002, etc.)
         status: 'pending',
         origin_country: input.origin_country,
         destination_country: input.destination_country,
