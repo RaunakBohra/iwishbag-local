@@ -61,6 +61,11 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
     ? shippingOptions 
     : shippingOptions.slice(0, 2); // Show only top 2 by default
 
+  // Helper function to calculate total weight
+  const getTotalWeight = () => {
+    return quote.items?.reduce((sum, item) => sum + (item.weight_kg * item.quantity), 0) || 0;
+  };
+
   // Compact header with selected option info
   const CompactHeader = () => (
     <div className="p-4">
@@ -244,11 +249,16 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
                   </div>
                 </div>
 
-                {/* Price */}
+                {/* Price with per-kg indication */}
                 <div className="text-right">
                   <div className="flex items-center text-sm font-semibold">
                     <DollarSign className="w-3 h-3" />
                     {option.cost_usd.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {getTotalWeight() > 0 && (
+                      <>≈ ${(option.cost_usd / getTotalWeight()).toFixed(2)}/kg</>
+                    )}
                   </div>
                   
                   {recommendation && recommendation.savings_usd > 0 && (
