@@ -133,7 +133,12 @@
       "mcp__ide__executeCode",
       "Bash(for file in Compact*.tsx)",
       "Bash(do echo \"=== $file exports ===\")",
-      "Bash(/dev/null)"
+      "Bash(/dev/null)",
+      "WebFetch(domain:primer.style)",
+      "WebFetch(domain:help.shopify.com)",
+      "WebFetch(domain:polaris.shopify.com)",
+      "WebFetch(domain:polaris-react.shopify.com)",
+      "WebFetch(domain:www.nngroup.com)"
     ],
     "deny": []
   }

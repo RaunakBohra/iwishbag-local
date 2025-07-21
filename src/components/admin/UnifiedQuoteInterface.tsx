@@ -52,6 +52,7 @@ import { CompactStatusManager } from './smart-components/CompactStatusManager';
 import { CompactShippingOptions } from './smart-components/CompactShippingOptions';
 import { CompactPaymentManager } from './smart-components/CompactPaymentManager';
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
+import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { QuoteDetailForm } from './QuoteDetailForm';
 import { Form } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
@@ -1064,8 +1065,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     <div 
       className={`max-w-7xl mx-auto p-6 space-y-6 transition-all duration-300 rounded-lg ${
         isEditMode 
-          ? 'border-2 border-orange-400 bg-orange-50/30 shadow-lg shadow-orange-100/50' 
-          : 'border border-gray-200 bg-white'
+          ? 'border border-teal-200 bg-teal-50/20 shadow-sm' 
+          : 'border border-blue-200 bg-blue-50/20 shadow-sm'
       }`}
     >
       {/* Smart Header with Key Metrics */}
@@ -1118,27 +1119,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
       {/* Smart Suggestions Bar - Collapsible */}
       {smartSuggestions.length > 0 && (
-        <Card className={`shadow-sm transition-all duration-300 ${
-          isEditMode 
-            ? 'border-orange-200 bg-orange-50' 
-            : 'border-blue-200 bg-blue-50'
-        }`}>
+        <Card className="shadow-sm border-blue-200 bg-blue-50">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Lightbulb className={`w-4 h-4 transition-colors duration-300 ${
-                  isEditMode ? 'text-orange-600' : 'text-blue-600'
-                }`} />
-                <span className={`text-sm font-medium transition-colors duration-300 ${
-                  isEditMode ? 'text-orange-800' : 'text-blue-800'
-                }`}>
+                <Lightbulb className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-800">
                   AI Suggestions ({smartSuggestions.length})
                 </span>
-                <Badge variant="secondary" className={`text-xs transition-all duration-300 ${
-                  isEditMode 
-                    ? 'bg-orange-100 text-orange-700' 
-                    : 'bg-blue-100 text-blue-700'
-                }`}>
+                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
                   Available
                 </Badge>
               </div>
@@ -1146,11 +1135,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowSmartSuggestions(!showSmartSuggestions)}
-                className={`h-6 w-6 p-0 transition-all duration-300 ${
-                  isEditMode 
-                    ? 'text-orange-600 hover:text-orange-800 hover:bg-orange-100' 
-                    : 'text-blue-600 hover:text-blue-800 hover:bg-blue-100'
-                }`}
+                className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
               >
                 {showSmartSuggestions ? (
                   <ChevronUp className="w-4 h-4" />
@@ -1160,9 +1145,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               </Button>
             </div>
             {showSmartSuggestions && (
-              <div className={`mt-3 pt-3 border-t transition-colors duration-300 ${
-                isEditMode ? 'border-orange-200' : 'border-blue-200'
-              }`}>
+              <div className="mt-3 pt-3 border-t border-blue-200">
                 <SmartSuggestionCards
                   suggestions={smartSuggestions}
                   onApplySuggestion={handleApplySuggestion}
@@ -1183,9 +1166,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             <div className="md:col-span-2 space-y-4">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
+                  {/* Shipping Route Header - Inside Form Context */}
+                  <ShippingRouteHeader 
+                    form={form}
+                    isEditMode={isEditMode}
+                    displayOriginCountry={quote.origin_country}
+                    displayDestinationCountry={quote.destination_country}
+                  />
                   {/* Products Section */}
                   <Card className="shadow-sm border-gray-200">
-                    <CardHeader className="bg-gray-50 border-b border-gray-200 py-4">
+                    <CardHeader className="bg-teal-50 border-b border-teal-200 py-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <CardTitle className="text-lg font-semibold text-gray-900">
@@ -1521,7 +1511,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
                   {/* Shipping & Costs Section */}
                   <Card className="shadow-sm border-gray-200">
-                    <CardHeader className="bg-gray-50 border-b border-gray-200 py-4">
+                    <CardHeader className="bg-teal-50 border-b border-teal-200 py-4">
                       <CardTitle className="text-lg font-semibold text-gray-900">
                         Shipping & Costs
                       </CardTitle>
@@ -1660,9 +1650,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               />
 
               {/* AI Insights - Compact Version */}
-              <Card className="shadow-sm border-gray-200">
+              <Card className="shadow-sm border-blue-200 bg-blue-50/20">
                 <CardContent className="p-3">
-                  <div className="flex items-center text-sm font-medium text-gray-700 mb-3">
+                  <div className="flex items-center text-sm font-medium text-blue-800 mb-3">
                     <Lightbulb className="w-4 h-4 mr-2 text-amber-500" />
                     AI Insights
                   </div>
@@ -1705,13 +1695,21 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       ) : (
         /* View Mode: Professional e-commerce admin layout */
         <div className="space-y-4">
+          {/* Shipping Route Header - View Mode (No Form Context Needed) */}
+          <ShippingRouteHeader 
+            form={form}
+            isEditMode={false}
+            displayOriginCountry={quote.origin_country}
+            displayDestinationCountry={quote.destination_country}
+          />
+
           {/* Main Content Area - Professional 2-Column Layout */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Left Column - Primary Information (2/3 width) */}
             <div className="md:col-span-2 space-y-4">
               {/* Quote Items - Professional Table Style */}
               <Card>
-                <CardHeader className="border-b border-gray-100">
+                <CardHeader className="bg-blue-50 border-b border-blue-200">
                   <CardTitle className="text-lg font-semibold text-gray-900">Order Items</CardTitle>
                   <p className="text-sm text-gray-500 mt-1">
                     {metrics?.totalItems} items • {metrics?.totalWeight} kg total weight
@@ -1811,9 +1809,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               )}
 
               {/* Quote Summary - Compact */}
-              <Card className="shadow-sm border-gray-200">
+              <Card className="shadow-sm border-blue-200 bg-blue-50/30">
                 <CardContent className="p-3">
-                  <div className="text-sm font-medium text-gray-700 mb-3">Quote Summary</div>
+                  <div className="text-sm font-medium text-blue-800 mb-3">Quote Summary</div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Total Value</span>
@@ -1848,7 +1846,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       )}
 
       {/* Quick Actions Footer */}
-      <Card>
+      <Card className="border-gray-200 bg-gray-50/50">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">

@@ -155,7 +155,7 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
           )}
           {/* NEW: Show pending indicator in edit mode */}
           {editMode && pendingOptionId && (
-            <Badge variant="secondary" className="text-xs h-5 px-2 bg-orange-100 text-orange-700">
+            <Badge variant="secondary" className="text-xs h-5 px-2 bg-cyan-100 text-cyan-700">
               Pending
             </Badge>
           )}
@@ -318,7 +318,7 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
               className={`cursor-pointer transition-all p-3 rounded-lg border ${
                 isSelected
                   ? pendingOptionId === option.id
-                    ? 'border-orange-300 bg-orange-50'
+                    ? 'border-cyan-300 bg-cyan-50'
                     : 'border-blue-300 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               }`}
@@ -340,7 +340,7 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
                   <div className="flex items-center">
                     {isSelected ? (
                       pendingOptionId === option.id ? (
-                        <div className="w-4 h-4 rounded-full border-2 border-orange-400 bg-orange-100" />
+                        <div className="w-4 h-4 rounded-full border-2 border-cyan-400 bg-cyan-100" />
                       ) : (
                         <CheckCircle className="w-4 h-4 text-blue-600" />
                       )
@@ -440,7 +440,7 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
             <div className="text-gray-500">Cheapest</div>
           </div>
           <div>
-            <div className="font-semibold text-orange-600">
+            <div className="font-semibold text-cyan-600">
               {Math.min(...shippingOptions.map((o) => parseInt(o.days.split('-')[0])))}
             </div>
             <div className="text-gray-500">Fastest (days)</div>

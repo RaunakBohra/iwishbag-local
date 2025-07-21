@@ -190,7 +190,7 @@ export const CountrySettings = () => {
                   }}
                   disabled={isCreating || isUpdating || isDeleting}
                   size="sm"
-                  className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Country
@@ -273,7 +273,7 @@ export const CountrySettings = () => {
                     }}
                     disabled={isCreating || isUpdating || isDeleting}
                     size="sm"
-                    className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add First Country

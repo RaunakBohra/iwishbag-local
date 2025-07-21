@@ -1,13 +1,15 @@
 // ============================================================================
-// PROFESSIONAL MODE TOGGLE - Stripe-inspired Edit/View Mode Switch
-// Features: Clear visual states, orange indicators, smooth animations
-// Based on industry standards: Stripe, GitHub Primer, Figma Dev Mode
+// PROFESSIONAL MODE TOGGLE - Edit Mode Switch with Calming Colors
+// Features: Single action label, clear visual states, teal indicators for relaxed attention
+// Color psychology: Teal promotes focus & reduces stress (blue + green benefits)
+// Follows UX best practices: labels show what happens when toggle is ON
+// Based on research: NN/g, color psychology studies, GitHub Primer, Figma Dev Mode
 // ============================================================================
 
 import React from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Eye, Zap } from 'lucide-react';
+import { Edit, Zap } from 'lucide-react';
 
 interface ModeToggleProps {
   isEditMode: boolean;
@@ -50,42 +52,42 @@ export const ModeToggle: React.FC<ModeToggleProps> = ({
 
   return (
     <div className="flex items-center space-x-3">
-      {/* Edit Mode Badge - Stripe-style indicator */}
+      {/* Edit Mode Badge - Calming teal for relaxed attention */}
       {showBadge && isEditMode && (
         <Badge
           variant="default"
-          className="bg-orange-500 hover:bg-orange-600 text-white border-orange-500 animate-in slide-in-from-left-2 duration-300 shadow-sm"
+          className="bg-cyan-600 hover:bg-cyan-700 text-white border-cyan-600 animate-in slide-in-from-left-2 duration-300 shadow-sm"
         >
           <Zap className="w-3 h-3 mr-1 animate-pulse" />
           EDIT MODE
         </Badge>
       )}
 
-      {/* Professional Toggle Switch */}
+      {/* Professional Toggle Switch - Single Label Following UX Best Practices */}
       <div
         className={`flex items-center space-x-3 p-3 rounded-lg border transition-all duration-300 ${
           isEditMode
-            ? 'border-orange-200 bg-orange-50/50'
+            ? 'border-cyan-200 bg-cyan-50/50'
             : 'border-gray-200 bg-gray-50/50 hover:bg-gray-100/50'
         }`}
         onKeyDown={handleKeyDown}
         tabIndex={0}
         role="group"
-        aria-label="Mode Toggle Control"
+        aria-label="Edit Mode Toggle"
       >
-        {/* View Mode Label */}
+        {/* Single Action Label - Shows what happens when toggle is ON */}
         <div className="flex items-center space-x-2">
-          <Eye
+          <Edit
             className={`w-4 h-4 transition-colors duration-200 ${
-              !isEditMode ? 'text-blue-600' : 'text-gray-400'
+              isEditMode ? 'text-cyan-600' : 'text-gray-600'
             }`}
           />
           <span
             className={`text-sm font-medium transition-colors duration-200 ${
-              !isEditMode ? 'text-blue-600' : 'text-gray-500'
+              isEditMode ? 'text-cyan-600' : 'text-gray-700'
             }`}
           >
-            View Mode
+            Edit Mode
           </span>
         </div>
 
@@ -96,27 +98,11 @@ export const ModeToggle: React.FC<ModeToggleProps> = ({
           disabled={disabled}
           className={`transition-all duration-300 ${
             isEditMode
-              ? 'data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500'
-              : 'data-[state=unchecked]:bg-blue-500 data-[state=unchecked]:border-blue-500'
+              ? 'data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500'
+              : 'data-[state=unchecked]:bg-gray-400 data-[state=unchecked]:border-gray-400'
           }`}
-          aria-label={`Switch to ${isEditMode ? 'View' : 'Edit'} Mode`}
+          aria-label={`${isEditMode ? 'Disable' : 'Enable'} Edit Mode`}
         />
-
-        {/* Edit Mode Label */}
-        <div className="flex items-center space-x-2">
-          <Edit
-            className={`w-4 h-4 transition-colors duration-200 ${
-              isEditMode ? 'text-orange-600' : 'text-gray-400'
-            }`}
-          />
-          <span
-            className={`text-sm font-medium transition-colors duration-200 ${
-              isEditMode ? 'text-orange-600' : 'text-gray-500'
-            }`}
-          >
-            Edit Mode
-          </span>
-        </div>
       </div>
 
       {/* Keyboard Shortcut Hint */}
